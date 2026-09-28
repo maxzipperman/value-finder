@@ -53,7 +53,40 @@ def lines():
     pin = per_book[per_book.book.str.upper().str.contains("PINNACLE")].groupby("game_id").line.median().rename("pin_total")
     g = g.merge(pin, on="game_id", how="left")
     g["game_id"] = g.game_id.astype("int64")
-    return g
+    return g.merge(home_spreads(), on="game_id", how="left")
+
+
+def home_spreads():
+    """Consensus home spread (negative = home favored), median across books. The
+    lines file names teams by abbreviation in older seasons and by school later, so
+    each row is matched against the home team's school, abbreviation and alt names."""
+    b = pd.read_parquet(RAW / "cfbfastr" / "line_odds.parquet")
+    b = b[(b.market_type == "spread") & b.lines.notna() & b.home_team_id.notna()]
+    d = RAW / "cfbfastr"
+    ti = pd.concat([pd.read_parquet(p) for p in sorted(d.glob("team_info_*.parquet"))]).drop_duplicates("team_id", keep="last")
+    names = {}
+    for r in ti.itertuples():
+        names[int(r.team_id)] = {str(x).strip().lower() for x in (r.school, r.abbreviation, r.alt_name1, r.alt_name2, r.alt_name3)
+                                 if isinstance(x, str)}
+    a = b.abbr.astype(str).str.strip().str.lower()
+    desc = b.game_desc.astype(str).str.lower().str.split("@")
+    home_hit = [x in names.get(int(h), set()) or x == d[-1].strip() for x, h, d in zip(a, b.home_team_id, desc)]
+    away_hit = [x in names.get(int(w), set()) or x == d[0].strip() for x, w, d in zip(a, b.away_team_id.fillna(-1), desc)]
+    b["home_hit"], b["away_hit"] = home_hit, away_hit
+    # each (game, book) has one row per team with lines x and -x: if either row identifies
+    # its team, the home spread follows
+    rows = []
+    for (gid, book), grp in b.groupby(["game_id", "book"]):
+        if len(grp) != 2:
+            continue
+        r1, r2 = grp.iloc[0], grp.iloc[1]
+        if r1.home_hit or r2.away_hit:
+            rows.append((gid, r1.lines))
+        elif r2.home_hit or r1.away_hit:
+            rows.append((gid, r2.lines))
+    h = pd.DataFrame(rows, columns=["game_id", "home_spread"]).groupby("game_id").home_spread.median().reset_index()
+    h["game_id"] = h.game_id.astype("int64")
+    return h
 
 
 def _window(h: pd.DataFrame, kick: pd.Timestamp):
