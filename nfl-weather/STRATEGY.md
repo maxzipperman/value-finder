@@ -1,48 +1,43 @@
-# NFL weather betting playbook
+# NFL weather betting playbook (v2)
 
-The edge is real but small and uneven: 13 of 20 seasons were profitable, and the
-last two were flat. Bet small, bet early, and grade yourself on closing-line
-value (CLV), not wins. Numbers below are from `output/tables/strategies.csv`
-(run `scripts/strategies.py`); 108 betting variants were examined in total, so
-treat any single bucket with suspicion.
+The research is real; the edge is not yet proven. Wind reliably lowers NFL
+passing, and closing totals historically under-adjusted for it, but every
+profitable backtest used the weather observed at kickoff. The forecast-based
+record so far is 12–12. So this is a small, pre-registered forward test graded on
+closing-line value (CLV) at the price you actually got, not a system to scale.
+Version 2 follows an independent audit; see `PREREGISTRATION.md` amendment 2.
 
-## 1. BET: early wind under
+## Rule B: early wind under (forward test)
 
 | | |
 |---|---|
-| **Trigger** | Outdoor stadium; kickoff wind forecast **≥ 15 mph** (game-book scale), **1–3 days before kickoff**. Alert: `BET 1u WIND UNDER`. |
-| **Action** | Bet the under right away at the best number you can find. Don't wait for Sunday. |
-| **Size** | 1 unit = 1% of bankroll. **Storm** (rain ≥ 0.06 in or snow ≥ 0.1 in also forecast in the game window): 1.5 units. |
-| **Price** | −110 or better; pass if the best price is worse than −115. On Kalshi, buy NO on the strike nearest the book total only if ask + fee ≤ 52¢ (50¢ + fee breaks even at 51.75%, cheaper than −110's 52.4%). |
-| **Evidence** | 57.2% vs the close, 682 games 1999–2025 (+9% ROI at −110). 59.7% vs the opener, 2007–2021. In these games the total fell 1.0 point from open to close on average; when it fell 1.5+, the opener under won 69%. Walk-forward bets beat the close 63% of the time by +0.9 points. Storm games: 68% (95 games). |
-| **Caveats** | 18–18 in 2024–26, even on observed wind. The backtest uses observed kickoff wind; a 1-day-out 15+ mph forecast verified about two-thirds of the time (2024–26). |
-| **Kill switch** | After 40 bets, stop if average CLV ≤ 0 (`scripts/score_forward.py`). |
+| **Trigger** | Outdoor stadium, kickoff wind forecast **≥ 15 mph** (game-book scale), **1–3 days before kickoff**. |
+| **Price gate** | A posted total, an under price of **−115 or better**, and **positive expected value at that line and price**. The alert computes EV from what actually happened after comparable windy lines (1999–2023), so a worse number or price can fail even when the wind trigger fires. |
+| **Alert** | `RULE B WIND UNDER 42.5 at −110: …`. A wind trigger without a usable price arrives as `WATCH … no bet (no price / price too high / negative EV)`. |
+| **Action** | Take that number or better, right away. Rain or snow in the forecast does not change the stake. |
+| **Stake** | Paper-trade it until 20 settled signals show positive average CLV. If you bet before then, flat 0.5% of bankroll per signal, never more. |
+| **Line lag** | Same gates, plus the wind forecast rose 5+ mph since the last check while a posted total barely moved (`RULE B LINE LAG`). |
+| **Evidence for** | 57.2% under vs the close in 682 observed-wind games since 1999 (+9% at −110); 59.7% vs the opener 2007–21; totals fell about 1 point by kickoff; walk-forward bets beat the close 63% of the time. |
+| **Evidence against** | 18–18 on observed wind in 2024–26; 12–12 on 1-day forecasts; 108 variants were examined, and the long result (p ≈ 0.007) doesn't clear a strict multiple-testing bar (p < 0.0005). |
+| **Decision** | Scored from Week 5 (Oct 8, 2026) by `scripts/score_forward.py` at entry line and price. Keep only if average CLV > 0 with a 95% interval above zero after Week 18 or 40 signals. |
 
-## 2. BET: line lag
+## Watch: log, don't bet
 
-Wind forecast jumps **≥ 5 mph to 15+** since the last check while the total has
-moved less than half a point. Same action and size as rule 1. Alert: `BET LINE LAG`.
-
-## 3. WATCH: log it, don't bet it yet
-
-| Rule | Why it's not a bet yet |
+| Signal | Why it's watch-only |
 |---|---|
-| **Model lean**: P(under) ≥ 55% | The pre-registered forward test (`PREREGISTRATION.md`). Its rain term is fit on observed rain, which overstates forecast rain (next row). |
-| **Rain unders from forecasts** | Historical 62% (401 games) comes mostly from rain nobody forecast. In 2024–26, surprise rain went 9–4 under; forecast rain went 8–9, already priced into the close. |
-| **Cold visitor**: dome or warm-climate visitor, game ≤ 32°F | Home team covered 58.6% (113 games) and the visitor's team total went under 58.0%. Cold-climate visitors in the same games: 47.0%. Right shape, small sample. |
-| **Props** | QB passing yards fall about 11% at 20+ mph and 7% in rain; a 50-yard FG goes from 78% to 72% at ≤ 32°F and 67% if also windy. No historical prop lines, so none of this is backtested. |
+| **Model lean** (P(under) ≥ 55%) | Pre-registered, but its probability is relative to the *closing* total and ignores the offered price; it also leans on a rain term fit to observed rain. |
+| **Forecast rain** | The historical 62% rain edge comes mostly from rain nobody forecast. Forecast rain went 8–9 against a close that had already priced it. |
+| **Cold visitor**: dome or warm-climate team in a ≤ 32°F game | Home covered 58.6% of 113; cold-climate visitors 47%. Right shape, small sample, never forward-tested. |
+| **Props** | Passing yards fall ~11% at 20+ mph and ~7% in rain; a 50-yard FG drops from 78% to 67% in freezing wind. No historical prop prices, so untested. |
 
-## 4. AVOID
+## Avoid
 
-* **Snow unders**: 45% (89 games). Snow games haven't scored less than the line.
-* **Cold-only totals**: freezing, calm, dry overs won 59% before 2014 and 50% since.
-* **10–14 mph wind at the close**: 54%, too thin after the vig.
-* **Indoor games** and retractable roofs that are likely closed.
+* Snow unders (45%), cold-only totals (freezing overs 59% before 2014, 50% since), 10–14 mph wind at the close (54%), indoor games.
+* Laying more than −115 on any weather under.
 
-## Rules of the road
+## Execution
 
-* One bet per game, no parlays, at most 3 units on a weekend.
-* Shop the number. Half a point of total is worth roughly 1–2.5 points of win probability.
-* Every alert snapshot is logged to `data/forward/ledger.csv`; record the price you actually got.
-* After Week 18, run `scripts/score_forward.py` and apply the decision rule in `PREREGISTRATION.md`.
-* Paper research first: nothing in this project places bets.
+* Shop the number: half a point of total is worth roughly 1–2.5 points of win probability; −105 instead of −110 drops break-even from 52.4% to 51.2%.
+* On Kalshi, match the exact strike and settlement (an under 44 and an under 43.5 differ when the score is 44). A 50¢ contract plus the taker fee breaks even at 51.75%.
+* Log the price you actually got. The ledger records the posted price at signal time; your fill is what counts.
+* Nothing in this project places bets.

@@ -62,3 +62,36 @@ The playbook in `STRATEGY.md` bets one rule; it is graded here on the same terms
   rain, and in 2024–26 forecast rain was already priced (8–9 against the total)
   while unforecast rain produced most of the historical rain edge.
 * Rule variants now under forward test: **2** (the model lean and Rule B).
+
+## Amendment 2 (2026-09-28, after an independent audit; no forward outcomes observed)
+
+An independent review (Codex, Sept 28) reproduced the historical numbers and found
+defects in how signals were generated and scored. Changes, with reasons:
+
+1. **Rule B is only actionable with a real price.** A signal now requires a posted
+   total, an under price of −115 or better, 1–3 days to kickoff (same-day excluded),
+   and positive expected value at that line and price. EV comes from the empirical
+   distribution of (final total − market total) in the frozen 1999–2023 cohort of
+   outdoor games with 15+ mph wind, so it depends on the offered number (the old
+   P(under) was the same at a total of 30 or 60). Triggers without a usable price are
+   logged as `no_price` / `price_too_high` / `negative_ev`, never as bets.
+2. **Flat, small stakes; no storm size-up.** The 1.5-unit storm stake is withdrawn:
+   the storm subset is small and was selected on observed precipitation.
+3. **Scoring at the entry number.** `score_forward.py` grades MODEL_LEAN and RULE_B
+   separately, at the entry line and entry price, with CLV against the close. (The v1
+   scorer silently dropped wind-only signals.)
+4. **Frozen calibration.** The ERA5-to-game-book calibration is fit once on 1999–2023
+   and reused (`calibration.json`, `frozen: true`); the v1 all-season fit is kept as
+   `calibration_v1_all_seasons.json`.
+5. **Forecast replay timing.** Planned Pinnacle quotes are taken at each forecast
+   lead's decision time (last game hour − lead + 7 h publication latency), so no quote
+   predates the forecast it is paired with.
+6. **Evaluation window.** Week 4 boards were viewed while these fixes were made, so
+   both rules are evaluated on games from **Week 5 (Oct 8, 2026) onward**; ledger rows
+   before this amendment (blank `rules_version`) are excluded.
+7. **Multiple testing.** 108 historical betting variants were examined. A strict
+   Bonferroni bar (p < 0.00046) is not met by the long wind result (p ≈ 0.007); the
+   forward test, not the backtest, decides.
+
+Decision criteria are unchanged (CLV-based, per rule). Entry-price ROI is reported as
+a secondary measure. Rule variants under forward test: still **2**.

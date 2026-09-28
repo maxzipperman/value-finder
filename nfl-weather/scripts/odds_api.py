@@ -19,7 +19,7 @@ from nflweather.config import RAW
 ap = argparse.ArgumentParser()
 ap.add_argument("cmd", choices=["plan", "backfill", "live", "build"])
 ap.add_argument("--confirm", action="store_true")
-ap.add_argument("--max-credits", type=int, default=6000)
+ap.add_argument("--max-credits", type=int, default=9000)
 ap.add_argument("--seasons", default="2024,2025")
 ap.add_argument("--markets", default="totals")
 a = ap.parse_args()

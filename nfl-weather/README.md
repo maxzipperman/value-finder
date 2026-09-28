@@ -5,7 +5,7 @@ and Rushing Performance* (Zipperman, CMC Senior Thesis, 2014): rebuild the data
 with a reusable pipeline, replicate the thesis, test it on the 12 seasons since,
 extend it, and ask whether the betting market prices the weather.
 
-The write-up is `report/nfl_weather_report.html`; the betting rules are in `STRATEGY.md`.
+The write-up is `report/nfl_weather_report.html`, published at https://claude.ai/artifact/D3DBN6pehV5aaC2RkDZcbP (private; republish with that URL to keep the link). The betting rules are in `STRATEGY.md`.
 
 ## Setup
 
@@ -36,8 +36,8 @@ scripts/run_all.sh                          # everything above, in order
 
 ```bash
 # .env already has a random NTFY_TOPIC; add ODDS_API_KEY
-.venv/bin/python scripts/odds_api.py plan   # free: 2024-25 backfill schedule + credit estimate (~5,300)
-.venv/bin/python scripts/odds_api.py backfill --confirm --max-credits 6000
+.venv/bin/python scripts/odds_api.py plan   # free: 2024-25 backfill schedule + credit estimate (~8,300)
+.venv/bin/python scripts/odds_api.py backfill --confirm --max-credits 9000
 .venv/bin/python scripts/odds_api.py build  # cached snapshots -> data/processed/pinnacle_lines.parquet
 .venv/bin/python scripts/pinnacle_check.py  # no-hindsight 2024-25 replay: forecasts vs Pinnacle, scored on CLV
 .venv/bin/python scripts/alerts.py --test   # one Mac notification (+ iPhone push if NTFY_TOPIC is set)
@@ -45,10 +45,11 @@ scripts/install_alerts.sh                   # launchd job: alerts at 7:30, 11:30
 scripts/install_alerts.sh --remove
 ```
 
-Alerts fire once per event: a game crossing the pre-registered 55% lean, model vs
-de-vigged market disagreement of 5+ points, or a kickoff wind forecast that rose
-5+ mph (or crossed 15) while the total stayed within half a point. With a key in
-`.env`, the board and alerts use live Pinnacle totals (1 credit per run);
+Alerts follow `STRATEGY.md` (v2). Only a full Rule B signal is actionable: forecast
+wind 15+ mph 1–3 days out, a posted total, an under price of −115 or better, and
+positive expected value at that line and price. Wind triggers without a usable price,
+model leans, big model-vs-market gaps and cold-visitor spots arrive as WATCH items.
+With a key in `.env`, the board and alerts use live Pinnacle totals (1 credit per run);
 without one they fall back to nflverse lines.
 
 For iPhone pushes: install the free ntfy app, subscribe to the topic in

@@ -15,6 +15,7 @@ from .stadiums import STADIUMS, resolve_stadium
 from .weather import game_weather, parse_gamebook_weather, previous_forecasts, wind_chill
 
 FRANCHISE = {"OAK": "LV", "SD": "LAC", "STL": "LA"}
+CAL_LAST_SEASON = 2023  # frozen calibration window (see PREREGISTRATION.md amendment 2)
 
 
 def load_schedule():
@@ -92,18 +93,28 @@ def build(seasons=None, verbose=True):
     g = g.merge(gbw, on="game_id", how="left")
 
     # Calibrate ERA5 grid wind to game-book (stadium-reported) wind where both exist,
-    # then use it only to fill games with no game-book reading.
-    both = g[(g.roof == "outdoors") & g.gb_wind.notna() & g.om_wind.notna()]
-    slope, intercept = np.polyfit(both.om_wind, both.gb_wind, 1)
-    g.attrs["wind_calibration"] = (slope, intercept, np.corrcoef(both.om_wind, both.gb_wind)[0, 1], len(both))
-    tb = both[["om_temp", "gb_temp"]].dropna()
-    t_slope, t_int = np.polyfit(tb.om_temp, tb.gb_temp, 1)
+    # then use it only to fill games with no game-book reading, and to put forecasts
+    # on the game-book scale. FROZEN: fit once on seasons <= CAL_LAST_SEASON and
+    # reused on every later build, so the forward-test holdout never feeds back into
+    # preprocessing. Delete data/processed/calibration.json to refit deliberately.
+    import json
+    from datetime import date as _date
+    cal_path = PROC / "calibration.json"
+    cal = json.loads(cal_path.read_text()) if cal_path.exists() else {}
+    if not cal.get("frozen"):
+        both = g[(g.roof == "outdoors") & g.gb_wind.notna() & g.om_wind.notna() & (g.season <= CAL_LAST_SEASON)]
+        slope, intercept = np.polyfit(both.om_wind, both.gb_wind, 1)
+        tb = both[["om_temp", "gb_temp"]].dropna()
+        t_slope, t_int = np.polyfit(tb.om_temp, tb.gb_temp, 1)
+        cal = dict(wind_slope=float(slope), wind_intercept=float(intercept), temp_slope=float(t_slope),
+                   temp_intercept=float(t_int), wind_r=float(np.corrcoef(both.om_wind, both.gb_wind)[0, 1]),
+                   n=int(len(both)), fit_seasons=f"{int(both.season.min())}-{CAL_LAST_SEASON}", frozen=True,
+                   created=_date.today().isoformat())
+        cal_path.write_text(json.dumps(cal, indent=1))
+    slope, intercept, t_slope, t_int = cal["wind_slope"], cal["wind_intercept"], cal["temp_slope"], cal["temp_intercept"]
+    g.attrs["wind_calibration"] = (slope, intercept, cal["wind_r"], cal["n"])
     g["om_wind_cal"] = (intercept + slope * g.om_wind).clip(lower=0)
     g["om_temp_cal"] = t_int + t_slope * g.om_temp
-    import json
-    (PROC / "calibration.json").write_text(json.dumps(dict(
-        wind_slope=slope, wind_intercept=intercept, temp_slope=t_slope, temp_intercept=t_int,
-        wind_r=float(np.corrcoef(both.om_wind, both.gb_wind)[0, 1]), n=int(len(both)))))
 
     # Game-book wind typos (e.g. 2008 TEN@CIN listed at 70 mph; the game-book text
     # says 21 and ERA5 says 21). Replace a reading only when it disagrees with the
