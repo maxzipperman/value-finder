@@ -21,7 +21,7 @@ from scipy import stats
 
 from cfbweather.board import HT_FIRST_KICK
 from cfbweather.config import ROOT
-from cfbweather.market import american_to_profit
+from cfbweather.market import american_to_profit, cost_of_waiting
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ledger", default=str(ROOT / "data" / "forward" / "ledger.csv"))
@@ -72,3 +72,18 @@ if len(ht_done):
           f"ROI {100 * ht_done.profit.sum() / len(ht_done):+.1f}%; break-even {100 * be:.1f}%, one-sided p {p:.3f}")
     print(ht_done[["game_id", "kick_et", "away_team", "home_team", "mkt_total", "mkt_under", "ht_threshold", "total",
                    "profit"]].to_string(index=False))
+
+# ---------------------------------------------------------------- cost of waiting (issue #5)
+fills_path = path.parent / "fills.csv"
+if fills_path.exists():
+    fills = pd.read_csv(fills_path).drop_duplicates(["game_id", "rule"], keep="last")
+    fills["game_id"] = pd.to_numeric(fills.game_id)
+    for rule, e in (("rule_b", bets), ("rule_ht", ht)):
+        if not len(e):
+            continue
+        entries = e[["game_id", "mkt_total", "mkt_under"]].rename(
+            columns={"mkt_total": "entry_line", "mkt_under": "entry_price"}).assign(rule=rule)
+        wc = cost_of_waiting(entries, fills)
+        if len(wc):
+            print(f"\nCost of waiting, {rule.upper()}: {len(wc)} paper fills; vs the rule's quote the fill gained "
+                  f"{wc.pts_gained.mean():+.2f} pts and {wc.profit_gained.mean():+.3f} units of payout per unit staked")

@@ -15,6 +15,10 @@ WATCH (paper-track only; log them, don't bet them yet)
   EDGE         model vs the de-vigged price >= 5 points.
   COLD VISITOR dome or warm-climate visitor, forecast <= 32F: home side / visitor team-total under.
 
+Every bet alert ends with timing advice (market.timing_note, issue #5): unders now,
+overs and underdogs later, favorites now. Log what you actually got with
+scripts/log_fill.py so score_forward.py can measure the cost of waiting.
+
 Delivery: macOS notification, plus an iPhone push when NTFY_TOPIC is set in .env.
 State lives in data/forward/alert_state.json so nothing is sent twice.
 
@@ -34,6 +38,7 @@ import pandas as pd
 from nflweather import board, notify, oddsapi
 from nflweather.config import ROOT
 from nflweather.features import RAIN_IN, SNOW_IN
+from nflweather.market import timing_note
 
 
 ap = argparse.ArgumentParser()
@@ -87,7 +92,8 @@ for r in up.itertuples():
                 if pd.notna(r.best_under) and pd.notna(r.mkt_under) and r.best_under > r.mkt_under else "")
         fire("ruleb", f"RULE B WIND UNDER {r.mkt_total:.1f}{price}: {game}",
              f"{detail}{storm}. Expected value {100 * r.ev_under:+.1f}% at this line and price.{shop} "
-             f"Bet only this number or better; paper-log the price you actually get.", s)
+             f"Bet only this number or better; paper-log the price you actually get (scripts/log_fill.py). "
+             f"{timing_note('under')}", s)
     elif r.rule_b in ("no_price", "price_too_high", "negative_ev"):
         fire(f"ruleb_{r.rule_b}", f"WATCH wind {r.wx_wind:.0f} mph, no bet ({r.rule_b.replace('_', ' ')}): {game}",
              detail + f"{price}. Rule B needs a posted total, an under price of -115 or better, and positive EV.", s)
@@ -97,23 +103,28 @@ for r in up.itertuples():
     if (r.rule_b == "SIGNAL" and w_prev is not None and r.wx_wind - w_prev >= 5
             and t_prev is not None and abs(r.mkt_total - t_prev) < 0.5):
         fire(f"lag{round(r.wx_wind)}", f"RULE B LINE LAG {r.mkt_total:.1f}{price}: {game}",
-             f"Kickoff wind {w_prev:.0f} → {r.wx_wind:.0f} mph since the last check; total still {total}.", s)
+             f"Kickoff wind {w_prev:.0f} → {r.wx_wind:.0f} mph since the last check; total still {total}. "
+             f"{timing_note('under')}", s)
 
     # WATCH: pre-registered model lean and model-vs-market edge
     side = "UNDER" if r.lean.startswith("UNDER") else "OVER" if r.lean.startswith("OVER") else ""
     if side:
         mk = f" vs market {100 * r.p_market:.0f}%" if pd.notna(r.p_market) else ""
         fire(f"lean{side}", f"WATCH model {side.lower()}: {game}",
-             f"{detail}; model P(under) {100 * r.p_under:.0f}%{mk}. Paper only (PREREGISTRATION.md).", s)
+             f"{detail}; model P(under) {100 * r.p_under:.0f}%{mk}. Paper only (PREREGISTRATION.md). "
+             f"{timing_note(side.lower())}", s)
     elif pd.notna(r.edge) and abs(r.edge) >= args.edge:
-        fire("edge", f"WATCH edge {100 * r.edge:+.0f} pts: {game}", detail + ". Paper only.", s)
+        fire("edge", f"WATCH edge {100 * r.edge:+.0f} pts: {game}",
+             detail + ". Paper only. " + timing_note("under" if r.edge > 0 else "over"), s)
 
     # WATCH: cold-weather visitor from a dome or a warm week
     warm_vis = (r.v_dome == 1) or (pd.notna(r.v_city_temp7) and r.v_city_temp7 >= 60)
     if pd.notna(r.wx_temp) and r.wx_temp <= 32 and warm_vis and 1 <= r.lead_days <= 3:
         why = "dome team" if r.v_dome == 1 else f"home week {r.v_city_temp7:.0f}°F"
+        home = "" if pd.isna(r.spread_line) else "favorite" if r.spread_line > 0 else "underdog"  # > 0: home favored
         fire("coldvis", f"WATCH cold visitor ({why}): {game}",
-             detail + ". Home side / visitor team-total under. Paper only.", s)
+             detail + f". Home side{f' ({home})' if home else ''} / visitor team-total under. Paper only."
+             + (f" {timing_note(home)}" if home else ""), s)
 
     s["wind"] = None if pd.isna(r.wx_wind) else round(float(r.wx_wind), 1)
     s["total"] = None if pd.isna(r.mkt_total) else float(r.mkt_total)

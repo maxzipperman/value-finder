@@ -149,3 +149,34 @@ def ev_under(line, odds, market_total, resid_sorted):
     ev = p_win * profit - (1 - p_win - p_push)
     bad = pd.isna(pd.Series(np.atleast_1d(odds))).to_numpy() | pd.isna(pd.Series(np.atleast_1d(line))).to_numpy()
     return np.where(bad, np.nan, ev)
+
+
+# --------------------------------------------------------------------------- execution timing (issue #5)
+# When to place each kind of bet, from the open->close drift in strategy-research/README.md
+# ("Structure and timing"). NFL 2007-21: lines moved toward the favorite in 46.8% of games and
+# away in 34.4%; totals fell in 48.8% and rose in 38.8%. CFB totals in 15+ mph wind fell 1.4
+# points by kickoff, and CFB totals >= the season mean + 10 rose 0.95 points. Moves don't predict
+# results beyond the close, so this is advice on execution, not a signal. Identical in the
+# nfl-weather and cfb-weather copies of this file.
+TIMING = {
+    "favorite": ("now", "lines drift toward favorites before kickoff"),
+    "underdog": ("later", "lines drift toward favorites, so underdogs get more points near kickoff"),
+    "under": ("now", "totals drift down before kickoff"),
+    "over": ("later", "totals drift down before kickoff"),
+    "high_total_under": ("at the close", "CFB high totals rise about a point before kickoff"),
+}
+
+
+def timing_note(side):
+    """One line of execution advice for a bet on `side` (a TIMING key)."""
+    when, why = TIMING[side]
+    return f"Timing: bet {when}; {why}."
+
+
+def cost_of_waiting(entries, fills):
+    """Paper fills (data/forward/fills.csv: game_id, rule, line, price) joined to each rule's
+    alert-time entry (game_id, rule, entry_line, entry_price). For unders, pts_gained > 0 and
+    profit_gained > 0 mean the fill beat the alert-time quote."""
+    f = fills.merge(entries, on=["game_id", "rule"], how="inner")
+    return f.assign(pts_gained=f.line - f.entry_line,
+                    profit_gained=american_to_profit(f.price) - american_to_profit(f.entry_price))

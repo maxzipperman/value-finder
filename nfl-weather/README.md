@@ -57,6 +57,11 @@ Rule B still prices at Pinnacle. `alerts.py --dry-run` makes no Odds API call, a
 hand-run commands stop when fewer than 60 credits are left this month
 (`data/raw/oddsapi/quota.json`).
 
+Every bet alert ends with timing advice (issue #5): unders and favorites now, overs and
+underdogs later. After you bet, log what you actually got, e.g.
+`scripts/log_fill.py 2026_06_BUF_NYJ --rule rule_b --line 41.5 --price -108 --book fanduel`;
+`score_forward.py` then reports the cost of waiting against the alert-time quote.
+
 For iPhone pushes: install the free ntfy app, subscribe to the topic in
 `NTFY_TOPIC` (pick something long and random; anyone who knows it can read it),
 and allow notifications. macOS may ask once to allow notifications from Script Editor.

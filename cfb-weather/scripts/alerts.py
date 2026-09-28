@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pandas as pd
 
 from cfbweather import board, notify
+from cfbweather.market import timing_note
 from cfbweather.config import ROOT
 
 ap = argparse.ArgumentParser()
@@ -50,7 +51,8 @@ for r in up.itertuples():
             alerts.append((f"CFB HIGH TOTAL UNDER {r.mkt_total:.1f} at {r.mkt_under:+.0f} (paper): {r.away_team} @ "
                            f"{r.home_team} {r.kick_et} ET",
                            f"Total is at least {r.ht_threshold:.1f} (last season's mean + 10). Rule HT takes the "
-                           f"latest number before kickoff; paper only through 2027 (PREREGISTRATION.md)."))
+                           f"latest number before kickoff; paper only through 2027 (PREREGISTRATION.md). "
+                           f"{timing_note('high_total_under')}"))
 for r in up.itertuples():
     s = state.setdefault(str(r.game_id), {"sent": []})
     game = f"{r.away_team} @ {r.home_team} {r.kick_et} ET"
@@ -59,7 +61,8 @@ for r in up.itertuples():
         shop = (f" Best under at this number: {r.best_under:+.0f} ({r.best_under_book})."
                 if pd.notna(r.best_under) and r.best_under > r.mkt_under else "")
         body = (f"{r.wx_wind:.0f} mph, {r.wx_temp:.0f}°F forecast {r.lead_days}d out; EV {100 * r.ev_under:+.1f}% "
-                f"at this line ({r.line_src}).{shop} Bet only this number or better; log your fill.")
+                f"at this line ({r.line_src}).{shop} Bet only this number or better; log your fill "
+                f"(scripts/log_fill.py). {timing_note('under')}")
     elif r.rule_b in ("no_price", "price_too_high", "negative_ev"):
         key, title = f"watch_{r.rule_b}", f"CFB WATCH wind {r.wx_wind:.0f} mph, no bet ({r.rule_b.replace('_', ' ')}): {game}"
         body = "Rule B needs a posted total, an under price of -115 or better, and positive EV."
