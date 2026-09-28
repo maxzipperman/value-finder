@@ -1,0 +1,49 @@
+sport  season  games  kickoffs  hourly_7d_snaps  windy12_obs  windy15_obs  windy12_fc
+  NFL    2020    269       123             3700           42           26           0
+  NFL    2021    285       127             3871           61           28           0
+  NFL    2022    284       132             3875           55           24           0
+  NFL    2023    285       136             3876           35           14           1
+  NFL    2024    285       138             3873           38           16          54
+  NFL    2025    285       139             3870           35           20          55
+  NFL    2026    272       118             3209            6            0           2
+  CFB    2020    542       240             2834           62           35           0
+  CFB    2021    849       284             2810          103           43           0
+  CFB    2022    854       290             2808          132           54           0
+  CFB    2023    910       325             3540           96           33           0
+  CFB    2024    920       369             3843          106           37           0
+  CFB    2025    934       381             3851           82           35           0
+  CFB    2026    888       277             2643            0            0           0 
+
+5-min snapshots: NFL 40,017 (109 windy games), CFB 37,361 (188 windy games)
+Oct 2025 kickoff slots: NFL 30, CFB 93
+
+ id                                                                                       use                                                             arithmetic  credits  value
+ L1                                                          NFL alerts: live Pinnacle totals                                1 mkt x 1 book group x 4 runs x 31 days      124    5.0
+ L2                                                       CFB alerts: live Pinnacle+DK totals                                               1 x 1 x 4 runs x 31 days      124    5.0
+ L3                     Close capture: one live totals call per kickoff slot (Oct 2025 slots)                                    1 x (30 NFL + 93 CFB kickoff slots)      123    4.0
+ L4                         NBA forward collector (PLAN s7): 5-min h2h ticks + 1-min final 2h                  1 x (~144 ticks + 150-260) x ~27 game days (estimate)     9423    2.0
+ B1                   NFL Pinnacle totals at forecast times, 2024-25 (existing backfill_plan)                                   10 x 1 mkt x 1 group x 826 snapshots     8260    4.0
+ B2                5-min totals, 72h before windy kickoffs (NFL fc>=12, CFB obs>=12), 2024-25                       10 x 1 x 1 x (40,017 NFL + 37,361 CFB snapshots)   773780    3.0
+ B3                     Hourly multi-book featured lines, 7 days pre-kickoff, NFL+CFB 2020-25 10 x 3 mkts x 1 group (10 books) x (23,065 NFL + 19,686 CFB snapshots)  1282530    5.0
+B3a                      Lean version of B3: multi-book featured closes only, NFL+CFB 2020-25                 10 x 3 x 1 group x (795 NFL + 1,889 CFB kickoff slots)    80520    4.0
+ B4                        Exchange group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025                           10 x 3 x 1 group x (3,870 + 3,851 snapshots)   231630    3.0
+ B5                         Alternate spreads+totals, NFL 2023-25, 2 snapshots (T-24h, close)                            10 x 2 mkts x 1 group x 2 snaps x 855 games    34200    4.0
+ B6                                        Alternate spreads+totals, CFB 2023-25, 2 snapshots                                           10 x 2 x 1 x 2 x 2,764 games   110560    2.0
+ B7                                        Player props, NFL 2023-25, 4 markets x 4 snapshots                            10 x 4 mkts x 1 group x 4 snaps x 855 games   136800    3.0
+ B8           Player props, CFB 2023-25, 4 markets x 4 snapshots (upper bound; empty is free)                                           10 x 4 x 1 x 4 x 2,764 games   442240    2.0
+ B9 1H totals + team totals, windy NFL games 2023-25 + equal calm controls, every 2h over 72h              10 x 2 mkts x 1 group x 36 snaps x (108 windy + 108 calm)   155520    3.0
+B10                                                                      Same for CFB 2023-25                                          10 x 2 x 1 x 36 x (284 + 284)   408960    3.0
+B11                            Historical events lookups for event IDs (one per kickoff slot)                                1 x (413 NFL + 1,075 CFB kickoff slots)     1488    NaN
+B12                                                     NBA sample week, schedule A (PLAN.md)                                   10 x 1 mkt x 1 group x 754 snapshots     7540    3.0
+B13                          NBA 2025-26 full season, schedule D: 5-min open to tip (PLAN.md)                                          10 x 1 x 1 x 49,398 snapshots   493980    2.0
+B14                              NBA Pinnacle closes 2021-26 for the H3 Kaggle test (PLAN.md)                                          10 x 1 x 1 x ~3,955 tip times    39550    2.0
+ O1     2026 out-of-sample add-on after the seasons: B3 + B5 + B7 for 2026 (schedules so far)                      30 x 5,852 snapshots + (40 + 160) x 272 NFL games   229960    3.0 
+
+Backfill total: 4,127,038   Live per month: 9,794 (alerts + close capture 371)
+
+plan  credits  usd  usd_per_1k  alerts_fit  all_live_fit                             backfills_that_fit  credits_used  value_points_fit
+Free      500    0      0.0000        True         False                                                          371                 0
+ 20K    20000   30      1.5000        True          True                                     B11 B1 B12         17659                 7
+100K   100000   59      0.5900        True          True                              B11 B1 B5 B12 B14         91409                13
+  5M  5000000  119      0.0238        True          True B11 B3 B1 B5 B12 B7 B9 B4 B10 B2 B14 B6 B8 B13       4127409                39
+ 15M 15000000  249      0.0166        True          True B11 B3 B1 B5 B12 B7 B9 B4 B10 B2 B14 B6 B8 B13       4127409                39

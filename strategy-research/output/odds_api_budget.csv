@@ -1,0 +1,21 @@
+id,kind,use,issue,arithmetic,credits,value
+L1,live/mo,NFL alerts: live Pinnacle totals,Rule B,1 mkt x 1 book group x 4 runs x 31 days,124,5.0
+L2,live/mo,CFB alerts: live Pinnacle+DK totals,Rule B,1 x 1 x 4 runs x 31 days,124,5.0
+L3,live/mo,Close capture: one live totals call per kickoff slot (Oct 2025 slots),Rule B,1 x (30 NFL + 93 CFB kickoff slots),123,4.0
+L4,live/mo,NBA forward collector (PLAN s7): 5-min h2h ticks + 1-min final 2h,H1/H2 (#9),1 x (~144 ticks + 150-260) x ~27 game days (estimate),9423,2.0
+B1,backfill,"NFL Pinnacle totals at forecast times, 2024-25 (existing backfill_plan)","#6, Rule B",10 x 1 mkt x 1 group x 826 snapshots,8260,4.0
+B2,backfill,"5-min totals, 72h before windy kickoffs (NFL fc>=12, CFB obs>=12), 2024-25",#6 forecast timing,"10 x 1 x 1 x (40,017 NFL + 37,361 CFB snapshots)",773780,3.0
+B3,backfill,"Hourly multi-book featured lines, 7 days pre-kickoff, NFL+CFB 2020-25","#8, #5, #4","10 x 3 mkts x 1 group (10 books) x (23,065 NFL + 19,686 CFB snapshots)",1282530,5.0
+B3a,alt,"Lean version of B3: multi-book featured closes only, NFL+CFB 2020-25",#8,"10 x 3 x 1 group x (795 NFL + 1,889 CFB kickoff slots)",80520,4.0
+B4,backfill,"Exchange group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025","#8, #9","10 x 3 x 1 group x (3,870 + 3,851 snapshots)",231630,3.0
+B5,backfill,"Alternate spreads+totals, NFL 2023-25, 2 snapshots (T-24h, close)","#8 teasers, key numbers",10 x 2 mkts x 1 group x 2 snaps x 855 games,34200,4.0
+B6,backfill,"Alternate spreads+totals, CFB 2023-25, 2 snapshots",#8,"10 x 2 x 1 x 2 x 2,764 games",110560,2.0
+B7,backfill,"Player props, NFL 2023-25, 4 markets x 4 snapshots","#10, weather props",10 x 4 mkts x 1 group x 4 snaps x 855 games,136800,3.0
+B8,backfill,"Player props, CFB 2023-25, 4 markets x 4 snapshots (upper bound; empty is free)","#10, weather props","10 x 4 x 1 x 4 x 2,764 games",442240,2.0
+B9,backfill,"1H totals + team totals, windy NFL games 2023-25 + equal calm controls, every 2h over 72h",#6 derivative lag,10 x 2 mkts x 1 group x 36 snaps x (108 windy + 108 calm),155520,3.0
+B10,backfill,Same for CFB 2023-25,#6 derivative lag,10 x 2 x 1 x 36 x (284 + 284),408960,3.0
+B11,backfill,Historical events lookups for event IDs (one per kickoff slot),B5-B10,"1 x (413 NFL + 1,075 CFB kickoff slots)",1488,
+B12,backfill,"NBA sample week, schedule A (PLAN.md)",H1/H2,10 x 1 mkt x 1 group x 754 snapshots,7540,3.0
+B13,backfill,"NBA 2025-26 full season, schedule D: 5-min open to tip (PLAN.md)",H1/H2,"10 x 1 x 1 x 49,398 snapshots",493980,2.0
+B14,backfill,NBA Pinnacle closes 2021-26 for the H3 Kaggle test (PLAN.md),H3,"10 x 1 x 1 x ~3,955 tip times",39550,2.0
+O1,later,2026 out-of-sample add-on after the seasons: B3 + B5 + B7 for 2026 (schedules so far),all,"30 x 5,852 snapshots + (40 + 160) x 272 NFL games",229960,3.0

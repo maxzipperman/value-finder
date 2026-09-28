@@ -1,0 +1,6 @@
+plan,credits,usd,usd_per_1k,alerts_fit,all_live_fit,backfills_that_fit,credits_used,value_points_fit
+Free,500,0,0.0,True,False,,371,0
+20K,20000,30,1.5,True,True,B11 B1 B12,17659,7
+100K,100000,59,0.59,True,True,B11 B1 B5 B12 B14,91409,13
+5M,5000000,119,0.0238,True,True,B11 B3 B1 B5 B12 B7 B9 B4 B10 B2 B14 B6 B8 B13,4127409,39
+15M,15000000,249,0.0166,True,True,B11 B3 B1 B5 B12 B7 B9 B4 B10 B2 B14 B6 B8 B13,4127409,39

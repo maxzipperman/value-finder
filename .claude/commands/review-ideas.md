@@ -59,7 +59,8 @@ Paper-only sports-betting research. Each thesis becomes a pre-registered forward
 
 **`strategy-research/`**
 - `screen.py` screens candidate theses on data already in the repo.
-- `output/*.csv` holds the results: screens, key numbers, line moves, the Kalshi ladder, calibration slopes.
+- `odds-api-credits.md`: which Odds API plan to buy and when, the credit cost and research value of every use, and the cost rules. `odds_budget.py` recomputes its numbers (no API calls).
+- `output/*.csv` holds the results: screens, key numbers, line moves, the Kalshi ladder, calibration slopes, and the Odds API budget (`odds_api_*.csv`).
 
 **On the owner's Mac only (gitignored; missing in a cloud checkout)**
 - `*/data/raw/`: 2 GB of play-by-play, weather, odds and Kalshi caches.
@@ -81,6 +82,15 @@ Only report problems you can verify. For each one, give the file and line, the e
 4. **Duplication and drift.** Diff the shared weather copies (`features`, `market`, `models`, `notify`). Count the Odds API clients and de-vig implementations across projects. Find constants duplicated across projects (the H4a rain threshold drifted once already).
 5. **Money-critical math is tested.** American-odds conversion, de-vig (proportional and Shin), EV at a price, break-evens (−110, −115, Kalshi at 50¢ plus fee), teaser break-evens, CLV sign conventions.
 6. **Operational risks.** Ledgers that exist only on one laptop, alert jobs that fail silently, empty API keys, an alert with no price, and what breaks in a cloud session.
+
+## Odds API plan check
+
+`strategy-research/odds-api-credits.md` holds the recommended Odds API plan and the credit cost of every use. Re-check it on every review:
+
+1. **Numbers.** Rerun `nfl-weather/.venv/bin/python strategy-research/odds_budget.py --no-save` from the repo root (free, no API calls, writes nothing) and compare it with the file's use-case table. Flag any use whose credits moved by more than 10%, and any Odds API call site (grep `api.the-odds-api.com`, `oddsapi`) that isn't in the table.
+2. **Plan vs calendar.** Compare the month-by-month plan with `STATUS.md` ("Waiting on you") and today's date. Flag a big month that is due, a paid month that lapsed with pulls still undone, and a live tier too small for the alerts plus any running collector.
+3. **Data worth buying.** For any backlog issue or new idea that needs Odds API data not in the table, give its credits (using the file's cost rules), a 1–5 research value grounded in `strategy-research/README.md`, and the plan and month it fits. Also flag data the file plans to buy that the latest results make worthless.
+4. **Facts.** Where you can, check that plan prices, cost rules and history start dates in the file are still current. List what you couldn't verify.
 
 ## Ideas
 
@@ -110,7 +120,8 @@ Write one report to `reviews/<YYYY-MM-DD>-review.md` with these sections:
 2. Verified problems, most severe first.
 3. Consolidation plan.
 4. Ranked ideas.
-5. Proposed GitHub issues: a title, labels and a two-line body for each. Don't create them.
-6. Anything you couldn't check, and why.
+5. Odds API plan: is the plan in `strategy-research/odds-api-credits.md` still right, and what data is worth buying next?
+6. Proposed GitHub issues: a title, labels and a two-line body for each. Don't create them.
+7. Anything you couldn't check, and why.
 
 Keep it under about 400 lines. If subagents are available, review the three projects in parallel and then merge the results. Report back in chat with the verdict and the top five items.
