@@ -44,21 +44,36 @@ def rule_b_status(r):
     return "SIGNAL"
 
 
+def best_under(totals: pd.DataFrame, rule_book="pinnacle") -> pd.DataFrame:
+    """Per event, the best under price any logged book offers at the rule book's total, and
+    which book. Logging only (line shopping); Rule B still prices at the rule book."""
+    rule = totals[totals.book == rule_book][["event_id", "total"]]
+    same = totals.dropna(subset=["total", "under_price"]).merge(rule, on=["event_id", "total"])
+    best = same.sort_values("under_price", ascending=False).drop_duplicates("event_id")
+    return best[["event_id", "under_price", "book"]].rename(columns={"under_price": "best_under",
+                                                                    "book": "best_under_book"})
+
+
 def _pinnacle_live():
     from . import oddsapi
     try:
         df = oddsapi.live(markets=("totals",))
-    except SystemExit as e:  # no key / plan problem: board still works on nflverse lines
+    except SystemExit as e:  # no key, out of credits, API down: board still works on nflverse lines
         print(f"  Pinnacle unavailable: {e}")
         return None
+    if df.empty:
+        return None
     df = df[df.market == "totals"].copy()
-    df["gameday"] = pd.to_datetime(df.commence_utc, utc=True).dt.tz_convert("America/New_York").dt.strftime("%Y-%m-%d")
-    return df.rename(columns={"home": "home_team", "away": "away_team", "total": "pin_total",
-                              "over_price": "pin_over", "under_price": "pin_under"})[
-        ["home_team", "away_team", "gameday", "pin_total", "pin_over", "pin_under", "snapshot_utc"]]
+    pin = df[df.book == oddsapi.RULE_BOOK].merge(best_under(df, oddsapi.RULE_BOOK), on="event_id", how="left")
+    pin["gameday"] = pd.to_datetime(pin.commence_utc, utc=True).dt.tz_convert("America/New_York").dt.strftime("%Y-%m-%d")
+    return pin.rename(columns={"home": "home_team", "away": "away_team", "total": "pin_total",
+                               "over_price": "pin_over", "under_price": "pin_under"})[
+        ["home_team", "away_team", "gameday", "pin_total", "pin_over", "pin_under", "best_under", "best_under_book",
+         "snapshot_utc"]]
 
 
 def compute(days=8, refresh=True, pinnacle=False):
+    """`pinnacle`: price at live Pinnacle (1 Odds API credit; quota.py may skip it when credits are low)."""
     if refresh:
         fetch.fetch_schedule()
     games = load_schedule()
@@ -95,10 +110,13 @@ def compute(days=8, refresh=True, pinnacle=False):
     # market: Pinnacle when available, else the nflverse line and prices
     up["line_src"] = "nflverse"
     up["mkt_total"], up["mkt_under"], up["mkt_over"] = up.total_line, up.under_odds, up.over_odds
+    up["best_under"], up["best_under_book"] = np.nan, ""
     if pinnacle:
         pin = _pinnacle_live()
         if pin is not None and len(pin):
-            up = up.merge(pin, on=["home_team", "away_team", "gameday"], how="left")
+            up = up.drop(columns=["best_under", "best_under_book"]).merge(
+                pin, on=["home_team", "away_team", "gameday"], how="left")
+            up["best_under_book"] = up.best_under_book.fillna("")
             has = up.pin_total.notna()
             up.loc[has, ["mkt_total", "mkt_under", "mkt_over"]] = up.loc[has, ["pin_total", "pin_under", "pin_over"]].values
             up.loc[has, "line_src"] = "pinnacle"
@@ -152,7 +170,7 @@ def save(up):
     path.parent.mkdir(parents=True, exist_ok=True)
     snap = up[["game_id", "gameday", "gametime", "away_team", "home_team", "lead_days", "wx_src", "wx_wind", "wx_temp",
                "wx_precip", "wx_snow", "line_src", "mkt_total", "mkt_under", "mkt_over", "p_under", "p_market", "lean",
-               "ev_under", "rule_b"]].copy()
+               "ev_under", "rule_b", "best_under", "best_under_book"]].copy()
     snap = snap.rename(columns={"mkt_total": "total_line", "mkt_under": "under_odds", "mkt_over": "over_odds"})
     snap.insert(0, "snapshot_utc", pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"))
     snap.insert(1, "rules_version", RULES_VERSION)

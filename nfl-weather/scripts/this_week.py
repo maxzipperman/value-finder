@@ -2,7 +2,8 @@
 output/this_week.csv and appended to the forward-test ledger.
 
     python scripts/this_week.py              # next 8 days, nflverse lines
-    python scripts/this_week.py --pinnacle   # use live Pinnacle totals (1 Odds API credit)
+    python scripts/this_week.py --pinnacle   # use live Pinnacle totals (1 Odds API credit; skipped when
+                                             # fewer than quota.MANUAL_FLOOR credits are left this month)
 
 Anything more than ~2 days out is provisional: wind is the least reliable part
 of a forecast, and the historical edge is modest.

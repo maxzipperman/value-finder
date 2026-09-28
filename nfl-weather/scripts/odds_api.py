@@ -1,8 +1,8 @@
 """Pinnacle lines from The Odds API.
 
     python scripts/odds_api.py plan                          # free: snapshot schedule + credit estimate
-    python scripts/odds_api.py backfill --confirm --max-credits 6000
-    python scripts/odds_api.py live                          # current lines (2 credits)
+    python scripts/odds_api.py backfill --confirm --max-credits 9000
+    python scripts/odds_api.py live                          # current lines, 10 books (2 credits)
     python scripts/odds_api.py build                         # cached snapshots -> data/processed/pinnacle_lines.parquet
 """
 import argparse
@@ -32,7 +32,8 @@ if a.cmd in ("plan", "backfill"):
 elif a.cmd == "live":
     b = oddsapi.Budget(10)
     df = oddsapi.live(budget=b)
-    print(df[df.market == "totals"][["commence_utc", "away", "home", "total", "over_price", "under_price"]].to_string(index=False))
+    df = df[(df.market == "totals") & (df.book == oddsapi.RULE_BOOK)]
+    print(df[["commence_utc", "away", "home", "total", "over_price", "under_price"]].to_string(index=False))
     print(f"credits used {b.used}, remaining {b.remaining}")
 else:
     L = oddsapi.lines_table(games)

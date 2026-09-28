@@ -1,0 +1,43 @@
+NFL dress rehearsal: 2025 Weeks 5-18 through this season's Rule B code and scorer
+  208 games; 416 ledger rows (2 per game); snapshot statuses: {'no_trigger': 250, 'not_outdoor': 140, 'SIGNAL': 23, 'price_too_high': 3}
+  games with a wind trigger: 19; signalled: 17; blocked at every snapshot: {'price_too_high': 2}
+
+Per week (2025 week numbers):
+week                    5   6   7   8   9   10  11  12  13  14  15  16  17  18
+games                   14  15  15  13  14  14  15  14  16  14  16  16  16  16
+rule_b_signals           0   3   3   0   0   1   5   0   3   0   0   2   0   0
+blocked_by_price_or_ev   0   0   0   0   0   0   0   0   0   0   0   1   0   1
+
+Scorer output (entry = close here, so CLV is 0 by construction):
+
+MODEL_LEAN: 0 signals, 0 settled
+
+RULE_B (wind under): 17 signals, 17 settled
+  record at entry line 11-6-0   units +3.96 (ROI +23.3%; 0 graded at an assumed -110)
+  mean CLV +0.00 pts  (95% CI +0.00 to +0.00)
+        game_id  side  total_line  close_total  total  clv_pts    profit
+2025_06_DEN_NYJ UNDER        43.5         43.5   24.0      0.0  0.892857
+ 2025_06_LA_BAL UNDER        43.5         43.5   20.0      0.0  0.925926
+2025_06_DAL_CAR UNDER        47.5         47.5   57.0      0.0 -1.000000
+ 2025_07_NO_CHI UNDER        43.5         43.5   40.0      0.0  0.909091
+2025_07_MIA_CLE UNDER        34.5         34.5   37.0      0.0 -1.000000
+2025_07_CAR_NYJ UNDER        39.5         39.5   19.0      0.0  0.980392
+2025_10_NYG_CHI UNDER        45.5         45.5   44.0      0.0  0.892857
+ 2025_11_GB_NYG UNDER        41.5         41.5   47.0      0.0 -1.000000
+ 2025_11_TB_BUF UNDER        46.5         46.5   76.0      0.0 -1.000000
+2025_11_BAL_CLE UNDER        37.5         37.5   39.0      0.0 -1.000000
+2025_11_CIN_PIT UNDER        48.5         48.5   46.0      0.0  0.909091
+2025_11_DET_PHI UNDER        46.5         46.5   25.0      0.0  0.925926
+2025_13_CHI_PHI UNDER        43.5         43.5   39.0      0.0  0.869565
+ 2025_13_SF_CLE UNDER        35.5         35.5   34.0      0.0  0.892857
+2025_13_BUF_PIT UNDER        44.5         44.5   33.0      0.0  0.892857
+ 2025_16_LA_SEA UNDER        42.5         42.5   75.0      0.0 -1.000000
+2025_16_MIN_NYG UNDER        41.5         41.5   29.0      0.0  0.869565
+
+Wind triggers by final status (a game counts once, at its best status):
+rule_b
+SIGNAL            17
+price_too_high     2
+
+Variants under forward test: 2 (MODEL_LEAN, RULE_B).
+
