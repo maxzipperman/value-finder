@@ -25,7 +25,7 @@ scripts/install_alerts.sh                  # launchd: 7:30, 11:30, 15:30, 19:30 
 | cfbfastR-data (mirrors CollegeFootballData) | schedules with UTC kickoffs, venues with coordinates/dome flag, betting lines 2006–2025 (consensus close = median across books; opening lines where present) |
 | Meteostat bulk hourly | nearest airport station to each venue (median 9.6 km); wind, temperature, precipitation at kickoff |
 | Open-Meteo | forecasts for upcoming games; an ERA5 sample for the frozen calibration |
-| The Odds API / ESPN | live totals and prices (Odds API when `ODDS_API_KEY` is set; ESPN refuses scripted clients at times) |
+| The Odds API / ESPN | live totals and prices (Odds API when `ODDS_API_KEY` is set: Pinnacle, else DraftKings, with 8 more books logged for line shopping at no extra cost; responses cached in `data/raw/oddsapi/live/`. ESPN refuses scripted clients at times) |
 
 Shared code copied from nfl-weather (`market.py`, `features.py`, `models.py`,
 `notify.py`) is marked in each file; keep them in sync until they move to a

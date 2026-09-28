@@ -19,7 +19,7 @@ Delivery: macOS notification, plus an iPhone push when NTFY_TOPIC is set in .env
 State lives in data/forward/alert_state.json so nothing is sent twice.
 
     python scripts/alerts.py              # normal run
-    python scripts/alerts.py --dry-run    # print what would be sent
+    python scripts/alerts.py --dry-run    # print what would be sent (nflverse lines; no Odds API credit)
     python scripts/alerts.py --test       # send one test notification
 """
 import argparse
@@ -51,7 +51,7 @@ if args.test:
 STATE = ROOT / "data" / "forward" / "alert_state.json"
 STATE.parent.mkdir(parents=True, exist_ok=True)
 state = json.loads(STATE.read_text()) if STATE.exists() else {}
-up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key())
+up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run)
 now = pd.Timestamp.now(tz="UTC")
 if up.empty:
     print(f"{now:%Y-%m-%d %H:%M}Z no games in the next {args.days} days")
@@ -83,8 +83,10 @@ for r in up.itertuples():
     price = "" if pd.isna(r.mkt_under) else f" at {r.mkt_under:+.0f}"
     if r.rule_b == "SIGNAL":
         storm = " (rain/snow also forecast)" if wet else ""
+        shop = (f" Best under at this number: {r.best_under:+.0f} ({r.best_under_book})."
+                if pd.notna(r.best_under) and pd.notna(r.mkt_under) and r.best_under > r.mkt_under else "")
         fire("ruleb", f"RULE B WIND UNDER {r.mkt_total:.1f}{price}: {game}",
-             f"{detail}{storm}. Expected value {100 * r.ev_under:+.1f}% at this line and price. "
+             f"{detail}{storm}. Expected value {100 * r.ev_under:+.1f}% at this line and price.{shop} "
              f"Bet only this number or better; paper-log the price you actually get.", s)
     elif r.rule_b in ("no_price", "price_too_high", "negative_ev"):
         fire(f"ruleb_{r.rule_b}", f"WATCH wind {r.wx_wind:.0f} mph, no bet ({r.rule_b.replace('_', ' ')}): {game}",

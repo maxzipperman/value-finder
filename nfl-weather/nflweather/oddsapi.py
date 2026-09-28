@@ -9,8 +9,14 @@ Same rules as sharp-markets:
   book's last_update.
 
 Costs (per The Odds API docs): a live call costs markets x regions credits; a
-historical call costs 10x that. Limiting to bookmakers=pinnacle counts as one
-region.
+historical call costs 10x that. A bookmakers= list of up to 10 books counts as one
+region, so live calls log LIVE_BOOKS for the price of Pinnacle alone. The rule's
+price is still Pinnacle's; the other books are logged for line shopping.
+
+Credits: every response's x-requests-remaining is kept in data/raw/oddsapi/quota.json.
+A call is refused (OddsAPIUnavailable, which the board treats like "no key") when the
+month's remaining credits are at or below its floor: 0 for the scheduled alerts,
+MANUAL_FLOOR for hand-run commands, so manual use can't starve the alerts.
 """
 from __future__ import annotations
 
@@ -22,12 +28,20 @@ from pathlib import Path
 
 import pandas as pd
 
+import requests
+
 from .config import PROC, RAW, ROOT
 from .fetch import session
 
 BASE = "https://api.the-odds-api.com/v4"
 SPORT = "americanfootball_nfl"
 CACHE = RAW / "oddsapi"
+QUOTA = CACHE / "quota.json"
+MANUAL_FLOOR = 60
+# <= 10 books = 1 region = 1 credit per market. All on the free plan (williamhill_us and fanatics are paid-only).
+LIVE_BOOKS = ("pinnacle", "lowvig", "betonlineag", "draftkings", "fanduel", "betmgm", "betrivers", "bovada",
+              "espnbet", "hardrockbet")
+RULE_BOOK = "pinnacle"
 
 TEAM = {
     "Arizona Cardinals": "ARI", "Atlanta Falcons": "ATL", "Baltimore Ravens": "BAL", "Buffalo Bills": "BUF",
@@ -54,6 +68,11 @@ def api_key():
     return key
 
 
+class OddsAPIUnavailable(SystemExit):
+    """The Odds API can't be used right now (no key, bad key, out of credits, network or
+    server error). A SystemExit so callers that already catch "no key" fall back the same way."""
+
+
 def has_key():
     try:
         api_key()
@@ -78,23 +97,58 @@ class Budget:
         return self.used + cost <= self.max
 
 
-def _get(path, params):
-    r = session.get(f"{BASE}{path}", params={**params, "apiKey": api_key()}, timeout=60)
+def _month():
+    return pd.Timestamp.now(tz="UTC").strftime("%Y-%m")
+
+
+def quota_left():
+    """Credits left as of the last call this calendar month (UTC), or None if unknown.
+    Credits reset on the 1st, so last month's figure doesn't count."""
+    if not QUOTA.exists():
+        return None
+    q = json.loads(QUOTA.read_text())
+    return q.get("remaining") if q.get("month") == _month() else None
+
+
+def _record_quota(r):
+    h = r.headers
+    if h.get("x-requests-remaining") is None:
+        return
+    QUOTA.parent.mkdir(parents=True, exist_ok=True)
+    num = lambda v: None if v is None else int(float(v))  # noqa: E731
+    QUOTA.write_text(json.dumps(dict(utc=pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"), month=_month(),
+                                     remaining=num(h.get("x-requests-remaining")), used=num(h.get("x-requests-used")),
+                                     last=num(h.get("x-requests-last")))))
+
+
+def _get(path, params, floor=0):
+    left = quota_left()
+    if left is not None and left <= floor:
+        raise OddsAPIUnavailable(f"credit floor: {left} Odds API credits left this month (floor {floor})")
+    try:
+        r = session.get(f"{BASE}{path}", params={**params, "apiKey": api_key()}, timeout=60)
+    except requests.RequestException as e:
+        raise OddsAPIUnavailable(f"The Odds API is unreachable ({type(e).__name__})") from e
+    _record_quota(r)
     if r.status_code == 401:
-        raise SystemExit("The Odds API rejected the key (401)")
+        raise OddsAPIUnavailable("The Odds API rejected the key, or the plan is out of credits (401)")
     if r.status_code == 422 and "historical" in path:
-        raise SystemExit("Historical odds need a paid Odds API plan (422)")
-    r.raise_for_status()
+        raise OddsAPIUnavailable("Historical odds need a paid Odds API plan (422)")
+    if r.status_code == 429:
+        raise OddsAPIUnavailable("The Odds API refused the call: out of credits or rate-limited (429)")
+    if r.status_code != 200:
+        raise OddsAPIUnavailable(f"The Odds API returned {r.status_code}")
     return r
 
 
-def live(markets=("totals", "spreads"), budget: Budget | None = None):
-    """Current Pinnacle lines for every upcoming NFL game. Costs len(markets) credits."""
+def live(markets=("totals", "spreads"), budget: Budget | None = None, floor=0):
+    """Current lines at LIVE_BOOKS (Pinnacle first) for every upcoming NFL game. Costs len(markets)
+    credits. `floor`: refuse when this month's remaining credits are at or below it."""
     ts = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H%MZ")
     dest = CACHE / "live" / f"{ts}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    r = _get(f"/sports/{SPORT}/odds", dict(bookmakers="pinnacle", markets=",".join(markets), oddsFormat="american",
-                                            dateFormat="iso"))
+    r = _get(f"/sports/{SPORT}/odds", dict(bookmakers=",".join(LIVE_BOOKS), markets=",".join(markets),
+                                            oddsFormat="american", dateFormat="iso"), floor=floor)
     if budget:
         budget.charge(r)
     dest.write_text(json.dumps({"snapshot_utc": ts, "data": r.json()}))
@@ -102,6 +156,8 @@ def live(markets=("totals", "spreads"), budget: Budget | None = None):
 
 
 def historical(ts: pd.Timestamp, markets=("totals",), budget: Budget | None = None):
+    """The snapshot at or before `ts`. It is labelled with the API's own `timestamp` (when the
+    quotes were captured, up to 5 minutes earlier), not the requested time."""
     stamp = ts.strftime("%Y-%m-%dT%H:%M:%SZ")
     dest = CACHE / "historical" / f"{ts.strftime('%Y-%m-%dT%H%MZ')}_{'-'.join(markets)}.json"
     if dest.exists():
@@ -112,13 +168,14 @@ def historical(ts: pd.Timestamp, markets=("totals",), budget: Budget | None = No
     if budget:
         budget.charge(r)
     js = r.json()
-    js["snapshot_utc"] = stamp
+    js["requested_utc"] = stamp
+    js["snapshot_utc"] = js.get("timestamp") or stamp
     dest.write_text(json.dumps(js))
     return js
 
 
 def parse(payload) -> pd.DataFrame:
-    snap = payload.get("snapshot_utc") or payload.get("timestamp")
+    snap = payload.get("timestamp") or payload.get("snapshot_utc")   # historical: the API's capture time
     rows = []
     for ev in payload.get("data", []):
         home, away = TEAM.get(ev["home_team"]), TEAM.get(ev["away_team"])
@@ -168,7 +225,7 @@ def backfill_plan(games: pd.DataFrame, seasons=(2024, 2025), close_min=30):
     return sorted(stamps)
 
 
-def backfill(games, seasons=(2024, 2025), markets=("totals",), confirm=False, max_credits=6000):
+def backfill(games, seasons=(2024, 2025), markets=("totals",), confirm=False, max_credits=9000):
     plan = backfill_plan(games, seasons)
     per_call = 10 * len(markets)
     todo = [t for t in plan if not (CACHE / "historical" / f"{t.strftime('%Y-%m-%dT%H%MZ')}_{'-'.join(markets)}.json").exists()]
@@ -197,7 +254,7 @@ def lines_table(games: pd.DataFrame) -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     L = pd.concat(frames, ignore_index=True)
-    L = L[L.market == "totals"].dropna(subset=["total"])
+    L = L[(L.market == "totals") & (L.book == RULE_BOOK)].dropna(subset=["total"])
     L["commence_utc"] = pd.to_datetime(L.commence_utc, utc=True)
     L["snapshot_utc"] = pd.to_datetime(L.snapshot_utc, utc=True, format="mixed")
     g = games[["game_id", "home_team", "away_team", "gameday"]].copy()

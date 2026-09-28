@@ -39,7 +39,8 @@ def rule_b_status(r):
     return "SIGNAL"
 
 
-def compute(days=8, refresh=True):
+def compute(days=8, refresh=True, odds=True):
+    """`odds`: price at The Odds API when a key is set (1 credit); False (dry runs) uses ESPN only."""
     if refresh:
         fetch.fetch_cfbfastr([fetch.current_season()])
     s = schedules()
@@ -74,13 +75,16 @@ def compute(days=8, refresh=True):
     d = RAW / "cfbfastr"
     ti = pd.read_parquet(sorted(d.glob("team_info_*.parquet"))[-1])
     names = {f"{a} {b}": a for a, b in zip(ti.school, ti.mascot)}
-    oa = fetch.odds_api_totals(names).dropna(subset=["home_team", "away_team"])
+    oa = fetch.odds_api_totals(names) if odds else pd.DataFrame()
+    oa = oa.dropna(subset=["home_team", "away_team"]) if len(oa) else oa
     if len(oa):
         oa["day"] = pd.to_datetime(oa.commence_utc, utc=True).dt.strftime("%Y-%m-%d")
         up["day"] = up.start_utc.dt.strftime("%Y-%m-%d")
         up = up.merge(oa.drop(columns="commence_utc"), on=["home_team", "away_team", "day"], how="left")
     else:
         up = up.merge(fetch.espn_week_odds(days), on="game_id", how="left")
+    for c, v in (("best_under", np.nan), ("best_under_book", "")):
+        up[c] = up[c].fillna(v) if c in up else v
     hist = load_games(2006, PRICING_LAST_SEASON)
     resid = cohort_residuals(hist, (hist.outdoor == 1) & (hist.wx_wind >= RULE_B_WIND))
     up["ev_under"] = ev_under(up.mkt_total, up.mkt_under, up.mkt_total, resid)
@@ -90,7 +94,8 @@ def compute(days=8, refresh=True):
 
 
 COLS = ["game_id", "kick_et", "away_team", "home_team", "venue", "lead_days", "wx_src", "wx_wind", "wx_temp",
-        "wx_precip", "line_src", "mkt_total", "mkt_under", "mkt_over", "ev_under", "rule_b"]
+        "wx_precip", "line_src", "mkt_total", "mkt_under", "mkt_over", "ev_under", "rule_b", "best_under",
+        "best_under_book"]
 
 
 def save(up):
@@ -100,4 +105,10 @@ def save(up):
     snap = up[COLS + ["start_utc"]].copy()
     snap.insert(0, "snapshot_utc", pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"))
     snap.insert(1, "rules_version", RULES_VERSION)
+    if path.exists():  # a ledger written before new columns were added: rewrite once with the union
+        old = pd.read_csv(path)
+        if list(old.columns) != list(snap.columns):
+            cols = list(snap.columns) + [c for c in old.columns if c not in snap.columns]
+            pd.concat([old, snap], ignore_index=True).reindex(columns=cols).to_csv(path, index=False)
+            return
     snap.to_csv(path, mode="a", header=not path.exists(), index=False)

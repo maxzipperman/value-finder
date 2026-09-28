@@ -181,34 +181,88 @@ def espn_week_odds(days_ahead=8):
 
 
 ODDS_API = "https://api.the-odds-api.com/v4/sports/americanfootball_ncaaf/odds"
+ODDS_CACHE = RAW / "oddsapi"
+QUOTA = ODDS_CACHE / "quota.json"
+# <= 10 books = 1 region = 1 credit. All on the free plan. Rule B prices at RULE_BOOKS (first listed wins);
+# the rest are logged for line shopping.
+LIVE_BOOKS = ("pinnacle", "draftkings", "lowvig", "betonlineag", "fanduel", "betmgm", "betrivers", "bovada",
+              "espnbet", "hardrockbet")
+RULE_BOOKS = ("pinnacle", "draftkings")
 
 
-def odds_api_totals(team_names: dict):
-    """Live CFB totals from The Odds API (1 credit per call): Pinnacle when it lists the
-    game, else DraftKings. `team_names` maps "School Mascot" -> cfbfastR school name.
-    Returns an empty frame when no ODDS_API_KEY is configured."""
+def quota_left():
+    """Odds API credits left as of the last call this calendar month (UTC), or None if unknown."""
+    if not QUOTA.exists():
+        return None
+    q = json.loads(QUOTA.read_text())
+    return q.get("remaining") if q.get("month") == pd.Timestamp.now(tz="UTC").strftime("%Y-%m") else None
+
+
+def _record_quota(r):
+    h = r.headers
+    if h.get("x-requests-remaining") is None:
+        return
+    now = pd.Timestamp.now(tz="UTC")
+    num = lambda v: None if v is None else int(float(v))  # noqa: E731
+    QUOTA.parent.mkdir(parents=True, exist_ok=True)
+    QUOTA.write_text(json.dumps(dict(utc=now.strftime("%Y-%m-%dT%H:%M:%SZ"), month=now.strftime("%Y-%m"),
+                                     remaining=num(h.get("x-requests-remaining")), used=num(h.get("x-requests-used")),
+                                     last=num(h.get("x-requests-last")))))
+
+
+def odds_api_totals(team_names: dict, floor=0):
+    """Live CFB totals from The Odds API (1 credit per call) at LIVE_BOOKS. Rule B's price is
+    Pinnacle when it lists the game, else DraftKings; `best_under` is the best under price any
+    logged book offers at that same total. `team_names` maps "School Mascot" -> cfbfastR school.
+    Every response is written to data/raw/oddsapi/live/ before it is parsed. Returns an empty
+    frame when no key is set, the month's credits are at or below `floor`, or the call fails."""
     from .notify import _env
     key = _env("ODDS_API_KEY")
-    cols = ["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over", "line_src", "quote_utc"]
+    cols = ["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over", "line_src", "quote_utc",
+            "best_under", "best_under_book"]
+    empty = pd.DataFrame(columns=cols)
     if not key:
-        return pd.DataFrame(columns=cols)
-    r = session.get(ODDS_API, params=dict(apiKey=key, bookmakers="pinnacle,draftkings", markets="totals",
-                                          oddsFormat="american", dateFormat="iso"), timeout=60)
+        return empty
+    left = quota_left()
+    if left is not None and left <= floor:
+        print(f"  Odds API skipped: {left} credits left this month (floor {floor})", flush=True)
+        return empty
+    try:
+        r = session.get(ODDS_API, params=dict(apiKey=key, bookmakers=",".join(LIVE_BOOKS), markets="totals",
+                                              oddsFormat="american", dateFormat="iso"), timeout=60)
+    except requests.RequestException as e:
+        print(f"  Odds API unreachable ({type(e).__name__})", flush=True)
+        return empty
+    _record_quota(r)
     if r.status_code != 200:
         print(f"  Odds API unavailable ({r.status_code})", flush=True)
-        return pd.DataFrame(columns=cols)
-    rows, stamp = [], pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
-    for ev in r.json():
-        books = {b["key"]: b for b in ev.get("bookmakers", [])}
-        b = books.get("pinnacle") or books.get("draftkings")
-        if not b:
+        return empty
+    stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+    dest = ODDS_CACHE / "live" / f"{stamp.replace(':', '')}.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps({"snapshot_utc": stamp, "data": r.json()}))
+    return parse_odds_api(r.json(), team_names, stamp)[cols]
+
+
+def parse_odds_api(events, team_names, stamp):
+    rows = []
+    for ev in events:
+        quotes = {}
+        for b in ev.get("bookmakers", []):
+            mk = next((m for m in b.get("markets", []) if m["key"] == "totals"), None)
+            if mk:
+                quotes[b["key"]] = {x["name"].lower(): x for x in mk["outcomes"]}
+        rule = next((k for k in RULE_BOOKS if k in quotes), None)
+        if not rule:
             continue
-        mk = next((m for m in b["markets"] if m["key"] == "totals"), None)
-        if not mk:
-            continue
-        o = {x["name"].lower(): x for x in mk["outcomes"]}
+        o = quotes[rule]
+        total = o.get("under", {}).get("point")
+        same = [(q["under"]["price"], k) for k, q in quotes.items()
+                if q.get("under", {}).get("point") == total and q.get("under", {}).get("price") is not None]
+        best = max(same) if same else (np.nan, "")
         rows.append(dict(home_team=team_names.get(ev["home_team"]), away_team=team_names.get(ev["away_team"]),
-                         commence_utc=ev["commence_time"], mkt_total=o.get("under", {}).get("point"),
-                         mkt_under=o.get("under", {}).get("price"), mkt_over=o.get("over", {}).get("price"),
-                         line_src=b["key"], quote_utc=stamp))
-    return pd.DataFrame(rows, columns=cols)
+                         commence_utc=ev["commence_time"], mkt_total=total, mkt_under=o.get("under", {}).get("price"),
+                         mkt_over=o.get("over", {}).get("price"), line_src=rule, quote_utc=stamp,
+                         best_under=best[0], best_under_book=best[1]))
+    return pd.DataFrame(rows, columns=["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over",
+                                       "line_src", "quote_utc", "best_under", "best_under_book"])
