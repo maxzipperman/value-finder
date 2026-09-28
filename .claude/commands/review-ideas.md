@@ -58,7 +58,8 @@ Paper-only sports-betting research. Each thesis becomes a pre-registered forward
 - `tests/`: `test_no_order_code.py` enforces paper-only.
 
 **`strategy-research/`**
-- `screen.py` screens candidate theses on data already in the repo.
+- `screen.py` screens candidate theses on data already in the repo (109 variants).
+- `prechecks.py` runs free pre-checks for backlog issues (#17 longshot bias, #6 crosswind and halftime split, #4 by spread size). It adds 20 variants, for a running total of 129.
 - `odds-api-credits.md`: which Odds API plan to buy and when, the credit cost and research value of every use, and the cost rules. `odds_budget.py` recomputes its numbers (no API calls).
 - `output/*.csv` holds the results: screens, key numbers, line moves, the Kalshi ladder, calibration slopes, and the Odds API budget (`odds_api_*.csv`).
 
