@@ -1,6 +1,7 @@
 .env
 .venv/
-data/
+data/*
+!data/processed/
 output/this_week.csv
 __pycache__/
 *.pyc

@@ -12,9 +12,12 @@ __pycache__/
 .DS_Store
 .claude/settings.local.json
 
-# downloaded / generated data (scripts re-create it)
-data/
+# downloaded / generated data (scripts re-create it), except the small
+# processed datasets, which are committed so cloud sessions can run analyses
+**/data/*
+!**/data/processed/
 *.parquet
+!**/data/processed/*.parquet
 *.duckdb
 
 # third-party reference clone
