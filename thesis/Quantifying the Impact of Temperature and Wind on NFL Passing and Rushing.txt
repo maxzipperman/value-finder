@@ -1,0 +1,1414 @@
+Claremont Colleges
+Scholarship @ Claremont
+CMC Senior Theses                                                                                                  CMC Student Scholarship
+
+
+
+2014
+
+Quantifying The Impact Of Temperature And
+Wind On NFL Passing And Rushing Performance
+Max A. Zipperman
+Claremont McKenna College
+
+
+
+
+Recommended Citation
+Zipperman, Max A., "Quantifying The Impact Of Temperature And Wind On NFL Passing And Rushing Performance" (2014). CMC
+Senior Theses. Paper 830.
+http://scholarship.claremont.edu/cmc_theses/830
+
+
+This Open Access Senior Thesis is brought to you by Scholarship@Claremont. It has been accepted for inclusion in this collection by an authorized
+administrator. For more information, please contact scholarship@cuc.claremont.edu.
+                CLAREMONT MCKENNA COLLEGE
+
+
+
+QUANTIFYING THE IMPACT OF TEMPERATURE AND WIND ON NFL PASSING
+                  AND RUSHING PERFORMANCE
+
+
+
+
+                        SUBMITTED TO
+                   PROFESSOR DARREN FILSON
+                             AND
+                    DEAN NICHOLAS WARNER
+
+
+                              BY
+                       MAX ZIPPERMAN
+
+
+                             FOR
+                        SENIOR THESIS
+                         SPRING 2014
+
+
+
+                         APRIL 28, 2014
+
+
+
+
+                               1
+2
+                                        Acknowledgements
+
+        Writing this thesis would not be possible without a lifetime of love and support from my
+parents. Mom and Dad, I am forever grateful for your continued commitment to my education.
+The return on your generous investment in my intellectual and personal development transcends
+pecuniary measurement or the simple acquisition of knowledge; my years learning alongside
+curious and insightful peers and instructors have blessed me with a priceless gift—a deep-seated
+love of learning.
+
+       I’d like to thank my reader, Professor Darren Filson, and my seminar advisor, Professor
+Marc Weidenmier, for their guidance and feedback throughout this undertaking. It was exciting
+to work with such capable and interested professors.
+
+        Evan Casey, Remy Guercio, Joe Newbry, Sean Adler, and Stephen Langdon helped me
+figure out how to write the web-scraper I needed to retrieve my data. You guys saved me a lot of
+time, and I’d probably still be trying to figure out “scrapy” if it wasn’t for your initial guidance.
+
+        I should also mention Peyton Manning for his role in helping me find the initial
+motivation for this study. If he didn’t do so poorly in this year’s super cold Super Bowl, I most
+likely would have written a different thesis.
+
+
+
+
+                                                  3
+                                           Abstract
+
+        This paper utilizes NFL game data from the 2002-2013 seasons in an investigation into
+the effects of temperature and wind on NFL passing and rushing performance. There are three
+separate analyses: (1) the general effects of weather on performance and the advantages/
+disadvantages of playing at home with respect to weather, (2) a comparison of how teams
+respond to weather when at home vs. on the road, and (3) an examination of the effect of
+transitioning weather conditions on visitor performance. Teams tended to have inferior passing
+success in low temperatures and consequently supplant passing attempts with rushing attempts in
+those conditions. The results suggest that teams perform better at home and that visiting teams
+are more sensitive to extreme weather conditions. The results also indicate that visiting teams
+playing in significantly colder conditions than their home stadium are the most vulnerable to
+inclement weather.
+
+
+
+
+                                               4
+Table of Contents
+
+Introduction             6
+
+Literature Review        8
+
+Hypotheses              12
+
+Data                    14
+
+Models                  16
+
+Results                 22
+
+Conclusion              30
+
+Appendix                31
+
+References              36
+
+
+
+
+                    5
+Introduction
+
+
+       When asked if he thought severe weather can affect National Football League (NFL)
+
+player performance and team general strategy, former Dallas Cowboys Super Bowl winning
+
+Head Coach Jimmy Johnson responded with a definitive “Yes”. Many other fans, athletes, and
+
+coaches agree that sufficiently inclement weather can significantly impact the performance of
+
+even the most highly skilled professional athletes. Anecdotal evidence of freezing temperatures
+
+and strong winds influencing passing, rushing, and play-calling abound; Jimmy Johnson
+
+remembers “being on the sideline during a winter game at the Meadowlands (home of the New
+
+York Jets and New York Giants) when it was so cold I didn’t know what down it was, much less
+
+what play to use!” (Advanced NFL Stats).
+
+
+       The NFL season spans early September until late January or early February, and stadiums
+
+in cold-weather and windy climates can prove hostile in the later months of the season. There is a
+
+reason teams fear visiting “The Frozen Tundra” in Green Bay or facing the Bears in “The Windy
+
+City”. Temperatures can reach into the single digits and winds can top 30 miles per hour in those
+
+stadiums. In my sample of over 3,000 games from the 2002-2013 seasons, roughly 12% of
+
+games were played in freezing conditions and over 33% were played with winds over 10 miles
+
+per hour.
+
+
+       The negative performance effects associated with hostile conditions make intuitive sense.
+
+Imagine the effects high winds and low temperatures can have on quarterback performance;
+
+scanning the field for open receivers, releasing the football with just the right finesse for the
+
+perfect pass, and audible play-calling from the line of scrimmage all would seem to be much
+
+more difficult in windy & freezing conditions. The same logic applies to running backs and wide
+
+
+                                                  6
+receivers, who might find it more difficult to retain possession of the football or sustain
+
+endurance in the taxing environment.
+
+
+       Despite the abundance of anecdotal evidence, there is a dearth of econometric literature
+
+on weather’s effect on NFL performance. In this paper, I attempt to quantify the impact of
+
+weather on individual position achievement and general offensive strategy. My first analysis will
+
+explore how teams react to weather differently when at home or on the road. My second analysis
+
+will investigate the relationship between temperature and performance, comparing home game
+
+performance to home game performance, and visitor performance only to visitor performance.
+
+My third analysis will estimate the performance effects associated with visiting teams
+
+transitioning climates for games.
+
+
+
+
+                                                  7
+Literature Review
+
+
+Physiological Responses to Cold
+
+
+       There is a robust literature on the impact of ambient temperature on mental and physical
+
+performance. Phetteplace (2000) explored the relationship between cold weather and the
+
+performance of soldiers, and his results indicate exposure to low temperatures produces
+
+significant physical, cognitive, and emotional performance impacts.
+
+
+       Physical impacts are the most acute and universal. Phetteplace explains that the body
+
+initially responds to cold with vasoconstriction, the reduction in blood supply to the skin and
+
+extremities. While vasoconstriction helps the body preserve heat by decreasing the potential for
+
+heat transfer, it also reduces touch sensitivity in the hands and increases blood pressure.
+
+Involuntary shivering, another reaction to cold ambient temperatures, can exacerbate the
+
+problems associated with increased blood pressure—when combined, they can lead to a four-fold
+
+increase in metabolic heart rate, accelerating fatigue.
+
+
+       Dehydration is another major concern for athletes subjected to extremely low
+
+temperatures. As the water vapor capacity of air is closely correlated with temperature,
+
+extremely cold air tends to have very little humidity. When athletes inhale low-humidity, low-
+
+temperature air, their lungs warm the air molecules and consequently increase their water vapor
+
+capacity. This leads the athlete to exhale more moisture than was inhaled. Intense physical
+
+exertion also leads to sweating. The combined effects of respiratory water loss and sweating are
+
+amplified by the increase in metabolic heart rate; together, they are a recipe for significantly
+
+expedited dehydration. Interestingly, cold also reduces thirst. Although NFL teams employ
+
+
+
+
+                                                  8
+dedicated nutritionists and physical therapists to monitor their players’ health, it is conceivable
+
+that reduced thirst might manifest itself in insufficient fluid replenishment during games.
+
+
+       Altogether, these physiological effects diminish dexterity, strength, endurance, and
+
+maximum performance levels. They also reduce muscle strength and stiffen joints. While all
+
+effects are significant, dexterity losses appear most pronounced. When analyzing the difference
+
+in task efficiency at 78°F and 49°F, Yeshnik (1988) found that task efficiency drops 35% for
+
+those requiring modest dexterity and substantial strength, and 60% for those requiring more
+
+dexterity and less strength.
+
+
+       The effect of cold temperatures on cognitive performance, while not as well understood
+
+as the effects on physical performance, are believed to result from dehydration and lower core
+
+body temperatures. In an attempt to quantify the effect of temperature on information processing
+
+accuracy, awareness and response times, Vaughn and Strauss (1975) tested and compared the
+
+cognitive abilities of divers in 60°F and 40°F water. In their study, divers in the colder water
+
+detected only 3% fewer targets than they did in warm water, but it took them 26% longer to do
+
+so.
+
+
+Previous NFL Analyses
+
+
+       Much of the current literature on the relationship between NFL performance and weather
+
+is amateur and/or focused specifically on ascertaining the influence of weather on odds-setting.
+
+While neither of these types of analyses have econometrically quantified the effect of weather on
+
+various performance metrics, they help inform my methodology.
+
+
+       Brian Burke of AdvancedNFLStats.com calculated the road team win-percentage by
+
+game temperature of all non-preseason games from the 2000 through 2011 seasons, and
+
+                                                  9
+discovered that teams from domes did not win a single game in 11 - 22 degree weather in his
+
+entire sample. According to his analysis, visitors from domes win less than 20% of games played
+
+at or below freezing. Teams from warmer climates do slightly better, winning roughly 35% of
+
+their games at or below freezing. Compared to the league average of 43%, it appears as though
+
+teams from warmer weather are at a significant disadvantage when playing in cold environments.
+
+While interesting, this analysis is plagued by selection bias. A significant percentage of freezing
+
+games are played during the playoffs, when teams earn home team advantage by virtue of having
+
+a higher ranking. Home teams are thus more likely to be better than visiting teams during the
+
+playoffs, which might help explain the difference in visiting team winning percentage.
+
+
+       Burke then plotted average yards per pass attempt for both the visiting and home team
+
+against temperature and wind. Not surprisingly, he found that high winds and low temperatures
+
+correlate negatively with passing yards per attempt for both groups. He also looked at the
+
+relationship between wind speed and play-type count, and found that teams tend to run more and
+
+pass less as wind velocity increases.
+
+
+       Borghesi (2007) analyzed the relationship between game day temperatures and NFL
+
+betting line forecast errors with a sample of 5,463 games from the 1981 – 2004 seasons. His
+
+paper was the first to introduce acclimation advantage as an independent variable in addition to
+
+temperature. Motivated by the idea that the body requires between five and ten days of
+
+acclimation before resuming peak physical performance after a large and sudden change in
+
+temperature, Borghesi explored the idea that differences in game day temperature and the mean
+
+five day temperature at each team’s home stadium might bias performance and create
+
+inefficiencies in betting markets. After comparing the relative differences for the home and
+
+visiting team, he assigned the acclimation advantage to the team whose practice conditions were
+
+                                                10
+closer to game day conditions. As hypothesized, the teams with an acclimation advantage
+
+outperformed their opponents.
+
+
+       Borghesi’s results make intuitive sense, and reinforce the idea that stresses of
+
+transitioning weather can significantly augment performance effects resulting from severe
+
+conditions. Home team players practice in more similar weather conditions to game day than the
+
+visiting team, and the visiting team most likely does not have sufficient time to adjust to the new
+
+conditions. The NFL is a particularly interesting sports league in this regard, as the nationwide
+
+dispersion of teams means climates can vary greatly, especially in the later weeks of the season.
+
+
+       Wind can be especially erratic in the winter months, when certain stadiums often produce
+
+“wind tunnels”. Cold weather is associated with large differences in air pressure, which cause
+
+more wind. The gusts enter the stadium through the paths of least resistance, which often
+
+produce unpredictable wind outcomes. The Meadowlands is notorious for this effect; strong
+
+gusts can be blowing north in the south end of the field, south in the north end of the field, and
+
+sideways in the center—a pattern reminiscent of a figure eight (New York Times).
+
+
+
+
+                                                 11
+Hypotheses
+
+
+       Determining the impact of inhospitable weather on NFL team performance considering
+
+contributing factors. Does inclement weather affect home and visiting teams equally? Are teams
+
+visiting from mild and inhospitable climates affected similarly or differently by extreme wind,
+
+cold, and heat? How do wind and temperature affect a quarterback’s ability to successfully
+
+complete passes? Do teams adjust their offensive strategy when the conditions inhibit a
+
+quarterback’s ability to pass? In these situations, do teams opt to put a larger offensive emphasis
+
+on rushing? Do cold and wind affect a team’s rushing and passing ability equally?
+
+
+       These questions suggest the following testable hypotheses:
+
+
+       Hypothesis 1: Visiting teams’ passing performance will be more vulnerable than home
+
+       teams’ to freezing conditions.
+
+
+       Hypothesis 1A: Visiting teams are more likely than home teams to modify their
+
+       offensive strategy and substitute rush attempts for pass attempts as a result of anticipated
+
+       performance effects in conditions of extreme weather.
+
+
+       Hypothesis 2: Large and negative differences between game temperatures and average
+
+       weekly temperatures will significantly inhibit visiting teams’ passing ability.
+
+
+       Hypothesis 2A: These large and negative temperature differences will push visiting
+
+       teams to modify their offensive strategy, superseding pass attempts with rush attempts.
+
+
+       Hypothesis 3: Wind will affect the passing performance of teams visiting from stadiums
+
+       with low average wind speeds more than teams visiting from windy stadiums.
+
+
+
+
+                                                12
+       Hypothesis 3A: Wind will cause teams to bias their offensive strategy from passing
+
+       towards rushing. Wind will affect teams visiting from non-windy stadiums more than it
+
+       will affect teams visiting from windy stadiums.
+
+
+       The lack of a robust literature on the relationship between weather conditions and NFL
+
+performance leads me to rely on common sense and generalized information on the impacts of
+
+cold weather on motor skills, cognition, and emotion in forming these hypotheses.
+
+
+       To assess what weather conditions impact a team’s offensive capabilities and overall
+
+strategy, we will regress a variety of performance outcome variables on weather condition
+
+variables. The first analysis will focus on quantifying the general impacts weather has on
+
+individual and team performance. It also compares how teams respond differently to weather
+
+when at home compared to when away, and estimates performance advantages and
+
+disadvantages enjoyed by teams when playing at home.
+
+       The second analysis will compare the effects of temperature and wind on home and away
+
+performance. The second analysis is distinct from the first in that it analyzes home and away
+
+performance separately.
+
+       The third analysis will differentiate the performance impacts of weather on teams visiting
+
+from home stadiums with significantly different weather conditions. Through these analyses I
+
+hope to reveal whether certain weather factors are “statistically significant”, meaning they have a
+
+clear impact on the performance outcome, and whether the influence on performance is
+
+economically important.
+
+
+
+
+                                                13
+Data
+
+
+       The data used in the analysis comprises 3,133 regular season and postseason games from
+
+the 2002-2013 NFL seasons. I collected the data from www.pro-football-reference.com using a
+
+web scraper built with Beautiful Soup 4 in Python. The web scraper was necessary because the
+
+information for each game was hosted on a unique web page. While the website was fairly
+
+consistent with standardizing their data formatting, some games, usually those played in domes,
+
+lacked weather information. For those cases, I applied the most common dome weather
+
+conditions, 72 degrees with no wind. In the cases where weather information was available, the
+
+information was taken from the official NFL game book, with temperature expressed in degrees
+
+Fahrenheit and wind expressed in mph.
+
+
+       Many cold games are also very windy, and high winds can drastically reduce perceptions
+
+of temperatures on the field. In order to better represent the player experience on the field, I
+
+created the wind chill equivalent temperature value from the temperature and wind values. The
+
+formula for windchill is: TWC = 35.74 + 0.6215Ta – 35.75V0.16 + 0.4275TaV0.16, where TWC is the
+
+wind chill equivalent temperature, Ta is air temperature, and V is wind speed in mph (NOAA).
+
+Merriam Webster defines windchill as “a still-air temperature that would have the same cooling
+
+effect on exposed human skin as a given combination of temperature and wind speed”. This
+
+value is crucial to the analysis because games that are both cold and windy can seem to be much
+
+colder than the raw temperature reading might indicate. Seeing as performance outcomes are
+
+influenced by physiological condition, I use the wind chill equivalent temperature as a proxy for
+
+raw temperature because physiological responses stem from temperature perception. Games are
+
+considered freezing if the wind chill temperature is at or below 32°F, and “temperature”
+
+hereinafter refers to wind chill temperature equivalent.
+
+                                                 14
+       To test the hypotheses, I created a week-by-week temperature differential variable by
+
+subtracting the visiting team’s average temperature for the week from the temperature at the
+
+game. I applied the temperature differential separately to three different segments of visiting
+
+teams: those with home stadium temperature averages of 70°F or above for the week (“Warm”),
+
+those whose home stadium averages 32°F to 70°F for the week (“Mid”), and those whose
+
+average home temperatures are at or below freezing (“Cold”).
+
+
+       In search of the specific effects of warm climate teams playing at or below freezing
+
+temperatures, I further segmented the temperature differential to control for visitors from warm
+
+and moderate climates playing in freezing conditions (“Freezing”).
+
+
+       The wind statistic is applied separately to three segments of visiting teams: those whose
+
+home stadium is a dome (“Dome”), those who play in open-air home stadiums but average less
+
+than 10 mph of wind per home game that season (“Light Wind”), and those whose home
+
+stadiums average wind speeds in excess of 10 mph (“Heavy Wind”). The wind is not expressed
+
+as a difference, but instead as simply mph. While high winds can contribute to the perception of
+
+extreme cold, the effect of wind on temperature has already been accounted for in the
+
+temperature variable. Aside from the influence on temperature, wind does not induce the same
+
+physiological effects as temperature; instead wind is a playing condition in which athletes can
+
+improve their performance through practice. With this theory, I segmented wind, using team and
+
+season fixed effects to account for players added to or removed from rosters between years who
+
+might not yet be accustomed to their new home stadium’s wind patterns.
+
+
+       I control for the quality of each team’s offense and defense by including team and season
+
+fixed effects. While this controlled for their average performance both at home and away, it has
+
+
+                                                15
+some minor limitations. The data is aggregate for the team as a whole and does not account for
+
+injuries or other modifications to the roster or depth chart.
+
+
+       Unfortunately, information on precipitation was not available. I would expect
+
+precipitation significantly affects team performance.
+
+
+       I evaluate the impact of weather on team performances with an eye towards individual
+
+position achievement and team performance. Variables used in the regressions, their
+
+descriptions, and summary statistics can be found in Tables 1, 2, 3, & 4.
+
+
+Models:
+
+
+       All estimates are from OLS (ordinary least squares) regressions with heteroskedastic-
+
+robust standard errors. The results are found in Tables 5 through 9. All regressions included
+
+fixed effects for home and visiting team and season, but those results are omitted from the tables.
+
+
+The results in Table 5 are produced with the following model:
+
+
+                                                 (1)*
+                     𝑛                                    𝑛
+
+  ln(𝑦𝑖𝑡 ) = 𝑎𝑖𝑇 + ∑ 𝜑𝑗 𝐷𝑗𝑇 + 𝛽′xit + 𝜃𝑖𝑇 (𝐻𝑜𝑚𝑒) + ∑ 𝜑𝑗 (𝐻𝑜𝑚𝑒)𝐷𝑗𝑇 + 𝛿′(𝐻𝑜𝑚𝑒)xit + 𝜀𝑖𝑡
+                    𝑗=1                                  𝑗=1
+ Variable       Description
+       𝑦        Performance outcome of interest
+        i       Team
+        t       Season
+       a        Constant
+       T        Game
+        j       Opposing team
+       𝜑        Quality of opponent
+       D        Dummy variable for weather effects
+       𝛽′       Vector of weather effects
+       𝜃        Dummy for home advantage/disadvantage
+       𝛿’       Vector of weather effects
+       *QBR is expressed in levels, not logs
+
+
+                                                 16
+The results in tables 6 & 7 were produced with the following model:
+
+                                              (2)
+                                                                      𝑛
+
+       ln(𝑦𝑖𝑡 ) = 𝑎𝑖𝑇 + 𝛽temperaturet + 𝛽windt + 𝐷freezing t + 𝐷hot t ∑ 𝜑𝑖 𝐷𝑖𝑇 + 𝜀𝑖𝑡
+                                                                      𝑖=1
+
+The results in tables 6 & 7 were produced with the following model:
+
+                                              (3)
+                                                     𝑛
+
+                           ln(𝑦𝑖𝑡 ) = 𝑎𝑖𝑇 + 𝛽′𝑖xit + ∑ 𝜑𝑖 𝐷𝑖𝑇 + 𝜀𝑖𝑡
+                                                    𝑖=1
+
+
+
+
+                                              17
+                                        Table 1: Description of Weather Variables
+
+Variable               Description
+Wind                   Wind, expressed in miles per hour (mph)
+                       Temperature adjusted for wind chill, used as a proxy for temperature throughout analysis.
+                       Formula: TWC = 35.74 + 0.6215Ta – 35.75V0.16 + 0.4275TaV0.16
+Temperature            TWC: the wind chill equivalent temperature; Ta: air temperature; V: wind speed in mph
+                       A dummy variable that takes the value 1 if the game was played in temperatures equal to or
+Hot                    greater than 80 degrees
+                       A dummy variable that takes the value 1 if the game was played in temperatures equal to or below
+Freezing               32 degrees
+Dome                   A dummy variable that takes the value 1 if the visiting team is from a dome
+                       A dummy variable that takes the value 1 if the visiting team is from an open-air stadium with
+Light Wind             average winds less than 10 mph
+                       A dummy variable that takes the value 1 if the visiting team is from an open-air stadium with
+High Wind              average winds equal to or greater than 10 mph
+VT Dome Wind           Wind * Dome
+VT Light Wind          Wind * Light Wind
+VT High Wind           Wind * High Wind
+Warm                   A dummy variable that takes the value 1 if the visiting team comes from temperatures ≥70
+Mid                    A dummy variable that takes the value 1 if the visiting team comes from temperatures <70 & >32
+Cold                   A dummy variable that takes the value 1 if the visiting team comes from temperatures ≤32
+VT Temperature         The difference in temperature between the visiting team's home stadium that week and the game
+Difference             temperature
+VT Warm Freezing       VT Temperature Difference, interacted with Warm and Freezing
+VT Mid Freezing        VT Temperature Difference, interacted with Mid and Freezing
+VT Warm Not Freezing   VT Temperature Difference, interacted with Warm
+VT Mid Not Freezing    VT Temperature Difference, interacted with Mid
+VT Cold Freezing       VT Temperature Difference, interacted with Cold and Freezing
+VT Cold Not Freezing   VT Temperature Difference, interacted with Cold
+
+
+
+
+                                                        18
+                                                Table 2: Description of Performance Variables
+
+Variable                Description
+HT                      Home Team
+VT                      Visiting Team
+                        Official NFL Quarterback Rating (Passer Rating)*. QBRNFL=        (𝑚𝑚(𝐴)+𝑚𝑚(𝐵)+𝑚𝑚(𝐶)+𝑚𝑚(𝐷)
+                                                                                                     6
+                                                                                                                  ) * 100
+                        A=  ( # 𝑜𝑓# 𝑜𝑓𝑃𝑎𝑠𝑠𝑖𝑛𝑔
+                                        𝐶𝑜𝑚𝑝𝑙𝑒𝑡𝑖𝑜𝑛𝑠
+                                              𝐴𝑡𝑡𝑒𝑚𝑝𝑡𝑠
+                                                        - .3) * 5
+                                  𝑃𝑎𝑠𝑠𝑖𝑛𝑔 𝑌𝑎𝑟𝑑𝑠
+                        B=(                           -3) * 0.25
+                             # 𝑜𝑓 𝑃𝑎𝑠𝑠𝑖𝑛𝑔 𝐴𝑡𝑡𝑒𝑚𝑝𝑡𝑠
+                                𝑇𝑜𝑢𝑐ℎ𝑑𝑜𝑤𝑛 𝑃𝑎𝑠𝑠𝑒𝑠
+                        C = ( # 𝑜𝑓 𝑃𝑎𝑠𝑠𝑖𝑛𝑔 𝐴𝑡𝑡𝑒𝑚𝑝𝑡𝑠 ) * 20
+                                          𝐼𝑛𝑡𝑒𝑟𝑐𝑒𝑝𝑡𝑖𝑜𝑛𝑠 𝑇ℎ𝑟𝑜𝑤𝑛
+                        D = 2.375 - ( # 𝑜𝑓 𝑃𝑎𝑠𝑠𝑖𝑛𝑔 𝐴𝑡𝑡𝑒𝑚𝑝𝑡𝑠 ∗ 25)
+                        mm(x) = max(0, min(x, 2.375))
+QBR                     *(NFL.com)
+Pass Yards              The natural logarithm of a team's passing yards per game
+Completion Percentage   The natural logarithm of a team's passing completion percentage
+Yards/ Completion       The natural logarithm of a team's yards per pass completion
+Rush Percentage         The natural logarithm of a team's percentage of total offensive plays that are rush attempts
+Rush Attempts*          The natural logarithm of a team's total rush attempts per game
+Rush Yards              The natural logarithm of a team's total rush yards per game
+Rush Yards/ Attempt     The natural logarithm of a team's rush yards per attempt per game
+Sacks                   The natural logarithm of the number of times a team's quarterback was sacked per game
+Fumbles                 The natural logarithm of a team's number of fumbles per game
+INT/ Attempts           The natural logarithm of a team's interceptions per pass attempt
+Total Yards             The natural logarithm of a team's total yards per game
+Penalties               The natural logarithm of a team's total penalties for the game
+Turnovers               The natural logarithm of a team's turnovers per game
+
+
+                                                           19
+                             Table 3: Summary Statistics of Weather Variables, Segmented
+Variable               Observations   Mean             Std. Dev.         Min               Max
+Wind                   3133           7.370252         5.869334          0                 70
+Wind Chill             3133           56.94754         18.92553          -27.0113          96
+VT Dome Wind           541            7.160813         5.598778          0                 40
+VT Light Wind          1587           6.981096         5.90143           0                 70
+VT High Wind           1005           8.097512         5.89892           0                 40
+VT Warm Freezing       53             -51.4488         9.835253          -81.0429          -39.9192
+VT Mid Freezing        239            -28.7124         13.88633          -72.6286          -2.28013
+VT Warm Not Freezing   841            -8.73291         12.47204          -50.6605          21.625
+VT Mid Not Freezing    1654           5.453792         15.3781           -36.6513          52.03329
+VT Cold Freezing       90             -4.63733         12.68496          -56.3784          14.61554
+VT Cold Not Freezing   234            31.71067         15.97613          0.592613          65.49712
+
+
+
+
+                                           20
+                                                 Table 4: Summary Statistics of Performance Outcomes
+
+  Variable*                                    Observations      Mean                  Std. Dev.              Min                    Max
+  HT QBR                                                  3133              85.57405               27.9569                       0            158.3333
+  VT QBR                                                  3133               81.4768             28.00847                        0            158.3333
+  HT Pass Yards                                           3133              232.6406             75.81441                       31                  527
+  VT Pass Yards                                           3133              229.0153             78.04035                       23                  520
+  HT Completion Pct.                                      3133              0.608712             0.100528               0.259259              0.933333
+  VT Completion Pct.                                      3133              0.597167             0.102162               0.076923              0.947368
+  HT Yards/ Completion                                    3133              11.75968             2.625259               5.083333                   31.6
+  HT Yards/ Completion                                    3133              11.57316             2.705787               4.333333                   34.5
+  HT Rushing Pct.                                         3133              0.462028             0.112739               0.122807              0.816667
+  VT Rushing Pct.                                         3133              0.445923               0.11576              0.105263              0.892857
+  HT Rush Attempts                                        3133              28.32142             7.971119                        7                   60
+  VT Rush Attempts                                        3133              26.98213             8.066118                        6                   57
+  HT Rush Yards                                           3132              120.0418               52.5358                       6                  378
+  VT Rush Yards                                           3132              110.7168             51.47832                        1                  351
+  HT Rush Yards/Attempt                                   3132              4.179884             1.288857                      0.5            12.23077
+  VT Rush Yards/Attempt                                   3132              4.028095             1.270325                  0.0625              13.5625
+  VT INT/Attempt                                          3133              0.030862             0.031806                        0            0.210526
+  VT Sacks                                                3133              2.317268             1.736528                        0                   12
+  VT Total Yards                                          3132              339.7107             84.01924                       70                  623
+  VT Fumbles                                              3133              1.461538               1.27063                       0                    8
+  VT Penalties                                            3133              6.438557             2.856476                        0                   21
+  VT Turnovers                                            3133              1.739547             1.392769                        0                    8
+*Variables are expressed as levels in this table but are converted to their logarithm in the results. This is because it is easier to understand
+general performance standards when expressed as absolute statistics, and changes in performance are most easily understood through
+logarithms.
+
+
+
+
+                                                                     21
+Results
+
+
+The Effect of Weather on Offense: Home vs. Away
+
+
+        Table 5 presents the results of an OLS regression that considers the effects of weather on
+
+general passing and rushing performance. The model accounts for how teams respond to weather
+
+differently when at home vs. when on the road, and estimates a team’s advantage or
+
+disadvantage in performance outcomes when playing at home.
+
+
+        “Home” is a binary variable indicating the general advantage or disadvantage attributed
+
+to the home team in that particular outcome variable, and “Home” before a weather variable
+
+means “Home” has been interacted with that weather variable. The coefficients represent
+
+percentage increases for every incremental increase in x, except for QBR, which is expressed as
+
+an absolute figure. For the purposes of facilitating interpretation of the regression results, I often
+
+refer to the effect of wind at 10 mph or a change in temperature of 10 degrees. To calculate the
+
+effect of a different wind speed or temperature difference, simply multiply the coefficient in the
+
+table by a wind or temperature value.
+
+
+Home Advantage
+
+
+        The results of the regression suggest teams perform better at home in all offensive
+
+respects. When at home and assuming no weather effects, quarterbacks are estimated to earn
+
+passer ratings 6.8 points higher, throw for 3.7% more yards, complete 4.6% more of their passes,
+
+and gain 2.1% more yards per completion. Of these results, only the effect on completion
+
+percentage is statistically significant at the 10% level; no other effects were found to be
+
+statistically significant.
+
+
+
+                                                  22
+       Rushing offenses are also stronger at home, with home team offenses relying on rushing
+
+attempts 7.4% more than when they are on the road, increasing their rushing attempt total 11.5%,
+
+rushing for 25.5% more yards, and earning 14% more rush yards per attempt when at home.
+
+These results are not only potentially game changing in their magnitude, but also statistically
+
+significant—the effects on rush yards per attempt and total rush yards are significant at the 1%
+
+level, the effect on total rush attempts is significant at the 5% level, and the effect on reliance on
+
+rushing is significant at the 10% level.
+
+
+       It is important to note that these results of home advantage are not complete without
+
+being contextualized with the other coefficients from the model. For example, although it
+
+appears as though teams rush for 25.5% more when at home, when considering the unique
+
+effects of weather on home teams, the realized home advantage can be reduced by over 11% if
+
+winds exceed 30 mph, or eliminated entirely if the game is played in 80 degree weather. I will
+
+explore the unique effects of weather on home teams later in this section.
+
+
+Wind
+
+
+       Wind is the most consistently statistically significant variable influencing performance
+
+outcome variables. Wind has a uniformly negative effect on passing and positive effect on
+
+rushing. Wind speeds of 10 mph are estimated to reduce quarterback ratings by 1.7 points, total
+
+passing yards by 6.8%, completion percentage by 2.4%, and yards per completion by 1.6%.
+
+Winds of 10 mph increase rush percentage by 2.7%, rush attempts by 3.2%, rush yards by 4.5%,
+
+and rush yards per attempt by 1.4%. All of these estimates are statistically significant at the 1%
+
+level, except for the effect on quarterback rating, yards per completion, and rush yards per
+
+attempt. The effect on QBR and yards per completion are statistically significant at the 10%
+
+level. The unique effect of wind on home teams is never statistically significant at the 5% level.
+                                                  23
+Temperature
+
+
+        The regression results suggest teams are better at rushing and worse at passing in low
+
+temperatures, but fewer effects are statistically significant than wind. When controlling for
+
+temperature, the effect of freezing conditions is not a statistically significant predictor of any
+
+outcome.
+
+
+        The effect of temperature on pass yards and completion percentage are statistically
+
+significant at the 1% level, and the effect on quarterback rating is statistically significant at the
+
+10% level. Temperature decreases of 10 degrees are estimated to lower pass yards by 1.7%,
+
+reduce completion percentage by 0.8%, and cut 0.8 points off a quarterback’s passer rating. Hot
+
+conditions are estimated to reduce completion percentage by 3.9% and shave 6.5% off a team’s
+
+pass yards for the game. The data estimates with 95% confidence that the teams respond
+
+differently to temperature when at home, losing 2.3% of their rush yards with every 10 degree
+
+drop in temperature.
+
+
+Home Vs. Away
+
+
+        Tables 6 & 7 contrast the ordinary least squares (OLS) estimates for the effect of weather
+
+on passing ability and rushing success. The results are different than those in Table 5 because
+
+they compare home game performance only to performance in other home games and visitor
+
+performance only to performance in other road games. Table 5 estimated both the general effects
+
+of weather on performance and how teams respond differently to weather when at home vs.
+
+when away.
+
+
+
+
+                                                  24
+Wind
+
+
+       Wind is the most consistently statistically significant variable influencing the passing
+
+outcome variables. The effect is important across most variables, with potentially game-changing
+
+effects on pass yards and completion percentage. The regression estimates with 99% confidence
+
+that wind has an effect on pass yards and completion percentage, predicting 10 mph winds to
+
+decrease pass yards for the visiting team by over 9% and reduce completion percentage by over
+
+3% relative to expected performance on the road. The regression estimates home teams to be
+
+roughly half as sensitive to wind, earning only 5% fewer pass yards and completing 2% fewer
+
+passes in similar conditions compared to other home games. Wind is estimated to decrease
+
+passer rating by 0.459 and 0.217 points per mph for the home and visiting teams, respectively.
+
+
+       When looking at rushing strategy and success, the weather regression is only able to
+
+demonstrate wind’s statistical significance on the visiting team. The effect of wind is both highly
+
+statistically significant and economically important, with high winds increasing a visiting team’s
+
+dependence on strong rushing competencies while also improving the rushing team’s ability.
+
+Winds of 10mph are estimated to increase rush attempts 5%, rush yards per attempt 2%, and total
+
+rush yards 7%. Wind is also expected to significantly alter a team’s offensive strategy, as visiting
+
+teams playing in 10 mph are estimated to substitute a rush attempt for a pass attempt in 4% of all
+
+offensive attempts compared to their strategy in other road games.
+
+
+Temperature
+
+
+       The three variables used to describe game temperature conditions are wind chill adjusted
+
+temperature and binary variables for whether the game is freezing or hot, in this case classified
+
+as being equal to or above 80 F. As I controlled for temperature, the binary variables for freezing
+
+
+                                                25
+games and hot games are statistically significant for a smaller portion of performance outcome
+
+variables than the raw temperature variable. In general, teams perform worse in colder
+
+conditions.
+
+
+       Similar to the case with wind, visiting teams seem to be affected by temperature roughly
+
+twice as much as home teams. Temperature has a statistically significant effect on the total pass
+
+yards for both the home and visiting teams. The model estimates visiting teams to gain 2.22%
+
+pass yards for every ten degrees, while home teams gain only 1.62%. When flipped, this
+
+translates to visiting teams to lose 2.22% of their pass yards for every 10 degree reduction in
+
+temperature, while home teams are affected less so. While not statistically significant at the 5%
+
+level, the estimates for the effect of temperature on completion percentage and yards per
+
+completion follow in this pattern of visiting teams being twice as sensitive to temperature; it
+
+should be noted, however, that the coefficients on these variables are nominally small.
+
+
+       Interestingly, temperature seemed to affect the relative rushing performance of home
+
+teams more so than visiting teams. Home teams are expected to prefer passing attempts to
+
+rushing 1.2% more for every 10 degree increase in temperature. This ten degree increase in
+
+temperature is also shown to reduce total rush attempts by 1.5%, total rush yards by 3.9%, and
+
+reduce rush yards per attempt by 2.5%. Interestingly, the effect for visiting teams is nominal,
+
+indicating visitors do not prioritize temperature as highly as the home team when formulating
+
+offensive strategy.
+
+
+       Freezing games are shown to reduce total rush yards by an additional 8.7% and passing
+
+completion percentage by an additional 3.3% for the home team. Hot games are shown to reduce
+
+pass yards by an additional 7.7% and completion percentage by 4.3% for the visiting teams.
+
+
+                                                26
+Visitors: Acclimation Disadvantages
+
+
+       The third set of OLS regression analyses compare the differing effects of wind and
+
+temperature on visiting teams in a variety of climate transition circumstances. The results can be
+
+found in tables 8 & 9 in the appendix, where coefficients represent percentage increases for
+
+every incremental increase in x unless otherwise noted.
+
+
+       The effect of wind is tested separately on teams visiting from domes, from open-air
+
+stadiums with an average of 10 mph of wind or less for the season, and teams visiting from
+
+windy open-air stadiums. The wind variable represents wind in mph.
+
+
+       Temperature should be interpreted as temperature differential, the difference in the game
+
+day temperature and the visitor’s average home stadium temperature for the week. A positive
+
+number indicates a team moving from colder to warmer climates, and a negative differential
+
+indicates a team moved from warmer to colder climates. This differential is applied tested
+
+separately on teams from warm, mild, and cold climates. It is further interacted with a binary
+
+variable representing freezing games to highlight the effect of temperature on performance
+
+specifically in games played in freezing conditions.
+
+
+Wind
+
+
+       Interestingly, the regression output indicates wind has a larger impact on the passing
+
+success of teams visiting from windy stadiums and domes than those visiting from stadiums with
+
+light wind. The results show high statistical significance for effects on total pass yards and
+
+completion percentage. For teams from a dome, winds of 10 mph are estimated to reduce total
+
+pass yards 6.3% and completion percentage by 5.1%. For teams from stadiums with light and
+
+heavy wind, those numbers are 8.3% & 2.0%, and 13.4% & 4.4%, respectively. All of these
+
+                                                 27
+results are statistically significant at the 1% level, except for the estimation regarding the effect
+
+of wind on pass yards for visitors from domes, which is statistically significant at the 10% level.
+
+
+       Wind also proves to have a statistically significant effect on rushing ability for teams
+
+visiting from all types of stadiums. 10 mph winds are expected to increase rushing’s share of
+
+total offensive attempts 4.6%, 4.0%, and 6.1% for teams from domes, light wind, and heavy
+
+wind, respectively. Visiting teams are estimated to attempt between 1.2 and 1.8 more rush
+
+attempts per game for every 10 mph of wind, and visiting teams increase their total rush yards by
+
+as much as 9.4% for every 10mph of wind. Wind is also associated with an increased success in
+
+visitor’s rush attempts; teams visiting from domes carry the ball 6.3% farther per attempt for
+
+every 10 mph of wind. Translated into real game statistics, that means dome visitors could gain
+
+an extra yard per rush attempt in 20mph wind conditions.
+
+
+       Although not statistically significant, wind is expected to have material and detrimental
+
+results with respect to fumbles. 10 mph winds are associated with an increase in fumble
+
+likelihood as large as 7.5%. It is also predicted to reduce the amount of sacks on the quarterback,
+
+but that number is commensurate with the reduction in pass attempts.
+
+
+Temperature
+
+
+       As expected, the most statistically significant and important performance impacts due to
+
+weather came in games with extreme weather acclimation disadvantages. The results for freezing
+
+games are the strongest, and teams from warmer climates are invariably more affected by
+
+temperature than their peers from milder regions.
+
+
+       Freezing games hurt teams from warm climates the most. In these games, each 10 degree
+
+difference in temperature is responsible for a 3.6% reduction in pass yards, a 1.6% reduction in
+
+                                                  28
+completion percentage, a 1.5% reduction in yards per completion, and a 1.7% drop in total yards.
+
+Teams visiting from milder climates are affected at almost the same rate, with negative 10 degree
+
+temperature differentials explaining the loss of 2.4% of pass yards, 0.9% of completion
+
+percentage, and 1.5% of total yards. These numbers are extremely large when considering the
+
+minimum temperature differential required to be in this category is 38 degrees, which would
+
+occur if a team accustomed to 70 degree weather were to play an opponent in 32 degree weather.
+
+When applied to the game with the largest temperature differential in the dataset, 81 degrees, the
+
+model predicts weather to account for over 29% in the variation in pass yards and an estimated
+
+12% drop in completion percentage, yards per completion, and total yards.
+
+
+         Temperature differential is not shown to be a significant predictor of variation in visiting
+
+team rushing strategy and success. It did, however, suggest a strong relationship between colder
+
+temperatures and fewer penalties, but that is accounted for in the reduced number of plays on the
+
+field.
+
+
+
+
+                                                  29
+Conclusion
+
+
+       The results of this analysis are relevant to coaches, fans, and fantasy sports competitors
+
+alike. The results are intuitive and corroborate anecdotal accounts. Wind has a uniformly
+
+negative impact on an NFL team’s ability to pass the football, and teams tend to rely on their
+
+rushing offense more heavily when playing in windy conditions. Temperature also has a negative
+
+effect on passing, but actually produces a small benefit to teams’ rushing initiatives. Professional
+
+football teams are likely to perform better at home, but are also more sensitive to extreme
+
+temperatures when surprised with inclement weather in their own stadium.
+
+
+       The most important and consistently statistically significant results came from the
+
+analysis of visiting team performance when transitioning climates. The results indicated that
+
+teams from warm climates playing in freezing conditions are the most significantly impacted by
+
+the cold. Teams from moderate climates are influenced by freezing temperatures less than teams
+
+from warm climates, and teams from freezing climates actually tend to improve their
+
+performance when playing in freezing conditions, perhaps because they have a comparative
+
+acclimation advantage.
+
+
+       This analysis could be improved by incorporating precipitation into the regressions.
+
+Precipitation is sure to be another important and significant determinant of NFL performance.
+
+The paper could also be appropriately expanded to investigate the impact of weather on punting
+
+and kicking performance.
+
+
+
+
+                                                30
+Appendix
+
+                                                           Table 5: Weather Effects on Offense
+                            (1)             (2)           (3)             (4)                (5)          (6)           (7)             (8)
+                           QBR          Pass Yards    Completion         Yards/             Rush     Rush Attempts   Rush Yards        Rush
+                                                      Percentage      Completion        Percentage                                Yards/Attempt
+ Temperature              0.0760*       0.00169***    0.000776***      0.000508          -0.000446     -0.000389      -0.000583     -0.000198
+                         (0.0444)       (0.000576)    (0.000288)      (0.000370)        (0.000419)    (0.000492)     (0.000854)    (0.000608)
+
+ Wind                     -0.170*       -0.00679***   -0.00236***      -0.00157*       0.00271***     0.00315***     0.00452***      0.00138
+                         (0.0997)        (0.00135)    (0.000764)      (0.000868)       (0.000953)     (0.00110)      (0.00175)      (0.00117)
+
+ Freezing                  0.370         -0.00775      -0.00314          0.0131          0.0250         0.0276        0.00996        -0.0180
+                          (2.227)        (0.0307)      (0.0151)         (0.0197)        (0.0206)       (0.0243)       (0.0411)      (0.0288)
+
+ Hot                       -3.298        -0.0653*      -0.0391**         -0.0122        -0.00514        -0.0274        -0.0319      -0.00456
+                          (2.527)        (0.0338)       (0.0157)        (0.0212)        (0.0220)       (0.0268)       (0.0460)      (0.0308)
+
+ Home                      6.795          0.0373        0.0460*          0.0218          0.0744*        0.115**       0.255***      0.140***
+                          (4.155)        (0.0520)      (0.0265)         (0.0342)        (0.0384)       (0.0451)       (0.0752)      (0.0523)
+
+ Home                     -0.0225        -0.000612     -0.000438       -0.000227        -0.000370      -0.000770     -0.00229**     -0.00150*
+ Temperature             (0.0622)       (0.000783)    (0.000394)      (0.000515)       (0.000577)     (0.000671)      (0.00112)    (0.000790)
+
+ Home Wind                 -0.182        0.00275      0.0000580         0.00103          -0.00200      -0.00268*     -0.00391*       -0.00126
+                          (0.135)       (0.00180)     (0.000979)       (0.00117)        (0.00130)      (0.00150)     (0.00237)      (0.00160)
+
+ Home                      -2.197        0.00390        -0.0253          0.0105          -0.0220        -0.0206        -0.0498       -0.0282
+ Freezing                 (3.183)        (0.0412)      (0.0207)         (0.0267)        (0.0284)       (0.0332)       (0.0548)      (0.0382)
+
+ Home Hot                 1.077           0.0367        0.0340         0.000765          0.0196         0.0554         0.0614       0.00565
+                         (3.415)         (0.0437)      (0.0208)        (0.0281)         (0.0317)       (0.0371)       (0.0620)      (0.0418)
+ _cons                   71.97***        5.224***      -0.616***        2.365***        -0.773***      3.336***       4.773***      1.437***
+                         (9.252)          (0.100)      (0.0602)        (0.0770)         (0.0825)        (0.106)        (0.185)       (0.125)
+ N                        6266             6266          6266             6266            6266           6266           6264          6264
+ R2                       0.270            0.319         0.304           0.219            0.301          0.283          0.287         0.225
+Standard errors in parentheses
+*
+  p < 0.10, ** p < 0.05, *** p < 0.01
+                                                                           31
+                                             Table 6: Weather Effects on Passing – Home versus Away
+                     (1)               (2)            (3)             (4)             (5)            (6)          (7)          (8)
+                   HT QBR           VT QBR         HT Pass        VT Pass      HT Completion VT Completion    HT Yards/    VT Yards/
+                                                    Yards           Yards         Percentage     Percentage   Completion   Completion
+ Temperature        0.0514           0.0711       0.00162***     0.00222***        0.000311      0.000691**    0.000324     0.000806*
+                   (0.0517)         (0.0517)     (0.000621)      (0.000680)       (0.000305)     (0.000337)   (0.000417)   (0.000433)
+
+ Wind              -0.459***         -0.217*     -0.00521***    -0.00925***    -0.00241***     -0.00304***    -0.000728    -0.00185*
+                    (0.123)          (0.123)      (0.00157)      (0.00172)     (0.000798)      (0.000959)     (0.00101)    (0.00111)
+
+ Freezing            -1.742           -0.326        0.0289       0.00745       -0.0326**        -0.01000        0.0311       0.0291
+                    (2.480)          (2.464)       (0.0296)      (0.0331)       (0.0151)        (0.0171)       (0.0198)     (0.0221)
+
+ Hot                 -2.263           -3.787        -0.0176      -0.0765**      0.00244         -0.0431**      0.00565       -0.0172
+                    (2.652)          (2.696)       (0.0315)      (0.0363)       (0.0156)        (0.0176)       (0.0218)     (0.0230)
+
+ _cons               97.83***         50.58***     5.271***      5.060***       -0.468***       -0.727***      2.331***     2.385***
+                     (12.92)          (14.03)      (0.126)       (0.157)        (0.0843)        (0.0860)       (0.108)      (0.116)
+  N                   3133             3133         3133          3133            3133            3133           3133        3133
+  R2                  0.368            0.358        0.394         0.427           0.404           0.384         0.335        0.308
+Standard errors in parentheses
+*
+  p < 0.10, ** p < 0.05, *** p < 0.01
+
+
+
+
+                                                                      32
+                                               Table 7: Weather Effects on Rushing – Home versus Away
+                       (1)              (2)             (3)             (4)            (5)           (6)         (7)            (8)
+                    HT Rush          VT Rush        HT Rush         VT Rush         HT Rush       VT Rush     HT Rush        VT Rush
+                   Percentage       Percentage      Attempts        Attempts          Yards        Yards        Yards/        Yards/
+                                                                                                               Attempt       Attempt
+ Temperature       -0.00123***       -0.000524    -0.00145***     -0.000242     -0.00393***     -0.000927    -0.00248***    -0.000677
+                   (0.000460)       (0.000483)    (0.000540)     (0.000565)     (0.000859)     (0.000969)    (0.000582)    (0.000683)
+
+ Wind               0.00125         0.00443***     0.000656       0.00502***      0.00163       0.00776***   0.000962       0.00274*
+                   (0.00111)        (0.00120)      (0.00133)      (0.00140)      (0.00203)      (0.00226)    (0.00138)     (0.00154)
+
+ Freezing            -0.0178          0.0213       -0.00387         0.0270       -0.0878**        -0.0156    -0.0836***      -0.0425
+                    (0.0216)         (0.0227)      (0.0256)        (0.0269)       (0.0394)       (0.0451)     (0.0266)      (0.0314)
+
+ Hot                 0.0340          -0.00829        0.0460         -0.0342        0.0322         -0.0357      -0.0140     -0.00183
+                    (0.0256)         (0.0242)       (0.0292)       (0.0304)       (0.0466)       (0.0517)     (0.0312)     (0.0348)
+
+ _cons               -0.653***        -0.725***     3.486***       3.358***       5.077***       4.882***     1.591***      1.523***
+                     (0.0999)          (0.144)      (0.116)        (0.180)        (0.206)        (0.327)      (0.169)       (0.200)
+  N                    3133             3133          3133           3133           3132           3132         3132          3132
+   2
+  R                    0.400            0.403        0.386          0.370          0.396          0.369        0.356         0.315
+Standard errors in parentheses
+*
+  p < 0.10, ** p < 0.05, *** p < 0.01
+
+
+
+
+                                                                        33
+                                                 Table 8: Acclimation and Wind Effects on Visitor Passing
+                            (1)               (2)                (3)               (4)                (5)       (6)             (7)
+                          VT QBR        VT Pass Yards      VT Completion      VT Yards/            VT INT/    VT Sacks     VT Total Yards
+                                                                              Completion           Attempts
+ VT Dome Wind               -0.264        -0.00626*         -0.00510***         0.00293            -0.00102    -0.00115      0.000448
+                           (0.250)        (0.00334)          (0.00194)         (0.00209)          (0.00632)   (0.00610)      (0.00212)
+
+ VT Mid Wind                -0.125       -0.00827***        -0.00209**          -0.00238*         0.00228      -0.00262      -0.00263*
+                           (0.147)        (0.00200)         (0.00106)           (0.00130)        (0.00397)    (0.00347)      (0.00135)
+
+ VT High Wind              -0.404**       -0.0134***        -0.00436***          -0.00234         0.00657      -0.00632      -0.00402**
+                           (0.191)        (0.00257)          (0.00150)          (0.00172)        (0.00497)    (0.00468)      (0.00164)
+
+ VT Warm Freezing           0.0970        0.00361***        0.00166***           0.00151**        0.00185     -0.000979       0.00168**
+                           (0.0775)       (0.00121)         (0.000614)          (0.000753)       (0.00166)    (0.00219)      (0.000755)
+
+ VT Mid Freezing            0.0851        0.00239**         0.000890**          0.0000894        -0.00287*    0.000635        0.00146**
+                           (0.0662)      (0.000972)         (0.000435)          (0.000591)       (0.00167)    (0.00155)      (0.000707)
+
+ VT Warm Not                -0.0835       -0.000383          -0.000715           -0.000366        -0.00317    0.00584***    -0.00000249
+ Freezing                  (0.0879)       (0.00107)         (0.000567)          (0.000764)       (0.00223)    (0.00214)      (0.000785)
+
+ VT Mid Not                 0.0828         0.00136           0.000384            0.000763         0.00111      0.00210        0.00105*
+ Freezing                  (0.0610)      (0.000849)         (0.000427)          (0.000544)       (0.00161)    (0.00148)      (0.000579)
+
+ VT Cold Freezing           -0.311         -0.00246         -0.000709           -0.000703         0.00891      -0.00456      -0.000994
+                           (0.237)        (0.00269)         (0.00146)           (0.00197)        (0.00751)    (0.00555)      (0.00188)
+
+ VT Cold Not                 -0.0906      0.000103           -0.000354           0.000213          0.00168     0.00242        0.000120
+ Freezing                   (0.0639)     (0.000760)         (0.000376)          (0.000523)       (0.00160)    (0.00153)      (0.000555)
+ _cons                      52.64***       5.186***           -0.708***           2.441***        -2.880***     0.289          5.712***
+                             (13.80)       (0.150)            (0.0817)            (0.113)          (0.365)     (0.326)         (0.149)
+  N                           3111          3111                3111               3111             1960         2698           3110
+   2
+  R                           0.365         0.431               0.389              0.313            0.429       0.367           0.416
+Standard errors in parentheses
+*
+  p < 0.10, ** p < 0.05, *** p < 0.01
+
+                                                                           34
+                                               Table 9: Acclimation and Wind Effects on Visitor Rushing
+                                (1)           (2)              (3)              (4)                  (5)         (6)          (7)
+                           VT Rushing      VT Rush      VT Rush Yards VT Rush Yards/            VT Fumbles       VT       VT Turnovers
+                           Percentage      Attempts                          Attempt                         Penalties
+ VT Dome Wind               0.00457**       0.126*         0.0112***        0.00631**             0.00745     -0.00345      0.00253
+                            (0.00232)      (0.0696)        (0.00426)        (0.00297)            (0.00606)   (0.00403)     (0.00591)
+
+ VT Mid Wind                0.00399***     0.137***       0.00642**           0.00167           0.00144       -0.00406     -0.000103
+                            (0.00149)      (0.0460)       (0.00272)          (0.00181)         (0.00391)     (0.00263)     (0.00353)
+
+ VT High Wind               0.00609***     0.178***      0.00937***           0.00314           0.00413      -0.000590     0.000275
+                            (0.00170)      (0.0534)      (0.00325)           (0.00227)         (0.00459)     (0.00339)     (0.00467)
+
+ VT Warm Freezing            -0.000830      -0.0138      -0.000989           -0.000219         -0.000428      0.00327*     0.000910
+                            (0.000769)     (0.0216)      (0.00154)           (0.00117)         (0.00227)     (0.00171)     (0.00202)
+
+ VT Mid Freezing             -0.000960      -0.0201       0.000225            0.000786         -0.000362     0.00619***    -0.000362
+                            (0.000633)     (0.0198)       (0.00126)          (0.000860)        (0.00149)     (0.00134)     (0.00159)
+
+ VT Warm Not                 -0.000372     -0.00310      -0.000118           0.0000512         0.000500      0.000262      -0.000805
+ Freezing                   (0.000853)     (0.0248)      (0.00163)           (0.00118)         (0.00206)     (0.00152)     (0.00210)
+
+ VT Mid Not Freezing         0.000287       0.0188         0.00139            0.000604          0.00145      -0.0000898     0.00101
+                            (0.000583)     (0.0180)       (0.00113)          (0.000784)        (0.00149)      (0.00116)    (0.00146)
+
+ VT Cold Freezing            -0.00129       -0.0586        -0.00171          0.000801           -0.00277      0.0111**      0.00795
+                            (0.00221)      (0.0667)       (0.00415)          (0.00243)         (0.00631)     (0.00502)     (0.00525)
+
+ VT Cold Not                  -0.000144    0.00519        0.000496            0.000415         0.000140      -0.000392     0.000455
+ Freezing                    (0.000553)    (0.0172)       (0.00109)          (0.000788)        (0.00156)     (0.00111)     (0.00151)
+ _cons                         -0.767***   28.91***        4.817***            1.491***          -0.422       1.395***       0.469
+                                (0.143)     (4.371)        (0.326)             (0.197)          (0.262)        (0.280)      (0.319)
+  N                              3111        3111            3110               3110              2348          3097          2498
+  R2                             0.400       0.371          0.368               0.317             0.360         0.336        0.332
+Standard errors in parentheses
+*
+  p < 0.10, ** p < 0.05, *** p < 0.01
+
+
+                                                                        35
+                                          References
+
+
+"Advanced Football Analytics (formerly Advanced NFL Stats)." Advanced Football Analytics
+      (formerly Advanced NFL Stats). Accessed April 28, 2014.
+      http://www.advancednflstats.com/2012/01/weather-effects-on-passing.html.
+
+Borghesi, Richard. "The Home Team Weather Advantage and Biases in the NFL Betting
+      Market." Journal of Economics and Business 59, no. 4 (July 2007): 340-54.
+      http://www.sciencedirect.com/science/article/pii/S0148619506001019.
+
+Branch, John. "Riddle of the Wind at New Meadowlands Stadium." The New York Times.
+      November 24, 2010. Accessed April 28, 2014.
+      http://www.nytimes.com/2010/11/25/sports/football/25wind.html?pagewanted=all.
+
+"National Weather Service Weather Forecast Office." Wind Chill Chart. Accessed April 28,
+       2014. http://www.crh.noaa.gov/ddc/?n=windchill.
+
+"NFL Quarterback Rating Formula." QB Rating Calc. Accessed April 28, 2014.
+      http://www.nfl.com/help/quarterbackratingformula.
+
+Phetteplace, Gary. "Integrating Cold Weather Impacts on Human Performance into Army M&S
+       Applications." Proceedings of the 2000 Winter Simulation Conference, 2000, 1020-024.
+       http://dl.acm.org/citation.cfm?id=510523.
+
+"Pro Football Reference." Pro-Football-Reference.com. Accessed April 28, 2014.
+       http://www.pro-football-reference.com/.
+
+Vaughan, W. S., Jr., and Strauss, M. B. 1975. Exploratory analysis of predictors of diver
+      performance decrement during 3-hours, cold water exposures. Office of Naval Research,
+      Psychological Sciences Division, Arlington, VA.
+
+"Windchill." Merriam-Webster. Accessed April 28, 2014. http://www.merriam-
+      webster.com/dictionary/windchill.
+
+Yeshnik, M. A. 1988. The variability of German winter temperature in relation to human
+      performance and its implications for tactical military operations. Master of Science
+      Thesis, Department of Geography, Pennsylvania State University
+
+
+
+
+                                               36
+

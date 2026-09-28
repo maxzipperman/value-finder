@@ -1,0 +1,68 @@
+game_date_et,away_code,home_code,cup_round,note_headline,tip_utc,espn_event_id,review_status
+2025-10-31,ATL,IND,group,NBA Cup - Group Play,2025-10-31T23:00:00+00:00,401809502,unreviewed
+2025-10-31,BOS,PHI,group,NBA Cup - Group Play,2025-10-31T23:00:00+00:00,401809503,unreviewed
+2025-10-31,TOR,CLE,group,NBA Cup - Group Play,2025-10-31T23:30:00+00:00,401809504,unreviewed
+2025-10-31,NYK,CHI,group,NBA Cup - Group Play,2025-11-01T00:00:00+00:00,401809505,unreviewed
+2025-10-31,LAL,MEM,group,NBA Cup - Group Play,2025-11-01T01:30:00+00:00,401809506,unreviewed
+2025-10-31,UTA,PHX,group,NBA Cup - Group Play,2025-11-01T02:00:00+00:00,401809507,unreviewed
+2025-10-31,DEN,POR,group,NBA Cup - Group Play,2025-11-01T02:00:00+00:00,401809508,unreviewed
+2025-10-31,NOP,LAC,group,NBA Cup - Group Play,2025-11-01T02:30:00+00:00,401809509,unreviewed
+2025-11-07,BOS,ORL,group,NBA Cup - Group Play,2025-11-08T00:00:00+00:00,401809510,unreviewed
+2025-11-07,CLE,WAS,group,NBA Cup - Group Play,2025-11-08T00:00:00+00:00,401809511,unreviewed
+2025-11-07,TOR,ATL,group,NBA Cup - Group Play,2025-11-08T00:30:00+00:00,401809512,unreviewed
+2025-11-07,DET,BKN,group,NBA Cup - Group Play,2025-11-08T00:30:00+00:00,401809773,unreviewed
+2025-11-07,HOU,SAS,group,NBA Cup - Group Play,2025-11-08T00:30:00+00:00,401809774,unreviewed
+2025-11-07,DAL,MEM,group,NBA Cup - Group Play,2025-11-08T01:00:00+00:00,401809776,unreviewed
+2025-11-07,CHA,MIA,group,NBA Cup - Group Play,2025-11-08T01:00:00+00:00,401809775,unreviewed
+2025-11-07,CHI,MIL,group,NBA Cup - Group Play,2025-11-08T01:00:00+00:00,401809777,unreviewed
+2025-11-07,UTA,MIN,group,NBA Cup - Group Play,2025-11-08T01:00:00+00:00,401809778,unreviewed
+2025-11-07,GSW,DEN,group,NBA Cup - Group Play,2025-11-08T03:00:00+00:00,401809779,unreviewed
+2025-11-07,OKC,SAC,group,NBA Cup - Group Play,2025-11-08T03:00:00+00:00,401809780,unreviewed
+2025-11-14,MIA,NYK,group,NBA Cup - Group Play,2025-11-15T00:00:00+00:00,401809781,unreviewed
+2025-11-14,BKN,ORL,group,NBA Cup - Group Play,2025-11-15T00:00:00+00:00,401809782,unreviewed
+2025-11-14,PHI,DET,group,NBA Cup - Group Play,2025-11-15T00:30:00+00:00,401809783,unreviewed
+2025-11-14,POR,HOU,group,NBA Cup - Group Play,2025-11-15T01:00:00+00:00,401809784,unreviewed
+2025-11-14,CHA,MIL,group,NBA Cup - Group Play,2025-11-15T01:00:00+00:00,401809785,unreviewed
+2025-11-14,SAC,MIN,group,NBA Cup - Group Play,2025-11-15T01:00:00+00:00,401809786,unreviewed
+2025-11-14,LAL,NOP,group,NBA Cup - Group Play,2025-11-15T01:00:00+00:00,401809787,unreviewed
+2025-11-14,LAC,DAL,group,NBA Cup - Group Play,2025-11-15T01:30:00+00:00,401809788,unreviewed
+2025-11-14,GSW,SAS,group,NBA Cup - Group Play,2025-11-15T02:30:00+00:00,401809789,unreviewed
+2025-11-21,IND,CLE,group,NBA Cup - Group Play,2025-11-22T00:00:00+00:00,401809790,unreviewed
+2025-11-21,BKN,BOS,group,NBA Cup - Group Play,2025-11-22T00:30:00+00:00,401809791,unreviewed
+2025-11-21,WAS,TOR,group,NBA Cup - Group Play,2025-11-22T00:30:00+00:00,401809792,unreviewed
+2025-11-21,MIA,CHI,group,NBA Cup - Group Play,2025-11-22T01:00:00+00:00,401809793,unreviewed
+2025-11-21,NOP,DAL,group,NBA Cup - Group Play,2025-11-22T01:30:00+00:00,401809794,unreviewed
+2025-11-21,MIN,PHX,group,NBA Cup - Group Play,2025-11-22T02:00:00+00:00,401809795,unreviewed
+2025-11-21,DEN,HOU,group,NBA Cup - Group Play,2025-11-22T02:30:00+00:00,401809796,unreviewed
+2025-11-21,POR,GSW,group,NBA Cup - Group Play,2025-11-22T03:00:00+00:00,401809798,unreviewed
+2025-11-21,OKC,UTA,group,NBA Cup - Group Play,2025-11-22T03:00:00+00:00,401809797,unreviewed
+2025-11-25,ATL,WAS,group,NBA Cup - Group Play,2025-11-26T00:00:00+00:00,401809799,unreviewed
+2025-11-25,ORL,PHI,group,NBA Cup - Group Play,2025-11-26T01:00:00+00:00,401809800,unreviewed
+2025-11-25,LAC,LAL,group,NBA Cup - Group Play,2025-11-26T04:00:00+00:00,401809801,unreviewed
+2025-11-26,DET,BOS,group,NBA Cup - Group Play,2025-11-26T22:00:00+00:00,401809802,unreviewed
+2025-11-26,NYK,CHA,group,NBA Cup - Group Play,2025-11-27T00:00:00+00:00,401809803,unreviewed
+2025-11-26,MIL,MIA,group,NBA Cup - Group Play,2025-11-27T00:30:00+00:00,401809804,unreviewed
+2025-11-26,MIN,OKC,group,NBA Cup - Group Play,2025-11-27T00:30:00+00:00,401809806,unreviewed
+2025-11-26,IND,TOR,group,NBA Cup - Group Play,2025-11-27T00:30:00+00:00,401809805,unreviewed
+2025-11-26,MEM,NOP,group,NBA Cup - Group Play,2025-11-27T01:00:00+00:00,401809807,unreviewed
+2025-11-26,HOU,GSW,group,NBA Cup - Group Play,2025-11-27T03:00:00+00:00,401809808,unreviewed
+2025-11-26,SAS,POR,group,NBA Cup - Group Play,2025-11-27T03:00:00+00:00,401809809,unreviewed
+2025-11-26,PHX,SAC,group,NBA Cup - Group Play,2025-11-27T03:00:00+00:00,401809810,unreviewed
+2025-11-28,CLE,ATL,group,NBA Cup - Group Play,2025-11-29T00:30:00+00:00,401809811,unreviewed
+2025-11-28,PHI,BKN,group,NBA Cup - Group Play,2025-11-29T00:30:00+00:00,401809812,unreviewed
+2025-11-28,CHI,CHA,group,NBA Cup - Group Play,2025-11-29T00:30:00+00:00,401809813,unreviewed
+2025-11-28,ORL,DET,group,NBA Cup - Group Play,2025-11-29T00:30:00+00:00,401809814,unreviewed
+2025-11-28,WAS,IND,group,NBA Cup - Group Play,2025-11-29T00:30:00+00:00,401809815,unreviewed
+2025-11-28,MIL,NYK,group,NBA Cup - Group Play,2025-11-29T00:30:00+00:00,401809816,unreviewed
+2025-11-28,SAS,DEN,group,NBA Cup - Group Play,2025-11-29T02:30:00+00:00,401809818,unreviewed
+2025-11-28,PHX,OKC,group,NBA Cup - Group Play,2025-11-29T02:30:00+00:00,401809817,unreviewed
+2025-11-28,SAC,UTA,group,NBA Cup - Group Play,2025-11-29T02:30:00+00:00,401809819,unreviewed
+2025-11-28,MEM,LAC,group,NBA Cup - Group Play,2025-11-29T03:00:00+00:00,401809821,unreviewed
+2025-11-28,DAL,LAL,group,NBA Cup - Group Play,2025-11-29T03:00:00+00:00,401809820,unreviewed
+2025-12-09,MIA,ORL,quarterfinal,NBA Cup - Quarterfinals,2025-12-09T23:00:00+00:00,401809833,unreviewed
+2025-12-09,NYK,TOR,quarterfinal,NBA Cup - Quarterfinals,2025-12-10T01:30:00+00:00,401809834,unreviewed
+2025-12-10,PHX,OKC,quarterfinal,NBA Cup - Quarterfinals,2025-12-11T00:30:00+00:00,401809835,unreviewed
+2025-12-10,SAS,LAL,quarterfinal,NBA Cup - Quarterfinals,2025-12-11T03:00:00+00:00,401809836,unreviewed
+2025-12-13,NYK,ORL,semifinal,NBA Cup - Semifinals,2025-12-13T22:30:00+00:00,401809837,unreviewed
+2025-12-13,SAS,OKC,semifinal,NBA Cup - Semifinals,2025-12-14T02:00:00+00:00,401809838,unreviewed
+2025-12-16,SAS,NYK,final,NBA Cup Championship,2025-12-17T01:30:00+00:00,401809839,unreviewed

@@ -1,0 +1,22 @@
+                                          finding                        unit   thesis replication holdout                    verdict  n_hold
+                        Wind lowers passing yards                % per 10 mph  -6.8***     -6.7*** -7.6***                      holds    6590
+                         Wind lowers completion %                % per 10 mph  -2.4***     -3.0*** -2.1***                      holds    6590
+                  Wind shifts play mix to the run                % per 10 mph  +2.7***      +2.4**    +1.0 same sign, not significant    6590
+                        Wind raises rushing yards                % per 10 mph  +4.5***        +2.4    -1.8                       gone    6589
+                        Cold lowers passing yards           % per 10°F colder  -1.7***     -2.3***    -0.3 same sign, not significant    6590
+                         Cold lowers completion %           % per 10°F colder  -0.8***     -1.2***    -0.4 same sign, not significant    6590
+                Heat (80°F+) lowers passing yards               % vs. not hot    -6.5*      -7.2**    -1.2 same sign, not significant    6590
+                 Heat (80°F+) lowers completion %               % vs. not hot   -3.9**      -3.1**    +0.0                       gone    6590
+              Visitors: wind lowers passing yards                % per 10 mph  -9.2***     -8.2*** -7.5***                      holds    3295
+            Home teams: wind lowers passing yards                % per 10 mph  -5.2***     -6.3*** -6.7***                      holds    3295
+              Visitors: cold lowers passing yards           % per 10°F colder  -2.2***     -2.8***    -0.4 same sign, not significant    3295
+            Home teams: cold lowers passing yards           % per 10°F colder  -1.6***      -1.6** -3.1***                      holds    3295
+                  Visitors: wind raises run share                % per 10 mph  +4.4***      +2.8**   +2.0*             holds (weaker)    3295
+                Home teams: cold raises run share           % per 10°F colder  +1.2***      +1.2** +1.2***                      holds    3295
+Warm-climate visitors in freezing games: pass yds % per 10°F colder than home  -3.6***      -2.2**    -1.4 same sign, not significant    3295
+ Mid-climate visitors in freezing games: pass yds % per 10°F colder than home   -2.4**        -0.6   -1.9*             holds (weaker)    3295
+  Warm-climate visitors in freezing games: comp % % per 10°F colder than home  -1.7***      -1.0**  -0.9**                      holds    3295
+Cold-climate visitors in freezing games: pass yds % per 10°F colder than home     +2.5        -7.8    -0.3           holds (still ~0)    3295
+    Visitors from windy stadiums: wind & pass yds                % per 10 mph -13.4***    -11.0*** -9.6***                      holds    3295
+     Visitors from calm stadiums: wind & pass yds                % per 10 mph  -8.3***     -9.1*** -8.1***                      holds    3295
+             Visitors from domes: wind & pass yds                % per 10 mph    -6.3*        -3.3    -4.8 same sign, not significant    3295

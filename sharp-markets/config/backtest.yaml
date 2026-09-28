@@ -1,0 +1,43 @@
+# Backtest parameters. Thresholds are tuned on the train split only.
+
+fair:
+  default_source: pinnacle          # pinnacle | blend
+  blend_weights: {pinnacle: 0.55, lowvig: 0.30, betonlineag: 0.15}   # from reference repo; renormalized over books present
+  max_sharp_age_min: 65             # sharp line considered stale after this (hourly tier + slack)
+
+kalshi:
+  ffill_max_age_min: 30             # forward-filled bid/ask become NULL after this
+  max_spread_for_mid: 0.05          # mid only used when ask - bid <= this
+
+fees:
+  taker_rate: 0.07                  # x series fee_multiplier; verified vs Kalshi fee-type docs
+  maker_ratio: 0.25                 # maker = 0.25 x taker (0.5 for *_combo_maker_fees); unused by taker sim
+  rounding: per_order               # per_order | per_fill | none (sensitivity)
+
+fills:
+  stake_dollars: 100                # requested notional per signal
+  participation: 0.25               # share of YES-taker volume we may take per minute
+  participation_sensitivity: [1.0]
+  fill_window_min: 5                # keep taking for up to N minutes while the signal still holds
+
+h1:
+  edge_thresholds: [0.01, 0.02, 0.03, 0.05]
+  fair_sources: [pinnacle, blend]
+
+h2:
+  move_pts: [0.02, 0.03, 0.05]
+  windows_min: [5, 15, 30]
+  min_edge_to_trade: 0.0            # trade only if post-move edge net of fee >= this
+  lag_cap_min: 120
+  late_news_min: 90                 # separate breakout for moves within this many minutes of tip
+
+leadlag:
+  search_min: 60
+  follow_frac: 0.5
+
+buckets:
+  edge: [0.01, 0.02, 0.03, 0.05, 0.10]
+  minutes_to_tip: [0, 30, 90, 120, 360, 1440]   # 0-30, 30-90, 90-120, 2-6h, 6-24h, >24h
+
+splits:
+  train_end: 2026-01-31

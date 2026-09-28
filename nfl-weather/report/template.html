@@ -1,0 +1,684 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NFL Weather Revisited</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+:root {
+  --paper: #f3f6f7;
+  --surface: #ffffff;
+  --ink: #111d27;
+  --ink-2: #44525e;
+  --muted: #6f7c87;
+  --hair: #d8dfe4;
+  --band: #eef2f4;
+  --accent: #0f5c68;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --good: #0c7d0c; --good-bg: #e3f3e1;
+  --warn: #8a5a00; --warn-bg: #fbf0d6;
+  --bad: #b3312f; --bad-bg: #f8e3e2;
+  --new: #0f5c68; --new-bg: #e0eef0;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --sans: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0f1417; --surface: #172026; --ink: #e9eef1; --ink-2: #b4c0c8; --muted: #86939c;
+    --hair: #2b363d; --band: #141c21; --accent: #6cc3cd;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --good: #6fd56f; --good-bg: #173222; --warn: #f2c14e; --warn-bg: #352a12;
+    --bad: #f08a88; --bad-bg: #3a1c1c; --new: #6cc3cd; --new-bg: #16323a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0f1417; --surface: #172026; --ink: #e9eef1; --ink-2: #b4c0c8; --muted: #86939c;
+  --hair: #2b363d; --band: #141c21; --accent: #6cc3cd;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --good: #6fd56f; --good-bg: #173222; --warn: #f2c14e; --warn-bg: #352a12;
+  --bad: #f08a88; --bad-bg: #3a1c1c; --new: #6cc3cd; --new-bg: #16323a;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.6; }
+.page { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: flex; flex-direction: column; gap: 56px; }
+.prose { max-width: 680px; display: flex; flex-direction: column; gap: 14px; }
+.prose p { margin: 0; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.02; }
+h1 { font-size: clamp(38px, 6.4vw, 64px); font-weight: 700; text-transform: uppercase; letter-spacing: 0.005em; }
+h2 { font-size: clamp(30px, 4.4vw, 42px); font-weight: 600; text-transform: uppercase; }
+h3 { font-size: 24px; font-weight: 600; letter-spacing: 0.01em; }
+.eyebrow { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0; }
+.dek { font-size: 21px; line-height: 1.45; color: var(--ink-2); max-width: 720px; margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+header.mast { display: flex; flex-direction: column; gap: 18px; padding-bottom: 8px; }
+.cite { font-family: var(--sans); font-size: 14px; color: var(--muted); margin: 0; }
+.gamebook { font-family: var(--mono); font-size: 13px; color: var(--ink-2); border-block: 1px solid var(--hair); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
+.gamebook b { color: var(--ink); font-weight: 600; letter-spacing: 0.04em; }
+.gamebook .gb-note { font-family: var(--sans); font-size: 13.5px; color: var(--muted); flex-basis: 100%; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 28px; font-family: var(--sans); font-size: 15px; color: var(--ink-2); }
+.facts strong { font-weight: 600; color: var(--ink); font-size: 18px; margin-right: 4px; }
+section { display: flex; flex-direction: column; gap: 22px; }
+.sec-head { display: flex; flex-direction: column; gap: 8px; border-top: 2px solid var(--ink); padding-top: 14px; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; border-top: 1px solid var(--hair); }
+.finding { display: grid; grid-template-columns: 78px 1fr; gap: 14px; padding-block: 14px; border-bottom: 1px solid var(--hair); align-items: start; }
+.finding p { margin: 0; font-size: 16px; line-height: 1.5; }
+.finding strong { font-family: var(--sans); font-weight: 600; }
+.pill { display: inline-block; font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; white-space: nowrap; line-height: 1.6; }
+.pill.good { color: var(--good); background: var(--good-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.pill.bad { color: var(--bad); background: var(--bad-bg); }
+.pill.new { color: var(--new); background: var(--new-bg); }
+.finding .pill { justify-self: start; margin-top: 2px; }
+figure.fig { margin: 0; display: flex; flex-direction: column; gap: 10px; background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 20px 20px 14px; }
+figcaption { font-family: var(--sans); display: flex; flex-direction: column; gap: 2px; }
+figcaption .fig-title { font-size: 17px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+figcaption .fig-sub { font-size: 14px; color: var(--muted); line-height: 1.4; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--sans); font-size: 13.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legend i.line { width: 16px; height: 2px; border-radius: 1px; }
+.legend i.hollow { background: transparent !important; border: 2px solid var(--muted); width: 10px; height: 10px; }
+.chart { width: 100%; min-height: 40px; }
+.chart svg { display: block; overflow: visible; font-family: var(--sans); }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px 26px; }
+.panel h4 { font-family: var(--sans); font-size: 14.5px; font-weight: 600; margin: 0 0 2px; color: var(--ink); }
+.panel .unit { font-family: var(--sans); font-size: 12.5px; color: var(--muted); margin: 0 0 4px; }
+.grid { stroke: var(--hair); stroke-width: 1; }
+.zero { stroke: var(--muted); stroke-width: 1; }
+.ref { stroke: var(--bad); stroke-width: 1.25; opacity: 0.8; }
+.band { fill: var(--band); }
+.cross { stroke: var(--muted); stroke-width: 1; }
+text.ax { fill: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+text.faint { fill: var(--muted); font-size: 11.5px; }
+text.reflab { fill: var(--bad); font-size: 11.5px; font-weight: 600; }
+text.rowlab { fill: var(--ink); font-size: 13px; }
+text.rowsub, tspan.rowsub { fill: var(--muted); font-size: 11.5px; }
+text.rowlab, text.rowsub, text.val { paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+text.val { fill: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+.hit { cursor: default; outline: none; }
+.hit:hover rect, .hit:focus rect { fill: var(--band); fill-opacity: 0.6; }
+details { font-family: var(--sans); font-size: 14px; }
+details summary { cursor: pointer; color: var(--accent); font-weight: 500; width: max-content; }
+details[open] summary { margin-bottom: 8px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; font-family: var(--sans); font-size: 14px; width: 100%; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+th { font-weight: 600; color: var(--ink-2); font-size: 12.5px; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody tr:hover { background: var(--band); }
+.note { font-family: var(--sans); font-size: 13.5px; color: var(--muted); margin: 0; line-height: 1.5; max-width: 820px; }
+.plays { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 640px) { .plays { grid-template-columns: 1fr; } }
+.play { background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.play p { margin: 0; font-size: 15px; line-height: 1.5; }
+.play h3 { font-size: 22px; }
+.play .play-tag { font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.play.bet { border-top: 3px solid var(--good); } .play.bet .play-tag { color: var(--good); }
+.play.watch { border-top: 3px solid var(--warn); } .play.watch .play-tag { color: var(--warn); }
+.play.avoid { border-top: 3px solid var(--bad); } .play.avoid .play-tag { color: var(--bad); }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; font-size: 16px; color: var(--ink-2); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; }
+.board .lean { font-weight: 600; }
+code, pre { font-family: var(--mono); font-size: 13px; }
+pre.eq { font-size: 13.5px; }
+pre { background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 14px 16px; overflow-x: auto; line-height: 1.55; margin: 0; }
+ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+#tip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--hair); border-radius: 6px; box-shadow: 0 6px 20px rgba(10, 20, 30, 0.16); padding: 8px 10px; font-family: var(--sans); font-size: 13px; max-width: 320px; display: flex; flex-direction: column; gap: 3px; }
+#tip .tip-title { font-weight: 600; color: var(--ink-2); font-size: 12.5px; margin-bottom: 2px; }
+#tip .tip-row { display: flex; align-items: center; gap: 7px; }
+#tip .tip-key { width: 12px; height: 2px; border-radius: 1px; flex: none; }
+#tip strong { font-variant-numeric: tabular-nums; }
+#tip .tip-label { color: var(--muted); }
+footer { font-family: var(--sans); font-size: 13.5px; color: var(--muted); border-top: 1px solid var(--hair); padding-top: 16px; }
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .page { padding-inline: 16px; gap: 44px; }
+  figure.fig { padding: 16px 14px 12px; }
+  .finding { grid-template-columns: 1fr; gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="page">
+  <header class="mast">
+    <p class="eyebrow">A follow-up to a 2014 CMC senior thesis</p>
+    <h1>Twelve more seasons of wind, cold &amp; closing lines</h1>
+    <p class="dek">The thesis found that wind and cold cut NFL passing, and that visitors from warm climates suffered most in freezing games. This rebuilds the data from scratch, re-runs the original models, tests them on every season since, and checks whether the betting market prices any of it.</p>
+    <p class="cite">Zipperman, M. (2014). <em>Quantifying the Impact of Temperature and Wind on NFL Passing and Rushing Performance.</em> CMC Senior Theses, Paper 830.</p>
+    <div class="gamebook" aria-label="Game book weather line">
+      <span><b>WEATHER</b> Partly Cloudy</span><span><b>TEMP</b> 49° F</span><span><b>HUMIDITY</b> 63%</span><span><b>WIND</b> 4 mph</span>
+      <span class="gb-note">Super Bowl XLVIII, MetLife Stadium, Feb. 2, 2014. The cold-weather Super Bowl that motivated the thesis kicked off at 49°F in almost no wind. Peyton Manning's 280 yards and two interceptions were not a weather story.</span>
+    </div>
+    <div class="facts">
+      <span><strong data-fig="games"></strong>games, <span data-fig="span"></span></span>
+      <span><strong data-fig="team_games"></strong>team-games</span>
+      <span><strong data-fig="outdoor"></strong>with outdoor weather</span>
+      <span><strong data-fig="fgs"></strong>field goals and PATs</span>
+    </div>
+  </header>
+
+  <section id="summary">
+    <div class="sec-head"><p class="eyebrow">Summary</p><h2>What held up, what didn't</h2></div>
+    <div class="findings" id="findings"></div>
+  </section>
+
+  <section id="holdout">
+    <div class="sec-head"><p class="eyebrow">Part 1 · Replication and out-of-sample test</p><h2>Same models, new seasons</h2></div>
+    <div class="prose">
+      <p>The thesis sample was <span data-fig="thesis_n"></span> games from 2002–2013, scraped from Pro-Football-Reference. The same game-book weather now ships in nflverse, and team box scores rebuilt from play-by-play match the thesis summary table almost exactly (home passer rating <span data-fig="qbr_check"></span>). The rebuilt data does show slightly less wind than the 2014 scrape, 6.4 vs 7.4 mph on average, so coefficients should agree in sign and size rather than to the decimal.</p>
+      <p>Each finding below is estimated three ways with the thesis's exact specification (log outcomes, franchise, opponent and season fixed effects, domes coded 72°F and calm): the published 2014 coefficient, the same regression on the rebuilt 2002–13 data, and the same regression on the <span data-fig="holdout_n"></span> games from 2014–2025 that the thesis never saw.</p>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Figure 1. Thesis estimates against 12 seasons of new data</span><span class="fig-sub">Percent change in the outcome, with 95% confidence intervals. Hover a row for values.</span></figcaption>
+      <div class="legend" id="fig1-legend"></div>
+      <div class="chart" id="fig1"></div>
+      <details><summary>All 21 findings as a table</summary><div id="fig1-table"></div></details>
+      <p class="note">“Holds” means the 2014–25 estimate has the thesis's sign with p &lt; 0.05. “Weaker” means the same sign with p &lt; 0.10. “Gone” means it is no longer distinguishable from zero or has flipped. Cold effects are stated per 10°F colder, using the thesis's wind-chill temperature.</p>
+    </figure>
+    <div class="prose">
+      <p><strong>Wind is the durable result.</strong> In the thesis, 10 mph of wind cut passing yards by <span data-fig="wpt"></span>. On the rebuilt 2002–13 data it is <span data-fig="wpr"></span>, and on the 12 new seasons <span data-fig="wph"></span>. Completion percentage still falls in the wind, and visitors from windy home stadiums are still the most affected, though the gaps between groups are within noise.</p>
+      <p><strong>Temperature mostly faded.</strong> The pooled cold effect on passing yards is <span data-fig="cold_h"></span> per 10°F in the new seasons, and the heat penalty is gone. The split that reversed is who feels the cold: in the thesis, visitors were about twice as sensitive as home teams. Since 2014 it runs the other way (visitors <span data-fig="cold_vt_h"></span>, home teams <span data-fig="cold_ht_h"></span>).</p>
+      <p><strong>Acclimation weakened but did not vanish.</strong> Warm-climate visitors in freezing games still complete fewer passes (<span data-fig="warm_cmp_h"></span> per 10°F colder than home), but the passing-yards effect, the thesis's strongest result, is now <span data-fig="warm_pass_h"></span> and not significant.</p>
+    </div>
+  </section>
+
+  <section id="audit">
+    <div class="sec-head"><p class="eyebrow">Part 2 · The 2014 model, audited</p><h2>What the original model does, and what to fix</h2></div>
+    <div class="prose">
+      <p>The main thesis regression, in words. Each row is one team's offense in one game:</p>
+      <pre class="eq">log(passing yards) = offense baseline + opponent baseline + season baseline
+                   + b₁·wind (mph) + b₂·wind-chill temperature (°F)
+                   + b₃·freezing + b₄·hot (80°F+)
+                   + home + home × each weather term + noise</pre>
+      <p><strong>How to read it.</strong> Because the outcome is logged, 100 × a coefficient is roughly the percent change per unit, so b₁ = −0.0068 means about −0.7% passing yards per mph, or −6.8% per 10 mph. The three baselines are fixed effects. Each offense is compared with itself, against a given opponent, in a given season, so a bad team playing in Buffalo doesn't look like a weather effect. Robust standard errors allow the noise to be bigger in some games than others. Tables 6 and 7 run the same model separately for home and away teams. Tables 8 and 9 give visitors a temperature <em>differential</em>, the game temperature minus their own city's temperature that week, to test acclimation.</p>
+      <p><strong>Verified.</strong> Rebuilt independently, the model reproduces: home passer rating averages 85.55 against the thesis's 85.57, and 10 mph of wind costs <span data-fig="lad0"></span> of passing yards against the published −6.8%. The one definitional difference is that the thesis's total yards were gross passing plus rushing, without subtracting sack yardage.</p>
+      <p>Figure 10 starts from that exact specification on the thesis's own seasons and applies one fix at a time. The headline numbers barely move, so the original conclusions were right. What changes is how the numbers should be read and how certain they are.</p>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Figure 10. The thesis model, one fix at a time (2002–2013)</span><span class="fig-sub">Percent change in passing yards, with 95% intervals. Each step keeps every fix above it.</span></figcaption>
+      <div class="panels" id="fig10"></div>
+      <details open><summary>What each step changes</summary><div id="fig10-table"></div></details>
+    </figure>
+    <div class="prose">
+      <ul class="plain">
+        <li><strong>The home effect was the real misread.</strong> With home × weather interactions in the model, the “Home” coefficient is the home advantage in a 0°F game with no wind. Rushing yards come out +<span data-fig="home_raw"></span> as estimated, but +<span data-fig="home_c"></span> at 60°F and average wind once the terms are centered. The same goes for “Wind”: with a home × wind term, it is the visitors' wind effect, not the league's (step 1).</li>
+        <li><strong>Significance was overstated a little.</strong> Clustering by game widens the wind interval by about <span data-fig="se_ratio"></span>. Every headline still clears the bar.</li>
+        <li><strong>Domes as 72°F calm days</strong> and <strong>wind counted twice</strong> (directly and inside wind chill) both nudged the wind effect toward zero. Fixing them moves it back to about −7%.</li>
+        <li><strong>The things the thesis could not fix itself</strong> matter more for other outcomes than for passing yards. Log models drop every zero (the INT-rate regression lost 37% of its games), straight-line wind hides that nothing happens below about 10 mph, and rush share mixes strategy with game script. Parts 3 and 4 use Poisson models, wind bins, and pass rate over expected instead.</li>
+      </ul>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Table 3. How much does weather explain?</span><span class="fig-sub">Share of variation explained, 1999–2025 team-games. The thesis reported total R², which is mostly the team, opponent and season baselines. Partial R² is what the weather terms add after those baselines.</span></figcaption>
+      <div id="tab-strength"></div>
+      <p class="note">Weather is a real but small part of any single game. It explains about <span data-fig="pr2_pass"></span> of game-to-game variation in passing yards once team quality is accounted for, and about <span data-fig="pr2_miss"></span> of how far totals miss the closing line. That is the scale to expect from any betting edge built on it.</p>
+    </figure>
+  </section>
+
+  <section id="extend">
+    <div class="sec-head"><p class="eyebrow">Part 3 · Taking it further</p><h2>What the thesis couldn't see</h2></div>
+    <div class="prose">
+      <p>The extended model keeps the thesis's question but changes the machinery. Team quality gets its own effect for each team-season, on offense and defense, instead of one effect per franchise. A week-of-season effect, identified from dome games, keeps “December” from masquerading as “cold”. Domes get their own category instead of being coded as a 72°F calm day. Wind and air temperature enter as separate bins, with rain and snow from hourly ERA5 reanalysis added. Standard errors are clustered by game, and the outcomes include play-by-play measures that did not exist in 2014: EPA per dropback, completion rate over expected, air yards, and pass rate over expected. Sample: <span data-fig="ext_n"></span> team-games, 1999–2025.</p>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Figure 2. What each condition does to an offense</span><span class="fig-sub">Change per team-game against an outdoor game with wind under 10 mph, 46–79°F, and no precipitation. Filled dots are significant at 5%; hollow dots are not.</span></figcaption>
+      <div class="panels" id="fig2"></div>
+      <details><summary>Table</summary><div id="fig2-table"></div></details>
+      <p class="note"><span data-fig="n_wind20"></span> team-games had 20+ mph wind, <span data-fig="n_rain"></span> had rain (≥<span data-fig="rain_in"></span> in over the game window), and <span data-fig="n_snow"></span> had snow. Against the NFL game book's kickoff description, ERA5 flags <span data-fig="rain_agree"></span> of the games described as rainy, and <span data-fig="rain_prec"></span> of ERA5-wet games are described that way. Pass rate over expected, completion rate over expected and air yards start in 2006.</p>
+    </div>
+    </figure>
+    <div class="prose">
+      <p>Wind works like a dose. Under 15 mph little happens. At 15–19 mph and again past 20 mph, teams throw shorter and less often (pass rate over expected <span data-fig="proe20"></span> points at 20+), completions get harder than their difficulty implies (CPOE <span data-fig="cpoe20"></span>), and passing yards fall by about <span data-fig="py20"></span> per team. Rain costs about as much passing efficiency as 15–19 mph wind. Snow hurts passing as much as rain, but points don't fall, partly because rushing picks up. The betting section returns to it.</p>
+    </div>
+
+    <figure class="fig">
+      <figcaption><span class="fig-title">Figure 3. The same conditions, then and now</span><span class="fig-sub">Effect of 20+ mph wind and of ≤32°F air temperature, estimated separately for 1999–2013 and 2014–2025.</span></figcaption>
+      <div class="legend" id="fig3-legend"></div>
+      <div class="chart" id="fig3"></div>
+      <p class="note">Offenses have adapted most to cold. In 1999–2013 freezing games cost about <span data-fig="proe_cold_old"></span> points of pass rate over expected; since 2014 it is <span data-fig="proe_cold_new"></span>. Wind still bites in both eras. CPOE and pass rate over expected start in 2006, so their first era is 2006–2013.</p>
+    </figure>
+
+    <div class="two">
+      <figure class="fig">
+        <figcaption><span class="fig-title">Figure 4. Freezing games, by who is visiting</span><span class="fig-sub">Change in passing yards in a ≤32°F game relative to the same team's other games. Visitors are grouped by their home city's average temperature over the prior week.</span></figcaption>
+        <div class="chart" id="fig4"></div>
+        <p class="note">Cold-climate visitors play freezing games like any other game. Dome teams lose the most (<span data-fig="dome_cold_py"></span> passing yards, <span data-fig="dome_cold_pts"></span> points), which is the thesis's acclimation idea surviving a much stricter model. Only <span data-fig="dome_cold_n"></span> such games, so the interval is wide.</p>
+      </figure>
+      <figure class="fig">
+        <figcaption><span class="fig-title">Figure 5. Field goals: cold hurts more than wind</span><span class="fig-sub">Modeled make probability by distance, 2025 kicking level, from <span data-fig="fg_n"></span> attempts.</span></figcaption>
+        <div class="legend" id="fig5-legend"></div>
+        <div class="chart" id="fig5"></div>
+        <p class="note">The thesis suggested kicking as future work. A 50-yarder falls from <span data-fig="fg50_calm"></span> in calm, mild conditions to <span data-fig="fg50_cold"></span> at ≤32°F, and <span data-fig="fg50_both"></span> when it is also windy. Coaches already know: the share of attempts from 50+ yards drops from <span data-fig="long_calm"></span> in light wind to <span data-fig="long_20"></span> in 20+ mph.</p>
+      </figure>
+    </div>
+  </section>
+
+  <section id="market">
+    <div class="sec-head"><p class="eyebrow">Part 4 · Gambling implications</p><h2>Does the market price the weather?</h2></div>
+    <div class="prose">
+      <p>This question has been asked before. Borghesi (2008) found that heat, wind and rain lowered scoring more than 1984–2004 totals allowed for, and Paul (2017) found the same for wind and humidity. The test here is whether that gap survived another two decades of an increasingly sharp market. If the weather effects are real and the market already knows them, the closing total should move by about as much as scoring does. Figure 6 compares the two with the same fixed effects: how much a condition changes actual combined points, and how much it changes the closing total.</p>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Figure 6. Wind costs points the closing total doesn't subtract</span><span class="fig-sub">Change in combined points versus a calm, mild, dry outdoor game, 1999–2025, with home and away team-season fixed effects.</span></figcaption>
+      <div class="legend" id="fig6-legend"></div>
+      <div class="chart" id="fig6"></div>
+      <p class="note">For 15–19 mph, scoring falls <span data-fig="mk_act_15"></span> points while the closing total drops only <span data-fig="mk_line_15"></span>. Cold runs the other way: the market takes <span data-fig="mk_line_cold"></span> points off totals for freezing games that actually cost <span data-fig="mk_act_cold"></span>.</p>
+    </figure>
+
+    <div class="two">
+      <figure class="fig">
+        <figcaption><span class="fig-title">Figure 7. Unders by wind speed</span><span class="fig-sub">Share of outdoor games that went under the closing total, pushes excluded, with 95% intervals.</span></figcaption>
+        <div class="legend" id="fig7-legend"></div>
+        <div class="chart" id="fig7"></div>
+        <p class="note">In 15+ mph wind the under hit <span data-fig="u15_all"></span> of <span data-fig="u15_n"></span> games (1999–2025), <span data-fig="u15_roi"></span> ROI at −110. Since 2014: <span data-fig="u15_new"></span>.</p>
+      </figure>
+      <figure class="fig">
+        <figcaption><span class="fig-title">Figure 8. The market moves late</span><span class="fig-sub">Under rate against the opening and the closing total, 2007–2021 (opening lines from the Sportsbook Reviews archive).</span></figcaption>
+        <div class="legend" id="fig8-legend"></div>
+        <div class="chart" id="fig8"></div>
+        <p class="note">In 15+ mph wind the total fell <span data-fig="oc_move15"></span> points from open to close on average and moved down in <span data-fig="oc_down15"></span> of games. The under won <span data-fig="oc_open15"></span> at the opener and <span data-fig="oc_close15"></span> at the close.</p>
+      </figure>
+    </div>
+
+    <div class="prose">
+      <h3>A strategy that doesn't peek</h3>
+      <p><strong>Closing-line value (CLV)</strong> is the scoreboard used below. The closing total is the last number before kickoff, after the market has absorbed the final forecast, injuries and sharp money. Betting under 44 when it closes 42.5 is +1.5 points of CLV. Win–loss records need thousands of bets to separate skill from luck. CLV doesn't depend on the final score, so it shows much sooner whether a signal is getting ahead of the market. On NFL totals, half a point is worth roughly 1–2.5 points of win probability, more near common final totals.</p>
+      <p>Bucket tables flatter whoever picks the buckets. The walk-forward test fits a weather-only model of P(under) on prior seasons, then bets the next season whenever the model clears 53%, refitting every year from 2006 on. It went <span data-fig="wf_rec"></span> (<span data-fig="wf_pct"></span>, <span data-fig="wf_roi"></span> ROI at −110, one-sided p = <span data-fig="wf_p"></span> against break-even). Two sharper checks, borrowed from the sharp-markets project:</p>
+      <ul class="plain">
+        <li><strong>Closing-line value.</strong> Where an opening line exists, those under bets beat the closing number <span data-fig="clv_share"></span> of the time, by <span data-fig="clv_pts"></span> points on average. All outdoor totals drift <span data-fig="clv_base"></span> points over the same window. Beating the close is the steadier evidence that the signal carries information the opener lacks.</li>
+        <li><strong>Model vs. the de-vigged price.</strong> Against closing over/under prices de-vigged two ways (proportional and Shin), the model's Brier score is <span data-fig="brier_m"></span> vs. <span data-fig="brier_k"></span> for the market, better by a hair. Betting only where the two disagree by 6+ points won <span data-fig="gap6"></span>. Both de-vig methods agree.</li>
+      </ul>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Figure 9. Walk-forward under bets, 2006–2025</span><span class="fig-sub">Cumulative units at −110, betting 1 unit whenever the prior-seasons model gives P(under) ≥ 53%.</span></figcaption>
+      <div class="chart" id="fig9"></div>
+      <p class="note">Profitable in <span data-fig="stab"></span> seasons, so a bad year is normal. <span data-fig="variants"></span> betting variants were examined across this whole section, so discount the single best-looking bucket in any table.</p>
+    </figure>
+
+    <div class="prose">
+      <h3>Would a fancier model help?</h3>
+      <p>The same walk-forward setup also tests two richer models: a logistic model with interactions (wind × the posted total, wind × cold, wind × rain), and gradient-boosted trees on raw weather plus the posted total and spread. Scores are Brier skill against simply predicting the prior seasons' under rate.</p>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Table 4. Out-of-sample accuracy of P(under), 2006–2025</span><span class="fig-sub">Brier skill relative to the league under rate, higher is better; zero means no better than the base rate. “Market” is the de-vigged closing over/under price.</span></figcaption>
+      <div id="tab-models"></div>
+      <p class="note">The trees do worse than the base rate: with a signal this thin, flexible models fit noise. The interaction terms add a little accuracy but not betting results. The de-vigged price has essentially zero skill, as it should, since totals are set so both sides are near 50%. The simple weather logistic stays in production.</p>
+    </figure>
+
+    <div class="prose">
+      <h3>Spreads, team totals, and the acclimation angle</h3>
+      <p>Wind does not help underdogs against the spread. The acclimation effect from Part 3 does show up in sides, though. When a dome or warm-climate team visits a freezing game, the home team covered <span data-fig="acc_home"></span> of <span data-fig="acc_n"></span> games, and the visitor's implied team total went under <span data-fig="acc_tt"></span>. Cold-climate visitors show nothing (<span data-fig="acc_cold"></span> home covers). It is the right shape, but the sample is small.</p>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Table 1. Freezing games against the spread</span><span class="fig-sub">Outdoor games at ≤32°F, excluding neutral sites. Implied team totals come from the closing spread and total.</span></figcaption>
+      <div id="tab-acc"></div>
+    </figure>
+
+    <div class="prose">
+      <h3>Forecasts, not hindsight</h3>
+      <p>Every backtest above uses the weather observed at kickoff, which no bettor has. Open-Meteo archives what its models forecast 1–3 days out starting in 2024. For outdoor games since then, the day-before forecast of kickoff wind correlates <span data-fig="fc1_r"></span> with the game-book reading, and the three-day forecast <span data-fig="fc3_r"></span>. That is good enough to spot a windy game early, which is where the open-to-close move lives.</p>
+      <p>The same seasons also show where hindsight flatters the backtest. Rain nobody forecast went <span data-fig="rs_surprise"></span> against the total, while games with rain in the day-before forecast went <span data-fig="rs_forecast"></span>: the close had already priced it. Most of the historical rain edge is surprise rain, which can't be bet ahead of time. Wind looks different but is no comfort either: 15+ mph games went <span data-fig="ws_recent"></span> in 2024–26 on observed wind, so the last two seasons were flat whatever the inputs. Treat the observed-weather results as an upper bound.</p>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Table 2. Forecast skill and the same model on forecast inputs, 2024 onward</span><span class="fig-sub">Kickoff wind put on the game-book scale. Two seasons only, so the betting rows are illustrative.</span></figcaption>
+      <div id="tab-fc"></div>
+    </figure>
+
+    <div class="callout">What this adds up to: weather is a real but small input. The durable angle is betting totals down early in the week when a strong-wind forecast firms up, before the rest of the market does. Closing-line value is the scoreboard, not the win rate.</div>
+  </section>
+
+  <section id="playbook">
+    <div class="sec-head"><p class="eyebrow">Part 5 · Playbook</p><h2>Strategies and triggers</h2></div>
+    <div class="prose">
+      <p>One rule has a real-money case. The rest are logged, not bet, until the forward test shows closing-line value. The alert job sends each trigger once, labeled BET or WATCH. The full card is in <code>STRATEGY.md</code>.</p>
+    </div>
+    <div class="plays">
+      <div class="play bet">
+        <p class="play-tag">Bet · 1 unit</p><h3>Early wind under</h3>
+        <p><strong>Trigger:</strong> outdoor stadium, kickoff wind forecast 15+ mph, 1–3 days out.</p>
+        <p><strong>Action:</strong> bet the under right away at the best number, −110 or better. <strong>Storm</strong> (rain or snow also forecast): 1.5 units.</p>
+        <p><strong>Why:</strong> <span data-fig="s_w_close"></span> vs the close since 1999; <span data-fig="s_w_open"></span> vs the opener; totals fall about <span data-fig="s_w_move"></span> points by kickoff. Storm games <span data-fig="s_storm"></span>.</p>
+        <p><strong>Stop:</strong> after 40 bets, if average CLV is zero or worse.</p>
+      </div>
+      <div class="play bet">
+        <p class="play-tag">Bet · 1 unit</p><h3>Line lag</h3>
+        <p><strong>Trigger:</strong> the kickoff wind forecast jumps 5+ mph to 15+ while the total moves less than half a point.</p>
+        <p><strong>Action:</strong> same as the early wind under. This is the move the market usually makes late.</p>
+      </div>
+      <div class="play watch">
+        <p class="play-tag">Watch · paper only</p><h3>Log, don't bet</h3>
+        <p><strong>Model lean</strong> at P(under) ≥ 55%, the pre-registered test. <strong>Forecast rain</strong>, already priced (<span data-fig="rs_forecast"></span> in 2024–26). <strong>Cold visitor</strong>: dome or warm-climate team in a ≤32°F game, home covered <span data-fig="acc_home"></span>. <strong>Props</strong>: passing yards fall about 11% at 20+ mph; 50-yard field goals drop to <span data-fig="fg50_both"></span> in freezing wind. Not backtestable.</p>
+      </div>
+      <div class="play avoid">
+        <p class="play-tag">Avoid</p><h3>No edge</h3>
+        <p><strong>Snow unders</strong> (<span data-fig="s_snow"></span>). <strong>Cold-only totals</strong> (freezing overs <span data-fig="s_cold_old"></span> before 2014, <span data-fig="s_cold_new"></span> since). <strong>10–14 mph wind at the close</strong> (<span data-fig="s_w1014"></span>). Anything indoors.</p>
+      </div>
+    </div>
+    <figure class="fig">
+      <figcaption><span class="fig-title">Table 5. Each rule, scored the same way</span><span class="fig-sub">Under (or over, for the control) win rate against the closing total, by era, and against the opener. Break-even at −110 is 52.4%.</span></figcaption>
+      <div id="tab-strat"></div>
+      <p class="note">Rules use thresholds fixed before looking at betting results: 15 mph from the wind bins and Burke (2012), rain ≥ 0.06 in from matching the NFL game book's rain descriptions. Execution: half a point of total is worth roughly 1–2.5 points of win probability, so shop the number. On Kalshi a 50¢ contract plus the taker fee breaks even at 51.75%, a little cheaper than −110.</p>
+    </figure>
+  </section>
+
+  <section id="week">
+    <div class="sec-head"><p class="eyebrow">Live</p><h2>This week's weather board</h2></div>
+    <div class="prose"><p>Forecast kickoff conditions for upcoming games as of <span data-fig="generated"></span>, with the historical scoring effect of that weather, how much closing totals usually move for it, and the model's P(under). A lean needs 55%. Forecasts more than two days out will change.</p></div>
+    <figure class="fig board"><div id="tab-week"></div>
+      <p class="note">Alerts: a scheduled job refreshes forecasts and lines four times a day and sends a Mac notification (and an iPhone push via ntfy) when a game crosses the 55% lean, when the model and the de-vigged price disagree by 5+ points, or when the kickoff wind forecast jumps while the total stays put. “Weather effect” is the historical change in combined points for these conditions. “Market usually moves” is how much closing totals have shifted for the same conditions. Retractable roofs with no roof decision yet are treated as closed.</p>
+    </figure>
+  </section>
+
+  <section id="method">
+    <div class="sec-head"><p class="eyebrow">Method</p><h2>How it's built</h2></div>
+    <div class="prose">
+      <p>The 2014 thesis used a Beautiful Soup scraper against Pro-Football-Reference, which now blocks scripts. The new pipeline pulls the same game-book weather from nflverse, rebuilds every team box score from play-by-play, adds hourly ERA5 weather from Open-Meteo for each stadium, NOAA daily highs and lows for each home city, and opening and closing lines scraped from the Sportsbook Reviews archive. Every source is cached, so a weekly rerun downloads only new games.</p>
+      <p>ERA5 wind is a grid average, not the stadium reading, so it is put on the game-book scale with a fitted calibration (game-book = <span data-fig="cal"></span> × ERA5, r = <span data-fig="cal_r"></span>). It is used only where the game book has no reading, and for forecasts.</p>
+    </div>
+<pre>.venv/bin/python scripts/fetch_data.py     # refresh every source (cached)
+.venv/bin/python scripts/build_data.py     # processed tables
+.venv/bin/python scripts/replicate.py      # thesis specs, 2002-13 and 2014-25
+.venv/bin/python scripts/extend.py         # extended model, acclimation, kicking
+.venv/bin/python scripts/audit_thesis.py   # the 2014 model, one fix at a time
+.venv/bin/python scripts/betting.py        # market tests, CLV, walk-forward
+.venv/bin/python scripts/model_compare.py  # simple vs fancier P(under) models
+.venv/bin/python scripts/odds_api.py plan  # Pinnacle backfill plan (free); backfill --confirm to spend
+.venv/bin/python scripts/this_week.py      # weather board + forward ledger
+.venv/bin/python scripts/alerts.py         # alerts (scheduled via scripts/install_alerts.sh)
+.venv/bin/python scripts/report_data.py    # rebuild this page</pre>
+    <div class="prose">
+      <h3>Limits</h3>
+      <ul class="plain">
+        <li>Observed kickoff weather stands in for the forecast in every backtest before 2024.</li>
+        <li>Closing lines come from nflverse and the Sportsbook Reviews archive rather than one sharp book. They agree within half a point on 94% of totals.</li>
+        <li>Snow and heavy-wind samples are small: <span data-fig="n_snow_games"></span> snow games and <span data-fig="n_w20_games"></span> games with 20+ mph wind.</li>
+        <li>Stadium wind is one number per game. Wind direction relative to the field, and swirl inside bowls like the Meadowlands, are not modeled.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Built <span data-fig="generated"></span> from nflverse, Open-Meteo (CC BY 4.0), NOAA NCEI and the Sportsbook Reviews Online archive. Paper research only.</footer>
+</div>
+<div id="tip" role="tooltip" hidden></div>
+
+<script>
+const D = /*__DATA__*/null;
+</script>
+<script>/*__CHARTS__*/</script>
+<script>
+(function () {
+  const C = n => `var(--s${n})`;
+  const pct = (v, d = 1) => v == null ? "–" : (100 * v).toFixed(d) + "%";
+  const sgn = (v, d = 1, u = "") => v == null ? "–" : fmt(v, d, true) + u;
+  const find = (arr, f) => (arr || []).find(f) || {};
+  const H = Object.fromEntries((D.headlines || []).map(h => [h.finding, h]));
+  const me = (o, t) => find(D.ext_main, r => r.outcome === o && r.term === t);
+  const era = (o, t, e) => find(D.ext_era, r => r.outcome === o && r.term === t && r.era === e);
+  const mk = (s, t, e = "All 1999–2025") => find(D.market, r => r.series === s && r.term === t && r.era === e);
+  const tb = (b, e = "All") => find(D.totals_bucket, r => r.bucket === b && r.era === e);
+  const oc = b => find(D.open_close, r => r.bucket === b);
+  const wf = (t, e, s) => find(D.walkforward, r => r.threshold === t && r.era === e && r.side === s);
+  const kg = (s, d) => find(D.kicking_grid, r => r.scenario === s && r.distance === d);
+  const acc = g => find(D.ext_acclimation, r => r.term === "cold_x_" + g && r.outcome === "pass_yds");
+  const accp = g => find(D.ext_acclimation, r => r.term === "cold_x_" + g && r.outcome === "pts");
+  const aa = (g, e = "All") => find(D.acclimation_ats, r => r.group === g && r.era === e);
+  const S = D.summary || {};
+  const m = D.meta;
+  const kbw = find(D.kicking_by_wind, r => String(r.wx_wind) === "<10");
+  const kbw20 = find(D.kicking_by_wind, r => String(r.wx_wind) === "20+");
+  const fs1 = find(D.forecast_skill, r => r.lead_days === 1), fs3 = find(D.forecast_skill, r => r.lead_days === 3);
+  const mm6 = find(D.model_vs_market, r => r.devig === "shin" && r.min_gap === 0.06);
+  const mm0 = find(D.model_vs_market, r => r.devig === "shin" && r.min_gap === 0);
+  const w53 = wf(0.53, "2006–2025", "under");
+  const hv = k => H[k] || {};
+  const F = {
+    games: m.games.toLocaleString(), span: `${m.first_season}–${m.last_season}`, team_games: m.team_games.toLocaleString(),
+    outdoor: m.outdoor_games.toLocaleString(), fgs: m.plays_kicks.toLocaleString(),
+    thesis_n: "3,133", holdout_n: m.holdout_games.toLocaleString(), qbr_check: "85.55 vs. 85.57",
+    wpt: sgn(hv("Wind lowers passing yards").thesis, 1, "%"), wpr: sgn(hv("Wind lowers passing yards").replication, 1, "%"),
+    wph: sgn(hv("Wind lowers passing yards").holdout, 1, "%"),
+    cold_h: sgn(hv("Cold lowers passing yards").holdout, 1, "%"),
+    cold_vt_h: sgn(hv("Visitors: cold lowers passing yards").holdout, 1, "%"), cold_ht_h: sgn(hv("Home teams: cold lowers passing yards").holdout, 1, "%"),
+    warm_cmp_h: sgn(hv("Warm-climate visitors in freezing games: comp %").holdout, 1, "%"),
+    warm_pass_h: sgn(hv("Warm-climate visitors in freezing games: pass yds").holdout, 1, "%"),
+    ext_n: (D.ext_main.find(r => r.outcome === "epa_db") || {}).n?.toLocaleString(),
+    n_wind20: (m.team_wind20 || 0).toLocaleString(), n_rain: (m.team_rain || 0).toLocaleString(), n_snow: (m.team_snow || 0).toLocaleString(),
+    rain_agree: pct(D.precip_check.era5_wet_given_gb_rain, 0), rain_prec: pct(D.precip_check.gb_rain_given_era5_wet, 0), rain_in: String(m.rain_in),
+    proe20: sgn(me("proe", "wind_20p").coef, 1), cpoe20: sgn(me("cpoe", "wind_20p").coef, 1, " pts"),
+    py20: Math.abs(me("pass_yds", "wind_20p").coef || 0).toFixed(0) + " yards",
+    proe_cold_old: sgn(era("proe", "temp_le32", "1999–2013").coef, 1), proe_cold_new: sgn(era("proe", "temp_le32", "2014–2025").coef, 1),
+    dome_cold_py: sgn(acc("visitor_dome").coef, 0), dome_cold_pts: sgn(accp("visitor_dome").coef, 1),
+    dome_cold_n: acc("visitor_dome").n_cold_games_group ?? "–",
+    fg_n: (m.fg_attempts || 0).toLocaleString(),
+    fg50_calm: kg("Calm, 46–79°F, dry", 50).make_pct?.toFixed(0) + "%", fg50_cold: kg("≤32°F", 50).make_pct?.toFixed(0) + "%",
+    fg50_both: kg("Wind 20+ & ≤32°F", 50).make_pct?.toFixed(0) + "%",
+    long_calm: pct(kbw.long_share, 0), long_20: pct(kbw20.long_share, 0),
+    mk_act_15: fmt(mk("Actual points", "wind_15_19").coef, 1, true), mk_line_15: fmt(mk("Closing total", "wind_15_19").coef, 1, true),
+    mk_line_cold: fmt(mk("Closing total", "temp_le32").coef, 1, true), mk_act_cold: fmt(mk("Actual points", "temp_le32").coef, 1, true),
+    u15_all: pct(tb("Wind 15+").under_win_pct), u15_n: (tb("Wind 15+").under_bets || 0).toLocaleString(),
+    u15_roi: sgn(100 * (tb("Wind 15+").under_roi_110 || 0), 1, "%"),
+    u15_new: `${pct(tb("Wind 15+", "2014–2025").under_win_pct)} of ${tb("Wind 15+", "2014–2025").under_bets}, ${sgn(100 * (tb("Wind 15+", "2014–2025").under_roi_110 || 0), 1, "%")} ROI`,
+    oc_move15: fmt(oc("Wind 15+").mean_move, 1, true), oc_down15: pct(oc("Wind 15+").share_moved_down, 0),
+    oc_open15: pct(oc("Wind 15+").under_open_pct), oc_close15: pct(oc("Wind 15+").under_close_pct),
+    wf_rec: `${w53.wins}–${w53.bets - w53.wins}`, wf_pct: pct(w53.win_pct), wf_roi: sgn(100 * (w53.roi_110 || 0), 1, "%"),
+    wf_p: w53.p_vs_breakeven?.toFixed(2),
+    clv_share: pct(S.clv?.share_beat_close, 0), clv_pts: fmt(S.clv?.mean_clv_pts, 2, true), clv_base: fmt(S.clv?.all_outdoor_mean_move_pts, 2, true),
+    brier_m: mm0.brier_model?.toFixed(4), brier_k: mm0.brier_market?.toFixed(4),
+    gap6: `${pct(mm6.win_pct)} of ${mm6.bets} bets (${sgn(100 * (mm6.roi_actual_odds || 0), 1, "%")} at actual prices)`,
+    stab: `${S.stability?.seasons_profitable} of ${S.stability?.seasons}`, variants: S.variants?.total,
+    acc_home: pct(aa("Dome or warm visitor, ≤32°F game").home_cover_pct, 0), acc_n: aa("Dome or warm visitor, ≤32°F game").games,
+    acc_tt: pct(aa("Dome or warm visitor, ≤32°F game").away_tt_under_pct, 0),
+    acc_cold: pct(aa("Cold-climate visitor (<40°F week), ≤32°F game").home_cover_pct, 0),
+    fc1_r: fs1.corr?.toFixed(2) ?? "–", fc3_r: fs3.corr?.toFixed(2) ?? "–",
+    generated: m.generated, cal: `${m.wind_cal.wind_intercept.toFixed(2)} + ${m.wind_cal.wind_slope.toFixed(2)}`, cal_r: m.wind_cal.wind_r.toFixed(2),
+    n_snow_games: m.snow_games, n_w20_games: m.wind20_games,
+    ...(() => {
+      const st = (rule, test) => find(D.strategies, r => r.rule === rule && r.test === test);
+      const rec = r => r.bets ? `${Math.round(r.win_pct * r.bets)}–${r.bets - Math.round(r.win_pct * r.bets)}` : "–";
+      const pc = r => r.win_pct == null ? "–" : `${(100 * r.win_pct).toFixed(1)}% (${r.bets})`;
+      return {
+        rs_surprise: rec(st("Rain split: rain nobody forecast", "2024–26 outdoor games")),
+        rs_forecast: rec(st("Rain split: forecast rain (1d)", "2024–26 outdoor games")),
+        ws_recent: rec(st("Wind split: observed wind 15+", "2024–26 outdoor games")),
+        s_w_close: pc(st("Wind 15+ mph → under", "vs close 1999–2025")),
+        s_w_open: pc(st("Wind 15+ mph → under", "vs open 2007–2021")),
+        s_w_move: Math.abs(st("Wind 15+ mph → under", "vs open 2007–2021").mean_move || 0).toFixed(1),
+        s_storm: pc(st("Storm: wind 15+ and rain/snow → under", "vs close 1999–2025")),
+        s_snow: pc(st("Snow → under (control)", "vs close 1999–2025")),
+        s_cold_old: pc(st("Freezing ≤32°F, calm & dry → over (control)", "vs close 1999–2013")),
+        s_cold_new: pc(st("Freezing ≤32°F, calm & dry → over (control)", "vs close 2014–2025")),
+        s_w1014: pct(tb("Wind 10–14").under_win_pct),
+      };
+    })(),
+    lad0: sgn(find(D.audit_ladder, r => r.outcome === "ln_pass_yds" && r.step.startsWith("0.")).wind_pct, 1, "%"),
+    home_raw: (find(D.audit_home, r => r.outcome === "ln_rush_yds" && r.version.startsWith("As")).home_pct || 0).toFixed(0) + "%",
+    home_c: (find(D.audit_home, r => r.outcome === "ln_rush_yds" && r.version.startsWith("Centered")).home_pct || 0).toFixed(0) + "%",
+    se_ratio: (() => { const a = find(D.audit_ladder, r => r.outcome === "ln_pass_yds" && r.step.startsWith("1.")), b = find(D.audit_ladder, r => r.outcome === "ln_pass_yds" && r.step.startsWith("2.")); return a.wind_se ? Math.round(100 * (b.wind_se / a.wind_se - 1)) + "%" : "–"; })(),
+    pr2_pass: pct(find(D.audit_strength, r => r.outcome === "ln_pass_yds").partial_r2_weather, 1),
+    pr2_miss: pct(find(D.audit_strength, r => r.outcome.startsWith("total")).partial_r2_weather, 1),
+  };
+  document.querySelectorAll("[data-fig]").forEach(e => { const v = F[e.dataset.fig]; e.textContent = v == null || v === "undefined%" ? "–" : v; });
+
+  /* ---------- summary findings ---------- */
+  const findings = [
+    ["good", "Holds", `<strong>Wind still cuts passing.</strong> ${F.wph} passing yards per 10 mph in 2014–25, against ${F.wpt} in the thesis.`],
+    ["bad", "Gone", `<strong>Cold and heat mostly stopped mattering for passing.</strong> The pooled cold effect is ${F.cold_h} per 10°F, and the heat penalty disappeared.`],
+    ["bad", "Reversed", `<strong>Visitors are not more weather-sensitive.</strong> Since 2014 home teams lose more to cold (${F.cold_ht_h} vs ${F.cold_vt_h} per 10°F).`],
+    ["warn", "Weaker", `<strong>Acclimation survives in a narrower form.</strong> Dome teams visiting freezing games still lose about ${F.dome_cold_py.replace("−", "")} passing yards and ${F.dome_cold_pts.replace("−", "")} points relative to their norm.`],
+    ["new", "New", `<strong>Rain and 20+ mph wind cost offenses the most</strong>, and cold matters more than wind for kickers: a 50-yarder goes from ${F.fg50_calm} to ${F.fg50_cold} at ≤32°F.`],
+    ["new", "New", `<strong>Closing totals under-adjust for wind.</strong> 15+ mph unders hit ${F.u15_all}, and weather bets beat the close by ${F.clv_pts} points on average. The edge is thin, flat in 2024–26, and the rain edge is mostly unforecastable.`],
+  ];
+  const fwrap = document.getElementById("findings");
+  findings.forEach(([k, lab, html]) => {
+    const d = document.createElement("div"); d.className = "finding";
+    d.appendChild(pill(lab, k));
+    const p = document.createElement("p"); p.innerHTML = html; d.appendChild(p);
+    fwrap.appendChild(d);
+  });
+
+  function legend(id, items) {
+    const el = document.getElementById(id);
+    items.forEach(([name, color, kind]) => { const s = document.createElement("span"); const i = document.createElement("i"); if (kind) i.className = kind; if (kind !== "hollow") i.style.background = color; s.appendChild(i); s.appendChild(document.createTextNode(name)); el.appendChild(s); });
+  }
+  const verdictKind = v => v.startsWith("holds (still") ? "good" : v === "holds" ? "good" : v.startsWith("holds") ? "warn" : v.startsWith("same sign") ? "warn" : "bad";
+  const verdictLabel = v => v === "holds" || v.startsWith("holds (still") ? "Holds" : v.startsWith("holds") ? "Weaker" : v.startsWith("same sign") ? "Faded" : v === "reversed" ? "Reversed" : "Gone";
+
+  /* ---------- Figure 1 ---------- */
+  const f1rows = ["Wind lowers passing yards", "Wind lowers completion %", "Wind shifts play mix to the run",
+    "Cold lowers passing yards", "Cold lowers completion %", "Heat (80°F+) lowers passing yards",
+    "Visitors: wind lowers passing yards", "Home teams: wind lowers passing yards",
+    "Visitors: cold lowers passing yards", "Home teams: cold lowers passing yards",
+    "Warm-climate visitors in freezing games: pass yds", "Warm-climate visitors in freezing games: comp %",
+    "Visitors from windy stadiums: wind & pass yds", "Visitors from domes: wind & pass yds"].filter(k => H[k]);
+  const f1series = [{ name: "Thesis (2014 paper)", color: C(2) }, { name: "Rebuilt data, 2002–13", color: C(3) }, { name: "New seasons, 2014–25", color: C(1) }];
+  legend("fig1-legend", f1series.map(s => [s.name, s.color]));
+  dotWhisker(document.getElementById("fig1"), {
+    rows: f1rows.map(k => { const h = H[k]; return { label: k.replace(" in freezing games", ", freezing").replace(": wind & pass yds", ""), sub: h.unit + " · " + verdictLabel(h.verdict),
+      values: [{ v: h.thesis, lo: h.thesis_lo, hi: h.thesis_hi, sig: h.thesis_sig }, { v: h.replication, lo: h.rep_lo, hi: h.rep_hi, sig: h.replication_sig }, { v: h.holdout, lo: h.holdout_lo, hi: h.holdout_hi, sig: h.holdout_sig }] }; }),
+    series: f1series, unit: "%", labelW: 290,
+  });
+  table(document.getElementById("fig1-table"), [
+    { h: "Finding", k: "finding" }, { h: "Unit", k: "unit" },
+    { h: "Thesis", num: 1, f: r => fmt(r.thesis, 1, true) + (r.thesis_sig || "") },
+    { h: "2002–13 rebuilt", num: 1, f: r => fmt(r.replication, 1, true) + (r.replication_sig || "") },
+    { h: "2014–25", num: 1, f: r => fmt(r.holdout, 1, true) + (r.holdout_sig || "") },
+    { h: "Verdict", f: r => pill(verdictLabel(r.verdict), verdictKind(r.verdict)) },
+  ], D.headlines);
+
+  /* ---------- Figure 2 ---------- */
+  const conds = [["wind_10_14", "Wind 10–14 mph"], ["wind_15_19", "Wind 15–19 mph"], ["wind_20p", "Wind 20+ mph"], ["temp_le32", "≤32°F"], ["temp_33_45", "33–45°F"], ["temp_80p", "80°F+"], ["rain", "Rain"], ["snow", "Snow"]];
+  const f2 = [["pass_yds", "Passing yards", "yards per team-game", 0], ["epa_db", "EPA per dropback", "expected points", 2], ["cpoe", "Completion % over expected", "percentage points", 1],
+    ["proe", "Pass rate over expected", "percentage points", 1], ["rush_att", "Rush attempts", "per team-game", 1], ["pts", "Points scored", "per team", 1]];
+  const p2 = document.getElementById("fig2");
+  f2.forEach(([o, title, unit, dec]) => {
+    const panel = document.createElement("div"); panel.className = "panel";
+    const h = document.createElement("h4"); h.textContent = title; panel.appendChild(h);
+    const u = document.createElement("p"); u.className = "unit"; u.textContent = unit; panel.appendChild(u);
+    const c = document.createElement("div"); c.className = "chart"; panel.appendChild(c); p2.appendChild(panel);
+    dotWhisker(c, { rows: conds.map(([t, lab]) => { const r = me(o, t); return { label: lab, values: [{ v: r.coef, lo: r.lo, hi: r.hi, hollow: !(r.p < 0.05), sig: r.p < 0.01 ? "***" : r.p < 0.05 ? "**" : r.p < 0.1 ? "*" : "" }] }; }),
+      series: [{ name: title, color: C(1) }], labelW: 108, decimals: dec, rowH: 24 });
+  });
+  table(document.getElementById("fig2-table"), [{ h: "Condition", f: r => r.lab }, ...f2.map(([o, t, , dec]) => ({ h: t, num: 1, f: r => { const x = me(o, r.t); return x.coef == null ? "–" : fmt(x.coef, dec, true) + (x.p < 0.01 ? "***" : x.p < 0.05 ? "**" : x.p < 0.1 ? "*" : ""); } }))],
+    conds.map(([t, lab]) => ({ t, lab })));
+
+  /* ---------- Figure 3 ---------- */
+  const f3o = [["pass_yds", "Passing yards", 0], ["cpoe", "CPOE (pts)", 1], ["proe", "Pass rate over expected (pts)", 1], ["pts", "Points scored", 1]];
+  const f3s = [{ name: "1999–2013", color: C(2) }, { name: "2014–2025", color: C(1) }];
+  legend("fig3-legend", f3s.map(s => [s.name, s.color]));
+  const f3rows = [];
+  [["wind_20p", "20+ mph wind"], ["temp_le32", "≤32°F"]].forEach(([t, tl]) => f3o.forEach(([o, ol]) => {
+    const a = era(o, t, "1999–2013"), b = era(o, t, "2014–2025");
+    f3rows.push({ label: ol, sub: tl, values: [{ v: a.coef, lo: a.lo, hi: a.hi }, { v: b.coef, lo: b.lo, hi: b.hi }] });
+  }));
+  dotWhisker(document.getElementById("fig3"), { rows: f3rows, series: f3s, labelW: 230 });
+
+  /* ---------- Figure 4 ---------- */
+  const g4 = [["home", "Home team"], ["visitor_cold", "Visitor, cold week (<40°F)"], ["visitor_temperate", "Visitor, 40–60°F week"], ["visitor_warm", "Visitor, warm week (≥60°F)"], ["visitor_dome", "Visitor, dome team"]];
+  dotWhisker(document.getElementById("fig4"), { rows: g4.map(([g, lab]) => { const r = acc(g); return { label: lab, sub: r.n_cold_games_group ? `${r.n_cold_games_group} team-games` : "", values: [{ v: r.coef, lo: r.lo, hi: r.hi, hollow: !(r.p < 0.05) }] }; }),
+    series: [{ name: "Passing yards", color: C(1) }], labelW: 170, decimals: 0, unit: "", rowH: 38 });
+
+  /* ---------- Figure 5 ---------- */
+  const k5 = [["Calm, 46–79°F, dry", C(1)], ["Wind 20+", C(2)], ["≤32°F", C(3)], ["Wind 20+ & ≤32°F", C(4)]];
+  legend("fig5-legend", k5.map(([n, c]) => [n, c, "line"]));
+  lineChart(document.getElementById("fig5"), {
+    series: k5.map(([n, c]) => ({ name: n, color: c, markers: true, points: D.kicking_grid.filter(r => r.scenario === n).map(r => [r.distance, r.make_pct]) })),
+    yUnit: "%", xUnit: " yd", height: 280, yDomain: [50, 100], xTicks: [30, 40, 45, 50, 55], label: v => v + "-yard attempt",
+    endLabels: ["Calm, 46–79°F, dry", "Wind 20+ & ≤32°F"], decimals: 1,
+  });
+
+  /* ---------- Figure 6 ---------- */
+  const f6s = [{ name: "Actual combined points", color: C(1) }, { name: "Closing total", color: C(2) }];
+  legend("fig6-legend", f6s.map(s => [s.name, s.color]));
+  pairedBars(document.getElementById("fig6"), {
+    rows: conds.map(([t, lab]) => ({ label: lab, a: mk("Actual points", t).coef, b: mk("Closing total", t).coef,
+      note: `Gap vs close: ${fmt(mk("Actual − closing", t).coef, 1, true)} pts` })).filter(r => r.a != null),
+    series: f6s, unit: "", labelW: 128,
+  });
+
+  /* ---------- Figure 7 ---------- */
+  const bins = ["0–4", "5–9", "10–14", "15–19", "20+"];
+  const f7s = [["1999–2013", C(2)], ["2014–2025", C(1)]];
+  legend("fig7-legend", [...f7s.map(([n, c]) => [n, c]), ["Break-even at −110 (52.4%)", "var(--bad)", "line"]]);
+  columnDots(document.getElementById("fig7"), {
+    cats: bins, xTitle: "Wind at kickoff (mph)", domain: [30, 75], ref: { v: 52.4, label: "52.4%" },
+    series: f7s.map(([e, c]) => ({ name: e, color: c, values: bins.map(b => { const r = tb("Wind " + b, e); return r.under_win_pct == null ? null : { v: 100 * r.under_win_pct, lo: 100 * r.under_win_lo, hi: 100 * r.under_win_hi, n: r.under_bets }; }) })),
+  });
+
+  /* ---------- Figure 8 ---------- */
+  const f8s = [["Vs. opening total", C(3), "under_open_pct"], ["Vs. closing total", C(1), "under_close_pct"]];
+  legend("fig8-legend", [...f8s.map(([n, c]) => [n, c]), ["Break-even at −110", "var(--bad)", "line"]]);
+  columnDots(document.getElementById("fig8"), {
+    cats: bins, xTitle: "Wind at kickoff (mph)", domain: [35, 75], ref: { v: 52.4, label: "52.4%" },
+    series: f8s.map(([n, c, k]) => ({ name: n, color: c, values: bins.map(b => { const r = oc("Wind " + b); return r[k] == null ? null : { v: 100 * r[k], n: r.games }; }) })),
+  });
+
+  /* ---------- Figure 9 ---------- */
+  const cum = D.walkforward_cum.map(r => { const d = new Date(r.gameday + "T12:00:00"); return [d.getFullYear() + (d - new Date(d.getFullYear(), 0, 1)) / 3.156e10, r.cum_units, r.gameday]; });
+  const byX = new Map(cum.map(p => [p[0], p[2]]));
+  lineChart(document.getElementById("fig9"), {
+    series: [{ name: "Cumulative units", color: C(1), area: true, points: cum.map(p => [p[0], p[1]]) }],
+    yUnit: " u", height: 300, xFmt: v => String(Math.round(v)), label: v => byX.get(v) || String(v), decimals: 1,
+    xTicks: [2006, 2010, 2014, 2018, 2022, 2026].filter(y => y <= cum.at(-1)[0] + 0.5),
+    endLabels: ["Cumulative units"],
+  });
+
+  /* ---------- Figure 10: audit ladder ---------- */
+  const L = (D.audit_ladder || []).filter(r => r.outcome === "ln_pass_yds");
+  const p10 = document.getElementById("fig10");
+  [["wind", "Wind", "% per 10 mph"], ["cold", "Cold", "% per 10°F colder"]].forEach(([k, title, unit]) => {
+    const panel = document.createElement("div"); panel.className = "panel";
+    const h = document.createElement("h4"); h.textContent = title; panel.appendChild(h);
+    const u = document.createElement("p"); u.className = "unit"; u.textContent = unit; panel.appendChild(u);
+    const c = document.createElement("div"); c.className = "chart"; panel.appendChild(c); p10.appendChild(panel);
+    dotWhisker(c, { rows: L.map(r => ({ label: r.step, values: [{ v: r[k + "_pct"], lo: r[k + "_lo"], hi: r[k + "_hi"] }] })),
+      series: [{ name: title, color: C(1) }], labelW: 205, unit: "%", rowH: 26 });
+  });
+  table(document.getElementById("fig10-table"), [{ h: "Step", k: "step" }, { h: "What changes", k: "change" },
+    { h: "Wind", num: 1, f: r => fmt(r.wind_pct, 1, true) + "% ±" + (1.96 * r.wind_se).toFixed(1) },
+    { h: "Cold", num: 1, f: r => fmt(r.cold_pct, 1, true) + "% ±" + (1.96 * r.cold_se).toFixed(1) }], L);
+  table(document.getElementById("tab-strength"), [
+    { h: "Outcome", f: r => ({ ln_pass_yds: "Passing yards (log)", epa_db: "EPA per dropback", cmp_pct: "Completion %", pts: "Points scored" })[r.outcome] || "Total points minus closing total" },
+    { h: "Team-games", num: 1, f: r => r.n.toLocaleString() }, { h: "Total R²", num: 1, f: r => r.r2_total.toFixed(3) },
+    { h: "Baselines only", num: 1, f: r => r.r2_fe_only.toFixed(3) }, { h: "Partial R², weather", num: 1, f: r => pct(r.partial_r2_weather, 1) }],
+    D.audit_strength || []);
+  const MN = { base: "League under rate", logit: "Weather logistic (in use)", logit_x: "Logistic + interactions", gbm: "Gradient-boosted trees", market: "Market (de-vigged close)" };
+  table(document.getElementById("tab-models"), [{ h: "Games", f: r => r.subset }, { h: "Model", f: r => MN[r.model] || r.model },
+    { h: "N", num: 1, f: r => r.games.toLocaleString() }, { h: "Log loss", num: 1, f: r => r.log_loss.toFixed(4) },
+    { h: "Brier skill", num: 1, f: r => (r.skill_vs_base >= 0 ? "+" : "−") + Math.abs(100 * r.skill_vs_base).toFixed(2) + "%" }],
+    (D.model_compare || []).filter(r => r.model !== "base" && ["Outdoor games", "Games with O/U prices"].includes(r.subset)));
+
+  /* ---------- Table 5: strategies ---------- */
+  const SR = ["Wind 15+ mph → under", "Storm: wind 15+ and rain/snow → under", "Rain → under", "Snow → under (control)", "Freezing ≤32°F, calm & dry → over (control)", "Dome/warm visitor in ≤32°F game → home ATS", "Cold-climate visitor in ≤32°F game → home ATS (control)"];
+  const cell = (rule, test) => { const r = find(D.strategies, x => x.rule === rule && x.test === test); return r.bets ? `${(100 * r.win_pct).toFixed(1)}% · ${r.bets}` : "–"; };
+  table(document.getElementById("tab-strat"), [{ h: "Rule", f: r => r }, { h: "1999–2025", num: 1, f: r => cell(r, "vs close 1999–2025") },
+    { h: "2014–2025", num: 1, f: r => cell(r, "vs close 2014–2025") }, { h: "2020–2025", num: 1, f: r => cell(r, "vs close 2020–2025") },
+    { h: "vs opener 07–21", num: 1, f: r => cell(r, "vs open 2007–2021") }], SR);
+
+  /* ---------- Tables ---------- */
+  table(document.getElementById("tab-acc"), [
+    { h: "Visitor type", k: "group" }, { h: "Era", k: "era" }, { h: "Games", k: "games", num: 1 },
+    { h: "Home cover", num: 1, f: r => pct(r.home_cover_pct) }, { h: "Home ATS margin", num: 1, f: r => fmt(r.home_ats_resid, 1, true) },
+    { h: "Visitor team total", num: 1, f: r => fmt(r.away_team_total_resid, 1, true) }, { h: "Visitor TT under", num: 1, f: r => pct(r.away_tt_under_pct) },
+  ], D.acclimation_ats.filter(r => !r.group.startsWith("Warm visitor") && !r.group.startsWith("Dome visitor") || r.era === "All"));
+
+  const fcw = document.getElementById("tab-fc");
+  if (D.forecast_skill.length) {
+    table(fcw, [{ h: "Forecast lead", f: r => r.lead_days + " day" + (r.lead_days > 1 ? "s" : "") }, { h: "Games", k: "games", num: 1 },
+      { h: "Correlation", num: 1, f: r => r.corr.toFixed(2) }, { h: "Mean abs. error", num: 1, f: r => r.mae.toFixed(1) + " mph" },
+      { h: "Forecast 15+ that verified", num: 1, f: r => pct(r.precision, 0) }, { h: "Actual 15+ that were forecast", num: 1, f: r => pct(r.recall, 0) }], D.forecast_skill);
+    table(fcw, [{ h: "Model inputs", k: "inputs" }, { h: "Bets", k: "bets", num: 1 }, { h: "Win %", num: 1, f: r => pct(r.win_pct) }, { h: "ROI at −110", num: 1, f: r => fmt(100 * (r.roi_110 ?? NaN), 1, true) + "%" }], D.forecast_vs_actual);
+  } else { const p = document.createElement("p"); p.className = "note"; p.textContent = "Forecast archive not fetched yet."; fcw.appendChild(p); }
+
+  const wk = D.this_week || [];
+  table(document.getElementById("tab-week"), [
+    { h: "Kickoff (ET)", f: r => r.gameday.slice(5) + " " + r.gametime }, { h: "Game", f: r => r.away_team + " @ " + r.home_team },
+    { h: "Forecast", f: r => r.conditions }, { h: "Total", num: 1, f: r => r.total_line == null ? "–" : r.total_line.toFixed(1) },
+    { h: "Weather effect", num: 1, f: r => fmt(r.pts_effect, 1, true) }, { h: "Market usually moves", num: 1, f: r => fmt(r.mkt_adjust, 1, true) },
+    { h: "P(under)", num: 1, f: r => pct(r.p_under, 0) }, { h: "Lean", f: r => r.lean ? pill(r.lean.replace(" lean", ""), r.lean.startsWith("UNDER") ? "new" : "warn") : "" },
+  ], wk);
+})();
+</script>

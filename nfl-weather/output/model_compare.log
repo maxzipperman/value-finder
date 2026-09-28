@@ -1,0 +1,31 @@
+               subset   model  games  log_loss   brier  skill_vs_base
+            All games    base   5352   0.69337 0.25011        0.00000
+            All games   logit   5352   0.69199 0.24941        0.00282
+            All games logit_x   5352   0.69152 0.24916        0.00379
+            All games     gbm   5352   0.69460 0.25066       -0.00220
+        Outdoor games    base   3816   0.69320 0.25003        0.00000
+        Outdoor games   logit   3816   0.69134 0.24907        0.00381
+        Outdoor games logit_x   3816   0.69078 0.24878        0.00497
+        Outdoor games     gbm   3816   0.69341 0.25005       -0.00011
+    Outdoor, wind 15+    base    466   0.69219 0.24952        0.00000
+    Outdoor, wind 15+   logit    466   0.69051 0.24856        0.00384
+    Outdoor, wind 15+ logit_x    466   0.69083 0.24868        0.00336
+    Outdoor, wind 15+     gbm    466   0.69931 0.25290       -0.01356
+Games with O/U prices    base   5216   0.69338 0.25012        0.00000
+Games with O/U prices   logit   5216   0.69155 0.24920        0.00367
+Games with O/U prices logit_x   5216   0.69105 0.24895        0.00468
+Games with O/U prices     gbm   5216   0.69399 0.25038       -0.00107
+Games with O/U prices  market   5216   0.69336 0.25011        0.00004
+  model  threshold  side  bets  win_pct  win_lo  roi_110  roi_actual_odds  p_vs_breakeven
+  logit       0.53 under   804    0.560   0.525    0.069            0.093           0.022
+  logit       0.53  over   352    0.540   0.488    0.030            0.058           0.293
+  logit       0.55 under   629    0.564   0.525    0.077            0.110           0.023
+  logit       0.55  over   205    0.551   0.483    0.052            0.091           0.237
+logit_x       0.53 under  1208    0.544   0.516    0.038            0.063           0.086
+logit_x       0.53  over   705    0.542   0.505    0.034            0.047           0.179
+logit_x       0.55 under   734    0.553   0.517    0.056            0.083           0.060
+logit_x       0.55  over   249    0.570   0.508    0.089            0.118           0.080
+    gbm       0.53 under  1904    0.522   0.499   -0.004            0.019           0.588
+    gbm       0.53  over  1395    0.536   0.510    0.024            0.041           0.184
+    gbm       0.55 under  1270    0.531   0.503    0.013            0.041           0.321
+    gbm       0.55  over   841    0.541   0.507    0.033            0.047           0.167

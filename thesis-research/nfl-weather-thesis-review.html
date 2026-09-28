@@ -1,0 +1,899 @@
+<title>NFL Weather Thesis Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+  :root {
+    --ground: #F3F6F8;
+    --paper: #FFFFFF;
+    --ink: #13202B;
+    --ink-2: #4F5D6A;
+    --ink-3: #6B7A87;
+    --rule: #D3DBE2;
+    --rule-strong: #A9B6C1;
+    --accent: #1C5A8A;
+    --accent-soft: #E2ECF4;
+    --flag: #F0C12E;
+    --flag-ink: #2E2300;
+    --red: #A3302B;
+    --red-soft: #F7E4E2;
+    --green: #2B6E4F;
+    --green-soft: #E1EFE7;
+    --slate-soft: #E7ECF0;
+    --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0E151B;
+      --paper: #151F28;
+      --ink: #E4ECF2;
+      --ink-2: #A5B3BF;
+      --ink-3: #85939F;
+      --rule: #283642;
+      --rule-strong: #3D4D5B;
+      --accent: #86BBE4;
+      --accent-soft: #1A2D3D;
+      --flag: #E6BE3A;
+      --flag-ink: #241B00;
+      --red: #EE958E;
+      --red-soft: #3A2120;
+      --green: #80C9A3;
+      --green-soft: #15302A;
+      --slate-soft: #1C2833;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0E151B;
+    --paper: #151F28;
+    --ink: #E4ECF2;
+    --ink-2: #A5B3BF;
+    --ink-3: #85939F;
+    --rule: #283642;
+    --rule-strong: #3D4D5B;
+    --accent: #86BBE4;
+    --accent-soft: #1A2D3D;
+    --flag: #E6BE3A;
+    --flag-ink: #241B00;
+    --red: #EE958E;
+    --red-soft: #3A2120;
+    --green: #80C9A3;
+    --green-soft: #15302A;
+    --slate-soft: #1C2833;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.6;
+    padding-inline: 20px;
+    padding-block: 0 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 920px; margin-inline: auto; }
+  p, li { max-width: 70ch; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { text-decoration-thickness: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  em { font-style: italic; }
+
+  /* Masthead */
+  .masthead { padding-block: 44px 28px; border-bottom: 1px solid var(--rule); }
+  .eyebrow {
+    font-family: var(--display); font-weight: 600; font-size: 14px;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 700;
+    font-size: clamp(40px, 7vw, 66px); line-height: 1; letter-spacing: -.005em;
+    margin: 0 0 16px; text-wrap: balance;
+  }
+  .deck { font-size: 19px; line-height: 1.5; color: var(--ink-2); margin: 0 0 26px; }
+  .gamebook {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.75; color: var(--ink-2);
+    background: var(--paper); border: 1px solid var(--rule); border-top: 3px solid var(--ink);
+    padding: 12px 16px; overflow-x: auto; white-space: nowrap;
+  }
+  .gamebook b { color: var(--ink); font-weight: 500; }
+  .gamebook .gb-row { display: block; }
+  .toc {
+    display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 22px;
+    font-family: var(--display); font-weight: 500; font-size: 16.5px; letter-spacing: .02em;
+  }
+  .toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule-strong); padding-bottom: 1px; }
+  .toc a:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Sections */
+  section { padding-block: 44px 4px; }
+  h2 {
+    font-family: var(--display); font-weight: 700;
+    font-size: clamp(28px, 4.4vw, 38px); line-height: 1.08; margin: 0 0 8px; text-wrap: balance;
+  }
+  .lede { color: var(--ink-2); margin: 0 0 22px; }
+  h3 { font-family: var(--serif); font-weight: 600; font-size: 18.5px; line-height: 1.35; margin: 0 0 6px; text-wrap: balance; }
+  .label {
+    font-family: var(--display); font-weight: 600; font-size: 13px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+  }
+
+  /* Chips */
+  .chip {
+    display: inline-block; font-family: var(--display); font-weight: 600; font-size: 12.5px;
+    line-height: 1; letter-spacing: .08em; text-transform: uppercase; padding: 4px 7px 3px;
+    border-radius: 3px; white-space: nowrap; background: var(--slate-soft); color: var(--ink-2);
+    vertical-align: 2px;
+  }
+  .chip.blue { background: var(--accent-soft); color: var(--accent); }
+  .chip.green { background: var(--green-soft); color: var(--green); }
+  .chip.red { background: var(--red-soft); color: var(--red); }
+  .chip.flag { background: var(--flag); color: var(--flag-ink); }
+  .chip.outline { background: transparent; box-shadow: inset 0 0 0 1px var(--rule-strong); color: var(--ink-2); }
+
+  /* Short answer */
+  .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px 32px; }
+  .point { border-top: 2px solid var(--ink); padding-top: 12px; }
+  .point p { margin: 0; }
+
+  /* Closest matches */
+  .matches { display: grid; gap: 16px; }
+  .match { background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 20px 22px; }
+  .match-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 8px; }
+  .match-top .yr { font-family: var(--mono); font-size: 14px; color: var(--ink-2); }
+  .match .src { font-size: 15.5px; color: var(--ink-2); margin: 0 0 12px; }
+  .match dl, .plan { display: grid; grid-template-columns: 8rem 1fr; gap: 10px 18px; margin: 0; }
+  .match dt, .plan dt {
+    font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); padding-top: 3px;
+  }
+  .match dt.vs { color: var(--accent); }
+  .match dd, .plan dd { margin: 0; }
+
+  /* Literature map */
+  .cites {
+    display: flex; gap: 12px 16px; align-items: baseline; flex-wrap: wrap;
+    background: var(--accent-soft); border-radius: 6px; padding: 14px 18px; margin-bottom: 8px;
+  }
+  .cites p { margin: 0; }
+  .group-title {
+    font-family: var(--display); font-weight: 700; font-size: 22px; margin: 32px 0 6px;
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .group-title .count { font-family: var(--mono); font-size: 13px; font-weight: 400; color: var(--ink-3); }
+  .entries { border-bottom: 1px solid var(--rule); }
+  .entry { display: grid; grid-template-columns: 6.5rem 1fr; gap: 4px 18px; padding-block: 14px; border-top: 1px solid var(--rule); }
+  .entry .yr { font-family: var(--mono); font-size: 14px; color: var(--ink-2); padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .entry .title { font-weight: 600; }
+  .entry .src { font-size: 15px; color: var(--ink-2); margin: 3px 0 7px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .entry p { margin: 0; font-size: 16px; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 15.5px; line-height: 1.5; }
+  th, td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--rule); }
+  thead th {
+    font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); background: var(--slate-soft);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.lead { font-weight: 600; width: 22%; }
+  td.status { width: 13%; }
+  .mono { font-family: var(--mono); font-size: .86em; font-variant-numeric: tabular-nums; }
+  .note { font-size: 15px; color: var(--ink-2); margin: 12px 0 0; }
+
+  /* Feedback */
+  .strengths { background: var(--green-soft); border-radius: 6px; padding: 18px 22px; }
+  .strengths h3 { color: var(--green); font-family: var(--display); font-size: 21px; font-weight: 700; margin: 0; }
+  .strengths ul { margin: 10px 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+  .fb-group { margin-top: 36px; }
+  .fb-head {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border-bottom: 2px solid var(--ink); padding-bottom: 8px;
+  }
+  .fb-head h3 { font-family: var(--display); font-size: 23px; font-weight: 700; margin: 0; }
+  .fb-head .count { font-family: var(--mono); font-size: 13px; color: var(--ink-3); }
+  .fb { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0 14px; padding-block: 16px; border-bottom: 1px solid var(--rule); }
+  .fb .n { font-family: var(--mono); font-size: 14px; color: var(--ink-3); padding-top: 2px; }
+  .fb h4 { font-family: var(--serif); font-size: 18px; font-weight: 600; margin: 0 0 6px; line-height: 1.35; text-wrap: balance; }
+  .fb p { margin: 0 0 8px; }
+  .fb p:last-child { margin-bottom: 0; }
+  .fix b {
+    font-family: var(--display); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    font-size: 13px; color: var(--accent); margin-right: 6px;
+  }
+  .calc {
+    font-family: var(--mono); font-size: 13px; line-height: 1.75; background: var(--slate-soft); color: var(--ink);
+    padding: 10px 14px; border-radius: 4px; overflow-x: auto; margin: 2px 0 10px; white-space: pre;
+  }
+
+  /* Plan + footer */
+  .plan { margin-top: 6px; }
+  .plan dd { padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+  .plan dd:last-of-type { border-bottom: 0; }
+  .gap-callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; margin-top: 22px; }
+  .gap-callout p { margin: 0; }
+  footer { margin-top: 52px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 15px; color: var(--ink-2); }
+  footer p { margin: 0 0 8px; }
+
+  @media (max-width: 600px) {
+    body { font-size: 16.5px; }
+    .deck { font-size: 17.5px; }
+    .entry { grid-template-columns: 1fr; }
+    .match { padding: 16px; }
+    .match dl, .plan { grid-template-columns: 1fr; gap: 2px; }
+    .match dd { margin-bottom: 10px; }
+    .plan dd { margin-bottom: 12px; }
+    .fb { grid-template-columns: 2rem 1fr; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">Literature check and thesis feedback · September 2026</p>
+    <h1>Wind, cold, and your 2014 thesis</h1>
+    <p class="deck">What has been published on weather and NFL offense before and since your CMC senior thesis, which of your findings have held up, and what a careful referee would flag in the paper itself.</p>
+    <div class="gamebook" role="note" aria-label="Thesis summary">
+      <span class="gb-row"><b>SENIOR THESIS</b> · Claremont McKenna College · Spring 2014 · Reader: Prof. Darren Filson</span>
+      <span class="gb-row"><b>SAMPLE</b> · Seasons 2002–2013 · 3,133 regular and postseason games · 6,266 team-games</span>
+      <span class="gb-row"><b>WEATHER</b> · Kickoff temp + wind from NFL Game Books via Pro-Football-Reference · wind chill used as temperature</span>
+      <span class="gb-row"><b>MODEL</b> · OLS, team and season fixed effects, robust SEs · <a href="https://scholarship.claremont.edu/cmc_theses/830/">scholarship.claremont.edu/cmc_theses/830</a></span>
+    </div>
+    <nav class="toc" aria-label="Sections">
+      <a href="#short">Short answer</a>
+      <a href="#closest">Closest matches</a>
+      <a href="#map">Literature map</a>
+      <a href="#held">What held up</a>
+      <a href="#scorecard">Hypothesis scorecard</a>
+      <a href="#feedback">Feedback</a>
+      <a href="#update">Updating it</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="short">
+    <h2>Short answer</h2>
+    <div class="points">
+      <div class="point">
+        <h3>Nobody has redone your analysis</h3>
+        <p>The nearest academic work is a 2026 paper in <em>Temperature</em> that tests your acclimation idea on wins and point margin, and a 2017 <em>International Journal of Sport Finance</em> paper on weather and betting totals. The rest is class projects, a high-school summer-program paper, and fantasy and betting analysis.</p>
+      </div>
+      <div class="point">
+        <h3>Your main results have held up</h3>
+        <p>Later work keeps finding what you found. Wind is the most consistent drag on passing, cold matters less, and wind pushes teams toward the run. The warm-team-in-the-cold effect now has peer-reviewed support.</p>
+      </div>
+      <div class="point">
+        <h3>Cited once, but easy to find</h3>
+        <p>Google Scholar lists one citing work, a 2019 master’s thesis on soccer. Your thesis was also the first search result for several of my queries on this topic.</p>
+      </div>
+      <div class="point">
+        <h3>The weak spots are fixable</h3>
+        <p>The acclimation model can’t tell “cold” apart from “colder than home.” Games with zero interceptions, fumbles or sacks dropped out of those regressions. Playoffs aren’t controlled for. Several numbers in the text misread log and interaction coefficients.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="closest">
+    <h2>The four closest matches</h2>
+    <p class="lede">These ask nearly your question. Two are peer-reviewed; two are student work.</p>
+    <div class="matches">
+
+      <article class="match">
+        <div class="match-top"><span class="yr">2026</span><span class="chip green">Peer-reviewed</span><span class="chip blue">Closest to Analysis 3</span></div>
+        <h3><a href="https://www.tandfonline.com/doi/abs/10.1080/23328940.2025.2588731">Game-day temperatures are predictive of National Football League game outcomes when teams from different climates compete against each other</a></h3>
+        <p class="src">Roberts, Urwin, Regan, Bowe &amp; Warmington · <em>Temperature</em> 13(1): 51–58 · <a href="https://pubmed.ncbi.nlm.nih.gov/41797813/">PubMed</a></p>
+        <dl>
+          <dt>Data</dt>
+          <dd>Official NFL Game Book temperatures, 2017–2025. Games between teams based north of 39°N (17 teams) and south of it (15 teams). Mixed-effects models.</dd>
+          <dt>Found</dt>
+          <dd>The northern team’s odds of winning fell as game-day temperature rose (odds ratio 0.974 per °C), and its point margin dropped 0.175 points per °C. The effect came mainly from games played in the south.</dd>
+          <dt class="vs">Vs. yours</dt>
+          <dd>The same acclimation idea as your third analysis, tested on wins and margin instead of passing and rushing. They split teams by latitude. You compared each visitor’s weekly home temperature with game conditions, which is finer-grained. Their seasons (2017–2025) don’t overlap with yours (2002–2013).</dd>
+        </dl>
+      </article>
+
+      <article class="match">
+        <div class="match-top"><span class="yr">2017</span><span class="chip green">Peer-reviewed</span></div>
+        <h3><a href="https://journals.sagepub.com/doi/full/10.1177/155862351701200102">The Impact of Atmospheric Conditions on Actual and Expected Scoring in the NFL</a></h3>
+        <p class="src">Rodney J. Paul · <em>International Journal of Sport Finance</em> 12(1)</p>
+        <dl>
+          <dt>Found</dt>
+          <dd>Humidity helps explain the gap between actual scoring and the betting total. Simple betting rules built on humidity and wind rejected market efficiency. Humidity appeared to help the running game.</dd>
+          <dt class="vs">Vs. yours</dt>
+          <dd>Game-level scoring and market efficiency rather than team passing and rushing. It adds humidity and air density, which you didn’t have.</dd>
+        </dl>
+      </article>
+
+      <article class="match">
+        <div class="match-top"><span class="yr">2016</span><span class="chip">Class project</span></div>
+        <h3><a href="https://web.stanford.edu/class/stats50/projects16/Houghton-BerryParkPierce-paper.pdf">Weather and the NFL</a></h3>
+        <p class="src">Houghton-Berry, Park &amp; Pierce · Stanford STATS 50</p>
+        <dl>
+          <dt>Data</dt>
+          <dd>NFLweather.com, 2009–2015, with rain, snow, indoor and turf indicators. OLS and lasso regressions.</dd>
+          <dt>Found</dt>
+          <dd>Each mph of wind cost about 0.26 points per game. Rain added 3.7 points to the home team’s margin, and colder games favored the home team.</dd>
+          <dt class="vs">Vs. yours</dt>
+          <dd>Similar game-level regressions, and it has the precipitation you lacked. It has no control for home-field advantage, which the authors acknowledge. It cites Burke’s 2012 posts, not your thesis.</dd>
+        </dl>
+      </article>
+
+      <article class="match">
+        <div class="match-top"><span class="yr">2022</span><span class="chip">High-school program</span></div>
+        <h3><a href="https://wsb.wharton.upenn.edu/wp-content/uploads/2022/09/2022_Football_Parks_Weather.pdf">Whether Weather, Wind Speed and Temperature, Impacts Offensive Success in the NFL</a></h3>
+        <p class="src">Parks, Ceklosky, Roseman, Awad &amp; Yan · Wharton Moneyball Academy, a summer program for high-school students</p>
+        <dl>
+          <dt>Data</dt>
+          <dd>nflfastR play-by-play, with EPA per play averaged by wind and temperature band.</dd>
+          <dt>Found</dt>
+          <dd>Passing EPA per play fell from +0.037 in 1–6 mph wind to −0.048 in 26–34 mph wind, while rushing EPA stayed roughly flat. Passing EPA rose with temperature; rushing EPA was best in the cold.</dd>
+          <dt class="vs">Vs. yours</dt>
+          <dd>Your question with the modern efficiency metric, but only band averages. There are no controls for team quality, home field or roof.</dd>
+        </dl>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="map">
+    <h2>Literature map</h2>
+    <p class="lede">Everything relevant I found, grouped by when it appeared relative to your thesis. I read each item except the one marked at the end.</p>
+
+    <div class="cites">
+      <span class="label">Who cites you</span>
+      <p>Google Scholar lists one citing work: <a href="https://scholar.google.com/scholar?cites=17265200358591335717">Palinggi (2019)</a>, <em>Predicting soccer outcome with machine learning based on weather condition</em>, a master’s thesis at Universitat Jaume I.</p>
+    </div>
+
+    <div class="group-title">Before your thesis <span class="count">8 items</span></div>
+    <div class="entries">
+      <div class="entry">
+        <span class="yr">2007</span>
+        <div>
+          <a class="title" href="https://www.sciencedirect.com/science/article/abs/pii/S0148619506001019">The Home Team Weather Advantage and Biases in the NFL Betting Market</a>
+          <div class="src">Borghesi · <em>Journal of Economics and Business</em> 59(4) <span class="chip green">You cited</span></div>
+          <p>Gave an acclimation advantage to the team whose five-day home temperatures were closer to game-day conditions. Teams with the advantage outperformed, and the betting market didn’t fully price it. Your third analysis builds on this.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2008</span>
+        <div>
+          <a class="title" href="https://www.tandfonline.com/doi/full/10.1080/09603100701335432">Weather Biases in the NFL Totals Market</a>
+          <div class="src">Borghesi · <em>Applied Financial Economics</em> 18(12) · <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2149710">SSRN</a> <span class="chip red">Not cited</span></div>
+          <p>In 1984–2004 games, heat, wind and rain lowered scoring, and the totals market didn’t fully price it. A weather-based under strategy won out of sample. It’s by the same author as your key source and measures the wind and rain effects directly.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2012</span>
+        <div>
+          <a class="title" href="http://www.advancedfootballanalytics.com/2012/01/weather-effects-on-passing.html">Weather Effects on Passing</a>
+          <div class="src">Brian Burke · Advanced NFL Stats <span class="chip green">You cited</span></div>
+          <p>Cold lowered adjusted yards per attempt for every type of team. Wind mattered mostly above 15 mph and hurt dome teams no more than anyone else. In 20+ mph wind, offenses traded only about five passes for runs.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2012</span>
+        <div>
+          <a class="title" href="http://www.advancedfootballanalytics.com/2012/01/how-does-temperature-affect-road-teams.html">How Does Temperature Affect Road Teams? (And Dome Teams in Particular?)</a>
+          <div class="src">Brian Burke · Advanced NFL Stats <span class="chip flag">Discussed, not in references</span></div>
+          <p>Dome teams went 0–8 on the road at 20°F or colder and 3–23 at 30°F or colder, about 20% once playoffs are removed. Cold-climate visitors showed no decline.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2013</span>
+        <div>
+          <a class="title" href="https://www.sloansportsconference.com/research-papers/going-for-three">Going for Three: Predicting the Likelihood of Field Goal Success with Logistic Regression</a>
+          <div class="src">Clark, Johnson &amp; Stimpson · MIT Sloan Sports Analytics Conference <span class="chip red">Not cited</span></div>
+          <p>A play-level model of 2000–2011 kicks. Cold, wind and precipitation lowered success, while altitude and artificial turf raised it. It shows weather effects with controls, from the same era as your data.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2014</span>
+        <div>
+          <a class="title" href="https://journals.sagepub.com/doi/10.1177/1527002512440580">The Impact of Visiting Team Travel on Game Outcome and Biases in NFL Betting Markets</a>
+          <div class="src">Mark W. Nichols · <em>Journal of Sports Economics</em> (online 2012) <span class="chip red">Not cited</span></div>
+          <p>Travel affects visiting teams’ results (1981–2004), with mixed evidence that betting lines account for it. An acclimation study needs these controls so travel isn’t mistaken for climate.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">Jan 2014</span>
+        <div>
+          <a class="title" href="https://www.espn.com/blog/statsinfo/post/_/id/83631/cold-weather-usually-an-issue-for-manning">Cold weather usually an issue for Manning</a>
+          <div class="src">ESPN Stats &amp; Information <span class="chip">Media</span></div>
+          <p>Manning was 8–11 in games below 40°F with 30 touchdowns and 23 interceptions, against 85–35 otherwise. Your acknowledgments credit this storyline.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2014</span>
+        <div>
+          <a class="title" href="https://ww2.amstat.org/meetings/proceedings/2014/data/assets/pdf/313577_91385.pdf">Association of Domed Stadium to Winning NFL Games</a>
+          <div class="src">Teramoto &amp; Cross · JSM Proceedings, Statistics in Sports <span class="chip outline">Same year as yours</span></div>
+          <p>For 2009–2013, after adjusting for team quality and schedule, dome teams won fewer road games (38.7% vs 43.2%) and had no significant home edge. It also opens with the Manning cold-weather story.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="group-title">Academic work since <span class="count">5 items</span></div>
+    <div class="entries">
+      <div class="entry">
+        <span class="yr">2014</span>
+        <div>
+          <a class="title" href="https://www.degruyterbrill.com/document/doi/10.1515/jqas-2013-0039/html">An expectation-based metric for NFL field goal kickers</a>
+          <div class="src">Pasteur &amp; Cunningham-Rhoads · <em>Journal of Quantitative Analysis in Sports</em> 10(1) <span class="chip green">Peer-reviewed</span></div>
+          <p>A logistic model of kick success with temperature, wind and a Denver altitude flag, used to rate kickers against expectation. Your conclusion proposed kicking as the next step; this paper and Clark et al. (2013) cover it.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2016</span>
+        <div>
+          <a class="title" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6188739/">A relationship between temperature and aggression in NFL football penalties</a>
+          <div class="src">Craig, Overbeek, Condon &amp; Rinaldo · <em>Journal of Sport and Health Science</em> 5(2) <span class="chip green">Peer-reviewed</span></div>
+          <p>Across 2,326 games, hotter weather predicted more aggressive penalties for home teams but not visitors. Your Table 9 found fewer visitor penalties in colder-than-home games and attributed it to fewer plays. Heat and aggression is a second explanation.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2017</span>
+        <div>
+          <a class="title" href="https://journals.sagepub.com/doi/full/10.1177/155862351701200102">The Impact of Atmospheric Conditions on Actual and Expected Scoring in the NFL</a>
+          <div class="src">Rodney J. Paul · <em>International Journal of Sport Finance</em> <span class="chip green">Peer-reviewed</span></div>
+          <p>Humidity and wind in the betting totals market. <a href="#closest">Summary above.</a></p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2025</span>
+        <div>
+          <a class="title" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11829705/">Associations Between Match-Play Characteristics and Environmental Temperatures in 4 Professional Football Leagues</a>
+          <div class="src">Schwarz, Duffield, Novak, Compton &amp; Meyer · <em>European Journal of Sport Science</em> 25(3) <span class="chip">Soccer</span></div>
+          <p>In 1,585 soccer matches, hotter games had fewer short passes and touches, meaning slower and more static play. The same question is now studied in other sports with event-level data.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2026</span>
+        <div>
+          <a class="title" href="https://www.tandfonline.com/doi/abs/10.1080/23328940.2025.2588731">Game-day temperatures are predictive of NFL game outcomes when teams from different climates compete</a>
+          <div class="src">Roberts et al. · <em>Temperature</em> 13(1) <span class="chip green">Peer-reviewed</span></div>
+          <p>Acclimation tested on wins and margin, 2017–2025. <a href="#closest">Summary above.</a></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="group-title">Public analysis since <span class="count">7 items</span></div>
+    <div class="entries">
+      <div class="entry">
+        <span class="yr">2016</span>
+        <div>
+          <a class="title" href="https://blog.hawkblogger.com/2016/01/effect-of-cold-weather-on-nfl-games.html">Effect of Cold Weather on NFL Games</a>
+          <div class="src">Hawk Blogger <span class="chip">Blog analysis</span></div>
+          <p>Combined turnovers rose 42% below 20°F, and yardage fell about 10%. Home teams were 28–11 in games below 10°F going back to 1960.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2016</span>
+        <div>
+          <a class="title" href="https://web.stanford.edu/class/stats50/projects16/Houghton-BerryParkPierce-paper.pdf">Weather and the NFL</a>
+          <div class="src">Stanford STATS 50 <span class="chip">Class project</span></div>
+          <p>Wind, rain and home margin, 2009–2015. <a href="#closest">Summary above.</a></p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2018</span>
+        <div>
+          <a class="title" href="https://www.4for4.com/2018/weather-effects-and-fantasy-football-part-3">Weather Effects and Fantasy Football (three parts)</a>
+          <div class="src">Chris Allen · 4for4 <span class="chip">Fantasy analysis</span></div>
+          <p>Rain had little effect, and snow shifted production toward running backs and tight ends. Part 3 found no link between a QB’s combine throwing velocity and how well his deep passing held up in wind.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2020</span>
+        <div>
+          <a class="title" href="https://www.thespax.com/nfl/analyzing-the-effect-of-weather-in-the-nfl/">Analyzing the Effect of Weather in the NFL</a>
+          <div class="src">Ahmed Cheema · The Spax <span class="chip">Blog analysis</span></div>
+          <p>Completion rate fell from 60.3% in wind under 10 mph to 54.7% at 20 mph and up. Adjusted net yards per attempt fell from 5.79 to 4.62, and field-goal rate from 83.8% to 76.9%.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2022</span>
+        <div>
+          <a class="title" href="https://wsb.wharton.upenn.edu/wp-content/uploads/2022/09/2022_Football_Parks_Weather.pdf">Whether Weather, Wind Speed and Temperature, Impacts Offensive Success in the NFL</a>
+          <div class="src">Wharton Moneyball Academy <span class="chip">High-school program</span></div>
+          <p>EPA per play by wind and temperature band. <a href="#closest">Summary above.</a></p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2024</span>
+        <div>
+          <a class="title" href="https://www.fantasylife.com/articles/best-ball/does-wind-matter-in-fantasy-football">Does Wind Matter in Fantasy Football?</a>
+          <div class="src">Chris Allen · Fantasy Life <span class="chip">Fantasy analysis</span></div>
+          <p>In 1,311 games from 2018–2022, completion percentage over expected fell 1.6 points in wind and pass rate over expected fell 2.8 points. Only 48 games (3.7%) topped 20 mph. Nearly half of the biggest accuracy swings came with a crosswind.</p>
+        </div>
+      </div>
+      <div class="entry">
+        <span class="yr">2026</span>
+        <div>
+          <a class="title" href="https://nflanalytic.com/explainer-weather-and-scoring.html">Weather &amp; NFL Scoring: It’s the Wind</a>
+          <div class="src">C. B. Zakarian · NFL Analytics <span class="chip">Data explainer</span></div>
+          <p>Across 7,276 games from 1999–2025, combined scoring falls from 44.7 points in 0–5 mph wind to 40.5 at 16+ mph. Across temperature bands it stays between 43.0 and 43.7. Dome games average 46.9.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="group-title">Found but couldn’t open <span class="count">1 item</span></div>
+    <div class="entries">
+      <div class="entry">
+        <span class="yr">n.d.</span>
+        <div>
+          <a class="title" href="https://medium.com/data-science/football-weather-diving-into-the-effects-of-weather-on-nfl-qb-performance-f0edb420623d">“Football Weather”: Diving Into the Effects of Weather on NFL QB Performance</a>
+          <div class="src">Josh Mancuso · Towards Data Science on Medium <span class="chip outline">Not reviewed</span></div>
+          <p>The title matches your topic closely, but the page blocked automated reading, so I can’t summarize it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="held">
+    <h2>What held up</h2>
+    <p class="lede">Your findings next to later evidence. Effects are per 10 mph of wind or 10°F of temperature, converted from your log coefficients.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Finding</th><th>Your estimate</th><th>Later evidence</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="lead">Wind hurts passing</td>
+            <td>Pass yards <span class="mono">−6.8%</span>, about 15 yards per team. Completion rate <span class="mono">−1.4</span> points. (Table 5)</td>
+            <td>Cheema 2020: completion 60.3% → 54.7% from under 10 to 20+ mph. Allen 2024: CPOE −1.6 points. Zakarian 2026: about 4 fewer combined points from calm to 16+ mph.</td>
+            <td class="status"><span class="chip green">Held up</span></td>
+          </tr>
+          <tr>
+            <td class="lead">Cold hurts passing a little</td>
+            <td>10°F colder: pass yards <span class="mono">−1.7%</span>, completion rate about <span class="mono">−0.5</span> points. (Table 5)</td>
+            <td>Burke 2012 and Wharton 2022: passing efficiency drops in the cold. Zakarian 2026: scoring barely changes with temperature.</td>
+            <td class="status"><span class="chip green">Held up</span></td>
+          </tr>
+          <tr>
+            <td class="lead">Wind pushes teams toward the run</td>
+            <td>Rush share up about <span class="mono">1.2</span> points of plays overall and <span class="mono">2.0</span> for visitors. (Tables 5, 7)</td>
+            <td>Allen 2024: pass rate over expected −2.8 points in wind. Burke 2012: about five passes become runs at 20+ mph.</td>
+            <td class="status"><span class="chip green">Held up</span></td>
+          </tr>
+          <tr>
+            <td class="lead">Warm-climate visitors do worst in freezing games</td>
+            <td>Largest pass-yard loss per degree of home-to-game drop: <span class="mono">3.6%</span> per 10°F for Warm visitors. (Table 8)</td>
+            <td>Roberts et al. 2026: familiar temperatures predict wins and margin. Burke 2012: dome visitors 0–8 at 20°F or colder.</td>
+            <td class="status"><span class="chip green">Replicated on outcomes</span></td>
+          </tr>
+          <tr>
+            <td class="lead">Teams from windy stadiums cope better (H3)</td>
+            <td>No. Windy-stadium visitors lost the most pass yards per mph. (Table 8)</td>
+            <td>Burke 2012: wind hurt dome teams no more than other teams.</td>
+            <td class="status"><span class="chip green">Your “no” held up</span></td>
+          </tr>
+          <tr>
+            <td class="lead">Visitors are more weather-sensitive than home teams</td>
+            <td>Pooled Home × weather terms not significant (Table 5). Wind costs home QBs more passer rating than visitors (Table 6).</td>
+            <td>Stanford 2016 and Hawk Blogger 2016: the home edge grows in rain and extreme cold, measured on scores.</td>
+            <td class="status"><span class="chip flag">Unsettled</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The warm-team result is now supported for wins and margin. Nobody has yet tested whether it runs through passing efficiency, which was your angle.</p>
+  </section>
+
+  <section id="scorecard">
+    <h2>Hypothesis scorecard</h2>
+    <p class="lede">The thesis states six hypotheses on pp. 12–13 but never says which ones held. Here is what your own tables show.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Hypothesis</th><th>What your tables show</th><th>Verdict</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="lead">H1 · Visitors’ passing is more vulnerable to freezing conditions than home teams’</td>
+            <td>Table 6: the Freezing dummy cut home teams’ completion rate (<span class="mono">−3.3%</span>, p &lt; .05) but not visitors’ (<span class="mono">−1.0%</span>, n.s.). Table 5’s Home × Freezing terms are all insignificant.</td>
+            <td class="status"><span class="chip outline">Not supported</span></td>
+          </tr>
+          <tr>
+            <td class="lead">H1A · Visitors are likelier to swap passes for runs in extreme weather</td>
+            <td>Table 7: visitors shift toward the run in wind (<span class="mono">+4.4%</span> rush share per 10 mph, p &lt; .01) and home teams don’t. In the cold it’s the reverse. Table 5’s pooled test of the difference is insignificant.</td>
+            <td class="status"><span class="chip flag">Mixed</span></td>
+          </tr>
+          <tr>
+            <td class="lead">H2 · Big drops from home temperature hurt visitors’ passing</td>
+            <td>Table 8: in freezing games, pass yards fall <span class="mono">3.6%</span> per 10°F of drop for Warm visitors and <span class="mono">2.4%</span> for Mid visitors (both significant).</td>
+            <td class="status"><span class="chip blue">Consistent, see #1</span></td>
+          </tr>
+          <tr>
+            <td class="lead">H2A · Those drops push visitors toward the run</td>
+            <td>Table 9: no temperature-differential term is significant for rush share or rush attempts. The thesis notes this on p. 29.</td>
+            <td class="status"><span class="chip outline">Not supported</span></td>
+          </tr>
+          <tr>
+            <td class="lead">H3 · Wind hurts visitors from calm stadiums more than visitors from windy ones</td>
+            <td>Table 8: per 10 mph, pass yards fall <span class="mono">6.3%</span> (dome), <span class="mono">8.3%</span> (light wind), <span class="mono">13.4%</span> (heavy wind). The order is reversed.</td>
+            <td class="status"><span class="chip outline">Reversed</span></td>
+          </tr>
+          <tr>
+            <td class="lead">H3A · Wind pushes teams toward the run, more for teams from calm stadiums</td>
+            <td>Table 9: rush share rises with wind in all three groups (all significant), most for heavy-wind teams (<span class="mono">+6.1%</span> vs <span class="mono">+4.0–4.6%</span>).</td>
+            <td class="status"><span class="chip flag">Half supported</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="feedback">
+    <h2>Feedback</h2>
+    <p class="lede">As a 2014 undergraduate thesis, this is strong work. The items below are what a journal referee would raise today, ordered by how much each could change the conclusions. Page and table numbers refer to your PDF.</p>
+
+    <div class="strengths">
+      <h3>What’s strong</h3>
+      <ul>
+        <li>You built an original game-level dataset with your own scraper, years before nflfastR made this easy.</li>
+        <li>You ran fixed-effects regressions against stated hypotheses when most public work was band averages.</li>
+        <li>Your acclimation measure, each visitor’s weekly home temperature against game conditions by climate group, is more detailed than the latitude split in the 2026 journal paper.</li>
+        <li>Your headline results agree with a decade of later data.</li>
+      </ul>
+    </div>
+
+    <div class="fb-group">
+      <div class="fb-head"><span class="chip red">Could change conclusions</span><h3>Identification and inference</h3><span class="count">6 items</span></div>
+
+      <div class="fb" id="fb1">
+        <span class="n">#1</span>
+        <div>
+          <h4>The acclimation model can’t separate “cold” from “colder than home”</h4>
+          <p>Table 8 has no term for game temperature itself. The differential interactions also enter without their own dummies (Warm × Freezing and so on), so each slope is forced through zero at a 0°F differential. No Warm visitor in a freezing game is anywhere near zero: all 53 have differentials between −40 and −81°F. For those games, a bigger drop from home and a colder game are nearly the same variable.</p>
+          <p>The Mid-visitor slope on pass yards (<span class="mono">2.4%</span> per 10°F) almost matches the plain temperature slope for all visitors in Table 6 (<span class="mono">2.2%</span>). Most of it may be the ordinary cold effect. Only the Warm slope (<span class="mono">3.6%</span>) stands out, and the gap is never tested.</p>
+          <p class="fix"><b>Fix</b>Include game temperature, interact it with the visitor’s home climate, and keep the main effects. Then test whether warm-climate visitors lose more than cold-climate visitors at the same game temperature.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb2">
+        <span class="n">#2</span>
+        <div>
+          <h4>Games with zero events dropped out of the log regressions</h4>
+          <p>The log of zero is undefined, so games with no interceptions, fumbles, turnovers or sacks fell out of those columns. The sample sizes in Tables 8 and 9 show it.</p>
+          <div class="calc">INT / attempt   N = 1,960 of 3,111   37% dropped
+Fumbles         N = 2,348 of 3,111   25% dropped
+Turnovers       N = 2,498 of 3,111   20% dropped
+Sacks           N = 2,698 of 3,111   13% dropped</div>
+          <p>Those columns describe only games where the event happened at least once, which is a different question.</p>
+          <p class="fix"><b>Fix</b>Use Poisson or negative binomial models for counts, with pass attempts or dropbacks as the exposure, or model rates in levels.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb3">
+        <span class="n">#3</span>
+        <div>
+          <h4>Playoffs are in the sample with no control</h4>
+          <p>Your literature review (p. 10) faults Burke for playoff selection bias: cold games cluster in January, when better teams host. The thesis includes postseason games without a playoff indicator, so the same bias can load onto the temperature and freezing coefficients. Late-season fatigue and injuries raise the same problem.</p>
+          <p class="fix"><b>Fix</b>Add a playoff dummy and week-of-season effects, and report results with playoffs dropped.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb4">
+        <span class="n">#4</span>
+        <div>
+          <h4>Team fixed effects don’t track roster changes</h4>
+          <p>The Data section (p. 15) says team and season fixed effects account for players joining or leaving. Separate team and season effects give each franchise one average across all 12 years, so the 0–16 Lions of 2008 and the playoff Lions of 2011 count as the same team.</p>
+          <p class="fix"><b>Fix</b>Use team-by-season fixed effects for offense and defense, or control for the pre-game point spread.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb5">
+        <span class="n">#5</span>
+        <div>
+          <h4>Standard errors treat linked rows as independent</h4>
+          <p>Weather is identical for both teams in a game, and Table 5 stacks both teams (6,266 rows from 3,133 games). Heteroskedasticity-robust errors assume those rows are independent, which makes the weather coefficients look more precise than they are. The many results reported at the 10% level make this matter more.</p>
+          <p class="fix"><b>Fix</b>Cluster by game at minimum. Clustering by stadium-season is safer, since weather is correlated within a stadium across a season.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb6">
+        <span class="n">#6</span>
+        <div>
+          <h4>The abstract and conclusion claim more than the tables show</h4>
+          <p>On “visiting teams are more sensitive to extreme weather”: Table 5 tests exactly that, and none of its Home × Wind or Home × Temperature passing terms is significant (you note this on p. 23). In Table 6, wind costs home teams more passer rating than visitors (<span class="mono">−0.46</span> vs <span class="mono">−0.22</span> per mph).</p>
+          <p>The “roughly twice as much” line on temperature (p. 26) compares 2.22% with 1.62%, a ratio of 1.4. The claim that cold-climate teams “improve” in freezing games (p. 30) rests on insignificant coefficients. The abstract’s cold-to-run shift holds only for home teams (Table 7).</p>
+          <p class="fix"><b>Fix</b>Test home-versus-away differences inside one pooled model, report the p-values, and keep only what passes in the abstract.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fb-group">
+      <div class="fb-head"><span class="chip flag">Misread numbers</span><h3>Interpreting the coefficients</h3><span class="count">4 items</span></div>
+
+      <div class="fb" id="fb7">
+        <span class="n">#7</span>
+        <div>
+          <h4>The home-advantage figures describe a 0°F game</h4>
+          <p>Because Home is interacted with uncentered temperature and wind, the Home coefficient is the home edge at a 0°F wind chill with no wind. At the sample means (57°F, 7.4 mph) the rushing-yards edge is about 10%, not 25.5%, and the passer-rating edge is about 4.2 points, not 6.8. The line on p. 23 that 80°F weather eliminates the rushing edge doesn’t reproduce either.</p>
+          <div class="calc">Rush yards, mean weather   0.255 − 0.00229×57 − 0.00391×7.4          = 0.096 → +10%
+Rush yards, 80°F, calm     0.255 − 0.00229×80 + 0.0614 (Home×Hot)    = 0.133 → +14%
+Passer rating, mean        6.795 − 0.0225×57 − 0.182×7.4             = +4.2 points</div>
+          <p class="fix"><b>Fix</b>Center temperature and wind before interacting them, for example at 60°F and 0 mph, so the Home term means something on its own.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb8">
+        <span class="n">#8</span>
+        <div>
+          <h4>Relative changes read as percentage points</h4>
+          <p>With logged rates, “completion percentage falls 2.4%” means 2.4% of the rate: about 60.3% to 58.9%, or 1.4 points. On p. 25, a 4.4% rise in visitors’ log rush share becomes “substitute a rush attempt for a pass attempt in 4% of all offensive attempts.” The actual shift is about 2 points of play share (44.6% to 46.6%), roughly one play per game.</p>
+          <p class="fix"><b>Fix</b>Report effects in football units: yards, percentage points, plays per game.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb9">
+        <span class="n">#9</span>
+        <div>
+          <h4>“29% of the variation” is a predicted drop at the edge of the data</h4>
+          <p>On p. 29, the 81°F differential is said to “account for over 29% in the variation in pass yards.” The coefficient implies a predicted fall in pass yards: 0.00361 × 81 = 0.29 log points, or 25% in exact terms. It’s a point prediction for the most extreme game in a 53-game cell. It isn’t a share of variance.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb10">
+        <span class="n">#10</span>
+        <div>
+          <h4>Confidence language, and one flipped sign</h4>
+          <p>“The regression estimates with 99% confidence that wind has an effect” (p. 25) should read “significant at the 1% level.” A p-value isn’t the probability that an effect is real. The same fix applies to “estimates with 95% confidence” on p. 24.</p>
+          <p>That p. 24 sentence also has the sign backwards. It says home teams lose 2.3% of rush yards with every 10°F drop. Table 5’s Home × Temperature coefficient (<span class="mono">−0.00229</span>) means they gain about 2.3%, which matches your p. 26 discussion and the conclusion.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fb-group">
+      <div class="fb-head"><span class="chip blue">Data and measurement</span><h3>What went into the model</h3><span class="count">7 items</span></div>
+
+      <div class="fb" id="fb11">
+        <span class="n">#11</span>
+        <div>
+          <h4>Wind chill as the temperature variable</h4>
+          <p>Wind chill folds wind into temperature while wind is also in the model, so the temperature coefficient never holds wind fixed. The NWS formula is also defined only at or below 50°F with wind above 3 mph, and the thesis doesn’t say it was limited to that range. Outside it, the formula runs hot.</p>
+          <div class="calc">80°F, 10 mph wind   → formula gives 83.2°F
+72°F dome, 0 mph    → formula gives 80.5°F   (would trip the Hot ≥ 80 dummy)</div>
+          <p>Check the scraper code. If the formula ran on every game, the Hot coefficients partly measure something else.</p>
+          <p class="fix"><b>Fix</b>Use air temperature and wind as separate variables, keep wind chill as a robustness check, and use heat index for hot games. Pro-Football-Reference lists humidity.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb12">
+        <span class="n">#12</span>
+        <div>
+          <h4>Precipitation was obtainable</h4>
+          <p>The thesis says precipitation wasn’t available (p. 16). Borghesi (2008) used rain data for games back to 1984, and hourly NOAA station records cover every NFL city. Rain and high wind often arrive together in storms, so leaving rain out probably inflates the wind coefficients somewhat.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb13">
+        <span class="n">#13</span>
+        <div>
+          <h4>Roofs and filled-in weather</h4>
+          <p>Dome games without weather data were set to 72°F and calm. Retractable roofs are open for some games and closed for others, and Pro-Football-Reference records which.</p>
+          <p class="fix"><b>Fix</b>Control for roof status and surface (grass or turf), or drop closed-roof games from the weather regressions.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb14">
+        <span class="n">#14</span>
+        <div>
+          <h4>Controls that travel with the weather</h4>
+          <p>Surface, Denver’s altitude, rest days, travel distance and time zones crossed (see Nichols 2014) all correlate with weather and affect offense. None is in the model.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb15">
+        <span class="n">#15</span>
+        <div>
+          <h4>The home-climate variable isn’t documented</h4>
+          <p>The acclimation analysis uses “the visiting team’s average temperature for the week” (p. 15) without saying where that number comes from or what dome teams get. If dome teams are set to 72°F, they all count as Warm, which puts Detroit and Minnesota in the same group as Miami and Tampa Bay. Say which it is. Burke’s results suggest dome teams deserve their own group.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb16">
+        <span class="n">#16</span>
+        <div>
+          <h4>Volume versus efficiency, and game script</h4>
+          <p>Pass yards fall when a team passes less, so the measure mixes strategy with skill. Yards per attempt or adjusted net yards per attempt would isolate efficiency. Rush share also rises when a team is ahead, and home teams lead more often, which likely explains much of the large home rushing edge.</p>
+          <p class="fix"><b>Fix</b>Add per-attempt measures. For play-calling, use neutral situations (score within a touchdown, first three quarters) or pass rate over expected.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb17">
+        <span class="n">#17</span>
+        <div>
+          <h4>A straight line may miss the wind threshold</h4>
+          <p>Burke and later fantasy analyses find that wind effects accelerate above about 15 mph. A linear mph term would understate strong wind and overstate light wind.</p>
+          <p class="fix"><b>Fix</b>Use wind bins (0–5, 6–10, 11–15, 16–20, 21+ mph) or a spline, and plot the result.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fb-group">
+      <div class="fb-head"><span class="chip">Presentation</span><h3>Writing, tables and sources</h3><span class="count">6 items</span></div>
+
+      <div class="fb" id="fb18">
+        <span class="n">#18</span>
+        <div>
+          <h4>Call it passer rating</h4>
+          <p>“QBR” is the name of ESPN’s Total QBR, introduced in 2011. The thesis uses the NFL passer rating, so readers may assume the wrong metric.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb19">
+        <span class="n">#19</span>
+        <div>
+          <h4>Equations, captions and labels</h4>
+          <p>Model (3) is captioned as producing Tables 6 and 7; it should be 8 and 9. Model (2) is missing plus signs and coefficients on its dummies. Light and Mid wind, and High and Heavy wind, are used interchangeably across Tables 1, 3, 8 and the text. Table 4 lists “HT Yards/Completion” twice, and the second row is the visitors’.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb20">
+        <span class="n">#20</span>
+        <div>
+          <h4>Add figures and one summary table</h4>
+          <p>The thesis has no figures. Binned plots of passing efficiency against wind and temperature, plus one coefficient plot comparing home and visitor effects, would make the argument faster than coefficient-by-coefficient prose. A single table of effects in yards, points and plays per game would serve most readers.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb21">
+        <span class="n">#21</span>
+        <div>
+          <h4>Say which hypotheses failed</h4>
+          <p>H1, H2A and H3 were not supported, and the results section never says so. A scorecard like the one above makes rejected hypotheses part of the findings.</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb22">
+        <span class="n">#22</span>
+        <div>
+          <h4>Small factual slips</h4>
+          <p>Burke’s zero-win dome finding covers 20°F and below, not “11–22 degree weather” (p. 10). The acknowledgments call Super Bowl XLVIII “super cold,” but <a href="https://en.wikipedia.org/wiki/Super_Bowl_XLVIII">kickoff was 49°F</a>, so Manning’s rough night came in mild weather. That makes a better opening: a cold-weather story that the data can test. The Hypotheses section also opens with a sentence fragment (p. 12).</p>
+        </div>
+      </div>
+
+      <div class="fb" id="fb23">
+        <span class="n">#23</span>
+        <div>
+          <h4>Literature available at the time</h4>
+          <p>Borghesi (2008), Clark, Johnson &amp; Stimpson (2013), and Nichols (online 2012) were all published before your thesis and speak directly to it. Burke’s road-team post is discussed in the text but missing from the references.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="update">
+    <h2>If you revisit it</h2>
+    <p class="lede">What a 2026 version would use. Most of this data is free.</p>
+    <dl class="plan">
+      <dt>Data</dt>
+      <dd><a href="https://nflfastr.com">nflverse / nflfastR</a> play-by-play and schedules, 1999–2025. They include EPA, completion probability and expected pass rate, plus roof, surface, temperature, wind and closing lines. Hourly station data from <a href="https://www.ncei.noaa.gov/">NOAA</a> or <a href="https://meteostat.net/">Meteostat</a> adds precipitation, humidity and wind direction at kickoff and during the game.</dd>
+      <dt>Outcomes</dt>
+      <dd>EPA per dropback, success rate, CPOE, air yards per attempt, and sack and interception rates. For play-calling, pass rate over expected.</dd>
+      <dt>Design</dt>
+      <dd>Offense-season and defense-season fixed effects, week and playoff controls, roof and surface, errors clustered by game and stadium-season, count models for turnovers, and wind in bins.</dd>
+      <dt>Acclimation</dt>
+      <dd>Game temperature × visitor home climate with main effects, plus flags for a warm team’s first sub-freezing game of the season and days since its last cold game.</dd>
+      <dt>New angles</dt>
+      <dd>Crosswind versus headwind from stadium orientation, which Allen’s 2024 piece hints at. Next Gen Stats for time to throw and throw depth. A market test of whether closing totals still underprice wind (Borghesi 2008; Paul 2017).</dd>
+    </dl>
+    <div class="gap-callout">
+      <p><strong>The open gap.</strong> I found no peer-reviewed study that estimates weather effects on NFL passing efficiency at the play level with team-quality controls and an acclimation design. Your thesis was aimed at that question in 2014, and it’s still open.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Method: web and Google Scholar searches, OpenAlex and Europe PMC lookups, and a direct read of each source except where marked. Thesis numbers come from Tables 3–9 of the Scholarship@Claremont PDF. Log-point effects are converted with e<sup>β</sup> − 1 where the exact figure matters.</p>
+    <p>Compiled September 27, 2026.</p>
+  </footer>
+</main>

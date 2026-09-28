@@ -1,0 +1,31 @@
+code,name,aliases,kalshi_codes,espn_codes,conference
+ATL,Atlanta Hawks,Atlanta,ATL,ATL,East
+BKN,Brooklyn Nets,Brooklyn,BKN,BKN,East
+BOS,Boston Celtics,Boston,BOS,BOS,East
+CHA,Charlotte Hornets,Charlotte,CHA,CHA,East
+CHI,Chicago Bulls,Chicago,CHI,CHI,East
+CLE,Cleveland Cavaliers,Cleveland,CLE,CLE,East
+DAL,Dallas Mavericks,Dallas,DAL,DAL,West
+DEN,Denver Nuggets,Denver,DEN,DEN,West
+DET,Detroit Pistons,Detroit,DET,DET,East
+GSW,Golden State Warriors,Golden State,GSW,GS,West
+HOU,Houston Rockets,Houston,HOU,HOU,West
+IND,Indiana Pacers,Indiana,IND,IND,East
+LAC,Los Angeles Clippers,LA Clippers|L.A. Clippers,LAC,LAC,West
+LAL,Los Angeles Lakers,LA Lakers|L.A. Lakers,LAL,LAL,West
+MEM,Memphis Grizzlies,Memphis,MEM,MEM,West
+MIA,Miami Heat,Miami,MIA,MIA,East
+MIL,Milwaukee Bucks,Milwaukee,MIL,MIL,East
+MIN,Minnesota Timberwolves,Minnesota,MIN,MIN,West
+NOP,New Orleans Pelicans,New Orleans,NOP,NO,West
+NYK,New York Knicks,,NYK,NY,East
+OKC,Oklahoma City Thunder,Oklahoma City,OKC,OKC,West
+ORL,Orlando Magic,Orlando,ORL,ORL,East
+PHI,Philadelphia 76ers,Philadelphia,PHI,PHI,East
+PHX,Phoenix Suns,Phoenix,PHX,PHX,West
+POR,Portland Trail Blazers,Portland,POR,POR,West
+SAC,Sacramento Kings,Sacramento,SAC,SAC,West
+SAS,San Antonio Spurs,San Antonio,SAS,SA,West
+TOR,Toronto Raptors,Toronto,TOR,TOR,East
+UTA,Utah Jazz,Utah,UTA,UTAH,West
+WAS,Washington Wizards,Washington,WAS,WSH,East
