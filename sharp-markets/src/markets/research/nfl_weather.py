@@ -41,7 +41,7 @@ WINDOW_BEFORE_MIN = 30 * 60
 STRIKE_RADIUS = 10.5
 MAX_SPREAD = Decimal("0.10")
 TRADE_LOT = 100
-RAIN_IN, SNOW_IN = 0.10, 0.10          # same thresholds as the weather study
+RAIN_IN, SNOW_IN = 0.06, 0.10          # same thresholds as the weather study (nflweather.features)
 
 
 def weather_terms(g: dict) -> dict:
@@ -307,8 +307,7 @@ def _write_report(season, n_study, rows, valid, unmatched, regs, buckets, n_vari
              f"with a valid T-5m Kalshi implied total: {len(valid)}; unmatched in-season Kalshi events: {len(unmatched)}",
              f"- Skipped Kalshi events (logged, not errors): {dict(skipped)}; matched with a ticker-date shift "
              f"(flexed games): {shifted}",
-             f"- Terms dropped (no variation in this sample): {dropped or 'none'} — the study's 2023+ games use "
-             "gamebook weather, which has wind and temperature but no precipitation.",
+             f"- Terms dropped (no variation in this sample): {dropped or 'none'}",
              f"- n_variants_tested: {n_variants} (5 buckets x 2 trade sides + 2 specs x 3 outcomes)",
              "- Weather = observed kickoff weather (study caveat). Kalshi prices = last 1-min candle at or before the snapshot.",
              "",
