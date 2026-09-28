@@ -1,0 +1,6 @@
+.env
+.venv/
+data/
+output/this_week.csv
+__pycache__/
+*.pyc

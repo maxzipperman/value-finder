@@ -138,16 +138,32 @@ def parse(payload) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def backfill_plan(games: pd.DataFrame, seasons=(2024, 2025), early_days=(4, 1), close_min=30):
-    """Snapshot times: early-week and day-before snapshots (12:00 UTC, shared by all
-    games that weekend) plus one near-close snapshot per distinct kickoff."""
+FORECAST_LEADS = (1, 3)       # days: Open-Meteo previous_day1 / previous_day3
+FORECAST_LATENCY_H = 7        # hours from model initialization to published forecast
+GAME_WINDOW_H = 4             # forecast fields used: kickoff hour through kickoff + 4h
+
+
+def decision_time(kick_utc, lead_days):
+    """Earliest moment every forecast field used for this game at this lead was
+    public. previous_dayN at valid hour t comes from a run initialized ~N days
+    before t, so the binding field is the last game hour (kickoff + 4h):
+    decision = kickoff + 4h - N days + release latency, rounded up to 5 minutes."""
+    t = pd.Timestamp(kick_utc) + timedelta(hours=GAME_WINDOW_H) - timedelta(days=lead_days) \
+        + timedelta(hours=FORECAST_LATENCY_H)
+    return t.ceil("5min")
+
+
+def backfill_plan(games: pd.DataFrame, seasons=(2024, 2025), close_min=30):
+    """Snapshot times per distinct kickoff: one at each forecast lead's decision time
+    (so the quote never predates the forecast it is paired with) plus one near-close
+    snapshot. Games sharing a kickoff share snapshots."""
     g = games[games.season.isin(seasons) & games.result.notna()].copy()
     kick = pd.to_datetime(g.gameday + " " + g.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
     stamps = set()
     for k in kick.unique():
         k = pd.Timestamp(k)
-        for d in early_days:
-            stamps.add((k - timedelta(days=d)).normalize() + timedelta(hours=12))
+        for lead in FORECAST_LEADS:
+            stamps.add(decision_time(k, lead))
         stamps.add((k - timedelta(minutes=close_min)).floor("5min"))
     return sorted(stamps)
 

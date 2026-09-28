@@ -296,7 +296,7 @@ footer { font-family: var(--sans); font-size: 13.5px; color: var(--muted); borde
     <figure class="fig">
       <figcaption><span class="fig-title">Figure 9. Walk-forward under bets, 2006–2025</span><span class="fig-sub">Cumulative units at −110, betting 1 unit whenever the prior-seasons model gives P(under) ≥ 53%.</span></figcaption>
       <div class="chart" id="fig9"></div>
-      <p class="note">Profitable in <span data-fig="stab"></span> seasons, so a bad year is normal. <span data-fig="variants"></span> betting variants were examined across this whole section, so discount the single best-looking bucket in any table.</p>
+      <p class="note">Profitable in <span data-fig="stab"></span> seasons, so a bad year is normal. <span data-fig="variants"></span> betting variants were examined across this whole section, so discount the single best-looking bucket in any table. A strict Bonferroni bar for 108 tests is p &lt; 0.0005; the long wind result (p ≈ 0.007) doesn't clear it, which is why the forward test decides.</p>
     </figure>
 
     <div class="prose">
@@ -321,7 +321,7 @@ footer { font-family: var(--sans); font-size: 13.5px; color: var(--muted); borde
     <div class="prose">
       <h3>Forecasts, not hindsight</h3>
       <p>Every backtest above uses the weather observed at kickoff, which no bettor has. Open-Meteo archives what its models forecast 1–3 days out starting in 2024. For outdoor games since then, the day-before forecast of kickoff wind correlates <span data-fig="fc1_r"></span> with the game-book reading, and the three-day forecast <span data-fig="fc3_r"></span>. That is good enough to spot a windy game early, which is where the open-to-close move lives.</p>
-      <p>The same seasons also show where hindsight flatters the backtest. Rain nobody forecast went <span data-fig="rs_surprise"></span> against the total, while games with rain in the day-before forecast went <span data-fig="rs_forecast"></span>: the close had already priced it. Most of the historical rain edge is surprise rain, which can't be bet ahead of time. Wind looks different but is no comfort either: 15+ mph games went <span data-fig="ws_recent"></span> in 2024–26 on observed wind, so the last two seasons were flat whatever the inputs. Treat the observed-weather results as an upper bound.</p>
+      <p>The same seasons also show where hindsight flatters the backtest. In the forecast archive (the 2023 playoffs through 2026 Week 3), rain nobody forecast went <span data-fig="rs_surprise"></span> against the total, while games with rain in the day-before forecast went <span data-fig="rs_forecast"></span>: the close had already priced it. Most of the historical rain edge is surprise rain, which can't be bet ahead of time. Wind looks different but is no comfort either: 15+ mph games went <span data-fig="ws_recent"></span> over the same stretch on observed wind, so the last two seasons were flat whatever the inputs. Treat the observed-weather results as an upper bound.</p>
     </div>
     <figure class="fig">
       <figcaption><span class="fig-title">Table 2. Forecast skill and the same model on forecast inputs, 2024 onward</span><span class="fig-sub">Kickoff wind put on the game-book scale. Two seasons only, so the betting rows are illustrative.</span></figcaption>
@@ -334,24 +334,24 @@ footer { font-family: var(--sans); font-size: 13.5px; color: var(--muted); borde
   <section id="playbook">
     <div class="sec-head"><p class="eyebrow">Part 5 · Playbook</p><h2>Strategies and triggers</h2></div>
     <div class="prose">
-      <p>One rule has a real-money case. The rest are logged, not bet, until the forward test shows closing-line value. The alert job sends each trigger once, labeled BET or WATCH. The full card is in <code>STRATEGY.md</code>.</p>
+      <p>One rule is under forward test with real prices; everything else is logged, not bet. The research shows wind lowers scoring; it hasn't yet shown a price you can beat with a forecast (12–12 so far). The alert job sends each trigger once. The full card is in <code>STRATEGY.md</code> (version 2, after an independent audit).</p>
     </div>
     <div class="plays">
       <div class="play bet">
-        <p class="play-tag">Bet · 1 unit</p><h3>Early wind under</h3>
+        <p class="play-tag">Rule B · forward test</p><h3>Early wind under</h3>
         <p><strong>Trigger:</strong> outdoor stadium, kickoff wind forecast 15+ mph, 1–3 days out.</p>
-        <p><strong>Action:</strong> bet the under right away at the best number, −110 or better. <strong>Storm</strong> (rain or snow also forecast): 1.5 units.</p>
-        <p><strong>Why:</strong> <span data-fig="s_w_close"></span> vs the close since 1999; <span data-fig="s_w_open"></span> vs the opener; totals fall about <span data-fig="s_w_move"></span> points by kickoff. Storm games <span data-fig="s_storm"></span>.</p>
-        <p><strong>Stop:</strong> after 40 bets, if average CLV is zero or worse.</p>
+        <p><strong>Price gate:</strong> a posted total, an under at −115 or better, and positive expected value at that exact line and price.</p>
+        <p><strong>Stake:</strong> paper until 20 settled signals show positive CLV; if betting, flat 0.5% of bankroll. No storm size-up.</p>
+        <p><strong>Why:</strong> <span data-fig="s_w_close"></span> vs the close since 1999; <span data-fig="s_w_open"></span> vs the opener; totals fall about <span data-fig="s_w_move"></span> points by kickoff. <strong>But:</strong> 12–12 on day-before forecasts so far.</p>
       </div>
       <div class="play bet">
-        <p class="play-tag">Bet · 1 unit</p><h3>Line lag</h3>
-        <p><strong>Trigger:</strong> the kickoff wind forecast jumps 5+ mph to 15+ while the total moves less than half a point.</p>
-        <p><strong>Action:</strong> same as the early wind under. This is the move the market usually makes late.</p>
+        <p class="play-tag">Rule B · forward test</p><h3>Line lag</h3>
+        <p><strong>Trigger:</strong> the kickoff wind forecast jumps 5+ mph to 15+ while a posted total moves less than half a point.</p>
+        <p><strong>Action:</strong> same gates and stake as the early wind under. This is the move the market usually makes late.</p>
       </div>
       <div class="play watch">
         <p class="play-tag">Watch · paper only</p><h3>Log, don't bet</h3>
-        <p><strong>Model lean</strong> at P(under) ≥ 55%, the pre-registered test. <strong>Forecast rain</strong>, already priced (<span data-fig="rs_forecast"></span> in 2024–26). <strong>Cold visitor</strong>: dome or warm-climate team in a ≤32°F game, home covered <span data-fig="acc_home"></span>. <strong>Props</strong>: passing yards fall about 11% at 20+ mph; 50-yard field goals drop to <span data-fig="fg50_both"></span> in freezing wind. Not backtestable.</p>
+        <p><strong>Model lean</strong> at P(under) ≥ 55%, the pre-registered test (its probability ignores the offered price). <strong>Forecast rain</strong>, already priced (<span data-fig="rs_forecast"></span> in 2024–26). <strong>Cold visitor</strong>: dome or warm-climate team in a ≤32°F game, home covered <span data-fig="acc_home"></span>. <strong>Props</strong>: passing yards fall about 11% at 20+ mph; 50-yard field goals drop to <span data-fig="fg50_both"></span> in freezing wind. Not backtestable.</p>
       </div>
       <div class="play avoid">
         <p class="play-tag">Avoid</p><h3>No edge</h3>
@@ -367,7 +367,7 @@ footer { font-family: var(--sans); font-size: 13.5px; color: var(--muted); borde
 
   <section id="week">
     <div class="sec-head"><p class="eyebrow">Live</p><h2>This week's weather board</h2></div>
-    <div class="prose"><p>Forecast kickoff conditions for upcoming games as of <span data-fig="generated"></span>, with the historical scoring effect of that weather, how much closing totals usually move for it, and the model's P(under). A lean needs 55%. Forecasts more than two days out will change.</p></div>
+    <div class="prose"><p>Forecast kickoff conditions for upcoming games as of <span data-fig="generated"></span>, with the historical scoring effect of that weather, how much closing totals usually move for it, the model's P(under), and each game's Rule B status. Only a Rule B signal is actionable; model leans are watch-only. Forecasts more than two days out will change.</p></div>
     <figure class="fig board"><div id="tab-week"></div>
       <p class="note">Alerts: a scheduled job refreshes forecasts and lines four times a day and sends a Mac notification (and an iPhone push via ntfy) when a game crosses the 55% lean, when the model and the de-vigged price disagree by 5+ points, or when the kickoff wind forecast jumps while the total stays put. “Weather effect” is the historical change in combined points for these conditions. “Market usually moves” is how much closing totals have shifted for the same conditions. Retractable roofs with no roof decision yet are treated as closed.</p>
     </figure>
@@ -377,7 +377,8 @@ footer { font-family: var(--sans); font-size: 13.5px; color: var(--muted); borde
     <div class="sec-head"><p class="eyebrow">Method</p><h2>How it's built</h2></div>
     <div class="prose">
       <p>The 2014 thesis used a Beautiful Soup scraper against Pro-Football-Reference, which now blocks scripts. The new pipeline pulls the same game-book weather from nflverse, rebuilds every team box score from play-by-play, adds hourly ERA5 weather from Open-Meteo for each stadium, NOAA daily highs and lows for each home city, and opening and closing lines scraped from the Sportsbook Reviews archive. Every source is cached, so a weekly rerun downloads only new games.</p>
-      <p>ERA5 wind is a grid average, not the stadium reading, so it is put on the game-book scale with a fitted calibration (game-book = <span data-fig="cal"></span> × ERA5, r = <span data-fig="cal_r"></span>). It is used only where the game book has no reading, and for forecasts.</p>
+      <p>An independent audit (Sept 28) reproduced the headline numbers and flagged defects in the live tooling: alerts that could fire without a posted price, a probability that ignored the offered line, a scorer that dropped wind-rule bets, and a forecast replay that could pair a quote with a forecast published after it. All four are fixed and covered by tests; the changes are recorded as amendment 2 in <code>PREREGISTRATION.md</code>, with evaluation starting at Week 5.</p>
+      <p>ERA5 wind is a grid average, not the stadium reading, so it is put on the game-book scale with a calibration fitted once on 1999–2023 and then frozen (game-book = <span data-fig="cal"></span> × ERA5, r = <span data-fig="cal_r"></span>). It is used only where the game book has no reading, and for forecasts.</p>
     </div>
 <pre>.venv/bin/python scripts/fetch_data.py     # refresh every source (cached)
 .venv/bin/python scripts/build_data.py     # processed tables
@@ -678,7 +679,9 @@ const D = /*__DATA__*/null;
     { h: "Kickoff (ET)", f: r => r.gameday.slice(5) + " " + r.gametime }, { h: "Game", f: r => r.away_team + " @ " + r.home_team },
     { h: "Forecast", f: r => r.conditions }, { h: "Total", num: 1, f: r => r.total_line == null ? "–" : r.total_line.toFixed(1) },
     { h: "Weather effect", num: 1, f: r => fmt(r.pts_effect, 1, true) }, { h: "Market usually moves", num: 1, f: r => fmt(r.mkt_adjust, 1, true) },
-    { h: "P(under)", num: 1, f: r => pct(r.p_under, 0) }, { h: "Lean", f: r => r.lean ? pill(r.lean.replace(" lean", ""), r.lean.startsWith("UNDER") ? "new" : "warn") : "" },
+    { h: "Model P(under)", num: 1, f: r => pct(r.p_under, 0) },
+    { h: "Rule B", f: r => r.rule_b === "SIGNAL" ? pill("Signal", "good") : ({ no_price: "no price", price_too_high: "price too high", negative_ev: "negative EV", outside_horizon: "too early" })[r.rule_b] || "" },
+    { h: "Model lean (watch)", f: r => r.lean ? pill(r.lean.replace(" lean", ""), "warn") : "" },
   ], wk);
 })();
 </script>

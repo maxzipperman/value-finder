@@ -14,12 +14,34 @@ from . import fetch
 from .build import load_schedule
 from .config import OUT, PROC, ROOT
 from .features import BIN_TERMS, LABELS, add_weather_features
-from .market import fit_under_model, load_games, market_p_under, predict_under
+from .market import (MIN_UNDER_ODDS, cohort_residuals, ev_under, fit_under_model, load_games, market_p_under,
+                     predict_under)
 from .models import fit
 from .weather import game_weather
 
 RETRACTABLE = {"ATL97", "DAL00", "HOU00", "IND00", "PHO00"}
+RULES_VERSION = "v2-2026-09-28"  # PREREGISTRATION.md amendment 2
 LEAN_P = 0.55  # pre-registered (PREREGISTRATION.md)
+RULE_B_WIND, RULE_B_LEAD = 15, (1, 3)  # Rule B: forecast wind >= 15 mph, 1-3 days before kickoff
+PRICING_LAST_SEASON = 2023             # frozen: pricing cohorts use seasons <= 2023 only
+
+
+def rule_b_status(r):
+    """Why a game is or isn't an actionable Rule B (early wind under) signal.
+    Only "SIGNAL" is actionable; everything else says what's missing."""
+    if r.wx_src != "era5":
+        return "not_outdoor"
+    if pd.isna(r.wx_wind) or r.wx_wind < RULE_B_WIND:
+        return "no_trigger"
+    if not (RULE_B_LEAD[0] <= r.lead_days <= RULE_B_LEAD[1]):
+        return "outside_horizon"
+    if pd.isna(r.mkt_total) or pd.isna(r.mkt_under):
+        return "no_price"
+    if r.mkt_under < MIN_UNDER_ODDS:
+        return "price_too_high"
+    if not (r.ev_under > 0):
+        return "negative_ev"
+    return "SIGNAL"
 
 
 def _pinnacle_live():
@@ -50,12 +72,14 @@ def compute(days=8, refresh=True, pinnacle=False):
     cal = json.loads((PROC / "calibration.json").read_text())
     up = up.merge(game_weather(up, kind="forecast"), on="game_id", how="left")
     closed = up.roof.isin(["dome", "closed"]) | (up.roof.isna() & up.stadium_key.isin(RETRACTABLE))
-    up["wx_src"] = np.where(closed, "indoor", np.where(up.om_temp.notna(), "era5", "missing"))
+    # open retractable roofs are their own category in training (no weather terms); match that here
+    open_roof = up.roof.eq("open") & ~closed
+    up["wx_src"] = np.select([closed, open_roof, up.om_temp.notna()], ["indoor", "open_roof", "era5"], "missing")
     up["wx_wind"] = (cal["wind_intercept"] + cal["wind_slope"] * up.om_wind).clip(lower=0)
     up["wx_temp"] = cal["temp_intercept"] + cal["temp_slope"] * up.om_temp
     up["wx_precip"], up["wx_snow"] = up.om_precip, up.om_snow
     up["indoor"] = closed.astype(int)
-    up["roof_open"] = 0
+    up["roof_open"] = open_roof.astype(int)
     up = add_weather_features(up)
 
     hist = load_games()
@@ -80,6 +104,13 @@ def compute(days=8, refresh=True, pinnacle=False):
             up.loc[has, "line_src"] = "pinnacle"
     up["p_market"] = market_p_under(up.mkt_under, up.mkt_over, "shin")
     up["edge"] = up.p_under - up.p_market
+
+    # line- and price-aware value of the under at the posted number, from the
+    # frozen (<= 2023) cohort of outdoor games with 15+ mph wind
+    frozen = hist[hist.season <= PRICING_LAST_SEASON]
+    resid = cohort_residuals(frozen, (frozen.outdoor == 1) & (frozen.wx_wind >= RULE_B_WIND))
+    up["ev_under"] = ev_under(up.mkt_total, up.mkt_under, up.mkt_total, resid)
+    up["rule_b"] = up.apply(rule_b_status, axis=1)
 
     # visitor's climate for the acclimation watch: dome status from its latest team-season,
     # and its home city's mean temperature over the last available 7 days (NOAA GHCN-D)
@@ -109,7 +140,8 @@ def compute(days=8, refresh=True, pinnacle=False):
 
 
 BOARD_COLS = ["gameday", "gametime", "away_team", "home_team", "stadium", "lead_days", "conditions", "flags", "line_src",
-              "mkt_total", "total_line", "spread_line", "pts_effect", "mkt_adjust", "p_under", "p_market", "edge", "lean"]
+              "mkt_total", "mkt_under", "total_line", "spread_line", "pts_effect", "mkt_adjust", "p_under", "p_market",
+              "edge", "ev_under", "rule_b", "lean"]
 
 
 def save(up):
@@ -119,7 +151,14 @@ def save(up):
     path = ROOT / "data" / "forward" / "ledger.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     snap = up[["game_id", "gameday", "gametime", "away_team", "home_team", "lead_days", "wx_src", "wx_wind", "wx_temp",
-               "wx_precip", "wx_snow", "line_src", "mkt_total", "mkt_under", "mkt_over", "p_under", "p_market", "lean"]].copy()
+               "wx_precip", "wx_snow", "line_src", "mkt_total", "mkt_under", "mkt_over", "p_under", "p_market", "lean",
+               "ev_under", "rule_b"]].copy()
     snap = snap.rename(columns={"mkt_total": "total_line", "mkt_under": "under_odds", "mkt_over": "over_odds"})
     snap.insert(0, "snapshot_utc", pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"))
+    snap.insert(1, "rules_version", RULES_VERSION)
+    if path.exists():  # older ledgers lack the v2 columns: rewrite once with the union of columns
+        old = pd.read_csv(path)
+        if list(old.columns) != list(snap.columns):
+            pd.concat([old, snap], ignore_index=True)[list(snap.columns)].to_csv(path, index=False)
+            return
     snap.to_csv(path, mode="a", header=not path.exists(), index=False)

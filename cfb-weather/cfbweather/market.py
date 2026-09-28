@@ -1,4 +1,6 @@
-"""Betting helpers shared by the backtests and the weekly board."""
+"""Copied from nfl-weather (nflweather/market.py) with a CFB load_games; keep the rest in sync.
+
+Betting helpers shared by the backtests and the weekly board."""
 from __future__ import annotations
 
 import numpy as np
@@ -85,19 +87,23 @@ def record(win, loss, price_profit=None):
     return out
 
 
-def load_games(first=1999, last=2025):
+def load_games(first=2006, last=2025):
+    """Played CFB games with a consensus closing total, weather features and bet outcomes."""
     g = pd.read_parquet(PROC / "games.parquet")
-    g = g[g.result.notna() & g.season.between(first, last)].copy()
+    g = g[g.home_points.notna() & g.close_total.notna() & g.season.between(first, last)].copy()
+    g["total_line"] = g.close_total
+    g["indoor"] = g.dome.astype(int)
+    g["roof_open"] = 0
     g = add_weather_features(g)
     g["resid_total"] = g.total - g.total_line
     g["under_win"] = g.total < g.total_line
     g["over_win"] = g.total > g.total_line
-    g["under_profit"] = american_to_profit(g.under_odds)
-    g["over_profit"] = american_to_profit(g.over_odds)
-    g["home_ts"] = g.home_team.replace(FRANCHISE) + "_" + g.season.astype(str)
-    g["away_ts"] = g.away_team.replace(FRANCHISE) + "_" + g.season.astype(str)
-    g["week_fe"] = g.week.astype(str)
-    g["era"] = np.where(g.season <= 2013, "1999–2013", "2014–2025")
+    g["neutral"] = g.neutral_site.astype(str).str.lower().isin(["true", "1"]).astype(int)
+    g["playoff"] = (g.season_type.astype(str) == "postseason").astype(int)
+    g["home_ts"] = g.home_team.astype(str) + "_" + g.season.astype(str)
+    g["away_ts"] = g.away_team.astype(str) + "_" + g.season.astype(str)
+    g["week_fe"] = g.season_type.astype(str) + "_" + g.week.astype(str)
+    g["era"] = np.where(g.season <= 2015, "2006–2015", "2016–2025")
     g["wbin"] = wind_bin(g.wx_wind.where(g.outdoor == 1))
     return g
 
@@ -105,34 +111,31 @@ def load_games(first=1999, last=2025):
 def fit_under_model(tr, x=BIN_TERMS):
     """Logistic model of P(under | weather) on non-push games. The average miss vs.
     the total is positive (scores are right-skewed) while unders still win ~50%,
-    so a mean-residual model would lean over for no reason: model the bet itself."""
+    so a mean-residual model would lean over for no reason: model the bet itself.
+    Columns with no variation in the training data (CFB has no open-roof games,
+    and almost no snow before 2016) are dropped so the fit stays identified."""
     tr = tr[tr.under_win | tr.over_win]
-    X = sm.add_constant(tr[x].astype(float), has_constant="add")
-    return sm.Logit(tr.under_win.astype(int), X).fit(disp=0)
+    cols = [c for c in x if tr[c].nunique() > 1]
+    X = sm.add_constant(tr[cols].astype(float), has_constant="add")
+    m = sm.Logit(tr.under_win.astype(int), X).fit(disp=0)
+    m.x_cols = cols
+    return m
 
 
 def predict_under(m, df, x=BIN_TERMS):
-    return np.asarray(m.predict(sm.add_constant(df[x].astype(float), has_constant="add")))
+    cols = getattr(m, "x_cols", x)
+    return np.asarray(m.predict(sm.add_constant(df[cols].astype(float), has_constant="add")))
 
 
-# --------------------------------------------------------------------------- line- and price-aware pricing
-# The logistic P(under) above describes finishing below the *closing* total. It says
-# nothing about a different number or a bad price (it returns the same value for an
-# under 30 and an under 60). For an actionable bet, price the offered line and odds:
-# P(total < L) = P(resid < L - market_total), with resid = final total - market
-# total drawn from historical games in the same weather cohort. The empirical
-# distribution keeps the right skew and the key-number pushes that a normal curve would miss.
-
-MIN_UNDER_ODDS = -115  # playbook price ceiling: never lay more than -115 on a weather under
+# ---- line- and price-aware pricing (same as nfl-weather/nflweather/market.py; keep in sync)
+MIN_UNDER_ODDS = -115
 
 
 def cohort_residuals(hist, mask):
-    """Sorted (final total - closing total) for historical games matching `mask`."""
     return np.sort((hist.total - hist.total_line)[mask].dropna().to_numpy())
 
 
 def p_under_at(line, market_total, resid_sorted):
-    """(P(win), P(push)) for an under at `line` when the market total is `market_total`."""
     x = np.asarray(line, float) - np.asarray(market_total, float)
     n = len(resid_sorted)
     below = np.searchsorted(resid_sorted, x, side="left")
@@ -141,8 +144,6 @@ def p_under_at(line, market_total, resid_sorted):
 
 
 def ev_under(line, odds, market_total, resid_sorted):
-    """Expected profit per unit staked on the under at `line` and American `odds`
-    (pushes return the stake). NaN when the line or price is missing."""
     p_win, p_push = p_under_at(line, market_total, resid_sorted)
     profit = american_to_profit(odds)
     ev = p_win * profit - (1 - p_win - p_push)
