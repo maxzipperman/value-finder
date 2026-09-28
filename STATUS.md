@@ -25,6 +25,8 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 Stake for Rule B: paper until 20 settled signals show positive average CLV. After that, 0.5% of bankroll at most. Rule HT stays on paper through 2027.
 
+What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, CFB Rule B about 25–32 times, and Rule HT 34 times. Losing seasons are common even with a real edge. The NFL decision is unlikely to be conclusive this season. The 20-signal stake gate passes about half the time with no edge, so it isn't a reason to stake. See [what to expect](strategy-research/README.md#what-to-expect-this-season-added-september-28-2026).
+
 ## Waiting on you
 
 1. **Odds API key and plan.** You have a free key. It goes in `nfl-weather/.env`, `cfb-weather/.env` and `sharp-markets/.env` on the Mac (copy each `.env.example`). Cloud sessions can't reach the Odds API.
