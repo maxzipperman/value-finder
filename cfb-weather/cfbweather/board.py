@@ -1,8 +1,12 @@
 """College football weather board: upcoming FBS games, the kickoff forecast on the
-station scale (frozen calibration), the posted DraftKings total and prices (via
-ESPN), and each game's Rule B status. Same gates as nfl-weather's v2 rule: a
-signal needs forecast wind >= 15 mph 1-3 days out, a posted total, an under price
-of -115 or better, and positive expected value at that line and price."""
+station scale (frozen calibration), the posted total and prices (The Odds API, else
+ESPN), and each game's status under the two pre-registered rules (STRATEGY.md):
+
+* Rule B (wind under): same gates as nfl-weather's v2 rule. A signal needs forecast
+  wind >= 15 mph 1-3 days out, a posted total, an under price of -115 or better, and
+  positive expected value at that line and price.
+* Rule HT (high-total under, amendment 1): a posted total >= the prior season's mean
+  closing total + 10, under at -115 or better. Graded at the last quote before kickoff."""
 from __future__ import annotations
 
 import json
@@ -18,9 +22,36 @@ from .features import add_weather_features
 from .market import MIN_UNDER_ODDS, cohort_residuals, ev_under, load_games
 from .weather import summarize
 
-RULES_VERSION = "cfb-v1-2026-09-28"
+RULES_VERSION = "cfb-v2-2026-09-28"   # PREREGISTRATION.md amendment 1: adds Rule HT; Rule B unchanged
 RULE_B_WIND, RULE_B_LEAD = 15, (1, 3)
 PRICING_LAST_SEASON = 2023
+HT_MARGIN = 10                         # Rule HT: total >= prior-season mean closing total + 10
+HT_FIRST_KICK = pd.Timestamp("2026-10-07T00:00:00Z")   # 2026 Week 6, the first eligible game
+HT_FROZEN = {2026: 52.617539 + HT_MARGIN}              # 2025 mean (955 games) + 10; fixed before Week 6
+
+
+def ht_threshold(season):
+    """Rule HT threshold for a season: the prior season's mean cfbfastR consensus closing total,
+    over games with a nonzero closing spread and a result (strategy-research/screen.py's set), + 10.
+    2026 is frozen; later seasons compute from data the season before, which is known in advance."""
+    if season in HT_FROZEN:
+        return HT_FROZEN[season]
+    g = pd.read_parquet(PROC / "games.parquet", columns=["season", "result", "home_spread", "close_total"])
+    g = g[(g.season == season - 1) & g.result.notna() & g.home_spread.notna() & (g.home_spread != 0)
+          & g.close_total.notna()]
+    return g.close_total.mean() + HT_MARGIN if len(g) else np.nan
+
+
+def rule_ht_status(r):
+    """Rule HT (high-total under). Only "SIGNAL" counts; it is graded at the game's last
+    logged quote before kickoff, so earlier SIGNAL rows are provisional."""
+    if pd.isna(r.mkt_total) or pd.isna(r.mkt_under):
+        return "no_price"
+    if pd.isna(r.ht_threshold) or r.mkt_total < r.ht_threshold:
+        return "below_threshold"
+    if r.mkt_under < MIN_UNDER_ODDS:
+        return "price_too_high"
+    return "SIGNAL"
 
 
 def rule_b_status(r):
@@ -89,13 +120,15 @@ def compute(days=8, refresh=True, odds=True):
     resid = cohort_residuals(hist, (hist.outdoor == 1) & (hist.wx_wind >= RULE_B_WIND))
     up["ev_under"] = ev_under(up.mkt_total, up.mkt_under, up.mkt_total, resid)
     up["rule_b"] = up.apply(rule_b_status, axis=1)
+    up["ht_threshold"] = pd.to_numeric(up.season).astype(int).map(ht_threshold)
+    up["rule_ht"] = np.where(up.start_utc >= HT_FIRST_KICK, up.apply(rule_ht_status, axis=1), "before_window")
     up["kick_et"] = up.start_utc.dt.tz_convert("America/New_York").dt.strftime("%a %m-%d %H:%M")
     return up.sort_values("start_utc")
 
 
 COLS = ["game_id", "kick_et", "away_team", "home_team", "venue", "lead_days", "wx_src", "wx_wind", "wx_temp",
         "wx_precip", "line_src", "mkt_total", "mkt_under", "mkt_over", "ev_under", "rule_b", "best_under",
-        "best_under_book"]
+        "best_under_book", "ht_threshold", "rule_ht"]
 
 
 def save(up):
