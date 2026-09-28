@@ -1,12 +1,12 @@
 """Odds API credit budget for every current and possible use in this repo (no API calls, no downloads).
 
-Turns the Odds API cost rules into credits per use case, using kickoff times and wind from the
-processed datasets, then checks which uses fit each plan in one month. The rules and plan prices
-come from the official docs; strategy-research/odds-api-credits.md lists the sources.
+Turns the Odds API cost rules into credits per use, using kickoff times and wind from the processed
+datasets, then checks what fits each plan in one month. The rules and plan prices come from the
+official docs; strategy-research/odds-api-credits.md lists the sources and explains every row.
 
   live /odds                        markets x regions per call (a bookmakers= list of <=10 books = 1 region)
+  live /events/{id}/odds            markets returned x regions, per game
   historical /odds                  10 x markets x regions per snapshot; one call = every game of the sport
-  historical /events                1 per call (0 if empty)
   historical /events/{id}/odds      10 x markets returned x regions, per game, per snapshot (props,
                                     alternates, periods, team totals; history from 2023-05-03)
 
@@ -15,14 +15,17 @@ Inputs (read-only)
   cfb-weather/data/processed/games.parquet                     kickoffs (start_utc), observed station wind
   NBA figures are copied from sharp-markets/docs/PLAN.md (no NBA schedule in this repo).
 
-Outputs: output/odds_api_budget.csv (use cases), output/odds_api_plans.csv (plan fit), output/odds_api_counts.csv
+The 2026 schedules are incomplete (no postseason, many CFB kickoffs TBD), so 2026 backfill counts use
+2025 as a stand-in. The CFB file has no 2020-22 bowls, so those seasons get 2025's postseason count added.
+
+Outputs: output/odds_api_budget.csv (use cases), odds_api_plans.csv (plan fit), odds_api_counts.csv (games and
+         snapshots per season), odds_api_live_months.csv (live credits by month), all under output/
 Run from the repo root:  nfl-weather/.venv/bin/python strategy-research/odds_budget.py [--no-save]
 """
 import argparse
 import json
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,9 +35,11 @@ CFB = ROOT / "cfb-weather/data/processed"
 
 PLANS = {"Free": (500, 0), "20K": (20_000, 30), "100K": (100_000, 59), "5M": (5_000_000, 119),
          "15M": (15_000_000, 249)}
-HIST = 10            # historical multiplier
-H = pd.Timedelta(hours=1)
+HIST = 10                        # historical multiplier
+H, D = pd.Timedelta(hours=1), pd.Timedelta(days=1)
 M5 = pd.Timedelta(minutes=5)
+SEASONS = range(2020, 2027)      # featured-market history starts 2020-06-06
+PROPS = range(2023, 2027)        # additional markets start 2023-05-03
 
 
 def nfl_games():
@@ -46,6 +51,7 @@ def nfl_games():
     fc = g[["fc1_wind", "fc3_wind"]].max(axis=1) * cal["wind_slope"] + cal["wind_intercept"]
     g["fc_wind"] = fc.where(g[["fc1_wind", "fc3_wind"]].notna().any(axis=1))
     g["outdoor"] = g.wx_src.isin(["gamebook", "era5"])
+    g["post"] = g.game_type != "REG"
     return g
 
 
@@ -54,18 +60,34 @@ def cfb_games():
     c = c[c.season.between(2020, 2026) & ((c.home_division == "fbs") | (c.away_division == "fbs"))].copy()
     c["kick"] = c.start_utc
     c["outdoor"] = c.wx_src == "station"
+    c["post"] = c.season_type == "postseason"
     return c
 
 
-def grid_union(kicks, lookback, step):
-    """Distinct snapshot times on a `step` grid inside any [kick - lookback, kick], plus each kickoff (the close)."""
+def grid(kicks, lookback, step, at=None):
+    """Snapshot times on a `step` grid (or daily at hour `at`, UTC) inside any [kick - lookback, kick],
+    plus each kickoff itself (the close)."""
     pts = set()
     for k in pd.Series(kicks).dropna().unique():
         k = pd.Timestamp(k)
-        t = (k - lookback).ceil(step)
-        pts.update(pd.date_range(t, k.floor(step), freq=step))
+        if at is None:
+            pts.update(pd.date_range((k - lookback).ceil(step), k.floor(step), freq=step))
+        else:
+            first = (k - lookback).normalize() + pd.Timedelta(hours=at)
+            pts.update(t for t in pd.date_range(first, k, freq=D) if t >= k - lookback)
         pts.add(k)
-    return len(pts)
+    return pts
+
+
+def per_season(d, fn):
+    """fn(season games) -> count, for 2020-26. 2026 uses 2025; seasons missing their postseason
+    (CFB 2020-22) get 2025's postseason-only count added."""
+    out = {}
+    post25 = fn(d[(d.season == 2025) & d.post])
+    for s in SEASONS:
+        x = d[d.season == (2025 if s == 2026 else s)]
+        out[s] = fn(x) + (post25 if s < 2026 and not x.post.any() else 0)
+    return out
 
 
 def main():
@@ -73,116 +95,154 @@ def main():
     ap.add_argument("--no-save", action="store_true", help="print only; don't rewrite output/*.csv")
     save = not ap.parse_args().no_save
     nfl, cfb = nfl_games(), cfb_games()
-    S = range(2020, 2026)
-    S3 = range(2023, 2026)          # props/alternates/periods exist from 2023-05-03
+
     counts = []
     for name, d in (("NFL", nfl), ("CFB", cfb)):
-        for s in [*S, 2026]:
-            x = d[d.season == s]
-            counts.append({
-                "sport": name, "season": s, "games": len(x), "kickoffs": x.kick.nunique(),
-                "hourly_7d_snaps": grid_union(x.kick, 168 * H, H),
-                "windy12_obs": int((x.outdoor & (x.wx_wind >= 12)).sum()),
-                "windy15_obs": int((x.outdoor & (x.wx_wind >= 15)).sum()),
-                "windy12_fc": int((x.outdoor & (x.fc_wind >= 12)).sum()) if "fc_wind" in x else 0,
-            })
+        games = per_season(d, len)
+        slots = per_season(d, lambda x: x.kick.nunique())
+        daily = per_season(d, lambda x: len(grid(x.kick, 7 * D, None, at=16)))
+        hourly = per_season(d, lambda x: len(grid(x.kick, 7 * D, H)))
+        w12 = per_season(d, lambda x: int((x.outdoor & (x.wx_wind >= 12)).sum()))
+        for s in SEASONS:
+            counts.append({"sport": name, "season": s, "stand_in": "2025" if s == 2026 else "",
+                           "games": games[s], "kickoff_slots": slots[s], "daily_plus_close_snaps": daily[s],
+                           "hourly_7d_snaps": hourly[s], "windy12_obs": w12[s]})
     cnt = pd.DataFrame(counts)
 
-    def tot(sport, col, seasons):
-        return int(cnt[(cnt.sport == sport) & cnt.season.isin(list(seasons))][col].sum())
+    def tot(col, seasons, sport=None):
+        x = cnt[cnt.season.isin(list(seasons)) & ((cnt.sport == sport) if sport else True)]
+        return int(x[col].sum())
 
-    # 5-min windows, 72h before each windy kickoff (union per sport). NFL uses the calibrated forecast
-    # (2024-25 only have forecasts); CFB has no forecast column, so observed wind stands in for it.
-    nfl_w = nfl[nfl.season.isin([2024, 2025]) & nfl.outdoor & (nfl.fc_wind >= 12)]
-    cfb_w = cfb[cfb.season.isin([2024, 2025]) & cfb.outdoor & (cfb.wx_wind >= 12)]
-    snaps5_nfl = sum(grid_union(nfl_w[nfl_w.season == s].kick, 72 * H, M5) for s in (2024, 2025))
-    snaps5_cfb = sum(grid_union(cfb_w[cfb_w.season == s].kick, 72 * H, M5) for s in (2024, 2025))
+    # 5-min windows 72h before windy kickoffs, 2024-25 (NFL: calibrated forecast >= 12; CFB has no
+    # forecast column, so observed wind stands in). Counted net of the hourly X1 snapshots.
+    b2 = b2_net = 0
+    for d, windy in ((nfl, lambda x: x.fc_wind >= 12), (cfb, lambda x: x.wx_wind >= 12)):
+        for s in (2024, 2025):
+            x = d[d.season == s]
+            five = grid(x[x.outdoor & windy(x)].kick, 72 * H, M5)
+            b2 += len(five)
+            b2_net += len(five - grid(x.kick, 7 * D, H))
 
-    # Live: the alerts run 4x/day; a close capture adds one call per distinct kickoff. Month = October 2025.
-    oct_ = lambda d: d[(d.kick >= "2025-10-01") & (d.kick < "2025-11-01")].kick.nunique()  # noqa: E731
-    nfl_oct_k, cfb_oct_k = oct_(nfl), oct_(cfb)
+    # October 2026 live: every day is active for both sports. Close capture = one call per kickoff slot.
+    # NFL slots come from the 2026 schedule; CFB kickoffs are mostly TBD, so use Oct 2025's rate per
+    # Saturday (Oct 2026 has 5 Saturdays, Oct 2025 had 4) plus Oct 2025's other-day slots.
+    nfl_oct = nfl[(nfl.kick >= "2026-10-01") & (nfl.kick < "2026-11-01")].kick.nunique()
+    c25 = cfb[(cfb.kick >= "2025-10-01") & (cfb.kick < "2025-11-01")]
+    sat = c25.kick.dt.tz_convert("America/New_York").dt.dayofweek == 5
+    cfb_sat, cfb_wk = c25[sat].kick.nunique(), c25[~sat].kick.nunique()
+    cfb_oct = round(cfb_sat / 4 * 5 + cfb_wk)
+    nfl_nov = int(((nfl.kick >= "2025-11-01") & (nfl.kick < "2025-12-01")).sum())
 
-    g3n, g3c = tot("NFL", "games", S3), tot("CFB", "games", S3)
-    w12n, w12c = tot("NFL", "windy12_obs", S3), tot("CFB", "windy12_obs", S3)
-    hn, hc = tot("NFL", "hourly_7d_snaps", S), tot("CFB", "hourly_7d_snaps", S)
-    hn25, hc25 = tot("NFL", "hourly_7d_snaps", [2025]), tot("CFB", "hourly_7d_snaps", [2025])
-    kn3, kc3 = tot("NFL", "kickoffs", S3), tot("CFB", "kickoffs", S3)
-    kn, kc = tot("NFL", "kickoffs", S), tot("CFB", "kickoffs", S)
-    h26 = tot("NFL", "hourly_7d_snaps", [2026]) + tot("CFB", "hourly_7d_snaps", [2026])
-    g26n = tot("NFL", "games", [2026])
+    # Live credits by month, 2025-26 as the stand-in season: 4 runs a day on every day with a game in the
+    # next 8 days (the boards return early otherwise) + one close-capture call per kickoff slot.
+    live_rows = []
+    for m in pd.period_range("2025-08", "2026-02", freq="M"):
+        row = {"month": str(m + 12)}                     # shown as the matching 2026-27 month
+        for name, d in (("nfl", nfl), ("cfb", cfb)):
+            days = pd.date_range(m.start_time, m.end_time.normalize(), freq=D, tz="America/Los_Angeles")
+            k = d.kick.dt.tz_convert("America/Los_Angeles").dt.normalize()
+            active = sum(((k >= day) & (k <= day + 8 * D)).any() for day in days)
+            row[f"{name}_alert_runs"] = 4 * active
+            row[f"{name}_close_slots"] = d[k.dt.tz_localize(None).dt.to_period("M") == m].kick.nunique()
+        row["alerts"] = row["nfl_alert_runs"] + row["cfb_alert_runs"]
+        row["alerts_plus_close"] = row["alerts"] + row["nfl_close_slots"] + row["cfb_close_slots"]
+        live_rows.append(row)
+    live_months = pd.DataFrame(live_rows)
+
+    g_props = tot("games", PROPS, "NFL")
+    w12_props = tot("windy12_obs", PROPS, "NFL")
+    daily = tot("daily_plus_close_snaps", SEASONS)
+    hourly = tot("hourly_7d_snaps", SEASONS)
+    h25 = tot("hourly_7d_snaps", [2025])
+    g3c = tot("games", range(2023, 2026), "CFB")
+    w12n, w12c = tot("windy12_obs", range(2023, 2026), "NFL"), tot("windy12_obs", range(2023, 2026), "CFB")
+    pilot_probe = 1_000
 
     rows = [
-        # id, kind, use, issue, formula, credits, value (1-5)
-        ("L1", "live/mo", "NFL alerts: live Pinnacle totals", "Rule B", "1 mkt x 1 book group x 4 runs x 31 days", 4 * 31, 5),
-        ("L2", "live/mo", "CFB alerts: live Pinnacle+DK totals", "Rule B", "1 x 1 x 4 runs x 31 days", 4 * 31, 5),
-        ("L3", "live/mo", "Close capture: one live totals call per kickoff slot (Oct 2025 slots)", "Rule B",
-         f"1 x ({nfl_oct_k} NFL + {cfb_oct_k} CFB kickoff slots)", nfl_oct_k + cfb_oct_k, 4),
-        ("L4", "live/mo", "NBA forward collector (PLAN s7): 5-min h2h ticks + 1-min final 2h", "H1/H2 (#9)",
-         "1 x (~144 ticks + 150-260) x ~27 game days (estimate)", 27 * (144 + 205), 2),
-        ("B1", "backfill", "NFL Pinnacle totals at forecast times, 2024-25 (existing backfill_plan)", "#6, Rule B",
-         "10 x 1 mkt x 1 group x 826 snapshots", 8_260, 4),
-        ("B2", "backfill", "5-min totals, 72h before windy kickoffs (NFL fc>=12, CFB obs>=12), 2024-25", "#6 forecast timing",
-         f"10 x 1 x 1 x ({snaps5_nfl:,} NFL + {snaps5_cfb:,} CFB snapshots)", HIST * (snaps5_nfl + snaps5_cfb), 3),
-        ("B3", "backfill", "Hourly multi-book featured lines, 7 days pre-kickoff, NFL+CFB 2020-25", "#8, #5, #4",
-         f"10 x 3 mkts x 1 group (10 books) x ({hn:,} NFL + {hc:,} CFB snapshots)", HIST * 3 * (hn + hc), 5),
-        ("B3a", "alt", "Lean version of B3: multi-book featured closes only, NFL+CFB 2020-25", "#8",
-         f"10 x 3 x 1 group x ({kn} NFL + {kc:,} CFB kickoff slots)", HIST * 3 * (kn + kc), 4),
-        ("B4", "backfill", "Exchange group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025", "#8, #9",
-         f"10 x 3 x 1 group x ({hn25:,} + {hc25:,} snapshots)", HIST * 3 * (hn25 + hc25), 3),
-        ("B5", "backfill", "Alternate spreads+totals, NFL 2023-25, 2 snapshots (T-24h, close)", "#8 teasers, key numbers",
-         f"10 x 2 mkts x 1 group x 2 snaps x {g3n} games", HIST * 2 * 2 * g3n, 4),
-        ("B6", "backfill", "Alternate spreads+totals, CFB 2023-25, 2 snapshots", "#8",
-         f"10 x 2 x 1 x 2 x {g3c:,} games", HIST * 2 * 2 * g3c, 2),
-        ("B7", "backfill", "Player props, NFL 2023-25, 4 markets x 4 snapshots", "#10, weather props",
-         f"10 x 4 mkts x 1 group x 4 snaps x {g3n} games", HIST * 4 * 4 * g3n, 3),
-        ("B8", "backfill", "Player props, CFB 2023-25, 4 markets x 4 snapshots (upper bound; empty is free)", "#10, weather props",
-         f"10 x 4 x 1 x 4 x {g3c:,} games", HIST * 4 * 4 * g3c, 2),
-        ("B9", "backfill", "1H totals + team totals, windy NFL games 2023-25 + equal calm controls, every 2h over 72h", "#6 derivative lag",
-         f"10 x 2 mkts x 1 group x 36 snaps x ({w12n} windy + {w12n} calm)", HIST * 2 * 36 * 2 * w12n, 3),
-        ("B10", "backfill", "Same for CFB 2023-25", "#6 derivative lag",
-         f"10 x 2 x 1 x 36 x ({w12c} + {w12c})", HIST * 2 * 36 * 2 * w12c, 3),
-        ("B11", "backfill", "Historical events lookups for event IDs (one per kickoff slot)", "B5-B10",
-         f"1 x ({kn3} NFL + {kc3:,} CFB kickoff slots)", kn3 + kc3, None),
-        ("B12", "backfill", "NBA sample week, schedule A (PLAN.md)", "H1/H2",
-         "10 x 1 mkt x 1 group x 754 snapshots", 7_540, 3),
-        ("B13", "backfill", "NBA 2025-26 full season, schedule D: 5-min open to tip (PLAN.md)", "H1/H2",
-         "10 x 1 x 1 x 49,398 snapshots", 493_980, 2),
-        ("B14", "backfill", "NBA Pinnacle closes 2021-26 for the H3 Kaggle test (PLAN.md)", "H3",
+        # id, stage, use, serves, arithmetic, credits, value (1-5)
+        ("L1", "live, per month", "NFL alerts: live Pinnacle totals", "Rule B",
+         "1 market x 1 book group x 4 runs x 31 days", 4 * 31, 5),
+        ("L2", "live, per month", "CFB alerts: live Pinnacle/DraftKings totals", "Rule B",
+         "1 x 1 x 4 runs x 31 days", 4 * 31, 5),
+        ("L3", "live, per month", "Close capture: one totals call per kickoff slot, Oct 2026", "Rule B, #4",
+         f"1 x ({nfl_oct} NFL + ~{cfb_oct} CFB slots)", nfl_oct + cfb_oct, 5),
+        ("L4", "if B12 passes", "NBA forward collector (PLAN.md s7), per month", "H1/H2",
+         "1 x (144 to 288 five-min ticks + 0 to 205 one-min) x 27 game days", "3,888-14,175", 2),
+        ("L5", "optional, per month", "Live logger: hourly multi-book featured lines, both sports, "
+         "+ NFL props, alternates, 1H and team totals", "#8, #10, #6",
+         f"3 x 24 x 30 x 2 sports + {nfl_nov} NFL games x (4 props + 4 x 2 snaps)",
+         3 * 24 * 30 * 2 + nfl_nov * (4 + 8), 3),
+        ("P0", "Oct pilot", "Probes: billing multiplier, Pinnacle props/alternates/periods, "
+         "LowVig and exchange history starts, one test week per new puller", "all", "capped", pilot_probe, 4),
+        ("B1", "Oct pilot", "NFL Pinnacle totals at the forecast decision times, 2024-25 (existing backfill_plan)",
+         "Rule B replay, #6", "10 x 1 market x 1 group x 826 snapshots", 8_260, 3),
+        ("B12", "Oct pilot", "NBA sample week, schedule A (PLAN.md)", "H1/H2 gate",
+         "10 x 1 x 1 x 754 snapshots", 7_540, 4),
+        ("M1", "main month", "Multi-book featured lines, daily 16:00 UTC for 7 days pre-kickoff + every close, "
+         "NFL+CFB 2020-26", "#8, #4, #5, CFB Pinnacle closes",
+         f"10 x 3 markets x 1 group (10 books) x {daily:,} snapshots", HIST * 3 * daily, 4),
+        ("M2", "main month", "Alternate spreads+totals, NFL 2023-26, at T-24h and close", "#8",
+         f"10 x 2 markets x 1 group x 2 snaps x {g_props:,} games", HIST * 2 * 2 * g_props, 3),
+        ("M3", "main month", "Player props (4 markets), NFL 2023-26, at the close", "#10",
+         f"10 x 4 x 1 x 1 snap x {g_props:,} games", HIST * 4 * g_props, 3),
+        ("M4", "main month if pre-check passes", "1H totals + team totals, windy NFL games (obs >= 12 mph) "
+         "+ as many calm controls, 2023-26, at T-24h and close", "#6 derivative markets",
+         f"10 x 2 x 1 x 2 snaps x ({w12_props} windy + {w12_props} calm)", HIST * 2 * 2 * 2 * w12_props, 2),
+        ("M5", "main month if H3 proceeds", "NBA Pinnacle closes 2021-26 for the H3 Kaggle test (PLAN.md)", "H3",
          "10 x 1 x 1 x ~3,955 tip times", 39_550, 2),
-        ("O1", "later", "2026 out-of-sample add-on after the seasons: B3 + B5 + B7 for 2026 (schedules so far)", "all",
-         f"30 x {h26:,} snapshots + (40 + 160) x {g26n} NFL games", 30 * h26 + 200 * g26n, 3),
+        ("N1", "if B12 passes", "NBA 2025-26 full season, schedule D: 5-min from market open to tip (PLAN.md)",
+         "H1/H2", "10 x 1 x 1 x 49,398 snapshots, less B12's 754 and M5's 791 already cached",
+         HIST * (49_398 - 754 - 791), 2),
+        ("X1", "deferred", "Hourly multi-book featured lines, 7 days pre-kickoff, NFL+CFB 2020-26", "#8",
+         f"10 x 3 x 1 x {hourly:,} snapshots", HIST * 3 * hourly, 3),
+        ("X2", "deferred", "5-min totals for 72h before windy kickoffs, 2024-25, net of X1",
+         "#6 forecast-run timing", f"10 x 1 x 1 x {b2_net:,} snapshots ({b2:,} before netting)", HIST * b2_net, 1),
+        ("X3", "dropped", "Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025", "#8, #9",
+         f"10 x 3 x 1 x {h25:,} snapshots", HIST * 3 * h25, 1),
+        ("X4", "dropped", "Alternate spreads+totals, CFB 2023-25", "#8",
+         f"10 x 2 x 1 x 2 x {g3c:,} games", HIST * 2 * 2 * g3c, 1),
+        ("X5", "dropped", "Player props, CFB 2023-25, 4 markets x 4 snapshots (upper bound)", "#10",
+         f"10 x 4 x 1 x 4 x {g3c:,} games", HIST * 4 * 4 * g3c, 1),
+        ("X6", "replaced by M3", "Player props, NFL 2023-25, 4 markets x 4 snapshots", "#10",
+         "10 x 4 x 1 x 4 x 855 games", HIST * 4 * 4 * 855, 2),
+        ("X7", "replaced by M4", "1H totals + team totals every 2h over 72h, windy + calm, NFL and CFB 2023-25",
+         "#6", f"10 x 2 x 1 x 37 x 2 x ({w12n} NFL + {w12c} CFB)", HIST * 2 * 37 * 2 * (w12n + w12c), 1),
     ]
-    b = pd.DataFrame(rows, columns=["id", "kind", "use", "issue", "arithmetic", "credits", "value"])
+    b = pd.DataFrame(rows, columns=["id", "stage", "use", "serves", "arithmetic", "credits", "value"])
+
+    num = lambda i: int(b.set_index("id").credits[i])  # noqa: E731
+    live_oct = num("L1") + num("L2") + num("L3")
+    pilot = num("P0") + num("B1") + num("B12")
+    main_core = sum(num(i) for i in ("M1", "M2", "M3"))
+    main_all = main_core + num("M4") + num("M5")
+    plans = []
+    for p, (cr, usd) in PLANS.items():
+        plans.append({
+            "plan": p, "credits": cr, "usd": usd, "usd_per_1k": round(usd / cr * 1000, 4) if usd else 0.0,
+            "live_oct_2026": live_oct <= cr,
+            "pilot_plus_live": (pilot + live_oct <= cr) and p != "Free",
+            "main_core_M1_M3": main_core <= cr and p != "Free",
+            "main_all_M1_M5": main_all <= cr and p != "Free",
+            "main_plus_N1_X1": main_all + num("N1") + num("X1") <= cr and p != "Free",
+        })
+    pl = pd.DataFrame(plans)
     if save:
         b.to_csv(OUT / "odds_api_budget.csv", index=False)
         cnt.to_csv(OUT / "odds_api_counts.csv", index=False)
-
-    live = int(b[b.kind == "live/mo"].credits.sum())
-    alerts = int(b[b.id.isin(["L1", "L2", "L3"])].credits.sum())
-    fill = b[b.kind == "backfill"].sort_values(["value", "credits"], ascending=[False, True], na_position="first")
-    plans = []
-    for p, (cr, usd) in PLANS.items():
-        room, fits = cr - alerts, []                     # the alerts run in the same month
-        for r in fill.itertuples():
-            if p != "Free" and r.credits <= room:        # historical endpoints are paid-only
-                room -= r.credits
-                fits.append(r.id)
-        plans.append({"plan": p, "credits": cr, "usd": usd,
-                      "usd_per_1k": round(usd / cr * 1000, 4) if usd else 0.0,
-                      "alerts_fit": alerts <= cr, "all_live_fit": live <= cr,
-                      "backfills_that_fit": " ".join(fits), "credits_used": cr - room,
-                      "value_points_fit": int(fill[fill.id.isin(fits)].value.sum())})
-    pl = pd.DataFrame(plans)
-    if save:
         pl.to_csv(OUT / "odds_api_plans.csv", index=False)
+        live_months.to_csv(OUT / "odds_api_live_months.csv", index=False)
 
-    pd.set_option("display.width", 250, "display.max_colwidth", 120)
+    pd.set_option("display.width", 250, "display.max_colwidth", 110)
     print(cnt.to_string(index=False), "\n")
-    print(f"5-min snapshots: NFL {snaps5_nfl:,} ({len(nfl_w)} windy games), CFB {snaps5_cfb:,} ({len(cfb_w)} windy games)")
-    print(f"Oct 2025 kickoff slots: NFL {nfl_oct_k}, CFB {cfb_oct_k}\n")
-    print(b[["id", "use", "arithmetic", "credits", "value"]].to_string(index=False), "\n")
-    print(f"Backfill total: {int(fill.credits.sum()):,}   Live per month: {live:,} (alerts + close capture {alerts})\n")
-    print(pl.to_string(index=False))
+    print(f"Oct 2026 kickoff slots: NFL {nfl_oct}; CFB ~{cfb_oct} (Oct 2025: {cfb_sat} on 4 Saturdays, {cfb_wk} other days)")
+    print(f"NFL games in Nov 2025: {nfl_nov}\n")
+    print(b[["id", "stage", "use", "arithmetic", "credits", "value"]].to_string(index=False), "\n")
+    print(f"Live, Oct 2026 (L1-L3): {live_oct:,}   Oct pilot (P0+B1+B12): {pilot:,}   with live: {pilot + live_oct:,}")
+    print(f"Main month core (M1-M3): {main_core:,}   all (M1-M5): {main_all:,}   "
+          f"+ N1 + X1: {main_all + num('N1') + num('X1'):,}\n")
+    print(pl.to_string(index=False), "\n")
+    print("Live credits by month (2025-26 schedule relabelled as 2026-27):")
+    print(live_months.to_string(index=False))
 
 
 if __name__ == "__main__":
