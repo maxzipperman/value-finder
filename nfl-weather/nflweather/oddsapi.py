@@ -21,7 +21,9 @@ from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
+import requests
 
+from . import quota
 from .config import PROC, RAW, ROOT
 from .fetch import session
 
@@ -79,17 +81,28 @@ class Budget:
 
 
 def _get(path, params):
-    r = session.get(f"{BASE}{path}", params={**params, "apiKey": api_key()}, timeout=60)
+    """GET with every failure turned into SystemExit, which callers (the board) treat as "no price"."""
+    try:
+        r = session.get(f"{BASE}{path}", params={**params, "apiKey": api_key()}, timeout=60)
+    except requests.RequestException as e:
+        raise SystemExit(f"The Odds API is unreachable ({type(e).__name__})")
+    quota.record(r, "nfl-weather")
     if r.status_code == 401:
         raise SystemExit("The Odds API rejected the key (401)")
     if r.status_code == 422 and "historical" in path:
         raise SystemExit("Historical odds need a paid Odds API plan (422)")
-    r.raise_for_status()
+    if r.status_code == 429:
+        raise SystemExit("The Odds API quota is used up or rate-limited (429)")
+    if not r.ok:
+        raise SystemExit(f"The Odds API returned {r.status_code}")
     return r
 
 
 def live(markets=("totals", "spreads"), budget: Budget | None = None):
     """Current Pinnacle lines for every upcoming NFL game. Costs len(markets) credits."""
+    why = quota.check()
+    if why:
+        raise SystemExit(why)
     ts = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H%MZ")
     dest = CACHE / "live" / f"{ts}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -97,8 +110,10 @@ def live(markets=("totals", "spreads"), budget: Budget | None = None):
                                             dateFormat="iso"))
     if budget:
         budget.charge(r)
-    dest.write_text(json.dumps({"snapshot_utc": ts, "data": r.json()}))
-    return parse({"snapshot_utc": ts, "data": r.json()})
+    payload = {"snapshot_utc": ts, "credits_last": r.headers.get("x-requests-last"),
+               "credits_remaining": r.headers.get("x-requests-remaining"), "data": r.json()}
+    dest.write_text(json.dumps(payload))
+    return parse(payload)
 
 
 def historical(ts: pd.Timestamp, markets=("totals",), budget: Budget | None = None):

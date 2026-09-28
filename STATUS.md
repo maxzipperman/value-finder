@@ -26,24 +26,13 @@ Stake for both: paper until 20 settled signals show positive average CLV. After 
 
 ## Waiting on you
 
-1. **Odds API key and plan.** `ODDS_API_KEY` is empty in `nfl-weather/.env` and `cfb-weather/.env`, and `sharp-markets/.env` doesn't exist yet (copy `.env.example`).
-   - **Without the key:**
-     - NFL alerts only see nflverse consensus lines.
-     - CFB alerts have no price source, so any trigger arrives as WATCH / no price.
-     - The sharp-markets H1/H2 runs can't start.
-   - **Recommended plan** ([`odds-api-credits.md`](strategy-research/odds-api-credits.md)):
-
-     | When | Plan | Cost | For |
-     |---|---|---|---|
-     | Now, before Oct 1 | Free key | $0 | The alerts, which use 248 credits a month (385 with close capture) |
-     | October | 20K | $30 | A pilot: probes, the NFL Pinnacle backfill and the NBA sample week |
-     | Nov to Feb | Free | $0 | The alerts only |
-     | March 1, 2027 | 5M, for one month | $119 | Main backfill: NFL and CFB 2020–26 multi-book lines, NFL alternates and props (about 304K credits) |
-
-     Add $119 only if the NBA sample week shows an edge.
-   - **Before the first run:** guard the free tier ([#15](https://github.com/maxzipperman/value-finder/issues/15)). Running out crashes the NFL alert run and leaves CFB unpriced.
-   - **Before the pilot:** fix the B1 timestamp label and its credit budget.
-   - **Before March:** commit a data-use plan. It's listed under "Before you buy" in that file.
+1. **Odds API plan.** A free key is set in all three `.env` files (Sep 28). Live check:
+   - Each alert call costs 1 credit, so the alerts use about 248 credits a month.
+   - Pinnacle prices NCAAF on the free plan: 56 of 58 games.
+   - The free-tier guard from #15 is in. Errors mean "no price" instead of a crash, and manual runs stop when fewer than 60 credits are left. Dry runs spend nothing.
+   - Still open in #15: logging up to 10 books per call.
+   - **Next purchase:** the 20K pilot for October ($30), per [`odds-api-credits.md`](strategy-research/odds-api-credits.md). Before it, fix the B1 timestamp label and its credit budget.
+   - **Later:** one 5M month on March 1, 2027 ($119), once a data-use plan is committed.
 2. **Close capture: your call, before Oct 1 (CFB) and Oct 8 (NFL).** Both scorers grade CLV against a stale or different close:
    - CFB uses the last alert quote, which is 0.5–4 hours old.
    - NFL grades Pinnacle entries against the nflverse consensus.

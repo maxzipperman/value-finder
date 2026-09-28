@@ -39,7 +39,7 @@ def rule_b_status(r):
     return "SIGNAL"
 
 
-def compute(days=8, refresh=True):
+def compute(days=8, refresh=True, prices=True):
     if refresh:
         fetch.fetch_cfbfastr([fetch.current_season()])
     s = schedules()
@@ -74,7 +74,13 @@ def compute(days=8, refresh=True):
     d = RAW / "cfbfastr"
     ti = pd.read_parquet(sorted(d.glob("team_info_*.parquet"))[-1])
     names = {f"{a} {b}": a for a, b in zip(ti.school, ti.mascot)}
-    oa = fetch.odds_api_totals(names).dropna(subset=["home_team", "away_team"])
+    for alt in ("alt_name1", "alt_name2", "alt_name3"):  # e.g. "UMass Minutemen" for Massachusetts
+        for a, m, school in zip(ti[alt], ti.mascot, ti.school):
+            if isinstance(a, str) and a:
+                names.setdefault(f"{a} {m}", school)
+    # prices=False (dry runs) skips The Odds API so it costs no credits
+    oa = fetch.odds_api_totals(names) if prices else pd.DataFrame(columns=["home_team", "away_team"])
+    oa = oa.dropna(subset=["home_team", "away_team"])
     if len(oa):
         oa["day"] = pd.to_datetime(oa.commence_utc, utc=True).dt.strftime("%Y-%m-%d")
         up["day"] = up.start_utc.dt.strftime("%Y-%m-%d")

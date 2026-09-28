@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import gzip
 import json
+import re
 import time
+import unicodedata
 from datetime import date, timedelta
 
 import numpy as np
@@ -183,21 +185,44 @@ def espn_week_odds(days_ahead=8):
 ODDS_API = "https://api.the-odds-api.com/v4/sports/americanfootball_ncaaf/odds"
 
 
+def norm_team(name: str) -> str:
+    """Match team names across sources that differ only in accents or punctuation
+    ("San José State" / "San Jose State", "Hawai'i" / "Hawaii", "Ragin' Cajuns" / "Ragin Cajuns")."""
+    ascii_ = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    return " ".join(re.sub(r"[^a-z0-9 ]", "", ascii_.lower()).split())
+
+
 def odds_api_totals(team_names: dict):
     """Live CFB totals from The Odds API (1 credit per call): Pinnacle when it lists the
     game, else DraftKings. `team_names` maps "School Mascot" -> cfbfastR school name.
     Returns an empty frame when no ODDS_API_KEY is configured."""
+    from . import quota
     from .notify import _env
     key = _env("ODDS_API_KEY")
     cols = ["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over", "line_src", "quote_utc"]
     if not key:
         return pd.DataFrame(columns=cols)
-    r = session.get(ODDS_API, params=dict(apiKey=key, bookmakers="pinnacle,draftkings", markets="totals",
-                                          oddsFormat="american", dateFormat="iso"), timeout=60)
+    why = quota.check()
+    if why:
+        print(f"  {why}", flush=True)
+        return pd.DataFrame(columns=cols)
+    try:
+        r = session.get(ODDS_API, params=dict(apiKey=key, bookmakers="pinnacle,draftkings", markets="totals",
+                                              oddsFormat="american", dateFormat="iso"), timeout=60)
+    except requests.RequestException as e:
+        print(f"  Odds API unreachable ({type(e).__name__})", flush=True)
+        return pd.DataFrame(columns=cols)
+    quota.record(r, "cfb-weather")
     if r.status_code != 200:
         print(f"  Odds API unavailable ({r.status_code})", flush=True)
         return pd.DataFrame(columns=cols)
+    lookup = {norm_team(k): v for k, v in team_names.items()}
     rows, stamp = [], pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+    # cache first: keep every response, as the NFL client does
+    dest = RAW / "oddsapi" / "live" / f"{stamp.replace(':', '')}.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps({"snapshot_utc": stamp, "credits_last": r.headers.get("x-requests-last"),
+                                "credits_remaining": r.headers.get("x-requests-remaining"), "data": r.json()}))
     for ev in r.json():
         books = {b["key"]: b for b in ev.get("bookmakers", [])}
         b = books.get("pinnacle") or books.get("draftkings")
@@ -207,7 +232,8 @@ def odds_api_totals(team_names: dict):
         if not mk:
             continue
         o = {x["name"].lower(): x for x in mk["outcomes"]}
-        rows.append(dict(home_team=team_names.get(ev["home_team"]), away_team=team_names.get(ev["away_team"]),
+        rows.append(dict(home_team=lookup.get(norm_team(ev["home_team"])),
+                         away_team=lookup.get(norm_team(ev["away_team"])),
                          commence_utc=ev["commence_time"], mkt_total=o.get("under", {}).get("point"),
                          mkt_under=o.get("under", {}).get("price"), mkt_over=o.get("over", {}).get("price"),
                          line_src=b["key"], quote_utc=stamp))

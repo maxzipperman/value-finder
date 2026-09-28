@@ -26,7 +26,7 @@ Each project has its own virtual environment. Don't share environments or instal
 - **Grade on price.** Grade on CLV at the price actually taken. Rules that bet *at* the close are graded on win rate and ROI at that price instead (see #4).
 - **Secrets and data stay local.** API keys go in each project's `.env`, which is gitignored; `.env.example` holds the names only. Anything under `data/`, `.venv/`, parquet and DuckDB files are gitignored and must be re-creatable from scripts.
 - **Paid APIs are cache-first.** Odds API calls need an explicit credit budget. Reruns read the cache.
-- **Shared weather code.** `market.py`, `features.py`, `models.py` and `notify.py` are copied between `nfl-weather` and `cfb-weather`. A change to one copy is made to both.
+- **Shared weather code.** `market.py`, `features.py`, `models.py`, `notify.py` and `quota.py` are copied between `nfl-weather` and `cfb-weather`. A change to one copy is made to both.
 
 ## Cloud sessions
 
