@@ -1,0 +1,7 @@
+  forecasts: 14 stadium-days
+ALERT  WATCH model under: TEN @ BAL 10-04 13:00 ET
+       10 mph, 60°F, rain; total 43.5 (nflverse); forecast 6d out; model P(under) 65% vs market 50%. Paper only (PREREGISTRATION.md).
+ALERT  WATCH model under: ARI @ NYG 10-04 13:00 ET
+       11 mph, 57°F, rain; total 44.5 (nflverse); forecast 6d out; model P(under) 65% vs market 50%. Paper only (PREREGISTRATION.md).
+ALERT  WATCH model under: LA @ PHI 10-04 13:00 ET
+       12 mph, 59°F, rain; total 46.5 (nflverse); forecast 6d out; model P(under) 65% vs market 50%. Paper only (PREREGISTRATION.md).
