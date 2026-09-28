@@ -41,7 +41,7 @@ Stake for both: paper until 20 settled signals show positive average CLV. After 
      | March 1, 2027 | 5M, for one month | $119 | Main backfill: NFL and CFB 2020–26 multi-book lines, NFL alternates and props (about 304K credits) |
 
      Add $119 only if the NBA sample week shows an edge.
-   - **Before the first run:** guard the free tier. Running out crashes the NFL alert run and leaves CFB unpriced.
+   - **Before the first run:** guard the free tier ([#15](https://github.com/maxzipperman/value-finder/issues/15)). Running out crashes the NFL alert run and leaves CFB unpriced.
    - **Before the pilot:** fix the B1 timestamp label and its credit budget.
    - **Before March:** commit a data-use plan. It's listed under "Before you buy" in that file.
 2. **Close capture: your call, before Oct 1 (CFB) and Oct 8 (NFL).** Both scorers grade CLV against a stale or different close:
@@ -65,8 +65,11 @@ One issue per idea from [`strategy-research/`](strategy-research/README.md#ideas
 | [#9](https://github.com/maxzipperman/value-finder/issues/9) | Kalshi/Polymarket microstructure | sharp-markets | Free Kalshi and Polymarket data |
 | [#10](https://github.com/maxzipperman/value-finder/issues/10) | Player props: median vs mean | nfl-weather | About 46K Odds API credits (NFL 2023–26 at the close), in the March 5M month |
 | [#11](https://github.com/maxzipperman/value-finder/issues/11) | CFB injury reports and early-season priors | cfb-weather | CFBD API |
+| [#15](https://github.com/maxzipperman/value-finder/issues/15) | Log up to 10 books on every alert call; guard the free Odds API tier | nfl-weather, cfb-weather | Nothing new (0 extra credits). **Best done before Oct 1.** |
+| [#16](https://github.com/maxzipperman/value-finder/issues/16) | Line-move reversal: do day-to-day moves reverse before the close? | sharp-markets | The multi-book lines in the March 5M month |
+| [#17](https://github.com/maxzipperman/value-finder/issues/17) | Favorite-longshot bias by odds band | nfl-weather, cfb-weather | NFL pre-check: nothing new. The best-price version needs the March 5M month. |
 
-The credit cost of every item, and the three extra hypotheses the March data can test at no extra cost (line shopping, line-move reversal, and the favorite-longshot bias), are in [`odds-api-credits.md`](strategy-research/odds-api-credits.md).
+The credit cost of every item, and the three extra hypotheses the March data can test at no extra cost (line shopping, #15; line-move reversal, #16; the favorite-longshot bias, #17), are in [`odds-api-credits.md`](strategy-research/odds-api-credits.md).
 
 Tested and skipped: primetime unders, the holdover bias, West Coast night games, fading big covers, turnover luck, road teams, CFB big underdogs, and service-academy unders. See [what the screen found](strategy-research/README.md#faded-or-never-there).
 
