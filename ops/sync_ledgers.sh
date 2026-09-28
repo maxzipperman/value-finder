@@ -25,6 +25,7 @@ for p in nfl-weather cfb-weather; do
   mkdir -p "$p"
   cp "$ROOT/$p/data/forward/ledger.csv" "$p/ledger.csv"
   cp "$ROOT/$p/data/forward/alerts.log" "$p/alerts.log" 2>/dev/null || true
+  cp "$ROOT/$p/data/forward/closes.csv" "$p/closes.csv" 2>/dev/null || true
 done
 git add -A
 if git diff --cached --quiet; then

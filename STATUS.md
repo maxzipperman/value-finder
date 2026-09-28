@@ -33,11 +33,10 @@ Stake for both: paper until 20 settled signals show positive average CLV. After 
    - Still open in #15: logging up to 10 books per call.
    - **Next purchase:** the 20K pilot for October ($30), per [`odds-api-credits.md`](strategy-research/odds-api-credits.md). Before it, fix the B1 timestamp label and its credit budget.
    - **Later:** one 5M month on March 1, 2027 ($119), once a data-use plan is committed.
-2. **Close capture: your call, before Oct 1 (CFB) and Oct 8 (NFL).** Both scorers grade CLV against a stale or different close:
-   - CFB uses the last alert quote, which is 0.5–4 hours old.
-   - NFL grades Pinnacle entries against the nflverse consensus.
-
-   One live totals call per kickoff slot (about 137 credits a month) would fix both. It would also be #4's entry price. It changes what the tests measure, so it needs a dated amendment to each pre-registration. This pull request doesn't make that change.
+2. **Close capture is live (Sep 28), as a secondary measure.** A launchd job (`com.valuefinder.closecapture`) runs every 15 minutes. It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the close in `*/data/forward/closes.csv`.
+   - Both scorers now also report CLV against that close. The registered primary CLV and the decision rules are unchanged: nfl-weather amendment 3, cfb-weather amendment 1, both dated before any signal.
+   - Budget: about 385 credits in October, out of 500.
+   - **Keep the Mac awake at kickoff.** A slot missed while it sleeps is reported as missing, never filled in.
 3. **Phone alerts.** Subscribe to the `NTFY_TOPIC` from either `.env` in the ntfy app, if you haven't yet.
 
 ## Backlog

@@ -95,3 +95,25 @@ defects in how signals were generated and scored. Changes, with reasons:
 
 Decision criteria are unchanged (CLV-based, per rule). Entry-price ROI is reported as
 a secondary measure. Rule variants under forward test: still **2**.
+
+## Amendment 3 (2026-09-28, before any Week 5 game; no Rule B signal logged and no forward outcome observed)
+
+**A secondary CLV measure against Pinnacle's close.** Nothing about the primary
+measure or the decision changes.
+
+* **Why.** Rule B's entry prices come from Pinnacle (The Odds API, live since
+  Sept 28). The primary CLV compares them with the nflverse closing total, a
+  consensus of other books. That comparison mixes a change of book into the change
+  of price.
+* **What is recorded.** `scripts/capture_close.py` runs every 15 minutes
+  (`ops/capture_closes.sh`, launchd). It makes one Odds API call per kickoff slot,
+  2–20 minutes before kickoff, and records Pinnacle's total and prices for every game
+  in the slot in `data/forward/closes.csv`.
+* **What is reported.** `score_forward.py` reports, for each rule, CLV against that
+  captured close, next to the primary measure. It also reports how many bets have no
+  captured close (the Mac was asleep, the quota was low, or Pinnacle had no line).
+  Missing closes are reported, never imputed.
+* **What it can't change.** This measure is descriptive. It doesn't change which bets
+  count, the primary CLV, or the keep/drop decision (after Week 18 or 40 bets,
+  whichever is later).
+* Rule variants under forward test: still **2**.

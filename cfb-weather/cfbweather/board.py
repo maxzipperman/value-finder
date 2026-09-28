@@ -39,6 +39,17 @@ def rule_b_status(r):
     return "SIGNAL"
 
 
+def odds_team_names():
+    """The Odds API's "School Mascot" names -> cfbfastR school names, including alternate names."""
+    ti = pd.read_parquet(sorted((RAW / "cfbfastr").glob("team_info_*.parquet"))[-1])
+    names = {f"{a} {b}": a for a, b in zip(ti.school, ti.mascot)}
+    for alt in ("alt_name1", "alt_name2", "alt_name3"):  # e.g. "UMass Minutemen" for Massachusetts
+        for a, m, school in zip(ti[alt], ti.mascot, ti.school):
+            if isinstance(a, str) and a:
+                names.setdefault(f"{a} {m}", school)
+    return names
+
+
 def compute(days=8, refresh=True, prices=True):
     if refresh:
         fetch.fetch_cfbfastr([fetch.current_season()])
@@ -71,13 +82,7 @@ def compute(days=8, refresh=True, prices=True):
     up = add_weather_features(up)
 
     # prices: The Odds API when a key is set (licensed, Pinnacle first), else ESPN/DraftKings
-    d = RAW / "cfbfastr"
-    ti = pd.read_parquet(sorted(d.glob("team_info_*.parquet"))[-1])
-    names = {f"{a} {b}": a for a, b in zip(ti.school, ti.mascot)}
-    for alt in ("alt_name1", "alt_name2", "alt_name3"):  # e.g. "UMass Minutemen" for Massachusetts
-        for a, m, school in zip(ti[alt], ti.mascot, ti.school):
-            if isinstance(a, str) and a:
-                names.setdefault(f"{a} {m}", school)
+    names = odds_team_names()
     # prices=False (dry runs) skips The Odds API so it costs no credits
     oa = fetch.odds_api_totals(names) if prices else pd.DataFrame(columns=["home_team", "away_team"])
     oa = oa.dropna(subset=["home_team", "away_team"])
