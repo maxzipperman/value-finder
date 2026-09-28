@@ -28,6 +28,15 @@ Each project has its own virtual environment. Don't share environments or instal
 - **Paid APIs are cache-first.** Odds API calls need an explicit credit budget. Reruns read the cache.
 - **Shared weather code.** `market.py`, `features.py`, `models.py` and `notify.py` are copied between `nfl-weather` and `cfb-weather`. A change to one copy is made to both.
 
+## Cloud sessions
+
+A cloud checkout has only what's in git. `ops/cloud_setup.sh` (a SessionStart hook in `.claude/settings.json`) builds each project's venv when `CLAUDE_CODE_REMOTE=true`, and does nothing on the Mac.
+
+- **Available in the cloud:** code, docs, outputs, `*/data/processed/` (the analysis datasets, about 8 MB), `nfl-weather/data/raw/odds/sbr_open_close.parquet`, and the forward-test ledgers on the `ledgers` branch (`git show origin/ledgers:nfl-weather/ledger.csv`). A launchd job (`ops/install_ledger_sync.sh`) pushes them nightly.
+- **Mac only:** the raw caches (weather, play-by-play, the Kalshi candles in `sharp-markets/data/raw`, `markets.duckdb`), the `.env` keys, and the alert jobs. Paid Odds API pulls run on the Mac, where the cache lives.
+- The default network allows PyPI and GitHub (including nflverse's `games.csv`), but not Open-Meteo, Meteostat, Kalshi or The Odds API. Anything needing those runs on the Mac.
+- After rebuilding processed data on the Mac, commit it. New files in `data/processed/` are picked up automatically.
+
 ## Workflow
 
 - One branch and one pull request per change. Link the issue (`Closes #n`).
