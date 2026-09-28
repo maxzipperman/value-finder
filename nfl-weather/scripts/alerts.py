@@ -51,7 +51,8 @@ if args.test:
 STATE = ROOT / "data" / "forward" / "alert_state.json"
 STATE.parent.mkdir(parents=True, exist_ok=True)
 state = json.loads(STATE.read_text()) if STATE.exists() else {}
-up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key())
+# a dry run spends no Odds API credits
+up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run)
 now = pd.Timestamp.now(tz="UTC")
 if up.empty:
     print(f"{now:%Y-%m-%d %H:%M}Z no games in the next {args.days} days")
