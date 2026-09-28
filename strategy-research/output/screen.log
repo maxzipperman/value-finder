@@ -1,0 +1,158 @@
+                                 screen                                                     thesis       era  bets  win   lo   hi   be   p_be    p50                                              note
+                  NFL: Wong teaser legs                    6-pt teaser through 3 and 7 (Wong 2001) 1999–2025  1391 74.7 72.3 76.9 73.9 0.2484 0.0000                       break-even = 2-team at -120
+                  NFL: Wong teaser legs                    6-pt teaser through 3 and 7 (Wong 2001) 1999–2013   590 73.4 69.7 76.8 73.9 0.6220 0.0000                       break-even = 2-team at -120
+                  NFL: Wong teaser legs                    6-pt teaser through 3 and 7 (Wong 2001) 2014–2025   801 75.7 72.6 78.5 73.9 0.1311 0.0000                       break-even = 2-team at -120
+                  NFL: Wong teaser legs                    6-pt teaser through 3 and 7 (Wong 2001) 2020–2025   447 75.8 71.7 79.6 73.9 0.1843 0.0000                       break-even = 2-team at -120
+                  NFL: Wong teaser legs                    6-pt teaser through 3 and 7 (Wong 2001) 2022–2025   322 73.3 68.2 77.8 73.9 0.6188 0.0000                       break-even = 2-team at -120
+         NFL: Wong teaser legs by total                                   Wong legs, total <= 43.5 2014–2025   289 74.7 69.4 79.4 73.9 0.3952 0.0000                       break-even = 2-team at -120
+         NFL: Wong teaser legs by total                                   Wong legs, total 44-48.5 2014–2025   356 78.9 74.4 82.8 73.9 0.0155 0.0000                       break-even = 2-team at -120
+         NFL: Wong teaser legs by total                                     Wong legs, total >= 49 2014–2025   156 69.9 62.3 76.5 73.9 0.8882 0.0000                       break-even = 2-team at -120
+          NFL: road teams (HFA decline)                 Market slow to shrink home-field advantage 1999–2013  3840 50.9 49.3 52.4 52.4 0.9715 0.2942                          mean result - line +0.16
+          NFL: road teams (HFA decline)                 Market slow to shrink home-field advantage 2014–2019  1524 51.8 49.3 54.3 52.4 0.6740 0.1589                          mean result - line -0.24
+          NFL: road teams (HFA decline)                 Market slow to shrink home-field advantage 2020–2025  1624 50.4 47.9 52.8 52.4 0.9503 0.7849                          mean result - line +0.27
+                 NFL: high totals under                          Total >= season mean + 5 -> under 2001–2025   778 54.1 50.6 57.6 52.4 0.1758 0.0238       1979-2000 in-sample; 2001+ is out of sample
+                 NFL: high totals under                          Total >= season mean + 5 -> under 2014–2025   336 53.9 48.5 59.1 52.4 0.3118 0.1725       1979-2000 in-sample; 2001+ is out of sample
+                 NFL: high totals under                          Total >= season mean + 5 -> under 2020–2025   189 57.1 50.0 64.0 52.4 0.1077 0.0583       1979-2000 in-sample; 2001+ is out of sample
+                 NFL: high totals under                          Total >= season mean + 7 -> under 2001–2025   379 53.6 48.5 58.5 52.4 0.3416 0.1816       1979-2000 in-sample; 2001+ is out of sample
+                 NFL: high totals under                          Total >= season mean + 7 -> under 2014–2025   167 54.5 46.9 61.9 52.4 0.3201 0.2786       1979-2000 in-sample; 2001+ is out of sample
+                 NFL: high totals under                          Total >= season mean + 7 -> under 2020–2025    89 56.2 45.8 66.0 52.4 0.2709 0.2891       1979-2000 in-sample; 2001+ is out of sample
+                  NFL: primetime unders                                     all primetime -> under 1999–2025  1096 52.2 49.2 55.1 52.4 0.5625 0.1557                                                  
+                  NFL: primetime unders                                     all primetime -> under 1999–2013   453 51.0 46.4 55.6 52.4 0.7385 0.7071                                                  
+                  NFL: primetime unders                                     all primetime -> under 2014–2021   414 51.2 46.4 56.0 52.4 0.7011 0.6583                                                  
+                  NFL: primetime unders                                     all primetime -> under 2022–2025   229 56.3 49.9 62.6 52.4 0.1289 0.0640                                                  
+                  NFL: primetime unders                                    Thursday night -> under 1999–2025   262 51.9 45.9 57.9 52.4 0.5855 0.5783                                                  
+                  NFL: primetime unders                                    Thursday night -> under 1999–2013    74 52.7 41.5 63.7 52.4 0.5250 0.7275                                                  
+                  NFL: primetime unders                                    Thursday night -> under 2014–2021   120 52.5 43.6 61.2 52.4 0.5266 0.6483                                                  
+                  NFL: primetime unders                                    Thursday night -> under 2022–2025    68 50.0 38.4 61.6 52.4 0.6969 1.0000                                                  
+                  NFL: primetime unders                                      Sunday night -> under 1999–2025   429 52.2 47.5 56.9 52.4 0.5470 0.3848                                                  
+                  NFL: primetime unders                                      Sunday night -> under 1999–2013   221 51.1 44.6 57.6 52.4 0.6701 0.7879                                                  
+                  NFL: primetime unders                                      Sunday night -> under 2014–2021   138 47.8 39.7 56.1 52.4 0.8762 0.6705                                                  
+                  NFL: primetime unders                                      Sunday night -> under 2022–2025    70 64.3 52.6 74.5 52.4 0.0297 0.0225                                                  
+                  NFL: primetime unders                                      Monday night -> under 1999–2025   349 52.7 47.5 57.9 52.4 0.4708 0.3353                                                  
+                  NFL: primetime unders                                      Monday night -> under 1999–2013   135 51.1 42.8 59.4 52.4 0.6490 0.8634                                                  
+                  NFL: primetime unders                                      Monday night -> under 2014–2021   137 53.3 45.0 61.4 52.4 0.4503 0.4944                                                  
+                  NFL: primetime unders                                      Monday night -> under 2022–2025    77 54.5 43.5 65.2 52.4 0.3958 0.4944                                                  
+                     NFL: Week 1 unders                        Week 1 -> under (early-season rust) 1999–2025   424 54.7 50.0 59.4 52.4 0.1803 0.0581                                                  
+                     NFL: Week 1 unders                        Week 1 -> under (early-season rust) 1999–2013   233 54.5 48.1 60.8 52.4 0.2799 0.1900                                                  
+                     NFL: Week 1 unders                        Week 1 -> under (early-season rust) 2014–2025   191 55.0 47.9 61.9 52.4 0.2597 0.1926                                                  
+                     NFL: Week 1 unders                        Week 1 -> under (early-season rust) 2020–2025    96 60.4 50.4 69.6 52.4 0.0697 0.0519                                                  
+             NFL: holdover bias, Week 1           Bet non-playoff team vs last year's playoff team 1999–2003    28 50.0 32.6 67.4 52.4 0.6710 1.0000    2004-12 = paper's sample; others out of sample
+             NFL: holdover bias, Week 1           Bet non-playoff team vs last year's playoff team 2004–2012    59 62.7 50.0 73.9 52.4 0.0717 0.0674    2004-12 = paper's sample; others out of sample
+             NFL: holdover bias, Week 1           Bet non-playoff team vs last year's playoff team 2013–2025    90 53.3 43.1 63.3 52.4 0.4707 0.5984    2004-12 = paper's sample; others out of sample
+              NFL: fade teams off a bye                                Bet against the rested team 1999–2010   319 47.3 41.9 52.8 52.4 0.9685 0.3704       their sample 2002-23; 2024-25 out of sample
+              NFL: fade teams off a bye                                Bet against the rested team 2011–2023   319 50.8 45.3 56.2 52.4 0.7349 0.8228       their sample 2002-23; 2024-25 out of sample
+              NFL: fade teams off a bye                                Bet against the rested team 2024–2025    48 54.2 40.3 67.4 52.4 0.4599 0.6655       their sample 2002-23; 2024-25 out of sample
+              NFL: fade teams off a bye                                Bet against the rested team 2011–2025   367 51.2 46.1 56.3 52.4 0.6900 0.6763       their sample 2002-23; 2024-25 out of sample
+              NFL: fade teams off a bye              Bet against the rested team, bye team at home 2011–2025   171 55.6 48.1 62.8 52.4 0.2254 0.1685                                                  
+              NFL: fade teams off a bye              Bet against the rested team, bye team on road 2011–2025   196 47.4 40.6 54.4 52.4 0.9270 0.5204                                                  
+          NFL: West Coast team at night  Bet Pacific team vs Eastern team, kickoff 8pm ET or later 1999–2011    30 70.0 52.1 83.3 52.4 0.0387 0.0428 published sample 1970-2011; 2012-25 out of sample
+          NFL: West Coast team at night  Bet Pacific team vs Eastern team, kickoff 8pm ET or later 2012–2025    75 56.0 44.7 66.7 52.4 0.3050 0.3557 published sample 1970-2011; 2012-25 out of sample
+          NFL: West Coast team at night Bet Pacific team vs Eastern team, kickoff 1pm ET (control) 1999–2011   111 42.3 33.6 51.6 52.4 0.9866 0.1285 published sample 1970-2011; 2012-25 out of sample
+          NFL: West Coast team at night Bet Pacific team vs Eastern team, kickoff 1pm ET (control) 2012–2025   163 56.4 48.8 63.8 52.4 0.1687 0.1170 published sample 1970-2011; 2012-25 out of sample
+         NFL: overreaction to last game                    Fade team that covered by 14+ last week 1999–2025  1565 50.7 48.2 53.1 52.4 0.9161 0.6132                                                  
+         NFL: overreaction to last game                    Fade team that covered by 14+ last week 1999–2013   896 50.4 47.2 53.7 52.4 0.8835 0.8151                                                  
+         NFL: overreaction to last game                    Fade team that covered by 14+ last week 2014–2025   669 51.0 47.2 54.7 52.4 0.7790 0.6427                                                  
+         NFL: overreaction to last game                    Fade team that covered by 14+ last week 2020–2025   336 51.5 46.2 56.8 52.4 0.6491 0.6235                                                  
+         NFL: overreaction to last game           Back team that missed by 14+ last week (control) 1999–2025  1537 51.9 49.4 54.3 52.4 0.6698 0.1532                                                  
+         NFL: overreaction to last game           Back team that missed by 14+ last week (control) 1999–2013   878 52.5 49.2 55.8 52.4 0.4842 0.1467                                                  
+         NFL: overreaction to last game           Back team that missed by 14+ last week (control) 2014–2025   659 51.0 47.2 54.8 52.4 0.7752 0.6402                                                  
+         NFL: overreaction to last game           Back team that missed by 14+ last week (control) 2020–2025   334 53.6 48.2 58.9 52.4 0.3491 0.2081                                                  
+                     NFL: turnover luck               Fade team with previous game TO margin >= +3 1999–2025  1121 51.8 48.9 54.7 52.4 0.6556 0.2322                                                  
+                     NFL: turnover luck               Fade team with previous game TO margin >= +3 1999–2013   686 53.2 49.5 56.9 52.4 0.3466 0.1006                                                  
+                     NFL: turnover luck               Fade team with previous game TO margin >= +3 2014–2025   435 49.7 45.0 54.3 52.4 0.8822 0.9236                                                  
+                     NFL: turnover luck               Fade team with previous game TO margin >= +3 2020–2025   209 45.5 38.8 52.2 52.4 0.9809 0.2130                                                  
+                     NFL: turnover luck      Fade team with season TO margin >= +1.0/game, week 5+ 1999–2025   939 49.6 46.4 52.8 52.4 0.9574 0.8448                                                  
+                     NFL: turnover luck      Fade team with season TO margin >= +1.0/game, week 5+ 1999–2013   601 50.6 46.6 54.6 52.4 0.8222 0.8067                                                  
+                     NFL: turnover luck      Fade team with season TO margin >= +1.0/game, week 5+ 2014–2025   338 47.9 42.7 53.2 52.4 0.9547 0.4796                                                  
+                     NFL: turnover luck      Fade team with season TO margin >= +1.0/game, week 5+ 2020–2025   156 48.7 41.0 56.5 52.4 0.8404 0.8103                                                  
+                        NFL: bet timing                             Favorite at the opening number 2007–2021  3814 50.4 48.8 52.0 52.4 0.9933 0.6387                                                  
+                        NFL: bet timing                Favorite at the closing number (same games) 2007–2021  3815 48.7 47.1 50.3 52.4 1.0000 0.1126                                                  
+                        NFL: bet timing                                 Under at the opening total 2007–2021  3937 50.7 49.2 52.3 52.4 0.9820 0.3721                                                  
+                        NFL: bet timing                    Under at the closing total (same games) 2007–2021  3963 50.3 48.8 51.9 52.4 0.9956 0.7030                                                  
+                     CFB: big underdogs                                       Underdog getting 21+ 2006–2015   718 46.4 42.8 50.0 52.4 0.9994 0.0569                                                  
+                     CFB: big underdogs                                       Underdog getting 21+ 2016–2025  1606 52.2 49.7 54.6 52.4 0.5742 0.0851                                                  
+                     CFB: big underdogs                                       Underdog getting 21+ 2021–2025   994 50.1 47.0 53.2 52.4 0.9293 0.9747                                                  
+                     CFB: big underdogs                                       Underdog getting 28+ 2006–2015   364 50.0 44.9 55.1 52.4 0.8320 1.0000                                                  
+                     CFB: big underdogs                                       Underdog getting 28+ 2016–2025   882 52.4 49.1 55.7 52.4 0.5137 0.1674                                                  
+                     CFB: big underdogs                                       Underdog getting 28+ 2021–2025   561 48.7 44.6 52.8 52.4 0.9644 0.5545                                                  
+                     CFB: big underdogs                                       Underdog getting 35+ 2006–2015   148 47.3 39.4 55.3 52.4 0.9066 0.5652                                                  
+                     CFB: big underdogs                                       Underdog getting 35+ 2016–2025   465 51.4 46.9 55.9 52.4 0.6813 0.5779                                                  
+                     CFB: big underdogs                                       Underdog getting 35+ 2021–2025   315 45.7 40.3 51.2 52.4 0.9923 0.1428                                                  
+            CFB: early-season underdogs                                   All underdogs, weeks 0-4 2006–2015  1058 50.1 47.1 53.1 52.4 0.9357 0.9755                                                  
+            CFB: early-season underdogs                                   All underdogs, weeks 0-4 2016–2025  2417 50.6 48.6 52.5 52.4 0.9651 0.5969                                                  
+            CFB: early-season underdogs                                   All underdogs, weeks 0-4 2021–2025  1666 49.8 47.4 52.2 52.4 0.9829 0.9025                                                  
+            CFB: early-season underdogs                          All underdogs, weeks 5+ (control) 2006–2015  2929 49.7 47.9 51.6 52.4 0.9980 0.7959                                                  
+            CFB: early-season underdogs                          All underdogs, weeks 5+ (control) 2016–2025  4609 50.8 49.4 52.3 52.4 0.9840 0.2757                                                  
+            CFB: early-season underdogs                          All underdogs, weeks 5+ (control) 2021–2025  2759 50.8 49.0 52.7 52.4 0.9520 0.4022                                                  
+            CFB: service academy unders                          any service academy game -> under 2006–2025   431 49.0 44.3 53.7 52.4 0.9294 0.7000                                                  
+            CFB: service academy unders                          any service academy game -> under 2006–2015   162 48.8 41.2 56.4 52.4 0.8414 0.8138                                                  
+            CFB: service academy unders                          any service academy game -> under 2016–2025   269 49.1 43.2 55.0 52.4 0.8745 0.8074                                                  
+            CFB: service academy unders                                academy vs academy -> under 2006–2025    42 69.0 54.0 80.9 52.4 0.0212 0.0195                                                  
+            CFB: service academy unders                                academy vs academy -> under 2006–2015    18 66.7 43.7 83.7 52.4 0.1643 0.2379                                                  
+            CFB: service academy unders                                academy vs academy -> under 2016–2025    24 70.8 50.8 85.1 52.4 0.0526 0.0639                                                  
+                 CFB: high totals under                          Total >= season mean + 7 -> under 2006–2015   718 50.1 46.5 53.8 52.4 0.8925 0.9702                                                  
+                 CFB: high totals under                          Total >= season mean + 7 -> under 2016–2025  1306 55.0 52.3 57.7 52.4 0.0320 0.0004                                                  
+                 CFB: high totals under                          Total >= season mean + 7 -> under 2021–2025   764 55.0 51.4 58.5 52.4 0.0808 0.0066                                                  
+                 CFB: high totals under                         Total >= season mean + 10 -> under 2006–2015   438 48.2 43.5 52.8 52.4 0.9649 0.4736                                                  
+                 CFB: high totals under                         Total >= season mean + 10 -> under 2016–2025   712 57.0 53.4 60.6 52.4 0.0072 0.0002                                                  
+                 CFB: high totals under                         Total >= season mean + 10 -> under 2021–2025   388 58.0 53.0 62.8 52.4 0.0152 0.0019                                                  
+         CFB: overreaction to last game                    Fade team that covered by 17+ last game 2006–2015   770 47.3 43.8 50.8 52.4 0.9980 0.1395                                                  
+         CFB: overreaction to last game                    Fade team that covered by 17+ last game 2016–2025  1456 50.5 47.9 53.0 52.4 0.9302 0.7333                                                  
+         CFB: overreaction to last game                    Fade team that covered by 17+ last game 2021–2025   907 49.5 46.3 52.8 52.4 0.9614 0.7905                                                  
+       CFB follow-up: high totals under                Total >= season mean + 10 -> under, sub-era 2016–2019   264 56.1 50.0 61.9 52.4 0.1280 0.0562                                                  
+       CFB follow-up: high totals under                Total >= season mean + 10 -> under, sub-era 2020–2022   254 58.3 52.1 64.2 52.4 0.0344 0.0100                                                  
+       CFB follow-up: high totals under                Total >= season mean + 10 -> under, sub-era 2023–2025   194 56.7 49.7 63.5 52.4 0.1285 0.0724                                                  
+       CFB follow-up: high totals under  Total >= season mean + 10 -> under, outdoor and wind < 15 2016–2025   650 57.5 53.7 61.3 52.4 0.0047 0.0001                                                  
+       CFB follow-up: high totals under    Total >= season mean + 10 -> under at the OPENING total 2016–2025   630 55.6 51.7 59.4 52.4 0.0598 0.0059                       mean open->close move +0.95
+       CFB follow-up: high totals under    Total >= PRIOR-season mean + 10 -> under (no lookahead) 2016–2025   646 57.7 53.9 61.5 52.4 0.0035 0.0001                                                  
+       NFL follow-up: high totals under     Total >= PRIOR-season mean + 5 -> under (no lookahead) 2001–2025   893 52.1 48.8 55.3 52.4 0.5867 0.2283                                                  
+         CFB follow-up: low totals over                 Total <= season mean - 10 -> over (mirror) 2016–2025   640 52.0 48.2 55.9 52.4 0.5860 0.3231                                                  
+NFL follow-up: fade home team off a bye                           Bet against the rested home team 2024–2025    24 54.2 35.1 72.1 52.4 0.5129 0.8388                                                  
+
+key numbers
+       era  games  margin_1  margin_2  margin_3  margin_4  margin_6  margin_7  margin_8  margin_10  margin_14  push_at_3  n_line_3  push_at_6  n_line_6  push_at_7  n_line_7  push_at_10  n_line_10
+1999–2014   4248     0.039     0.037     0.153     0.051     0.053     0.093     0.033      0.060      0.047      0.083       720      0.033       212      0.066       319       0.060        133
+2015–2019   1335     0.043     0.042     0.144     0.041     0.073     0.099     0.041      0.046      0.057      0.125       192      0.062        65      0.114        79       0.071         42
+2020–2025   1693     0.047     0.049     0.152     0.050     0.067     0.077     0.044      0.049      0.047      0.083       241      0.026        77      0.022        93       0.079         38
+
+line moves
+ market  games  mean_fav_move  share_toward_fav  share_away_from_fav  slope_resid_on_move  slope_se  slope_p  mean_move  share_up  share_down
+spread   3934           0.48             0.468                0.344               -0.049     0.105    0.640        NaN       NaN         NaN
+ total   4018            NaN               NaN                  NaN                0.011     0.115    0.926     -0.236     0.388       0.488
+
+cfb open vs close
+                   tier  games  mean_abs_move  share_move_3plus  mae_open  mae_close
+any Group of 5 / other   4798          1.766             0.216    13.042     12.864
+          both Power 5   3252          1.842             0.222    12.936     12.703
+
+calibration slopes (result on closing number)
+                   market       era  games  slope  slope_se  p_slope_eq_1
+               NFL total 1999–2013   3981  0.924     0.045         0.087
+               NFL total 2014–2025   3295  0.979     0.055         0.708
+NFL spread (home margin) 1999–2013   3981  1.047     0.036         0.189
+NFL spread (home margin) 2014–2025   3295  1.037     0.037         0.314
+               CFB total 2006–2015   4047  1.010     0.033         0.763
+               CFB total 2016–2025   7158  0.891     0.025         0.000
+CFB spread (home margin) 2006–2015   4047  1.050     0.016         0.002
+CFB spread (home margin) 2016–2025   7158  0.995     0.011         0.663
+
+kalshi ladder
+ snap bucket  contracts  games  mean_mid  yes_rate  yes_minus_mid  yes_minus_mid_se  yes_taker_roi  yes_taker_pnl  yes_taker_pnl_se  no_taker_pnl  no_taker_pnl_se
+T-1h  10-20          6      6     0.198     0.333          0.136             0.190          0.532          0.112             0.188        -0.159            0.193
+T-1h  20-30        381    240     0.263     0.276          0.013             0.032         -0.051         -0.014             0.032        -0.039            0.032
+T-1h  30-40        514    262     0.352     0.350         -0.002             0.033         -0.082         -0.030             0.033        -0.025            0.033
+T-1h  40-50        563    282     0.448     0.483          0.035             0.032          0.020          0.009             0.032        -0.060            0.032
+T-1h  50-60        533    282     0.552     0.568          0.016             0.031         -0.017         -0.010             0.031        -0.042            0.031
+T-1h  60-70        499    267     0.652     0.657          0.006             0.033         -0.033         -0.022             0.033        -0.034            0.033
+T-1h  70-80        373    237     0.745     0.748          0.003             0.030         -0.029         -0.022             0.030        -0.030            0.030
+T-1h  80-90         19     18     0.809     0.842          0.033             0.081          0.011          0.009             0.082        -0.058            0.080
+T-5m  10-20          3      3     0.193     0.667          0.473             0.270          2.119          0.445             0.267        -0.500            0.273
+T-5m  20-30        382    238     0.261     0.267          0.006             0.030         -0.078         -0.022             0.030        -0.032            0.030
+T-5m  30-40        535    263     0.351     0.355          0.004             0.032         -0.066         -0.024             0.032        -0.032            0.032
+T-5m  40-50        569    281     0.448     0.480          0.032             0.034          0.014          0.006             0.034        -0.057            0.034
+T-5m  50-60        540    283     0.553     0.578          0.024             0.033         -0.002         -0.001             0.033        -0.050            0.033
+T-5m  60-70        495    270     0.653     0.667          0.014             0.031         -0.021         -0.014             0.031        -0.043            0.031
+T-5m  70-80        394    236     0.745     0.764          0.019             0.030         -0.010         -0.008             0.030        -0.046            0.030
+T-5m  80-90         12     11     0.812     0.833          0.021             0.107         -0.009         -0.007             0.109        -0.051            0.105
+
+n_variants = 109; Bonferroni bar p < 0.00046; passing: []

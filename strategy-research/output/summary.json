@@ -1,0 +1,9 @@
+{
+  "n_variants": 109,
+  "bonferroni_p": 0.00045871559633027525,
+  "nfl_games": 7276,
+  "cfb_games": 11205,
+  "kalshi_contract_snapshots": 5818,
+  "kalshi_games": 285,
+  "passes_bonferroni": []
+}
