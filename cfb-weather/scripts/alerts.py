@@ -35,7 +35,7 @@ if args.test:
 STATE = ROOT / "data" / "forward" / "alert_state.json"
 STATE.parent.mkdir(parents=True, exist_ok=True)
 state = json.loads(STATE.read_text()) if STATE.exists() else {}
-up = board.compute(odds=not args.dry_run)
+up = board.compute(prices=not args.dry_run)  # a dry run spends no Odds API credits
 if up.empty:
     sys.exit(print("no FBS games in the next 8 days"))
 if not args.dry_run:

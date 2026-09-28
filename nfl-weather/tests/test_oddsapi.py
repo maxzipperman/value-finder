@@ -11,13 +11,14 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from nflweather import board, oddsapi  # noqa: E402
+from nflweather import board, oddsapi, quota  # noqa: E402
 
 
 class Resp:
     def __init__(self, status=200, body=None, remaining=480, last=1):
         self.status_code, self._body = status, body if body is not None else []
         self.headers = {"x-requests-remaining": str(remaining), "x-requests-used": "20", "x-requests-last": str(last)}
+        self.ok = status < 400
 
     def json(self):
         return self._body
@@ -38,7 +39,8 @@ EVENT = {"id": "e1", "commence_time": "2026-10-11T17:00:00Z", "home_team": "Chic
 def api(tmp_path, monkeypatch):
     monkeypatch.setenv("ODDS_API_KEY", "test")
     monkeypatch.setattr(oddsapi, "CACHE", tmp_path / "oddsapi")
-    monkeypatch.setattr(oddsapi, "QUOTA", tmp_path / "oddsapi" / "quota.json")
+    monkeypatch.setattr(quota, "STATE", tmp_path / "odds_quota.json")
+    monkeypatch.delenv("XPC_SERVICE_NAME", raising=False)
     calls = []
 
     def use(resp):
@@ -66,7 +68,7 @@ def test_live_logs_every_book_but_prices_at_pinnacle(api):
     assert (row.best_under, row.best_under_book) == (-102, "fanduel")       # best price at the same number
     saved = json.loads(next((oddsapi.CACHE / "live").glob("*.json")).read_text())
     assert len(saved["data"][0]["bookmakers"]) == 4                         # every book is kept on disk
-    assert oddsapi.quota_left() == 480
+    assert quota.read()["remaining"] == 480
 
 
 @pytest.mark.parametrize("resp", [Resp(status=429), Resp(status=401), Resp(status=500),
@@ -76,17 +78,19 @@ def test_api_failure_falls_back_instead_of_crashing(api, resp):
     assert board._pinnacle_live() is None
 
 
-def test_credit_floor_protects_the_alerts(api, tmp_path):
+def test_credit_floor_protects_the_alerts(api, monkeypatch):
     calls = api(Resp(body=[EVENT]))
-    oddsapi.QUOTA.parent.mkdir(parents=True, exist_ok=True)
-    oddsapi.QUOTA.write_text(json.dumps(dict(month=oddsapi._month(), remaining=50)))
+    now = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+    quota.STATE.write_text(json.dumps(dict(utc=now, remaining=50)))
     with pytest.raises(oddsapi.OddsAPIUnavailable):
-        oddsapi.live(markets=("totals",), floor=oddsapi.MANUAL_FLOOR)       # hand-run: refused
+        oddsapi.live(markets=("totals",))                                    # hand-run: refused below 60
     assert calls == []
-    oddsapi.live(markets=("totals",), floor=0)                               # scheduled alert: still runs
+    monkeypatch.setenv("XPC_SERVICE_NAME", "com.nflweather.alerts")
+    oddsapi.live(markets=("totals",))                                        # scheduled alert: still runs
     assert len(calls) == 1
-    oddsapi.QUOTA.write_text(json.dumps(dict(month="2000-01", remaining=0)))   # credits reset on the 1st
-    oddsapi.live(markets=("totals",), floor=oddsapi.MANUAL_FLOOR)
+    monkeypatch.delenv("XPC_SERVICE_NAME")
+    quota.STATE.write_text(json.dumps(dict(utc="2000-01-15T00:00:00Z", remaining=0)))   # reset on the 1st
+    oddsapi.live(markets=("totals",))
     assert len(calls) == 2
 
 

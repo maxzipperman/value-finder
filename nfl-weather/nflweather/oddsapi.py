@@ -13,10 +13,9 @@ historical call costs 10x that. A bookmakers= list of up to 10 books counts as o
 region, so live calls log LIVE_BOOKS for the price of Pinnacle alone. The rule's
 price is still Pinnacle's; the other books are logged for line shopping.
 
-Credits: every response's x-requests-remaining is kept in data/raw/oddsapi/quota.json.
-A call is refused (OddsAPIUnavailable, which the board treats like "no key") when the
-month's remaining credits are at or below its floor: 0 for the scheduled alerts,
-MANUAL_FLOOR for hand-run commands, so manual use can't starve the alerts.
+Credits: quota.py (shared with cfb-weather) keeps the last reported quota. A live call
+is refused (OddsAPIUnavailable, which the board treats like "no key") when a manual
+run would take the month below quota.MANUAL_FLOOR, or a scheduled run finds none left.
 """
 from __future__ import annotations
 
@@ -27,17 +26,15 @@ from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
-
 import requests
 
+from . import quota
 from .config import PROC, RAW, ROOT
 from .fetch import session
 
 BASE = "https://api.the-odds-api.com/v4"
 SPORT = "americanfootball_nfl"
 CACHE = RAW / "oddsapi"
-QUOTA = CACHE / "quota.json"
-MANUAL_FLOOR = 60
 # <= 10 books = 1 region = 1 credit per market. All on the free plan (williamhill_us and fanatics are paid-only).
 LIVE_BOOKS = ("pinnacle", "lowvig", "betonlineag", "draftkings", "fanduel", "betmgm", "betrivers", "bovada",
               "espnbet", "hardrockbet")
@@ -97,62 +94,42 @@ class Budget:
         return self.used + cost <= self.max
 
 
-def _month():
-    return pd.Timestamp.now(tz="UTC").strftime("%Y-%m")
-
-
-def quota_left():
-    """Credits left as of the last call this calendar month (UTC), or None if unknown.
-    Credits reset on the 1st, so last month's figure doesn't count."""
-    if not QUOTA.exists():
-        return None
-    q = json.loads(QUOTA.read_text())
-    return q.get("remaining") if q.get("month") == _month() else None
-
-
-def _record_quota(r):
-    h = r.headers
-    if h.get("x-requests-remaining") is None:
-        return
-    QUOTA.parent.mkdir(parents=True, exist_ok=True)
-    num = lambda v: None if v is None else int(float(v))  # noqa: E731
-    QUOTA.write_text(json.dumps(dict(utc=pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"), month=_month(),
-                                     remaining=num(h.get("x-requests-remaining")), used=num(h.get("x-requests-used")),
-                                     last=num(h.get("x-requests-last")))))
-
-
-def _get(path, params, floor=0):
-    left = quota_left()
-    if left is not None and left <= floor:
-        raise OddsAPIUnavailable(f"credit floor: {left} Odds API credits left this month (floor {floor})")
+def _get(path, params):
+    """GET with every failure turned into OddsAPIUnavailable (a SystemExit), which callers
+    (the board) treat as "no price". Every response's quota headers go to quota.record."""
     try:
         r = session.get(f"{BASE}{path}", params={**params, "apiKey": api_key()}, timeout=60)
     except requests.RequestException as e:
         raise OddsAPIUnavailable(f"The Odds API is unreachable ({type(e).__name__})") from e
-    _record_quota(r)
+    quota.record(r, "nfl-weather")
     if r.status_code == 401:
         raise OddsAPIUnavailable("The Odds API rejected the key, or the plan is out of credits (401)")
     if r.status_code == 422 and "historical" in path:
         raise OddsAPIUnavailable("Historical odds need a paid Odds API plan (422)")
     if r.status_code == 429:
-        raise OddsAPIUnavailable("The Odds API refused the call: out of credits or rate-limited (429)")
-    if r.status_code != 200:
+        raise OddsAPIUnavailable("The Odds API quota is used up or rate-limited (429)")
+    if not r.ok:
         raise OddsAPIUnavailable(f"The Odds API returned {r.status_code}")
     return r
 
 
-def live(markets=("totals", "spreads"), budget: Budget | None = None, floor=0):
+def live(markets=("totals", "spreads"), budget: Budget | None = None):
     """Current lines at LIVE_BOOKS (Pinnacle first) for every upcoming NFL game. Costs len(markets)
-    credits. `floor`: refuse when this month's remaining credits are at or below it."""
+    credits. Skipped when quota.check() says the month's credits are too low for this kind of run."""
+    why = quota.check()
+    if why:
+        raise OddsAPIUnavailable(why)
     ts = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H%MZ")
     dest = CACHE / "live" / f"{ts}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     r = _get(f"/sports/{SPORT}/odds", dict(bookmakers=",".join(LIVE_BOOKS), markets=",".join(markets),
-                                            oddsFormat="american", dateFormat="iso"), floor=floor)
+                                            oddsFormat="american", dateFormat="iso"))
     if budget:
         budget.charge(r)
-    dest.write_text(json.dumps({"snapshot_utc": ts, "data": r.json()}))
-    return parse({"snapshot_utc": ts, "data": r.json()})
+    payload = {"snapshot_utc": ts, "credits_last": r.headers.get("x-requests-last"),
+               "credits_remaining": r.headers.get("x-requests-remaining"), "data": r.json()}
+    dest.write_text(json.dumps(payload))
+    return parse(payload)
 
 
 def historical(ts: pd.Timestamp, markets=("totals",), budget: Budget | None = None):

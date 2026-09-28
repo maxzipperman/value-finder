@@ -11,7 +11,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cfbweather import board, fetch  # noqa: E402
+from cfbweather import board, fetch, quota  # noqa: E402
 
 
 class Resp:
@@ -39,8 +39,9 @@ NAMES = {"Iowa Hawkeyes": "Iowa", "Ohio State Buckeyes": "Ohio State"}
 @pytest.fixture
 def api(tmp_path, monkeypatch):
     monkeypatch.setenv("ODDS_API_KEY", "test")
-    monkeypatch.setattr(fetch, "ODDS_CACHE", tmp_path / "oddsapi")
-    monkeypatch.setattr(fetch, "QUOTA", tmp_path / "oddsapi" / "quota.json")
+    monkeypatch.setattr(fetch, "RAW", tmp_path)
+    monkeypatch.setattr(quota, "STATE", tmp_path / "odds_quota.json")
+    monkeypatch.delenv("XPC_SERVICE_NAME", raising=False)
     calls = []
 
     def use(resp):
@@ -62,8 +63,8 @@ def test_prices_at_pinnacle_logs_best_book_and_caches(api):
     r = df.iloc[0]
     assert (r.line_src, r.mkt_total, r.mkt_under) == ("pinnacle", 45.5, -107)
     assert (r.best_under, r.best_under_book) == (-104, "fanduel")
-    assert len(list((fetch.ODDS_CACHE / "live").glob("*.json"))) == 1      # cache-first
-    assert fetch.quota_left() == 480
+    assert len(list((fetch.RAW / "oddsapi" / "live").glob("*.json"))) == 1   # cache-first
+    assert quota.read()["remaining"] == 480
 
 
 def test_draftkings_when_pinnacle_is_missing(api):
@@ -78,10 +79,10 @@ def test_failures_return_an_empty_frame(api, resp):
     assert fetch.odds_api_totals(NAMES).empty
 
 
-def test_credit_floor_skips_the_call(api):
+def test_credit_floor_skips_the_call(api, monkeypatch):
     calls = api(Resp(body=[]))
-    fetch.QUOTA.parent.mkdir(parents=True, exist_ok=True)
-    fetch.QUOTA.write_text(json.dumps(dict(month=pd.Timestamp.now(tz="UTC").strftime("%Y-%m"), remaining=0)))
+    monkeypatch.setenv("XPC_SERVICE_NAME", "com.cfbweather.alerts")
+    quota.STATE.write_text(json.dumps(dict(utc=pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"), remaining=0)))
     assert fetch.odds_api_totals(NAMES).empty and calls == []
 
 

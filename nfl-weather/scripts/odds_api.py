@@ -31,7 +31,7 @@ if a.cmd in ("plan", "backfill"):
                      max_credits=a.max_credits)
 elif a.cmd == "live":
     b = oddsapi.Budget(10)
-    df = oddsapi.live(budget=b, floor=oddsapi.MANUAL_FLOOR)
+    df = oddsapi.live(budget=b)
     df = df[(df.market == "totals") & (df.book == oddsapi.RULE_BOOK)]
     print(df[["commence_utc", "away", "home", "total", "over_price", "under_price"]].to_string(index=False))
     print(f"credits used {b.used}, remaining {b.remaining}")

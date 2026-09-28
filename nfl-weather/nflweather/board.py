@@ -54,10 +54,10 @@ def best_under(totals: pd.DataFrame, rule_book="pinnacle") -> pd.DataFrame:
                                                                     "book": "best_under_book"})
 
 
-def _pinnacle_live(floor=0):
+def _pinnacle_live():
     from . import oddsapi
     try:
-        df = oddsapi.live(markets=("totals",), floor=floor)
+        df = oddsapi.live(markets=("totals",))
     except SystemExit as e:  # no key, out of credits, API down: board still works on nflverse lines
         print(f"  Pinnacle unavailable: {e}")
         return None
@@ -72,9 +72,8 @@ def _pinnacle_live(floor=0):
          "snapshot_utc"]]
 
 
-def compute(days=8, refresh=True, pinnacle=False, credit_floor=0):
-    """`pinnacle`: price at live Pinnacle (1 Odds API credit). `credit_floor`: skip that call when
-    this month's remaining credits are at or below it (hand-run commands pass oddsapi.MANUAL_FLOOR)."""
+def compute(days=8, refresh=True, pinnacle=False):
+    """`pinnacle`: price at live Pinnacle (1 Odds API credit; quota.py may skip it when credits are low)."""
     if refresh:
         fetch.fetch_schedule()
     games = load_schedule()
@@ -113,7 +112,7 @@ def compute(days=8, refresh=True, pinnacle=False, credit_floor=0):
     up["mkt_total"], up["mkt_under"], up["mkt_over"] = up.total_line, up.under_odds, up.over_odds
     up["best_under"], up["best_under_book"] = np.nan, ""
     if pinnacle:
-        pin = _pinnacle_live(credit_floor)
+        pin = _pinnacle_live()
         if pin is not None and len(pin):
             up = up.drop(columns=["best_under", "best_under_book"]).merge(
                 pin, on=["home_team", "away_team", "gameday"], how="left")

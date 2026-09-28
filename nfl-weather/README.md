@@ -55,7 +55,7 @@ nflverse lines. The same call logs nine more books at no extra cost (up to 10 bo
 as one region), so each signal also shows the best under price at Pinnacle's number;
 Rule B still prices at Pinnacle. `alerts.py --dry-run` makes no Odds API call, and
 hand-run commands stop when fewer than 60 credits are left this month
-(`data/raw/oddsapi/quota.json`).
+(the shared `~/.cache/value-finder/odds_quota.json`, see `nflweather/quota.py`).
 
 Every bet alert ends with timing advice (issue #5): unders and favorites now, overs and
 underdogs later. After you bet, log what you actually got, e.g.
