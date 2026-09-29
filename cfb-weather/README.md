@@ -59,6 +59,8 @@ This adds **1 variant**, for a running total of 135.
 
 ## Forecast replay on NWS MOS, back to 2006 (issue #40, Sep 29)
 
+Count at merge (Sep 29, 2026): 233; bar p < 0.000215.
+
 Every long-run CFB Rule B number used the wind *observed* at the airport after the game. The live rule bets on a *forecast* made 1–3 days before. The Open-Meteo replay above only reaches back to 2024, because that archive starts there. The National Weather Service's own station forecasts (MOS) are archived, with the time each was issued, back to 2000. [`scripts/mos_replay.py`](scripts/mos_replay.py) replays the rule on those forecasts, using only what had been issued by the day of the bet.
 
 **Status: the method is checked on 2023–25, and the result there is not significant (p = 0.13). The 2006–25 download is still running.** The site allows about one request every 7–8 seconds, so the full pull (2,119 requests for college football, then 487 for the NFL, about 2 GB in all) takes five to six hours. It runs detached on the Mac and is resumable; the numbers below are the FBS 2023–25 sample only. The larger historical check, 2006–25, comes from rerunning `scripts/mos_replay.py` once the pull finishes.
