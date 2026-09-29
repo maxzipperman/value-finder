@@ -1229,7 +1229,7 @@ def test_amendment_5_states_the_decisions_a_held_back_copy_leaves_on_the_mac_onl
             "scorer goes on recording and nothing new is published, so every decision recorded until the hub puts that "
             "line back exists only on the Mac") in three
     assert "The first copy is checked the same way" in three
-    assert "its line says that the published copy is damaged, not the file" in three
+    assert "the line it prints says that the published copy is damaged, not the file" in three
     assert "recorded and lost on the same day, before that night's copy" not in norm(amendment5())
     replaces = norm(amendment5().split("### What this amendment replaces")[1])
     assert ('Amendment 4, section 3: "A record made since the last nightly copy exists only on the Mac until that '

@@ -573,10 +573,10 @@ and the reviews of this amendment found that the nightly copy itself could lose 
   is held: if the file doesn't hold it, it is printed from the copy as recorded, never decided again, and it is not
   restored from a damaged copy (the hub can restore it by hand). Recording resumes once the copy can be read again.
   The nightly copy never replaces a published copy that is itself cut or does not start with the record's header
-  line: it keeps it, and its line says that the published copy is damaged, not the file. An empty copy is replaced
-  as a first copy is published. A copy with any other damaged line is replaced only by a file that holds every line
-  of it. Otherwise the hub replaces a damaged copy by hand, with a commit to the ledgers branch. When the file is
-  missing, it is first restored by hand from a readable earlier copy in the branch's history (`git log
+  line: it keeps it, and the line it prints says that the published copy is damaged, not the file. An empty copy
+  is replaced as a first copy is published. A copy with any other damaged line is replaced only by a file that
+  holds every line of it. Otherwise the hub replaces a damaged copy by hand, with a commit to the ledgers branch.
+  When the file is missing, it is first restored by hand from a readable earlier copy in the branch's history (`git log
   origin/ledgers -- cfb-weather/decisions.csv`), as amendment 4 says.
 
 ### What this amendment replaces
