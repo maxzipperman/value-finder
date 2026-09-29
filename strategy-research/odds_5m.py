@@ -29,6 +29,9 @@ HIST, FEAT = 10, 3                 # historical multiplier; featured markets (h2
 PER_SNAP = HIST * FEAT             # one featured snapshot at up to 10 books
 HISTORY_BUDGET = 4_500_000         # the owner's target for history
 RESERVE = 300_000                  # probes, the live uses during the month, mistakes
+# Owner decisions, Sep 28 (via the hub): keep F4; drop X3 (the same data is free from Kalshi and
+# Polymarket at better resolution) and add its credits to the reserve, not to new pulls.
+DROPPED = {"X3"}
 
 # ---------------------------------------------------------------- season structures (estimates)
 # (season label, games, days in the season window, distinct kickoff slots, sealed holdout?)
@@ -165,8 +168,9 @@ def plan():
     ]
     p = pd.DataFrame(P, columns=["id", "pull", "arithmetic", "credits", "value", "primary_hypothesis"])
     p = p.sort_values(["value", "credits"], ascending=[False, True], kind="stable").reset_index(drop=True)
-    p["cumulative"] = p.credits.cumsum()
-    p["in_plan"] = p.cumulative <= HISTORY_BUDGET
+    p["dropped"] = p.id.isin(DROPPED)
+    p["cumulative"] = p.credits.where(~p.dropped, 0).cumsum()
+    p["in_plan"] = ~p.dropped & (p.cumulative <= HISTORY_BUDGET)
     return p, s, dict(daily_fb=daily_fb, hourly_fb=hourly_fb, nfl_p=nfl_p, cfb_p=cfb_p)
 
 
@@ -191,12 +195,14 @@ def main(save=True):
         live.to_csv(OUT / "odds_5m_live.csv", index=False)
     pd.set_option("display.width", 250, "display.max_colwidth", 110)
     print("\n5M month: historical pulls ranked by research value (cut line at "
-          f"{HISTORY_BUDGET:,}; reserve {RESERVE:,})")
-    print(p[["id", "value", "credits", "cumulative", "in_plan", "pull"]].to_string(index=False))
-    inp = p[p.in_plan]
-    print(f"\nIn plan: {inp.credits.sum():,} credits of history + {RESERVE:,} reserve = "
-          f"{inp.credits.sum() + RESERVE:,} of 5,000,000; below the cut: {', '.join(p[~p.in_plan].id)} "
-          f"({p[~p.in_plan].credits.sum():,})")
+          f"{HISTORY_BUDGET:,}; base reserve {RESERVE:,}; dropped by the owner: {', '.join(sorted(DROPPED))})")
+    print(p[["id", "value", "credits", "cumulative", "in_plan", "dropped", "pull"]].to_string(index=False))
+    inp, drop = p[p.in_plan], p[p.dropped]
+    reserve = RESERVE + drop.credits.sum()
+    print(f"\nIn plan: {inp.credits.sum():,} credits of history; reserve {reserve:,} ({RESERVE:,} plus "
+          f"{drop.credits.sum():,} freed by dropping {', '.join(drop.id)}); unallocated "
+          f"{5_000_000 - inp.credits.sum() - reserve:,}; below the cut: {', '.join(p[~p.in_plan & ~p.dropped].id)} "
+          f"({p[~p.in_plan & ~p.dropped].credits.sum():,})")
     print("\nSeason structures (estimates for non-football sports; the probe replaces them):")
     print(s.groupby("sport", sort=False).agg(seasons=("season", "size"), games=("games", "sum"),
                                              snapshots=("snapshots", "sum"), sealed=("sealed", "sum")).to_string())

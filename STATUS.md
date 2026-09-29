@@ -36,12 +36,20 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
      - the free-tier guard (errors mean "no price" instead of a crash; manual runs stop when fewer than 60 credits are left; dry runs spend nothing);
      - 10-book logging with the best under price on each signal;
      - the B1 timestamp and budget fixes.
-   - **Next purchase (owner decision, Sep 28):** one 5M month ($119) around Oct 1–3, once the pullers pass their tests. It replaces the 20K pilot and the March month.
-     - **The plan:** about 4.4M credits of history across NFL, CFB, MLB, NBA, NHL and the soccer heat leagues, plus a 300K reserve. The data-use plan is in [`odds-api-credits.md`](strategy-research/odds-api-credits.md#the-5m-month-owner-decision-september-28-2026).
-     - **Sealed holdout:** every 2026-season game in every sport stays unexamined until a hypothesis about it is pre-registered.
+   - **Next purchase (owner decision, Sep 28):** one 5M month ($119), bought **Thu Oct 1**. The hub runs the day-one checklist on the Mac that day. It replaces the 20K pilot and the March month.
+     - **The plan:** 4.18M credits of history across NFL, CFB, MLB, NBA, NHL and the soccer heat leagues, plus a 531,630 reserve (300K plus the dropped exchange group's 231,630). The data-use plan is in [`odds-api-credits.md`](strategy-research/odds-api-credits.md#the-5m-month-owner-decision-september-28-2026).
+     - **Owner answers (Sep 28):**
+       - the recommended holdout;
+       - keep the hourly football pull (F4), with the 5-minute windows (X2) deferred;
+       - drop the exchange group (X3).
+     - **Terms of use:** checked. Derived tables may go into git; raw responses stay out.
+     - **Sealed holdout:** these stay unexamined until a hypothesis about them is pre-registered:
+       - the 2026 NFL and CFB seasons;
+       - calendar-2026 MLB, soccer and World Cup games;
+       - the 2026-27 NBA and NHL seasons.
      - **Variants:** they would rise from 135 to 191.
      - **Pullers (PR B):** `sharp-markets` now has the bulk puller (`uv run markets odds5m`). It is tested against mocked responses; the hub runs it on day one by [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](sharp-markets/docs/ODDS5M_DAY_ONE.md). The first step is a probe of about 10.6K credits that builds exact schedules and checks the billing. Still to come: the live-use scripts (PR C) and the weather joins (PR D).
-     - **Decisions waiting on you** (listed at the top of that section): the NBA and NHL holdout definition, whether to keep the hourly football pull (1.6M credits), the exchange group, the terms-of-use check, and the post-month plan. After the month, live uses cost about 9K–20K credits a month, so 20K ($30) or 100K ($59).
+     - **Waiting on you: the plan after October. Decide around Oct 25, from real usage.** Live uses are estimated at about 9,400–19,700 credits a month: 20K ($30) covers the low case, and 100K ($59) the high case (the NBA collector polling all day).
 2. **Close capture is live (Sep 28), as a secondary measure.** A launchd job (`com.valuefinder.closecapture`) runs every 15 minutes. It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the close in `*/data/forward/closes.csv`.
    - Both scorers now also report CLV against that close. The registered primary CLV and the decision rules are unchanged: nfl-weather amendment 3, cfb-weather amendment 2, both dated before any signal.
    - Rule HT keeps its entry at the last logged quote; the scorer also reports the captured close for it.

@@ -273,6 +273,22 @@ def test_load_rows_leaves_sealed_seasons_out(cfg, tmp_path):
     assert {r["odds_event_id"] for r in sealed} == {"ev1", "ev26"}
 
 
+def test_real_config_matches_the_owners_decisions():
+    """Owner decisions, Sep 28: the sealed seasons exactly as below; X3 dropped; the NBA studies 2025-26."""
+    real = bulk.load_config()
+    sealed = {s: [w["label"] for w in sc["windows"] if w["sealed"]] for s, sc in real["sports"].items()}
+    want = {"americanfootball_nfl": ["2026"], "americanfootball_ncaaf": ["2026"], "basketball_nba": ["2026-27"],
+            "icehockey_nhl": ["2026-27"], "baseball_mlb": ["2026"], "soccer_fifa_world_cup": ["2026 North America"]}
+    for s, labels in sealed.items():
+        if s.startswith("soccer_") and s != "soccer_fifa_world_cup":
+            # calendar 2026: sealed where the league has a 2026 window, nothing earlier
+            assert labels == (["2026"] if any(w["label"] == "2026" for w in real["sports"][s]["windows"]) else []), s
+        else:
+            assert labels == want[s], s
+    assert "X3" not in real["pulls"] and list(real["pulls"])[-1] == "F6"
+    assert real["pulls"]["N1"]["only_seasons"] == ["2025-26"]
+
+
 def test_normalizer_keeps_point_and_description():
     body = {"timestamp": "2024-09-05T23:55:00Z", "data": {"id": "e", "commence_time": "2024-09-06T00:20:00Z",
             "home_team": "H", "away_team": "A", "bookmakers": [{"key": "draftkings", "markets": [

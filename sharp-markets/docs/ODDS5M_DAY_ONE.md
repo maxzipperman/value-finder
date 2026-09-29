@@ -11,7 +11,7 @@ Run every command from `sharp-markets/`.
 
 - **Dry run by default.** Without `--confirm`, no stage calls the API. Every stage without `--confirm` prints what it would do and the most it could cost.
 - **Run budget.** `--max-credits N` is checked before each call against that call's upper-bound cost, so a run can never go over N.
-- **Reserve floor.** `--floor` defaults to 300,000. The run stops before the account's remaining credits would drop below it. That keeps the live-use reserve.
+- **Reserve floor.** `--floor` defaults to 531,630: the 300K reserve plus the 231,630 freed by dropping X3. The run stops before the account's remaining credits would drop below it.
 - **Circuit breaker.** The run stops at once:
   - when a call bills more than its upper bound (`x-requests-last` above 10 × markets × regions, or above 1 for `/events`);
   - on HTTP 401 (key rejected);
@@ -61,7 +61,7 @@ Run every command from `sharp-markets/`.
    ```bash
    uv run markets odds5m plan
    ```
-   It prints calls and the upper-bound credits per pull from the real schedules, in value order, with a running total. The PR A estimate was 4.41M for F1 through X3. If the running total passes 4.5M, drop pulls from the bottom of the list (X3 first, then F6) rather than trimming seasons.
+   It prints calls and the upper-bound credits per pull from the real schedules, in value order, with a running total. The PR A estimate was 4.18M for F1 through F6 (X3 was dropped by the owner). If the running total passes 4.5M, drop pulls from the bottom of the list (F6 first, then N1) rather than trimming seasons, and tell the owner. Never go below the 531,630-credit reserve: that's 300K plus X3's credits, which the owner assigned to the reserve.
 4. **One week per sport**, to check coverage before the big spend. Dry run first to see the cost, then set `--max-credits` a little above it:
    ```bash
    uv run markets odds5m week                                 # prints the upper bound per pull
@@ -81,7 +81,7 @@ Run every command from `sharp-markets/`.
    uv run markets odds5m full --pull F2 --confirm --max-credits 110000
    ...
    ```
-   The order is F1, F2, F3, B1, S1, F4, H1, N2, F5, N1, F6, X3.
+   The order is F1, F2, F3, B1, S1, F4, H1, N2, F5, N1, F6.
    - At the default 8 requests a second, the whole plan (about 160,000 calls) takes about 6 hours. The API allows 30 a second, so `--rate 20` is safe if nothing else is using the key heavily.
    - If a run stops, read the `STOPPED:` line. A budget or floor stop is expected. A circuit-breaker stop means something needs a look before rerunning.
 6. **Reconcile credits** against the manifest:
