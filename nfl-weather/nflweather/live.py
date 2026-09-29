@@ -67,18 +67,24 @@ def active_triggers(ledger: pd.DataFrame, now: pd.Timestamp) -> pd.DataFrame:
     return L[L.rule_b.isin(TRIGGERED) & (L.kick_utc > now) & (L.kick_utc - now <= POLL_HORIZON)]
 
 
+LEDGER_KEEP = ["game_id", "home_team", "away_team", "kick_utc", "snapshot_utc", "rule_b", "wx_wind", "lead_days"]
+
+
 def trigger_rows(active: pd.DataFrame, lines: pd.DataFrame, poll_utc: str) -> pd.DataFrame:
-    """One row per triggered game x book: the book's total and prices at this poll."""
+    """One row per triggered game x book: the book's total and prices at this poll. Only the ledger
+    columns the log needs are carried into the match, so a ledger that gains columns (it gained
+    quote_utc and quote_update on Sep 28) can't collide with the feed's own columns."""
     cols = ["poll_utc", "game_id", "kick_utc", "ledger_snapshot_utc", "rule_b", "wx_wind", "lead_days", "book",
             "total", "under_price", "over_price", "book_update", "quote_utc", "sealed"]
     if active.empty or lines is None or lines.empty:
         return pd.DataFrame(columns=cols)
-    tot = lines[lines.market == "totals"].copy()
+    tot = lines[lines.market == "totals"].rename(columns={"snapshot_utc": "quote_utc"})
     tot["commence"] = pd.to_datetime(tot.commence_utc, utc=True)
-    m = active.merge(tot, left_on=["home_team", "away_team"], right_on=["home", "away"], how="inner")
+    led = active[LEDGER_KEEP].rename(columns={"snapshot_utc": "ledger_snapshot_utc"})
+    m = led.merge(tot, left_on=["home_team", "away_team"], right_on=["home", "away"], how="inner")
     m = m[(m.commence - m.kick_utc).abs() <= MATCH_TOLERANCE]
-    m = m.assign(poll_utc=poll_utc, ledger_snapshot_utc=m.snapshot_utc_x, quote_utc=m.snapshot_utc_y,
-                 sealed=m.kick_utc.map(sealed), kick_utc=m.kick_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    m = m.assign(poll_utc=poll_utc, sealed=m.kick_utc.map(sealed),
+                 kick_utc=m.kick_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
     return m[cols].reset_index(drop=True)
 
 

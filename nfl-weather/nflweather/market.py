@@ -18,25 +18,35 @@ FRANCHISE = {"OAK": "LV", "SD": "LAC", "STL": "LA"}
 
 
 def _num(v):
-    """`v` as a float array of at least one element; anything that isn't a number is NaN."""
+    """`v` (a single value or a 1-D list, array or Series) as a flat float array of at least one element;
+    anything that isn't a number is NaN."""
     flat = np.atleast_1d(np.asarray(v, dtype=object)).ravel()
     return np.asarray(pd.to_numeric(pd.Series([None if pd.isna(x) else x for x in flat], dtype=object),
                                     errors="coerce"), dtype=float)
 
 
+def _is_price(odds):
+    """Element by element: a finite number at or beyond 100 either side of zero."""
+    with np.errstate(invalid="ignore"):
+        return np.isfinite(odds) & (np.abs(odds) >= 100)
+
+
 def valid_odds(odds):
-    """True for a usable American price: a number at or beyond 100 either side of zero. Nothing
-    between -100 and +100 is a price, so a feed value there is treated as no price."""
-    odds = _num(odds)
-    ok = np.abs(odds) >= 100
-    return bool(ok[0]) if np.ndim(odds) and len(odds) == 1 else ok
+    """True for a usable American price: a finite number at or beyond 100 either side of zero. Nothing
+    between -100 and +100 is a price, so a feed value there is treated as no price.
+
+    A single value gives True or False. A list, array or Series (1-D) gives an array with one answer per
+    element, even when it holds one element, so `df[valid_odds(df.x)]` works on a frame of any length."""
+    ok = _is_price(_num(odds))
+    return bool(ok[0]) if np.ndim(odds) == 0 else ok
 
 
 def american_to_profit(odds):
-    """Profit per unit staked on a winner. NaN for a missing price or one that isn't valid American odds."""
+    """Profit per unit staked on a winner. NaN for a missing price or one that isn't valid American odds.
+    `odds` is a single value or 1-D; the answer is always a flat array."""
     odds = _num(odds)
     with np.errstate(divide="ignore", invalid="ignore"):
-        return np.where(np.abs(odds) >= 100, np.where(odds > 0, odds / 100, 100 / np.abs(odds)), np.nan)
+        return np.where(_is_price(odds), np.where(odds > 0, odds / 100, 100 / np.abs(odds)), np.nan)
 
 
 def american_to_prob(odds):
@@ -193,7 +203,11 @@ def p_under_at(line, market_total, resid_sorted):
     The under's chance at the reference does not depend on the size of the total. That was tested on
     the frozen cohort and the flat model scored best (strategy-research/gate_level_check.py), so the
     offered number matters only through x and through whole-number versus half-point lines. The test
-    covered the under rate, not the spread of the residual."""
+    covered the under rate, not the spread of the residual.
+
+    `line` and `market_total` are single values or 1-D (lists, arrays or Series of the same length);
+    2-D input is not supported. A missing or non-numeric line or reference prices as NaN, not as a
+    certain win."""
     shape = np.broadcast(np.asarray(line, dtype=object), np.asarray(market_total, dtype=object)).shape
     line = np.round(_num(line) * 4) / 4          # lines sit on the quarter-point grid
     ref = _num(market_total)
@@ -206,17 +220,20 @@ def p_under_at(line, market_total, resid_sorted):
 
     quarter = ~np.isclose((line * 2) % 1, 0)
     (w0, p0), (w1, p1) = at(np.where(quarter, line - 0.25, line)), at(np.where(quarter, line + 0.25, line))
-    return ((w0 + w1) / 2).reshape(shape), ((p0 + p1) / 2).reshape(shape)
+    missing = ~(np.isfinite(line) & np.isfinite(ref))
+    win, push = np.where(missing, np.nan, (w0 + w1) / 2), np.where(missing, np.nan, (p0 + p1) / 2)
+    return win.reshape(shape), push.reshape(shape)
 
 
 def ev_under(line, odds, market_total, resid_sorted):
     """Expected profit per unit staked on the under at the offered `line` and American `odds`, against
     the reference total `market_total` (pushes return the stake). NaN when the line, the reference or
-    the price is missing, or when the price isn't valid American odds."""
+    the price is missing, or when the price isn't valid American odds. Inputs are single values or 1-D
+    (2-D is not supported); the answer is always a flat array."""
     p_win, p_push = (np.atleast_1d(v) for v in p_under_at(line, market_total, resid_sorted))
     profit = american_to_profit(odds)
     ev = p_win * profit - (1 - p_win - p_push)
-    bad = np.isnan(profit) | np.isnan(_num(line)) | np.isnan(_num(market_total))
+    bad = np.isnan(profit) | ~np.isfinite(_num(line)) | ~np.isfinite(_num(market_total))
     return np.where(bad, np.nan, ev)
 
 

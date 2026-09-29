@@ -245,6 +245,12 @@ def test_a_rule_ht_signal_alerts_on_the_live_path(tmp_path, monkeypatch):
     assert sent == [] and runs.status.tolist() == ["ok", "ok"]            # each alert goes out once
 
 
+def failed(error):
+    """A failed run exits with status 1 after printing the error with any key blanked (it no longer
+    re-raises the original exception, whose text could hold a key)."""
+    return isinstance(error, SystemExit) and error.code == 1
+
+
 def test_one_games_alert_cannot_cost_the_others_theirs(tmp_path, monkeypatch):
     def broken(kick, now):
         raise TypeError("tz_convert() takes exactly 2 positional arguments (1 given)")
@@ -252,7 +258,7 @@ def test_one_games_alert_cannot_cost_the_others_theirs(tmp_path, monkeypatch):
     rows = [board_row(), board_row(game_id=402, home_team="Army", away_team="Navy", rule_ht="below_threshold")]
     sent, runs, error = run_alerts(tmp_path, monkeypatch, pd.DataFrame(rows))
     assert sent[0][0].startswith("CFB RULE B WIND UNDER 63.5 at -110: Navy @ Army")
-    assert isinstance(error, RuntimeError) and runs.status.tolist() == ["failed"] and runs.games.tolist() == [2]
+    assert failed(error) and runs.status.tolist() == ["failed"] and runs.games.tolist() == [2]
     assert runs.error[0].startswith("while building the alerts: RuntimeError: 1 game(s) raised: Southern Miss @ Troy")
     assert sent[-1][0] == "CFB weather alerts: run failed"
 
@@ -261,7 +267,7 @@ def test_a_run_that_fails_while_saving_is_recorded_and_notified(tmp_path, monkey
     def full(up):
         raise OSError(28, "No space left on device")
     sent, runs, error = run_alerts(tmp_path, monkeypatch, pd.DataFrame([board_row()]), save=full)
-    assert isinstance(error, OSError) and runs.status.tolist() == ["failed"]
+    assert failed(error) and runs.status.tolist() == ["failed"]
     assert runs.error[0].startswith("while saving the ledger: OSError")
     assert [t for t, _ in sent] == ["CFB weather alerts: run failed"]
 
@@ -270,6 +276,6 @@ def test_a_failed_download_is_recorded_without_the_key(tmp_path, monkeypatch):
     def down(**k):
         raise ConnectionError("GET https://api.the-odds-api.com/v4/odds?apiKey=SECRETKEY123 failed")
     sent, runs, error = run_alerts(tmp_path, monkeypatch, down)
-    assert isinstance(error, ConnectionError) and runs.error[0].startswith("while building the board")
+    assert failed(error) and runs.error[0].startswith("while building the board")
     assert "SECRETKEY123" not in runs.error[0] and "SECRETKEY123" not in sent[0][1]
     assert "SECRETKEY123" not in runlog.scrub("x?api_key=SECRETKEY123&y=1 token=SECRETKEY123")

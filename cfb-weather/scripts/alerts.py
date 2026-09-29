@@ -9,14 +9,20 @@
            unless a later manual snapshot is logged.
 
 Mac notification plus the same iPhone ntfy topic as the NFL alerts.
-State: data/forward/alert_state.json. Every run, finished or failed, leaves one row in
-data/forward/runs.csv.
+State: data/forward/alert_state.json, so nothing is sent twice: each alert is marked sent, and the
+file saved, right after it goes out, so a send that fails part way can't repeat the earlier ones
+next run. The ledger is saved before the state is read, so a damaged state file can't cost a ledger
+row: it is kept beside the new one, the run starts from an empty state, and the run is still recorded
+"ok", with a note (a run is "failed" only when a step fails or an alert can't be built or sent). Every
+run, finished or
+failed, leaves one row in data/forward/runs.csv; a failed run prints the error with any key blanked
+and exits with status 1. ops/RUN_RECORDS.md explains the records.
 
     python scripts/alerts.py [--dry-run | --test]    # --dry-run: ESPN prices only, no Odds API credit
 """
 import argparse
-import json
 import sys
+import traceback
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -53,38 +59,57 @@ def record(status, **kw):
 def run(at):
     """One alert run. `at` holds the stage the run has reached and what it has counted so far, so a
     failure anywhere is recorded with both."""
-    STATE.parent.mkdir(parents=True, exist_ok=True)
-    state = json.loads(STATE.read_text()) if STATE.exists() else {}
     up = board.compute(prices=not args.dry_run)  # a dry run spends no Odds API credits
     if up.empty:
         return print("no FBS games in the next 8 days")
     at["counts"] = dict(games=len(up), signals=int((up.rule_b == "SIGNAL").sum() + (up.rule_ht == "SIGNAL").sum()),
-                        priced=int(up.mkt_total.notna().sum()), unmapped="; ".join(fetch.LAST_UNMAPPED))
+                        priced=int(up.mkt_total.notna().sum()), unmapped="; ".join(fetch.LAST_UNMAPPED),
+                        rule_priced=int(up.line_src.isin(fetch.RULE_BOOKS).sum()))   # Odds API at a rule book
     at["stage"] = "saving the ledger"
     if not args.dry_run:
         board.save(up)
+    # read after the ledger is saved: a damaged state file is kept aside and can't cost a ledger row
+    at["stage"] = "reading the alert state"
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    state, at["note"] = runlog.read_alert_state(STATE, keep_copy=not args.dry_run)
+    if at["note"]:
+        print(f"  {runlog.scrub(at['note'])}")
     at["stage"] = "building the alerts"
     now = pd.Timestamp.now(tz="UTC")
-    alerts, problems = [], []
+    outbox, problems = [], []       # outbox: (game's state, key, title, body), built and not yet sent
     for r in up.itertuples():
         s = state.setdefault(str(r.game_id), {"sent": []})
         game = f"{r.away_team} @ {r.home_team} {r.kick_et} ET"
         try:        # one game's alert can't cost the others theirs
             for key, title, body in game_alerts(r, game, now):
-                if key not in s["sent"]:
-                    s["sent"].append(key)
-                    alerts.append((title, body))
+                if key not in s.setdefault("sent", []) and not any(q is s and k == key for q, k, _, _ in outbox):
+                    outbox.append((s, key, title, body))
         except Exception as e:
             problems.append(f"{game}: {type(e).__name__}: {e}")
     at["stage"] = "sending the alerts"
-    for title, body in alerts:
+    unsaved = []
+
+    def save():
+        """Save the alert state (not on a dry run). A write that fails doesn't stop the sends: a missed
+        alert is worse than a repeated one. The run is then recorded as failed."""
+        if not args.dry_run:
+            try:
+                runlog.write_alert_state(STATE, state)
+            except OSError as e:
+                unsaved.append(e)
+    for s, key, title, body in outbox:
         print(f"ALERT  {title}\n       {body}")
         if not args.dry_run:
             notify.send(title, body)
-    if not alerts:
+        s["sent"].append(key)
+        save()                                      # saved as sent before the next alert goes out
+    if not outbox:
         print(f"{pd.Timestamp.now(tz='UTC'):%Y-%m-%d %H:%M}Z checked {len(up)} FBS games, nothing new")
-    if not args.dry_run:
-        STATE.write_text(json.dumps(state, indent=1))
+    save()
+    if unsaved:     # every alert went out, but which ones is not on disk: some may repeat next run
+        at["stage"] = "saving the alert state"
+        also = f"; also {len(problems)} game(s) raised: " + " | ".join(problems) if problems else ""
+        raise RuntimeError(f"alert_state.json could not be saved ({type(unsaved[-1]).__name__}: {unsaved[-1]}){also}")
     if problems:
         at["stage"] = "building the alerts"
         raise RuntimeError(f"{len(problems)} game(s) raised: " + " | ".join(problems))
@@ -116,16 +141,19 @@ def game_alerts(r, game, now):
     return out
 
 
-at = {"stage": "building the board", "counts": {}}
+at = {"stage": "building the board", "counts": {}, "note": ""}
 try:
     run(at)
 except BaseException as e:      # log, don't drop: a run that fails at any stage leaves a record and says so
     why = runlog.scrub(f"while {at['stage']}: {type(e).__name__}: {e}")
-    record("failed", error=why, **at["counts"])
+    record("failed", error="; ".join(filter(None, (why, at["note"]))), **at["counts"])
     if not args.dry_run:
         try:
             notify.send("CFB weather alerts: run failed", f"{why[:300]}. See data/forward/runs.csv.")
         except Exception as e2:
             print(f"  the failure notice could not be sent: {type(e2).__name__}")
-    raise
-record("ok", **at["counts"])
+    # never the raw exception: its text can hold a key, and alerts.log is pushed to GitHub
+    where = " <- ".join(f"{Path(f.filename).name}:{f.lineno}" for f in traceback.extract_tb(e.__traceback__)[::-1][:3])
+    print(f"{pd.Timestamp.now(tz='UTC'):%Y-%m-%d %H:%M}Z run failed {why} (at {where})", flush=True)
+    sys.exit(1)
+record("ok", error=at["note"], **at["counts"])
