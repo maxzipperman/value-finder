@@ -16,7 +16,8 @@ UTC = timezone.utc
 SNAPSHOT_SECONDS = 30
 SCORER_SECONDS = 600
 PROJECTS = commands.PROJECTS
-SPORT_OF = {"nfl-weather": "NFL", "cfb-weather": "CFB"}
+SPORT_OF = {"nfl-weather": "NFL", "cfb-weather": "CFB"}                   # a short tag, as on the board
+SPORT_IN_WORDS = {"nfl-weather": "NFL", "cfb-weather": "college football"}  # the sport in a sentence
 QUOTA_FIELDS = ("utc", "remaining", "used", "last", "project", "status")     # never the key's fingerprint
 DEFAULT_RUN_TIMES = [(7, 30), (11, 30), (15, 30), (19, 30)]
 JOBS = [
@@ -55,7 +56,7 @@ class Config:
 
 
 def label(project: str, what: str, name: str) -> str:
-    return f"the {SPORT_OF[project] if project in SPORT_OF else project} {what} ({project}/data/forward/{name})"
+    return f"the {SPORT_IN_WORDS.get(project, project)} {what} ({project}/data/forward/{name})"
 
 
 def read_runs(path: Path, what: str, now: datetime | None = None, tz: tzinfo = UTC) -> Read:
@@ -302,8 +303,9 @@ class Store:
             self._expect(snap, snap.runs[p], label(p, "run record", "runs.csv"))
             n = snap.runs[p].future
             if n:
-                snap.warnings.append(f"The {SPORT_OF[p]} run record has {words.count(n, 'row')} logged later than "
-                                     f"now, {'which is' if n == 1 else 'which are'} left out; check the Mac's clock.")
+                snap.warnings.append(f"The {SPORT_IN_WORDS[p]} run record has {words.count(n, 'row')} logged later "
+                                     f"than now, {'which is' if n == 1 else 'which are'} left out; check the Mac's "
+                                     "clock.")
             snap.alert_state[p] = read_json(fwd / "alert_state.json", label(p, "alert record", "alert_state.json"))
             if snap.alert_state[p].data is not None and not isinstance(snap.alert_state[p].data, dict):
                 snap.alert_state[p] = Read(note=label(p, "alert record", "alert_state.json") + " is not in the "

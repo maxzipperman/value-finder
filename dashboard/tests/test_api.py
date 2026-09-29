@@ -461,7 +461,11 @@ def test_ledger_grows_between_reads(root, home):
     clock.t += timedelta(minutes=91)                  # 18:31 UTC: after that run was logged
     s = api.summary(store)
     assert s["games_on_board"] == 3 + 1            # the NFL latest run now has one game
-    assert s["signals_live"] == 3 + 1 - 0
+    # counted from the same games as the board: NYJ_MIA and Rule HT on 401000002. BUF_NE and TEN_BAL signalled in
+    # the run before, which the latest run no longer lists, so they are on neither
+    assert s["signals_live"] == 1 + 1
+    b = api.board(store)
+    assert len(b["games"]) == s["games_on_board"] and b["signals"] == s["signals_live"]
     # a rewrite (new file, same name) is read from the top
     shutil.copy(nfl, nfl.with_suffix(".tmp"))
     os.replace(nfl.with_suffix(".tmp"), nfl)
@@ -492,11 +496,13 @@ def test_a_logging_time_that_cant_be_read_is_left_out(root, home):
     store = make_store(root, home)
     s = api.summary(store)
     assert s["health"] == "ok", s["problems"]
-    # LV_LAC joins the board; NYJ_MIA isn't in the latest run, but its latest row signals and it hasn't kicked off
-    assert s["games_on_board"] == 8 + 1 and s["signals_live"] == 3 + 1
+    # LV_LAC joins the board. NYJ_MIA's row signals, but it is from an earlier run and its game has a time set, so
+    # it is neither on the board nor counted: the light counts the board's games
+    assert s["games_on_board"] == 8 + 1 and s["signals_live"] == 3
     b = api.board(store)
     assert b["runs"]["nfl"] == {"sport": "NFL", "latest_run": "7:30 AM", "games": 6}
     assert "2026_05_NYJ_MIA" not in {g["game_id"] for g in b["games"]}
+    assert b["signals"] == s["signals_live"] and len(b["games"]) == s["games_on_board"]
     assert ("1 row of the NFL ledger (nfl-weather/data/forward/ledger.csv) has a logging time (snapshot_utc) that "
             "can't be read; it is left out.") in b["notes"]
     assert b["header"]["last_written"] == "Last run 7:30 AM"

@@ -66,7 +66,7 @@
   {
     "id": "cfb-rule-b-observed-2006-25",
     "title": "College football wind under on observed wind, 2006–25",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "backtest",
     "result": "The under won 56.6% against the close in games with observed wind of 15 mph or more (+8% at −110); 57.4% in 2016–25 and 56.4% in 2021–25.",
     "record": null,
@@ -82,7 +82,7 @@
   {
     "id": "cfb-rule-b-opener",
     "title": "College football wind under against the opening total",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "backtest",
     "result": "The under won 60.9% against the opener, with totals falling 1.4 points by kickoff.",
     "record": null,
@@ -98,7 +98,7 @@
   {
     "id": "cfb-rule-b-replay-openmeteo-2024-25",
     "title": "College football wind under, replayed on the forecasts available at bet time (2024–25)",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "replay",
     "result": "On the forecasts that existed at bet time the rule went 61–46–3 (57.0%) at the close, ROI +8.8% at −110; two seasons can't confirm it.",
     "record": "61-46-3",
@@ -114,7 +114,7 @@
   {
     "id": "cfb-rule-b-replay-mos-2006-25",
     "title": "College football wind under, replayed on NWS MOS forecasts as issued (2006–25)",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "replay",
     "result": "On the forecasts as they were issued, the rule went 715–555–14 (56.3%) on 1,284 signals over 20 seasons, a return of +7.5% per bet at an assumed −110; it beats break-even by ordinary standards but does not clear this project's bar.",
     "record": "715-555-14",
@@ -130,7 +130,7 @@
   {
     "id": "cfb-rule-b-replay-mos-2023-25",
     "title": "College football wind under, replayed on NWS MOS forecasts as issued (FBS 2023–25)",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "replay",
     "result": "On forecasts as issued the rule went 112–86–2 (56.6%) at the close, ROI +8.0% at −110; not evidence of an edge on its own.",
     "record": "112-86-2",
@@ -146,7 +146,7 @@
   {
     "id": "cfb-rule-ht-2016-25",
     "title": "College football high totals go under (Rule HT), 2016–25",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "backtest",
     "result": "When the closing total was at least the prior season's mean + 10, the under went 373–273 (57.7%), above 50% in 9 of 10 seasons.",
     "record": "373-273",
@@ -162,7 +162,7 @@
   {
     "id": "cfb-rule-ht-restated",
     "title": "Rule HT restated on the corrected spread data (#36)",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "backtest",
     "result": "On the corrected spread data the pre-check's by-spread split sums to 502–393 (56.1%), or 434–326 (57.1%) on FBS-involved games.",
     "record": "502-393",
@@ -178,12 +178,12 @@
   {
     "id": "key-numbers-declared",
     "title": "Key-number table against the registered pricing model",
-    "sport": "NFL and CFB",
+    "sport": "NFL and college football",
     "kind": "null result",
     "result": "The table did not beat the registered pricing model on any of the 8 comparisons declared before the run, so the pricing model stays as registered.",
     "record": null,
     "win_rate": null,
-    "n": "3,028 NFL and 15,768 CFB games",
+    "n": "3,028 NFL and 15,768 college football games",
     "p_value": null,
     "clears_bar": false,
     "bar": "p < 0.00022 (0.05 / 232)",
@@ -194,7 +194,7 @@
   {
     "id": "key-numbers-cfb-half-point",
     "title": "College football: where games land next to a half-point line",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "lead",
     "result": "The table's log loss is 1.5% lower out of sample (95% interval 0.7% to 2.1%; better in 15 of 20 seasons).",
     "record": null,
@@ -226,7 +226,7 @@
   {
     "id": "money-gate-today",
     "title": "Today's paper-to-money gate",
-    "sport": "CFB and NFL",
+    "sport": "College football and NFL",
     "kind": "simulation",
     "result": "“Paper until 20 settled signals show positive average CLV” passes 49–51% of the time with no edge at all, so it isn't a filter.",
     "record": null,
@@ -242,9 +242,9 @@
   {
     "id": "money-gate-sequential",
     "title": "The recommended sequential gate (not chosen yet)",
-    "sport": "CFB",
+    "sport": "College football",
     "kind": "simulation",
-    "result": "With no edge it passes on CFB about 2.6% of the time (4–5% if signals cluster as much as the most pessimistic estimate); real money this season about 21% of the time at half the historical line move, 65% at the full move.",
+    "result": "With no edge it passes in college football about 2.6% of the time (4–5% if signals cluster as much as the most pessimistic estimate); real money this season about 21% of the time at half the historical line move, 65% at the full move.",
     "record": null,
     "win_rate": null,
     "n": "40,000 simulated runs of 40 signals per case",
@@ -258,16 +258,16 @@
   {
     "id": "keep-test-false-pass",
     "title": "The keep test passes too often",
-    "sport": "CFB and NFL",
+    "sport": "College football and NFL",
     "kind": "simulation",
-    "result": "Signals move together, so the keep test as first registered (the plain interval) passes a no-edge rule about 5.5% of the time on CFB instead of 2.7%, and 8–10% on NFL instead of 2%.",
+    "result": "Signals move together, so the keep test as first registered (the plain interval) passes a no-edge rule about 5.5% of the time in college football instead of 2.7%, and 8–10% in the NFL instead of 2%.",
     "record": null,
     "win_rate": null,
     "n": "40,000 simulated runs of 40 signals per case",
     "p_value": null,
     "clears_bar": false,
     "bar": "Not a betting test: it adds no variants",
-    "note": "nfl-weather amendment 7 and cfb-weather amendment 5 (Sep 29) register the wider of the plain interval and one grouped by game day. In the realistic case it keeps a no-edge rule 2.8 to 3.0% of the time on CFB and 5.8 to 7.4% on NFL, against an intended 2.5%. It is registered for both sports as an improvement, with its remaining error stated in the amendments.",
+    "note": "nfl-weather amendment 7 and cfb-weather amendment 5 (Sep 29) register the wider of the plain interval and one grouped by game day. In the realistic case it keeps a no-edge rule 2.8 to 3.0% of the time in college football and 5.8 to 7.4% in the NFL, against an intended 2.5%. It is registered for both sports as an improvement, with its remaining error stated in the amendments.",
     "source": "strategy-research/README.md",
     "date": "2026-09-29"
   }

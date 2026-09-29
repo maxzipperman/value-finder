@@ -32,6 +32,13 @@ RULE_NAMES = {"rule_b": "Rule B", "rule_ht": "Rule HT", "lean": "Model lean"}
 # call this set TRIGGERED). Rule B's expected value is priced from the frozen cohort of outdoor games with 15+ mph
 # wind, so it means something only on these rows, though the jobs log it on every priced row.
 WIND_TRIGGER_MET = ("SIGNAL", "SIGNAL_SECONDARY", "price_too_high", "negative_ev", "no_price", "outside_horizon")
+# Of those, the statuses on which the Board and Game screens show the value: a signal, at either price; and
+# "negative_ev", where the value (not above zero) is what says why there is no signal. On any other status a
+# positive value would read as a priced edge on a game that is not a signal, so a dash is shown and the status
+# says why ("Wind trigger, outside the 1 to 3 day window", "Wind trigger, price too high", ...). The value at the
+# best number is shown on a signal only: on a "negative_ev" row it can be above zero at another book.
+WIND_VALUE_SHOWN = ("SIGNAL", "SIGNAL_SECONDARY", "negative_ev")
+WIND_BEST_SHOWN = ("SIGNAL", "SIGNAL_SECONDARY")
 
 
 class Screen:
@@ -100,52 +107,65 @@ def to_play(L, r, now: datetime) -> bool:
     return u is not None and u > now
 
 
-def upcoming(snap: Snap, now: datetime):
-    """(sport, ledger, row) for each game not yet kicked off in the latest run of each sport."""
+def board_set(snap: Snap, now: datetime) -> list[tuple]:
+    """The one set of games that the board lists and that games_on_board, signals_live and leans_live count, so
+    the menu-bar light, Home and the board never disagree. For each sport, each as (sport, ledger, row, listed):
+
+    - every game in the latest run that hasn't kicked off (one whose time isn't set: until its date has passed in
+      Eastern time), with its row from that run (listed True);
+    - every game whose newest row has no kickoff time set, whose date (Eastern) hasn't ended, and which the latest
+      run no longer lists, with that newest row (listed False). The college job stops logging such a game at its
+      first run after the placeholder kickoff, midnight Eastern, hours before the game is played.
+
+    A game with a time set that the latest run doesn't list is in neither part, whatever its older rows say."""
+    out = []
     for sport, L in snap.ledgers.items():
-        for n in L.latest_rows:
-            r = L.rows[n]
-            if to_play(L, r, now):
-                yield sport, L, r
+        gid_i = I["game_id"]
+        listed = {L.rows[n][gid_i] for n in L.latest_rows}
+        for gid, idx in L.by_game.items():
+            r = L.rows[idx[-1]]                          # the newest row; for a listed game, the latest run's
+            if gid in listed:
+                if to_play(L, r, now):
+                    out.append((sport, L, r, True))
+            elif not L.time_set(r) and to_play(L, r, now):
+                out.append((sport, L, r, False))
+    return out
 
 
-def signals_live(snap: Snap, now: datetime) -> int:
-    """Games not yet kicked off whose latest logged row is a signal under Rule B (either price) or Rule HT.
-    The NFL model lean is a watch, as the alert job and runs.csv count it, and is counted apart (leans_live)."""
-    n = 0
-    for L in snap.ledgers.values():
-        for idx in L.by_game.values():
-            r = L.rows[idx[-1]]
-            if L.signal(r) and to_play(L, r, now):
-                n += 1
-    return n
+def on_board(store: Store, snap: Snap, now: datetime) -> list[tuple]:
+    """board_set, worked out once per snapshot and minute (at the minute's start), so that every screen and the
+    light asked within the same minute get the same games, whichever asked first."""
+    minute = now.replace(second=0, microsecond=0)
+    return store.derived(("on_board", snap.built, minute), lambda: board_set(snap, minute))
 
 
-def leans_live(snap: Snap, now: datetime) -> int:
-    """NFL games not yet kicked off whose latest logged row is a model lean (under or over)."""
-    L = snap.ledgers.get("nfl")
-    n = 0
-    for idx in (L.by_game.values() if L is not None else ()):
-        r = L.rows[idx[-1]]
-        if get(r, "lean").strip() in ("UNDER lean", "OVER lean") and to_play(L, r, now):
-            n += 1
-    return n
+def signals_live(games: list[tuple]) -> int:
+    """Games on the board whose row is a signal under Rule B (either price) or Rule HT. The NFL model lean is a
+    watch, as the alert job and runs.csv count it, and is counted apart (leans_live)."""
+    return sum(1 for _, L, r, _ in games if L.signal(r))
 
 
-def summary(store: Store) -> dict:
+def leans_live(games: list[tuple]) -> int:
+    """NFL games on the board whose row is a model lean (under or over)."""
+    return sum(1 for sport, _, r, _ in games
+               if sport == "nfl" and get(r, "lean").strip() in ("UNDER lean", "OVER lean"))
+
+
+def summary(store: Store, snap: Snap | None = None, now: datetime | None = None) -> dict:
     """GET /api/summary: the menu-bar light's contract, exactly these fields."""
-    snap = store.snapshot()
-    now = store.clock()
+    snap = snap or store.snapshot()
+    now = now or store.clock()
     tz = store.cfg.tz
     h = health_mod.assess(snap, now, tz)
     nxt = words.next_run(run_times(snap), now, tz)
     q = snap.quota or {}
     credits = q.get("remaining")
+    games = on_board(store, snap, now)
     return {
         "generated_utc": words.iso_z(now),
         "health": h.level,
-        "signals_live": int(signals_live(snap, now)),
-        "games_on_board": int(sum(1 for _ in upcoming(snap, now))),
+        "signals_live": int(signals_live(games)),
+        "games_on_board": len(games),
         "next_run_local": nxt.astimezone(tz).strftime("%H:%M") if nxt else "--:--",
         "credits_remaining": credits if isinstance(credits, int) else None,
         "problems": list(h.problems),
@@ -185,32 +205,55 @@ def wind_rule_met(r) -> bool:
     return get(r, "rule_b").strip() in WIND_TRIGGER_MET
 
 
+def wind_rule_bar(snap: Snap) -> str:
+    """One sentence under the board: whether Rule B clears the project's multiple-testing bar, read from the
+    evidence list every time (its Rule B results have "rule-b" in their id), never written into the page."""
+    raw = snap.evidence.data
+    raw = raw.get("entries", []) if isinstance(raw, dict) else raw if isinstance(raw, list) else []
+    results = [e for e in raw if isinstance(e, dict) and "rule-b" in str(e.get("id", ""))
+               and e.get("title") and e.get("result")]
+    if not results:
+        return ("Rule B is not counted as clearing the project’s multiple-testing bar: the evidence list has no Rule B "
+                "result that can be read.")
+    n, k = len(results), sum(1 for e in results if e.get("clears_bar") is True)
+    if not k:
+        return (f"Rule B has not cleared the project’s multiple-testing bar: none of its {n:,} results on the "
+                "Research screen does.")
+    return (f"{k:,} of Rule B’s {n:,} results on the Research screen {'clears' if k == 1 else 'clear'} the project’s "
+            "multiple-testing bar; a signal is still a paper entry for the forward test, not a proven bet.")
+
+
 def lean_model_applies(sport: str, r) -> bool:
     """The NFL lean model's chance of the under means something only for an outdoor NFL game with a forecast (the
     lean rule's own gate, wx_src "era5"); the jobs log p_under on every row."""
     return sport == "nfl" and get(r, "wx_src").strip() == "era5"
 
 
-def game_row(scr: Screen, sport: str, L, r) -> dict:
+def game_row(scr: Screen, sport: str, L, r, listed: bool = True) -> dict:
+    """One logged row as the Board and Game screens show it. `listed` is False for a game on the board that the
+    latest run no longer lists (its time isn't set; see board_set): its time note says when it was last logged."""
     k = L.kickoff(r)
     timed = L.time_set(r)
     logged = L.logged(r)
     met = wind_rule_met(r)
+    b = get(r, "rule_b").strip()
     return {
         "sport": SPORT_OF[L.project], "sport_key": sport, "game_id": get(r, "game_id"),
         "kickoff": words.kickoff_et(k) if timed or k is None else f"{words.day_label(k, words.EASTERN)}, time not set",
         "kick_day": words.day_label(k, words.EASTERN) if k else "", "time_set": timed,
-        "kick_utc": words.iso_z(k) if timed else None,
+        "kick_utc": words.iso_z(k) if timed else None, "listed": listed,
+        "time_note": ("" if timed or k is None else "Time not set" if listed
+                      else f"Time not set. Last logged {scr.when(logged)}."),
         "matchup": f"{get(r, 'away_team')} at {get(r, 'home_team')}", "venue": get(r, "venue"),
         "forecast": forecast_words(sport, r), "wind": words.num(get(r, "wx_wind")),
         "total": words.total(get(r, "total")), "total_num": words.num(get(r, "total")),
         "under": words.odds(get(r, "under")), "over": words.odds(get(r, "over")),
         "source": words.book(get(r, "line_src")) if get(r, "line_src") else "",
         "market_chance": words.pct(get(r, "p_market")),
-        # Rule B's expected value, priced as a 15+ mph wind game: only where the wind trigger was met
+        # Rule B's expected value, priced as a 15+ mph wind game: only on a signal, or where it is why there is none
         "wind_rule_met": met,
-        "wind_value": words.pct(get(r, "ev_under"), signed=True, digits=1) if met else "",
-        "wind_value_best": words.pct(get(r, "ev_best_line"), signed=True, digits=1) if met else "",
+        "wind_value": words.pct(get(r, "ev_under"), signed=True, digits=1) if b in WIND_VALUE_SHOWN else "",
+        "wind_value_best": words.pct(get(r, "ev_best_line"), signed=True, digits=1) if b in WIND_BEST_SHOWN else "",
         # the NFL lean model's chance of the under, a different model: outdoor NFL games only
         "lean_chance": words.pct(get(r, "p_under")) if lean_model_applies(sport, r) else "",
         "rules": rule_cells(sport, r), "signal": L.signal(r), "best": best_words(r),
@@ -486,7 +529,7 @@ def evidence(scr: Screen) -> tuple[list[dict], int | None, str | None]:
 
 def home(store: Store) -> dict:
     scr = Screen(store)
-    s = summary(store)
+    s = summary(store, scr.snap, scr.now)                 # the same snapshot, minute and games as the rest
     at = latest_alert_run(scr.snap)
     tests, _ = scr.part("forward tests", lambda: forward_tests(scr, wait=False), ([], {}))
     job_list = scr.part("scheduled jobs", lambda: jobs(scr), [])
@@ -504,7 +547,7 @@ def home(store: Store) -> dict:
         "header": scr.header("Last run", at),
         "numbers": {
             "signals_live": s["signals_live"], "games_on_board": s["games_on_board"],
-            "leans_live": scr.part("model leans", lambda: leans_live(scr.snap, scr.now), 0),
+            "leans_live": scr.part("model leans", lambda: leans_live(on_board(store, scr.snap, scr.now)), 0),
             "next_run": words.clock(nxt, scr.tz) if nxt else "Not known",
             "next_run_day": ("today" if nxt and nxt.astimezone(scr.tz).date() == scr.now.astimezone(scr.tz).date()
                              else "tomorrow" if nxt else ""),
@@ -517,10 +560,11 @@ def home(store: Store) -> dict:
 
 
 def board_rows(scr: Screen) -> tuple[list[dict], list[str]]:
-    """The board's rows, signals first, and what couldn't be shown."""
+    """The board's rows (the games of on_board, the set the light counts), signals first, and what couldn't be
+    shown."""
     rows, before = [], len(scr.notes)
-    for sport, L, r in upcoming(scr.snap, scr.now):
-        g = scr.part("a game row", lambda sport=sport, L=L, r=r: game_row(scr, sport, L, r))
+    for sport, L, r, listed in on_board(scr.store, scr.snap, scr.now):
+        g = scr.part("a game row", lambda sport=sport, L=L, r=r, listed=listed: game_row(scr, sport, L, r, listed))
         if g:
             rows.append((L.until(r), g))              # a game with no time set comes after its date's timed games
     rows.sort(key=lambda x: (not x[1]["signal"], x[0], x[1]["matchup"]))
@@ -533,8 +577,8 @@ def board(store: Store) -> dict:
         if not L.readable:
             scr.notes.append(words.cap(L.note) or f"{words.cap(L.csv.label)} could not be read.")
     # worked out once a minute from each snapshot: a refresh, a second tab or the light reuses it
-    minute = scr.now.astimezone(scr.tz).strftime("%Y-%m-%d %H:%M")
-    rows, row_notes = store.derived(("board", minute), lambda: board_rows(scr))
+    minute = scr.now.replace(second=0, microsecond=0)
+    rows, row_notes = store.derived(("board", scr.snap.built, minute), lambda: board_rows(scr))
     scr.notes.extend(n for n in row_notes if n not in scr.notes)
     runs = {}
     for sport, L in scr.snap.ledgers.items():
@@ -544,7 +588,7 @@ def board(store: Store) -> dict:
     newest = max((words.parse_utc(L.latest_snapshot) for L in scr.snap.ledgers.values()
                   if words.parse_utc(L.latest_snapshot)), default=None)
     return scr.done({"header": scr.header("Last run", newest), "games": rows, "runs": runs,
-                     "signals": sum(1 for g in rows if g["signal"])})
+                     "signals": sum(1 for g in rows if g["signal"]), "wind_rule_bar": wind_rule_bar(scr.snap)})
 
 
 def game(store: Store, game_id: str) -> tuple[int, dict]:
@@ -569,9 +613,11 @@ def game(store: Store, game_id: str) -> tuple[int, dict]:
     closes = scr.part("closing lines", lambda: game_closes(scr, project, game_id), [])
     alerts = scr.part("alerts", lambda: game_alerts(scr, project, L, game_id, last), {})
     fills = scr.part("paper fills", lambda: game_fills(scr, project, game_id), [])
-    return 200, scr.done({"header": scr.header("Last logged", words.parse_utc(last["logged_utc"])),
-                          "game": {k: last[k] for k in ("sport", "game_id", "kickoff", "matchup", "venue")},
-                          "rows": rows, "charts": charts, "closes": closes, "alerts": alerts, "fills": fills})
+    head = {k: last[k] for k in ("game_id", "kickoff", "matchup", "venue")}
+    head["sport"] = SPORT_WORDS[sport]                    # in the header line, in words: "College football"
+    return 200, scr.done({"header": scr.header("Last logged", words.parse_utc(last["logged_utc"])), "game": head,
+                          "rows": rows, "charts": charts, "closes": closes, "alerts": alerts, "fills": fills,
+                          "wind_rule_bar": wind_rule_bar(scr.snap)})
 
 
 def game_closes(scr: Screen, project: str, game_id: str) -> list[dict]:
@@ -664,7 +710,7 @@ def jobs_screen(store: Store) -> dict:
                         "unmapped": row.get("unmapped", ""), "rules_version": row.get("rules_version", ""),
                         "error": err[:300]})
         runs[p] = {"sport": "NFL" if p == "nfl-weather" else "College football", "rows": out,
-                   "total": len(rows), "note": "" if r is not None and r.data else (r.note if r else "")}
+                   "total": len(rows), "note": "" if r is not None and r.data else words.cap(r.note if r else "")}
     q = scr.snap.quota
     credits = None
     if q is not None:

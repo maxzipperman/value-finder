@@ -151,10 +151,10 @@
   function drawHome(d) {
     const n = d.numbers || {};
     const tiles = h("div", { class: "tiles" },
-      tile("Signals today", fmtInt(n.signals_live), "Rule B and Rule HT, games not yet kicked off. " +
+      tile("Signals on the board", fmtInt(n.signals_live), "Rule B and Rule HT, on games not yet kicked off. " +
         (n.leans_live ? "Model leans, which are watches, not signals: " + fmtInt(n.leans_live) + "."
           : "Model leans are watches and aren’t counted.")),
-      tile("Games on the board", fmtInt(n.games_on_board), "Not yet kicked off, in the latest runs"),
+      tile("Games on the board", fmtInt(n.games_on_board), "Not yet kicked off, as the board lists them"),
       tile("Next run", n.next_run, n.next_run_day ? "Both alert jobs, " + n.next_run_day : ""),
       tile("Credits left", n.credits === null || n.credits === undefined ? "Not known" : fmtInt(n.credits),
         n.credits_read ? "As the Odds API reported it at " + n.credits_read : "No reading yet"));
@@ -238,7 +238,7 @@
       h("thead", null, h("tr", null, ["Kickoff (ET)", "Matchup", "Forecast", "Total and under", "Wind rule’s value", "Lean model’s chance of the under", "Rules", "Best number"].map((t) => h("th", { scope: "col" }, t)))),
       h("tbody", null, games.map((g) => {
         const tr = h("tr", { class: "clickable" + (g.signal ? " signal" : "") },
-          h("td", { class: "stack" }, g.time_set === false ? [h("div", null, g.kick_day), h("div", null, "Time not set")] : h("div", null, g.kickoff),
+          h("td", { class: "stack" }, g.time_set === false ? [h("div", null, g.kick_day), h("div", null, g.time_note || "Time not set")] : h("div", null, g.kickoff),
             h("div", { class: "faint" }, daysWords(g.days))),
           h("td", null, h("span", { class: "tag" }, g.sport), h("a", { href: "#game/" + encodeURIComponent(g.game_id) }, g.matchup)),
           h("td", null, g.forecast),
@@ -252,17 +252,24 @@
         return tr;
       })));
     return h("div", null, h("h1", null, "Board"), filters, h("div", { class: "tablewrap" }, table),
-      h("p", { class: "faint" }, "Wind rule’s value is Rule B’s expected value for the under, priced as if the game were played in wind of 15 mph or more, so it is shown only where the wind trigger was met. Lean model’s chance of the under is the NFL lean model’s own estimate, for outdoor NFL games only. Neither is a proven edge."),
-      h("p", { class: "faint" }, "Signals are listed first. A signal is a paper entry for the forward test, not a proven bet. Kickoffs are Eastern time, as the ledgers give them."));
+      h("p", { class: "faint" }, windValueWords(d.wind_rule_bar) + " Lean model’s chance of the under is the NFL lean model’s own estimate, for outdoor NFL games only. Neither is a proven edge."),
+      h("p", { class: "faint" }, "Signals are listed first. A signal is a paper entry for the forward test, not a proven bet. Kickoffs are Eastern time, as the ledgers give them. A game whose kickoff time is not set stays on the board through the end of its date, Eastern time, with the last row logged for it."));
+  }
+
+  // What the wind rule's value is and when it is shown; the server says, from the evidence list, whether Rule B
+  // clears the project's bar.
+  function windValueWords(bar) {
+    return "Wind rule’s value is Rule B’s expected value for the under, from the rule’s registered pricing model. It is shown only when the wind rule has signalled, or when the value is not above zero, which is why it did not signal." +
+      (bar ? " " + bar : "");
   }
 
   // Rule B's value, and the lean model's chance, each in its own cell and never side by side in one: a dash where
-  // the server sends nothing (the wind trigger wasn't met; not an outdoor NFL game).
+  // the server sends nothing (no wind rule signal; not an outdoor NFL game). The Rules column says why.
   function dash(why) {
     return h("span", { class: "faint", title: why }, "—");
   }
   function windValueCell(g) {
-    if (!g.wind_value) return h("td", null, dash(g.wind_rule_met ? "Not logged on this row" : "The wind trigger was not met"));
+    if (!g.wind_value) return h("td", null, dash(g.wind_rule_met ? "Shown only when the wind rule signals; the Rules column says why it did not" : "The wind trigger was not met"));
     return h("td", { class: "stack" }, h("div", null, g.wind_value),
       g.wind_value_best ? h("div", { class: "faint" }, g.wind_value_best + " at the best number") : "");
   }
@@ -397,7 +404,7 @@
         leanChanceCell(r),
         h("td", { class: "stack small" }, r.rules.map((c) => h("div", { class: c.signal ? "sig" : "" }, c.rule + ": " + c.words))),
         h("td", null, r.best))))),
-      h("p", { class: "faint" }, fmtInt(rows.length) + " rows. Each row is one scheduled or manual run. Wind rule’s value is shown only on a row where the wind trigger was met; the lean model’s chance, only for an outdoor NFL game. Neither is a proven edge.")));
+      h("p", { class: "faint" }, fmtInt(rows.length) + " rows. Each row is one scheduled or manual run. " + windValueWords(d.wind_rule_bar) + " The lean model’s chance is shown only for an outdoor NFL game. Neither is a proven edge.")));
     return out;
   }
 

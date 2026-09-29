@@ -63,10 +63,18 @@ whatever follows `ODDS_API_KEY`, `CFBD_API_KEY`, `KAGGLE_KEY` or `NTFY_TOPIC` is
 sentences). The rules are at the top of `vfdash/health.py`. "More than 5 hours" counts only the hours between
 7:30 AM and 11:30 PM local, so a quiet night never turns the light amber or red.
 
-`signals_live` counts Rule B at either price and Rule HT, as the alert jobs count signals in `runs.csv`. The
-NFL model lean is logged as a watch, not a signal, so it is not in `signals_live`; the Home screen shows the
-number of live leans beside it ("Model leans, which are watches, not signals: 3"). Counting leans as signals
-is a one-line change (`is_signal` in `vfdash/words.py`) if the hub decides they should be.
+`games_on_board`, `signals_live`, the Home screen's numbers and the Board are all worked out from one set of
+games (`board_set` in `vfdash/api.py`), so the light and the board never disagree: every game in each sport's
+latest run that hasn't kicked off, plus every game whose newest row has no kickoff time set, whose date (Eastern)
+hasn't ended, and which the latest run no longer lists (see below). A game with a time set that the latest run
+doesn't list is in neither, whatever its older rows say. The set is worked out once per read of the files and
+minute, so the light and every screen asked in the same minute get the same games.
+
+`signals_live` counts Rule B at either price and Rule HT on those games, as the alert jobs count signals in
+`runs.csv`. The NFL model lean is logged as a watch, not a signal, so it is not in `signals_live`; the Home
+screen shows the number of leans on the board beside it ("Model leans, which are watches, not signals: 3").
+Counting leans as signals is a one-line change (`is_signal` in `vfdash/words.py`) if the hub decides they
+should be.
 
 A ledger is read by its column names. One without `snapshot_utc`, `game_id` or its kickoff columns
 (`gameday` and `gametime`; for college football `start_utc` or `kick_et`), and a `runs.csv` without `run_utc`
@@ -79,19 +87,29 @@ notes, and the light turns amber.
 A game whose kickoff time isn't set yet (the college job logs it with cfbfastR's placeholder, midnight Eastern
 at the start of the game's date, and with `wx_src` `time_tbd` at an outdoor venue; or an NFL row with no
 `gametime`) is shown as "Time not set" with its date. It stays on the board, in `games_on_board` and, if one of
-its rules signals, in `signals_live` until its date has passed in Eastern time. Rule B can't signal on such a
-game (it has no forecast), but Rule HT is priced without one, so the college job can log a Rule HT signal on it.
+its rules signals, in `signals_live` until its date has passed in Eastern time. The college job logs only games
+whose kickoff is after now, so its first run after the placeholder midnight (7:30 AM Pacific on game day) no
+longer lists such a game, hours before it is played; the board then shows the game's last logged row with "Time
+not set. Last logged Fri Oct 9, 7:30 PM." Rule B can't signal on such a game (it has no forecast), but Rule HT is
+priced without one, so the college job can log a Rule HT signal on it.
 
 ## What the board shows beside a game
 
-"Wind rule's value" is Rule B's expected value for the under (`ev_under`, and `ev_best_line` at the best
-number). The jobs log it on nearly every priced row, but it is priced from the frozen cohort of outdoor games
-with 15+ mph wind, so it is the value of an under in a windy game. The Board and Game screens show it only on a
-row whose Rule B status says the wind trigger was met (`SIGNAL`, `SIGNAL_SECONDARY`, `price_too_high`,
-`negative_ev`, `no_price`, `outside_horizon`), and a dash elsewhere. "Lean model's chance of the under"
-(`p_under`) is the NFL lean model's, a different model, in its own column and only for outdoor NFL games with a
-forecast (`wx_src` `era5`, the lean rule's own gate). Neither is a proven edge, and the page says so under the
-board.
+"Wind rule's value" is Rule B's expected value for the under (`ev_under`), from the rule's registered pricing
+model (the frozen cohort of outdoor games with 15+ mph wind). The jobs log it on nearly every priced row, but the
+Board and Game screens show it only on a Rule B signal (`SIGNAL`, `SIGNAL_SECONDARY`) and on a `negative_ev` row,
+where the value, not above zero, is what says why there is no signal. On every other row, including those where
+the wind trigger was met but the game is outside the 1 to 3 day window, the price is too high or there is no
+price, a positive value would read as a priced edge on a game that is not a signal, so a dash is shown and the
+Rules column says why. The value at the best number (`ev_best_line`) is shown on a signal only: on a `negative_ev`
+row it can be above zero at another book. "Lean model's chance of the under" (`p_under`) is the NFL lean model's,
+a different model, in its own column and only for outdoor NFL games with a forecast (`wx_src` `era5`, the lean
+rule's own gate); where the lean model isn't run the Rules column says why ("Not an outdoor game", "Open roof, not
+counted", "No forecast yet") rather than "No lean".
+
+The line under the board says whether Rule B clears the project's multiple-testing bar, read from the evidence
+list every time (its Rule B results are the entries with `rule-b` in their id), and that neither number is a
+proven edge.
 
 ## Connections
 

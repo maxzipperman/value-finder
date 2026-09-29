@@ -250,11 +250,16 @@ RULE_HT_WORDS = {
     "before_window": "Before the test starts (Week 6)",
 }
 LEAN_WORDS = {"UNDER lean": "Leans under", "OVER lean": "Leans over", "": "No lean"}
+# The lean model is run only for an outdoor NFL game with a forecast (wx_src "era5"); on any other game the job
+# logs a blank lean, which says the model wasn't run, not that it found nothing.
+LEAN_NOT_RUN = {"indoor": "Not an outdoor game", "open_roof": "Open roof, not counted", "missing": "No forecast yet"}
 
 
 def status_words(rule: str, value: str, wx_src: str = "", threshold: str = "") -> str:
     v = (value or "").strip()
     if rule == "lean":
+        if not v and (wx_src or "").strip() in LEAN_NOT_RUN:
+            return LEAN_NOT_RUN[wx_src.strip()]
         return LEAN_WORDS.get(v, f"Logged as “{v}”")
     if not v:
         return "Not logged on this row"

@@ -70,9 +70,28 @@ def test_the_board_as_drawn(root, home, tmp_path):
     assert rows["Air Force at Army"][0] == "Sat Oct 10Time not setin 7 days"
     drawn = text(page)
     assert "EV " not in drawn and "12:00 AM" not in drawn
-    assert ("Wind rule’s value is Rule B’s expected value for the under, priced as if the game were played in wind of "
-            "15 mph or more, so it is shown only where the wind trigger was met.") in drawn
-    assert "Neither is a proven edge." in drawn
+    assert ("Wind rule’s value is Rule B’s expected value for the under, from the rule’s registered pricing model. It "
+            "is shown only when the wind rule has signalled, or when the value is not above zero, which is why it did "
+            "not signal. Rule B has not cleared the project’s multiple-testing bar: none of its ") in drawn
+    assert "trigger was met" not in drawn and "Neither is a proven edge." in drawn
+
+
+def test_a_game_the_latest_run_no_longer_lists_as_drawn(root, home, tmp_path):
+    """A game whose time isn't set, after the college job has stopped logging it: on the board with its last row,
+    and the words the hub chose."""
+    cfb = root / "cfb-weather" / "data" / "forward" / "ledger.csv"
+    with cfb.open("a") as f:
+        f.write(cfb_row("2026-10-10T02:30:14Z", "401000010", "Sat 10-10 00:00", "Air Force", "Army", "time_tbd",
+                        "SIGNAL", "2026-10-10 04:00:00+00:00", total="66.5", src="time_tbd") + "\n")
+        f.write(cfb_row("2026-10-10T14:30:14Z", "401000002", "Sat 10-10 15:30", "Ohio State", "Michigan",
+                        "no_trigger", "below_threshold", "2026-10-10 19:30:00+00:00") + "\n")
+    store = make_store(root, home, clock=Clock(datetime(2026, 10, 10, 16, 0, tzinfo=timezone.utc)))   # noon ET
+    heads, rows = table(draw(tmp_path, "#board", api.board(store)), "Kickoff (ET)")
+    assert rows["Air Force at Army"][0] == "Sat Oct 10Time not set. Last logged Fri Oct 9, 7:30 PM.today"
+    assert "Rule HT: Signal" in rows["Air Force at Army"][heads.index("Rules")]
+    home_ = draw(tmp_path, "#home", api.home(store))
+    tiles = {text(t["kids"][0]): text(t["kids"][1]) for t in find(home_, "div") if t["cls"] == "tile"}
+    assert tiles["Signals on the board"] == "1" and tiles["Games on the board"] == "2"
 
 
 def test_a_game_as_drawn(store, tmp_path):
