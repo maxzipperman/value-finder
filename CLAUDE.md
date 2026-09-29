@@ -34,8 +34,8 @@ One chat manages the project: **"Value Finder — hub"** (session `local_446fc83
 
 - **`/hub`** runs one check-in. It covers status, deadlines, PRs, worker chats and Mac health, then does small Mac-only jobs itself and spawns workers for the rest. The rules are in `.claude/commands/hub.md`. A daily check-in runs at about 9 AM while the app is open.
 - **Workers get one issue each,** on their own branch, with one PR that links the issue.
-  - **Cloud workers** get anything that only needs git, and use cloud session credits.
-  - **Local worker chats** get anything that needs the Mac's keys or raw data.
+  - **The cloud worker** is one standing cloud chat ("Cloud tokens chat setup"). It gets anything that only needs git, and uses cloud session credits. The hub sends it briefs with `SendMessage`. It merges its own analysis, docs and data PRs, but asks before touching rules, money or the alert jobs.
+  - **Local worker chats** get anything that needs the Mac's keys or raw data. Each one works in its own worktree. **Nothing but the hub works in `~/code/value-finder` itself, and nothing switches branches there**, because the launchd alert, close-capture and ledger jobs run whatever is checked out.
 - **Workers are cleaned up automatically.** The account setting "Auto-archive sessions when their pull request closes" archives each worker once its PR merges.
 - **A local worker chat reports back** with one message to the hub session above: the PR link, the results, and anything that failed.
 

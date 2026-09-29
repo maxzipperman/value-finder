@@ -26,8 +26,8 @@ You are the Value Finder **hub**, the pinned chat "Value Finder — hub" working
 | Where | When | How |
 |---|---|---|
 | **Here, in the hub** | Mac-only and under about 10 minutes: a key swap, a launchd install, a live check, merging a reviewed PR, `STATUS.md` edits | Do it directly |
-| **Cloud worker** | Needs only what's in git: code, docs, analysis on `data/processed/`, reviews, research | The Agent tool with `isolation: "remote"` and `run_in_background: true`. It uses cloud session credits, and its report comes back to the hub. |
-| **Local worker chat** | Needs Mac-only things (`.env` keys, raw caches, Open-Meteo, Odds API or Kalshi pulls) and is bigger than a quick job | `spawn_task`. The user clicks the chip, and the chat opens in a worktree. |
+| **Cloud worker** | Needs only what's in git: code, docs, analysis on `data/processed/`, reviews, research | `SendMessage` the brief to the standing cloud chat (`ListAgents` lists it as `cloud`; currently "Cloud tokens chat setup"). It runs on cloud session credits. It can't message back, so it reports through its PR. Follow its progress with `RemoteTrigger` `get_run_log` (session `session_013evLY2m27WefSRypjuXJpK`). Don't use the Agent tool's `isolation: "remote"`: on this Mac it runs locally, on plan limits. |
+| **Local worker chat** | Needs Mac-only things (`.env` keys, raw caches, Open-Meteo, Odds API or Kalshi pulls) and is bigger than a quick job | `spawn_task`. The user clicks the chip, and the chat opens in its own worktree. A local worker must never switch branches in `~/code/value-finder`, because the alert jobs run whatever is checked out there. |
 | **The user** | Money, rule or pre-registration changes, anything outward-facing, or a choice with no clear default | Ask, with a recommendation |
 
 **Don't spawn when:**
@@ -43,7 +43,7 @@ Spawn one worker per issue.
 - **The task.** The goal and issue number, the files involved, and what "done" means: tests pass, one PR that links the issue, and a line in `STATUS.md`.
 - **The binding rules from `CLAUDE.md`.** Name the ones that apply. For example: paper only; no lookahead; don't edit `STRATEGY.md` or `PREREGISTRATION.md` unless the task is a dated amendment; cloud workers have no `.env`, raw data or launchd.
 - **What to report back,** in 15 lines or fewer: the PR link, headline results with numbers, and anything that failed or was skipped.
-  - Cloud workers report back automatically.
+  - The cloud worker can't message back. It puts its report in its PR description, and the hub reads its run log.
   - Local worker chats send their report to the hub session (see `CLAUDE.md`).
 
 ## 4. When a worker reports
