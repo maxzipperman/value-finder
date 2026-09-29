@@ -15,14 +15,30 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
 ## How a run protects the credits
 
 - **Dry run by default.** Without `--confirm`, no stage calls the API. Every stage without `--confirm` prints what it would do and the most it could cost.
+- **A key check before anything is spent.** Every `--confirm` run starts with the free `/v4/sports` call. The run refuses to start, and prints `STOPPED before the first paid call, nothing spent: ...`, when:
+  - the key is rejected (check `ODDS_API_KEY` in `sharp-markets/.env`);
+  - the check doesn't come back cleanly, or comes back without a readable balance (wait a few minutes and run the same command again);
+  - the balance is already below the floor. The message gives both numbers. Stop and tell the owner.
 - **Run budget.** `--max-credits N` is checked before each call against that call's upper-bound cost, so a run can never go over N.
-- **Reserve floor.** `--floor` defaults to 531,630: the 300K reserve plus the 231,630 freed by dropping X3. The run stops before the account's remaining credits would drop below it.
+- **Reserve floor.** `--floor` defaults to 531,630: the 300K reserve plus the 231,630 freed by dropping X3. The run stops before the account's remaining credits would drop below it. If the run ever loses track of the balance, it stops rather than guess (`STOPPED: the account balance is unknown ...`).
+- **Billing the run can't read.** Every paid response should say what it cost (`x-requests-last`) and what is left (`x-requests-remaining`).
+  - If a successful response doesn't say what it cost, or says something that isn't a number, the run counts the most that call could have cost, keeps the response, and stops: `STOPPED: the billing could not be read ...`.
+  - If it doesn't say what is left, the run stops: `STOPPED: the balance could not be read ...`.
+  - What to do: tell the hub before rerunning. The response is cached, so a rerun won't buy it again, but the next call would probably have the same problem. Compare the balance the next key check prints (`key ok: ... credits remaining`) with the last `remaining` in the manifest.
+  - A "not found" (404) or error response without a readable cost doesn't stop the run, because the API's documentation doesn't charge for responses with no data. The run still counts the most that call could have cost, so the budget errs toward stopping early. Errors still stop the run after 5 in a row.
+- **Network failures.** If the API can't be reached after the retries (seven tries, spread over at least a minute and a half), the run stops with `STOPPED: no answer from the Odds API ...`. Nothing is cached for that call, so when the connection is back, the same command picks up where it stopped. A call that timed out may still have been billed, so check the balance the rerun's key check prints.
+- **The key never shows in error text.** Error messages, the collector's heartbeat notes and logs print the key as `REDACTED`.
+- **Every run ends with a summary.** After any `STOPPED:` line, each pull prints `done:` or `stopped:` with the calls fetched, the credits counted this run and the balance; the probe prints `P0 done:` or `P0 stopped:`. A billing or network problem ends in these lines, never in a Python error dump.
 - **Groups, not `all`.** `--pull` takes pull IDs or a group from the config: `day_one` (F1, F2, F3, HB1, HS1), `gated` (N1, F4), `march` (H1, N2, F5, F6). The `full` stage refuses `--pull all`, so nothing runs every pull in the config by accident.
+- **F3 only by season slice.** `full --pull F3` refuses to run without `--seasons`, and so does `full --pull day_one`. The dry run shows the same refusal, so you see it before spending. The refusal prints the day-one command (`--seasons 2025`) and the gated one (`--seasons 2023,2024,2026`). This is `require_seasons` on F3 in the config. It changes nothing about what a slice fetches or where it is stored.
 - **Circuit breaker.** The run stops at once:
   - when a call bills more than its upper bound (`x-requests-last` above 10 × markets × regions, or above 1 for `/events`);
   - on HTTP 401 (key rejected);
   - on HTTP 429 after retries (quota used up);
   - after 5 errors in a row.
+
+  The breaker can only see what a call cost after the API has billed it, so no code on our side can stop one overbilling call from being paid for. That is why the probe runs first: it tries one call of each kind before any pull. It is also why `--max-credits` stays tight on the first run of each kind of call.
+- **The probe follows the same rules.** Its seven single calls go through the same budget, floor, billing and circuit-breaker checks. The first stop ends the probes, and the ones after it are listed as `not run`.
 - **Cache first and resumable.** Every response is stored before it is used, under `data/raw/{sport_key}/oddsapi/...`. N1 is the exception: it is stored under `data/raw/nba/oddsapi_hist/`, where `markets build --sport nba` reads it, and where the sample week's `odds-pull` snapshots already are. Rerunning a command skips everything cached, so a stopped or interrupted run resumes for free. Errors aren't cached, so they are retried.
 - **Manifest.** Every real request gets a row in `data/raw/_manifest/oddsapi_manifest.csv`. Each row has:
   - the requested and returned snapshot times;
@@ -37,9 +53,11 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
 
   `bulk.load_rows()` leaves those rows out unless `include_sealed=True`, which only a pre-registered test may pass. The seasons change if the owner decides differently (decision 1). In that case, edit `sealed:` in the config before the pull.
 
+  `markets build` reads `data/raw/nba/oddsapi_hist/` directly, where N1 and `odds-pull` store their snapshots, so it has its own guard. It leaves out odds rows for games in a sealed season, prints how many (`odds rows left out for games in sealed seasons`), and records them as a `sealed_odds_left_out` anomaly. The puller also refuses to plan a sealed-season call for any pull stored in another pipeline's folder (N1).
+
 ## Before buying
 
-1. `git pull` on main, then `uv run pytest`. Everything passes, including `tests/test_bulk.py`, which covers the puller against mocked responses, and `tests/test_weather.py`, which covers the heat triggers.
+1. `git pull` on main, then `uv run pytest`. Everything passes, including `tests/test_bulk.py`, which covers the puller against mocked responses, `tests/test_http.py`, which checks that the key never shows in error text, and `tests/test_weather.py`, which covers the heat triggers.
 2. Check free disk space: plan for about 3 GB under `data/raw/` for day one (about 16 GB if F4 is later earned; an extrapolation from two live responses). If the internal disk is short, point `MARKETS_DATA_DIR` at an external one.
 3. Run `uv run markets odds5m probe` (no `--confirm`). It prints the `/events` sweep calls per sport, about 10,400 in all, and the number of probes.
 4. Run `uv run markets odds5m plan` (free). With no schedules yet it prints zero calls per pull, in group order. That's expected.
@@ -71,7 +89,9 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
    ```bash
    uv run markets odds5m plan
    ```
-   It prints calls and the upper-bound credits per pull from the real schedules, with the pull's group and a running total. HB1 and HS1 stop with a message until step 7 has written their game list; that's expected. The estimate for day one is 272,790 (F1 162,210; F2 45,600; F3's 2025 slice 34,200; the rest small). If F1, F2 or F3 comes out more than about 10% above its estimate, stop and tell the owner before pulling: a schedule window is probably wrong.
+   It prints calls and the upper-bound credits per pull from the real schedules, with the pull's group and a running total. HB1 and HS1 stop with a message until step 7 has written their game list; that's expected. The estimate for day one is 272,790 (F1 162,210; F2 45,600; F3's 2025 slice 34,200; the rest small).
+   - F3's line here covers all its seasons (about 136,800) and is marked `full needs --seasons`. For the day-one slice, run `uv run markets odds5m plan --pull F3 --seasons 2025` and compare that with 34,200.
+   - If F1, F2 or F3's 2025 slice comes out more than about 10% above its estimate, stop and tell the owner before pulling: a schedule window is probably wrong.
    - **Where 4,440,000 comes from:** 5,000,000 − 531,630 (the `--floor` reserve) − about 10,700 (the probe) − about 9,200 (October's live use on the same key: alerts 248, close capture ~385, trigger poller ~2,600, props log ~2,520, NBA collector from Oct 20 ~3,460) ≈ 4,448,500, rounded down. The floor stops every run at 4.47M spent, so a plan above this line can't finish anyway. Day one plus every gate is 2,304,050, so the ceiling only matters if a gate is misread.
 4. **One week per sport for F1 and F2**, to check coverage before the full spend. Dry run first to see the cost, then set `--max-credits` a little above it:
    ```bash
@@ -95,8 +115,8 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
    uv run markets odds5m check --pull F3 --seasons 2025
    ```
    - At the default 8 requests a second, F1's roughly 5,400 calls take about 12 minutes, F2's 4,600 about 10, and F3a's 570 about a minute. `--rate 20` is safe if nothing else is using the key heavily (the API allows 30).
-   - If a run stops, read the `STOPPED:` line. A budget or floor stop is expected. A circuit-breaker stop means something needs a look before rerunning.
-   - `--seasons 2025` is what keeps F3 to its first slice. Without it, `full --pull F3` would pull all of 2023–26 (136,800); the rest is gated (F3b, below).
+   - If a run stops, read the `STOPPED:` line. A budget or floor stop is expected. A circuit-breaker stop, or a billing or balance that couldn't be read, means something needs a look before rerunning ([How a run protects the credits](#how-a-run-protects-the-credits)).
+   - F3 always needs `--seasons`: the puller refuses `full --pull F3` without it, dry run included. `--seasons 2025` is the first slice (34,200 at most); the rest is gated (F3b, below). Without the guard, `full --pull F3` would have pulled all of 2023–26 (136,800).
 6. **The NBA sample week (N0), 7,540 credits, through the NBA pipeline, not the bulk puller.** PLAN.md §8 step 3 requires it before any full season; the week's Kalshi candles and trades are already cached, and the snapshots land where N1 will look:
    ```bash
    uv run markets odds-plan --start 2026-01-05 --end 2026-01-11                              # free: 754 snapshots, 7,540 credits
@@ -127,7 +147,7 @@ and in `strategy-research/odds_5m.py`; the short form:
 
 | Pull | Credits at most | Gate | Command |
 |---|---|---|---|
-| F3b: NFL props 2023–24 and the 2026 games played | 102,600 | On the 2025 slice, graded as #10's pre-registration draft says (`strategy-research/README.md`, idea 7; it goes into a pre-registration file before the rows are joined to outcomes): the pooled excess under rate over the de-vigged close is positive in the primary markets (receiving and rushing yards), and the posted line sits above the player's same-season median in both | `full --pull F3 --confirm --max-credits 108000` (the 2025 slice is cached, so only the rest is fetched) |
+| F3b: NFL props 2023–24 and the 2026 games played | 102,600 | On the 2025 slice, graded as #10's pre-registration draft says (`strategy-research/README.md`, idea 7; it goes into a pre-registration file before the rows are joined to outcomes): the pooled excess under rate over the de-vigged close is positive in the primary markets (receiving and rushing yards), and the posted line sits above the player's same-season median in both | `full --pull F3 --seasons 2023,2024,2026 --confirm --max-credits 108000` (F3 needs `--seasons`; the 2025 slice is already cached) |
 | N1: NBA 2025-26 at 5 minutes, less the sample week | 486,440 | The sample week shows an H1 edge (net-of-fee flags with fills and positive CLV to Pinnacle's close) or an H2 lag (median catch-up lag ≥ 10 minutes), per PLAN.md | `full --pull N1 --confirm --max-credits 510000` |
 | F4: hourly football, net of F1 | 1,442,220 | H16b on F1's daily grid: fading a move of a point or more earns ≥ 0.25 points of CLV with the interval above zero, in both sports, in 4 of 6 seasons | `full --pull F4 --confirm --max-credits 1520000`; about 48,000 calls, roughly two hours at `--rate 8` |
 

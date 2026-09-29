@@ -87,6 +87,9 @@ def cmd_build(args) -> None:
     print("games by match_status:", s["match_status"])
     print("exclusions by reason:", s["exclusions"])
     print("anomalies by kind:", s["anomalies"])
+    sealed = s["sealed_odds_rows_left_out"]
+    print(f"odds rows left out for games in sealed seasons (config/odds5m.yaml): {sum(sealed.values()):,}",
+          sealed or "")
     print(f"http requests this run: {ctx.cache.http_requests}")
 
 
@@ -205,7 +208,7 @@ def main(argv: list[str] | None = None) -> None:
                    "comma-separated; `all` works for plan, week and check but not for full")
     f.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
     f.add_argument("--seasons", default=None, help="only these season labels from config/odds5m.yaml, comma-separated "
-                   "(e.g. 2025 for the first F3 slice)")
+                   "(e.g. 2025 for the first F3 slice); `full` refuses a pull with require_seasons (F3) without it")
     f.add_argument("--week-of", default="auto", help="week stage: YYYY-MM-DD, or auto (first week of the latest unsealed season)")
     f.add_argument("--confirm", action="store_true", help="actually spend credits")
     f.add_argument("--max-credits", type=int, default=0, help="credit budget for this run")
