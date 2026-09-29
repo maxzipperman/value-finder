@@ -28,8 +28,12 @@ THE TABLE (primary specification, declared before any out-of-sample result was c
 THE TEST (step 2 of the issue)
   Leave-one-season-out: each season is predicted from a table and a residual model fitted without it.
   Both models see the same training seasons. The residual model trains on its registered window
-  (NFL 1999 on, CFB 2006 on) minus the held-out season, on its registered cohort definition:
-  all games, or outdoor games with observed wind 15+ mph ("windy").
+  (NFL 1999 on, CFB 2006 on) minus the held-out season. For the windy cohort (outdoor games with
+  observed wind 15+ mph) that is the registered cohort definition, refit per fold. For all games it is
+  the registered method (`p_under_at` over a residual cohort) applied to an all-games cohort, which is
+  not itself registered. The registered frozen file as it stands is tested only by the 2024-25 check.
+  (The sentences on the comparator were reworded after the independent review, September 29, 2026, to
+  label it accurately. The method did not change; the text as declared is in commit 5b5eaa7.)
   Held-out seasons: NFL 2015-2025 (the landing window); CFB 2006-2025. CFB closing totals that sit on
   a quarter point (a split consensus, 5.8% of games) are left out of the test sets of both models.
   Two metrics, at the closing line:
@@ -38,6 +42,10 @@ THE TEST (step 2 of the issue)
       both models say so).
   Differences are table minus residual (negative = the table is better), averaged per game, with a
   season-cluster standard error and a 95% interval from resampling seasons (20,000 draws).
+  p-values (added after review; the verdicts use only the interval): p_normal treats the season-
+  clustered z as normal, which overstates significance with 10-20 seasons; p_t uses a t reference on
+  (seasons - 1) degrees of freedom; p_signflip flips the sign of each season's summed difference
+  (exact, over all 2^S patterns). Quote p_t or p_signflip, never p_normal alone.
 
 DECISION RULE (declared before any result was computed)
   On the primary specification only, for each sport, cohort and metric: the table BEATS the residual
@@ -63,10 +71,20 @@ ADDED AFTER THE FIRST RUN (exploratory; they were not declared and cannot rescue
   than either model says, and that the margin table under-predicts Wong teaser legs. So:
   * a third readout on every comparison, 'neighbour': at a half-point closing line T, the log loss of
     P(final = T - 0.5) and P(final = T + 0.5), the landing a half-point buy crosses. It is what an
-    alternate line depends on, and it is untouched by how books choose between whole and half lines;
-  * held-out calibration of landing by line type (whole-number vs half-point lines), descriptive     1
+    alternate line depends on. It is read on every model specification and judged against the
+    multiple-testing bar, so it counts as a variant                                                     1
+  * held-out calibration of landing by line type (whole-number vs half-point lines), descriptive,
+    with Fisher tests of the change from 1999-2014 to 2015 on in each line source                      1
   * the margin table with its shape from 2015 on as well ("pure 2015")                                1
-  Total with the additions                                                                            28
+  Total after the first run                                                                           29
+ADDED AFTER THE INDEPENDENT REVIEW (exploratory; each is a check on a result above, and each counts)
+  * the NFL readouts without 2025, whose nflverse closing totals are all half-points (its line source
+    looks to have changed): primary specification, 2015-2024, on NFL totals (all games) and on NFL
+    margins                                                                                            2
+  * CFB raw landing checks, descriptive: counts pooled over the six strongest and six weakest landing
+    totals in 35-75, when the close sits on the total and when it is a half-point away; and the
+    landing ratios fitted separately on 2006-15 and 2016-25                                            1
+  Total                                                                                               32
   (Each model variant is read on the two declared metrics plus the exploratory one.)
 
 PRICES (step 3) come from the primary table fitted on every season (NFL shape 1999-2025, landing
@@ -304,6 +322,16 @@ def line_type_check(mod):
                              seasons=f"{x.season.min()}-{x.season.max()}", whole_lines=len(w),
                              pushes=int((w.total == w[col]).sum()), push_rate=float((w.total == w[col]).mean()),
                              half_lines=len(h), neighbour_landings=int(nb.sum()), neighbour_rate=float(nb.mean())))
+        if len(rows) >= 2 and rows[-1]["variant"] == rows[-2]["variant"] == source:
+            # added after review: two-sided Fisher tests of the change between eras (neighbour chances are two per
+            # half-point line; the two are mutually exclusive, which makes the test slightly conservative)
+            a, b = rows[-2], rows[-1]
+            b["push_change_fisher_p"] = stats.fisher_exact(
+                [[a["pushes"], a["whole_lines"] - a["pushes"]], [b["pushes"], b["whole_lines"] - b["pushes"]]])[1]
+            na, nb_ = 2 * a["half_lines"], 2 * b["half_lines"]
+            b["neighbour_change_fisher_p"] = stats.fisher_exact(
+                [[a["neighbour_landings"], na - a["neighbour_landings"]],
+                 [b["neighbour_landings"], nb_ - b["neighbour_landings"]]])[1]
     return pd.DataFrame(rows)
 
 
@@ -311,6 +339,26 @@ def ll(p, o):
     p = np.clip(np.asarray(p, float), 1e-9, 1 - 1e-9)
     o = np.asarray(o, bool)
     return -np.where(o, np.log(p), np.log(1 - p))
+
+
+def signflip_p(D):
+    """Exact two-sided sign-flip p-value for sum(D) = 0: the share of the 2^S sign patterns whose |sum| is at least
+    the observed one. Meet in the middle (all sums of each half, then a sorted count), so S up to about 40 is cheap."""
+    D = np.asarray(D, float)
+    t = abs(D.sum())
+    if t == 0:
+        return 1.0
+    t *= 1 - 1e-9                      # the observed pattern itself counts, whatever the rounding
+
+    def sums(x):
+        s = np.zeros(1)
+        for v in x:
+            s = np.concatenate([s + v, s - v])
+        return s
+    h = len(D) // 2
+    a, b = sums(D[:h]), np.sort(sums(D[h:]))
+    hits = (len(b) - np.searchsorted(b, t - a, side="left")) + np.searchsorted(b, -t - a, side="right")
+    return float(hits.sum()) / 2 ** len(D)
 
 
 def compare(sub, metric, rng, by_game=False):
@@ -334,17 +382,18 @@ def compare(sub, metric, rng, by_game=False):
         se = dd.d.std(ddof=1) / np.sqrt(N)
         idx = rng.integers(0, N, (N_BOOT, N))
         boot = dd.d.to_numpy()[idx].mean(1)
-        unit = "games"
+        unit, df, p_flip = "games", N - 1, np.nan
     else:
         se = np.sqrt(S / (S - 1) * ((by.D - by.n * mean) ** 2).sum()) / N
         idx = rng.integers(0, S, (N_BOOT, S))
         boot = by.D.to_numpy()[idx].sum(1) / by.n.to_numpy()[idx].sum(1)
-        unit = "seasons"
+        unit, df, p_flip = "seasons", S - 1, signflip_p(by.D)
     lo, hi = np.percentile(boot, [2.5, 97.5])
     verdict = "table beats" if hi < 0 else "table loses" if lo > 0 else "no difference shown"
+    z = mean / se if se > 0 else np.nan
     out = dict(games=N, events=int(o.sum()), seasons=S, ll_table=lt.mean(), ll_resid=lr.mean(), diff=mean,
                diff_pct=100 * mean / lr.mean(), se=se, ci_lo=lo, ci_hi=hi, resampled=unit,
-               p_two_sided=2 * stats.norm.sf(abs(mean / se)) if se > 0 else np.nan,
+               p_normal=2 * stats.norm.sf(abs(z)), p_t=2 * stats.t.sf(abs(z), df), p_signflip=p_flip,
                seasons_table_better=int((by.D < 0).sum()), verdict=verdict)
     return out, by.reset_index().assign(metric=metric)
 
@@ -493,15 +542,28 @@ def main():
             res.append(dict(sport=sport, market=market, cohort=cohort, variant=variant, metric=metric,
                             tested=f"{sub.season.min()}-{sub.season.max()}", **o))
             seasons.append(by.assign(sport=sport, market=market, cohort=cohort, variant=variant))
+    # added after the independent review: the NFL readouts without 2025, whose nflverse closing totals are all
+    # half-points (see the data note in the README). Run after every comparison above, so their draws are unchanged.
+    post = "primary, 2015-2024 (added after review)"
+    for market in ("total", "spread"):
+        sub = P[(P.sport == "NFL") & (P.market == market) & (P.cohort == "all") & (P.variant == "primary")
+                & (P.season <= 2024)].assign(variant=post)
+        for metric in ("under", "push", "neighbour"):
+            o, by = compare(sub, metric, rng)
+            res.append(dict(sport="NFL", market=market, cohort="all", variant=post, metric=metric,
+                            tested=f"{sub.season.min()}-{sub.season.max()}", **o))
+            seasons.append(by.assign(sport="NFL", market=market, cohort="all", variant=post))
     R = pd.DataFrame(res)
     R["ci_lo_pct"], R["ci_hi_pct"] = 100 * R.ci_lo / R.ll_resid, 100 * R.ci_hi / R.ll_resid
     S = pd.concat(seasons, ignore_index=True)
     show = R.assign(ll_table=R.ll_table.round(5), ll_resid=R.ll_resid.round(5), diff=(R["diff"] * 1000).round(3),
                     diff_pct=R.diff_pct.round(2), se=(R.se * 1000).round(3), ci_lo=(R.ci_lo * 1000).round(3),
-                    ci_hi=(R.ci_hi * 1000).round(3), p_two_sided=R.p_two_sided.round(4),
-                    ci_lo_pct=R.ci_lo_pct.round(2), ci_hi_pct=R.ci_hi_pct.round(2))
+                    ci_hi=(R.ci_hi * 1000).round(3), p_normal=R.p_normal.round(5), p_t=R.p_t.round(5),
+                    p_signflip=R.p_signflip.round(5), ci_lo_pct=R.ci_lo_pct.round(2), ci_hi_pct=R.ci_hi_pct.round(2))
     say("\n===== Leave-one-season-out log loss at the closing line (diff, se, ci in thousandths; negative = table better)"
-        "\n      'neighbour' (added after the first run): landing on the whole number either side of a half-point line")
+        "\n      'neighbour' (added after the first run): landing on the whole number either side of a half-point line"
+        "\n      p_normal overstates significance with 10-20 seasons; quote p_t (t on seasons - 1 df) or p_signflip"
+        "\n      (exact sign-flip over seasons). Verdicts come from the season-bootstrap interval only.")
     for metric in ("under", "push", "neighbour"):
         say(f"-- {metric}")
         say(show[show.metric == metric].drop(columns=["resampled", "metric"]).to_string(index=False))
@@ -601,6 +663,40 @@ def main():
     for cohort in ("all", "windy"):
         say(f"\n===== CFB {cohort}: P(final = K | market total K), the 6 strongest and 4 weakest landing totals in 35-75")
         say(at_key("CFB", "total", cohort, cfb_keys).loc[cfb_keys].round(4).to_string())
+    # added after the independent review: the raw counts pooled over the six strongest and six weakest landing totals,
+    # when the close sits on K (what the half-point prices at K assume) and when it is a half-point away
+    say("\n===== CFB all games, raw landings on K pooled over the 6 strongest and 6 weakest landing totals in 35-75"
+        "\n      (added after review). Model columns: the mean full-data P(final = K | close on K) over those games")
+    pk = PR[(PR.sport == "CFB") & (PR.cohort == "all") & (PR.line == PR.key) & PR.model.isin(["table", "residual"])]
+    pk = pk.pivot_table(index="key", columns="model", values="p_push", aggfunc="first")
+    pool = []
+    for lab, Ks in (("strongest 6", sorted(cm.k.tail(6))), ("weakest 6", sorted(cm.k.head(6)))):
+        on = raw_c[raw_c.total_line.isin(Ks)]
+        near = raw_c[raw_c.total_line.isin([k - 0.5 for k in Ks] + [k + 0.5 for k in Ks])]
+        near_k = np.where(near.total_line.sub(0.5).isin(Ks), near.total_line - 0.5, near.total_line + 0.5)
+        w = on.total_line.round().astype(int).value_counts()
+        pool.append(dict(totals=lab, keys=" ".join(map(str, Ks)), close_on_K=len(on),
+                         landed_on_K=int((on.total == on.total_line).sum()), rate_on_K=(on.total == on.total_line).mean(),
+                         table=float((pk.loc[w.index, "table"] * w).sum() / w.sum()),
+                         residual=float((pk.loc[w.index, "residual"] * w).sum() / w.sum()),
+                         close_half_away=len(near), landed_half_away=int((near.total == near_k).sum()),
+                         rate_half_away=(near.total == near_k).mean()))
+    POOL = pd.DataFrame(pool)
+    say(POOL.round(4).to_string(index=False))
+    CAL = pd.concat([CAL, POOL.assign(sport="CFB", market="total", cohort="all", seasons="2006-2025",
+                                      source="raw on-K check (added after review)")], ignore_index=True)
+    counts = ["whole_lines", "pushes", "half_lines", "neighbour_landings", "close_on_K", "landed_on_K",
+              "close_half_away", "landed_half_away"]
+    CAL[counts] = CAL[counts].astype("Int64")        # counts stay whole numbers where other rows leave them blank
+    # the same check, part 2: do the CFB landing ratios (O/E) replicate between the two halves of the window?
+    half = {}
+    for lo, hi in ((2006, 2015), (2016, 2025)):
+        x = cfb_tot[cfb_tot.season.between(lo, hi)]
+        half[f"{lo}-{hi}"] = fit_g(x.total_line, x.total, smooth(x.total - x.total_line, H_PRIMARY), kvt)[1].set_index("k")
+    (a_, ra), (b_, rb) = ((k, v.loc[35:80, "ratio"]) for k, v in half.items())
+    named = sorted(cm.k.tail(6)) + sorted(cm.k.head(6))
+    say(f"CFB landing ratios O/E fitted separately on {a_} and {b_}: correlation over k = 35-80: "
+        f"{np.corrcoef(ra, rb)[0, 1]:.3f}\n" + pd.DataFrame({a_: ra.loc[named], b_: rb.loc[named]}).T.round(2).to_string())
     say("\n===== Half-point worth in cents of fair (no-vig) price, at a market line on the key number K:"
         "\n      'onto' = K-0.5 to K for an under (K+0.5 to K for a favorite); 'off' = K to K+0.5 for an under (K to K-0.5 for a favorite)")
     for (sport, market, cohort), x in PR[PR.model.isin(["table", "residual"])].groupby(["sport", "market", "cohort"], sort=False):
@@ -665,8 +761,8 @@ def main():
         outcomes = sorted((c for c in t.columns if c not in ("cohort", "market_line")), key=int)
         TABS[key] = t[["cohort", "market_line"] + outcomes]
 
-    say("\nvariants: 28 (26 declared before the first run, 2 added after it; see the docstring); "
-        "running count before this script: 200")
+    say("\nvariants: 32 (26 declared before the first run, 3 added after it, 3 added after the independent review; "
+        "see the docstring); running count before this script: 200, after: 232, bar 0.05 / 232 = 0.000216")
     if not args.no_save:
         R.to_csv(OUT / "landing_mass_loso.csv", index=False)
         S.to_csv(OUT / "landing_mass_loso_by_season.csv", index=False)
