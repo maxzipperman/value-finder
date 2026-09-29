@@ -231,6 +231,8 @@ def main(argv: list[str] | None = None) -> None:
     f.add_argument("--floor", type=int, default=531_630,
                    help="stop when the account would drop below this (the reserve: 300K + X3's 231,630)")
     f.add_argument("--rate", type=float, default=8.0, help="requests per second (the API allows 30)")
+    f.add_argument("--retry-404", action="store_true", help="week and full: ask the pull's cached 404s (nothing there "
+                   "at that time) again, under the same budget and floor; a 404 is replaced only by a 200")
     f.set_defaults(fn=cmd_odds5m)
 
     pe = sub.add_parser("price-engine", help="price-engine backtest on F1, issues #8 and #53 "

@@ -151,14 +151,14 @@ def test_before_retry_can_stop_a_retry_and_nothing_holding_the_key_is_chained(mo
     class Refused(RuntimeError):
         pass
 
-    def check(why):
-        whys.append(why)
+    def check(why, resp):
+        whys.append((why, resp))
         raise Refused("no budget for a retry")
 
     with pytest.raises(Refused) as ei:
         http.http_get(Flaky(), "https://h.invalid/v4/x", {"apiKey": KEY}, http.RateLimiter(1e6), max_retries=6,
                       before_retry=check)
-    assert len(sent) == 1 and whys == ["ReadTimeout"]
+    assert len(sent) == 1 and whys == [("ReadTimeout", None)]         # no answer: no response to count
     assert ei.value.__context__ is None and KEY not in "".join(traceback.format_exception(ei.value))
 
 

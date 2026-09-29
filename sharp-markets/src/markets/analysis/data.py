@@ -78,13 +78,15 @@ def load_markets(con, start: date, end: date, *, max_spread: float) -> dict[str,
                                        [start, end]).fetchall():
         if mt in out:
             out[mt].yes_taker[minute] = vol
-    # closing fair = last sharp snapshot at or before commence
+    # closing fair = last sharp snapshot strictly before commence, as load_sharp takes them (audit 2, Sep 29, 2026:
+    # a snapshot at the scheduled start could be in-play). Post-tip snapshots stay in sharp_fair and analysis_1m for
+    # the lead-lag analysis.
     for mt, pin_close, blend_close in con.execute("""
             SELECT m.market_ticker, f.pin_fair, f.blend_fair
             FROM (SELECT DISTINCT a.market_ticker, g.odds_event_id, a.team_code, g.commence_time
                   FROM analysis_1m a JOIN games g USING (sport, game_id) WHERE a.game_date_et BETWEEN ? AND ?) m
             ASOF LEFT JOIN sharp_fair f
-              ON m.odds_event_id = f.odds_event_id AND m.team_code = f.team_code AND m.commence_time >= f.snapshot_ts""",
+              ON m.odds_event_id = f.odds_event_id AND m.team_code = f.team_code AND m.commence_time > f.snapshot_ts""",
                                                   [start, end]).fetchall():
         if mt in out:
             out[mt].close_fair = {"pinnacle": pin_close, "blend": blend_close}

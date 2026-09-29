@@ -2,11 +2,12 @@
 
 It is the bulk puller's client (bulk.BulkClient) with this pipeline's cache layout, so it counts, checks and stops
 the way `markets odds5m` does, from the same code: the free key check before the first paid call (it refuses to
-start on an unreadable balance or one below the floor); the run budget and the floor checked before every call and
-every retry; billing headers that fail closed; the cost counted as the largest of what the response reports, what
-the documentation charges for what came back, and how far the balance fell; attempts with no answer counted until
-a balance reading explains them; the key blanked everywhere; a STOPPED line and a summary on every stop; no 200 that
-isn't JSON ever cached; and a row per paid request in data/raw/_manifest/oddsapi_manifest.csv, with pull id N0.
+start on an unreadable balance or one below the floor); every answer counted at the larger of what it reports and
+what the documentation charges for what came back, and every attempt with no answer at its upper bound; the run
+budget and the floor checked before every attempt; billing headers that fail closed; the stop on a call billed
+above its upper bound, a retried 5xx included; the alarm on an account that falls further than the run counted; the
+key blanked everywhere; a STOPPED line and a summary on every stop; no 200 that isn't JSON ever cached; and a row per
+answer in data/raw/_manifest/oddsapi_manifest.csv, with pull id N0.
 
 What it asks for and where it caches are its own and unchanged: data/raw/{sport}/oddsapi_hist/, keyed on the same
 URL and parameters as before (N1's cache_as calls and the sample week's cached Kalshi data rely on them). Unlike the
@@ -68,8 +69,8 @@ class OddsApiClient(BulkClient):
                     at, credits_per_snapshot(len(markets.split(",")), len(bookmakers)), self._sealed(sport_key, at),
                     cache_sport=self.sport, base=BASE_URL)
 
-    def fetch(self, call: Call) -> dict:
-        rec = super().fetch(call)
+    def fetch(self, call: Call, refetch: bool = False) -> dict:
+        rec = super().fetch(call, refetch)
         if rec["http_status"] != 200:
             # the body is printed only with any key blanked, in case a server or proxy echoes the request
             raise OddsApiError(f"Odds API {call.path} at {iso(call.at)} -> HTTP {rec['http_status']}: "

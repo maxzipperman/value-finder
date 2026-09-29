@@ -2,10 +2,13 @@
 import csv
 import json
 import logging
+import random
 from argparse import Namespace
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
+import requests
 
 from markets.cache import RawCache, cache_key
 from markets.oddsapi import bulk
@@ -459,7 +462,7 @@ def test_unreadable_balance_stops_the_run_when_a_floor_is_set(cfg, tmp_path):
     c.account()
     res = bulk.run_calls(c, _one_call(cfg))
     assert res["fetched"] == 1 and "balance could not be read" in res["stopped"] and len(api.calls) == 2
-    assert res["remaining"] is None
+    assert res["remaining"] == 5_000_000 - 20                   # the estimate: the start less the count
     api2 = FakeOddsApi()
     res = bulk.run_calls(client(tmp_path / "b", api2, floor=950), _one_call(cfg))       # account() never ran
     assert res["fetched"] == 0 and "balance is unknown" in res["stopped"] and api2.calls == []
@@ -668,15 +671,18 @@ def _retrying_client(tmp_path, api, monkeypatch, **kw):
 @pytest.mark.parametrize("mode", ["timeout", "500"])
 def test_a_call_billed_on_a_retried_attempt_still_counts(cfg, tmp_path, monkeypatch, mode):
     """Review blocker 1: a first attempt that is billed and then times out (or answers 500), and a retry that
-    succeeds, used to count once while the balance fell twice, so the run went over --max-credits. Now the run
-    counts how far the balance fell and checks the budget before every retry: the server never bills more than
-    the budget, and the run never counts less than the server billed."""
+    succeeds, used to count once, so the run went over --max-credits. Now every attempt counts before the retry: an
+    attempt with no answer at its upper bound (60), and a 500 at what it reports (20). The budget is checked before
+    every retry, so the server never bills more than the budget, and the run never counts less than it billed."""
     api = Billed(mode=mode)
     c = _retrying_client(tmp_path, api, monkeypatch, max_credits=200)
     res = bulk.run_calls(c, _nfl_calls(cfg))
     assert api.billed <= 200 and res["spent"] >= api.billed, (api.billed, res)
     assert "run budget" in res["stopped"]
-    assert c.balance_drop == c.start_remaining - c.remaining > c.spent     # the fall, not the reports, was counted
+    per_call = 60 + 20 if mode == "timeout" else 20 + 20
+    assert res["fetched"] == (2 if mode == "timeout" else 4) and c.counted == per_call * res["fetched"]
+    rows = list(csv.DictReader((tmp_path / "raw/_manifest/oddsapi_manifest.csv").open()))[1:]
+    assert [r["http_status"] for r in rows] == (["200"] if mode == "timeout" else ["500", "200"]) * res["fetched"]
 
 
 def test_many_billed_retries_stop_before_the_budget_or_the_floor(cfg, tmp_path, monkeypatch):
@@ -700,25 +706,6 @@ def test_a_zero_or_fractional_cost_never_undercounts(cfg, tmp_path, monkeypatch)
     assert api.billed <= 100 and res["spent"] >= api.billed and "billing cannot be trusted" in res["stopped"]
     assert res["fetched"] == 1
     assert bulk._cost("19.5") == 20 and bulk._cost("20") == 20 and bulk._balance("4999.9") == 4999
-
-
-@pytest.mark.parametrize("bad", ["1e20", "rising"])
-def test_a_balance_that_rises_or_makes_no_sense_is_not_believed(cfg, tmp_path, bad, caplog):
-    """Review minor: the balance is the lower of what the API reports and the last balance less what was
-    counted, so a garbled or rising x-requests-remaining can't carry a run past the floor."""
-    class Liar(FakeOddsApi):
-        def _r(self, status, body, cost):
-            r = super()._r(status, body, cost)
-            if cost:                                     # paid calls only; the key check reads the true balance
-                r.headers["X-Requests-Remaining"] = bad if bad != "rising" else str(self.remaining + 1_000)
-            return r
-    api = Liar()
-    c = client(tmp_path, api, floor=5_000_000 - 70)
-    c.account()
-    res = bulk.run_calls(c, _nfl_calls(cfg))
-    assert api.remaining >= 5_000_000 - 70 and "the floor is" in res["stopped"]
-    if bad == "rising":
-        assert "rose" in caplog.text
 
 
 def test_a_full_disk_or_a_body_that_is_not_json_stops_with_the_summary(cfg, tmp_path, monkeypatch, capsys):
@@ -987,12 +974,11 @@ class Late(Billed):
 
 @pytest.mark.parametrize("lag", [1, 2, 3, None])
 def test_a_late_balance_and_billed_retries_never_pass_the_budget_or_floor(cfg, tmp_path, monkeypatch, lag):
-    """Item 1b (final review, finding 2; review of the follow-up, blocker 1): a balance that arrives late, plus
-    attempts billed and then timed out, used to stop counting those attempts before the balance showed their bill (at
-    the next reading on main, at the second reading after the retry in the first version of this follow-up), so runs
-    went over the budget and under the floor by several calls, and without limit when the balance never moves. Now
-    an attempt stays counted until the balance shows what it cost, so the run never passes the budget or the floor,
-    however late the balance is (lag None: it never moves after the key check)."""
+    """Billed timeouts, with the floor and a late balance. A balance that arrives late, plus attempts billed and then
+    timed out, used to let runs go over the budget and under the floor by several calls, and without limit when the
+    balance never moves, because a reading cleared the attempts before it showed their bill. Now an attempt with no
+    answer counts its upper bound to the end of the run and the balance never clears it, so the run never passes the
+    budget or the floor, however late the balance is (lag None: it never moves after the key check)."""
     calls = _f1_calls(cfg, ("2024-09-02T00:20:00Z", "2024-09-05T17:00:00Z", "2024-09-08T17:00:00Z"))   # 17, 30 each
     start = 5_000_000
     for bad in (1, 2, 3):
@@ -1005,10 +991,9 @@ def test_a_late_balance_and_billed_retries_never_pass_the_budget_or_floor(cfg, t
             assert res["stopped"] and api.remaining >= start - m, (bad, m, api.remaining, res)
 
 
-def test_an_attempt_with_no_answer_stays_counted_until_the_balance_explains_it(cfg, tmp_path, monkeypatch):
-    """Item 1b: a timed-out attempt that the balance shows was billed is cleared at once; one the balance doesn't
-    show stays counted for the rest of the run (review of the follow-up, blocker 1: it used to be cleared at the
-    second reading after the retry, which a balance two answers late, or one that never moves, also passes)."""
+def test_an_attempt_with_no_answer_stays_counted_to_the_end_of_the_run(cfg, tmp_path, monkeypatch):
+    """Rule 2: an attempt with no answer counts its upper bound and stays counted to the end of the run, billed or
+    not: no balance reading clears it (the balance never adds to the count)."""
     import requests
 
     class Unbilled(FakeOddsApi):
@@ -1024,19 +1009,13 @@ def test_an_attempt_with_no_answer_stays_counted_until_the_balance_explains_it(c
     api = Billed(bad=1)                                           # billed 20 of its upper bound of 60, then timed out
     c = _retrying_client(tmp_path / "billed", api, monkeypatch)
     c.fetch(calls[0])
-    assert c.unanswered == 60 - 20 and c.counted == 40 + 40 and api.billed == 40   # the 20 the balance showed is cleared
+    assert c.unanswered == 60 and c.counted == 60 + 20 and api.billed == 40
     api = Unbilled()
     c = _retrying_client(tmp_path / "unbilled", api, monkeypatch)
-    c.fetch(calls[0])
-    assert c.unanswered == 60 and c.counted == 20 + 60           # the retry's reading doesn't explain it: kept
-    c.max_retries = 0
-    Unbilled.seen.add((calls[1].url, dict(calls[1].params)["date"]))
-    c.fetch(calls[1])
-    assert c.unanswered == 60 and c.counted == 40 + 60            # the second reading: still counted
-    for call in calls[2:]:
-        Unbilled.seen.add((call.url, dict(call.params)["date"]))
+    for call in calls:
         c.fetch(call)
-    assert c.unanswered == 60 and c.counted == 20 * len(calls) + 60   # and to the end of the run
+    assert c.unanswered == 60 * len(calls) and c.counted == (60 + 20) * len(calls)
+    assert c.remaining == 5_000_000 - c.counted                   # the estimate goes by the count, below the truth
 
 
 class Overcharges(FakeOddsApi):
@@ -1053,24 +1032,25 @@ class Overcharges(FakeOddsApi):
         return super()._r(status, body, cost)
 
 
-def test_overbilling_that_shows_only_in_the_balance_stops_after_three_calls(cfg, tmp_path, capsys):
-    """Item 1c (final review, finding 3): an API that charges more than it reports only printed a warning, so the
-    whole budget bought a fraction of the data. Now three calls in a row whose balance fall exceeds the reported cost
-    by more than the call's upper bound stop the run; smaller excesses, and other users of the key, don't."""
-    calls = _nfl_calls(cfg, 8)                                    # upper bound 60, reported 20
-    api = Overcharges(extra=100)
-    c = client(tmp_path / "a", api, max_credits=100_000)
-    c.account()
-    res = bulk.run_calls(c, calls)
-    assert res["fetched"] == 3 and "the account is being charged more than the API reports" in res["stopped"]
-    assert res["spent"] >= api.billed == 3 * 120
-    assert "STOPPED: the account is being charged more than the API reports" in capsys.readouterr().out
-    for kw in ({"extra": 40}, {"others": 3}, {"others": 60}):     # never more than the upper bound over
-        api = Overcharges(**kw)
-        c = client(tmp_path / str(kw), api, max_credits=100_000)
+def test_other_users_of_the_key_stop_the_run_only_above_the_margin(cfg, tmp_path, capsys):
+    """Rule 8: another job spending on the key lowers the balance but not the count. Below the margin (the larger of
+    300 credits and 5% of --max-credits) the run goes on; once the account has fallen by more than the margin beyond
+    what the run counted, the run stops and says so. It never counts the other spending toward --max-credits."""
+    calls = _nfl_calls(cfg, 8)                                    # 16 calls, upper bound 60, charged 20
+    for others, stops in ((18, False), (19, True), (60, True)):   # 16 x 18 = 288 is within 300; 16 x 19 = 304 isn't
+        api = Overcharges(others=others)
+        c = client(tmp_path / str(others), api, max_credits=6_000)
         c.account()
         res = bulk.run_calls(c, calls)
-        assert res["stopped"] is None and res["spent"] >= api.billed, kw
+        assert c.margin == 300 and c.counted == 20 * res["fetched"]
+        if not stops:
+            assert res["stopped"] is None and c.unexplained == 16 * others
+        else:
+            assert "the account has fallen by" in res["stopped"] and "Tell the hub" in res["stopped"]
+            assert c.unexplained > 300 and c.unexplained - others <= 300    # stopped at the first answer past it
+    assert "STOPPED: the account has fallen by" in capsys.readouterr().out
+    big = client(tmp_path / "big", Overcharges(others=19), max_credits=100_000)
+    assert big.margin == 5_000                                    # 5% of --max-credits when that is larger
 
 
 def test_ctrl_c_ends_the_run_with_stopped_interrupted_and_the_summary(cfg, tmp_path, capsys):
@@ -1110,7 +1090,7 @@ def test_stop_messages_say_one_credit_and_a_probe_bug_says_tell_the_hub(cfg, tmp
     c = client(tmp_path / "c", CtrlC())
     c.account()
     res = bulk.run_calls(c, [_events_call()])
-    assert "counted at its upper bound, 1 credit. A rerun" in res["stopped"]
+    assert "counted at its upper bound, 1 credit, and a rerun" in res["stopped"]
 
     class Buggy(bulk.BulkClient):
         def fetch(self, call):
@@ -1478,17 +1458,12 @@ SEALED_GAMES = {
     "soccer_korea_kleague1": ("2026-02-28T05:00:00Z", "2026-12-13T05:00:00Z"),    # round 1; promotion play-off leg 2
     "soccer_fifa_world_cup": ("2026-06-11T19:00:00Z", "2026-07-19T19:00:00Z"),    # opener; final
 }
-NOT_YET = {("icehockey_nhl", "first"): "NHL 2026-27 opens Sep 29 (84 games); the window starts Oct 1. Moving it adds "
-                                        "three probe sweeps, so it is left for the hub (Sep 29 follow-up)."}
-
-
 @pytest.mark.parametrize("sport,which", [(s, w) for s in SEALED_GAMES for w in ("first", "last")])
-def test_every_sealed_window_holds_its_first_and_last_game_in_utc(sport, which, request):
+def test_every_sealed_window_holds_its_first_and_last_game_in_utc(sport, which):
     """Item 8 (final review, finding 11): the NCAAF 2026 window ended 2027-01-25, but the CFP title game kicks off
     at 2027-01-26T00:30Z, so it came out of load_rows as unsealed. Every sealed window must start at least a day
-    before its season's first game and end at least a day after its last, in UTC."""
-    if (sport, which) in NOT_YET:
-        request.applymarker(pytest.mark.xfail(strict=True, reason=NOT_YET[(sport, which)]))
+    before its season's first game and end at least a day after its last, in UTC. The NHL 2026-27 window starts
+    2026-09-28 since Sep 29, 2026 (the hub's decision): the season opened on Sep 29."""
     real = bulk.load_config()
     (w,) = [w for w in real["sports"][sport]["windows"] if w["sealed"]]
     kick = t(SEALED_GAMES[sport][0 if which == "first" else 1])
@@ -1501,11 +1476,12 @@ def test_every_sealed_window_holds_its_first_and_last_game_in_utc(sport, which, 
 
 
 def test_a_game_in_no_window_is_judged_by_its_call(tmp_path, monkeypatch):
-    """Review of the follow-up, blocker 2: the NHL 2026-27 season opened on Sep 29, 2026, two days before its sealed
-    window starts, so those games have no season and bulk.load_rows returned their rows by default, from the
-    daily-close snapshots planned for the sealed games of the next days. Now a row whose game falls in no season
-    window is judged by its call, as a row with no game time already was: left out (and counted) when the call is
-    sealed. Nothing fetched changes. `markets build` does the same for a snapshot taken inside a sealed window."""
+    """Review of the follow-up, blocker 2: the NHL 2026-27 season opened on Sep 29, 2026, before its sealed window
+    started, so those games had no season and bulk.load_rows returned their rows by default, from the daily-close
+    snapshots planned for the sealed games of the next days. The window now starts Sep 28, and the read-side guard
+    stays for any game that still falls in no window (here, made-up games on Sep 27): a row whose game falls in no
+    season window is judged by its call, as a row with no game time already was: left out (and counted) when the call
+    is sealed. `markets build` does the same for a snapshot taken inside a sealed window."""
     import shutil
     from collections import Counter
 
@@ -1515,10 +1491,11 @@ def test_a_game_in_no_window_is_judged_by_its_call(tmp_path, monkeypatch):
     from markets.cache import write_record
     from markets.sport import load_teams
     real = bulk.load_config()
-    games = {"sep29": "2026-09-29T21:00:00Z", "sep30": "2026-09-30T23:00:00Z", "oct3": "2026-10-03T23:00:00Z"}
+    games = {"sep27a": "2026-09-27T21:00:00Z", "sep27b": "2026-09-27T23:00:00Z", "oct3": "2026-10-03T23:00:00Z"}
     sched = {"icehockey_nhl": [bulk._label(real, {"id": g, "sport": "icehockey_nhl", "commence_time": t(k)})
                                for g, k in games.items()]}
-    assert [g["season"] for g in sched["icehockey_nhl"]] == [None, None, "2026-27"]      # the window starts Oct 1
+    assert [g["season"] for g in sched["icehockey_nhl"]] == [None, None, "2026-27"]      # the window starts Sep 28
+    assert bulk._label(real, {"sport": "icehockey_nhl", "commence_time": t("2026-09-29T21:00:00Z")})["sealed"]
 
     class Lists(FakeOddsApi):
         """Featured snapshots list every game of the week ahead."""
@@ -1542,13 +1519,14 @@ def test_a_game_in_no_window_is_judged_by_its_call(tmp_path, monkeypatch):
     assert {r["odds_event_id"] for r in bulk.load_rows(real, calls, c.cache, include_sealed=True)} == set(games)
     unsealed = [bulk.Call(x.pull, x.sport, x.source, x.path, x.params, x.at, x.expected, False, x.event_id,
                           x.cache_sport) for x in calls]
-    assert {r["odds_event_id"] for r in bulk.load_rows(real, unsealed, c.cache)} == {"sep29", "sep30"}
+    assert {r["odds_event_id"] for r in bulk.load_rows(real, unsealed, c.cache)} == {"sep27a", "sep27b"}
 
     monkeypatch.setattr(run, "RAW_DIR", tmp_path / "build")
     monkeypatch.setattr(run, "ODDS5M_SPORT_KEY", {**run.ODDS5M_SPORT_KEY, "nba": "icehockey_nhl"})
-    for day, sealed_snapshot in (("2026-09-28", False), ("2026-10-02", True)):
+    for day, sealed_snapshot in (("2026-09-25", False), ("2026-10-02", True)):
         body = {"timestamp": f"{day}T16:00:00Z", "data": [
-            {"id": "sep30", "commence_time": games["sep30"], "home_team": "Boston Celtics", "away_team": "New York Knicks",
+            {"id": "sep27b", "commence_time": games["sep27b"], "home_team": "Boston Celtics",
+             "away_team": "New York Knicks",
              "bookmakers": [{"key": "pinnacle", "markets": [{"key": "h2h", "outcomes": [
                  {"name": "Boston Celtics", "price": 1.5}, {"name": "New York Knicks", "price": 2.6}]}]}]}]}
         shutil.rmtree(tmp_path / "build", ignore_errors=True)
@@ -1720,17 +1698,436 @@ class ToppedUp(Overcharges):
         return super()._r(status, body, cost)
 
 
-@pytest.mark.parametrize("at", [0, 2, 5])
-def test_a_balance_that_rises_mid_run_still_counts_the_falls_after_it(cfg, tmp_path, at):
-    """Round 2, major 3: after the balance rose during a run (a top-up, the monthly renewal), the run stopped counting
-    the balance, so an API charging more than it reports (40 for a call it reports as 20, upper bound 60: too little
-    to trip the breaker) went past --max-credits: 480 charged on a 300 budget here. Now the rise is taken out of every later
-    reading and the falls after it still count; only the extra hidden in the one interval of the rise (20) can go
-    past. at=0: no rise (the control)."""
-    api = ToppedUp(at=at, extra=20)
-    c = client(tmp_path, api, max_credits=300)
+def test_a_balance_that_rises_mid_run_starts_the_run_again_from_there(cfg, tmp_path, caplog):
+    """Rule 6: credits added mid-run (a top-up, the monthly renewal) make a balance higher than the one before it. The
+    run logs one warning and starts again from there: the start becomes that balance plus the count so far, and the
+    floor is measured from it. The count is untouched: the balance never adds to it or takes from it."""
+    api = ToppedUp(at=3)                                          # +1,000,000 lands before the 3rd paid answer
+    c = client(tmp_path, api, max_credits=10_000, floor=5_000_000 - 100)
     c.account()
-    res = bulk.run_calls(c, _nfl_calls(cfg, 7))
-    assert "run budget" in res["stopped"]
-    assert api.billed <= 300 + (20 if at else 0), api.billed
-    assert c.risen == (0 if not at else 1_000_000 - 40)
+    res = bulk.run_calls(c, _nfl_calls(cfg, 8))                   # 16 calls at 20: the old floor would stop call 4
+    assert res["stopped"] is None and res["fetched"] == 16 and c.counted == api.billed == 320
+    assert c.start == 6_000_000 and c.remaining == api.remaining == 6_000_000 - 320 and c.unexplained == 0
+    assert caplog.text.count("the reported balance rose from 4,999,960 to 5,999,940") == 1
+
+
+@pytest.mark.parametrize("at", [0, 2, 3])
+def test_the_alarm_still_works_after_a_rise(cfg, tmp_path, at):
+    """Rule 6 with rule 8: after a rise the unexplained fall is measured from the new start, so an API charging more
+    than it reports (120 for a call it reports as 20) still stops the run once the account has fallen by more than the
+    margin (300) beyond the count after the rise. What went unexplained up to the rise (100 a call) is not counted
+    again: that, the margin and one call's extra is what can pass unseen. at=0: no rise (the control)."""
+    api = ToppedUp(at=at, extra=100)
+    c = client(tmp_path, api, max_credits=6_000)
+    c.account()
+    res = bulk.run_calls(c, _nfl_calls(cfg, 8))
+    assert "the account has fallen by" in res["stopped"]
+    assert api.billed - c.counted == 300 + 100 + 100 * at, (api.billed, c.counted)
+
+
+# ---------------------------------------------------------------- the accounting rule, simplified (Sep 29, round 4)
+EVENT3 = {"id": "g", "commence_time": "2024-09-06T00:20:00Z", "home_team": "H", "away_team": "A", "bookmakers": [
+    {"key": "pinnacle", "markets": [{"key": m, "outcomes": [{"name": "H", "price": 1.9}]}
+                                    for m in ("h2h", "spreads", "totals")]}]}
+
+
+class Scripted:
+    """Answers each paid request with the next of `answers`, (status, x-requests-last, x-requests-remaining), a None
+    header left out; a 200 carries one F1 snapshot with its three markets (documented cost 30)."""
+
+    def __init__(self, answers, start=1_000):
+        self.answers, self.start, self.paid = list(answers), start, 0
+
+    def get(self, url, params=None, timeout=None):
+        if url.endswith("/sports"):
+            return Resp(200, [], {"x-requests-remaining": str(self.start), "x-requests-last": "0"})
+        self.paid += 1
+        status, last, left = self.answers.pop(0)
+        body = {"timestamp": params["date"], "data": [EVENT3]} if status == 200 else {"message": "busy"}
+        return Resp(status, body, {k: v for k, v in (("x-requests-last", last), ("x-requests-remaining", left)) if v})
+
+
+def test_every_http_answer_is_counted_before_the_retry_is_decided(cfg, tmp_path, monkeypatch, capsys):
+    """Rule 3a (Astra C2): a 429 or 5xx about to be retried is an answer. Its billing headers are read first: a
+    readable cost is counted, an unreadable one counts the upper bound, and one above the upper bound stops the run
+    with no retry. Astra's case: budget 60, a 500 reporting 300 credits (balance 700), then a 200 reporting 30: the run
+    used to retry and buy 30 more; now it stops after the 500, with 300 counted."""
+    (call,) = _f1_calls(cfg)[-1:]                                 # upper bound 30
+    cases = [([(500, "300", "700"), (200, "30", "670")], 60, 1, 300, "billed 300 credits; it should cost at most 30"),
+             ([(500, "30", "970"), (200, "30", "940")], 1_000, 2, 60, None),
+             ([(503, None, None), (200, "30", "970")], 1_000, 2, 60, None),     # unreadable: its upper bound
+             ([(429, "0", "1000"), (200, "30", "970")], 1_000, 2, 30, None),
+             ([(500, "30", "970"), (200, "30", "940")], 50, 1, 30, "retrying")]  # 30 + 30 > 50: no retry
+    for i, (answers, budget, sent, counted, why) in enumerate(cases):
+        api = Scripted(answers)
+        c = _retrying_client(tmp_path / str(i), api, monkeypatch, max_credits=budget)
+        res = bulk.run_calls(c, [call])
+        assert (api.paid, c.counted) == (sent, counted), i
+        assert (res["stopped"] is None) == (why is None) and (why is None or why in res["stopped"]), (i, res["stopped"])
+    assert "(HTTP 500, not retried)" in capsys.readouterr().out
+    rows = list(csv.DictReader((tmp_path / "1/raw/_manifest/oddsapi_manifest.csv").open()))
+    assert [(r["http_status"], r["credits_last"]) for r in rows[1:]] == [("500", "30"), ("200", "30")]
+
+
+def test_a_call_never_returns_while_the_run_is_past_its_budget(cfg, tmp_path, monkeypatch):
+    """Rule 3b: after a call's last answer, a count past --max-credits stops the run with a STOPPED line. Here the
+    check before each call is switched off, as if an answer had counted more than the check allowed for."""
+    c = client(tmp_path, FakeOddsApi(), max_credits=50)
+    monkeypatch.setattr(c, "_precheck", lambda call, what="": None)
+    res = bulk.run_calls(c, _f1_calls(cfg))                      # 30 each
+    assert res["fetched"] == 2 and "took the count to 60, past the 50-credit run budget" in res["stopped"]
+
+
+class MemCache(RawCache):
+    """The cache in a dict, for runs of thousands of calls (same lookup and get_or_fetch contract; see `fast`)."""
+
+    def __init__(self):
+        super().__init__(Path("/nonexistent"))
+        self.mem = {}
+
+    def lookup(self, sport, source, key):
+        return (self, (sport, source, key)) if (sport, source, key) in self.mem else None
+
+    def get_or_fetch(self, *, sport, source, data_date, url, params, fetch, key_extra=None, cache_statuses=(200, 404),
+                     refresh=False):
+        k = (sport, source, cache_key(source, url, params))
+        if k in self.mem and not refresh:
+            return self.mem[k]
+        f = fetch()
+        rec = {"cache_key": k[2], "http_status": f.status, "body": f.body,
+               "headers_json": json.dumps({h: v for h, v in f.headers.items() if h.startswith("x-requests-")})}
+        if f.status in cache_statuses:
+            self.mem[k] = rec
+        return rec
+
+
+class Ledger:
+    """A fast fake API for long runs. Every paid call is an F1 snapshot with its three markets (upper bound and
+    documented cost 30), charged `charge` and reported as `report`. `others` credits are spent by another job before
+    each call; a share `timeouts` of attempts is charged and then times out. x-requests-remaining is the balance as of
+    `lag()` answers ago (0: live), or the key check's balance forever when `frozen`."""
+    BODY = json.dumps({"timestamp": "2024-09-01T16:00:00Z", "data": [EVENT3]})
+
+    def __init__(self, lag=lambda: 0, charge=30, report=30, others=0, timeouts=0.0, bill_timeouts=True, frozen=False,
+                 seed=0, start=5_000_000):
+        self.lag, self.charge, self.report, self.others, self.frozen = lag, charge, report, others, frozen
+        self.timeouts, self.bill_timeouts = timeouts, bill_timeouts
+        self.rnd, self.true, self.billed = random.Random(seed), start, 0
+        self.hist = [start]
+
+    def get(self, url, params=None, timeout=None):
+        if url.endswith("/sports"):
+            return Resp(200, "[]", {"x-requests-remaining": str(self.true), "x-requests-last": "0"})
+        self.true -= self.others
+        timed_out = self.timeouts and self.rnd.random() < self.timeouts
+        if not timed_out or self.bill_timeouts:
+            self.true -= self.charge
+            self.billed += self.charge
+        if timed_out:
+            raise requests.ReadTimeout("read timed out")
+        self.hist.append(self.true)
+        shown = self.hist[0] if self.frozen else self.hist[max(0, len(self.hist) - 1 - self.lag())]
+        return Resp(200, self.BODY, {"x-requests-last": str(self.report), "x-requests-remaining": str(shown)})
+
+
+_F1_5000: list = []
+
+
+def _f1_5000():
+    """5,000 F1 snapshots, 5 minutes apart (upper bound 30 each: a 150,000-credit pull)."""
+    if not _F1_5000:
+        t0, books = t("2024-09-01T16:00:00Z"), CFG_YAML.split("us10: [")[1].split("]")[0].split(", ")
+        _F1_5000.extend(bulk.Call("F1", "americanfootball_nfl", bulk.SRC_ODDS, "/historical/sports/americanfootball_nfl/odds",
+                                  bulk._odds_params(books, "h2h,spreads,totals", t0 + i * bulk.FIVE), t0 + i * bulk.FIVE,
+                                  30, False, cache_sport="americanfootball_nfl") for i in range(5_000))
+    return _F1_5000
+
+
+@pytest.fixture
+def fast(monkeypatch):
+    """Runs of thousands of calls in memory: the cache in a dict (MemCache), no manifest file, no rate limit or sleeps,
+    and the log quiet. Returns run(api, calls, **client options) -> (client, run_calls result)."""
+    import contextlib
+    import io
+
+    from markets import http
+    monkeypatch.setattr(bulk, "read_record", lambda p: p[0].mem[p[1]])
+    monkeypatch.setattr(bulk, "read_status", lambda p: p[0].mem[p[1]]["http_status"], raising=False)
+    monkeypatch.setattr(bulk.BulkClient, "_log", lambda self, row: None)
+    monkeypatch.setattr(http.RateLimiter, "wait", lambda self: None)
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    monkeypatch.setattr(bulk.log, "disabled", True)
+    monkeypatch.setattr(http.log, "disabled", True)
+
+    def run(api, calls, **kw):
+        c = bulk.BulkClient(MemCache(), session=api, api_key=KEY, **{"max_credits": 157_500, "floor": 531_630, **kw})
+        c.account()
+        with contextlib.redirect_stdout(io.StringIO()):
+            return c, bulk.run_calls(c, calls)
+    return run
+
+
+@pytest.mark.parametrize("lag", [1, 2, 3, "0-3 at random"])
+def test_an_honest_run_never_stops_on_a_late_balance(fast, lag):
+    """Rules 3, 7 and 8: a balance header that is late, by a fixed number of answers or by one drawn at random from
+    0-3 for every answer, only keeps the lowest balance above the truth, so an honest 5,000-call pull with its budget
+    5% above its upper bound finishes with no stop (100 seeds for the random lag), and counts exactly what it was
+    charged. (Round 3's rule counted each apparent rise from a late reading as spending, and stopped every such run.)"""
+    for seed in range(100 if lag == "0-3 at random" else 1):
+        rnd = random.Random(seed)
+        api = Ledger(lag=(lambda: lag) if isinstance(lag, int) else (lambda: rnd.randint(0, 3)), seed=seed)
+        c, res = fast(api, _f1_5000())
+        assert res["stopped"] is None and res["fetched"] == 5_000, (seed, res["stopped"])
+        assert c.counted == api.billed == 150_000 and c.unexplained <= 3 * 30, seed
+
+
+def test_a_balance_that_never_moves_stops_nothing_and_the_floor_goes_by_the_count(fast):
+    """Rule 7: when x-requests-remaining never moves, the lowest balance stays at the start, so the estimate is the
+    start less the count: an honest run finishes, and the floor stops a run by the count alone."""
+    api = Ledger(frozen=True)
+    c, res = fast(api, _f1_5000())
+    assert res["stopped"] is None and c.counted == api.billed and c.unexplained == -c.counted
+    api = Ledger(frozen=True)
+    c, res = fast(api, _f1_5000(), floor=5_000_000 - 3_000)
+    assert "the floor is 4,997,000" in res["stopped"] and res["fetched"] == 100 and api.true >= 5_000_000 - 3_000
+
+
+@pytest.mark.parametrize("lag", [0, 3, "0-3 at random"])
+def test_the_floor_holds_with_a_late_balance(fast, lag):
+    """Rule 7: the estimate is the lower of the lowest balance reported and the start less the count. With a balance
+    late by a fixed number of answers the start less the count is the truth, so an honest run stops before the account
+    goes below --floor. When the lateness varies, a stale reading can look like a rise and the run starts again from
+    it (rule 6), so the floor stop can come as many answers late as the balance is (here up to 3 calls of 30)."""
+    for seed in range(20):
+        rnd = random.Random(seed)
+        api = Ledger(lag=(lambda: lag) if isinstance(lag, int) else (lambda: rnd.randint(0, 3)), seed=seed)
+        c, res = fast(api, _f1_5000(), floor=5_000_000 - 30_000)
+        late = 0 if isinstance(lag, int) else 3 * 30
+        assert "the floor is 4,970,000" in res["stopped"] and api.true >= 5_000_000 - 30_000 - late, seed
+
+
+@pytest.mark.parametrize("lag", [0, 1, 3])
+def test_an_api_charging_ten_times_what_it_reports_trips_the_alarm_within_the_margin_and_the_lag(fast, lag):
+    """Rule 8: an API that charges 300 for a call it reports as 30 (as documented) is seen only in the balance. The
+    alarm stops the run once the account has fallen by more than the margin (7,875: 5% of 157,500) beyond the count,
+    so what is lost beyond the count is at most the margin, the charges of the answers the balance is late by, and one
+    call's extra."""
+    api = Ledger(lag=lambda: lag, charge=300, report=30)
+    c, res = fast(api, _f1_5000())
+    assert "the account has fallen by" in res["stopped"] and c.margin == 7_875
+    assert api.billed - c.counted <= c.margin + lag * 300 + 270, (api.billed, c.counted)
+
+
+@pytest.mark.parametrize("billed", [True, False])
+def test_billed_timeouts_count_their_upper_bound_and_never_pass_the_budget(fast, billed):
+    """Rule 2: an attempt that times out counts its upper bound for the rest of the run, whether or not it was billed.
+    With 2% of attempts timing out, a 5,000-call pull with the usual 5% margin finishes; the count is never below
+    what was charged, and a late balance never raises the alarm, because the count only goes up."""
+    for seed in range(5):
+        rnd = random.Random(seed)
+        api = Ledger(timeouts=0.02, bill_timeouts=billed, seed=seed, lag=lambda: rnd.randint(0, 3))
+        c, res = fast(api, _f1_5000(), max_retries=6)
+        assert res["stopped"] is None and res["fetched"] == 5_000 and c.counted >= api.billed, seed
+        assert c.unanswered > 0 and (c.counted == api.billed) == billed
+    small = Ledger(timeouts=0.3, seed=1)
+    c, res = fast(small, _f1_5000()[:200], max_credits=3_000, max_retries=6)
+    assert "run budget" in res["stopped"] and small.billed <= 3_000 <= c.counted + 30
+
+
+def test_odds_pull_stops_at_the_key_check_or_after_the_first_overcharged_call(tmp_path):
+    """Astra C1: two NBA sample-week snapshots expected at 10 credits that report 300 each, with a balance below the
+    floor. odds-pull runs on the bulk client, so it refuses at the key check (nothing bought); with no floor it stops
+    after the first call; and called directly, as Astra's script does, the second call is never sent."""
+    from markets.oddsapi.ingest import pull_snapshots
+
+    class Astra:
+        def __init__(self):
+            self.paid = 0
+
+        def get(self, url, params=None, timeout=None):
+            if url.endswith("/sports"):
+                return Resp(200, [], {"x-requests-remaining": "500000", "x-requests-last": "0"})
+            self.paid += 1
+            return Resp(200, {"timestamp": params["date"], "data": []},
+                        {"x-requests-last": "300", "x-requests-remaining": "500000"})
+
+    api = Astra()
+    oc, ctx, plan = _oddspull(tmp_path / "floor", api, n=2, floor=531_630)
+    res = pull_snapshots(ctx, plan, 1_000, client=oc)
+    assert api.paid == 0 and "already below the floor of 531,630" in res["stopped"]
+    api = Astra()
+    oc, ctx, plan = _oddspull(tmp_path / "no-floor", api, n=2)
+    res = pull_snapshots(ctx, plan, 1_000, client=oc)
+    assert api.paid == 1 and res["credits_spent"] == 300 and "billed 300 credits; it should cost at most 10" in res["stopped"]
+    api = Astra()
+    oc, ctx, plan = _oddspull(tmp_path / "direct", api, n=2)
+    with pytest.raises(bulk.CircuitBreaker, match="billed 300 credits"):
+        for at in plan["todo"]:
+            oc.historical_odds(sport_key="basketball_nba", at=at, bookmakers=ctx.cfg.bookmakers)
+    assert api.paid == 1 and oc.counted == 300
+
+
+@pytest.mark.parametrize("echo", [False, True])
+def test_a_body_is_kept_exactly_as_sent_unless_it_holds_the_key(cfg, tmp_path, caplog, echo):
+    """Astra C3: every body, HTTP 200 included, has the active key blanked before it is cached, printed, logged or
+    raised: its exact value and its URL-encoded forms, and nothing else, so no odds data can change. A body without
+    the key is stored byte for byte as the server sent it, even text that looks like a query string; one that held the
+    key logs one warning per answer. The manifest's sha256 is of the body as stored."""
+    import hashlib
+    from urllib.parse import quote, quote_plus
+    key = "FAKE/SECRET KEY+999"                                     # URL-encodes two ways (%20 and +)
+
+    class Echo(FakeOddsApi):
+        def __init__(self):
+            super().__init__()
+            self.sent = []
+
+        def get(self, url, params=None, timeout=None):
+            r = super().get(url, params, timeout)
+            if not url.endswith("/sports"):
+                body = json.loads(r.text)
+                body["note"] = "see ?apiKey=someone&token=abc"         # looks like a secret, isn't the key
+                if echo:
+                    body["message"] = f"GET ?apiKey={quote(key, safe='')} {quote_plus(key)} for {params['apiKey']}"
+                r.text = json.dumps(body, separators=(",", ":"))
+                self.sent.append(r.text)
+            return r
+
+    caplog.set_level(logging.WARNING)
+    api = Echo()
+    c = bulk.BulkClient(RawCache(tmp_path / "raw"), max_credits=10_000, session=api, api_key=key, rate_per_sec=1e6,
+                        max_retries=0)
+    c.account()
+    calls = _one_call(cfg)
+    assert bulk.run_calls(c, calls)["stopped"] is None
+    stored = [c.cached_record(x)["body"] for x in calls]
+    rows = list(csv.DictReader((tmp_path / "raw/_manifest/oddsapi_manifest.csv").open()))[1:]
+    assert [r["sha256"] for r in rows] == [hashlib.sha256(b.encode()).hexdigest() for b in stored]
+    assert all("?apiKey=someone&token=abc" in b for b in stored)
+    if not echo:
+        assert stored == api.sent
+    else:
+        assert quote(key, safe="") != quote_plus(key) and "REDACTED" in stored[0]
+        assert all(key not in b and quote(key, safe="") not in b and quote_plus(key) not in b for b in stored)
+        assert stored == [s.replace(key, "REDACTED").replace(quote(key, safe=""), "REDACTED").replace(
+            quote_plus(key), "REDACTED") for s in api.sent]
+    assert caplog.text.count("the API echoed the key") == (2 if echo else 0)
+
+
+class Gone(FakeOddsApi):
+    """Answers event odds for the games in `gone` with a 404 (nothing there, no charge); `fail` answers them 500."""
+
+    def __init__(self, gone=(), fail=False, **kw):
+        super().__init__(**kw)
+        self.gone, self.fail = set(gone), fail
+
+    def get(self, url, params=None, timeout=None):
+        if "/events/" in url and url.split("/events/")[1].split("/")[0] in self.gone:
+            self.calls.append((url, dict(params)))
+            return self._r(500 if self.fail else 404, {"message": "Event not found"}, 0)
+        return super().get(url, params, timeout)
+
+
+def test_404s_stay_cached_are_counted_and_retry_404_asks_them_again(cfg, tmp_path, monkeypatch, capsys):
+    """Astra C4: a 404 stays cached as "nothing there at that time", so a rerun doesn't ask again; errors other than
+    404 are never cached. Every run's summary line and the check stage count a pull's cached 404s, and --retry-404
+    asks them again under the usual budget and floor, replacing a 404 only with a 200."""
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    calls = _nfl_calls(cfg, 2)                                     # ev0 and ev1, two snapshots each
+    raw = tmp_path / "raw"
+
+    def run(api, **kw):
+        c = bulk.BulkClient(RawCache(raw), max_credits=kw.pop("max_credits", 10_000), session=api, api_key=KEY,
+                            rate_per_sec=1e6, max_retries=0)
+        c.account()
+        return bulk.run_calls(c, calls, **kw), capsys.readouterr().out
+
+    res, out = run(Gone({"ev0"}))
+    assert res["cached_404"] == 2 and "cached 404s 2" in out and res["errors"] == 0
+    assert bulk.coverage(cfg, calls, RawCache(raw))["cached_404"] == 2
+    api = Gone({"ev0"})
+    res, out = run(api)                                            # a plain rerun asks nothing
+    assert res["todo"] == 0 and api.calls[1:] == [] and "cached 404s 2" in out
+    for still in (Gone({"ev0"}), Gone({"ev0"}, fail=True)):        # still missing, or an error: the 404 stays
+        res, out = run(still, retry_404=True)
+        assert res["todo"] == 2 and "(2 of them cached 404s asked again)" in out and res["cached_404"] == 2
+    res, out = run(Gone(), retry_404=True, max_credits=70)        # 20 counted + 60 > 70: the budget still holds
+    assert res["fetched"] == 1 and "run budget" in res["stopped"] and res["cached_404"] == 1
+    res, out = run(Gone(), retry_404=True)
+    assert res["cached_404"] == 0 and "cached 404s 0" in out
+    assert bulk.coverage(cfg, calls, RawCache(raw))["cached_ok"] == 4
+    with pytest.raises(SystemExit, match="--retry-404 works with week and full, not check"):
+        _main(cfg, tmp_path / "cli", monkeypatch, FakeOddsApi(), stage="check", retry_404=True)
+
+
+def test_ctrl_c_just_after_an_answer_counts_it_at_what_it_cost(cfg, tmp_path, monkeypatch):
+    """Review round 3, minor a: Ctrl-C between an answer's arrival and its count left it uncounted and out of the
+    manifest, while the STOPPED line said it was counted at its upper bound. Now the answer is counted at what it
+    cost and logged, and the line says so: saved (a rerun doesn't buy it again) or not (a rerun does)."""
+    from markets import cache as cache_mod
+
+    class InterruptAfterSave(RawCache):
+        def get_or_fetch(self, **kw):
+            rec = super().get_or_fetch(**kw)
+            if len(list(self.raw_dir.rglob("*.parquet"))) == 2:
+                raise KeyboardInterrupt
+            return rec
+
+    c = bulk.BulkClient(InterruptAfterSave(tmp_path / "a"), max_credits=10_000, session=FakeOddsApi(), api_key=KEY,
+                        rate_per_sec=1e6, max_retries=0)
+    c.account()
+    res = bulk.run_calls(c, _nfl_calls(cfg))
+    assert res["interrupted"] and c.counted == 40 and res["fetched"] == 2
+    assert "had come back and was saved, so it is counted at what it cost, 20 credits." in res["stopped"]
+    rows = list(csv.DictReader((tmp_path / "a/_manifest/oddsapi_manifest.csv").open()))[1:]
+    assert [r["credits_last"] for r in rows] == ["20", "20"]
+    writes = []
+
+    def interrupted_write(path, record):
+        writes.append(path)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cache_mod, "write_record", interrupted_write)
+    c = client(tmp_path / "b", FakeOddsApi())
+    c.account()
+    res = bulk.run_calls(c, _nfl_calls(cfg))
+    assert c.counted == 20 and "counted at what it cost, 20 credits, and a rerun buys it again." in res["stopped"]
+
+
+def test_sweeps_answered_404_never_finish_a_sport_with_no_games(cfg, tmp_path, monkeypatch, capsys):
+    """Review round 3, minor b: /events sweeps answered 404 are cached, so they counted as a finished sweep: the probe
+    saved an empty schedule over one with games and printed `P0 done`. Now a sport whose sweeps list no games while
+    some were answered 404, or while the saved schedule has games, is incomplete: its schedule is kept, the probe
+    stops, and it says to tell the hub (a rerun won't ask cached 404s again)."""
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    nfl = ["americanfootball_nfl"]
+    two = [{**game(cfg, g, k), "home_team": "H", "away_team": "A", "first_seen": None}
+           for g, k in (("a", "2024-09-06T00:20:00Z"), ("b", "2024-09-08T17:00:00Z"))]
+
+    class Sweeps(FakeOddsApi):
+        def __init__(self, status):
+            super().__init__()
+            self.status_ = status
+
+        def get(self, url, params=None, timeout=None):
+            if url.endswith("/events"):
+                self.calls.append((url, dict(params)))
+                return self._r(self.status_, {"timestamp": params["date"], "data": []}, 0)
+            return super().get(url, params, timeout)
+
+    n = len(bulk.sweep_calls(cfg, nfl[0], NOW))
+    for status, why in ((404, f"all {n} sweeps came back but listed no games, and {n} of them were HTTP 404"),
+                        (200, "the sweeps listed no games, so the saved schedule of 2 game(s) was kept")):
+        bulk.save_schedule(tmp_path / str(status), nfl[0], two)
+        path = bulk.schedule_path(tmp_path / str(status), nfl[0])
+        before = path.read_bytes()
+        out = bulk.stage_probe(cfg, RawCache(tmp_path / str(status)), args(sports=nfl), now=NOW, session=Sweeps(status))
+        printed = capsys.readouterr().out
+        assert out["stopped"] and out["incomplete"] == nfl and path.read_bytes() == before, status
+        assert why in printed and "P0 stopped" in printed and "Tell the hub before rerunning" in printed, status
+    api = Sweeps(404)
+    bulk.stage_probe(cfg, RawCache(tmp_path / "404"), args(sports=nfl), now=NOW, session=api)
+    assert not any(u.endswith("/events") for u, _ in api.calls)    # the 404s are cached: a rerun asks nothing
+    out = bulk.stage_probe(cfg, RawCache(tmp_path / "new"), args(sports=nfl), now=NOW, session=Sweeps(200))
+    assert out["stopped"] is None and out["games"][nfl[0]] == {}   # nothing saved before, no 404: an empty schedule

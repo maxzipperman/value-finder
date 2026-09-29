@@ -111,6 +111,26 @@ def test_no_fill_after_tip():
     assert f["n_fill_minutes"] == 1 and f["qty"] == 40
 
 
+def test_the_close_is_strictly_before_tip_and_post_tip_rows_stay(con):
+    """Audit 2 (Sep 29, 2026, Astra C5): the NBA close took the last sharp snapshot AT OR BEFORE the scheduled start,
+    so a quote at the start itself (possibly in-play) became the close. Now it is strictly before, as load_sharp
+    already was: 0.50 five minutes before tip, 0.99 at tip, the close is 0.50. Post-tip snapshots stay in
+    sharp_fair and in analysis_1m's post-tip minutes, where the lead-lag analysis reads them."""
+    from datetime import date
+
+    from markets.analysis.data import load_markets
+    con.execute("CREATE TABLE kalshi_yes_taker_1m (sport VARCHAR, market_ticker VARCHAR, minute_end_ts TIMESTAMPTZ, "
+                "yes_taker_volume DECIMAL(18,2))")
+    con.execute("DELETE FROM sharp_fair")
+    con.execute("""INSERT INTO sharp_fair SELECT 'nba', CAST(ts AS TIMESTAMPTZ), 'E1', 'BBB', p, p, 0.0, 'pinnacle', NULL
+                   FROM (VALUES ('2026-01-05 23:55:00+00', 0.50), ('2026-01-06 00:00:00+00', 0.99),
+                                ('2026-01-06 00:05:00+00', 0.97)) t(ts, p)""")
+    con.execute(sql.analysis_sql(fair_source="pinnacle", ffill_max_min=30, sharp_max_min=65, taker_rate=0.07))
+    ms = load_markets(con, date(2026, 1, 5), date(2026, 1, 5), max_spread=1.0)["G-BBB"]
+    assert ms.close_fair == {"pinnacle": pytest.approx(0.50), "blend": pytest.approx(0.50)}
+    assert row(con, TIP + timedelta(minutes=5))["pin_fair"] == pytest.approx(0.97)     # post-tip, for lead-lag
+
+
 def test_pinnacle_moves_need_dense_reference():
     s = SharpSeries([TIP - timedelta(minutes=m) for m in (120, 60, 10, 5)], [0.50, 0.50, 0.51, 0.55], [None] * 4)
     ev = pinnacle_moves(s, TIP, 0.03, 5)

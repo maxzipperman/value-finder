@@ -56,13 +56,15 @@ def scrub(text, params: dict | None = None) -> str:
     return _SECRET_IN_QUERY.sub(r"\1" + REDACTED, text)
 
 
-def blank_secrets(text: str) -> str:
-    """`text` with every secret value http_get has sent blanked, and nothing else changed (unlike `scrub`, no
-    query-parameter pattern is applied). For a successful answer's body, which is kept exactly as it came unless it
-    holds the key itself."""
-    for form in sorted(_KNOWN_SECRETS, key=len, reverse=True):
-        if form in text:
-            text = text.replace(form, REDACTED)
+def blank_key(text: str, key: str | None) -> str:
+    """`text` with the exact value of `key` and its URL-encoded forms blanked, and nothing else changed (unlike
+    `scrub`, no pattern is applied), so a body that doesn't hold the key comes back exactly as it was. For response
+    bodies, before they are cached, printed, logged or raised. A key under 8 characters is left alone: a real key
+    is far longer, and a short one would blank ordinary text."""
+    if not key or len(key) < 8:
+        return text
+    for form in sorted({key, quote(key, safe=""), quote_plus(key)}, key=len, reverse=True):
+        text = text.replace(form, REDACTED)
     return text
 
 
@@ -135,15 +137,16 @@ def _scrubbed(exc: requests.RequestException, params: dict, attempts: int) -> re
 
 def http_get(session: requests.Session, url: str, params: dict, limiter: RateLimiter,
              *, timeout: float = 60, max_retries: int = 6,
-             before_retry: Callable[[str], None] | None = None) -> requests.Response:
+             before_retry: Callable[[str, requests.Response | None], None] | None = None) -> requests.Response:
     """GET with retries on 429/5xx/network errors. Honors Retry-After. Returns the final response.
 
     A network error or timeout that outlasts the retries, and any other `requests` error, is raised as the
     same exception type with the secrets in its text blanked (`scrub`) and no chained cause; its `attempts`
     says how many requests were sent.
 
-    `before_retry(why)` is called before each retry, with why = the error's type name or "HTTP <status>". A
-    paid caller uses it to count the attempt that got no usable answer (it may have been billed) and to check
+    `before_retry(why, response)` is called before each retry, with why = the error's type name or "HTTP <status>",
+    and the response that is about to be retried (None when the attempt got no answer). A paid caller uses it to
+    count that attempt (from the response's billing headers, or its upper bound when there is no answer) and to check
     its budget before asking again; whatever it raises propagates, and no retry is sent."""
     for k, v in params.items():
         if str(k).lower() in SECRET_PARAMS:
@@ -163,16 +166,16 @@ def http_get(session: requests.Session, url: str, params: dict, limiter: RateLim
             failure = _scrubbed(exc, params, attempt + 1)
             break
         if error is not None:
-            delay, what = _backoff(attempt), f"failed ({error})"
+            delay, what, answer = _backoff(attempt), f"failed ({error})", None
         elif resp.status_code in RETRY_STATUSES and attempt < max_retries:
             retry_after = resp.headers.get("Retry-After")
             delay = float(retry_after) if retry_after and retry_after.replace(".", "", 1).isdigit() else _backoff(attempt)
             error = f"HTTP {resp.status_code}"
-            what = f"-> {error}"
+            what, answer = f"-> {error}", resp
         else:
             return resp
         if before_retry is not None:
-            before_retry(error)          # outside any except block, so nothing holding the URL is chained to it
+            before_retry(error, answer)  # outside any except block, so nothing holding the URL is chained to it
         log.warning("GET %s %s; retrying in %.1fs", scrub(url, params), what, delay)
         time.sleep(delay)
     if failure is not None:
