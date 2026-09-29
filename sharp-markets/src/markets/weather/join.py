@@ -7,8 +7,10 @@ placed, with the reason and any venue name the source gave).
 Coordinates: an MLB park takes the MLB Stats API's own coordinates when they're cached (one pair per park,
 so every game there shares its weather requests), and the table's otherwise. Where both exist,
 coord_gap_km says how far apart they are; `markets weather plan` lists parks more than COORD_FLAG_KM
-apart, so the table can be corrected. No odds and no scores: outcomes are joined only by the pre-registered analysis
-(docs/HEAT_HYPOTHESES.md), which also keeps the sealed seasons out.
+apart, so the table can be corrected.
+
+No odds and no scores: outcomes are joined only by the pre-registered analysis (docs/HEAT_HYPOTHESES.md),
+which also keeps the sealed seasons out.
 """
 from __future__ import annotations
 
