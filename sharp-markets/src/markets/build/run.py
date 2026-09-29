@@ -65,9 +65,11 @@ def sharp_odds_rows(con, sport: str, teams, *,
     misses, the rows left out by sealed season label, the rows left out because their game time can't be
     read, and the cached responses skipped because their body can't be read. A row whose game falls in a sealed
     season of config/odds5m.yaml is left out unless include_sealed=True (only a pre-registered test may pass
-    it), the same rule as bulk.load_rows. A row with no readable commence_time is always left out (and
-    counted): its season can't be told, and no game can be matched to it. A cached body that isn't the JSON
-    snapshot it should be (a web page cached by an older odds-pull, say) is skipped and counted, never a crash."""
+    it), the same rule as bulk.load_rows; so is a row whose game falls in no season window when the snapshot was
+    taken inside a sealed one (counted under that season's label). A row with no readable commence_time is always
+    left out (and counted): its season can't be told, and no game can be matched to it. A cached body that isn't
+    the JSON snapshot it should be (a web page cached by an older odds-pull, say) is skipped and counted, never a
+    crash."""
     rows_out, unknown_names, sealed_out, no_kick, unreadable = [], Counter(), Counter(), 0, 0
     glob = _raw_glob(sport, "oddsapi_hist")
     if not glob:
@@ -81,10 +83,13 @@ def sharp_odds_rows(con, sport: str, teams, *,
     for params_json, body in con.execute(
             f"SELECT params_json, body FROM read_parquet('{glob}') WHERE http_status = 200").fetchall():
         try:
-            rows, unknown = snapshot_rows(json.loads(body), json.loads(params_json)["date"], teams)
+            requested = json.loads(params_json)["date"]
+            rows, unknown = snapshot_rows(json.loads(body), requested, teams)
         except (ValueError, TypeError, KeyError, AttributeError):
             unreadable += 1
             continue
+        asked = game_time(requested)
+        snap_window = window_for(odds5m, key, asked) if asked else None
         for r in rows:
             k = game_time(r["commence_time"])
             if k is None:
@@ -93,6 +98,11 @@ def sharp_odds_rows(con, sport: str, teams, *,
             w = window_for(odds5m, key, k)
             if w and w["sealed"] and not include_sealed:
                 sealed_out[w["label"]] += 1
+                continue
+            if w is None and snap_window and snap_window["sealed"] and not include_sealed:
+                # a game in no season window, in a snapshot taken inside a sealed one: judged by the snapshot, as
+                # bulk.load_rows judges such a row by its call
+                sealed_out[f"{snap_window['label']} (game in no window)"] += 1
                 continue
             rows_out.append({**r, "sport": sport})
         unknown_names.update(unknown)

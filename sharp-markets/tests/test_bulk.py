@@ -965,43 +965,50 @@ def test_an_empty_result_reported_as_free_goes_on(cfg, tmp_path):
 
 
 class Late(Billed):
-    """Billed (each call's first `bad` attempts billed, then timed out), with x-requests-remaining one answered
-    response late; the key check reads the true balance."""
+    """Billed (each call's first `bad` attempts billed, then timed out), with x-requests-remaining `lag` answered
+    responses late, or never moving after the key check when lag is None; the key check reads the true balance."""
 
-    def __init__(self, **kw):
+    def __init__(self, lag=1, **kw):
         super().__init__(**kw)
-        self.shown = None
+        self.lag, self.shown = lag, []
 
     def get(self, url, params=None, timeout=None):
         r = super().get(url, params, timeout)
         true = r.headers["X-Requests-Remaining"]
-        if not url.endswith("/sports"):
-            r.headers["X-Requests-Remaining"] = self.shown
-        self.shown = true
+        if url.endswith("/sports"):
+            self.shown = [true] * (self.lag or 1)
+        elif self.lag is None:
+            r.headers["X-Requests-Remaining"] = self.shown[0]
+        else:
+            self.shown.append(true)
+            r.headers["X-Requests-Remaining"] = self.shown.pop(0)
         return r
 
 
-def test_a_late_balance_and_billed_retries_pass_the_budget_or_floor_by_at_most_one_call(cfg, tmp_path, monkeypatch):
-    """Item 1b (final review, finding 2): a balance one response late, plus attempts billed and then timed out, used
-    to clear the count of those attempts at the next reading, so runs went over the budget and under the floor by
-    several calls. Now that count is cleared only by as much as the balance explains, or at the second reading after
-    the retry: the run ends at most one call's upper bound (30 here) past the budget or the floor. (Before, one to
-    three billed attempts per call took it 60 to 120 past.)"""
+@pytest.mark.parametrize("lag", [1, 2, 3, None])
+def test_a_late_balance_and_billed_retries_never_pass_the_budget_or_floor(cfg, tmp_path, monkeypatch, lag):
+    """Item 1b (final review, finding 2; review of the follow-up, blocker 1): a balance that arrives late, plus
+    attempts billed and then timed out, used to stop counting those attempts before the balance showed their bill (at
+    the next reading on main, at the second reading after the retry in the first version of this follow-up), so runs
+    went over the budget and under the floor by several calls, and without limit when the balance never moves. Now
+    an attempt stays counted until the balance shows what it cost, so the run never passes the budget or the floor,
+    however late the balance is (lag None: it never moves after the key check)."""
     calls = _f1_calls(cfg, ("2024-09-02T00:20:00Z", "2024-09-05T17:00:00Z", "2024-09-08T17:00:00Z"))   # 17, 30 each
     start = 5_000_000
     for bad in (1, 2, 3):
         for m in range(60, 600, 10):
-            api = Late(bad=bad)
+            api = Late(lag=lag, bad=bad)
             res = bulk.run_calls(_retrying_client(tmp_path / f"b{bad}-{m}", api, monkeypatch, max_credits=m), calls)
-            assert res["stopped"] and api.billed <= m + 30, (bad, m, api.billed, res)
-            api = Late(bad=bad)
+            assert res["stopped"] and api.billed <= m, (bad, m, api.billed, res)
+            api = Late(lag=lag, bad=bad)
             res = bulk.run_calls(_retrying_client(tmp_path / f"f{bad}-{m}", api, monkeypatch, floor=start - m), calls)
-            assert res["stopped"] and api.remaining >= start - m - 30, (bad, m, api.remaining, res)
+            assert res["stopped"] and api.remaining >= start - m, (bad, m, api.remaining, res)
 
 
 def test_an_attempt_with_no_answer_stays_counted_until_the_balance_explains_it(cfg, tmp_path, monkeypatch):
     """Item 1b: a timed-out attempt that the balance shows was billed is cleared at once; one the balance doesn't
-    show stays counted through the retry's own reading and is cleared at the second reading after it."""
+    show stays counted for the rest of the run (review of the follow-up, blocker 1: it used to be cleared at the
+    second reading after the retry, which a balance two answers late, or one that never moves, also passes)."""
     import requests
 
     class Unbilled(FakeOddsApi):
@@ -1025,7 +1032,11 @@ def test_an_attempt_with_no_answer_stays_counted_until_the_balance_explains_it(c
     c.max_retries = 0
     Unbilled.seen.add((calls[1].url, dict(calls[1].params)["date"]))
     c.fetch(calls[1])
-    assert c.unanswered == 0 and c.counted == 40                  # the second reading: cleared
+    assert c.unanswered == 60 and c.counted == 40 + 60            # the second reading: still counted
+    for call in calls[2:]:
+        Unbilled.seen.add((call.url, dict(call.params)["date"]))
+        c.fetch(call)
+    assert c.unanswered == 60 and c.counted == 20 * len(calls) + 60   # and to the end of the run
 
 
 class Overcharges(FakeOddsApi):
@@ -1085,6 +1096,29 @@ def test_ctrl_c_ends_the_run_with_stopped_interrupted_and_the_summary(cfg, tmp_p
     assert res["stopped"].startswith("interrupted") and res["interrupted"]
     assert "STOPPED: interrupted" in out and "stopped: 1 fetched" in out and "rerun resumes" in out
     assert res["spent"] == 20 + 60                                # the call that was out, at its upper bound
+
+
+def test_stop_messages_say_one_credit_and_a_probe_bug_says_tell_the_hub(cfg, tmp_path, capsys):
+    """Review of the follow-up, wording: Ctrl-C during a sweep said "counted at its upper bound, 1 credits", and a bug
+    in a billing probe didn't say to tell the hub before rerunning, as a bug in a pull does."""
+    class CtrlC(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            if not url.endswith("/sports"):
+                raise KeyboardInterrupt
+            return super().get(url, params, timeout)
+
+    c = client(tmp_path / "c", CtrlC())
+    c.account()
+    res = bulk.run_calls(c, [_events_call()])
+    assert "counted at its upper bound, 1 credit. A rerun" in res["stopped"]
+
+    class Buggy(bulk.BulkClient):
+        def fetch(self, call):
+            raise ValueError("a bug")
+
+    row = bulk._probe_row("p", Buggy(RawCache(tmp_path / "b"), max_credits=10), _events_call(), "x")
+    assert row["stopped"] and "unexpected error, probably a bug; tell the hub before rerunning" in row["result"]
+    assert "STOPPED: unexpected error, probably a bug; tell the hub before rerunning" in capsys.readouterr().out
 
 
 def _saved_test_nfl(cfg, raw):
@@ -1193,6 +1227,49 @@ def test_a_probe_that_stops_keeps_the_earlier_schedules_and_names_the_incomplete
     assert out["stopped"] is None and "P0 done" in capsys.readouterr().out and path.read_bytes() != before
     sweeps = len(bulk.sweep_calls(cfg, "americanfootball_nfl", NOW))
     assert sum(u.endswith("/events") for u, _ in api.calls[n_first:]) == sweeps - (n_first - 1)   # only what's missing
+
+
+@pytest.mark.parametrize("status", [422, 500])
+def test_a_sweep_that_keeps_getting_an_error_names_its_date_and_does_not_hold_up_the_probes(cfg, tmp_path, monkeypatch,
+                                                                                           capsys, status):
+    """Review of the follow-up, major: one /events sweep that always gets an error answer (422, or 500 after the
+    retries) left its sport incomplete on every rerun, the STOPPED line didn't say which sweep, the seven billing
+    probes never ran, and the runbook said to rerun until `P0 done`, forever. Now the STOPPED line names the sweep's
+    date and HTTP status, the probes still run on the sweeps that finished, the summary line says an answer was an
+    error, and the probe says to tell the hub if a rerun stops the same way."""
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    bad = "2025-10-21T06:00:00Z"
+
+    class Refuses(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            if (params or {}).get("date") == bad:
+                self.calls.append((url, dict(params)))
+                return self._r(status, {"message": "nope"}, 0)
+            return super().get(url, params, timeout)
+
+    for attempt in (1, 2):
+        api = Refuses()
+        out = bulk.stage_probe(cfg, RawCache(tmp_path), args(max_retries=6), now=NOW, session=api)
+        printed = capsys.readouterr().out
+        assert out["incomplete"] == ["basketball_nba"] and out["stopped"], attempt
+        assert (f"STOPPED: the sweeps did not finish for 1 sport(s), so their schedules were not saved: basketball_nba "
+                f"(1 sweep answered with an error: 2025-10-21 HTTP {status})") in printed
+        assert "(1 answered with an error and not saved; a rerun asks again)" in printed
+        assert "If a rerun stops again on the same sweeps with an error answer, don't keep rerunning: tell the hub" in printed
+        assert bulk.schedule_path(tmp_path, "americanfootball_nfl").exists()
+        assert not bulk.schedule_path(tmp_path, "basketball_nba").exists()
+        assert [p["probe"] for p in out["probes"]][:3] == ["featured NFL, 10 books, 3 markets",
+                                                          "event odds NFL props, 10 books",
+                                                          "event odds NFL props, Pinnacle only"]
+        assert not any(p.get("stopped") for p in out["probes"])
+    assert sum(u.endswith("/events") for u, _ in api.calls) == (7 if status == 500 else 1)   # only the refused sweep
+    status = 401                              # a stop of the run itself: its own STOPPED line, no "tell the hub" hint
+    out = bulk.stage_probe(cfg, RawCache(tmp_path / "401"), args(), now=NOW, session=Refuses())
+    printed = capsys.readouterr().out
+    assert "STOPPED: the Odds API rejected the key (401)" in printed and not out["probes"]
+    assert "Rerun the same command" in printed and "If a rerun stops again" not in printed
 
 
 def test_plan_lists_every_pull_and_says_which_wait_for_the_qualifying_games(tmp_path, monkeypatch, capsys):
@@ -1391,7 +1468,7 @@ def test_markets_build_skips_and_counts_a_cached_body_it_cannot_read(tmp_path, m
 SEALED_GAMES = {
     "americanfootball_nfl": ("2026-09-10T00:20:00Z", "2027-02-14T23:30:00Z"),     # NE at SEA; Super Bowl LXI
     "americanfootball_ncaaf": ("2026-08-29T16:00:00Z", "2027-01-26T00:30:00Z"),   # TCU-UNC, Dublin; CFP title game
-    "basketball_nba": ("2026-10-20T23:30:00Z", "2027-06-21T01:00:00Z"),           # opening night; Finals Game 7
+    "basketball_nba": ("2026-10-20T19:00:00Z", "2027-06-21T01:00:00Z"),           # opening night, 3 pm ET; Finals G7
     "icehockey_nhl": ("2026-09-29T21:00:00Z", "2027-06-27T00:00:00Z"),            # opening night; Final (as late as 2022)
     "baseball_mlb": ("2026-03-26T00:05:00Z", "2026-11-01T00:00:00Z"),             # Opening Night; World Series Game 7
     "soccer_usa_mls": ("2026-02-21T17:00:00Z", "2026-12-19T01:00:00Z"),           # matchday 1; MLS Cup (Fri Dec 18)
@@ -1421,3 +1498,64 @@ def test_every_sealed_window_holds_its_first_and_last_game_in_utc(sport, which, 
     else:
         assert w["to"] >= (kick + timedelta(days=1)).date(), (w["to"], kick)
     assert set(SEALED_GAMES) == {s for s, sc in real["sports"].items() if any(x["sealed"] for x in sc["windows"])}
+
+
+def test_a_game_in_no_window_is_judged_by_its_call(tmp_path, monkeypatch):
+    """Review of the follow-up, blocker 2: the NHL 2026-27 season opened on Sep 29, 2026, two days before its sealed
+    window starts, so those games have no season and bulk.load_rows returned their rows by default, from the
+    daily-close snapshots planned for the sealed games of the next days. Now a row whose game falls in no season
+    window is judged by its call, as a row with no game time already was: left out (and counted) when the call is
+    sealed. Nothing fetched changes. `markets build` does the same for a snapshot taken inside a sealed window."""
+    import shutil
+    from collections import Counter
+
+    import duckdb
+
+    from markets.build import run
+    from markets.cache import write_record
+    from markets.sport import load_teams
+    real = bulk.load_config()
+    games = {"sep29": "2026-09-29T21:00:00Z", "sep30": "2026-09-30T23:00:00Z", "oct3": "2026-10-03T23:00:00Z"}
+    sched = {"icehockey_nhl": [bulk._label(real, {"id": g, "sport": "icehockey_nhl", "commence_time": t(k)})
+                               for g, k in games.items()]}
+    assert [g["season"] for g in sched["icehockey_nhl"]] == [None, None, "2026-27"]      # the window starts Oct 1
+
+    class Lists(FakeOddsApi):
+        """Featured snapshots list every game of the week ahead."""
+        def get(self, url, params=None, timeout=None):
+            if url.endswith("/sports"):
+                return super().get(url, params, timeout)
+            at = t(params["date"])
+            data = [{"id": g, "commence_time": k, "home_team": "H", "away_team": "A", "bookmakers": [
+                {"key": "pinnacle", "markets": [{"key": m, "outcomes": [{"name": "H", "price": 1.9}]}
+                                                for m in ("h2h", "spreads", "totals")]}]}
+                for g, k in games.items() if at <= t(k) <= at + timedelta(days=8)]
+            return self._r(200, {"timestamp": params["date"], "data": data}, 30)
+
+    calls = bulk.plan_calls(real, "H1", sched, now=datetime(2026, 10, 10, tzinfo=UTC))
+    assert calls and all(c.sealed for c in calls)                   # planned only for the Oct 3 game
+    c = client(tmp_path, Lists(), max_credits=100_000)
+    assert bulk.run_calls(c, calls)["stopped"] is None
+    left = Counter()
+    assert bulk.load_rows(real, calls, c.cache, left_out=left) == []
+    assert left["in no season window, sealed call"] > 0 and left["sealed season"] > 0
+    assert {r["odds_event_id"] for r in bulk.load_rows(real, calls, c.cache, include_sealed=True)} == set(games)
+    unsealed = [bulk.Call(x.pull, x.sport, x.source, x.path, x.params, x.at, x.expected, False, x.event_id,
+                          x.cache_sport) for x in calls]
+    assert {r["odds_event_id"] for r in bulk.load_rows(real, unsealed, c.cache)} == {"sep29", "sep30"}
+
+    monkeypatch.setattr(run, "RAW_DIR", tmp_path / "build")
+    monkeypatch.setattr(run, "ODDS5M_SPORT_KEY", {**run.ODDS5M_SPORT_KEY, "nba": "icehockey_nhl"})
+    for day, sealed_snapshot in (("2026-09-28", False), ("2026-10-02", True)):
+        body = {"timestamp": f"{day}T16:00:00Z", "data": [
+            {"id": "sep30", "commence_time": games["sep30"], "home_team": "Boston Celtics", "away_team": "New York Knicks",
+             "bookmakers": [{"key": "pinnacle", "markets": [{"key": "h2h", "outcomes": [
+                 {"name": "Boston Celtics", "price": 1.5}, {"name": "New York Knicks", "price": 2.6}]}]}]}]}
+        shutil.rmtree(tmp_path / "build", ignore_errors=True)
+        write_record(tmp_path / "build" / "nba" / "oddsapi_hist" / day / f"{day}.parquet", {
+            "cache_key": day, "sport": "nba", "source": "oddsapi_hist", "data_date": day, "url": "u",
+            "params_json": json.dumps({"date": f"{day}T16:00:00Z"}), "fetched_at": NOW, "http_status": 200,
+            "headers_json": "{}", "body": json.dumps(body)})
+        rows, _, sealed_out, _, _ = run.sharp_odds_rows(duckdb.connect(), "nba", load_teams("nba"))
+        assert bool(rows) != sealed_snapshot, day
+        assert dict(sealed_out) == ({"2026-27 (game in no window)": 2} if sealed_snapshot else {}), day

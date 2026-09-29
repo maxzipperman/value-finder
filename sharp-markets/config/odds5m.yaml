@@ -58,7 +58,8 @@ sports:
       - {label: "2023-24", from: 2023-10-20, to: 2024-06-25}
       - {label: "2024-25", from: 2024-10-18, to: 2025-06-25}
       - {label: "2025-26", from: 2025-10-01, to: 2026-06-25}
-      # first: opening night Tue Oct 20, 2026, Boston at Detroit, about 2026-10-20T23:30Z (NBA schedule release);
+      # first: opening night Tue Oct 20, 2026, Boston at Detroit, 3 pm ET = 2026-10-20T19:00Z (NBA.com, "Key dates
+      # for 2026-27 NBA season"; the first game of NBC's opening triple-header);
       # last: the Finals, not scheduled yet; the league's projected calendar puts a Game 7 on June 19-20, 2027, and
       # the latest Finals game of the last decade was June 22, 2025 (8 pm ET = 2025-06-23T00:00Z).
       - {label: "2026-27", from: 2026-10-01, to: 2027-06-30, sealed: true}
