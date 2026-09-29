@@ -32,6 +32,7 @@ from .stadiums import STADIUMS, coords, home_stations, resolve_stadium
 
 SCHEDULE_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
 PBP_URL = "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.parquet"
+STATS_URL = "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{season}.parquet"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 NCEI_URL = "https://www.ncei.noaa.gov/access/services/data/v1"
@@ -99,6 +100,23 @@ def fetch_pbp(seasons=None, workers=4):
     with ThreadPoolExecutor(workers) as ex:
         for season, size in ex.map(one, seasons):
             print(f"  pbp {season}: {size / 1e6:.1f} MB", flush=True)
+
+
+def fetch_player_stats(seasons=None, workers=4):
+    """Download nflverse weekly player stats (every player, kickers included). Past seasons are
+    cached; the current season is always refreshed."""
+    cur = current_season()
+    seasons = seasons or range(FIRST_SEASON, cur + 1)
+
+    def one(season):
+        dest = RAW / "player_stats" / f"stats_player_week_{season}.parquet"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        download(STATS_URL.format(season=season), dest, force=(season == cur))
+        return season, dest.stat().st_size
+
+    with ThreadPoolExecutor(workers) as ex:
+        for season, size in ex.map(one, seasons):
+            print(f"  player stats {season}: {size / 1e6:.1f} MB", flush=True)
 
 
 # --------------------------------------------------------------------------- NOAA

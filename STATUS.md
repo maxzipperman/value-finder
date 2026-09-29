@@ -57,6 +57,7 @@ One issue per idea from [`strategy-research/`](strategy-research/README.md#ideas
 | [#9](https://github.com/maxzipperman/value-finder/issues/9) | Kalshi/Polymarket microstructure | sharp-markets | Free Kalshi and Polymarket data |
 | [#10](https://github.com/maxzipperman/value-finder/issues/10) | Player props: median vs mean | nfl-weather | About 46K Odds API credits (NFL 2023–26 at the close), in the March 5M month |
 | [#11](https://github.com/maxzipperman/value-finder/issues/11) | CFB injury reports and early-season priors | cfb-weather | CFBD API |
+| [#21](https://github.com/maxzipperman/value-finder/issues/21) | Kicker props: kicking-points unders in wind and cold | nfl-weather | Outcomes are in (`player_week.parquet`). Prices: 22,800 credits, added to the March 5M month (M6). |
 | [#16](https://github.com/maxzipperman/value-finder/issues/16) | Line-move reversal: do day-to-day moves reverse before the close? | sharp-markets | The multi-book lines in the March 5M month |
 
 Done: #4 (Rule HT pre-registered), #5 (timing advice and fill logging), #15 (10-book logging and the free-tier guard), #17 (no longshot bias; see below). The credit cost of every item, and the extra hypotheses the March data can test at no extra cost (line shopping, line-move reversal), are in [`odds-api-credits.md`](strategy-research/odds-api-credits.md).

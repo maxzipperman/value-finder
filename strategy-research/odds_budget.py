@@ -188,6 +188,8 @@ def main():
         ("M4", "dropped (pre-check failed)", "1H totals + team totals, windy NFL games (obs >= 12 mph) "
          "+ as many calm controls, 2023-26, at T-24h and close", "#6 derivative markets",
          f"10 x 2 x 1 x 2 snaps x ({w12_props} windy + {w12_props} calm)", HIST * 2 * 2 * 2 * w12_props, 1),
+        ("M6", "main month if #21 is in the data-use plan", "Kicker props (kicking points, field goals made), NFL "
+         "2023-26, at the close", "#21", f"10 x 2 x 1 x 1 snap x {g_props:,} games", HIST * 2 * g_props, 3),
         ("M5", "main month if H3 proceeds", "NBA Pinnacle closes 2021-26 for the H3 Kaggle test (PLAN.md)", "H3",
          "10 x 1 x 1 x ~3,955 tip times", 39_550, 2),
         ("N1", "if B12 passes", "NBA 2025-26 full season, schedule D: 5-min from market open to tip (PLAN.md)",

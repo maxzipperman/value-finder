@@ -77,6 +77,7 @@ new weather and new lines are downloaded.
 | nflverse `games.csv` | every game since 1999; game-book kickoff temp and wind; roof; closing spread, total, moneyline, O/U prices | The same game-book weather Pro-Football-Reference shows, which is what the thesis scraped. PFR now returns 403 to scripts. |
 | nflverse play-by-play | team box scores, EPA, CPOE, air yards, expected pass rate, every FG/XP | Box scores reproduce official stats (e.g. Houston 2012-11-18: 43/55, 527 yds, 5 TD, 2 INT). |
 | Open-Meteo archive (ERA5) | hourly precipitation, snowfall, gusts, humidity, temp and wind at each stadium for the game window | Fills the thesis's missing precipitation, and the 2022–23 games with no game-book reading. Free tier: ~75 requests/min. |
+| nflverse weekly player stats | every player's stat line since 1999, kickers included (`scripts/build_player_week.py` → `data/processed/player_week.parquet`) | Outcomes for props and kicker props (#10, #21). `player_games.parquet` keeps the no-hindsight QB/RB1/WR1 roles. |
 | Open-Meteo previous runs | what the forecast said 1–3 days before kickoff (2024+) | Measures how much of the observed-weather edge a forecast-driven bettor keeps. |
 | Open-Meteo forecast | forecasts for upcoming games | Used by `this_week.py`. |
 | NOAA GHCN-Daily (NCEI) | daily highs/lows at each home city's airport | The visitor's 7-day "practice climate" for the acclimation variables. |

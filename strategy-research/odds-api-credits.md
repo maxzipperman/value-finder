@@ -118,6 +118,7 @@ The Kaunitz outlier-price method is idea 1 itself. Its real-money test ran for f
 | ~~M1~~ | ~~Longshots lose more per dollar at the best price~~ (dropped: the free pre-check found no bias) | | | 0 |
 | M2 | Alternate lines misprice key-number crossings versus recent-era margins | EV at the alternate price | 2026 | 4 |
 | M3 | Yardage-prop unders hit more than 50% (median below mean) | Under rate, ROI at the close | 2026 | 4 (one per market) |
+| M6 | Kicking-points unders in 15+ mph or ≤ 32°F outdoor games ([#21](https://github.com/maxzipperman/value-finder/issues/21)) | Win rate, ROI at the prop price | 2026 | 2 |
 | ~~M4~~ | ~~Windy-game first-half and team totals don't reflect the wind~~ (dropped: pre-check failed) | | | 0 |
 | B12, N1 | H1/H2 as specified in PLAN.md | Per PLAN.md | Per PLAN.md | Per PLAN.md |
 
@@ -143,6 +144,7 @@ Credits are per month for live rows (L) and one-time for backfills. Value runs f
 | M2 | Main month | Alternate spreads and totals, NFL 2023–26, T−24h and close | #8 | 10 × 2 × 1 × 2 × 1,140 games | 45,600 | 3 | Needs Pinnacle alternates for a sharp reference |
 | M3 | Main month | Player props (4 markets), NFL 2023–26, close | #10 | 10 × 4 × 1 × 1 × 1,140 | 45,600 | 3 | Idea 7; graded on outcomes at US-book prices |
 | M4 | Dropped (pre-check failed) | First-half and team totals, windy NFL games (≥ 12 mph observed) plus as many calm games, 2023–26, T−24h and close | #6 | 10 × 2 × 1 × 2 × (143 + 143) | 11,440 | 1 | The free play-by-play check found no wind effect on the first-half or team split |
+| M6 | If #21 is in the data-use plan | Kicker props (kicking points, field goals made), NFL 2023–26, close | #21 | 10 × 2 × 1 × 1 × 1,140 | 22,800 | 3 | Wind and cold cut team kicking points from 7.2 to 6.5 a game; the prices are untested |
 | M5 | If H3 proceeds | NBA Pinnacle closes 2021–26 | H3 | 10 × 1 × 1 × ~3,955 tips | 39,550 | 2 | Waits on licensed data |
 | N1 | If B12 passes | NBA 2025-26 season, 5-minute, market open to tip (schedule D) | H1/H2 | 10 × 1 × 1 × (49,398 − 754 − 791 cached) | 478,530 | 2 | Worth it only after B12 |
 | X1 | Deferred | Hourly multi-book featured lines, 7 days before kickoff, NFL+CFB 2020–26 | #8 | 10 × 3 × 1 × 53,481 | 1,604,430 | 3 | Hourly misses minute-long stale lines, and daily already catches persistent ones |
