@@ -178,6 +178,75 @@ def select_runs(runs: pd.DataFrame, kick_utc, leads=LEADS, how="window") -> dict
     return out
 
 
+def explain_selection(runs: pd.DataFrame, kick_utc, leads=LEADS, how="window") -> list[str]:
+    """The run selection for one game, step by step, for checking by hand (scripts/mos_hand_check.py).
+
+    Lists the runs cached for each date from (kickoff date - max lead) through the kickoff date,
+    then for each lead: the date its run must come from, the run select_runs takes, when that run
+    was published and the last alert run of its day, the MOS steps around each time the rule
+    reads (knots) and the interpolated values."""
+    k = pd.Timestamp(kick_utc)
+    k = k.tz_localize("UTC") if k.tzinfo is None else k.tz_convert("UTC")
+    kd = kick_date(k)
+    local = k.tz_convert(KICK_TZ)
+    out = [f"  kickoff {k:%Y-%m-%d %H:%M} UTC = {local:%a %Y-%m-%d %H:%M} Eastern; Eastern date {kd}"]
+    rts = pd.Series(runs.runtime.unique()) if len(runs) else pd.Series([], dtype="datetime64[ns]")
+    for back in range(max(leads), -1, -1):
+        day = kd - timedelta(days=back)
+        cyc = sorted(f"{pd.Timestamp(r):%H}Z" for r in rts if mac_date(r) == day)
+        tag = "kickoff date: never used" if back == 0 else f"lead {back}"
+        out.append(f"  runs cached for {day} ({tag}): {' '.join(cyc) or 'none'}")
+    sel = select_runs(runs, k, leads, how)
+    targets = target_times(k, how)
+    for n in leads:
+        want = kd - timedelta(days=n)
+        v = sel[n]
+        if v is None:
+            out.append(f"  lead {n} (runs of {want}): none; {lead_status(runs, k, n, how)}")
+            continue
+        rt = v["runtime"]
+        steps = runs[runs.runtime == rt].sort_values("ftime")
+        out.append(f"  lead {n} (runs of {want}): run {rt:%Y-%m-%d %H}Z, published by {v['published_utc']:%Y-%m-%d %H:%M} "
+                   f"UTC; last alert run that day {v['bet_by_utc']:%Y-%m-%d %H:%M} UTC; kickoff {k:%Y-%m-%d %H:%M} UTC")
+        vals = []
+        for t in targets:
+            before = steps[steps.ftime <= t].tail(1)
+            after = steps[steps.ftime >= t].head(1)
+            t1, v1 = before.ftime.iloc[0], float(before.wsp.iloc[0])
+            t2, v2 = after.ftime.iloc[0], float(after.wsp.iloc[0])
+            val = v1 if t1 == t2 else v1 + (t - t1) / (t2 - t1) * (v2 - v1)
+            vals.append(val)
+            out.append(f"    {t:%m-%d %H:%M}Z: steps {t1:%m-%d %H}Z {v1:g} kt, {t2:%m-%d %H}Z {v2:g} kt -> {val:.3f} kt")
+        out.append(f"    mean {np.mean(vals):.3f} kt x {KT_TO_MPH:.6f} = {v['wind_mph']:.2f} mph"
+                   + ("  (>= 15: fires)" if v["wind_mph"] >= 15 else ""))
+    return out
+
+
+def lead_status(runs: pd.DataFrame, kick_utc, lead, how="window") -> str:
+    """Why one lead has a forecast or not, from one station's runs (the runs select_runs reads).
+
+    "forecast": select_runs finds one. "no run that day": no run counts on date (kickoff's Eastern
+    date - lead). "run ends before the window": every run of that day ends before the last time the
+    rule reads, the usual case at lead 3, as MAV reaches 72 hours. "gap or no wind": a run reaches
+    that far, but a step around the window is missing or has no wind value. Describes; never selects."""
+    if runs is None or runs.empty:
+        return "no run that day"
+    want = kick_date(kick_utc) - timedelta(days=lead)
+    near = runs[(runs.runtime >= pd.Timestamp(want - timedelta(days=1)))
+                & (runs.runtime < pd.Timestamp(want + timedelta(days=1)))]
+    day = [rt for rt in near.runtime.unique() if mac_date(rt) == want]
+    if not day:
+        return "no run that day"
+    last = target_times(kick_utc, how)[-1]
+    reaches = False
+    for rt in day:
+        steps = near[near.runtime == rt]
+        if not np.isnan(window_wind_kt(steps, kick_utc, how)):
+            return "forecast"
+        reaches |= bool(steps.ftime.max() >= last)
+    return "gap or no wind" if reaches else "run ends before the window"
+
+
 # --------------------------------------------------------------------------- fetching
 _session = requests.Session()
 _session.headers["User-Agent"] = USER_AGENT
@@ -259,14 +328,77 @@ def fetch_runs(station, sts, ets, model=MODEL, cache=None, log=print) -> Path:
     raise RateLimited(f"{station} {params['sts']}..{params['ets']}: gave up after {len(BACKOFF_S) + 1} tries")
 
 
+COLUMNS = ["runtime", "ftime", "wsp", "wdr", "station"]
+_UNREADABLE = (pd.errors.EmptyDataError, pd.errors.ParserError, UnicodeDecodeError)
+
+
+def _no_rows() -> pd.DataFrame:
+    return pd.DataFrame(columns=COLUMNS)
+
+
 def read_file(p: Path) -> pd.DataFrame:
-    d = pd.read_csv(p, usecols=lambda c: c in ("runtime", "ftime", "wsp", "wdr", "station"))
-    if d.empty:
-        return pd.DataFrame(columns=["runtime", "ftime", "wsp", "wdr", "station"])
+    """One cached answer as rows (runtime, ftime, wsp in knots, wdr, station); never raises on odd answers.
+
+    IEM leaves out any column that is empty in the whole answer, so an answer can lack wsp. The
+    Sep 29 full pull found two kinds (file_status says which a file is): a station-season with
+    no runs at all is the header alone, and Baltimore Inner Harbor (KDMH) has every MOS variable
+    but wind in every season, so its answers have no wdr or wsp column. Both are missing
+    forecasts: no runs gives no rows, and runs without wind give their rows with wsp = NaN, which
+    select_runs never uses. A body that isn't a CSV with runtime and ftime reads as no rows."""
+    try:
+        d = pd.read_csv(p, usecols=lambda c: c in COLUMNS)
+    except _UNREADABLE:
+        return _no_rows()
+    if d.empty or not {"runtime", "ftime"} <= set(d.columns):
+        return _no_rows()
+    for c in COLUMNS:
+        if c not in d:
+            d[c] = np.nan
     d["runtime"] = pd.to_datetime(d.runtime)
     d["ftime"] = pd.to_datetime(d.ftime)
     d["wsp"] = pd.to_numeric(d.wsp, errors="coerce")
     return d
+
+
+def _scan(p: Path) -> tuple[str, int, int]:
+    """(file_status, runs, rows with a wind value) of one cached answer."""
+    try:
+        head = pd.read_csv(p, nrows=0).columns
+        if not {"runtime", "ftime"} <= set(head):
+            return "unreadable", 0, 0
+        d = pd.read_csv(p, usecols=["runtime"] + (["wsp"] if "wsp" in head else []))
+    except _UNREADABLE:
+        return "unreadable", 0, 0
+    if d.empty:
+        return "no runs", 0, 0
+    wind = int(pd.to_numeric(d.wsp, errors="coerce").notna().sum()) if "wsp" in d else 0
+    return ("ok" if wind else "no wind"), int(d.runtime.nunique()), wind
+
+
+def file_status(p: Path) -> str:
+    """What a cached answer holds: "ok" (runs with at least one wind value), "no runs" (the header
+    alone), "no wind" (runs, but no wind value in any of them) or "unreadable" (not the expected CSV)."""
+    return _scan(p)[0]
+
+
+def cache_tally(model=MODEL, cache=None) -> dict:
+    """file_status of every file in the cache (both sports share it): {status: [paths]}."""
+    out = {}
+    for p in sorted((Path(cache or CACHE) / model).glob(f"*/*_{model}_*.csv")):
+        out.setdefault(file_status(p), []).append(p)
+    return out
+
+
+def window_status(w: pd.DataFrame, model=MODEL, cache=None) -> pd.DataFrame:
+    """For each requested window (icao, sts, ets, ...): the cached file that covers it, its
+    file_status ("not downloaded" when nothing covers it), its number of runs and of rows with wind."""
+    rows = []
+    for r in w.itertuples():
+        p = cached_cover(r.icao, r.sts, r.ets, model, cache)
+        st, runs, wind = _scan(p) if p is not None else ("not downloaded", 0, 0)
+        rows.append(dict(file=p.name if p is not None else "", status=st, runs=runs, wind_rows=wind))
+    return pd.concat([w.reset_index(drop=True), pd.DataFrame(rows, columns=["file", "status", "runs", "wind_rows"])],
+                     axis=1)
 
 
 def load_station(station, model=MODEL, cache=None) -> pd.DataFrame:
@@ -274,8 +406,10 @@ def load_station(station, model=MODEL, cache=None) -> pd.DataFrame:
     d = Path(cache or CACHE) / model / station
     files = sorted(d.glob(f"{station}_{model}_*.csv")) if d.exists() else []
     if not files:
-        return pd.DataFrame(columns=["runtime", "ftime", "wsp", "wdr", "station"])
+        return _no_rows()
     out = pd.concat([read_file(p) for p in files], ignore_index=True)
+    # the same (run, step) in two files: keep one with a wind value over one without (else the first file's)
+    out = out.sort_values("wsp", key=lambda s: s.isna(), kind="stable")
     return out.drop_duplicates(["runtime", "ftime"]).sort_values(["runtime", "ftime"]).reset_index(drop=True)
 
 

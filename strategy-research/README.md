@@ -79,7 +79,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 **The bar for new analyses is already p < 0.00026 (0.05 / 191).** The 5M data-use plan commits 56 more variants ([`odds-api-credits.md`](odds-api-credits.md#data-use-plan)), 135 + 56 = 191. They count from the moment they were committed, whether or not their analysis has run yet, so anything analysed from here on is judged against 0.05 / 191, and each new variant beyond the plan raises the count further.
 
-**Running count: 200** (September 28, 2026, evening: 198, plus 2 for the size-of-total check in [`gate_level_check.py`](gate_level_check.py), one per sport; it found no dependence, so the registered pricing model is flat). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 200 = 0.00025. September 29, 2026: the [landing-mass table](#landing-mass-table-key-numbers-added-september-29-2026-52) ([#52](https://github.com/maxzipperman/value-finder/issues/52)) adds 32, for **232**, so the bar is p < 0.05 / 232 = 0.000216. September 29, 2026: the CFB Rule B forecast replay on NWS MOS ([#40](https://github.com/maxzipperman/value-finder/issues/40), [`../cfb-weather/scripts/mos_replay.py`](../cfb-weather/scripts/mos_replay.py)) adds 1, for **233**, so the bar is p < 0.05 / 233 = 0.000215; its NFL half adds 1 more when it runs. September 29, 2026: the [price-engine backtest](#the-price-engine-backtest-ready-before-f1-lands-added-september-29-2026-8-53) ([#8](https://github.com/maxzipperman/value-finder/issues/8), [#53](https://github.com/maxzipperman/value-finder/issues/53)), registered before any F1 data exists, adds 38, for **271**, so the bar is p < 0.05 / 271 = 0.000185. September 29, 2026: the [paper-to-money gate](#the-paper-to-money-gate-added-september-29-2026-51) ([#51](https://github.com/maxzipperman/value-finder/issues/51)) sizes a staking rule, not a betting rule, and adds none: still **271**, bar p < 0.05 / 271 = 0.000185.
+**Running count: 200** (September 28, 2026, evening: 198, plus 2 for the size-of-total check in [`gate_level_check.py`](gate_level_check.py), one per sport; it found no dependence, so the registered pricing model is flat). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 200 = 0.00025. September 29, 2026: the [landing-mass table](#landing-mass-table-key-numbers-added-september-29-2026-52) ([#52](https://github.com/maxzipperman/value-finder/issues/52)) adds 32, for **232**, so the bar is p < 0.05 / 232 = 0.000216. September 29, 2026: the CFB Rule B forecast replay on NWS MOS ([#40](https://github.com/maxzipperman/value-finder/issues/40), [`../cfb-weather/scripts/mos_replay.py`](../cfb-weather/scripts/mos_replay.py)) adds 1, for **233**, so the bar is p < 0.05 / 233 = 0.000215; its NFL half adds 1 more when it runs. September 29, 2026: the [price-engine backtest](#the-price-engine-backtest-ready-before-f1-lands-added-september-29-2026-8-53) ([#8](https://github.com/maxzipperman/value-finder/issues/8), [#53](https://github.com/maxzipperman/value-finder/issues/53)), registered before any F1 data exists, adds 38, for **271**, so the bar is p < 0.05 / 271 = 0.000185. September 29, 2026: the [paper-to-money gate](#the-paper-to-money-gate-added-september-29-2026-51) ([#51](https://github.com/maxzipperman/value-finder/issues/51)) sizes a staking rule, not a betting rule, and adds none: still **271**, bar p < 0.05 / 271 = 0.000185. September 29, 2026: the NFL half of the forecast replay on NWS MOS ([#40](https://github.com/maxzipperman/value-finder/issues/40), [PR 65](https://github.com/maxzipperman/value-finder/pull/65), [`../nfl-weather/scripts/mos_replay.py`](../nfl-weather/scripts/mos_replay.py)) adds 1, and one NFL cut looked at after its results (the seasons outside 2007–21) adds 1, for **273**, so the bar is p < 0.05 / 273 = 0.000183.
 
 | Issue | Test | Result | Verdict |
 |---|---|---|---|
@@ -371,6 +371,8 @@ Count at merge (Sep 29, 2026): 271; bar p < 0.000185.
 
 Section 4 of [`simulate_decisions.py`](simulate_decisions.py) ([`output/money_gate.csv`](output/money_gate.csv), [`output/money_gate.log`](output/money_gate.log)). It tests a staking rule, not a betting rule, so it adds **0 variants**; the running count stays at 200.
 
+*Note, Sep 29, 2026:* when this study merged, the running count was **271** (bar p < 0.000185), not 200; this study adds none.
+
 **The question.** Both `STRATEGY.md` files put real money in once "20 settled signals show positive average CLV". A rule with no edge passes that half the time. What should replace it, and how likely is each candidate to let money in on CFB this season?
 
 **Short answer.**
@@ -614,6 +616,64 @@ When the fixed looks arrive (the share of seasons that reach the count, and the 
 - At 20 signals the bar would be about 1.17 points, and half the move would clear it about 1 time in 4.
 - So 40 is roughly the smallest count at which an edge of the historical size is very likely to show. It isn't enough to confirm a smaller one.
 - With 25 CFB signals a season, the 40th signal arrives this season only 3% of the time. That's why the sequential gate matters: it can let money in before 40 when the evidence is strong, and never on weaker evidence than the keep test's.
+
+### The keep test: plain, grouped by game day, and the wider of the two (added September 29, 2026)
+
+Count at merge (Sep 29, 2026): 273; bar p < 0.000183. This changes how a test is graded, not a betting rule, so it adds **0 variants**, and the running count stays at 273.
+
+[`keep_test_check.py`](keep_test_check.py) ([`output/keep_test_check.csv`](output/keep_test_check.csv), [`output/keep_test_check.log`](output/keep_test_check.log)) asks how often the registered keep test keeps a Rule B that has no edge, with its interval computed three ways. nfl-weather amendment 7 and cfb-weather amendment 5 register the third, the wider of the other two. The check reuses section 4 of `simulate_decisions.py` (the CLV proxy, the dependence estimates and the calendars above) without rewriting any of that script's outputs. Each case is 40,000 simulated paths of 40 bets, with seed 29; the run takes about a minute.
+
+**The three intervals.** Each is the plain mean m of the n closing-line values plus or minus a half-width.
+
+- **Plain:** 1.96 × sd / √n, as the scorers computed it before the amendments. It treats every bet as independent.
+- **Grouped by game day:** the bets are grouped by the Eastern date of their game's kickoff. With G game days, the variance of the mean is (G / (G − 1)) × the sum over days of (that day's sum of CLV − m) squared, divided by n squared, and the half-width uses Student's t on G − 1 degrees of freedom. With fewer than 2 game days there is no interval. The first draft of the amendments registered this one alone.
+- **The wider of the two (registered):** the larger of t(0.975, n − 1) × sd / √n and the grouped half-width. With fewer than 2 game days, or 2 bets, there is no interval and the decision is inconclusive. A path it keeps, both of the others keep, so it can never keep more often than either; the script checks this path by path, and it holds in every case below.
+
+**No edge: how often each keeps the rule.**
+
+| Sport, signals a season | Dependence | Plain | Grouped | Wider of the two (registered) |
+|---|---|---|---|---|
+| CFB, 25 / 40 / 55 | independent | 2.8 / 2.7 / 2.7% | 3.3 / 3.1 / 3.4% | 1.9 / 1.7 / 1.7% |
+| CFB, 25 / 40 / 55 | realistic (same day 0.11) | 5.2 / 5.8 / 6.3% | 3.6 / 3.7 / 4.0% | 2.8 / 2.9 / 3.0% |
+| CFB, 25 / 40 / 55 | stress (same day 0.17) | 6.6 / 7.3 / 8.7% | 3.8 / 3.9 / 4.4% | 3.3 / 3.4 / 3.8% |
+| CFB | model-free, whole days resampled | 4.6% | 3.1% | 2.6% |
+| NFL, 17 / 25 | independent | 2.1 / 2.1% | 2.0 / 2.0% | 1.4 / 1.4% |
+| NFL, 17 / 25 | realistic (same day 0.07, same season 0.06) | 8.0 / 10.3% | 6.4 / 8.1% | 5.8 / 7.4% |
+| NFL, 17 / 25 | stress (same day 0.16, same season 0.06) | 9.0 / 11.0% | 6.6 / 7.8% | 6.3 / 7.4% |
+| NFL, 17 / 25 | the realistic day share alone (season share 0) | 2.6 / 2.7% | 2.1 / 2.3% | 1.7 / 1.7% |
+| NFL | model-free, whole days resampled | 3.7% | 1.6% | 1.2% |
+| NFL | model-free, whole seasons resampled | 5.6% | 3.2% | 3.2% |
+
+The intended rate is 2.5%. For the NFL's two looks (nfl-weather amendment 6, section 6), with the 20-close limit and mean CLV positive in each half or season, a rule with no edge is kept, at 17 and 25 signals a season:
+
+| Dependence | Plain at both looks | Grouped | Wider of the two (registered) |
+|---|---|---|---|
+| independent | 2.0 / 1.9% | 1.9 / 2.0% | 1.3 / 1.4% |
+| realistic | 8.4 / 10.2% | 7.1 / 8.9% | 6.5 / 8.4% |
+| stress | 9.0 / 11.0% | 7.0 / 8.6% | 6.7 / 8.4% |
+
+The win rate against the close isn't simulated, so these are upper bounds for that criterion. No simulated path reached 40 bets in 2026, so this is the pooled look after 2027. Keep and drop both met is a drop, so here the wider test is not below the others by construction; it is below or equal in every case, and no single path is kept by it and not by the others.
+
+**With an edge (realistic case): how often each keeps the rule.**
+
+| Sport, signals a season | True edge | Plain | Grouped | Wider of the two (registered) |
+|---|---|---|---|---|
+| CFB, 40 | half the historical move | 45% | 32% | 30% |
+| CFB, 40 | the full move | 90% | 79% | 78% |
+| NFL, 17 | half the historical move | 34% | 29% | 28% |
+| NFL, 17 | the full move | 73% | 67% | 66% |
+
+**What it means.**
+
+- **The plain interval keeps a rule with no edge 2 to 4 times as often as intended** once bets on the same day move together, as the historical moves did.
+- **The grouped interval alone is not safe either.** With only 10 to 16 game days among 40 college football signals, a standard error built from so few days is itself noisy: with no dependence at all, it keeps a no-edge rule more often than the plain one (3.1 to 3.4% against 2.7 to 2.8%). And when each day's CLVs happen to balance around the mean it can come out narrower than the plain interval, even of zero width: 40 bets on 4 game days with equal day totals give +0.30 to +0.30 grouped, against −0.54 to +1.14 plain (with t on 39 degrees of freedom).
+- **The wider of the two covers both.** It brings college football to 2.8 to 3.0% in the realistic case and 2.6% model-free; with independent signals it keeps a no-edge rule 1.7 to 1.9% of the time, below both of the others; the zero-width example takes the plain interval and is not kept.
+- **It helps the NFL less:** 5.8 to 7.4% in the realistic case, 6.5 to 8.4% over the two looks. The NFL's extra comes from a swing shared by a whole season: with the day share alone, the registered test keeps a no-edge rule 1.7% of the time. Grouping by day can't correct a season-wide swing, and one or two seasons can't measure one. This is a known limit, stated in nfl-weather amendment 7.
+- **It costs power.** It keeps a real edge less often too: 12 to 15 points below the plain interval in college football, and 6 to 7 in the NFL, in the table above; 1 to 2 points below the grouped interval alone.
+- **Registered for both sports as an improvement**, with its remaining error stated in the amendments. Whether and when real money goes in (the paper-to-money gate, above) is a separate question the owner hasn't decided.
+- **Checked twice.** Run with seed 6, the registered test's no-edge rates agree with seed 29's to within 0.3 points (plain within 0.6, grouped within 0.4). With seed 6 this script also reproduces the earlier exploration's plain and grouped tables exactly.
+
+Rerun it from the repo root with `nfl-weather/.venv/bin/python strategy-research/keep_test_check.py [--seed 29]`.
 
 ---
 

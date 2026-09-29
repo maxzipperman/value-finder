@@ -6,9 +6,10 @@ wind, which observed threshold matches MOS's 15 mph, the both-fired / MOS-only s
 of the gap between them, how many signals the observed-wind evidence already counts, how many
 Open-Meteo signals are also MOS signals, and which run cycle the replay reads.
 
-Nothing here is a rule or a variant, and nothing changes the replay: scripts/mos_replay.py is
-left as it was when the 2006-25 download started. The splits use the game's observed wind,
-which isn't known at bet time, so they describe the result; they can't be bet.
+Nothing here is a rule or a variant, and nothing changes the replay: the replay's game
+selection, run selection and grading are as they were when the 2006-25 download started (the
+full run added descriptive tables only). The splits use the game's observed wind, which isn't
+known at bet time, so they describe the result; they can't be bet.
 
     python scripts/mos_replay_checks.py [--seasons 2023-2025]
 """
