@@ -79,7 +79,7 @@ def test_rule_b_is_final_after_forty_signals_and_the_regular_season(tmp_path):
     out = rule_b(score(tmp_path, rows, sched, "2026-11-20"))
     assert "INTERIM read, decides nothing" in out and "FINAL" not in out  # the regular season isn't over
     out = rule_b(score(tmp_path, rows, sched, "2026-12-20"))
-    assert "FINAL: KEEP, on the 40 signals that kicked off by 2026-12-13" in out and "n=40" in out
+    assert "FINAL: KEEP, on the 40 signals that kicked off by 2026-12-12" in out and "n=40" in out
 
 
 def test_a_cancelled_game_cannot_hold_the_decision_open(tmp_path):

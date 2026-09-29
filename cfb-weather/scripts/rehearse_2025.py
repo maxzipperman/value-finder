@@ -62,7 +62,9 @@ led = S.assign(snapshot_utc=(S.snapshot_utc + SHIFT).dt.strftime("%Y-%m-%dT%H:%M
                kick_et=S.start_s.dt.tz_convert("America/New_York").dt.strftime("%a %m-%d %H:%M"),
                best_under=np.nan, best_under_book="", start_utc=S.start_s.dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
 led = led.reindex(columns=["snapshot_utc", "rules_version"] + board.COLS + ["start_utc"])   # newer columns stay blank
-sched = g[["game_id", "home_points", "away_points"]]
+# the schedule's kickoff too, shifted like the ledger's, so the scorer's postponement check runs (amendment 4)
+sched = g[["game_id", "home_points", "away_points"]].assign(
+    start_utc=(g.start_utc + SHIFT).dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
 
 with tempfile.TemporaryDirectory() as tmp:
     led.to_csv(Path(tmp) / "ledger.csv", index=False)
