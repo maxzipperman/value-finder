@@ -79,7 +79,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 **The bar for new analyses is already p < 0.00026 (0.05 / 191).** The 5M data-use plan commits 56 more variants ([`odds-api-credits.md`](odds-api-credits.md#data-use-plan)), 135 + 56 = 191. They count from the moment they were committed, whether or not their analysis has run yet, so anything analysed from here on is judged against 0.05 / 191, and each new variant beyond the plan raises the count further.
 
-**Running count: 200** (September 28, 2026, evening: 198, plus 2 for the size-of-total check in [`gate_level_check.py`](gate_level_check.py), one per sport; it found no dependence, so the registered pricing model is flat). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 200 = 0.00025. September 29, 2026: the [landing-mass table](#landing-mass-table-key-numbers-added-september-29-2026-52) ([#52](https://github.com/maxzipperman/value-finder/issues/52)) adds 32, for **232**, so the bar is p < 0.05 / 232 = 0.000216. September 29, 2026: the CFB Rule B forecast replay on NWS MOS ([#40](https://github.com/maxzipperman/value-finder/issues/40), [`../cfb-weather/scripts/mos_replay.py`](../cfb-weather/scripts/mos_replay.py)) adds 1, for **233**, so the bar is p < 0.05 / 233 = 0.000215; its NFL half adds 1 more when it runs. September 29, 2026: the [price-engine backtest](#the-price-engine-backtest-ready-before-f1-lands-added-september-29-2026-8-53) ([#8](https://github.com/maxzipperman/value-finder/issues/8), [#53](https://github.com/maxzipperman/value-finder/issues/53)), registered before any F1 data exists, adds 38, for **271**, so the bar is p < 0.05 / 271 = 0.000185.
+**Running count: 200** (September 28, 2026, evening: 198, plus 2 for the size-of-total check in [`gate_level_check.py`](gate_level_check.py), one per sport; it found no dependence, so the registered pricing model is flat). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 200 = 0.00025. September 29, 2026: the [landing-mass table](#landing-mass-table-key-numbers-added-september-29-2026-52) ([#52](https://github.com/maxzipperman/value-finder/issues/52)) adds 32, for **232**, so the bar is p < 0.05 / 232 = 0.000216. September 29, 2026: the CFB Rule B forecast replay on NWS MOS ([#40](https://github.com/maxzipperman/value-finder/issues/40), [`../cfb-weather/scripts/mos_replay.py`](../cfb-weather/scripts/mos_replay.py)) adds 1, for **233**, so the bar is p < 0.05 / 233 = 0.000215; its NFL half adds 1 more when it runs. September 29, 2026: the [price-engine backtest](#the-price-engine-backtest-ready-before-f1-lands-added-september-29-2026-8-53) ([#8](https://github.com/maxzipperman/value-finder/issues/8), [#53](https://github.com/maxzipperman/value-finder/issues/53)), registered before any F1 data exists, adds 38, for **271**, so the bar is p < 0.05 / 271 = 0.000185. September 29, 2026: the [paper-to-money gate](#the-paper-to-money-gate-added-september-29-2026-51) ([#51](https://github.com/maxzipperman/value-finder/issues/51)) sizes a staking rule, not a betting rule, and adds none: still **271**, bar p < 0.05 / 271 = 0.000185.
 
 | Issue | Test | Result | Verdict |
 |---|---|---|---|
@@ -360,6 +360,258 @@ The CFB version is F5 (CFB alternates and team totals, March, gated).
 - Nothing passes the multiple-testing bar. The smallest small-sample p-value in the study is 0.00055, and the bar is 0.00022. With 10 to 20 seasons per comparison, the p-values in the first write-up were too small, because they treated the seasons as a large sample.
 
 Rerun it from the repo root with `nfl-weather/.venv/bin/python strategy-research/landing_mass.py`. It takes about 30 seconds.
+
+### The paper-to-money gate (added September 29, 2026, [#51](https://github.com/maxzipperman/value-finder/issues/51))
+
+Count at merge (Sep 29, 2026): 271; bar p < 0.000185.
+
+**Revised the same day after an independent review. The headline numbers changed:** the recommended CFB gate is safer than first stated (a no-edge rule gets through about 2.6% of the time, not 3.9%) but a little less likely to put money in this season (21% / 65%, not 24% / 66%), and the NFL bar rises from 2.14 to 2.96.
+
+Section 4 of [`simulate_decisions.py`](simulate_decisions.py) ([`output/money_gate.csv`](output/money_gate.csv), [`output/money_gate.log`](output/money_gate.log)). It tests a staking rule, not a betting rule, so it adds **0 variants**; the running count stays at 200.
+
+**The question.** Both `STRATEGY.md` files put real money in once "20 settled signals show positive average CLV". A rule with no edge passes that half the time. What should replace it, and how likely is each candidate to let money in on CFB this season?
+
+**Short answer.**
+
+- Today's gate isn't a filter: it passes a no-edge rule **50%** of the time.
+- The recommended replacement is a **sequential gate**. It checks after every settled signal from the 10th to the 40th, with a bar that starts high and relaxes.
+- With no edge, it passes on CFB **about 2.6%** of the time. That rises to 4–5% if signals cluster as much as the most pessimistic estimate.
+- On CFB at 40 signals a season, the chance of real money before the bowls end is:
+  - **about 1 in 5 (21%)** if the true edge is half the historical line move;
+  - **about 2 in 3 (65%)** if it is the full move.
+- When it passes, it typically does so in **mid-November**, and the first real-money bet follows a few days to a week later.
+- **Signals move together, so textbook tests pass too often.** CFB windy games on the same day have correlated line moves (about 0.09–0.11). NFL games also share a season-wide swing. That raises the false-pass rate of every textbook test, including the **registered keep test**: about 5.5% instead of 2.7% on CFB, and 8–10% instead of 2% on NFL. The new gates are calibrated for it; the keep test isn't.
+- **You can choose a lower CFB bar.** Calibrated to the realistic correlation rather than the pessimistic one, the bar is 2.48 instead of 2.75. That raises the chance of money this season to 28% / 72%. In exchange, a no-edge rule gets through about 4% of the time, or 6–7% at the pessimistic level.
+
+**How it was measured.**
+
+- **CLV.** Each simulated signal's CLV is drawn from the open-to-close moves of history's windy games:
+  - CFB: 426 games, 2016–25, spread 2.67 points.
+  - NFL: 371 games, 2007–21, spread 2.28 points.
+
+  The moves are shifted to three truths: no edge (average 0), half the move (CFB +0.75, NFL +0.49) and the full move (CFB +1.50, NFL +0.99). Rule B enters 1–3 days out, later than the open, so the half case is probably the nearer one. Each case has 40,000 simulated runs of 40 signals.
+- **Signals move together (new).** The line moves of windy games on the same day are correlated. The estimators disagree, so all of them are shown:
+
+  | Estimator | CFB (426 games on 143 days) | NFL (371 games on 202 days) |
+  |---|---|---|
+  | Correlation over pairs of games on the same day | 0.09 (95% interval 0.02 to 0.16; p = 0.004) | 0.22 (−0.04 to 0.51; p = 0.001) |
+  | Random-effects model (REML), day effect only | 0.11 | 0.12 |
+  | The same with a season effect: day share / season share | 0.11 / 0.00 | 0.07 / 0.06 |
+  | Season effect beyond the day (whole days permuted across seasons) | none (p = 0.69) | yes (p = 0.004) |
+  | One-way ANOVA, the first draft's estimator | 0.17 (0.07 to 0.28) | 0.01 (−0.23 to 0.23) |
+
+  - **The ANOVA figure is distorted by days with one windy game.** ANOVA counts their spread as a day effect.
+    - In CFB, those days (62 of 143, about half of them weekdays) have noisier moves (variance 10.9 against 6.5), so ANOVA reads high. Dropping the 3 most extreme of those games (3 of 426) moves it from 0.17 to 0.13.
+    - In NFL they're quieter (4.1 against 5.7), so ANOVA reads low.
+    - On days with two or more games, ANOVA gives 0.09 for both sports.
+  - **NFL seasons also differ as a whole.** Windy lines moved more in some seasons than others: 2007 and 2020 averaged about 1.3 points above the 15-season average, 2014 about 1.3 below. A swing shared by a whole season isn't averaged away by more signals from that season. CFB shows no such effect.
+  - **Realistic case** (used in the tables): the random-effects estimate with a season effect. That's 0.11 same-day for CFB, and 0.07 same-day plus 0.06 same-season for NFL.
+  - **Stress case:** the highest same-day estimate of any method (CFB 0.17, NFL 0.22), with the same season share.
+  - **Model-free check:** paths built from whole real historical days, and for NFL whole real seasons in order, with no correlation model at all.
+- **Calendar.** Signals arrive on the dates of the windiest games of each of the last ten seasons, replayed onto 2026:
+  - CFB is aligned on Army–Navy (Dec 12, 2026); bowls keep their calendar dates.
+  - NFL uses the 2026 schedule, Weeks 5–18.
+  - The wind cut-off is set so a season averages 25, 40 or 55 CFB signals, or 17 or 25 NFL signals.
+- **When real money starts.** Rule B logs a signal 1–3 days before kickoff, so a signal already logged when the gate passes stays on paper.
+  - A signal counts as a real-money bet only if it kicks off more than 3 days after the game that made the gate pass.
+  - A pass with no such signal left in the season doesn't count as "money this season".
+- **Thresholds.** The issue's gates keep their textbook thresholds. The gates added here have thresholds set by simulation on separate draws. With no edge, they pass at most 5% (or 10%) of the time in every modelled case: either sport, independent signals, the realistic case, the stress case, any season volume, and 0–40% of signals with a CLV of exactly 0.
+  - Checked on the main draws, the worst case is 5.0% for the 5% gates. That's the stress case at 55 signals a season.
+  - The "realistic bar" is calibrated the same way, but without the stress case.
+  - The recommended CFB bar is rounded up from the 2.72 this calibration needs to 2.75, as a margin for simulation and calendar error. An independently built calendar needed 2.78 at the stress level, where 2.75 passes about 5.2%.
+  - There are two kinds of added gate:
+    - a single look at a fixed signal count;
+    - sequential gates, which look after every settled signal from the 10th to the 40th.
+- **Precision.** With 40,000 paths per cell, the simulation's own error on a 5% rate is about 0.1 point. That's the smallest source of uncertainty. The inputs matter more:
+  - The calendars come from 10 seasons of dates per sport (30 CFB season combinations with the bowls). A season near the wind cut-off can gain or lose a signal on a tie-break.
+  - The size and clustering of CLV come from about 400 games per sport.
+- **Terms.**
+  - *t* is the average CLV divided by its standard error (the spread over √n). "t > 1.65" is the issue's "lower 95% bound above zero".
+  - The **OBF** (O'Brien–Fleming-type) boundary is c × √(40 ÷ n): strict early, relaxing to c at the 40th signal.
+  - The **constant** (Pocock-type) boundary is c at every look.
+
+**CFB Rule B, realistic case** (same-day correlation 0.11, 40 signals a season, no zero-CLV signals). "Money this season" is the chance a real-money bet is placed before the bowls end. "Pass date" is the median date the gate passes under the full move.
+
+| Gate | Looks at signal | Threshold | False pass (no edge): independent / realistic / stress | Passes by the 40th signal: half / full move | Money this season: half / full | Pass date |
+|---|---|---|---|---|---|---|
+| Mean CLV > 0 (today's gate) | 20 | – | 50% / 50% / 50% | 86% / 98% | 86% / 98% | Nov 7 |
+| t > 1.65 | 20 | 1.65 | 5.5% / 9.4% / 11% | 39% / 78% | 39% / 78% | Nov 7 |
+| t > 1.65 | 40 | 1.65 | 5.1% / 8.8% / 11% | 55% / 94% | 30% / 50% | Nov 21 |
+| Bootstrap 90% lower bound > 0 | 20 | – | 11% / 16% / 18% | 52% / 86% | 52% / 86% | Nov 7 |
+| Bootstrap 95% lower bound > 0 | 20 | – | 6.2% / 10% / 12% | 41% / 79% | 41% / 79% | Nov 7 |
+| Bootstrap 95% lower bound > 0 | 40 | – | 5.5% / 9.3% / 11% | 56% / 95% | 30% / 50% | Nov 21 |
+| t above a calibrated threshold | 20 | 2.33 | 1.4% / 3.4% / 4.7% | 21% / 58% | 21% / 58% | Oct 31 |
+| t above a calibrated threshold | 40 | 2.34 | 1.1% / 2.9% / 4.0% | 33% / 85% | 18% / 44% | Nov 21 |
+| Sequential, constant, 5% | 10–40 | 3.37 | 1.1% / 3.0% / 4.2% | 22% / 70% | 19% / 62% | Oct 31 |
+| **Sequential, OBF, 5% (recommended)** | **10–40** | **2.75 × √(40/n)** | **0.7% / 2.6% / 3.9%** | **28% / 80%** | **21% / 65%** | **Nov 14** |
+| Sequential, OBF, 5%, realistic bar | 10–40 | 2.48 × √(40/n) | 1.5% / 4.2% / 5.9% | 36% / 85% | 28% / 72% | Nov 7 |
+| Sequential, constant, 10% | 10–40 | 2.77 | 3.2% / 6.8% / 9.0% | 38% / 84% | 34% / 78% | Oct 24 |
+| Sequential, OBF, 10% | 10–40 | 2.22 × √(40/n) | 2.8% / 6.5% / 8.6% | 45% / 90% | 35% / 79% | Nov 7 |
+| *Reference: the registered keep test* | 40 | 1.96 | 2.7% / 5.5% / 7.0% | 45% / 91% | – | – |
+
+The CSV and the log also have the same rows at 30 signals, the bootstrap 90% bound at 40, the NFL, every volume, the stress case at each volume, the floors, and the gate calibrated to 2.72 (within a point of the 2.75 row everywhere).
+
+- **Today's gate can't be fixed with a floor.** Requiring an average of at least 0.25 or 0.5 points still passes a no-edge rule 34% or 20% of the time (independent signals).
+  - For every other gate, the floors almost never bind. Clearing a statistical bar at 20 or more signals already takes an average near a point or more.
+- **Textbook thresholds are only right if signals are independent.** With CFB's realistic correlation:
+  - t > 1.65 and the bootstrap 95% bound pass a no-edge rule about 9–10% of the time, not 5–6% (11–12% at the stress level).
+  - The bootstrap 90% bound passes it 15–16% of the time.
+  - **The registered keep test has the same problem.** Its false-keep rate is 5.5% instead of 2.7%. It's 7.0% at the stress level (8.2% with 55 signals a season), and 4.7% in the model-free check. That's a finding about the keep decision, not just the gate.
+- **At the same 5% false-pass rate, looking often mostly beats looking once.**
+
+  | Gate (5% level) | Passes: half / full | Money this season: half / full | Pass date |
+  |---|---|---|---|
+  | Single look at signal 20 (t > 2.33) | 21% / 58% | 21% / 58% | Oct 31 |
+  | Sequential OBF (2.75) | 28% / 80% (by signal 40) | 21% / 65% | Nov 14 |
+  | Sequential constant (3.37) | 22% / 70% (by signal 40) | 19% / 62% | Oct 31 |
+
+  - Under the half move, the single look at signal 20 puts money in this season as often as the OBF gate (21%). The OBF gate wins under the full move and by the 40th signal.
+  - The constant boundary passes earliest, typically Oct 29–31, but less often.
+- **How long the recommended gate takes.** When it passes, it averages 29 signals under the half move and 26 under the full move. It still hasn't passed at the 40th signal 72% of the time under the half move, and 21% under the full move.
+
+**NFL Rule B** (realistic case: same-day 0.07 plus same-season 0.06; 17 signals a season; the season ends with Week 18 on Jan 10, 2027).
+
+| Gate | Threshold | False pass: independent / realistic / stress | Passes by the 40th signal: half / full | Money by Week 18: half / full |
+|---|---|---|---|---|
+| Mean CLV > 0 (today's gate) | – | 48% / 49% / 49% | 75% / 92% | 7.2% / 8.8% |
+| t > 1.65 at 20 | 1.65 | 4.1% / 12% / 13% | 32% / 60% | 3.4% / 5.8% |
+| Sequential, constant, 5% | 3.52 | 0.2% / 3.0% / 3.8% | 14% / 41% | 5.4% / 14% |
+| **Sequential, OBF, 5% (recommended)** | **2.96 × √(40/n)** | **0.2% / 2.7% / 3.4%** | **16% / 49%** | **1.1% / 4.0%** |
+| Sequential, OBF, 5%, realistic bar | 2.83 × √(40/n) | 0.3% / 3.3% / 4.1% | 19% / 53% | 1.4% / 4.9% |
+| Sequential, OBF, the first draft's bar | 2.14 × √(40/n) | 2.2% / 9.8% / 11% | 36% / 72% | 5.3% / 14% |
+| Sequential, OBF, 10% | 2.42 × √(40/n) | 1.0% / 6.4% / 7.6% | 28% / 65% | 3.2% / 9.3% |
+| *Reference: the registered keep test at 40* | 1.96 | 2.2% / 7.9% / 8.8% | 34% / 72% | – |
+
+- **The season effect changes NFL the most.** Every NFL test passes a no-edge rule more often than it claims: t > 1.65 at 20 about 12–14% of the time, and the registered keep test 8–10% (17 or 25 signals a season).
+- **The first draft's bar (2.14) isn't established at 5%.**
+  - In this model it lets a no-edge rule through 10–13% of the time.
+  - The model-free check, which chains whole real NFL seasons, gives 4.5%.
+  - That check has only 15 seasons, about 225 distinct paths. The data can't settle which figure is closer, so the plausible range for 2.14 is about 4–13%.
+- **Holding 5% with the season effect takes 2.96,** or 2.83 without the stress case. The model-free check puts 2.96 at 0.5%.
+- **At 17 signals a season, no NFL gate is likely to let money in during 2026:** 1.1% / 4.0% by Week 18 at 2.96.
+  - The constant boundary (3.52) also holds 5%, and pays more often by Week 18 (5.4% / 14%). It pays less often by the 40th signal (14% / 41%, against 16% / 49%).
+  - The sequential gates keep looking into 2027 and 2028 until the 40th signal.
+- **The NFL bar has to be set before Oct 8.** The gate pools 2026 signals with later ones, so changing it once 2026 CLVs are known would break pre-registration.
+
+**CLVs of exactly 0.** CFB's primary close is the last logged quote before kickoff, and it can be the entry row itself. Pass rates below are CFB, realistic case, 40 signals a season, in the order no edge / half / full.
+
+| Gate | No zeros | 20% zeros | 40% zeros |
+|---|---|---|---|
+| Mean CLV > 0 at 20 (today) | 50 / 86 / 98% | 51 / 84 / 97% | 51 / 81 / 96% |
+| t > 1.65 at 20 | 9.4 / 39 / 78% | 8.7 / 34 / 70% | 8.0 / 29 / 60% |
+| t above a calibrated threshold at 20 | 3.4 / 21 / 58% | 2.8 / 17 / 48% | 2.2 / 12 / 34% |
+| Sequential, constant, 5% | 3.0 / 22 / 70% | 1.9 / 15 / 54% | 0.9 / 7.4 / 33% |
+| **Sequential, OBF, 2.75 (recommended)** | **2.6 / 28 / 80%** | **1.8 / 21 / 68%** | **1.2 / 13 / 50%** |
+| Sequential, OBF, realistic bar 2.48 | 4.2 / 36 / 85% | 3.3 / 28 / 76% | 2.3 / 20 / 61% |
+| Sequential, OBF, 10% | 6.5 / 45 / 90% | 5.3 / 37 / 83% | 4.2 / 28 / 71% |
+
+- Zeros don't create false passes.
+- They do hide a real edge. A signal whose "close" is its own entry carries no information, so 40% zeros cut the recommended gate's power under the full move from 80% to 50%.
+- The constant boundary loses more (70% → 33%).
+- Grading the gate on amendment 2's captured close would avoid this. That close is logged 2–20 minutes before kickoff and is never the entry row.
+
+**On the calendar** (recommended gate: 2.75 for CFB, 2.96 for NFL; realistic case). The "Money by …" columns are in the order no edge / half / full.
+
+| Rule, signals a season | Wind cut-off in 2016–25 | Seasons that reach 40 signals | Money by the regular-season end | Money by the season end | Pass date: half / full | First real-money bet: half / full | Real-money bets this season: half / full |
+|---|---|---|---|---|---|---|---|
+| CFB, 25 | about 16.6 mph | 3% | 0.9 / 8.0 / 27% | 1.1 / 9.5 / 33% | Nov 21 / Nov 21 | Nov 27 / Nov 27 | 0.6 / 2.3 |
+| CFB, 40 | about 15.0 mph | 53% | 2.0 / 18 / 55% | 2.2 / 21 / 65% | Nov 14 / Nov 14 | Nov 21 / Nov 18 | 2.8 / 9.6 |
+| CFB, 55 | about 13.8 mph | 73% | 2.7 / 23 / 66% | 3.0 / 27 / 75% | Nov 5 / Oct 31 | Nov 14 / Nov 7 | 7.0 / 20.1 |
+| NFL, 17 | about 15.3 mph | 0% | 0.3 / 1.1 / 4.0% | same (Week 18) | Dec 14 / Dec 19 | Dec 19 / Dec 19 | 0.0 / 0.2 |
+| NFL, 25 | about 13.1 mph | 0% | 1.2 / 5.2 / 16% | same (Week 18) | Dec 20 / Dec 14 | Dec 20 / Dec 20 | 0.3 / 0.9 |
+
+When the fixed looks arrive (the share of seasons that reach the count, and the median date when they do):
+
+| Rule, signals a season | Signal 20 | Signal 30 | Signal 40 |
+|---|---|---|---|
+| CFB, 25 (start Oct 1) | 60%, Nov 21 | 34%, Nov 21 | 3%, Dec 19 (a bowl) |
+| CFB, 40 | 100%, Oct 31 | 73%, Nov 14 | 53%, Nov 21 |
+| CFB, 55 | 100%, Oct 24 | 100%, Oct 31 | 73%, Nov 14 |
+| NFL, 17 (start Oct 8) | 20%, Jan 3 | 0% | 0% |
+| NFL, 25 | 90%, Dec 20 | 10%, Dec 27 | 0% |
+
+- Seasons are lumpy: a calm autumn gives half the signals of a windy one.
+- November is windier than October, but the season's last two Saturdays are thin: championship games are often indoors.
+- A fixed look at 40 decides within the season only about half the time, even at 40 signals a season.
+
+**What betting from the first signal risks** (arithmetic, not advice). Flat 0.5% of bankroll per bet at −110, no pushes. 1 unit = one bet = 0.5% of bankroll.
+
+| Bets | True win rate | Average | 5th percentile | 95th percentile | Chance of being behind |
+|---|---|---|---|---|---|
+| 20 | 50% (no edge) | −0.9 units (−0.45% of bankroll) | −8.5 (−4.3%) | +6.7 (+3.4%) | 59% |
+| 20 | 53.3% (half the edge) | +0.4 (+0.18%) | −6.6 (−3.3%) | +6.7 (+3.4%) | 47% |
+| 20 | 56.6% (CFB windy unders' history) | +1.6 (+0.8%) | −4.7 (−2.4%) | +8.6 (+4.3%) | 35% |
+| 40 | 50% | −1.8 (−0.9%) | −11.4 (−5.7%) | +7.7 (+3.9%) | 56% |
+| 40 | 53.3% | +0.7 (+0.35%) | −9.5 (−4.7%) | +9.6 (+4.8%) | 40% |
+| 40 | 56.6% | +3.2 (+1.6%) | −7.5 (−3.8%) | +13.5 (+6.7%) | 25% |
+
+- At 0.5% stakes, the money at risk before the gate decides is small either way.
+- A no-edge rule costs about 0.9% of bankroll over 40 bets on average, and 5.7% in a bad (1-in-20) run.
+- Even at the historical edge, 1 run in 4 is behind after 40 bets, and 44% of no-edge runs are ahead. Profit can't tell the two apart this season; CLV is what the gate reads.
+
+**Recommendation: the sequential OBF gate at 5%, with c = 2.75 for CFB and 2.96 for NFL.**
+
+- **CFB Rule B.** After each settled signal from the 10th to the 40th, stake once the average CLV divided by its standard error exceeds 2.75 × √(40 ÷ n):
+
+  | Signals settled | 10 | 20 | 30 | 40 |
+  |---|---|---|---|---|
+  | Bar | 5.50 | 3.89 | 3.18 | 2.75 |
+  | Average CLV that needs, at a 2.67-point spread | – | about 2.3 points | 1.5 | 1.2 |
+- **NFL Rule B.** The same with 2.96: a bar of 5.92 at 10 signals, 4.19 at 20, 3.42 at 30 and 2.96 at 40. The first draft proposed 2.14, which assumed no season effect.
+- **Real money starts with the next signal alerted after the gate passes.** Signals already logged stay on paper.
+- **If it hasn't passed by the 40th signal, it never passes this way.** The registered keep decision takes over. The gate never changes the keep decision.
+- **False pass, CFB (2.75).**
+  - 2.6% in the realistic case, and 3.1% at worst across season volumes and zero shares.
+  - 3.9% at the stress level. It's 4.9% at 55 signals a season, and about 5.2% under an independently built calendar. So it's about 5% at the stress level, not a hard ceiling.
+  - 1.8% in the model-free check.
+  - 0.7% if signals are independent.
+- **False pass, NFL (2.96).** 2.7% in the realistic case (4.0% at 25 signals a season), at most 4.9% at the stress level, and 0.5% in the model-free check.
+- **Pass rates, CFB at 40 signals a season.**
+  - By the 40th signal: 28% under half the move, 80% under the full move.
+  - Real money before the bowls end: 21% and 65%. The gate typically passes around Nov 14, and the first real-money bet follows around Nov 18–21.
+  - At 25 signals a season: 9.5% and 33%. At 55: 27% and 75%.
+- **Why this one.**
+  - Among the 5% gates, it has the best chance of real money this season under the full move at 40 or more CFB signals a season. Under the half move, the single look at signal 20 ties it (21%).
+  - It keeps the most power when some CLVs are exactly 0.
+  - It rarely passes a rule that then fails the keep test: 0.3–1.0% across the three truths, against 0.6–2.4% for the constant boundary.
+  - A single calibrated look at the 40th signal passes a little more often by then (33% and 85%). But it decides within the season only about half the time.
+- **Your choice on CFB: 2.75 or the realistic bar, 2.48.**
+
+  | CFB bar | False pass: realistic / stress / model-free | Passes by the 40th signal: half / full | Money this season at 25 / 40 / 55 signals a season (half) | Same, full move | Real-money bets this season at 40 a season: half / full |
+  |---|---|---|---|---|---|
+  | 2.75 (recommended) | 2.6% / 3.9% / 1.8% | 28% / 80% | 9.5% / 21% / 27% | 33% / 65% / 75% | 2.8 / 9.6 |
+  | 2.48 | 4.2% / 5.9% / 3.3% | 36% / 85% | 13% / 28% / 35% | 40% / 72% / 82% | 3.9 / 11.6 |
+
+  - 2.75 errs on the side of caution. It holds about 5% even if CFB signals cluster as much as the pessimistic estimate, and about 2.6% if the realistic one is right.
+  - 2.48 buys about 7 points of chance of money this season. A no-edge rule then gets through about 4% of the time, rising to 6–7% at the pessimistic level.
+  - The lean is 2.75. The live CLV runs from a 1–3-day entry, not the open, and may cluster differently from this proxy.
+- **Alternatives.**
+  - **For speed:** the constant boundary at 5% (t above 3.37 at any look).
+    - It passes about 2 weeks earlier (Oct 29–31).
+    - It does better at 25 signals a season (13% and 43% before the bowls end).
+    - It gives about one more real-money bet a season under the half move, and two more under the full move.
+    - It loses twice as much to zero-CLV signals.
+    - For NFL, where signals are scarce, it is the more likely to pay by Week 18 (14% against 4% under the full move) at the same 5%. It's a reasonable choice for NFL alone.
+  - **Looser:** the 10% versions. Under the half move, they put money in this season more often (35% against 21%, CFB). They let a no-edge rule through about 6.5% of the time, or 8.6% at the stress level.
+
+**What this doesn't show.**
+
+- **Nothing here is evidence that Rule B has an edge.** It only sizes the gates.
+- **The CLV proxy is the open-to-close move.** The live CLV runs from a 1–3-day entry to the last quote, so it will be smaller, and its spread may differ.
+- **The dependence is measured on that proxy, and its size isn't settled.**
+  - The CFB same-day correlation is 0.09–0.11 by the better estimators and 0.17 by ANOVA.
+  - NFL's season effect rests on 15 seasons.
+  - Live signals may cluster more or less. The stress case and the model-free check bracket what that does.
+- **Signal dates come from observed station wind, not forecasts.** Bowl weather exists only for 2023–25 and about half the bowls, so bowl-season signals are undercounted.
+- **All thresholds assume the gate reads every settled signal the scorer counts,** in kickoff order.
+
+**Why 40?** It's the sample the CFB keep decision was registered with, and a power choice, not a law.
+
+- With independent signals, a 40-signal average has a standard error of about 0.42 points, so the keep test clears when the average is above about 0.83.
+- The full historical move (+1.5) clears that nearly always (94%). Half the move (+0.75) clears it only 44% of the time.
+- At 20 signals the bar would be about 1.17 points, and half the move would clear it about 1 time in 4.
+- So 40 is roughly the smallest count at which an edge of the historical size is very likely to show. It isn't enough to confirm a smaller one.
+- With 25 CFB signals a season, the 40th signal arrives this season only 3% of the time. That's why the sequential gate matters: it can let money in before 40 when the evidence is strong, and never on weaker evidence than the keep test's.
 
 ---
 
