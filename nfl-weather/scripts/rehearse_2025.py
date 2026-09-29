@@ -27,7 +27,7 @@ import pandas as pd
 
 from nflweather import board
 from nflweather.config import OUT, PROC, ROOT
-from nflweather.market import cohort_residuals, ev_under, load_games, market_p_under
+from nflweather.market import ev_under, market_p_under, pricing_cohort
 
 SHIFT = pd.Timedelta(weeks=53)
 cal = json.loads((PROC / "calibration.json").read_text())
@@ -35,9 +35,7 @@ g = pd.read_parquet(PROC / "games.parquet")
 g = g[(g.season == 2025) & (g.game_type == "REG") & g.week.between(5, 18) & g.result.notna()].copy()
 g["kick"] = pd.to_datetime(g.gameday + " " + g.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
 
-hist = load_games()
-frozen = hist[hist.season <= board.PRICING_LAST_SEASON]
-resid = cohort_residuals(frozen, (frozen.outdoor == 1) & (frozen.wx_wind >= board.RULE_B_WIND))
+resid = pricing_cohort(board.PRICING_COHORT_SHA256)     # the registered cohort, as the live board reads it
 
 rows = []
 for lead, col in ((3, "fc3_wind"), (1, "fc1_wind")):
@@ -46,7 +44,10 @@ for lead, col in ((3, "fc3_wind"), (1, "fc1_wind")):
     s["wx_src"] = np.where(outdoor, "era5", np.where(s.wx_src.isin(["gamebook", "era5"]), "missing", "indoor"))
     s["wx_wind"] = (cal["wind_intercept"] + cal["wind_slope"] * s[col]).clip(lower=0).where(outdoor)
     s["lead_days"] = lead
-    s["line_src"] = "nflverse close"
+    # The rehearsal has one price per game, the nflverse close, so it stands in for Pinnacle all the way
+    # to the scorer: a signal here is a primary one, and the primary table and the decision are exercised.
+    # Live, a consensus-priced signal is labelled secondary (amendment 5).
+    s["line_src"] = board.PRIMARY_SRC
     s["mkt_total"], s["mkt_under"], s["mkt_over"] = s.total_line, s.under_odds, s.over_odds
     s["ev_under"] = ev_under(s.mkt_total, s.mkt_under, s.mkt_total, resid)
     s["rule_b"] = s.apply(board.rule_b_status, axis=1)

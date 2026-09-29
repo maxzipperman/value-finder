@@ -5,8 +5,9 @@ free plan, reset on the 1st). The last quota the API reported is kept in one
 file outside the repo, ~/.cache/value-finder/odds_quota.json, so each project
 sees what the other spent.
 
-* Scheduled alert runs (launchd sets XPC_SERVICE_NAME to the job label) call the
-  API until the quota is gone; an exhausted quota just means no price that run.
+* Scheduled runs (the alert jobs and close capture; launchd sets XPC_SERVICE_NAME to the
+  job label) call the API until the quota is gone; an exhausted quota just means no price
+  that run.
 * Manual runs skip the API when fewer than MANUAL_FLOOR credits remain, so the
   alerts keep their budget for the rest of the month.
 * Background loggers (the trigger poller, the props log and the other live uses; their
@@ -16,8 +17,9 @@ sees what the other spent.
 
 Paid-tier setting: the plan size is read from the last response (used + remaining), so a
 paid key switches the tier by itself. ODDS_API_TIER=free|paid overrides that, and
-ODDS_BACKGROUND_FLOOR overrides the background floor. Alert, close-capture and manual
-runs behave exactly as before on every plan. Background launchd jobs get both from their plists
+ODDS_BACKGROUND_FLOOR overrides the background floor. Alert and manual runs behave the
+same on every plan; close capture has shared the alerts' floor since September 29, 2026 (it used to
+stop at MANUAL_FLOOR). Background launchd jobs get both from their plists
 (ops/install_live_uses.sh passes them through), because the weather projects don't load .env into the
 environment.
 
@@ -43,8 +45,11 @@ BACKGROUND_MIN_FLOOR = 2_000      # background loggers leave at least this many 
 BACKGROUND_SHARE = 0.02           # or 2% of the plan if that is more (100K on the 5M plan)
 
 
+SCHEDULED_JOBS = (".alerts", ".closecapture")    # launchd labels: the alert jobs and close capture
+
+
 def scheduled() -> bool:
-    return os.environ.get("XPC_SERVICE_NAME", "").endswith(".alerts")
+    return os.environ.get("XPC_SERVICE_NAME", "").endswith(SCHEDULED_JOBS)
 
 
 def fingerprint(key: str | None) -> str | None:

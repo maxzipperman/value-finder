@@ -189,15 +189,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-fetch", action="store_true", help="use cached responses only")
     args = ap.parse_args()
-    from cfbweather.board import PRICING_LAST_SEASON, RULE_B_WIND
-    from cfbweather.market import cohort_residuals, load_games
+    from cfbweather.board import PRICING_COHORT_SHA256
+    from cfbweather.market import pricing_cohort
 
     games = eligible_games()
     if not args.no_fetch:
         fetch(games)
     cal = json.loads((PROC / "calibration.json").read_text())
-    hist = load_games(2006, PRICING_LAST_SEASON)
-    resid = cohort_residuals(hist, (hist.outdoor == 1) & (hist.wx_wind >= RULE_B_WIND))
+    resid = pricing_cohort(PRICING_COHORT_SHA256)     # the registered cohort, as the live board reads it
     df = replay(games, cal, resid)
     tab = summary(df)
 

@@ -30,7 +30,7 @@ from pathlib import Path
 import pandas as pd
 
 SEALED_SEASON = (pd.Timestamp("2026-09-01", tz="UTC"), pd.Timestamp("2027-02-21", tz="UTC"))  # odds5m.yaml NFL "2026"
-TRIGGERED = {"outside_horizon", "no_price", "price_too_high", "negative_ev", "SIGNAL"}
+TRIGGERED = {"outside_horizon", "no_price", "price_too_high", "negative_ev", "SIGNAL", "SIGNAL_SECONDARY"}
 POLL_HORIZON = pd.Timedelta(days=4)
 MATCH_TOLERANCE = pd.Timedelta(hours=12)
 

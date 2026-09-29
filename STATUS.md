@@ -19,7 +19,7 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 | Rule | Scored from | Signals so far | Decision |
 |---|---|---|---|
-| NFL Rule B: early wind under ([`STRATEGY.md`](nfl-weather/STRATEGY.md)) | Week 5, Oct 8, 2026 | 0 | Once, after the 2027 season, on 2026 and 2027 pooled (amendment 4, Sep 28), or at 40 signals if sooner: keep only if average CLV > 0 with a 95% interval above zero. The 2026 result is an interim read. |
+| NFL Rule B: early wind under ([`STRATEGY.md`](nfl-weather/STRATEGY.md)) | Week 5, Oct 8, 2026 | 0 | After Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on 2026 and 2027 pooled (amendments 4 and 5): keep only if average CLV > 0 with a 95% interval above zero. Until then the scorer prints an interim read. |
 | CFB Rule B: early wind under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Oct 1, 2026 | 0 | After 40 signals or the regular season, whichever is later, by the same test. |
 | CFB Rule HT: high total → under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Week 6, Oct 7, 2026 (00:00 UTC) | 0 | Once, after the 2027 season: promote only if the win rate beats the break-even of the prices taken (one-sided p < 0.05) and ROI > 0. Drop at or below break-even. Otherwise keep on paper. |
 
@@ -52,7 +52,7 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
        - the 2026 NFL and CFB seasons;
        - calendar-2026 MLB, soccer and World Cup games;
        - the 2026-27 NBA and NHL seasons.
-     - **Variants:** the plan committed 56 on Sep 28 (191). The props pre-registration draft ([#41](https://github.com/maxzipperman/value-finder/issues/41), Sep 29) adds 1 and the fade-the-move pre-check ([#42](https://github.com/maxzipperman/value-finder/issues/42)) adds 6: **198**, so new analyses use p < 0.00025 (0.05 / 198).
+     - **Variants:** the plan committed 56 on Sep 28 (191). The props pre-registration draft ([#41](https://github.com/maxzipperman/value-finder/issues/41), Sep 29) adds 1 and the fade-the-move pre-check ([#42](https://github.com/maxzipperman/value-finder/issues/42)) adds 6: 198. The size-of-total check behind the pricing model (Sep 28) adds 2: **200**, so new analyses use p < 0.00025 (0.05 / 200).
      - **Pullers (PR B):** `sharp-markets` now has the bulk puller (`uv run markets odds5m`). It is tested against mocked responses; the hub runs it on day one by [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](sharp-markets/docs/ODDS5M_DAY_ONE.md). The first step is a probe of about 10.7K credits that builds exact schedules and checks the billing, plus three coverage probes (NCAAF 2020, MLB 2024, MLS 2024). Pulls are grouped `day_one`, `gated` and `march`; `full --pull all` is refused; the heat closes read the game list that `markets weather qualifying` writes from the registered triggers, and `--seasons` pulls one slice of F3 at a time.
      - **Live uses (PR C):** three logging-only launchd jobs, described in [`ops/LIVE_USES.md`](ops/LIVE_USES.md). The hub installs them with `ops/install_live_uses.sh` once the paid key is in the `.env` files:
        - the wind-trigger price poller (NFL + CFB);
@@ -80,6 +80,15 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
 4. **Phone alerts.** Subscribe to the `NTFY_TOPIC` from either `.env` in the ntfy app, if you haven't yet.
 5. **The alert book list: not switched (hub decision, Sep 28).** The alerts keep their 10 books. Two of `us10`'s books (Caesars, Fanatics) are paid-only, so on a free month the switched list would return 8 books, and every signal would log two fewer prices for a cosmetic gain. The free 2026 archive joins to F1 on the 8 books they share; the two that differ are noted in `odds-api-credits.md`.
 6. **CFB games table rebuilt with the spread fix ([#36](https://github.com/maxzipperman/value-finder/issues/36), Sep 28, owner decision).** The consensus home spread was missing for a third of (game, book) pairs; the fix recovers all but 0.26%. Rule HT's by-spread history is restated on more games: 502–393 (56.1%) overall, 434–326 (57.1%) on FBS-involved games, against the cited 373–273 (57.7%); the screen's row is unchanged. The rule, its frozen 2026 threshold and the forward test are as registered. **2027 threshold:** computed over FBS-involved games (owner decision); a dated amendment goes into `cfb-weather/PREREGISTRATION.md` before 2027 Week 0. Details in [`cfb-weather/README.md`](cfb-weather/README.md#consensus-home-spread-issue-36-sep-28).
+
+7. **Independent audit, fixed the same night (Sep 28).** An outside audit ([`reviews/2026-09-29-astra-audit.md`](reviews/2026-09-29-astra-audit.md)) found six gaps between the pre-registrations and the code. All six are settled in nfl-weather amendment 5 and cfb-weather amendment 3, dated before any signal. No game that would have signalled before is lost. A second review of the fixes, before they went live, found one crash (the first Rule HT signal would have stopped every CFB alert) and eight places where the code fell short of the amendments; all are fixed and tested ([#50](https://github.com/maxzipperman/value-finder/pull/50)).
+   - **The pricing model is registered in full**, on a frozen file with a hash. Inside the −115 cap the expected-value gate can't reject a bet at the rule's own number, so Rule B in practice is wind, window and price, which is what the history measured. Its real use is pricing a better number at another book; every run logs that now.
+   - **NFL prices (owner decision):** Pinnacle is the registered test. A signal at the backup consensus line is labelled secondary, reported separately, and left out of the decision.
+   - **Rule HT** alerts on the true last scheduled run, so the alert and the scored entry are the same row.
+   - **The scorers** accept only registered versions, pre-kickoff rows and games inside the test window, and compute each decision as interim or final.
+   - **Records:** a row per run in `runs.csv`, finished or failed; every forecast kept under its hash; crosswind logged on every NFL row.
+   - **Open, yours:** CFB Rule B's primary close can be the entry row itself (CLV 0 by construction) or hours old. Whether to require a later quote is undecided; the captured close is reported alongside either way.
+   - **Open, yours:** the rule for moving from paper to real money. "20 settled signals with positive average CLV" passes about half the time with no edge at all ([`simulations.log`](strategy-research/output/simulations.log)). A stricter gate is being measured.
 
 ## Research sweep (Sep 28)
 

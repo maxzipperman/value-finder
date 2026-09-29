@@ -27,6 +27,7 @@ import pandas as pd
 import requests
 
 from .config import FIRST_SEASON, RAW, USER_AGENT
+from .market import valid_odds
 
 CFBFASTR = "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main"
 METEOSTAT = "https://bulk.meteostat.net/v2"
@@ -166,9 +167,13 @@ def espn_week_odds(days_ahead=8):
     rows = []
     for k in range(days_ahead + 1):
         day = (date.today() + timedelta(days=k)).strftime("%Y%m%d")
-        r = session.get(ESPN, params=dict(dates=day, groups=80, limit=400), timeout=30)
-        if r.status_code != 200:
-            print(f"  ESPN unavailable ({r.status_code}); no ESPN prices this run", flush=True)
+        try:
+            r = session.get(ESPN, params=dict(dates=day, groups=80, limit=400), timeout=30)
+            status = r.status_code
+        except requests.RequestException as e:
+            r, status = None, type(e).__name__
+        if status != 200:
+            print(f"  ESPN unavailable ({status}); no ESPN prices this run", flush=True)
             return pd.DataFrame(columns=["game_id", "mkt_total", "mkt_under", "mkt_over", "line_src", "quote_utc"])
         for e in r.json().get("events", []):
             c = e["competitions"][0]
@@ -188,6 +193,7 @@ ODDS_API = "https://api.the-odds-api.com/v4/sports/americanfootball_ncaaf/odds"
 LIVE_BOOKS = ("pinnacle", "draftkings", "lowvig", "betonlineag", "fanduel", "betmgm", "betrivers", "bovada",
               "espnbet", "hardrockbet")
 RULE_BOOKS = ("pinnacle", "draftkings")
+LAST_UNMAPPED: list[str] = []    # odds-feed team names the last call couldn't match (for the run record)
 
 
 def norm_team(name: str) -> str:
@@ -207,7 +213,7 @@ def odds_api_totals(team_names: dict):
     from .notify import _env
     key = _env("ODDS_API_KEY")
     cols = ["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over", "line_src", "quote_utc",
-            "best_under", "best_under_book"]
+            "quote_update", "best_under", "best_under_book", "best_line", "best_line_under", "best_line_book"]
     empty = pd.DataFrame(columns=cols)
     if not key:
         return empty
@@ -234,27 +240,42 @@ def odds_api_totals(team_names: dict):
     return parse_odds_api(r.json(), team_names, stamp)[cols]
 
 
-def parse_odds_api(events, team_names, stamp):
+def parse_odds_api(events, team_names, stamp, min_odds=-115):
+    """One row per event: the rule's quote, the best under price at that same total, and the best line
+    (the highest total any logged book offers the under at, at `min_odds` or better; logging only).
+    The rule's quote comes from the first of RULE_BOOKS with a complete under quote (a total and a price)."""
     lookup = {norm_team(k): v for k, v in team_names.items()}
+    LAST_UNMAPPED[:] = sorted({n for ev in events for n in (ev["home_team"], ev["away_team"])
+                               if norm_team(n) not in lookup})
+    if LAST_UNMAPPED:
+        print(f"  odds feed team names with no match (their games arrive unpriced): {LAST_UNMAPPED}", flush=True)
     rows = []
     for ev in events:
-        quotes = {}
+        quotes, updated = {}, {}
         for b in ev.get("bookmakers", []):
             mk = next((m for m in b.get("markets", []) if m["key"] == "totals"), None)
             if mk:
                 quotes[b["key"]] = {x["name"].lower(): x for x in mk["outcomes"]}
-        rule = next((k for k in RULE_BOOKS if k in quotes), None)
-        if not rule:
+                updated[b["key"]] = mk.get("last_update") or b.get("last_update") or ""
+        unders = {k: (q["under"]["point"], q["under"]["price"]) for k, q in quotes.items()
+                  if q.get("under", {}).get("point") is not None and valid_odds(q.get("under", {}).get("price"))}
+        if not unders:
             continue
-        o = quotes[rule]
-        total = o.get("under", {}).get("point")
-        same = [(q["under"]["price"], k) for k, q in quotes.items()
-                if q.get("under", {}).get("point") == total and q.get("under", {}).get("price") is not None]
+        # no rule book quoting: the game has no rule price, and its best line is still logged
+        rule = next((k for k in RULE_BOOKS if k in unders), None)
+        o = quotes.get(rule, {})
+        total = o.get("under", {}).get("point", np.nan)
+        same = [(price, k) for k, (point, price) in unders.items() if point == total]
         best = max(same) if same else (np.nan, "")
+        lines = [(point, price, k) for k, (point, price) in unders.items() if price >= min_odds]
+        top = max(lines) if lines else (np.nan, np.nan, "")
         rows.append(dict(home_team=lookup.get(norm_team(ev["home_team"])),
                          away_team=lookup.get(norm_team(ev["away_team"])),
-                         commence_utc=ev["commence_time"], mkt_total=total, mkt_under=o.get("under", {}).get("price"),
-                         mkt_over=o.get("over", {}).get("price"), line_src=rule, quote_utc=stamp,
-                         best_under=best[0], best_under_book=best[1]))
+                         commence_utc=ev["commence_time"], mkt_total=total,
+                         mkt_under=o.get("under", {}).get("price", np.nan),
+                         mkt_over=o.get("over", {}).get("price", np.nan), line_src=rule or "", quote_utc=stamp,
+                         quote_update=updated.get(rule, ""), best_under=best[0], best_under_book=best[1],
+                         best_line=top[0], best_line_under=top[1], best_line_book=top[2]))
     return pd.DataFrame(rows, columns=["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over",
-                                       "line_src", "quote_utc", "best_under", "best_under_book"])
+                                       "line_src", "quote_utc", "quote_update", "best_under", "best_under_book",
+                                       "best_line", "best_line_under", "best_line_book"])

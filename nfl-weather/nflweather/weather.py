@@ -26,6 +26,10 @@ def _kick_hour(gametime):
         return 13.0
 
 
+WEATHER_COLS = ("om_temp", "om_wind", "om_gust", "om_rh", "om_feels", "om_wind_dir", "om_wind_game", "om_gust_game",
+                "om_temp_game", "om_precip", "om_rain", "om_snow", "om_wcode", "om_precip_day")   # summarize_hourly's keys
+
+
 def summarize_hourly(h: pd.DataFrame, kick: float) -> dict:
     """Kickoff values (linear interpolation) and in-game aggregates.
     Open-Meteo precipitation at hour H is the total for H-1..H, so the game
@@ -71,6 +75,8 @@ def game_weather(games: pd.DataFrame, kind="openmeteo") -> pd.DataFrame:
         if h is None or h.temperature_2m.isna().all():
             continue
         rows.append(dict(game_id=g.game_id, **summarize_hourly(h, _kick_hour(g.gametime))))
+    if not rows:      # no forecast for any game: keep the columns, so the board can still merge and log every game
+        return pd.DataFrame({"game_id": pd.Series(dtype=object), **{c: pd.Series(dtype=float) for c in WEATHER_COLS}})
     return pd.DataFrame(rows)
 
 

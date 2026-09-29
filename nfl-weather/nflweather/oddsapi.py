@@ -164,7 +164,8 @@ def parse(payload) -> pd.DataFrame:
         for bk in ev.get("bookmakers", []):
             for mk in bk.get("markets", []):
                 rec = dict(snapshot_utc=snap, event_id=ev["id"], commence_utc=ev["commence_time"],
-                           home=home, away=away, book=bk["key"], market=mk["key"], book_update=mk.get("last_update"))
+                           home=home, away=away, home_name=ev["home_team"], away_name=ev["away_team"],
+                           book=bk["key"], market=mk["key"], book_update=mk.get("last_update"))
                 if mk["key"] == "totals":
                     for o in mk["outcomes"]:
                         side = o["name"].lower()
