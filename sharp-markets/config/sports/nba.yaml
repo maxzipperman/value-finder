@@ -40,6 +40,15 @@ seasons:
     regular_end: 2027-04-11        # placeholder until the NBA publishes the schedule
     train_end: null                # forward out-of-sample season
 
+# Forward collector (docs/PLAN.md section 7; src/markets/collector.py). Paper-only, GET-only.
+collector:
+  start: 2026-10-20                # the NBA opener; ticks before this date do nothing
+  window_before_tip_hours: 56      # Kalshi game markets open about 56h before tip (PLAN.md section 1)
+  window_after_tip_min: 15
+  every_min: 5                     # 1 Odds API credit per acting tick
+  final_minutes: 120
+  final_every_min: null            # 1 = one-minute ticks in the final 2h (PLAN.md section 3, about +100 credits a day); off until decided
+
 flags:
   lifetime_flag_days: 14           # flag only; NBA markets routinely live > 3 days
   tip_diff_flag_min: 30

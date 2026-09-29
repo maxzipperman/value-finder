@@ -48,7 +48,14 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
        - calendar-2026 MLB, soccer and World Cup games;
        - the 2026-27 NBA and NHL seasons.
      - **Variants:** they would rise from 135 to 191.
-     - **Pullers (PR B):** `sharp-markets` now has the bulk puller (`uv run markets odds5m`). It is tested against mocked responses; the hub runs it on day one by [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](sharp-markets/docs/ODDS5M_DAY_ONE.md). The first step is a probe of about 10.6K credits that builds exact schedules and checks the billing. Still to come: the live-use scripts (PR C) and the weather joins (PR D).
+     - **Pullers (PR B):** `sharp-markets` now has the bulk puller (`uv run markets odds5m`). It is tested against mocked responses; the hub runs it on day one by [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](sharp-markets/docs/ODDS5M_DAY_ONE.md). The first step is a probe of about 10.6K credits that builds exact schedules and checks the billing.
+     - **Live uses (PR C):** three logging-only launchd jobs, described in [`ops/LIVE_USES.md`](ops/LIVE_USES.md). The hub installs them with `ops/install_live_uses.sh` once the paid key is in the `.env` files:
+       - the wind-trigger price poller (NFL + CFB);
+       - the NFL props, alternates and team-totals log;
+       - the NBA collector (from Oct 20).
+
+       They run only on a paid plan and stop at a background floor, so the alerts and close capture keep their credits.
+     - **Still to come:** the weather joins (PR D).
      - **Waiting on you: the plan after October. Decide around Oct 25, from real usage.** Live uses are estimated at about 9,400–19,700 credits a month: 20K ($30) covers the low case, and 100K ($59) the high case (the NBA collector polling all day).
 2. **Close capture is live (Sep 28), as a secondary measure.** A launchd job (`com.valuefinder.closecapture`) runs every 15 minutes. It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the close in `*/data/forward/closes.csv`.
    - Both scorers now also report CLV against that close. The registered primary CLV and the decision rules are unchanged: nfl-weather amendment 3, cfb-weather amendment 2, both dated before any signal.
