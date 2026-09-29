@@ -1,18 +1,18 @@
 # Odds API credits: which plan to buy, and what more credits unlock
 
-*Strategy research · September 28, 2026*
+*Strategy research · September 28, 2026 · The 5M-month section was rewritten on September 29 to the reviewed day-one design the owner adopted ([#38](https://github.com/maxzipperman/value-finder/issues/38)), with the research sweep's two corrections folded in ([#41](https://github.com/maxzipperman/value-finder/issues/41), [#42](https://github.com/maxzipperman/value-finder/issues/42)).*
 
-Which Odds API plan this repo should pay for, month by month, and what each extra tier of credits would let us backtest. No Odds API call was made. The cost rules come from the official docs, and every credit figure comes from [`odds_budget.py`](odds_budget.py), which counts snapshots from the kickoff times in `*/data/processed/games.parquet`. Its output is in [`output/odds_budget.log`](output/odds_budget.log) and `output/odds_api_*.csv`. Two independent reviews tried to refute the arithmetic and the value case; [what they changed](#what-the-review-changed) is at the end.
+Which Odds API plan this repo should pay for, month by month, and what each extra tier of credits would let us backtest. No Odds API call was made. The cost rules come from the official docs, and every credit figure comes from [`odds_budget.py`](odds_budget.py), which counts snapshots from the kickoff times in `*/data/processed/games.parquet`. Its output is in [`output/odds_budget.log`](output/odds_budget.log) and `output/odds_api_*.csv`. Two independent reviews tried to refute the arithmetic and the value case; [what they changed](#what-the-review-changed) is at the end. A third review, of the 5M month itself, is [`plan-review-2026-09-28.md`](plan-review-2026-09-28.md).
 
 ---
 
-## The 5M month (owner decision, September 28, 2026)
+## The 5M month (owner decisions, September 28, 2026; rewritten September 29)
 
-The owner will buy **one 5M month ($119) as soon as the pullers pass their tests, around October 1–3, 2026**. That replaces the October pilot and the March month below. The target is about 4.5M credits of history, plus a 300K reserve for probes, the live uses during the month and mistakes. [`odds_5m.py`](odds_5m.py) makes the plan. Its outputs are [`output/odds_5m_plan.csv`](output/odds_5m_plan.csv), [`odds_5m_seasons.csv`](output/odds_5m_seasons.csv) and [`odds_5m_live.csv`](output/odds_5m_live.csv).
+The owner buys **one 5M month ($119) on Thursday, October 1, 2026**, and on the evening of September 28 adopted the [plan review](plan-review-2026-09-28.md): a small day-one pull, two pulls gated on results inside the month, and the rest in a March 2027 month that the 2026 holdout needs anyway. The props pull sits behind its own pre-registration ([#41](https://github.com/maxzipperman/value-finder/issues/41)), a research-sweep finding the hub asked to fold in on September 29. [`odds_5m.py`](odds_5m.py) makes the plan; its outputs are [`output/odds_5m_plan.csv`](output/odds_5m_plan.csv) (one row per pull with its tier, credits, 2026 share and gate), [`odds_5m_seasons.csv`](output/odds_5m_seasons.csv) and [`odds_5m_live.csv`](output/odds_5m_live.csv). The hub runs [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](../sharp-markets/docs/ODDS5M_DAY_ONE.md) on the Mac on day one.
 
-### Owner decisions (answered September 28, 2026)
+**Every credit figure here is an upper bound.** Football counts a full 2026 season as 2025's stand-in. On October 1 about a third of it exists (48 NFL and 331 CFB games played), so each football pull has a 2026 remainder that only a March month can complete. The table gives both numbers.
 
-The owner answered all five questions, via the hub. The purchase is set for **Thursday, October 1**, and the hub runs [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](../sharp-markets/docs/ODDS5M_DAY_ONE.md) on the Mac that day.
+### Owner decisions (September 28)
 
 1. **Holdout: the recommended split.** Sealed seasons:
    - the 2026 NFL and CFB seasons;
@@ -20,41 +20,36 @@ The owner answered all five questions, via the hub. The purchase is set for **Th
    - the 2026-27 NBA and NHL seasons.
 
    NBA research uses 2025-26, the study season in `sharp-markets/docs/PLAN.md`. `sharp-markets/config/odds5m.yaml` matches this exactly.
-2. **Keep F4, the hourly football history (1.60M).** X2, the 5-minute windows, stays below the cut and is deferred.
-3. **Drop X3, the exchange group (232K).** The same data is free from Kalshi and Polymarket at better resolution. Its credits go to the reserve, not to new pulls.
-4. **Terms of use.** The hub checked [the-odds-api.com/terms-and-conditions](https://the-odds-api.com/terms-and-conditions) from the Mac:
+2. **Day one stays under 400K.** The probe, with three extra 30-credit coverage checks; F1; F2 at T−24h and the close, without team totals; the NBA sample week at schedule A through `markets odds-pull --schedule A`, not the bulk puller's `week` stage; heat as trigger-first, close-only pulls. This reverses the same day's earlier decision to pull F4 (hourly football) at once: F4 is now gated on F1's daily result. The review's reasons: the daily test comes first in the repo's own sequencing, the history doesn't expire, and F4 was 38% of the plan sitting in the first tier, where a billing surprise costs the most.
+3. **Two pulls are gated inside the month, decided by about October 20:** N1 on the NBA sample week, F4 on F1's day-to-day reversal test. The exact rules are in the gated table below and in `odds_5m.py`.
+4. **The heat hypotheses become descriptive, closes only** ([`HEAT_HYPOTHESES.md`](../sharp-markets/docs/HEAT_HYPOTHESES.md) amendment 4). The full MLB and soccer histories, B1 and S1 (850K), are out of October and not scheduled for March.
+5. **Drop X3, the exchange group (232K).** The same data is free from Kalshi and Polymarket at better resolution. Its credits go to the reserve, not to new pulls. X2, the 5-minute windows, stays deferred.
+6. **Terms of use.** The hub checked [the-odds-api.com/terms-and-conditions](https://the-odds-api.com/terms-and-conditions) from the Mac:
    - Storing data indefinitely is allowed.
    - Research, dashboards and model training are allowed.
    - "Calculating and displaying values you derive from our data" is allowed.
    - Reselling or redistributing the raw data as a standalone data product is not allowed.
    - The terms don't say whether billing cycles follow the calendar month (see C6 below).
 
-   So compact derived tables may go into this private repo, and raw responses stay out of git. That resolves open question 4.
-5. **After October: the owner decides around October 25, from real usage.** The estimates to decide with are in [below](#after-the-month-live-uses): the 20K plan ($30) covers the low case (about 14,100 credits a month, with the NBA collector as shipped). The high case (about 20,000, with the collector's one-minute final-2h ticks turned on) needs the 100K plan ($59), or the collector's 56-hour window cut to game windows.
+   So compact derived tables may go into this private repo, and raw responses stay out of git.
+7. **After October: the owner decides around October 25, from real usage.** The estimates to decide with are [below](#after-the-month-live-uses): the 20K plan ($30) covers the low case (about 14,100 credits a month, with the NBA collector as shipped). The high case (about 20,000, with the collector's one-minute final-2h ticks turned on) needs the 100K plan ($59), or the collector's 56-hour window cut to game windows.
+8. **"Get as much NCAA as possible."** What that means inside this design is [below](#ncaa-what-get-as-much-as-possible-buys-here): F1 already carries every FBS game's close and daily line, and nothing CFB-specific is added on day one.
 
-### The pulls, ranked by research value
+### Day one: 238,590 credits at most, of which about 210K exists on October 1
 
-Value is scored 1 to 5. The cut line is 4.5M. Football counts are exact, from our schedules (2026 uses 2025 as a stand-in). Other sports use season-structure **estimates**, set out in `odds_5m.py`. Day one's probe replaces them with the real schedules from the historical `/events` endpoint, at 1 credit per call.
+Everything here has its outcomes on disk already, so analysis starts the same week. The run order is the table order.
 
-| ID | Value | Pull | Credits | Running total |
+| ID | Pull | Credits (upper bound) | 2026 share, and the part of it that exists on Oct 1 | Backtest ready on disk? |
 |---|---|---|---|---|
-| F1 | 4 | NFL+CFB featured markets, 10 books, daily for 7 days before kickoff plus every close, 2020–26 | 162,210 | 162,210 |
-| F2 | 3 | NFL alternate spreads, alternate totals and team totals at T−24h, T−2h and the close, 2023–26 | 102,600 | 264,810 |
-| F3 | 3 | NFL props (pass, rush and receiving yards, receptions, kicking points, field goals) at T−48h, T−24h, T−2h and the close, 2023–26 | 273,600 | 538,410 |
-| B1 | 3 | MLB featured markets, daily plus every close, 2020–26 (estimate) | 358,470 | 896,880 |
-| S1 | 3 | Soccer heat leagues and tournaments, featured markets (3-way moneyline, spreads, totals), daily plus every close (estimate) | 491,970 | 1,388,850 |
-| F4 | 3 | NFL+CFB featured markets, 10 books, **hourly** for 7 days before kickoff, 2020–26 | 1,604,430 | 2,993,280 |
-| H1 | 2 | NHL featured markets, daily plus every close, 2020–26 (estimate) | 163,860 | 3,157,140 |
-| N2 | 2 | NBA featured markets, daily plus every close, seasons other than 2025-26 (estimate) | 170,460 | 3,327,600 |
-| F5 | 2 | CFB alternate lines and team totals at T−24h and the close, 2023–26 | 221,880 | 3,549,480 |
-| N1 | 2 | NBA 2025-26 at 5-minute resolution, moneyline, 3 sharp books (PLAN.md schedule D) | 478,530 | 4,028,010 |
-| F6 | 1 | CFB props at the close, 2023–26 (an upper bound; coverage is thin) | 147,920 | 4,175,930 |
-| ~~X3~~ | 1 | *Dropped by the owner:* exchange group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025 | ~~231,630~~ | — |
-| *X2* | *1* | *Below the cut, deferred:* 5-minute NFL+CFB totals for 72 hours before windy kickoffs, 2024–25 | *705,580* | — |
+| P0 | Probe: key check (free), historical `/events` sweeps for all 16 sport keys (exact schedules), then seven single-call probes: the four NFL billing checks, plus featured closes for NCAAF 2020, MLB 2024 and MLS 2024 | ~10,700 | — | n/a |
+| F1 | NFL+CFB featured markets, 10 books, daily for 7 days before kickoff plus every close, 2020–26 | 162,210 | 24,540; 5,670 | Yes: 653 Rule HT games, 128 NFL and 237 CFB windy games (2020–25), every closing outcome |
+| F2 | NFL alternate spreads and alternate totals at T−24h and the close, 2023–26. No T−2h snapshot (no hypothesis) and no team totals (their line, M4, was dropped after the free pre-check) | 45,600 | 11,400; 1,920 | Yes: nflverse margins |
+| N0 | NBA sample week, Jan 5–11, 2026, at schedule A (754 snapshots), as PLAN.md §8 requires before any full season. `markets odds-pull --schedule A`; the snapshots are on N1's 5-minute grid and land in its cache | 7,540 | — | Yes: the week's Kalshi candles and trades are cached |
+| HB1 | MLB heat closes: 10 books at the close of each 2024–25 game whose day-1 forecast temperature at first pitch is ≥ 90 °F at an open park | ≤ 4,380 | — | After the free weather join and `markets weather qualifying` |
+| HS1 | Soccer heat closes: 10 books at the close of each 2024–25 league or tournament match whose day-1 forecast heat index at kickoff is ≥ 90 °F at an open venue | ≤ 8,160 | — | Same |
+| **Total** | | **238,590** | **35,940; 7,590** | |
 
-**Total:** 4,175,930 credits of history. The reserve is 531,630: the original 300,000 plus X3's 231,630. That leaves 292,440 of the 5,000,000 unallocated.
-
-- **Sequencing:** pull the value-4 and value-3 items first, so a mistake can only cost the bottom of the list.
+- **Why the heat pulls are small.** The trigger comes first, from free Open-Meteo data, and only qualifying games' closes are bought: the pulls read the game list that `markets weather qualifying` writes. The figures assume one close slot per qualifying game (146 MLB games and about 272 soccer matches, the review's free counts on observed weather), which is an upper bound. The day-1 forecast counts replace those numbers on the Mac; a different count changes the credits, never the design.
 - **How the soccer leagues were chosen.** They're the summer and heat leagues with Odds API history from mid-2020. (There's no international-friendlies key.)
 
   | League or tournament | Why it's in |
@@ -70,23 +65,92 @@ Value is scored 1 to 5. The cut line is 4.5M. Football counts are exact, from ou
   | World Cup 2022 | A cooled-stadium control |
   | World Cup 2026 | The prime heat test; sealed |
 
+### Gated inside the month: 2,065,460 at most, decided by about October 20
+
+| ID | Pull | Credits (upper bound) | 2026 share; on Oct 1 | Gate (act-or-drop) |
+|---|---|---|---|---|
+| F3a | NFL props (pass, rush and receiving yards, receptions, kicking points, field goals made) at T−24h and the close, the 2025 season | 34,200 | — | Only after #41's free pre-registration, before any prop line is seen: #10 rewritten as "the posted line sits above the empirical median of the player's outcome distribution, and the under's price is not asymmetric enough to remove the edge"; the distribution model and the de-vig method registered; the 2023–25 mean-minus-median gap per market computed from `player_week.parquet` and `kicks.parquet`. Posted lines are not on disk, so the line-vs-median check itself runs on this 2025 slice. |
+| F3b | NFL props, the same markets and snapshots, 2023–24 and the 2026 games played | 102,600 | 34,200; 5,760 | Only if, on the 2025 slice, the posted line sits above the empirical median in at least 3 of the 4 yardage markets and the under's excess win rate over the de-vigged close is positive pooled. If the lines sit at the median, F3b moves to March and only the kicking markets (#21) stay in play. |
+| N1 | NBA 2025-26 at 5-minute resolution, moneyline, 3 sharp books (PLAN.md schedule D), less the sample week | 486,440 | — | Only if the sample week shows an H1 edge (net-of-fee edge flags with fills and positive CLV to Pinnacle's close) or an H2 lag (median catch-up lag of 10 minutes or more), exactly as PLAN.md §8 step 3 and §9 decision 2 require. |
+| F4 | NFL+CFB featured markets, 10 books, **hourly** for 7 days before kickoff, 2020–26, net of F1 | 1,442,220 | 207,090; 40,650 | Only if H16b passes on F1's daily grid ([#42](https://github.com/maxzipperman/value-finder/issues/42)): a move of a point or more on day *t* reverses by the close, graded on CLV; fading it earns at least 0.25 points of CLV with the 95% interval above zero, in both sports, in 4 of 6 seasons. H16a (fade the move at the close, graded on ROI, must beat the vig) is a separate variant with a free SBR pre-check for 2007–21; it does not unlock F4. |
+
+- **Day one plus every gate is 2,304,050**, against the hard ceiling of **4,440,000** (5,000,000 less the 531,630 floor, the probe and October's live use, rounded down; the arithmetic is in the day-one doc). Even if every gate passes, 2,164,320 stays unallocated. Nothing else is bought in October.
+- **F3 moved behind #41 on September 29.** The Sep 28 decision had all 136,800 on day one. The research sweep found that a yardage line set at the median hits about 50% by construction, so the skew argument needs the line to sit above the median. Posted lines aren't free, so the check runs on the cheapest slice first (2025, 34,200) and the rest follows only if it passes. The total is unchanged if it does.
+- **F4's incremental cost is 1,442,220, not 1,604,430.** Every F1 snapshot (the 16:00 UTC points and every close) lies on F4's hourly grid, and `bulk.py` caches by the same key; `tests/test_bulk.py` checks it.
+- **N1 is 486,440 = 10 × (49,398 − 754).** The Sep 28 figure of 478,530 also netted 791 "closes" that nothing in the month pulls (review C12). Honouring the gate costs nothing: the sample week's snapshots are the first 754 of N1's grid.
+
+### March 2027: the completions, and whatever the gates earned
+
+| What | Credits (upper bound) | Gate |
+|---|---|---|
+| The 2026 completions of F1, F2 and F3b (the games after October 1) | 56,790 | None: the sealed 2026 seasons are pulled so they exist when a hypothesis about them is registered |
+| F4's 2026 completion, if F4 was earned | 166,440 | H16b, as above |
+| H1: NHL featured, daily plus every close, 2020–26 (estimate) | 163,860 | Only if the price engine worked on football (F1's rule) and a data-use line has been written |
+| N2: NBA featured, daily plus every close, seasons other than 2025-26 (estimate) | 170,460 | Same |
+| F5: CFB alternate lines and team totals at T−24h and the close, 2023–26 | 221,880 (the team-totals slice at the close alone is 36,980) | Only if Rule HT's re-grade at Pinnacle's close (F1, 2020–25) keeps its win rate above the break-even of the prices; the team-totals slice is the part worth having |
+| F6: CFB props at the close, 2023–26 (upper bound; coverage is thin) | 147,920 | Only if #10 passes on NFL (F3) and a 30-credit probe finds CFB props at the close |
+
+The plan size for March follows from the gates: 100K ($59) covers the completions and F5's team-totals slice; anything with H1, N2 or F4 needs 5M ($119).
+
+### Not pulled
+
+| ID | Pull | Credits | Why |
+|---|---|---|---|
+| B1, S1 | The full MLB and soccer daily histories, 2020–26 (estimates) | 358,470 + 491,970 | Replaced by HB1 and HS1 on September 29 (#38): the heat hypotheses are descriptive and closes-only, and the trigger exists only from 2024, so 2020–23 serves nothing registered |
+| X3 | Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025 | 231,630 | Dropped by the owner; its credits are in the reserve |
+| X2 | 5-minute NFL+CFB totals for 72 hours before windy kickoffs, 2024–25 | 705,580 | Deferred until a forecast-run archive exists; the MOS archive in [#40](https://github.com/maxzipperman/value-finder/issues/40) may supply the run times |
+
+### NCAA: what "get as much as possible" buys here
+
+The owner asked for as much college football as the design allows. Inside the reviewed design:
+
+- **F1 already carries it.** 3,381 of F1's 5,407 snapshots are CFB (101,430 of the 162,210 credits): every FBS-involved game's close and daily line at 10 books, 2020–26. That re-grades Rule HT (653 games) and CFB Rule B (237 windy games, 2020–25) at Pinnacle's close, and runs the price engine, H16a and H16b on CFB as well as the NFL.
+- **The NCAAF 2020 probe** (30 credits) checks whether Pinnacle prices college football in the earliest history; `pin_total` in the CFBD data stops in 2019, so this is the open question for the CFB sharp close.
+- **Free, in parallel:** the alerts log 10 books four times a day and close capture records every kickoff slot, which builds the 2026 CFB archive at no cost. Switching the alert book list to `us10` would make that archive continue F1 exactly (see [hygiene](#free-before-october-1-hygiene) below).
+
+What could be added, with the credits and the hypothesis served, and the recommendation:
+
+| Candidate | Credits | Hypothesis | Recommendation |
+|---|---|---|---|
+| F5, CFB alternates and team totals at T−24h and the close, 2023–26 | 221,880; 147,920 without team totals; 36,980 for team totals at the close only | Rule HT-style shrinkage shows up in team totals and alternates | **Not now.** Dropped once for thin coverage and weak CFB key numbers, and nothing has changed; Bovada, the book named for CFB derivatives, isn't in `us10`. March, behind the Rule HT re-grade, and only the team-totals slice. |
+| A CFB-only hourly pull, 2020–26 | 796,380 gross; 694,950 net of F1's CFB snapshots | Hour-to-hour reversal (#16), the same as F4 | **Not separately.** F4 already includes CFB and has the same gate. A CFB-only version would only make sense if H16b held in CFB and failed in the NFL, which the F1 test will show before any hourly credit is spent. |
+| F6, CFB props at the close, 2023–26 | 147,920 | Median-vs-mean props in CFB | **March**, behind #10 passing on the NFL and a 30-credit coverage probe. |
+| Heat in NCAA football | Free (cfb-weather's data) | Whether the close mis-sets hot early-season games | **2027 material.** Testable free, but the ceiling is low, the sign is contested, and no CFB slot opens before 2027 (review section 7). |
+
+**Recommendation: add nothing CFB-specific on day one.** The one NCAA item worth a decision in October is F5's team-totals slice (36,980), and its gate can only be read after F1 lands.
+
 ### Data-use plan
 
-**Sealed holdout.** Every 2026-season game in every sport is pulled, but it isn't examined until a hypothesis about it is pre-registered. Owner decision 1 defines the seasons; for NBA and NHL that's 2026-27. All exploration uses 2020–25 (NBA through 2025-26). The sharp-markets puller enforces this: the manifest flags sealed calls, and `bulk.load_rows()` leaves sealed rows out by default (PR B, #28).
+**Sealed holdout.** Every 2026-season game that exists is pulled with its pull, but it isn't examined until a hypothesis about it is pre-registered. Owner decision 1 defines the seasons; for NBA and NHL that's 2026-27. All exploration uses 2020–25 (NBA through 2025-26). The sharp-markets puller enforces this: the manifest flags sealed calls, and `bulk.load_rows()` leaves sealed rows out by default (PR B, #28).
 
-| Pull | Primary hypothesis | Metric | Variants |
-|---|---|---|---|
-| F1 | Soft-book prices beyond the sharp fair line earn CLV (#8); re-grade #4 and Rule B at the Pinnacle close; day-to-day moves reverse (#16) | CLV per flag; win rate; CLV of fading the move | 15 |
-| F2 | Alternate lines misprice key-number crossings against recent-era margins | EV at the alternate price | 4 |
-| F3 | Yardage-prop unders beat 50% (#10); kicking-points unders in wind or cold (#21); prop moves across the snapshots | Under rate and ROI at the prop price | 8 |
-| F4 | Hour-to-hour moves reverse before the close (#16) | CLV of fading the move | 2 |
-| S1 | Kickoff heat index at or above the threshold (defined in PR D) → under at the close | Under rate and ROI at the close price | 1 |
-| B1 | Open-air park weather → totals: wind blowing in → under; heat (PR D) → over | Under/over rate and ROI | 2 |
-| N1 | H1/H2 as in PLAN.md | Per PLAN.md | 12 |
-| N2, H1 | Favorite-longshot bias at the best price, by odds band | ROI by band | 4 + 4 |
-| F5, F6 | CFB shrinkage in team totals and alternates; CFB median-vs-mean props | Win rate, ROI | 2 + 2 |
+The act-or-drop rules below are written before the data lands (review section 4, item 1). "Act" means the hypothesis becomes a 2027 pre-registration candidate, or unlocks the pull it gates; "drop" means it is written up and closed.
 
-**Variant count:** 56 new variants on top of 135 makes **191**, so the Bonferroni bar is **p < 0.00026**. Nothing without a line in this table gets analysed. X3 carried no variants, so dropping it leaves the count at 191.
+| Pull | Primary hypothesis | Metric | Act if | Drop if | Games needed | Variants |
+|---|---|---|---|---|---|---|
+| F1 | **Price engine** (#8): soft-book prices beyond the sharp fair line are bets | Realized ROI at the flagged price, and CLV to the soft book's own close (CLV to Pinnacle is tautological when Pinnacle defines the flag) | ROI positive with a 95% interval above zero, positive in at least 5 of 6 seasons, and it survives excluding flags where Pinnacle's market `last_update` is older than the soft book's | ROI at or below zero, or driven by one book or one season | A few hundred flags per market; stability across books and seasons is the binding constraint, not power | 9 |
+| F1 | Rule HT and CFB Rule B history re-graded at Pinnacle's close; value of line shopping | Win rate, ROI | Descriptive: no act-or-drop. Rule HT above break-even at the sharp close is F5's gate | — | — | 4 |
+| F1 | **H16b** ([#42](https://github.com/maxzipperman/value-finder/issues/42)): a move of a point or more on day *t* reverses by the close | CLV of fading the move, on the daily grid | At least 0.25 points of CLV with the interval above zero, in both sports, in 4 of 6 seasons: F4 unlocks | Anything else: F4 stays unpulled | Thousands of game-days | 2 |
+| F1 | **H16a** (#42): fade the open-to-close move at the close | Win rate and ROI at the close, after vig | Positive ROI after vig with p < 0.01 on 2020–25, and the free SBR 2007–21 pre-check in the same direction | Otherwise. Moskowitz 2021 finds the reversal after the close and says it fails costs, so expect drop | Thousands of games | 1 (new) |
+| F2 | Alternate lines misprice key-number crossings against recent-era margins | EV at the alternate price | Best-book alternate EV of at least +2% against the recent-era margin table, in each of 2023, 2024 and 2025 | EV at or below zero after vig. The Wong teaser leg rate was 73.3% in 2022–25 against a 73.9% break-even, so expect this dead at −120 | 1,140 games times many lines | 4 |
+| F3a, F3b | **#10 as rewritten by #41**: the posted line sits above the empirical median of the outcome distribution, and the under's price is not asymmetric enough to remove the edge | Line minus empirical median, by market; under rate and ROI against the de-vigged close | F3b: the gate above. On 2023–25: under rate above the price's break-even with p < 0.01 in each year and each market | At or below break-even, or one market carries it, or the lines sit at the median | Tens of thousands of lines; the one close-is-wrong rule in the plan that is decidable | 4 |
+| F3a, F3b | **Kicker props** (#21): kicking-points unders in wind or cold | Mean CLV from T−24h to the prop close; kicking points in trigger games | Mean CLV above zero with the interval clear on at least 100 lines, and kicking points actually fall in trigger games | Otherwise | About 89 windy or cold outdoor games in 2023–25, roughly 180 lines: a 2027 forward-test candidate at best | 2 |
+| F3 | Prop moves across snapshots | — | Retired: the T−48h and T−2h snapshots are gone and it had no metric. The count is not lowered | — | — | 2 |
+| N0, N1 | H1 (Kalshi static edge) and H2 (lag) as in PLAN.md | Per PLAN.md | Per PLAN.md; N1 only through the gate | Per PLAN.md | Train and validate as written | 12 |
+| F4 | Hour-to-hour moves reverse before the close (#16) | CLV of fading the move | Only pulled through H16b; the same criteria at hourly resolution | — | — | 2 |
+| HB1, HS1 | B-H1 and S-H1, **descriptive** (amendment 4) | The registered side's record at Pinnacle's close, its excess over the de-vigged probability with an interval, ROI; reported as a split | No decision rule: reported only, with the void and no-close counts | — | 146 and about 272: below any useful power | 3 (unchanged; includes the deferred B-H2) |
+| H1, N2 (March) | Soft-price flags at the best price | ROI | Only through their gate; a data-use line is written before March | | | 4 + 4 |
+| F5, F6 (March) | CFB shrinkage in team totals and alternates; CFB median-vs-mean props | Win rate, ROI | Only through their gates | | | 2 + 2 |
+
+**Variant count:** the plan committed 56 variants on September 28 (191 in all). Rewriting #10 replaces its variants rather than adding any, and the retired prop-move variants stay counted. Splitting #16 adds H16a as one new variant, so the count is **192** and the bar is **p < 0.00026** (0.05 / 192). Nothing without a line in this table gets analysed. The pre-registration of #10 (#41) and the H16a pre-check on the SBR lines (#42) are free and belong to their issues; neither is done here.
+
+### Free before October 1: hygiene
+
+From the review's section 4, item 6:
+
+- **The cut line and the reserve no longer collide.** The old 4.5M cut line plus the 531,630 floor summed to 5,031,630. The month now has a day-one cap of 400K and one hard ceiling, 4,440,000, which the floor can actually reach; `odds_5m.py` checks both.
+- **STATUS.md** no longer describes the 20K pilot or the March month as the plan.
+- **The paid key goes in all three `.env` files.** `LIVE_USES.md` and `ODDS5M_DAY_ONE.md` agree ([#33](https://github.com/maxzipperman/value-finder/issues/33)).
+- **The alert book list, left for the hub.** The alerts log `pinnacle, lowvig, betonlineag, draftkings, fanduel, betmgm, betrivers, bovada, espnbet, hardrockbet`; F1's `us10` has `williamhill_us` and `fanatics` in place of `bovada` and `hardrockbet`, and the alerts log totals only. Switching the alert list to `us10` makes the free 2026 archive continue F1 exactly for totals, but it touches live alert behaviour, so it is the hub's call. One caveat: `williamhill_us` and `fanatics` are paid-only books, so on a free month after October the switched list would silently return eight books, not ten. Either switch for paid months only, or accept the eight-of-ten overlap.
 
 ### After the month: live uses
 

@@ -154,34 +154,53 @@ sports:
     sweep_every_days: 2
     windows: [{label: "2025", from: 2025-07-25, to: 2025-09-01}]
 
-# Pulls, in the plan's value order (odds_5m.py IDs). kind: featured = historical /odds (one call
-# covers every game at a snapshot); event = historical event odds (per game per snapshot).
-# schedule: daily_close = 16:00 UTC daily for 7 days before each kickoff + each close;
-# hourly = on the hour for 7 days + each close; 5min = every 5 minutes from lookback_hours before
-# each tip to after_minutes past it (PLAN.md schedule D). The close is the last 5-minute grid point
-# at least 5 minutes before kickoff, so no in-play prices leak in. Event offsets are hours before
+# Pulls, in the order the reviewed plan runs them (odds_5m.py IDs; the owner adopted the plan review on
+# Sep 28, #38). kind: featured = historical /odds (one call covers every game at a snapshot); event =
+# historical event odds (per game per snapshot).
+# schedule: daily_close = 16:00 UTC daily for 7 days before each kickoff + each close; hourly = on the
+# hour for 7 days + each close; close = each close only; 5min = every 5 minutes from lookback_hours
+# before each tip to after_minutes past it (PLAN.md schedule D). The close is the last 5-minute grid
+# point at least 5 minutes before kickoff, so no in-play prices leak in. Event offsets are hours before
 # kickoff (0 = that close). cache_as writes into another pipeline's cache so it can read the data
 # (N1 lands where `markets build --sport nba` looks); its params must match that pipeline's exactly.
+# games_from limits a pull to the games listed in that CSV (sport, id), relative to the data directory;
+# `markets weather qualifying` writes it from the pre-registered heat triggers before any odds are bought.
 soccer: &soccer [soccer_usa_mls, soccer_mexico_ligamx, soccer_brazil_campeonato, soccer_japan_j_league,
                  soccer_korea_kleague1, soccer_fifa_world_cup, soccer_uefa_european_championship,
                  soccer_conmebol_copa_america, soccer_fifa_club_world_cup, soccer_concacaf_gold_cup,
                  soccer_concacaf_leagues_cup]
 pulls:
+  # --- day one (Oct 1): under 400K credits in all, docs/ODDS5M_DAY_ONE.md
   F1: {kind: featured, sports: [americanfootball_nfl, americanfootball_ncaaf], schedule: daily_close, books: us10}
-  F2: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [24, 2, 0],
-       markets: "alternate_spreads,alternate_totals,team_totals"}
-  F3: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [48, 24, 2, 0],
+  F2: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [24, 0],
+       markets: "alternate_spreads,alternate_totals"}
+  F3: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [24, 0],
        markets: "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_kicking_points,player_field_goals"}
-  B1: {kind: featured, sports: [baseball_mlb], schedule: daily_close, books: us10}
-  S1: {kind: featured, sports: *soccer, schedule: daily_close, books: soccer10}
+  HB1: {kind: featured, sports: [baseball_mlb], schedule: close, books: us10, only_seasons: ["2024", "2025"],
+        games_from: weather/heat_qualifying.csv}
+  HS1: {kind: featured, sports: *soccer, schedule: close, books: soccer10, only_seasons: ["2024", "2025"],
+        games_from: weather/heat_qualifying.csv}
+  # --- gated inside the month (decided by about Oct 20; the gates are written in odds-api-credits.md)
+  N1: {kind: featured, sports: [basketball_nba], schedule: 5min, lookback_hours: 56, after_minutes: 15,
+       books: sharp3, markets: h2h, only_seasons: ["2025-26"], cache_as: {sport: nba, source: oddsapi_hist}}
   F4: {kind: featured, sports: [americanfootball_nfl, americanfootball_ncaaf], schedule: hourly, books: us10}
+  # --- March 2027 month, each with its own gate
   H1: {kind: featured, sports: [icehockey_nhl], schedule: daily_close, books: us10}
   N2: {kind: featured, sports: [basketball_nba], schedule: daily_close, books: us10, skip_seasons: ["2025-26"]}
   F5: {kind: event, sports: [americanfootball_ncaaf], books: us10, from: 2023-05-03, offsets: [24, 0],
        markets: "alternate_spreads,alternate_totals,team_totals"}
-  N1: {kind: featured, sports: [basketball_nba], schedule: 5min, lookback_hours: 56, after_minutes: 15,
-       books: sharp3, markets: h2h, only_seasons: ["2025-26"], cache_as: {sport: nba, source: oddsapi_hist}}
   F6: {kind: event, sports: [americanfootball_ncaaf], books: us10, from: 2023-05-03, offsets: [0],
        markets: "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions"}
-# X3 (exchange book group, hourly, 2025) was dropped by the owner on Sep 28: the same data is free
-# from Kalshi and Polymarket at better resolution. Its 231,630 credits went to the reserve.
+groups:
+  day_one: [F1, F2, F3, HB1, HS1]
+  gated: [N1, F4]
+  march: [H1, N2, F5, F6]
+# Not in any group:
+# - B1 and S1, the full MLB and soccer daily histories 2020-26 (850K), were replaced by HB1 and HS1 on
+#   Sep 29 (#38): the heat hypotheses are descriptive and closes-only, and the trigger is computed from
+#   free Open-Meteo data first, so only qualifying games' closes are bought.
+# - X3 (exchange book group, hourly, 2025) was dropped by the owner on Sep 28: the same data is free
+#   from Kalshi and Polymarket at better resolution. Its 231,630 credits went to the reserve.
+# - X2 (5-minute windows before windy kickoffs) is deferred until a forecast-run archive exists.
+# The NBA sample week (Jan 5-11, 2026, schedule A, 7,540 credits) runs through `markets odds-pull
+# --schedule A`, not this puller; its snapshots land in N1's cache.

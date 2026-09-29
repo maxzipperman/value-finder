@@ -1,23 +1,35 @@
-"""The 5M-credit Odds API month: every candidate historical pull across sports, ranked by research
-value, with a cut line at the history budget (no API calls, no downloads).
+"""The 5M-credit Odds API month, as the owner decided it on Sep 28, 2026 after the plan review
+(plan-review-2026-09-28.md; issue #38): a small day-one pull, two pulls gated on results inside the month,
+the props pull behind its own pre-registration (#41), and the rest in a March 2027 month. No API calls,
+no downloads.
 
 Called by odds_budget.py; run on its own with
     nfl-weather/.venv/bin/python strategy-research/odds_5m.py [--no-save]
 
+Tiers
+* day_one   runs on Oct 1 (docs: sharp-markets/docs/ODDS5M_DAY_ONE.md), under DAY_ONE_CAP in all
+* gated     runs inside the month only when its written gate passes (the gate text is in the table)
+* march     the March 2027 month, each with its own gate
+* replaced  B1 and S1, the full MLB and soccer histories, replaced by the close-only HB1 and HS1
+* dropped   X3, by the owner; deferred: X2
+
 Counts
-* NFL and CFB: exact, from the processed schedules (odds_budget.py's helpers; 2026 uses 2025 as a
-  stand-in because its schedule is incomplete).
+* NFL and CFB: exact, from the processed schedules (odds_budget.py's helpers). 2026 uses 2025 as a
+  stand-in for the season's full size, so every football figure is an upper bound; credits_2026 is the
+  2026 share, and credits_2026_by_oct1 the part of it that exists on Oct 1 (games kicked off by then).
+  The difference is what a March month completes.
 * NBA, NHL, MLB and soccer: season STRUCTURE estimates (games, days in the season window, distinct
-  kickoff slots), written out below with their assumptions, because their schedules aren't
-  reachable from the cloud. Day one's probe (sharp-markets `markets odds5m probe`) pulls the real
-  schedules from the Odds API's historical /events endpoint (1 credit a call) and replaces them.
+  kickoff slots), written out below with their assumptions. Day one's probe (`markets odds5m probe`)
+  pulls the real schedules from the Odds API's historical /events endpoint and replaces them.
+* Heat closes: the review's free counts of qualifying games (HEAT_QUALIFYING), one close slot each,
+  an upper bound; `markets weather qualifying` gives the real day-1 forecast counts on the Mac.
 
 Costs (official docs): historical featured /odds = 10 x markets x book groups per snapshot, covering
 every game of the sport; historical event odds = 10 x markets x groups per game per snapshot.
 Up to 10 bookmakers = 1 group. Featured here = h2h, spreads, totals (3 markets) at 10 books = 30.
 
-The 2026 season of every sport is a SEALED HOLDOUT: it is pulled while credits last (history can't be
-bought cheaper later) but nothing analyses it until a hypothesis about it is pre-registered.
+The 2026 season of every sport is a SEALED HOLDOUT: what exists is pulled with its season (history can't
+be bought cheaper later) but nothing analyses it until a hypothesis about it is pre-registered.
 """
 import argparse
 from pathlib import Path
@@ -27,11 +39,22 @@ import pandas as pd
 OUT = Path(__file__).resolve().parent / "output"
 HIST, FEAT = 10, 3                 # historical multiplier; featured markets (h2h, spreads, totals)
 PER_SNAP = HIST * FEAT             # one featured snapshot at up to 10 books
-HISTORY_BUDGET = 4_500_000         # the owner's target for history
+DAY_ONE_CAP = 400_000              # owner decision, Sep 28: day one stays under this
+CEILING = 4_440_000                # the hard drop line for the whole month (ODDS5M_DAY_ONE.md): 5M less the
+                                   # floor, the probe and October's live use, rounded down
 RESERVE = 300_000                  # probes, the live uses during the month, mistakes
-# Owner decisions, Sep 28 (via the hub): keep F4; drop X3 (the same data is free from Kalshi and
-# Polymarket at better resolution) and add its credits to the reserve, not to new pulls.
+X3_TO_RESERVE = 231_630            # X3's credits, assigned to the reserve by the owner (Sep 28)
+FLOOR = RESERVE + X3_TO_RESERVE    # 531,630: `markets odds5m --floor`, the account balance no run goes below
+DAY_ONE = pd.Timestamp("2026-10-01", tz="UTC")
 DROPPED = {"X3"}
+PROBE = 10_700                     # ~10,400 /events sweeps at 1 credit + 7 billing and coverage probes (<= 270)
+NBA_WEEK_SNAPS = 754               # schedule A, Jan 5-11, 2026 (sharp-markets/docs/PLAN.md s3)
+N1_SEASON_SNAPS = 49_398           # schedule D, the full 2025-26 season (PLAN.md s3)
+# Free counts from the plan review (Appendix B): games in 2024-25 whose observed weather met the registered
+# trigger at an open venue. MLB 146 (ERA5 first-pitch temperature >= 90 F); soccer about 225 league matches
+# plus about 47 tournament matches (19:00-local heat index >= 90 F). The day-1 forecast counts replace them.
+HEAT_QUALIFYING = {"HB1": 146, "HS1": 225 + 47}
+TIERS = ["day_one", "gated", "march", "replaced", "dropped", "deferred"]
 
 # ---------------------------------------------------------------- season structures (estimates)
 # (season label, games, days in the season window, distinct kickoff slots, sealed holdout?)
@@ -104,7 +127,8 @@ def structured_rows():
 
 
 def football_counts():
-    """Exact NFL/CFB counts from odds_budget.py (2026 = 2025 stand-in)."""
+    """Exact NFL/CFB counts from odds_budget.py (2026 = 2025 stand-in), plus by_oct1: the 2026 games
+    that had kicked off before Oct 1, 2026 and their snapshot counts (what day one can actually pull)."""
     import odds_budget as ob
     nfl, cfb = ob.nfl_games(), ob.cfb_games()
     out = {}
@@ -112,8 +136,36 @@ def football_counts():
         daily = ob.per_season(d, lambda x: len(ob.grid(x.kick, 7 * ob.D, None, at=16)))
         hourly = ob.per_season(d, lambda x: len(ob.grid(x.kick, 7 * ob.D, ob.H)))
         games = ob.per_season(d, len)
-        out[name] = dict(daily=daily, hourly=hourly, games=games)
+        played = d[(d.season == 2026) & (d.kick < DAY_ONE)]
+        by_oct1 = dict(daily=len(ob.grid(played.kick, 7 * ob.D, None, at=16)),
+                       hourly=len(ob.grid(played.kick, 7 * ob.D, ob.H)), games=len(played))
+        out[name] = dict(daily=daily, hourly=hourly, games=games, by_oct1=by_oct1)
     return out
+
+
+# The act-or-drop rules (plan review section 3, with the Sep 28 research sweep's two corrections, #41 and #42).
+GATES = {
+    "F3a": ("Only after #41's free pre-registration, before any prop line is seen: #10 rewritten as 'the posted line "
+            "sits above the empirical median of the player's outcome distribution, and the under's price is not "
+            "asymmetric enough to remove the edge'; the distribution model and the de-vig method registered; the "
+            "2023-25 mean-minus-median gap per market computed from player_week.parquet and kicks.parquet. Posted "
+            "lines are not on disk, so the line-vs-median check itself runs on this 2025 slice."),
+    "F3b": ("Only if, on the 2025 slice (F3a), the posted line sits above the empirical median in at least 3 of the "
+            "4 yardage markets and the under's excess win rate over the de-vigged close is positive pooled. If the "
+            "lines sit at the median, F3b moves to March and only the kicking markets (#21) stay in play."),
+    "N1": ("Only if the sample week shows an H1 edge (net-of-fee edge flags with fills and positive CLV to Pinnacle's "
+           "close) or an H2 lag (median catch-up lag of 10 minutes or more), exactly as PLAN.md s8 step 3 and s9 "
+           "decision 2 require. Decide by about Oct 20."),
+    "F4": ("Only if H16b passes on F1's daily grid (#42): a move of a point or more on day t reverses by the close, "
+           "graded on CLV; fading it earns at least 0.25 points of CLV with the 95% interval above zero, in both "
+           "sports, in 4 of 6 seasons. Decide by about Oct 20. H16a (fade the move at the close, graded on ROI, must "
+           "beat the vig) is a separate variant with a free SBR pre-check for 2007-21; it does not unlock F4."),
+    "H1": "March 2027, only if the price engine worked on football (F1's rule) and a data-use line has been written.",
+    "N2": "March 2027, only if the price engine worked on football (F1's rule) and a data-use line has been written.",
+    "F5": ("March 2027, only if Rule HT's re-grade at Pinnacle's close (F1, 2020-25) keeps its win rate above the "
+           "break-even of the prices; the team-totals slice at the close (36,980) is the part worth having."),
+    "F6": "March 2027, only if #10 passes on NFL (F3) and a 30-credit probe finds CFB props at the close.",
+}
 
 
 def plan():
@@ -121,57 +173,108 @@ def plan():
     s = structured_rows()
     daily_fb = sum(sum(v["daily"].values()) for v in fb.values())
     hourly_fb = sum(sum(v["hourly"].values()) for v in fb.values())
+    daily_26 = sum(v["daily"][2026] for v in fb.values())
+    hourly_26 = sum(v["hourly"][2026] for v in fb.values())
+    daily_oct1 = sum(v["by_oct1"]["daily"] for v in fb.values())
+    hourly_oct1 = sum(v["by_oct1"]["hourly"] for v in fb.values())
     nfl_p = sum(fb["NFL"]["games"][y] for y in range(2023, 2027))      # props/alternates exist from 2023-05-03
     cfb_p = sum(fb["CFB"]["games"][y] for y in range(2023, 2027))
+    nfl_25, nfl_26, nfl_oct1 = fb["NFL"]["games"][2025], fb["NFL"]["games"][2026], fb["NFL"]["by_oct1"]["games"]
+    cfb_26, cfb_oct1 = fb["CFB"]["games"][2026], fb["CFB"]["by_oct1"]["games"]
     snaps = lambda sport, exclude=(): int(s[(s.sport == sport) & ~s.season.isin(exclude)].snapshots.sum())  # noqa: E731
     soccer = [n for n in s.sport.unique() if n in SOCCER_WHY]
     nba_other = snaps("NBA", exclude=("2025-26",))
+    f3_snap = HIST * 6 * 2                                              # 6 prop markets at T-24h and the close
 
-    P = [  # id, pull, arithmetic, credits, value (1-5), primary hypothesis (data-use plan)
-        ("F1", "NFL+CFB featured, 10 books, daily 16:00 UTC for 7 days pre-kickoff + every close, 2020-26",
-         f"{PER_SNAP} x {daily_fb:,} snapshots", PER_SNAP * daily_fb, 4,
-         "Soft-book prices beyond the sharp fair line earn CLV (price engine, #8)"),
-        ("F2", "NFL alternate spreads, alternate totals, team totals at T-24h, T-2h, close, 2023-26",
-         f"10 x 3 mkts x 3 snaps x {nfl_p:,} games", HIST * 3 * 3 * nfl_p, 3,
+    P = [  # id, tier, pull, arithmetic, credits, credits_2026, credits_2026_by_oct1, value (1-5), primary hypothesis
+        ("P0", "day_one", "Probe: key check (free), historical /events sweeps for all 16 sport keys (exact schedules), "
+         "7 billing and coverage probes (NFL billing x4; NCAAF 2020, MLB 2024 and MLS 2024 featured closes)",
+         "~10,400 sweeps x 1 + 7 probes at <= 30-60", PROBE, 0, 0, 5,
+         "Settles the billing multiplier, Pinnacle's NCAAF history in 2020, and MLB and MLS totals history"),
+        ("F1", "day_one", "NFL+CFB featured, 10 books, daily 16:00 UTC for 7 days pre-kickoff + every close, 2020-26",
+         f"{PER_SNAP} x {daily_fb:,} snapshots", PER_SNAP * daily_fb, PER_SNAP * daily_26, PER_SNAP * daily_oct1, 4,
+         "Price engine (#8); Rule HT and Rule B re-graded at Pinnacle's close; H16a and H16b (#16, #42)"),
+        ("F2", "day_one", "NFL alternate spreads and alternate totals at T-24h and the close, 2023-26 "
+         "(no T-2h snapshot: no hypothesis; no team totals: the M4 pre-check failed)",
+         f"10 x 2 mkts x 2 snaps x {nfl_p:,} games", HIST * 2 * 2 * nfl_p, HIST * 2 * 2 * nfl_26, HIST * 2 * 2 * nfl_oct1, 3,
          "Alternate lines misprice key-number crossings vs recent-era margins"),
-        ("F3", "NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-48h, T-24h, T-2h, close, 2023-26",
-         f"10 x 6 mkts x 4 snaps x {nfl_p:,} games", HIST * 6 * 4 * nfl_p, 3,
-         "Yardage-prop unders beat 50% (#10); kicking-points unders in wind/cold (#21)"),
-        ("F4", "NFL+CFB featured, 10 books, HOURLY for 7 days pre-kickoff, 2020-26",
-         f"{PER_SNAP} x {hourly_fb:,} snapshots", PER_SNAP * hourly_fb, 3,
-         "Hour-to-hour line moves reverse before the close (#16)"),
-        ("S1", "Soccer heat leagues and tournaments, featured (h2h 3-way, spreads, totals), daily + every close",
-         f"{PER_SNAP} x {sum(snaps(n) for n in soccer):,} snapshots (estimate)",
-         PER_SNAP * sum(snaps(n) for n in soccer), 3,
-         "Kickoff heat index >= threshold (PR D) -> under at the close"),
-        ("B1", "MLB featured (moneyline, run line, totals), daily + every close, 2020-26",
-         f"{PER_SNAP} x {snaps('MLB'):,} snapshots (estimate)", PER_SNAP * snaps("MLB"), 3,
-         "Open-air park weather (PR D) -> totals; wind in -> under"),
-        ("N1", "NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D)",
-         "10 x 1 mkt x 49,398 snapshots, less cached", HIST * (49_398 - 754 - 791), 2,
-         "H1/H2: Kalshi static edge and lag vs Pinnacle (PLAN.md)"),
-        ("N2", "NBA featured, daily + every close, seasons other than 2025-26",
-         f"{PER_SNAP} x {nba_other:,} snapshots (estimate)", PER_SNAP * nba_other, 2,
-         "Favorite-longshot bias and soft-price flags at the best price"),
-        ("H1", "NHL featured (moneyline, puck line, totals), daily + every close, 2020-26",
-         f"{PER_SNAP} x {snaps('NHL'):,} snapshots (estimate)", PER_SNAP * snaps("NHL"), 2,
-         "Favorite-longshot bias and soft-price flags (no weather: indoor)"),
-        ("F5", "CFB alternate lines and team totals at T-24h and close, 2023-26",
-         f"10 x 3 mkts x 2 snaps x {cfb_p:,} games", HIST * 3 * 2 * cfb_p, 2,
+        ("N0", "day_one", "NBA sample week Jan 5-11, 2026 at schedule A, h2h, 3 sharp books "
+         "(`markets odds-pull --schedule A`, PLAN.md s8; the snapshots land in N1's cache)",
+         f"10 x {NBA_WEEK_SNAPS} snapshots", HIST * NBA_WEEK_SNAPS, 0, 0, 4,
+         "H1/H2 on the sample week: the gate for N1"),
+        ("HB1", "day_one", "MLB heat closes: 10 books at the close of each 2024-25 game whose day-1 forecast temperature "
+         "at first pitch is >= 90 F at an open park (`markets weather qualifying` lists them first)",
+         f"{PER_SNAP} x <= {HEAT_QUALIFYING['HB1']} qualifying games, one close slot each (upper bound)",
+         PER_SNAP * HEAT_QUALIFYING["HB1"], 0, 0, 2,
+         "B-H1, descriptive only (HEAT_HYPOTHESES.md amendment 4): the over's record at Pinnacle's close in hot games"),
+        ("HS1", "day_one", "Soccer heat closes: 10 books at the close of each 2024-25 league or tournament match whose "
+         "day-1 forecast heat index at kickoff is >= 90 F at an open venue",
+         f"{PER_SNAP} x <= {HEAT_QUALIFYING['HS1']} qualifying matches, one close slot each (upper bound)",
+         PER_SNAP * HEAT_QUALIFYING["HS1"], 0, 0, 2,
+         "S-H1, descriptive only (amendment 4): the under's record at Pinnacle's close in hot matches"),
+        ("F3a", "gated", "NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-24h and the close, "
+         "the 2025 season", f"{f3_snap} x {nfl_25:,} games", f3_snap * nfl_25, 0, 0, 3,
+         "#10 as rewritten by #41: the posted line sits above the empirical median; kicking-points unders in wind/cold (#21)"),
+        ("F3b", "gated", "NFL props, the same markets and snapshots, 2023-24 and the 2026 games played",
+         f"{f3_snap} x {nfl_p - nfl_25:,} games", f3_snap * (nfl_p - nfl_25), f3_snap * nfl_26, f3_snap * nfl_oct1, 3,
+         "#10 on 2023-25 (act if the under beats the de-vigged close with p < 0.01 in each year and each market)"),
+        ("N1", "gated", "NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D), less the sample week",
+         f"10 x ({N1_SEASON_SNAPS:,} - {NBA_WEEK_SNAPS}) snapshots", HIST * (N1_SEASON_SNAPS - NBA_WEEK_SNAPS), 0, 0, 2,
+         "H1/H2 on the full season (PLAN.md)"),
+        ("F4", "gated", "NFL+CFB featured, 10 books, HOURLY for 7 days pre-kickoff, 2020-26, net of F1 "
+         "(every F1 snapshot is on the hourly grid and shares the cache)",
+         f"{PER_SNAP} x ({hourly_fb:,} - {daily_fb:,}) snapshots", PER_SNAP * (hourly_fb - daily_fb),
+         PER_SNAP * (hourly_26 - daily_26), PER_SNAP * (hourly_oct1 - daily_oct1), 3,
+         "Hour-to-hour moves reverse before the close (#16); only worth asking if H16b holds daily"),
+        ("H1", "march", "NHL featured (moneyline, puck line, totals), daily + every close, 2020-26 (estimate)",
+         f"{PER_SNAP} x {snaps('NHL'):,} snapshots (estimate)", PER_SNAP * snaps("NHL"), 0, 0, 2,
+         "Soft-price flags at the best price (the price engine on a second sport)"),
+        ("N2", "march", "NBA featured, daily + every close, seasons other than 2025-26 (estimate)",
+         f"{PER_SNAP} x {nba_other:,} snapshots (estimate)", PER_SNAP * nba_other, 0, 0, 2,
+         "Soft-price flags at the best price (the price engine on a second sport)"),
+        ("F5", "march", "CFB alternate lines and team totals at T-24h and close, 2023-26",
+         f"10 x 3 mkts x 2 snaps x {cfb_p:,} games", HIST * 3 * 2 * cfb_p, HIST * 3 * 2 * cfb_26, HIST * 3 * 2 * cfb_oct1, 2,
          "Rule HT-style shrinkage shows up in team totals and alternates"),
-        ("F6", "CFB props (4 yardage markets) at the close, 2023-26 (upper bound; thin coverage)",
-         f"10 x 4 mkts x {cfb_p:,} games", HIST * 4 * cfb_p, 1, "Median-vs-mean props in CFB"),
-        ("X3", "Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025",
-         "10 x 3 x 7,721 snapshots", 231_630, 1, "Better data is free from Kalshi and Polymarket directly"),
-        ("X2", "5-min NFL+CFB totals for 72h before windy kickoffs, 2024-25",
-         "10 x 1 x 70,558 snapshots", 705_580, 1, "Forecast-run timing; needs run-issue timestamps first"),
+        ("F6", "march", "CFB props (4 yardage markets) at the close, 2023-26 (upper bound; thin coverage)",
+         f"10 x 4 mkts x {cfb_p:,} games", HIST * 4 * cfb_p, HIST * 4 * cfb_26, HIST * 4 * cfb_oct1, 1,
+         "Median-vs-mean props in CFB"),
+        ("B1", "replaced", "MLB featured (moneyline, run line, totals), daily + every close, 2020-26 (estimate)",
+         f"{PER_SNAP} x {snaps('MLB'):,} snapshots (estimate)", PER_SNAP * snaps("MLB"), 0, 0, 3,
+         "Replaced by HB1 on Sep 29 (#38): heat is descriptive and closes-only, so the full history buys nothing"),
+        ("S1", "replaced", "Soccer heat leagues and tournaments, featured (h2h 3-way, spreads, totals), daily + every close",
+         f"{PER_SNAP} x {sum(snaps(n) for n in soccer):,} snapshots (estimate)",
+         PER_SNAP * sum(snaps(n) for n in soccer), 0, 0, 3, "Replaced by HS1 on Sep 29 (#38), for the same reason"),
+        ("X3", "dropped", "Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025",
+         "10 x 3 x 7,721 snapshots", 231_630, 0, 0, 1, "Better data is free from Kalshi and Polymarket directly"),
+        ("X2", "deferred", "5-min NFL+CFB totals for 72h before windy kickoffs, 2024-25",
+         "10 x 1 x 70,558 snapshots", 705_580, 0, 0, 1, "Forecast-run timing; needs run-issue timestamps first (#40)"),
     ]
-    p = pd.DataFrame(P, columns=["id", "pull", "arithmetic", "credits", "value", "primary_hypothesis"])
-    p = p.sort_values(["value", "credits"], ascending=[False, True], kind="stable").reset_index(drop=True)
+    p = pd.DataFrame(P, columns=["id", "tier", "pull", "arithmetic", "credits", "credits_2026", "credits_2026_by_oct1",
+                                 "value", "primary_hypothesis"])
+    p["gate"] = p.id.map(GATES).fillna("")
     p["dropped"] = p.id.isin(DROPPED)
-    p["cumulative"] = p.credits.where(~p.dropped, 0).cumsum()
-    p["in_plan"] = ~p.dropped & (p.cumulative <= HISTORY_BUDGET)
-    return p, s, dict(daily_fb=daily_fb, hourly_fb=hourly_fb, nfl_p=nfl_p, cfb_p=cfb_p)
+    p["in_plan"] = p.tier.isin(["day_one", "gated"])          # what the October month may buy
+    p["cumulative"] = p.credits.where(p.in_plan, 0).cumsum()
+    return p, s, dict(daily_fb=daily_fb, hourly_fb=hourly_fb, nfl_p=nfl_p, cfb_p=cfb_p, daily_26=daily_26,
+                      daily_oct1=daily_oct1, hourly_26=hourly_26, hourly_oct1=hourly_oct1)
+
+
+def totals(p):
+    """The figures the docs quote. Upper bounds count a full 2026 season; 'on Oct 1' removes the 2026 games
+    not yet played, which a March month completes."""
+    remainder = p.credits_2026 - p.credits_2026_by_oct1
+    day = p[p.tier == "day_one"]
+    gated = p[p.tier == "gated"]
+    return {
+        "day_one_upper": int(day.credits.sum()),
+        "day_one_on_oct1": int(day.credits.sum() - remainder[day.index].sum()),
+        "gated_upper": int(gated.credits.sum()),
+        "month_max_upper": int(day.credits.sum() + gated.credits.sum()),
+        "march_completion_without_f4": int(remainder[p.id.isin(["F1", "F2", "F3b"])].sum()),
+        "march_completion_f4": int(remainder[p.id == "F4"].sum()),
+        "march_pulls": int(p[p.tier == "march"].credits.sum()),
+        "unallocated_if_every_gate_passes": int(5_000_000 - FLOOR - day.credits.sum() - gated.credits.sum()),
+    }
 
 
 def live_month():
@@ -193,20 +296,27 @@ def live_month():
 def main(save=True):
     p, s, c = plan()
     live = live_month()
+    t = totals(p)
     if save:
         p.to_csv(OUT / "odds_5m_plan.csv", index=False)
         s.to_csv(OUT / "odds_5m_seasons.csv", index=False)
         live.to_csv(OUT / "odds_5m_live.csv", index=False)
-    pd.set_option("display.width", 250, "display.max_colwidth", 110)
-    print("\n5M month: historical pulls ranked by research value (cut line at "
-          f"{HISTORY_BUDGET:,}; base reserve {RESERVE:,}; dropped by the owner: {', '.join(sorted(DROPPED))})")
-    print(p[["id", "value", "credits", "cumulative", "in_plan", "dropped", "pull"]].to_string(index=False))
-    inp, drop = p[p.in_plan], p[p.dropped]
-    reserve = RESERVE + drop.credits.sum()
-    print(f"\nIn plan: {inp.credits.sum():,} credits of history; reserve {reserve:,} ({RESERVE:,} plus "
-          f"{drop.credits.sum():,} freed by dropping {', '.join(drop.id)}); unallocated "
-          f"{5_000_000 - inp.credits.sum() - reserve:,}; below the cut: {', '.join(p[~p.in_plan & ~p.dropped].id)} "
-          f"({p[~p.in_plan & ~p.dropped].credits.sum():,})")
+    pd.set_option("display.width", 250, "display.max_colwidth", 95)
+    print("\n5M month, the reviewed design (owner decisions Sep 28, #38). Credits are upper bounds; football counts a "
+          "full 2026 season as 2025's stand-in.")
+    print(p[["id", "tier", "value", "credits", "credits_2026", "credits_2026_by_oct1", "cumulative", "pull"]].to_string(index=False))
+    print(f"\nDay one (P0, F1, F2, N0, HB1, HS1): {t['day_one_upper']:,} upper bound; {t['day_one_on_oct1']:,} exists on "
+          f"Oct 1 (cap {DAY_ONE_CAP:,}: {'ok' if t['day_one_upper'] < DAY_ONE_CAP else 'OVER'})")
+    print(f"Gated inside the month (F3a, F3b, N1, F4): {t['gated_upper']:,}; day one plus every gate {t['month_max_upper']:,} "
+          f"against the {CEILING:,} ceiling ({'ok' if t['month_max_upper'] <= CEILING else 'OVER'})")
+    print(f"Floor {FLOOR:,} ({RESERVE:,} plus X3's {X3_TO_RESERVE:,}); unallocated if every gate passes "
+          f"{t['unallocated_if_every_gate_passes']:,}")
+    print(f"March 2027: the 2026 completions, {t['march_completion_without_f4']:,} for F1, F2 and F3b, plus "
+          f"{t['march_completion_f4']:,} for F4 if it was earned; the March pulls (H1, N2, F5, F6) {t['march_pulls']:,} "
+          f"upper bound, each behind its gate")
+    print("\nGates (verbatim in odds-api-credits.md):")
+    for _, r in p[p.gate != ""].iterrows():
+        print(f"  {r.id}: {r.gate}")
     print("\nSeason structures (estimates for non-football sports; the probe replaces them):")
     print(s.groupby("sport", sort=False).agg(seasons=("season", "size"), games=("games", "sum"),
                                              snapshots=("snapshots", "sum"), sealed=("sealed", "sum")).to_string())

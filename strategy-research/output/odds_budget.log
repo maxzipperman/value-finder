@@ -61,23 +61,41 @@ Live credits by month (2025-26 schedule relabelled as 2026-27):
 2027-01             104               17              72                9     176                202
 2027-02              32                1               0                0      32                 33
 
-5M month: historical pulls ranked by research value (cut line at 4,500,000; reserve 300,000)
-id  value  credits  cumulative  in_plan                                                                                                     pull
-F1      4   162210      162210     True                NFL+CFB featured, 10 books, daily 16:00 UTC for 7 days pre-kickoff + every close, 2020-26
-F2      3   102600      264810     True                      NFL alternate spreads, alternate totals, team totals at T-24h, T-2h, close, 2023-26
-F3      3   273600      538410     True NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-48h, T-24h, T-2h, close, 2023-26
-B1      3   358470      896880     True                                 MLB featured (moneyline, run line, totals), daily + every close, 2020-26
-S1      3   491970     1388850     True          Soccer heat leagues and tournaments, featured (h2h 3-way, spreads, totals), daily + every close
-F4      3  1604430     2993280     True                                       NFL+CFB featured, 10 books, HOURLY for 7 days pre-kickoff, 2020-26
-H1      2   163860     3157140     True                                NHL featured (moneyline, puck line, totals), daily + every close, 2020-26
-N2      2   170460     3327600     True                                            NBA featured, daily + every close, seasons other than 2025-26
-F5      2   221880     3549480     True                                          CFB alternate lines and team totals at T-24h and close, 2023-26
-N1      2   478530     4028010     True                                 NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D)
-F6      1   147920     4175930     True                         CFB props (4 yardage markets) at the close, 2023-26 (upper bound; thin coverage)
-X3      1   231630     4407560     True                                  Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025
-X2      1   705580     5113140    False                                              5-min NFL+CFB totals for 72h before windy kickoffs, 2024-25
+5M month, the reviewed design (owner decisions Sep 28, #38). Credits are upper bounds; football counts a full 2026 season as 2025's stand-in.
+ id     tier  value  credits  credits_2026  credits_2026_by_oct1  cumulative                                                                                                                                                                                          pull
+ P0  day_one      5    10700             0                     0       10700 Probe: key check (free), historical /events sweeps for all 16 sport keys (exact schedules), 7 billing and coverage probes (NFL billing x4; NCAAF 2020, MLB 2024 and MLS 2024 featured closes)
+ F1  day_one      4   162210         24540                  5670      172910                                                                                                     NFL+CFB featured, 10 books, daily 16:00 UTC for 7 days pre-kickoff + every close, 2020-26
+ F2  day_one      3    45600         11400                  1920      218510                                         NFL alternate spreads and alternate totals at T-24h and the close, 2023-26 (no T-2h snapshot: no hypothesis; no team totals: the M4 pre-check failed)
+ N0  day_one      4     7540             0                     0      226050                                             NBA sample week Jan 5-11, 2026 at schedule A, h2h, 3 sharp books (`markets odds-pull --schedule A`, PLAN.md s8; the snapshots land in N1's cache)
+HB1  day_one      2     4380             0                     0      230430        MLB heat closes: 10 books at the close of each 2024-25 game whose day-1 forecast temperature at first pitch is >= 90 F at an open park (`markets weather qualifying` lists them first)
+HS1  day_one      2     8160             0                     0      238590                                   Soccer heat closes: 10 books at the close of each 2024-25 league or tournament match whose day-1 forecast heat index at kickoff is >= 90 F at an open venue
+F3a    gated      3    34200             0                     0      272790                                                                                    NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-24h and the close, the 2025 season
+F3b    gated      3   102600         34200                  5760      375390                                                                                                                  NFL props, the same markets and snapshots, 2023-24 and the 2026 games played
+ N1    gated      2   486440             0                     0      861830                                                                                                NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D), less the sample week
+ F4    gated      3  1442220        207090                 40650     2304050                                                  NFL+CFB featured, 10 books, HOURLY for 7 days pre-kickoff, 2020-26, net of F1 (every F1 snapshot is on the hourly grid and shares the cache)
+ H1    march      2   163860             0                     0     2304050                                                                                                          NHL featured (moneyline, puck line, totals), daily + every close, 2020-26 (estimate)
+ N2    march      2   170460             0                     0     2304050                                                                                                                      NBA featured, daily + every close, seasons other than 2025-26 (estimate)
+ F5    march      2   221880         56040                 19860     2304050                                                                                                                               CFB alternate lines and team totals at T-24h and close, 2023-26
+ F6    march      1   147920         37360                 13240     2304050                                                                                                              CFB props (4 yardage markets) at the close, 2023-26 (upper bound; thin coverage)
+ B1 replaced      3   358470             0                     0     2304050                                                                                                           MLB featured (moneyline, run line, totals), daily + every close, 2020-26 (estimate)
+ S1 replaced      3   491970             0                     0     2304050                                                                                               Soccer heat leagues and tournaments, featured (h2h 3-way, spreads, totals), daily + every close
+ X3  dropped      1   231630             0                     0     2304050                                                                                                                       Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025
+ X2 deferred      1   705580             0                     0     2304050                                                                                                                                   5-min NFL+CFB totals for 72h before windy kickoffs, 2024-25
 
-In plan: 4,407,560 credits of history + 300,000 reserve = 4,707,560 of 5,000,000; below the cut: X2 (705,580)
+Day one (P0, F1, F2, N0, HB1, HS1): 238,590 upper bound; 210,240 exists on Oct 1 (cap 400,000: ok)
+Gated inside the month (F3a, F3b, N1, F4): 2,065,460; day one plus every gate 2,304,050 against the 4,440,000 ceiling (ok)
+Floor 531,630 (300,000 plus X3's 231,630); unallocated if every gate passes 2,164,320
+March 2027: the 2026 completions, 56,790 for F1, F2 and F3b, plus 166,440 for F4 if it was earned; the March pulls (H1, N2, F5, F6) 704,120 upper bound, each behind its gate
+
+Gates (verbatim in odds-api-credits.md):
+  F3a: Only after #41's free pre-registration, before any prop line is seen: #10 rewritten as 'the posted line sits above the empirical median of the player's outcome distribution, and the under's price is not asymmetric enough to remove the edge'; the distribution model and the de-vig method registered; the 2023-25 mean-minus-median gap per market computed from player_week.parquet and kicks.parquet. Posted lines are not on disk, so the line-vs-median check itself runs on this 2025 slice.
+  F3b: Only if, on the 2025 slice (F3a), the posted line sits above the empirical median in at least 3 of the 4 yardage markets and the under's excess win rate over the de-vigged close is positive pooled. If the lines sit at the median, F3b moves to March and only the kicking markets (#21) stay in play.
+  N1: Only if the sample week shows an H1 edge (net-of-fee edge flags with fills and positive CLV to Pinnacle's close) or an H2 lag (median catch-up lag of 10 minutes or more), exactly as PLAN.md s8 step 3 and s9 decision 2 require. Decide by about Oct 20.
+  F4: Only if H16b passes on F1's daily grid (#42): a move of a point or more on day t reverses by the close, graded on CLV; fading it earns at least 0.25 points of CLV with the 95% interval above zero, in both sports, in 4 of 6 seasons. Decide by about Oct 20. H16a (fade the move at the close, graded on ROI, must beat the vig) is a separate variant with a free SBR pre-check for 2007-21; it does not unlock F4.
+  H1: March 2027, only if the price engine worked on football (F1's rule) and a data-use line has been written.
+  N2: March 2027, only if the price engine worked on football (F1's rule) and a data-use line has been written.
+  F5: March 2027, only if Rule HT's re-grade at Pinnacle's close (F1, 2020-25) keeps its win rate above the break-even of the prices; the team-totals slice at the close (36,980) is the part worth having.
+  F6: March 2027, only if #10 passes on NFL (F3) and a 30-credit probe finds CFB props at the close.
 
 Season structures (estimates for non-football sports; the probe replaces them):
                      seasons  games  snapshots  sealed
@@ -98,10 +116,10 @@ Gold Cup 2025              1     31         58       0
 Leagues Cup 2025           1     45         81       0
 
 Live uses per month (1 credit per market per group per call):
-                                                          live use                             arithmetic  credits_per_month
-                               Alerts, NFL + CFB (10 books a call)            4 runs x 31 days x 2 sports                248
-                         Close capture (one call per kickoff slot)                   ~137 NFL + CFB slots                137
-Trigger poller: every 10 min while a Rule B wind trigger is active ~6 polls/h x 72 h x ~6 trigger windows               2600
-               NFL props, alternates, team totals log (event odds)            70 games x 9 mkts x 4 snaps               2520
-     NBA collector, PLAN.md s7 (5-min h2h ticks + 1-min final 2 h)       27 game days x (144-288 + 0-205)              14175
-Total live, high case: 19,680 a month
+                                                                         live use                                 arithmetic  credits_per_month
+                                              Alerts, NFL + CFB (10 books a call)                4 runs x 31 days x 2 sports                248
+                                        Close capture (one call per kickoff slot)                       ~137 NFL + CFB slots                137
+               Trigger poller: every 10 min while a Rule B wind trigger is active     ~6 polls/h x 72 h x ~6 trigger windows               2600
+                              NFL props, alternates, team totals log (event odds)                70 games x 9 mkts x 4 snaps               2520
+NBA collector, PLAN.md s7 (5-min h2h ticks, 56 h window; + 1-min final 2 h if on) 288 ticks x 31 days + 27 game days x 0-205              14463
+Total live, high case: 19,968 a month

@@ -117,7 +117,7 @@ def client(tmp_path, api=None, **kw):
 
 
 def args(**kw):
-    base = dict(pull="all", sports=None, week_of="auto", confirm=True, max_credits=100_000, floor=0, rate=1e6)
+    base = dict(pull="all", sports=None, seasons=None, week_of="auto", confirm=True, max_credits=100_000, floor=0, rate=1e6)
     return Namespace(**{**base, **kw})
 
 
@@ -138,6 +138,10 @@ def test_daily_close_matches_the_budget_grid():
     assert len(hourly) == 7 * 24 + 1 and hourly[0] == t("2024-09-01T17:00:00Z")
     five = bulk.game_snapshots(t("2025-10-21T23:30:00Z"), {"schedule": "5min", "lookback_hours": 1, "after_minutes": 15})
     assert five[0] == t("2025-10-21T22:30:00Z") and five[-1] == t("2025-10-21T23:45:00Z") and len(five) == 16
+    assert bulk.game_snapshots(t("2024-09-08T17:00:00Z"), {"schedule": "close"}) == [t("2024-09-08T16:55:00Z")]
+    # F4's incremental cost nets every F1 snapshot: each daily_close point is on the hourly grid, the close included
+    for k in ("2024-09-08T17:00:00Z", "2024-09-06T00:20:00Z", "2024-09-08T16:33:00Z"):
+        assert set(bulk.game_snapshots(t(k), {"schedule": "daily_close"})) <= set(bulk.game_snapshots(t(k), {"schedule": "hourly"}))
 
 
 def test_build_schedule_uses_last_sighting_before_kickoff(cfg):
@@ -173,6 +177,57 @@ def test_plan_unions_snapshots_and_filters_seasons(cfg):
     assert not any(c.sealed for c in f4)                           # only_seasons: 2024
     wk = bulk.plan_calls(cfg, "F3", sched, now=NOW, week_of="auto")
     assert {c.event_id for c in wk} == {"g1", "g2", "g3"}          # first week of the latest unsealed season
+    sl = bulk.plan_calls(cfg, "F3", sched, now=NOW, seasons=["2024"])   # --seasons: one slice of a pull (F3a)
+    assert {c.event_id for c in sl} == {"g1", "g2", "g3"} and not any(c.sealed for c in sl)
+
+
+def test_games_from_limits_a_close_pull_to_the_listed_games(cfg, tmp_path):
+    """HB1/HS1: only the games `markets weather qualifying` listed get a close; a missing list stops the run."""
+    sched = {"americanfootball_nfl": [game(cfg, "g1", "2024-09-06T00:20:00Z"), game(cfg, "g3", "2024-09-08T17:00:00Z"),
+                                      game(cfg, "g4", "2024-09-08T20:25:00Z")]}
+    listing = tmp_path / "q.csv"
+    cfg["pulls"]["HX"] = {"id": "HX", "kind": "featured", "sports": ["americanfootball_nfl"], "schedule": "close",
+                          "books": "us10", "only_seasons": ["2024"], "games_from": str(listing)}
+    with pytest.raises(SystemExit, match="weather qualifying"):
+        bulk.plan_calls(cfg, "HX", sched, now=NOW)
+    listing.write_text("sport,id,pull\namericanfootball_nfl,g1,HB1\nbasketball_nba,g3,HB1\n")   # g3 is listed for another sport
+    calls = bulk.plan_calls(cfg, "HX", sched, now=NOW)
+    assert [(c.at, c.expected) for c in calls] == [(t("2024-09-06T00:15:00Z"), 30)]
+    assert bulk.games_from(cfg["pulls"]["F1"], "americanfootball_nfl") is None            # pulls without a list are unchanged
+
+
+def test_groups_expand_and_full_refuses_all(cfg, tmp_path):
+    cfg["groups"] = {"day_one": ["F1", "F3"], "gated": ["N1"]}
+    assert bulk._pulls(cfg, "day_one,N1") == ["F1", "F3", "N1"]
+    assert bulk._pulls(cfg, "gated,N1") == ["N1"]
+    assert bulk.group_of(cfg, "F3") == "day_one" and bulk.group_of(cfg, "F4") == "-"
+    with pytest.raises(SystemExit, match="unknown pull"):
+        bulk._pulls(cfg, "march")
+    bulk.save_schedule(tmp_path, "americanfootball_nfl", [{**game(cfg, "ev1", "2024-09-06T00:20:00Z"), "home_team": "H",
+                                                             "away_team": "A", "first_seen": None}])
+    with pytest.raises(SystemExit, match="name the pulls"):
+        bulk.stage_pull(cfg, RawCache(tmp_path), args(pull="all", confirm=False), week=False, now=NOW)
+    assert bulk.stage_pull(cfg, RawCache(tmp_path), args(pull="all", confirm=False), week=True, now=NOW) == []
+
+
+def test_extra_probes_cost_one_featured_close_each(cfg, tmp_path):
+    """The review's three coverage checks: NCAAF 2020, MLB 2024, MLS 2024, 30 credits each, skipped when absent."""
+    cfg["books"]["soccer10"] = ["pinnacle", "betonlineag", "draftkings", "fanduel", "betmgm", "williamhill_us", "bovada",
+                                "unibet_eu", "marathonbet", "betfair_ex_eu"]
+    mk = lambda gid, sport, kick, season: {"id": gid, "sport": sport, "commence_time": t(kick), "season": season,  # noqa: E731
+                                           "sealed": False}
+    sched = {"americanfootball_nfl": [game(cfg, "ev1", "2024-09-06T00:20:00Z"), game(cfg, "ev20", "2020-09-11T00:20:00Z")],
+             "americanfootball_ncaaf": [mk("c20", "americanfootball_ncaaf", "2020-09-12T19:30:00Z", "2020")],
+             "baseball_mlb": [mk("m24", "baseball_mlb", "2024-07-10T23:10:00Z", "2024")]}
+    api = FakeOddsApi()
+    rows = bulk.billing_probes(cfg, client(tmp_path, api), sched, NOW)
+    by = {r["probe"]: r for r in rows}
+    assert len(rows) == 7
+    ncaaf, mlb = by["featured americanfootball_ncaaf 2020, us10"], by["featured baseball_mlb 2024, us10"]
+    assert (ncaaf["expected_max"], ncaaf["billed"]) == (30, "30") and "pinnacle" in ncaaf["books_returned"]
+    assert mlb["expected_max"] == 30 and set(mlb["markets_returned"]) == {"h2h", "spreads", "totals"}
+    assert by["featured soccer_usa_mls 2024, soccer10"]["result"].startswith("skipped")
+    assert any("americanfootball_ncaaf/odds" in u for u, _ in api.calls) and len(api.calls) == 6
 
 
 def test_n1_shares_the_nba_pipeline_cache(cfg):
@@ -256,6 +311,7 @@ def test_probe_then_week_then_check(cfg, tmp_path, monkeypatch):
     props = probes["event odds NFL props, 10 books"]
     assert props["billed"] == "20" and props["billing_rule"].endswith("= 20")
     assert "lowvig" not in probes["featured NFL 2020, sharp books"]["books_returned"]
+    assert probes["featured baseball_mlb 2024, us10"]["result"].startswith("skipped")     # no MLB in this config
     week = bulk.stage_pull(cfg, cache, args(pull="F1,F3", sports=["americanfootball_nfl"]), week=True, now=NOW, session=api)
     assert [w["pull"] for w in week] == ["F1", "F3"] and all(w["stopped"] is None for w in week)
     cov = bulk.stage_check(cfg, cache, args(pull="F3"), now=NOW)[0]
@@ -274,7 +330,9 @@ def test_load_rows_leaves_sealed_seasons_out(cfg, tmp_path):
 
 
 def test_real_config_matches_the_owners_decisions():
-    """Owner decisions, Sep 28: the sealed seasons exactly as below; X3 dropped; the NBA studies 2025-26."""
+    """Owner decisions, Sep 28: the sealed seasons exactly as below; X3 dropped; the NBA studies 2025-26; and the
+    reviewed day-one design adopted on Sep 28 (#38): F2 and F3 at T-24h and the close, no team totals, heat as
+    close-only pulls of qualifying games, N1 and F4 gated, H1/N2/F5/F6 in March."""
     real = bulk.load_config()
     sealed = {s: [w["label"] for w in sc["windows"] if w["sealed"]] for s, sc in real["sports"].items()}
     want = {"americanfootball_nfl": ["2026"], "americanfootball_ncaaf": ["2026"], "basketball_nba": ["2026-27"],
@@ -285,7 +343,16 @@ def test_real_config_matches_the_owners_decisions():
             assert labels == (["2026"] if any(w["label"] == "2026" for w in real["sports"][s]["windows"]) else []), s
         else:
             assert labels == want[s], s
-    assert "X3" not in real["pulls"] and list(real["pulls"])[-1] == "F6"
+    assert "X3" not in real["pulls"] and "B1" not in real["pulls"] and "S1" not in real["pulls"]
+    assert real["groups"] == {"day_one": ["F1", "F2", "F3", "HB1", "HS1"], "gated": ["N1", "F4"],
+                              "march": ["H1", "N2", "F5", "F6"]}
+    assert list(real["pulls"]) == [p for g in real["groups"].values() for p in g]
+    assert real["pulls"]["F2"]["offsets"] == [24, 0] and real["pulls"]["F2"]["markets"] == "alternate_spreads,alternate_totals"
+    assert real["pulls"]["F3"]["offsets"] == [24, 0] and len(real["pulls"]["F3"]["markets"].split(",")) == 6
+    for pid in ("HB1", "HS1"):
+        h = real["pulls"][pid]
+        assert (h["schedule"], h["only_seasons"], h["games_from"]) == ("close", ["2024", "2025"], "weather/heat_qualifying.csv")
+    assert real["pulls"]["HS1"]["books"] == "soccer10" and "soccer_fifa_world_cup" in real["pulls"]["HS1"]["sports"]
     assert real["pulls"]["N1"]["only_seasons"] == ["2025-26"]
     assert set(real["books"]) == {"us10", "soccer10", "sharp3"}                  # X3's exchange group is gone
     assert {p["books"] for p in real["pulls"].values()} <= set(real["books"])
