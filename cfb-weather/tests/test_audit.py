@@ -173,14 +173,16 @@ def test_scorer_counts_only_registered_pre_kickoff_rows_inside_the_window(tmp_pa
     assert "INTERIM read, decides nothing" in out
 
 
-def test_rule_b_reports_a_primary_close_that_is_the_entry_itself(tmp_path):
-    rows = [dict(ROW, game_id=1, rule_b="SIGNAL"),                                           # its own last quote
+def test_rule_b_primary_close_is_a_later_quote_never_the_entry_itself(tmp_path):
+    """Amendment 4 settled amendment 3's open question: the entry row is never its own close."""
+    rows = [dict(ROW, game_id=1, rule_b="SIGNAL"),                                           # no later quote
             dict(ROW, game_id=2, rule_b="SIGNAL", mkt_total=51.5),
             dict(ROW, game_id=2, rule_b="SIGNAL", mkt_total=50.0, snapshot_utc="2026-10-10T18:30:00Z")]
     out = score(tmp_path, rows, [dict(game_id=1, home_points=20, away_points=20),
                                  dict(game_id=2, home_points=20, away_points=20)])
-    assert "RULE_B: 2 signals, 2 settled" in out
-    assert "1 of 2 are the entry row itself" in out and "1 were logged more than 6 hours before kickoff" in out
+    assert "RULE_B: 2 signals, 2 settled" in out and "1 of 2 bets have a primary close" in out
+    assert "1 from a later logged quote, 0 from the captured close, 1 with none" in out
+    assert "0 of the later quotes were logged more than 6 hours before kickoff" in out
     assert "decision (Rule B" in out and "by price source: {'pinnacle': 2}" in out
 
 

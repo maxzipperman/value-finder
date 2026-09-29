@@ -316,3 +316,89 @@ times, and the scorer computes both:
 
 Rule variants under forward test: still **2**. The historical count rises by 2 for the
 size-of-total check (one per sport), to 200.
+
+## Amendment 6 (2026-09-29 Pacific, before any Week 5 game; no Rule B signal logged and no forward outcome observed)
+
+A review of the scorer, made after amendment 5 was merged (pull request 50), found readings the earlier
+text left open. Every one is settled here, before any outcome exists. **No trigger, gate, price cap,
+stake or metric changes.** The rules version stays `v3-2026-09-28`, because the board behaves exactly
+as before; only `scripts/score_forward.py` changes. Where this amendment and amendment 5 differ, this
+one applies.
+
+### 1. A bet whose game was moved or never played is void
+
+* A bet is **void** when its game did not kick off within 24 hours of the kickoff time on its entry
+  row (the game was postponed, moved or cancelled), or when the schedule still shows no result 30 days
+  after that kickoff. The entry row's kickoff is its `gameday` and `gametime` (Eastern time); the
+  scorer compares it with the schedule's kickoff for the same game id.
+* A void bet is counted and listed by reason. It is not graded: it is left out of the record, the
+  units, the CLV and the count toward 40.
+* A sportsbook voids the same bets. Wind rules meet this case more than most, because hurricanes
+  postpone games.
+
+### 2. A bet still waiting for its result holds its decision open
+
+* A bet whose game has no result yet, and that is not void, is **pending**. The scorer prints how many
+  bets are pending.
+* No decision is final while any bet that kicked off on or before the decision's horizon is pending.
+* This replaces amendment 5's test that treated a game with no result a week after kickoff as not
+  played. Under that test a result that arrived late could change a decision after it was made.
+
+### 3. A decision is made once, and written down
+
+* The first time a decision is final, the scorer appends it to `data/forward/decisions.csv`: the rule,
+  the horizon, the time it was decided (UTC), the number of bets, every number the decision used, the
+  verdict, and a fingerprint (sha256) of the ledger rows that entered it.
+* Every later run prints the recorded decision. If a fresh computation on the same horizon would now
+  come out differently (a corrected score, say), the scorer prints both and says the recorded one
+  stands.
+* A run on a test ledger (`--ledger`) writes `decisions.csv` beside that ledger, never into
+  `data/forward/`.
+
+### 4. Horizons are dates
+
+* "After Week 18" means after the last regular-season kickoff in the NFL schedule for that season.
+  This replaces amendment 5's "every game in the schedule has a result, or kicked off more than a
+  week ago"; section 2 now keeps a decision open while any of its bets waits for a result.
+* A game dated after a test's end never counts, whatever season label it carries. For the NFL the
+  schedule labels each game's season, and no decision uses a bet that kicked off after its horizon;
+  the last horizon is the end of the 2027 regular season.
+
+### 5. The model lean's entry
+
+* The model lean's entry is **the earliest snapshot, at least 24 hours before kickoff, that has both a
+  lean and a posted total.** Amendment 5 said "the earliest snapshot at least 24 hours before kickoff".
+  The code took the earliest such row with a lean, and it could take one with no posted total and
+  grade it as a loss. The live ledger already has such a row: the 7:30 PM run on Sep 28 logged an
+  under lean on Rams at Eagles (Week 4, outside the test) with a blank total.
+* Rule B's entry is its earliest `SIGNAL` row before kickoff. The 24-hour rule is the model lean's
+  only; amendment 5, section 3 already gives Rule B's window as about 11 to 82 hours before kickoff.
+
+### 6. After the 2026 decision
+
+* A keep or a drop at the 2026 horizon (40 in the 2026 regular season) is the decision. Later bets are
+  still logged and reported, and decide nothing.
+* An inconclusive result at the 2026 horizon carries the rule into 2027 unchanged, as the original
+  file says. It is decided once more after the 2027 regular season, on both seasons pooled, with mean
+  CLV positive in each season.
+* This applies to Rule B and to the model lean.
+
+### 7. Ties with the close
+
+* Ties with the close are left out of the win rate against the close: a tie neither beats the close
+  nor loses to it.
+* The printed count of bets "with a primary close" counts bets whose game has a closing total.
+
+### 8. Corrections to amendment 5's quoted numbers (2026-09-29)
+
+Amendment 5's text is left as written. Two numbers in section 1, "What this means for the gate", were
+off:
+
+* The value at the rule's own number reaches zero at **about −135** on a half-point line (−135.1), and
+  **−136 on a whole number** (−136.4), not "about −136" for both. The conclusion stands: inside the
+  −115 cap the gate can't reject a bet at the rule's own number.
+* At −115 the model rejects an under **from 1.5 points below the reference** (reference 42.5, under
+  41: −0.6%), not only "3 points below". One point below still passes (+2.3%).
+
+Rule variants under forward test: still **2**. This amendment tests nothing, so the historical count
+stays 200.

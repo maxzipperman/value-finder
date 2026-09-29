@@ -19,13 +19,13 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 | Rule | Scored from | Signals so far | Decision |
 |---|---|---|---|
-| NFL Rule B: early wind under ([`STRATEGY.md`](nfl-weather/STRATEGY.md)) | Week 5, Oct 8, 2026 | 0 | After Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on 2026 and 2027 pooled (amendments 4 and 5): keep only if average CLV > 0 with a 95% interval above zero. Until then the scorer prints an interim read. |
-| CFB Rule B: early wind under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Oct 1, 2026 | 0 | After 40 signals or the regular season, whichever is later, by the same test. |
-| CFB Rule HT: high total → under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Week 6, Oct 7, 2026 (00:00 UTC) | 0 | Once, after the 2027 season: promote only if the win rate beats the break-even of the prices taken (one-sided p < 0.05) and ROI > 0. Drop at or below break-even. Otherwise keep on paper. |
+| NFL Rule B: early wind under ([`STRATEGY.md`](nfl-weather/STRATEGY.md)) | Week 5, Oct 8, 2026 | 0 | After Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on 2026 and 2027 pooled (amendments 4 and 5): keep only if average CLV > 0 with a 95% interval above zero. Until then the scorer prints an interim read. *Amendment 6 (Sep 29):* a keep or a drop in 2026 is the decision; an inconclusive 2026 result is decided once more after the 2027 regular season, on both seasons pooled. |
+| CFB Rule B: early wind under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Oct 1, 2026 | 0 | After 40 signals or the regular season, whichever is later, by the same test. *Amendment 4 (Sep 29):* CLV against the last quote logged after the entry, else the captured close; "not kept" means no money goes on it. |
+| CFB Rule HT: high total → under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Week 6, Oct 7, 2026 (00:00 UTC) | 0 | Once, after the 2027 season: promote only if the win rate beats the break-even of the prices taken (one-sided p < 0.05) and ROI > 0. Drop at or below break-even. Otherwise keep on paper. *Note, Sep 29:* amendment 3 reads the drop test at the prices taken: drop when ROI is zero or below. |
 
 Stake for Rule B: paper until 20 settled signals show positive average CLV. After that, 0.5% of bankroll at most. Rule HT stays on paper through 2027.
 
-What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, CFB Rule B about 25–32 times, and Rule HT 34 times. Losing seasons are common even with a real edge. The NFL decision is unlikely to be conclusive this season. The 20-signal stake gate passes about half the time with no edge, so it isn't a reason to stake. See [what to expect](strategy-research/README.md#what-to-expect-this-season-added-september-28-2026).
+What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, CFB Rule B about 25–32 times, and Rule HT 43 times (34 before #48 rebuilt the CFB games table, which moved the rehearsal's 2025 threshold from 62.66 to 62.22). Losing seasons are common even with a real edge. The NFL decision is unlikely to be conclusive this season. The 20-signal stake gate passes about half the time with no edge, so it isn't a reason to stake. See [what to expect](strategy-research/README.md#what-to-expect-this-season-added-september-28-2026).
 
 ## Waiting on you
 
@@ -87,8 +87,14 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
    - **Rule HT** alerts on the true last scheduled run, so the alert and the scored entry are the same row.
    - **The scorers** accept only registered versions, pre-kickoff rows and games inside the test window, and compute each decision as interim or final.
    - **Records:** a row per run in `runs.csv`, finished or failed; every forecast kept under its hash; crosswind logged on every NFL row.
-   - **Open, yours:** CFB Rule B's primary close can be the entry row itself (CLV 0 by construction) or hours old. Whether to require a later quote is undecided; the captured close is reported alongside either way.
+   - **CFB Rule B's primary close** (open until Sep 29): settled by cfb-weather amendment 4, on your yes. The close is the last quote logged after the entry row, else the captured close, else none; the entry is never its own close.
    - **Open, yours:** the rule for moving from paper to real money. "20 settled signals with positive average CLV" passes about half the time with no edge at all ([`simulations.log`](strategy-research/output/simulations.log)). A stricter gate is being measured.
+
+8. **Scorer readings: nfl-weather amendment 6 and cfb-weather amendment 4 (Sep 29, registered on your yes).** Three reviews of #50 found no problem with the scheduled alert runs, and found readings the scorers left open. Both amendments settle them before any outcome exists; no trigger, gate, price cap, stake or metric changes. Deadlines: CFB before Thu Oct 1, 5:00 PM Pacific; NFL before Oct 8.
+   - **Void and pending.** A bet whose game moved more than 24 hours, or has no result 30 days after kickoff, is void and not graded. A bet waiting for its result holds its decision open. The old one-week rule let a late result flip a final decision.
+   - **Decided once.** The first final decision is written to `data/forward/decisions.csv` and stands; later runs print it.
+   - **NFL:** "after Week 18" is the last regular-season kickoff; the model lean enters only on a row with a posted total; an inconclusive 2026 decision is decided once more after 2027; ties with the close are left out of the win rate.
+   - **CFB:** Rule HT enters at the last quote with a valid price; Rule B's close is the last later quote, else the captured close; "not kept" means no money goes on the rule; Rule HT is reported by price source.
 
 ## Research sweep (Sep 28)
 

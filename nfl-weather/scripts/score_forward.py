@@ -1,8 +1,10 @@
 """Score the pre-registered forward tests (PREREGISTRATION.md), one table per rule:
 
-  MODEL_LEAN          model P(under) >= 55% / <= 45%, earliest snapshot >= 24h before kickoff
+  MODEL_LEAN          model P(under) >= 55% / <= 45%. The entry is the earliest snapshot at least 24
+                      hours before kickoff that has both a lean and a posted total (amendment 6).
   RULE_B              early wind under, priced at Pinnacle: the registered test. The entry is the
-                      earliest pre-kickoff snapshot whose status was "SIGNAL".
+                      earliest pre-kickoff snapshot whose status was "SIGNAL". The 24-hour rule is the
+                      lean's only: Rule B's window is about 11 to 82 hours (amendment 5, section 3).
   RULE_B (secondary)  the same gates at the backup price (the consensus line, when Pinnacle had no
                       quote). Reported separately; not part of the keep/drop decision (amendment 5).
 
@@ -10,9 +12,16 @@ What counts (amendments 2, 4 and 5): rows written under a registered rules versi
 kickoff, for games from Week 5 (Oct 8, 2026) through the 2027 season. Rows outside that are counted
 by reason, never silently dropped; --list-excluded prints each one.
 
-The decisions (amendment 5, section 4) are computed here and labelled. A FINAL decision is made once,
-on the bets that kicked off by its horizon, so a later run prints the same numbers. Before the horizon
-the script prints an interim read, which shows the numbers and decides nothing.
+Each bet is settled, pending or void (amendment 6). It is void when its game kicked off more than 24
+hours from the kickoff on its entry row, or when the schedule still shows no result 30 days after
+that kickoff; a void bet is listed by reason and not graded. It is pending while it has no result.
+
+The decisions (amendment 5, section 4, and amendment 6) are computed here and labelled. Horizons are
+dates: "after Week 18" is after the last regular-season kickoff in the schedule. A decision is FINAL
+once its horizon has passed and no bet that kicked off by then is pending. The first FINAL is written
+to decisions.csv beside the ledger, and every later run prints that record; if a fresh computation on
+the same horizon would now differ, it prints both and the recorded one stands. Before that the script
+prints an interim read, which shows the numbers and decides nothing.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
@@ -24,6 +33,8 @@ outside the horizon) are counted, so coverage gaps can't quietly select winners.
     python scripts/score_forward.py [--list-excluded]
 """
 import argparse
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -40,6 +51,13 @@ FIRST_KICK = pd.Timestamp("2026-10-08", tz="UTC")     # amendment 2: Week 5 onwa
 TEST_SEASONS = (2026, 2027)                           # amendment 4: the two seasons are pooled
 BREAK_EVEN = 110 / 210                                # -110
 ENOUGH = 40
+LEAN_LEAD = pd.Timedelta(hours=24)                    # the model lean's entry is at least 24 hours out
+MOVED = pd.Timedelta(hours=24)                        # amendment 6: void if it kicked off further than this ...
+NO_RESULT = pd.Timedelta(days=30)                     # ... or had no result this long after the entry's kickoff
+VOID_MOVED = "the game kicked off more than 24 hours from the kickoff on its entry row"
+VOID_NO_RESULT = "the schedule shows no result 30 days after that kickoff"
+H26, H27 = "after Week 18 of 2026", "after the 2027 regular season"     # the decision horizons, by name
+RECORD_COLS = ["rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers", "ledger_rows_sha256"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ledger", default=str(ROOT / "data" / "forward" / "ledger.csv"))
@@ -48,16 +66,36 @@ ap.add_argument("--list-excluded", action="store_true", help="print every exclud
 ap.add_argument("--now", help="score as of this UTC time (tests and rehearsals); default: the clock")
 args = ap.parse_args()
 NOW = pd.Timestamp(args.now, tz="UTC") if args.now else pd.Timestamp.now(tz="UTC")
-CANCELLED_AFTER = pd.Timedelta(days=7)      # a game with no result a week after its kickoff was not played
 ledger = Path(args.ledger)
 if not ledger.exists():
     sys.exit("no ledger yet: run scripts/this_week.py or scripts/alerts.py first")
+DECISIONS = ledger.parent / "decisions.csv"     # beside the ledger scored: a test ledger never writes to data/forward/
+
+
+def eastern(day, time):
+    """Kickoff in UTC from an Eastern date and time (nflverse's convention); NaT when either is blank."""
+    day, time = pd.Series(day), pd.Series(time)
+    ok = day.notna() & time.notna() & day.astype(str).str.strip().ne("") & time.astype(str).str.strip().ne("")
+    t = pd.to_datetime(day.astype(str).where(ok) + " " + time.astype(str).where(ok), format="mixed", errors="coerce")
+    return t.dt.tz_localize("America/New_York", ambiguous="NaT", nonexistent="NaT").dt.tz_convert("UTC")
+
+
 L = pd.read_csv(ledger)
+text = ledger.read_text().splitlines()
+# the rows as written, for each decision's fingerprint
+HEADER, LINES = text[0], [ln for ln in text[1:] if ln.strip()]
+if len(LINES) != len(L):        # a row spread over several lines: fingerprint the rows as read instead
+    LINES = (pd.read_csv(ledger, dtype=str, keep_default_na=False).to_csv(index=False, lineterminator="\n")
+             .splitlines()[1:])
+L["_row"] = np.arange(len(L))
 L["snapshot_utc"] = pd.to_datetime(L.snapshot_utc, utc=True)
 for c in ("lean", "rule_b", "rules_version", "line_src"):
     L[c] = L[c].fillna("").astype(str) if c in L else ""
+# the kickoff the entry row was logged against (amendment 6, reading 1)
+L["row_kick"] = (eastern(L.gameday, L.gametime) if {"gameday", "gametime"} <= set(L)
+                 else pd.Series(pd.NaT, index=L.index, dtype="datetime64[ns, UTC]"))
 G = pd.read_csv(args.games)
-G["kick_utc"] = pd.to_datetime(G.gameday + " " + G.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
+G["kick_utc"] = eastern(G.gameday, G.gametime)
 if "season" not in G:      # a season runs from September into February
     d = pd.to_datetime(G.gameday)
     G["season"] = np.where(d.dt.month >= 8, d.dt.year, d.dt.year - 1)
@@ -65,8 +103,9 @@ for c in ("week", "game_type"):
     if c not in G:
         G[c] = np.nan
 g = G[["game_id", "total", "total_line", "kick_utc", "result", "season", "week", "game_type"]].rename(
-    columns={"total_line": "close_total"})
+    columns={"total_line": "close_total"}).assign(in_schedule=True)
 L = L.merge(g, on="game_id", how="left")
+L["in_schedule"] = L.in_schedule.eq(True)
 # Amendment 3: the Pinnacle close captured just before kickoff (scripts/capture_close.py), secondary only
 closes = ledger.parent / "closes.csv"
 cap = pd.read_csv(closes) if closes.exists() else pd.DataFrame(columns=["game_id", "book", "close_total"])
@@ -75,10 +114,10 @@ cap = (cap[cap.book.eq("pinnacle")].dropna(subset=["close_total"]).drop_duplicat
 L = L.merge(cap, on="game_id", how="left")
 
 # What counts. Every excluded row is counted by its first failing reason.
-why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.kick_utc.isna(), L.kick_utc < FIRST_KICK,
-                 ~L.season.isin(TEST_SEASONS), L.snapshot_utc >= L.kick_utc],
-                ["unregistered rules version", "game not in the schedule", "before Week 5 (Oct 8, 2026)",
-                 "after the 2027 season", "logged at or after kickoff"], "")
+why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), ~L.in_schedule, L.kick_utc.isna(),
+                 L.kick_utc < FIRST_KICK, ~L.season.isin(TEST_SEASONS), L.snapshot_utc >= L.kick_utc],
+                ["unregistered rules version", "game not in the schedule", "no kickoff time in the schedule",
+                 "before Week 5 (Oct 8, 2026)", "after the 2027 season", "logged at or after kickoff"], "")
 print(f"ledger rows: {len(L)}; in the test: {int((why == '').sum())}")
 for reason, n in pd.Series(why[why != ""]).value_counts().items():
     print(f"  excluded, {reason}: {n}")
@@ -92,11 +131,11 @@ def regular_season(season):
     return G[(G.season == season) & (G.game_type.astype(str) == "REG")]
 
 
-def season_complete(season):
-    """True once the regular season of `season` is over: it is in the schedule, and every game has a
-    result or kicked off more than a week ago (a cancelled game never gets one)."""
-    s = regular_season(season)
-    return len(s) > 0 and bool((s.result.notna() | (s.kick_utc < NOW - CANCELLED_AFTER)).all())
+def horizon_of(season):
+    """Amendment 6, reading 4: "after Week 18" is after the season's last regular-season kickoff in the
+    schedule. None while the schedule doesn't have that season."""
+    k = regular_season(season).kick_utc.max()
+    return None if pd.isna(k) else k
 
 
 def grade(bets, side_col):
@@ -113,8 +152,14 @@ def grade(bets, side_col):
     clv_cap = np.where(under, entry - cap, cap - entry)
     beat = np.where(under, bets.total < bets.close_total, bets.total > bets.close_total)   # vs the close
     tie = bets.total == bets.close_total
-    return bets.assign(win=win, push=push, profit=profit, clv_pts=clv, clv_cap=clv_cap, priced=has_price,
+    bets = bets.assign(win=win, push=push, profit=profit, clv_pts=clv, clv_cap=clv_cap, priced=has_price,
                        beat_close=beat, tie_close=tie)
+    # Amendment 6, readings 1 and 2: void (moved or never scored), pending (no result yet), or settled
+    moved = (bets.kick_utc - bets.row_kick).abs() > MOVED
+    stale = bets.result.isna() & (NOW >= bets.row_kick.fillna(bets.kick_utc) + NO_RESULT)
+    void = np.select([moved, stale], [VOID_MOVED, VOID_NO_RESULT], "")
+    return bets.assign(void=void, status=np.where(void != "", "void",
+                                                  np.where(bets.result.notna(), "settled", "pending")))
 
 
 def mean_ci(x):
@@ -126,16 +171,20 @@ def mean_ci(x):
 
 
 def report(name, bets):
-    settled = bets[bets.result.notna()]
-    print(f"\n{name}: {len(bets)} signals, {len(settled)} settled")
+    settled = bets[bets.status.eq("settled")]
+    n_pend, void = int(bets.status.eq("pending").sum()), bets[bets.status.eq("void")]
+    print(f"\n{name}: {len(bets)} signals, {len(settled)} settled, {n_pend} pending, {len(void)} void (not graded)")
+    for reason, v in void.groupby("void", sort=False):
+        print(f"  void, {reason}: {len(v)} ({', '.join(v.game_id.astype(str))})")
     if settled.empty:
         return settled
     w, p = int(settled.win.sum()), int(settled.push.sum())
-    m, lo, hi, n = mean_ci(settled.clv_pts)
+    m, lo, hi, _ = mean_ci(settled.clv_pts)
     print(f"  record at entry line {w}-{len(settled) - w - p}-{p}   units {settled.profit.sum():+.2f} "
           f"(ROI {100 * settled.profit.sum() / len(settled):+.1f}% per bet placed; "
           f"{int((~settled.priced).sum())} graded at an assumed -110)")
-    print(f"  mean CLV {m:+.2f} pts  (95% CI {lo:+.2f} to {hi:+.2f}; {n} of {len(settled)} bets have a primary close)")
+    print(f"  mean CLV {m:+.2f} pts  (95% CI {lo:+.2f} to {hi:+.2f}; {int(settled.close_total.notna().sum())} of "
+          f"{len(settled)} bets have a primary close)")
     cm, clo, chi, cn = mean_ci(settled.clv_cap)
     if cn:
         print(f"  secondary (amendment 3): mean CLV vs captured Pinnacle close {cm:+.2f} pts "
@@ -147,75 +196,166 @@ def report(name, bets):
     return settled
 
 
-def decide(name, settled, final, split, split_name, when, enough=True):
-    """The registered keep/drop test. `split` labels each bet's half (or season); CLV must be positive
-    in every part. Where the keep test and the drop test are both met, the result is DROP. Before the
-    horizon this prints the numbers and no verdict."""
-    if settled is None or settled.empty:
-        print(f"  decision ({name}): nothing settled yet")
-        return None
-    m, lo, hi, n = mean_ci(settled.clv_pts)
-    graded = settled[settled.close_total.notna() & ~settled.tie_close]     # a bet with no close isn't a loss
+# ---------------------------------------------------------------- the decisions
+def assess(bets, split, split_name, final_label, enough=True):
+    """The registered keep/drop test on `bets`, as numbers and a verdict. `split` labels each bet's half
+    (or season); CLV must be positive in every part. Keep and drop both met is a DROP."""
+    m, lo, hi, n = mean_ci(bets.clv_pts)
+    graded = bets[bets.close_total.notna() & ~bets.tie_close]     # no close, or a tie with it: left out
     rate = graded.beat_close.mean() if len(graded) else np.nan
-    parts = settled.assign(part=split).groupby("part").clv_pts.mean()
-    both = len(parts) >= 2 and bool((parts > 0).all())
-    tests = {"mean CLV > 0": m > 0, "95% interval above zero": lo > 0,
-             f"win rate vs the close at least {100 * BREAK_EVEN:.1f}%": rate >= BREAK_EVEN,
-             f"mean CLV positive in both {split_name}s": both}
-    drop = bool(m <= 0 or hi < 0.25)
-    keep = all(bool(v) for v in tests.values()) and not drop
-    verdict = ("INCONCLUSIVE (fewer than 40 by the end of the test)" if not enough else
-               "DROP" if drop else "KEEP" if keep else "INCONCLUSIVE (carry forward unchanged)")
-    if final:
-        print(f"  decision ({name}), FINAL: {verdict}")
-    else:
-        print(f"  decision ({name}): INTERIM read, decides nothing. The decision comes {when}.")
+    parts = bets.assign(part=split).groupby("part").clv_pts.mean()
+    f = lambda v: None if pd.isna(v) else float(v)                # noqa: E731
+    nums = dict(n_bets=len(bets), mean_clv=f(m), ci_low=f(lo), ci_high=f(hi), n_clv=int(n), win_rate_vs_close=f(rate),
+                beat_close=int(graded.beat_close.sum()), with_close=len(graded), ties=int(bets.tie_close.sum()),
+                split=split_name, by_part={str(k): float(v) for k, v in parts.items()})
+    keep, drop = criteria(nums)
+    verdict = (final_label[1] if not enough else "DROP" if drop else
+               "KEEP" if all(keep.values()) else final_label[0])
+    return verdict, nums
+
+
+def criteria(nums):
+    """The keep tests and the drop test, from a decision's numbers."""
+    m, lo, hi, rate = (np.nan if nums[k] is None else nums[k] for k in ("mean_clv", "ci_low", "ci_high",
+                                                                         "win_rate_vs_close"))
+    parts = nums["by_part"]
+    plural = {"half": "halves", "season": "seasons"}[nums["split"]]
+    keep = {"mean CLV > 0": m > 0, "95% interval above zero": lo > 0,
+            f"win rate vs the close at least {100 * BREAK_EVEN:.1f}%": rate >= BREAK_EVEN,
+            f"mean CLV positive in both {plural}": len(parts) >= 2 and all(v > 0 for v in parts.values())}
+    return keep, bool(m <= 0 or hi < 0.25)
+
+
+def show(nums):
+    m, lo, hi, n, rate = (np.nan if nums[k] is None else nums[k]
+                          for k in ("mean_clv", "ci_low", "ci_high", "n_clv", "win_rate_vs_close"))
+    keep, drop = criteria(nums)
     ci = f"95% CI {lo:+.2f} to {hi:+.2f}" if n > 1 else "no interval on one bet"
     print(f"    mean CLV {m:+.2f} ({ci}, n={n}); win rate vs the close {100 * rate:.1f}% "
-          f"({int(graded.beat_close.sum())} of {len(graded)} with a close, {int(settled.tie_close.sum())} ties); "
-          f"mean CLV by {split_name}: { {str(k): round(float(v), 2) for k, v in parts.items()} }")
-    print("    keep needs: " + "; ".join(f"{k} ({'met' if bool(v) else 'not met'})" for k, v in tests.items())
+          f"({nums['beat_close']} of {nums['with_close']} with a close, {nums['ties']} ties), ties left out; "
+          f"mean CLV by {nums['split']}: { {k: round(v, 2) for k, v in nums['by_part'].items()} }")
+    print("    keep needs: " + "; ".join(f"{k} ({'met' if bool(v) else 'not met'})" for k, v in keep.items())
           + f". Drop if mean CLV <= 0 or the interval's upper bound is below +0.25 ({'met' if drop else 'not met'}).")
-    return verdict if final else None
+
+
+def recorded(rule, horizon):
+    """The decision already written down for this rule and horizon (amendment 6, reading 3), or None."""
+    if not DECISIONS.exists():
+        return None
+    d = pd.read_csv(DECISIONS, dtype=str, keep_default_na=False)
+    d = d[d.rule.eq(rule) & d.horizon.eq(horizon)]
+    return None if d.empty else d.iloc[0]
+
+
+def write_down(rule, horizon, horizon_utc, verdict, nums, rows):
+    """Append a decision the first time it is FINAL, with a sha256 of the ledger's header and the entry
+    rows that entered it, exactly as written."""
+    lines = [HEADER] + [LINES[i] for i in sorted(rows)]
+    rec = dict(rule=rule, horizon=horizon, horizon_utc=f"{horizon_utc:%Y-%m-%dT%H:%M:%SZ}",
+               decided_utc=f"{NOW:%Y-%m-%dT%H:%M:%SZ}", n_bets=nums["n_bets"], verdict=verdict,
+               numbers=json.dumps(nums),
+               ledger_rows_sha256=hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest())
+    pd.DataFrame([rec], columns=RECORD_COLS).to_csv(DECISIONS, mode="a", header=not DECISIONS.exists(), index=False)
+    return rec
+
+
+def decision(rule, horizon, name, h_utc, bets_by, split_by, split_name, pending, when, labels, enough=lambda b: True):
+    """One registered decision. Prints the recorded one if it exists (and a fresh computation on the same
+    horizon beside it when that now differs); otherwise FINAL, recorded now, once the horizon has passed
+    and no bet that kicked off by then is pending; otherwise an interim read. Returns the verdict or None."""
+    rec = recorded(rule, horizon)
+    if rec is not None:
+        h = pd.Timestamp(rec.horizon_utc)
+        bets = bets_by(h)
+        fresh, nums = assess(bets, split_by(bets), split_name, labels, enough(bets))
+        print(f"  decision ({name}), FINAL: {rec.verdict}")
+        show(json.loads(rec.numbers))
+        print(f"    recorded in decisions.csv on {rec.decided_utc}, horizon {rec.horizon_utc}; "
+              f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}")
+        if fresh != rec.verdict or json.dumps(nums) != json.dumps(json.loads(rec.numbers)):
+            print(f"    a fresh computation on the same horizon now gives: {fresh}, on {len(bets)} bets:")
+            show(nums)
+            print("    The recorded decision stands.")
+        return rec.verdict
+    bets = bets_by(h_utc)
+    verdict, nums = assess(bets, split_by(bets), split_name, labels, enough(bets))
+    waiting = 0 if h_utc is None else int((pending.kick_utc <= h_utc).sum())
+    if h_utc is not None and NOW > h_utc and not waiting:
+        print(f"  decision ({name}), FINAL: {verdict}")
+        show(nums)
+        rec = write_down(rule, horizon, h_utc, verdict, nums, bets._row)
+        print(f"    recorded in decisions.csv on {rec['decided_utc']}, horizon {rec['horizon_utc']}; "
+              f"ledger rows sha256 {rec['ledger_rows_sha256'][:16]}")
+        return verdict
+    print(f"  decision ({name}): INTERIM read, decides nothing. {when(waiting)}")
+    show(nums)
+    return None
 
 
 def halves(df):
     return np.where(pd.to_numeric(df.week, errors="coerce") <= 11, "Weeks 5-11", "Weeks 12-18")
 
 
-def horizon_decision(what, unit, done):
-    """Amendment 5, section 4. With 40 in the 2026 regular season, the decision is made after Week 18
-    of 2026 on those bets, split by half. Otherwise it is made once, after the 2027 regular season, on
-    every bet that kicked off by then, split by season. Bets after the horizon never enter it."""
+def horizon_decision(what, unit, bets):
+    """Amendment 5, section 4, and amendment 6. With 40 in the 2026 regular season, the decision is made
+    after Week 18 of 2026 on those bets, split by half; a keep or a drop then is the decision. Otherwise,
+    or when 2026 is inconclusive, it is made once, after the 2027 regular season, on every bet that kicked
+    off by then, split by season. Bets after a horizon never enter it."""
+    done, pending = bets[bets.status.eq("settled")], bets[bets.status.eq("pending")]
+    h26, h27 = horizon_of(2026), horizon_of(2027)
     reg26 = done[(done.season == 2026) & done.game_type.astype(str).eq("REG")]
-    if len(reg26) >= ENOUGH:
-        return decide(f"{what}: 40 {unit} in 2026, decided after Week 18 of 2026", reg26, season_complete(2026),
-                      halves(reg26), "half", "after Week 18 of 2026")
-    end27 = regular_season(2027).kick_utc.max()
-    pool = done if pd.isna(end27) else done[done.kick_utc <= end27]
-    return decide(f"{what}: once, after the 2027 regular season, both seasons pooled", pool, season_complete(2027),
-                  pool.season.astype(int).values, "season",
-                  f"after Week 18 of 2027 (or after Week 18 of 2026, with 40 {unit} in 2026)",
-                  enough=what != "model lean" or len(pool) >= ENOUGH)
+
+    def ahead(label, h, waiting):
+        if h is not None and NOW > h:
+            return f"{label} is over; the decision waits for {waiting} pending {unit if waiting != 1 else unit[:-1]}."
+        return f"The decision comes {label.replace('Week', 'after Week', 1)}" + (
+            f" (the last regular-season kickoff, {h:%Y-%m-%d %H:%M} UTC)." if h is not None else ".")
+
+    rule = what
+    if recorded(rule, H26) is not None or len(reg26) >= ENOUGH:
+        verdict = decision(rule, H26, f"{what}: 40 {unit} in 2026, decided after Week 18 of 2026", h26,
+                           lambda h: reg26 if h is None else reg26[reg26.kick_utc <= h], halves, "half", pending,
+                           lambda k: ahead("Week 18 of 2026", h26, k),
+                           ("INCONCLUSIVE (carried into 2027 unchanged)", None))
+        if verdict is None or verdict in ("KEEP", "DROP"):
+            if verdict:
+                print(f"    Later {unit} are logged and reported, and decide nothing (amendment 6).")
+            return
+        name = f"{what}: inconclusive in 2026, decided once more after the 2027 regular season, both seasons pooled"
+    else:
+        name = f"{what}: once, after the 2027 regular season, both seasons pooled"
+
+    def ahead27(k):
+        text = ahead("Week 18 of 2027", h27, k)
+        if (h26 is None or NOW <= h26) and recorded(rule, H26) is None:
+            text = text.rstrip(".") + f", or after Week 18 of 2026 with 40 {unit} in the 2026 regular season."
+        return text
+    decision(rule, H27, name, h27, lambda h: done if h is None else done[done.kick_utc <= h],
+             lambda b: b.season.astype(int).values, "season", pending, ahead27,
+             ("INCONCLUSIVE (carry forward unchanged)",
+              f"INCONCLUSIVE (fewer than {ENOUGH} {unit} by the end of the 2027 regular season)"),
+             enough=lambda b: what != "model lean" or len(b) >= ENOUGH)
 
 
 pre = L[L.snapshot_utc < L.kick_utc]
 
-# MODEL_LEAN: the original pre-registration, on its original horizon
-lean = pre[pre.lean.str.len().gt(0) & (pre.snapshot_utc <= pre.kick_utc - pd.Timedelta(hours=24))]
+# MODEL_LEAN: the original pre-registration, on its original horizon. Amendment 6, reading 5: the entry
+# is the earliest snapshot at least 24 hours out that has both a lean and a posted total.
+lean = pre[pre.lean.str.len().gt(0) & pd.to_numeric(pre.total_line, errors="coerce").notna()
+           & (pre.snapshot_utc <= pre.kick_utc - LEAN_LEAD)]
 lean = lean.sort_values("snapshot_utc").drop_duplicates("game_id")
 lean = grade(lean.assign(side=np.where(lean.lean.str.startswith("UNDER"), "UNDER", "OVER")), "side")
 done = report("MODEL_LEAN", lean)
-if len(done):
-    horizon_decision("model lean", "leans", done)
+if len(done) or recorded("model lean", H26) is not None or recorded("model lean", H27) is not None:
+    horizon_decision("model lean", "leans", lean)
 
 # RULE_B: amendment 1, gated by amendment 2, priced by amendment 5
 sig = pre[pre.rule_b.isin(["SIGNAL", "SIGNAL_SECONDARY"])]
 primary = sig[sig.rule_b.eq("SIGNAL") & sig.line_src.eq(PRIMARY_SRC)]
 rb = grade(primary.sort_values("snapshot_utc").drop_duplicates("game_id").assign(side="UNDER"), "side")
 done = report("RULE_B (wind under)", rb)
-if len(done):
-    horizon_decision("Rule B", "signals", done)
+if len(done) or recorded("Rule B", H26) is not None or recorded("Rule B", H27) is not None:
+    horizon_decision("Rule B", "signals", rb)
 
 second = sig[~sig.game_id.isin(rb.game_id)]
 second = grade(second.sort_values("snapshot_utc").drop_duplicates("game_id").assign(side="UNDER"), "side")
@@ -244,7 +384,10 @@ if fills_path.exists():
     if len(wc):
         print(f"\nCost of waiting, RULE_B: {len(wc)} paper fills; vs the alert-time quote the fill gained "
               f"{wc.pts_gained.mean():+.2f} pts and {wc.profit_gained.mean():+.3f} units of payout per unit staked")
-print("\nDecision horizons (amendment 5, section 4), for Rule B and the model lean alike: with 40 in the 2026 "
-      "regular season, after Week 18 of 2026 on those bets; otherwise once, after the 2027 regular season, on "
-      "both seasons pooled.")
+print("\nDecision horizons (amendment 5, section 4, and amendment 6), for Rule B and the model lean alike: with "
+      "40 in the 2026 regular season, after Week 18 of 2026 (its last regular-season kickoff) on those bets, where "
+      "a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular "
+      "season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A "
+      "decision waits for every bet that kicked off by its horizon to settle or be void, and the first final one "
+      f"is written to {DECISIONS.name} beside the ledger.")
 print("Variants under forward test: 2 (MODEL_LEAN, RULE_B).")

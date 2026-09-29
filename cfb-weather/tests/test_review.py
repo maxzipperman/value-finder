@@ -79,7 +79,7 @@ def test_rule_b_is_final_after_forty_signals_and_the_regular_season(tmp_path):
     out = rule_b(score(tmp_path, rows, sched, "2026-11-20"))
     assert "INTERIM read, decides nothing" in out and "FINAL" not in out  # the regular season isn't over
     out = rule_b(score(tmp_path, rows, sched, "2026-12-20"))
-    assert "FINAL: KEEP, on the 40 signals that kicked off by 2026-12-13" in out and "n=40" in out
+    assert "FINAL: KEEP, on the 40 signals that kicked off by 2026-12-12" in out and "n=40" in out
 
 
 def test_a_cancelled_game_cannot_hold_the_decision_open(tmp_path):
@@ -129,6 +129,7 @@ def test_rule_ht_is_final_only_after_the_title_game_and_drops_on_roi(tmp_path):
     assert "FINAL: STAY ON PAPER" in out                                 # it made money: not a drop
     for g in sw[:2]:
         g.update(home_points=40, away_points=40)                         # 8-12 now: it lost money
+    (tmp_path / "decisions.csv").unlink()                  # another test, not a later run (amendment 4, section 3)
     out = score(tmp_path, wins + losses, sw + sl, "2028-02-02").split("RULE_HT:")[1]
     assert "record 8-12-0" in out and "FINAL: DROP" in out
 
