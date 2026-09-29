@@ -46,14 +46,14 @@ def test_every_endpoint_changes_nothing(tmp_path):
 
 def stand_in_scorers(scorers: Path, folders: bool = True):
     """A stand-in for each project's scorer that, like the real ones (their config.py), creates its project's
-    folders when it is imported and they are missing, then prints its arguments."""
+    folders when it is imported and they are missing, then prints its arguments as the text of a --json document."""
     for project in commands.PROJECTS:
         (scorers / project / ".venv" / "bin").mkdir(parents=True)
         os.symlink(sys.executable, scorers / project / ".venv" / "bin" / "python")
         (scorers / project / "scripts").mkdir()
         (scorers / project / "scripts" / "score_forward.py").write_text(
             "import sys, json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(__file__).resolve().parents[1]))\n"
-            "import helper\nprint('args', json.dumps(sys.argv[1:]))\n")
+            "import helper\nprint(json.dumps({'text': 'args ' + json.dumps(sys.argv[1:]) + '\\n', 'tests': []}))\n")
         (scorers / project / "helper.py").write_text(
             "from pathlib import Path\nROOT = Path(__file__).resolve().parent\n"
             f"for rel in {commands.SCORER_FOLDERS[project]!r}:\n    (ROOT / rel).mkdir(parents=True, exist_ok=True)\n")

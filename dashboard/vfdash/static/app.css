@@ -1,5 +1,8 @@
 /* Value Finder dashboard. Quiet and flat: system font, hairline borders, no gradients or shadows.
-   Green, amber and red are used only for job health and deadlines (and the health banner). */
+   Green, amber and red are used only for job health and deadlines (and the health banner).
+   Violet (--signal) is the one signal colour and is used for nothing else: the filled "Signal" badge, the outlined
+   "Signal, backup price" badge, and the tint of a row whose game's newest row is a signal. It is never the only
+   carrier of meaning: every badge has its word. */
 
 :root {
   color-scheme: light;
@@ -17,6 +20,10 @@
   --critical: #d03b3b;
   --fail-wash: #fbeaea;
   --warn-wash: #fdf3dc;
+  --signal: #6d3fc0;
+  --signal-ink: #ffffff;
+  --signal-text: #6d3fc0;
+  --signal-wash: #f4effc;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -33,6 +40,10 @@
     --accent: #3987e5;
     --fail-wash: #3a2020;
     --warn-wash: #3a3016;
+    --signal: #a88cf2;
+    --signal-ink: #17121f;
+    --signal-text: #b9a3f7;
+    --signal-wash: #2b2340;
   }
 }
 :root[data-theme="dark"] {
@@ -48,6 +59,10 @@
   --accent: #3987e5;
   --fail-wash: #3a2020;
   --warn-wash: #3a3016;
+  --signal: #a88cf2;
+  --signal-ink: #17121f;
+  --signal-text: #b9a3f7;
+  --signal-wash: #2b2340;
 }
 
 * { box-sizing: border-box; }
@@ -170,8 +185,61 @@ th { font-weight: 500; color: var(--text-2); font-size: 12.5px; border-bottom-co
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--wash); }
-tr.signal td:first-child { border-left: 3px solid var(--accent); padding-left: 8px; }
+tr.signal td { background: var(--signal-wash); }
+tr.clickable.signal:hover td { background: var(--signal-wash); }
+tr.signal td:first-child { border-left: 3px solid var(--signal); padding-left: 8px; }
 .sig { font-weight: 600; }
+
+/* badges: a word in a small box. The signal colour is only ever on the first two. */
+.badge { display: inline-block; font-size: 11.5px; font-weight: 600; line-height: 1.35; padding: 1px 7px;
+  border-radius: 999px; border: 1px solid transparent; white-space: nowrap; vertical-align: 1px; }
+.badge.signal { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
+.badge.backup { background: transparent; color: var(--signal-text); border-color: var(--signal); }
+.badge.watch { background: transparent; color: var(--text-2); border-color: var(--line-strong); font-weight: 500; }
+.badge.won { background: var(--text); color: var(--panel); border-color: var(--text); }
+.badge.lost { background: transparent; color: var(--text); border-color: var(--text-2); }
+.badge.push, .badge.pending, .badge.void { background: transparent; color: var(--text-2);
+  border-color: var(--line-strong); font-weight: 500; }
+.rulecell > div { display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: baseline; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 14px; color: var(--text-2); font-size: 12.5px; }
+.legend > span { display: inline-flex; gap: 6px; align-items: baseline; }
+.legend .tint { display: inline-block; width: 22px; height: 12px; background: var(--signal-wash);
+  border-left: 3px solid var(--signal); transform: translateY(1px); }
+h2.group { margin: 18px 0 8px; display: flex; gap: 8px; align-items: baseline; }
+h2.group .count { color: var(--text-2); font-weight: 500; }
+
+/* Home: the live signals, above the numbers */
+.live { border: 1px solid var(--line); border-left: 4px solid var(--signal); border-radius: 6px; background: var(--panel);
+  margin-bottom: 18px; }
+.live > header { padding: 12px 16px 8px; display: flex; gap: 10px; align-items: baseline; }
+.live .rows > li { padding: 10px 16px; display: grid; gap: 4px 16px; align-items: baseline;
+  grid-template-columns: max-content minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr) max-content; }
+.live .rows > li { background: var(--signal-wash); border-bottom: 1px solid var(--panel); }
+.live .rows > li:last-child { border-bottom: none; }
+.live .note { padding: 8px 16px 10px; margin: 0; color: var(--text-2); font-size: 13px; }
+.live.none { border-left-color: var(--line-strong); padding: 10px 16px; color: var(--text-2); }
+@media (max-width: 900px) { .live .rows > li { grid-template-columns: minmax(0, 1fr); } }
+
+/* Signals: cards and the two charts above the log */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; margin: 0 0 18px; }
+.card { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 12px 14px; min-width: 0; }
+.card.together { border-color: var(--line-strong); }
+.card h3 { margin-bottom: 4px; }
+.card .figs { display: flex; flex-wrap: wrap; gap: 2px 16px; margin: 6px 0; }
+.card .figs b { font-size: 18px; font-weight: 600; }
+.card p { font-size: 13px; color: var(--text-2); margin: 3px 0; }
+.card p.paper { color: var(--text-3); font-size: 12px; margin-top: 8px; }
+select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: 6px; padding: 4px 8px; }
+.chart .ref { stroke: var(--text-2); stroke-width: 1; }
+.chart .reflabel { fill: var(--text-2); font-size: 11px; }
+.chart .dot { fill: var(--text-3); stroke: var(--panel); stroke-width: 2; }
+.chart .caption { font-size: 12.5px; color: var(--text-2); margin-top: 6px; }
+.chart .scope { font-size: 12px; color: var(--text-3); font-weight: 400; display: block; margin-top: 2px; }
+.chart .serieskey { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); margin: 4px 0 0; }
+.chart .serieskey i { display: inline-block; width: 14px; height: 2px; background: var(--accent); vertical-align: 3px;
+  margin-right: 5px; }
+.chart .serieskey i.dotkey { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); vertical-align: 0; }
 .small { font-size: 12.5px; }
 .stack > div + div { margin-top: 2px; }
 .tag { font-size: 11px; color: var(--text-2); border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 4px;

@@ -29,7 +29,7 @@ const byId = { main: new El("main"), stamp: new El("div"), banner: new El("div")
 Object.assign(globalThis, {
   Node: Base,
   document: {
-    hidden: false, getElementById: (id) => byId[id], createElement: (t) => new El(t),
+    hidden: false, title: "Value Finder", getElementById: (id) => byId[id], createElement: (t) => new El(t),
     createElementNS: (_ns, t) => new El(t), createTextNode: (t) => new Text(t), querySelectorAll: () => [],
     addEventListener() {},
   },
@@ -40,5 +40,7 @@ Object.assign(globalThis, {
 });
 vm.runInThisContext(readFileSync(appPath, "utf8"), { filename: "app.js" });
 await new Promise((r) => setTimeout(r, 50));
-const out = (n) => (n instanceof Text ? { text: n.text } : { tag: n.tag, cls: n.className, kids: n.kids.map(out) });
-process.stdout.write(JSON.stringify(out(byId.main)));
+const out = (n) => (n instanceof Text ? { text: n.text } : { tag: n.tag, cls: n.className, attrs: n.attrs,
+  kids: n.kids.map(out) });
+// the main part of the page as drawn, and the browser tab's title
+process.stdout.write(JSON.stringify({ ...out(byId.main), doc_title: document.title }));

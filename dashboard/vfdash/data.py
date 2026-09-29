@@ -2,6 +2,7 @@
 Scorer previews are kept for 10 minutes. Reading never changes a file; see readers.py and commands.py."""
 from __future__ import annotations
 
+import json
 import re
 import threading
 from dataclasses import dataclass, field
@@ -101,11 +102,39 @@ class Launchctl:
 @dataclass
 class Scored:
     project: str
-    status: str                     # ok, failed, timed_out, missing, skipped, waiting
-    text: str = ""
+    status: str                     # ok, failed, timed_out, missing, skipped, waiting, not_document
+    text: str = ""                  # the printed report: the document's "text" (or what a failed run printed)
     error: str = ""
     ran_at: datetime | None = None
     seconds: float = 0.0
+    doc: dict | None = None         # the scorer's --json document, with anything like a key blanked
+
+
+def scrub_all(x):
+    """Every string in a document, blanked of anything that looks like a key (words.scrub)."""
+    if isinstance(x, str):
+        return words.scrub(x)
+    if isinstance(x, list):
+        return [scrub_all(v) for v in x]
+    if isinstance(x, dict):
+        return {str(k): scrub_all(v) for k, v in x.items()}
+    return x
+
+
+def read_document(stdout: str) -> dict | None:
+    """A scorer's --json document, or None when what it printed is not one: a single JSON object with the printed
+    report as text and a list of tests, each with its id, counts and bets."""
+    try:
+        doc = json.loads(stdout)
+    except (TypeError, ValueError):
+        return None
+    if not (isinstance(doc, dict) and isinstance(doc.get("text"), str) and isinstance(doc.get("tests"), list)):
+        return None
+    for t in doc["tests"]:
+        if not (isinstance(t, dict) and isinstance(t.get("id"), str) and isinstance(t.get("counts"), dict)
+                and isinstance(t.get("bets"), list) and all(isinstance(b, dict) for b in t["bets"])):
+            return None
+    return scrub_all(doc)
 
 
 @dataclass
@@ -423,7 +452,9 @@ class Store:
             except Exception as e:                        # noqa: BLE001
                 res = Scored(project, "failed", error=f"{type(e).__name__}", ran_at=now)
             else:
-                out = words.scrub(r.stdout)               # as printed, except that anything like a key is blanked
+                doc = read_document(r.stdout) if r.ok else None
+                # as printed, except that anything like a key is blanked
+                out = doc["text"] if doc is not None else words.scrub(r.stdout)
                 if r.missing:
                     res = Scored(project, "missing", ran_at=now)
                 elif r.timed_out:
@@ -431,8 +462,10 @@ class Store:
                 elif not r.ok:
                     res = Scored(project, "failed", text=out, error=words.scrub(r.stderr)[-2000:], ran_at=now,
                                  seconds=r.seconds)
+                elif doc is None:
+                    res = Scored(project, "not_document", error=out[-1200:], ran_at=now, seconds=r.seconds)
                 else:
-                    res = Scored(project, "ok", text=out, ran_at=now, seconds=r.seconds)
+                    res = Scored(project, "ok", text=out, ran_at=now, seconds=r.seconds, doc=doc)
             self._scores[project] = res
             return res
 

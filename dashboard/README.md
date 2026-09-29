@@ -25,11 +25,53 @@ schedules), not from a `TZ` setting: `TZ=... uv run ...` in a rehearsal doesn't 
 
 ## Screens
 
-Home (`#home`), Board (`#board`, with `?sport=nfl|cfb&signals=1`), a game (`#game/<id>`), Forward tests
-(`#tests`), Jobs and records (`#jobs`, and `#jobs/records` for `ops/RUN_RECORDS.md`), Thursday's pull (`#pull`)
-and Research (`#research`). Data refreshes every 60 seconds; the server re-reads the files at most every 30
-seconds (and works out the board's rows at most once a minute from each read) and runs each scorer preview at
-most every 10 minutes.
+Home (`#home`), Signals (`#signals`, with `?sport=nfl|cfb&rule=<rule id>&result=won|lost|push|pending|void`),
+Board (`#board`, with `?sport=nfl|cfb&signals=1`), a game (`#game/<id>`), Forward tests (`#tests`), Jobs and
+records (`#jobs`, and `#jobs/records` for `ops/RUN_RECORDS.md`), Thursday's pull (`#pull`) and Research
+(`#research`). Data refreshes every 60 seconds; the server re-reads the files at most every 30 seconds (and works
+out the board's rows at most once a minute from each read) and runs each scorer preview at most every 10 minutes.
+
+To add a screen: one entry in `SCREENS` in `vfdash/static/app.js` (its address, its `/api/...` answer and the
+function that draws it), one link in the navigation in `vfdash/static/index.html`, one route in `vfdash/server.py`
+and one builder in `vfdash/api.py`. A chart is drawn with `timeChart` in `app.js` (inline SVG, nothing loaded):
+reference lines (`refs`), a smallest span for the axis (`minSpan`) and, for a win-rate chart, `floorAtMost: 40` so
+its axis starts at 40% or lower, with break-even (52.4% at −110) passed as a reference line.
+
+## Signals: one colour, badges, and the log
+
+One colour is kept for signals and used for nothing else (violet, `--signal` in `app.css`): a filled **Signal**
+badge (a rule fired at its registered price), the same colour outlined for **Signal, backup price** (the NFL wind
+rule at the consensus line when Pinnacle had no quote; logged apart, not part of the decision), and a tinted row for
+a game whose newest row is a signal. A **watch** gets a quiet outlined badge in the neutral colour: the NFL model
+lean, and a wind trigger that didn't become a signal (no price, a price too high, a value not above zero, or outside
+the 1 to 3 day window; the alert job sends a watch for each). Green, amber and red stay for job health and deadlines.
+Every badge carries its word. The rules are `badge` and `strongest` in `vfdash/words.py`.
+
+Home opens with the live signals, one row each (the badge, the game, the kickoff, the rule, the number and price to
+take, a better number if a book logged one, and how long until kickoff), above the four numbers; with none it says
+"No signal is live." and when the next run is. The browser tab shows the count, "(1) Value Finder", on every screen.
+The Board lists "Signals" and then "Everything else", each with its count, under a legend.
+
+The Signals screen lists every bet the scorers count, newest first, from each scorer's `--json` document (the same
+preview, kept 10 minutes, whose "text" is the report on the Forward tests screen): the kickoff, the game, the rule,
+the entry (number, price, book and when it was logged), the close and where it came from, the closing-line value,
+the final total, the result and the units. A row opens the game's page. Above it, for each rule and for the signal
+rules together (the model lean, a watch, is totalled on its own): the record, the units, the return per bet placed,
+the mean closing-line value with the registered interval, and the count toward the decision, each with its sample
+size, whether it clears the multiple-testing bar (read from STATUS.md's "Variants" bullet), and "Paper bets. No
+money was placed." The per-rule numbers are the scorer's own; the totals for rules together, the p-values and the
+charts are worked out in `vfdash/signals.py` from the scorer's bets: the win rate's one-sided p is exact, each bet
+winning with the break-even chance of its own price (the test the college football scorer registers for Rule HT);
+the closing-line value's is the larger of the plain t-test's and the one grouped by game day (the two the registered
+interval is the wider of). Two charts, cumulative units by date and closing-line value per bet with its running
+mean, say what they found in their titles ("not distinguishable from break-even" when it isn't), draw break-even or
+zero as a line, and never span less than 4 units or points, so a small difference never fills the chart; with fewer
+than 2 settled bets each is a sentence instead. The totals and charts ignore the result filter.
+
+Before the first signal the screen says which rule starts when, worked out from `content/forward_tests.json` (the
+date in each test's `starts_text`, else its `starts_utc` in Eastern time). If a scorer fails, takes more than 60
+seconds or prints something that is not its document, the screen says so and lists, from the ledgers, the games whose
+rows include a signal since their rule started, without results.
 
 ## What it reads, and the only programs it starts
 
@@ -41,8 +83,9 @@ the schedule keys of the four jobs' files in `~/Library/LaunchAgents/`; the last
 `~/Library/Logs/valuefinder-closecapture.log` and `valuefinder-ledgersync.log`. It never opens a `.env` file.
 
 Starts (from fixed lists in `vfdash/commands.py`, never with a shell): each project's
-`scripts/score_forward.py --ledger <root>/<project>/data/forward/ledger.csv --now <UTC time>` with that
-project's `.venv/bin/python` in the project folder (a preview, which never records a decision);
+`scripts/score_forward.py --ledger <root>/<project>/data/forward/ledger.csv --now <UTC time> --json` with that
+project's `.venv/bin/python` in the project folder (a preview, which never records a decision; `--json` makes it
+print its report and its graded bets as one JSON document, and changes nothing else);
 `/bin/launchctl list`; `/bin/launchctl print gui/<uid>/<label>` for the four jobs.
 
 What a scorer preview does besides printing: importing its package (`nflweather/config.py`,
