@@ -3,6 +3,8 @@ from the nearest Meteostat station, the consensus closing total (median across
 books), opening total where available, and the result."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -43,7 +45,7 @@ def venues():
     return v[["venue_id", "venue_name", "city", "state", "lat", "lon", "elevation", "grass", "dome", "timezone"]]
 
 
-def lines():
+def lines(verbose=True):
     """Consensus closing and opening totals per game (median across books)."""
     b = pd.read_parquet(RAW / "cfbfastr" / "line_odds.parquet")
     b = b[(b.market_type == "total") & b.lines.notna()]
@@ -53,38 +55,87 @@ def lines():
     pin = per_book[per_book.book.str.upper().str.contains("PINNACLE")].groupby("game_id").line.median().rename("pin_total")
     g = g.merge(pin, on="game_id", how="left")
     g["game_id"] = g.game_id.astype("int64")
-    return g.merge(home_spreads(), on="game_id", how="left")
+    return g.merge(home_spreads(verbose=verbose), on="game_id", how="left")
 
 
-def home_spreads():
-    """Consensus home spread (negative = home favored), median across books. The
-    lines file names teams by abbreviation in older seasons and by school later, so
-    each row is matched against the home team's school, abbreviation and alt names."""
-    b = pd.read_parquet(RAW / "cfbfastr" / "line_odds.parquet")
-    b = b[(b.market_type == "spread") & b.lines.notna() & b.home_team_id.notna()]
+ALIASES = Path(__file__).with_name("spread_aliases.csv")  # sportsbook team codes, from scripts/spread_aliases.py
+SPREAD_TOL = 1.0      # rows of one (game, book) may disagree by up to a point (a hook either side); more is a conflict
+STATUS_ORDER = ["matched", "no_match", "conflict", "not_in_schedule"]
+
+
+def team_names(aliases=True):
+    """Lower-cased names each team goes by in the lines file: school, abbreviation and alternate
+    names from team info, plus (by default) the sportsbook codes in spread_aliases.csv."""
     d = RAW / "cfbfastr"
     ti = pd.concat([pd.read_parquet(p) for p in sorted(d.glob("team_info_*.parquet"))]).drop_duplicates("team_id", keep="last")
-    names = {}
-    for r in ti.itertuples():
-        names[int(r.team_id)] = {str(x).strip().lower() for x in (r.school, r.abbreviation, r.alt_name1, r.alt_name2, r.alt_name3)
-                                 if isinstance(x, str)}
+    names = {int(r.team_id): {str(x).strip().lower() for x in (r.school, r.abbreviation, r.alt_name1, r.alt_name2, r.alt_name3)
+                              if isinstance(x, str)} for r in ti.itertuples()}
+    if aliases:
+        for r in pd.read_csv(ALIASES).itertuples():
+            names.setdefault(int(r.team_id), set()).add(r.code)
+    return names
+
+
+def schedule_teams():
+    """game_id, home_id, away_id from the schedules: the orientation games.parquet's result uses."""
+    s = schedules()
+    return pd.DataFrame(dict(game_id=s.game_id.astype("int64"), home_id=pd.to_numeric(s.home_id, errors="coerce"),
+                             away_id=pd.to_numeric(s.away_id, errors="coerce")))
+
+
+def spread_pairs(b, homes, names):
+    """Home spread per (game, book) from spread rows `b` (game_id, book, season, game_desc, abbr, lines).
+
+    Each row carries one team's line. The row is matched to the schedule's home or away team (`homes`:
+    game_id, home_id, away_id) by `names` or by the "away@home" game description, and gives the home
+    spread: its line if it names the home team, minus its line if it names the away team. Rows that
+    name neither team, or both, are ignored, so duplicated rows, one-sided pairs and stray rows from
+    another game still resolve. A (game, book) is dropped when its game isn't in the schedule
+    (not_in_schedule), no row names either team (no_match), or its rows disagree by more than
+    SPREAD_TOL (conflict).
+    Returns (per_book: game_id, book, home_spread; pairs: game_id, book, season, status)."""
+    b = b[["game_id", "book", "season", "game_desc", "abbr", "lines"]].merge(homes, on="game_id", how="left")
     a = b.abbr.astype(str).str.strip().str.lower()
     desc = b.game_desc.astype(str).str.lower().str.split("@")
-    home_hit = [x in names.get(int(h), set()) or x == d[-1].strip() for x, h, d in zip(a, b.home_team_id, desc)]
-    away_hit = [x in names.get(int(w), set()) or x == d[0].strip() for x, w, d in zip(a, b.away_team_id.fillna(-1), desc)]
-    b["home_hit"], b["away_hit"] = home_hit, away_hit
-    # each (game, book) has one row per team with lines x and -x: if either row identifies
-    # its team, the home spread follows
-    rows = []
-    for (gid, book), grp in b.groupby(["game_id", "book"]):
-        if len(grp) != 2:
-            continue
-        r1, r2 = grp.iloc[0], grp.iloc[1]
-        if r1.home_hit or r2.away_hit:
-            rows.append((gid, r1.lines))
-        elif r2.home_hit or r1.away_hit:
-            rows.append((gid, r2.lines))
-    h = pd.DataFrame(rows, columns=["game_id", "home_spread"]).groupby("game_id").home_spread.median().reset_index()
+    hid, aid = b.home_id.fillna(-1).astype(int), b.away_id.fillna(-1).astype(int)
+    home_hit = np.array([x in names.get(h, ()) or x == d[-1].strip() for x, h, d in zip(a, hid, desc)], dtype=bool)
+    away_hit = np.array([x in names.get(w, ()) or x == d[0].strip() for x, w, d in zip(a, aid, desc)], dtype=bool)
+    b["implied"] = np.select([home_hit & ~away_hit, away_hit & ~home_hit], [b.lines, -b.lines], np.nan)
+    p = b.groupby(["game_id", "book"]).agg(season=("season", "first"), in_schedule=("home_id", "count"),
+                                            n=("implied", "count"), lo=("implied", "min"), hi=("implied", "max"),
+                                            home_spread=("implied", "median")).reset_index()
+    p["status"] = np.select([p.in_schedule == 0, p.n == 0, p.hi - p.lo > SPREAD_TOL],
+                            ["not_in_schedule", "no_match", "conflict"], "matched")
+    return p.loc[p.status == "matched", ["game_id", "book", "home_spread"]], p[["game_id", "book", "season", "status"]]
+
+
+def drop_table(pairs):
+    """(game, book) pairs by status and season, plus a 'dropped' row (every reason but matched)
+    and a 'total' column."""
+    t = pd.crosstab(pairs.status, pairs.season.astype(int))
+    t = t.reindex([s for s in STATUS_ORDER if s in t.index] + sorted(set(t.index) - set(STATUS_ORDER)))
+    t.loc["dropped"] = t.drop(index="matched", errors="ignore").sum()
+    t["total"] = t.sum(axis=1)
+    return t
+
+
+def home_spreads(b=None, homes=None, names=None, verbose=True):
+    """Consensus home spread (negative = home favored), median across books. Inputs default to the
+    cfbfastR spread lines, the schedule's team ids and team_names(). The (game, book) pairs that
+    give no spread are printed by reason and season (issue #36)."""
+    if b is None:
+        b = pd.read_parquet(RAW / "cfbfastr" / "line_odds.parquet")
+        b = b[(b.market_type == "spread") & b.lines.notna() & b.game_id.notna()]
+        b = b.assign(game_id=b.game_id.astype("int64"))
+    homes = schedule_teams() if homes is None else homes
+    names = team_names() if names is None else names
+    per_book, pairs = spread_pairs(b, homes, names)
+    if verbose:
+        dropped = int((pairs.status != "matched").sum())
+        print(f"  home spreads: {len(pairs):,} (game, book) pairs, {len(pairs) - dropped:,} matched, "
+              f"{dropped:,} dropped; by status and season:")
+        print("  " + drop_table(pairs).to_string().replace("\n", "\n  "))
+    h = per_book.groupby("game_id").home_spread.median().reset_index()
     h["game_id"] = h.game_id.astype("int64")
     return h
 
@@ -140,7 +191,7 @@ def build(verbose=True):
     v = venues()
     g = s.merge(v, on="venue_id", how="left")
     g["dome"] = g.dome.fillna(False).astype(bool)
-    g = g.merge(lines(), on="game_id", how="left")
+    g = g.merge(lines(verbose), on="game_id", how="left")
     sm = pd.read_parquet(PROC / "station_map.parquet") if (PROC / "station_map.parquet").exists() else None
     if sm is not None:
         w = game_weather(g[g.season.between(FIRST_SEASON, 2025)], sm)

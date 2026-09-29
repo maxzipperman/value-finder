@@ -1,0 +1,118 @@
+code,team_id,school,games,share
+aam,2010,Alabama A&M,10,1.0
+alast,2011,Alabama State,7,1.0
+alb,399,UAlbany,5,1.0
+alcst,2016,Alcorn State,11,1.0
+apb,2029,Arkansas-Pine Bluff,6,1.0
+apy,2046,Austin Peay,18,1.0
+ari,12,Arizona,145,0.986
+ark,2032,Arkansas State,3,1.0
+arks,2032,Arkansas State,150,1.0
+arm,349,Army,150,0.973
+bama,333,Alabama,158,0.994
+bgn,189,Bowling Green,152,1.0
+boise,68,Boise State,152,1.0
+cc,324,Coastal Carolina,40,1.0
+cch,2127,Charleston Southern,14,1.0
+cha,2429,Charlotte,57,1.0
+cht,236,Chattanooga,13,1.0
+cle,228,Clemson,153,1.0
+cmc,2117,Central Michigan,157,1.0
+col,38,Colorado,156,0.987
+cps,13,Cal Poly,12,1.0
+csus,16,Sacramento State,13,1.0
+dls,2169,Delaware State,9,1.0
+duk,150,Duke,154,1.0
+eil,2197,Eastern Illinois,12,1.0
+eky,2198,Eastern Kentucky,16,1.0
+elo,2210,Elon,11,1.0
+emc,2199,Eastern Michigan,153,1.0
+ew,331,Eastern Washington,13,1.0
+fre,278,Fresno State,147,1.0
+gra,2755,Grambling,6,1.0
+gso,290,Georgia Southern,76,1.0
+gst,2247,Georgia State,86,1.0
+gwb,2241,Gardner-Webb,13,1.0
+hb,2277,Houston Christian,5,1.0
+ida,70,Idaho,130,1.0
+ids,304,Idaho State,20,1.0
+ils,2287,Illinois State,8,1.0
+inds,282,Indiana State,14,1.0
+iow,2294,Iowa,159,0.981
+iw,2916,Incarnate Word,7,1.0
+jm,256,James Madison,11,0.909
+jvs,55,Jacksonville State,10,1.0
+kan,2305,Kansas,154,1.0
+ken,96,Kentucky,152,0.987
+knt,2309,Kent State,108,0.991
+kst,2306,Kansas State,150,1.0
+mar,120,Maryland,151,1.0
+mfl,2390,Miami,107,0.991
+mgn,2415,Morgan State,15,1.0
+min,135,Minnesota,153,1.0
+mis,145,Ole Miss,149,1.0
+mizst,2623,Missouri State,13,1.0
+mnm,2405,Monmouth,4,1.0
+moh,193,Miami (OH),157,0.987
+mos,147,Montana State,8,1.0
+msh,276,Marshall,150,1.0
+mts,2393,Middle Tennessee,142,1.0
+nat,2448,North Carolina A&T,5,1.0
+nav,2426,Navy,155,1.0
+naz,2464,Northern Arizona,13,1.0
+nc,153,North Carolina,157,0.904
+nfs,2450,Norfolk State,11,1.0
+nh,160,New Hampshire,11,1.0
+nic,2447,Nicholls,15,0.933
+nil,2459,Northern Illinois,162,0.994
+nm,167,New Mexico,148,0.98
+nms,166,New Mexico State,154,0.994
+noco,2458,Northern Colorado,8,1.0
+ntx,249,North Texas,144,1.0
+nw,77,Northwestern,157,1.0
+nws,2466,Northwestern State,15,1.0
+ohi,195,Ohio,154,0.994
+okl,201,Oklahoma,158,1.0
+oks,197,Oklahoma State,148,0.993
+ors,204,Oregon State,147,1.0
+pit,221,Pittsburgh,152,1.0
+rch,257,Richmond,10,1.0
+ril,227,Rhode Island,11,1.0
+rut,164,Rutgers,157,1.0
+sab,6,South Alabama,95,1.0
+sau,2617,Stephen F. Austin,9,1.0
+sbk,2619,Stony Brook,11,1.0
+scs,2569,South Carolina State,5,1.0
+sds,2571,South Dakota State,10,0.9
+sel,2545,SE Louisiana,15,1.0
+sem,2546,Southeast Missouri State,10,1.0
+shs,2534,Sam Houston,8,1.0
+sil,79,Southern Illinois,12,0.917
+sjs,23,San José State,132,1.0
+sta,24,Stanford,154,1.0
+sut,253,Southern Utah,19,0.947
+svs,2542,Savannah State,14,1.0
+ten,2633,Tennessee,152,1.0
+tep,2638,UTEP,147,0.993
+tnt,2635,Tennessee Tech,12,0.917
+try,2653,Troy,150,0.993
+tsa,202,Tulsa,118,1.0
+tso,2640,Texas Southern,7,1.0
+tt,2641,Texas Tech,149,0.993
+tul,2655,Tulane,148,0.993
+twn,119,Towson,11,1.0
+txam,245,Texas A&M,145,1.0
+uca,2110,Central Arkansas,12,1.0
+ull,309,Louisiana,82,1.0
+umaine,311,Maine,16,1.0
+uth,254,Utah,156,1.0
+uts,328,Utah State,149,1.0
+was,264,Washington,150,1.0
+wbs,2692,Weber State,16,1.0
+wc,2717,Western Carolina,18,0.944
+wf,154,Wake Forest,152,1.0
+wil,2710,Western Illinois,13,1.0
+wky,98,Western Kentucky,133,1.0
+wm,2729,William & Mary,12,1.0
+wmc,2711,Western Michigan,155,1.0
+wst,265,Washington State,151,0.993
