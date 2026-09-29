@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8765", "--directory", "nfl-weather/report"],
       "port": 8765
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--project", "dashboard", "python", "-m", "vfdash", "--port", "8787"],
+      "port": 8787
     }
   ]
 }
