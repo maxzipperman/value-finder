@@ -141,7 +141,7 @@ What differs from the college version:
 
 ## Forecast replay on NWS MOS, the full run: 2004–25 (issue #40, Sep 29)
 
-Count at merge (Sep 29, 2026): 272; bar p < 0.000184. It is 273 (bar p < 0.000183) if the hub counts the after-the-fact cut described under "What it means".
+Count at merge (Sep 29, 2026): 273; bar p < 0.000183. That includes 1 for the cut looked at after the results, described under "What it means": the hub counts it, because every look is counted.
 
 **The headline changed after review: with the last 28 downloads fetched, the rule went 337–261–9 (56.4%) on 607 signals, p = 0.028; the first draft had 323–253–8 (56.1%) on 584, p = 0.041.** The 221 games that had no forecast (every Baltimore home game, and Washington's 2004–09 games) now have one. 23 of them are signals, and those went 14–8–1. The review had pointed out that these games leaned toward the under on observed wind (the 22 of them with 15+ mph went 17–4–1), so a rise was the likelier direction.
 
@@ -153,7 +153,8 @@ The replay described above, unchanged, on 22 seasons. Every game at a stadium wi
 - **At an assumed −110 the ROI is +7.6%.** The 95% interval runs from 52.4% to 60.3% for the win rate, or −0.1% to +15.1% for the ROI.
 - **It is consistent with the observed-wind evidence** the rule rests on (57.2% on 682 games since 1999).
 - **It is only weakly distinguishable from break-even**: one-sided p = 0.028, and 0.021 with standard errors grouped by game day.
-- **It is far from this project's bar** (p < 0.000184, 272 variants).
+- **It is far from this project's bar** (p < 0.000183, 273 variants).
+- **It is not an independent test.** 333 of the 607 signals are games the observed-wind evidence already counts. The 274 only the forecast flagged went 148–122–4 (54.8%, p = 0.23), which can't be told from break-even.
 - **In the 15 seasons with a second source of lines (2007–21), the rule is indistinguishable from break-even**: 214–181–5 (54.2%, 400 signals, p = 0.25) at the nflverse close, and 214–181–2 (54.2%, 397, p = 0.25) at SBR's own close.
 - **The declared eras** (descriptive, no variant):
   - 2004–14: 164–133–4 (55.2%, 301 signals, p = 0.18);
@@ -247,7 +248,7 @@ The replay described above, unchanged, on 22 seasons. Every game at a stadium wi
   - One-sided p is 0.028, 0.021 grouped by game day (327 game days, 1.8 signals a day), and 0.034 if same-day results correlated at 0.1.
   - By this project's bar, no.
 - **In the 15 seasons with a second source of lines, it is indistinguishable from break-even.** Across 2007–21 the rule went 214–181–5 (54.2%, 400 signals, p = 0.25) at the nflverse close, and 214–181–2 (54.2%, 397, p = 0.25) at SBR's own close. The two closes agree. It did better at the SBR opener (58.2%), which, as in college football, is posted before the forecast that fires.
-- **A look taken after the results, not a test.** The first draft read the per-season table and wrote that the pooled result "owes most to 2004–06 and 2021–23" and that 2007–21 "are simply weaker". Both sentences were written after seeing the results. The worker who drafted them also computed one cut in scratch: the seasons outside 2007–21 (2004–06 and 2022–25) went 123–80–4 (60.6%, 207 signals, p = 0.011; it was 118–74–3 before the 28 downloads). Because that cut was chosen after looking, its p-value means little. Whether it counts as a variant is the hub's decision; if it does, the running count is 273 (bar p < 0.000183). Nothing in this write-up rests on it.
+- **A look taken after the results, not a test.** The first draft read the per-season table and wrote that the pooled result "owes most to 2004–06 and 2021–23" and that 2007–21 "are simply weaker". Both sentences were written after seeing the results. The worker who drafted them also computed one cut in scratch: the seasons outside 2007–21 (2004–06 and 2022–25) went 123–80–4 (60.6%, 207 signals, p = 0.011; it was 118–74–3 before the 28 downloads). Because that cut was chosen after looking, its p-value means little. The hub counts it as a variant, because the project counts every look it takes: the running count is 273 (bar p < 0.000183). Nothing in this write-up rests on it.
 - **The NFL signal count** is about 28 a season (19–39), about 24 of them from Oct 1 on (15–31).
 - **What it does not show.**
   - The price actually available 1–3 days early, or the board's expected-value gate.
@@ -255,7 +256,7 @@ The replay described above, unchanged, on 22 seasons. Every game at a stadium wi
   - Independence from the observed-wind evidence: 333 of the 607 signals are games that evidence counts. The 274 only the forecast flagged went 148–122–4 (54.8%, p = 0.23).
   - That it describes the board's own signals: on the 380 games of 2023–25 with both, MOS fired 63 times and Open-Meteo 42, with 35 in both.
 
-**Variants.** 1 for the NFL. With the college football replay already counted in main's 271, the total is **272**, bar p < 0.000184 (273 and p < 0.000183 if the hub counts the scratch cut above). The era cuts, the SBR opener and close grades, the opener comparison, the bias tables and the split above describe the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 270`).
+**Variants.** 2 for the NFL: the replay, and the cut above that was looked at after the results (counted because every look is counted). With the college football replay already counted in main's 271, the total is **273**, bar p < 0.05 / 273 = 0.000183. The era cuts, the SBR opener and close grades, the opener comparison, the bias tables and the split above describe the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 271`).
 
 **No lookahead, checked by hand.** [`scripts/mos_hand_check.py`](scripts/mos_hand_check.py) prints the run selection for 11 real games, with every run, publication time and interpolation ([`output/mos_hand_check.log`](output/mos_hand_check.log)):
 - a 1 PM Sunday kickoff that lead 3 reaches, and a 4:25 PM one it doesn't;

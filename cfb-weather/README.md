@@ -149,7 +149,7 @@ Outputs: per-game rows in `data/processed/mos_replay*.parquet`, tables in `outpu
 
 ## Forecast replay on NWS MOS, the full run: 2006–25 (issue #40, Sep 29)
 
-Count at merge (Sep 29, 2026): 272; bar p < 0.000184.
+Count at merge (Sep 29, 2026): 273; bar p < 0.000183.
 
 *Revised after review, Sep 29: no college football number changed. The bottom line is reworded to claim less, the observed-wind row is relabeled (it was never the same games as the signals), and the opener is now compared with the close on the same games.*
 
@@ -160,7 +160,7 @@ The same replay as the section above, unchanged, on all 20 seasons once the down
 - **On the forecasts as they were issued, the rule went 715–555–14 (56.3%) on 1,284 signals over 20 seasons.** At an assumed −110 that is a return of +7.5% per bet (95% interval +2.2% to +12.6%).
 - **That is the same rate as the observed-wind history** the rule was built on (56.6% on 990 games).
 - **It beats break-even (52.4%) by ordinary standards**: one-sided p = 0.003. That is still 0.004 when games on the same day are treated as related (standard errors grouped by game day), and 0.013 if same-day results were as correlated as same-day line moves (about 0.1, from the paper-to-money study).
-- **It does not clear this project's bar**, p < 0.000184, which splits 0.05 over 272 tested variants. Nor is it an independent test:
+- **It does not clear this project's bar**, p < 0.000183, which splits 0.05 over 273 tested variants. Nor is it an independent test:
   - 602 of the 1,284 signals are games the observed-wind evidence already counts.
   - The 682 games only the forecast flagged went 365–311–6 (54.0%), p = 0.21. As independent evidence, that is weak.
 - **It is not the forecast the live board reads.** The board reads Open-Meteo. On the 1,670 games of 2024–25 both cover, MOS fired 135 times and Open-Meteo 110, and only 65 games were flagged by both.
@@ -309,7 +309,7 @@ Per season and lead, with the reason for every missing forecast: [`output/tables
   - One-sided p is 0.003 (1,270 decided bets), and 0.004 grouped by game day (364 game days, 3.5 signals a day).
   - The tightest caution is the paper-to-money study's same-day correlation of about 0.1 in line moves. If results correlated that much, the interval would widen to 52.9–59.7% and p would be 0.013.
   - The outcomes themselves show less clustering than that: grouping by day widens the interval only slightly.
-  - By this project's bar, no. After 272 variants the bar is p < 0.000184.
+  - By this project's bar, no. After 273 variants the bar is p < 0.000183.
 - **How many signals a season?**
   - 64 a season in 2006–25 (range 28–96), and 67 in 2021–25.
   - From Oct 1 on, the part of a season still ahead on Oct 1, it is 49 (range 26–86), and 47 in 2021–25.
@@ -325,7 +325,7 @@ Per season and lead, with the reason for every missing forecast: [`output/tables
   - **That the market hasn't adapted.** The last five seasons (57.3%) show no fade, but five seasons can't rule one out.
 - **Bottom line.** The forecast version of Rule B has now been replayed on 20 seasons, not 3. On NWS MOS forecasts graded at the consensus close, it wins at the same rate as the observed-wind history, about 56%. The games it adds to that history went 54.0% (p = 0.21), so it is weak independent evidence. It is also not a record of the rule as the board bets it: a different forecast (Open-Meteo, which flagged mostly different games in 2024–25), one book's price 1–3 days early, a −115 cap and an expected-value gate. It supports the rule; it does not prove it. It does not settle whether to bet real money this season; the paper-to-money gate and the forward test still decide that.
 
-**Variants.** 1 for college football, already counted in main's 271 when PR 61 merged. The NFL replay adds 1, for **272**, bar p < 0.05 / 272 = 0.000184. The era cuts, the bias tables, the coverage counts, the opener comparison and the both/forecast-only split are descriptions of the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 270`). One NFL cut taken after seeing the results is disclosed in `nfl-weather/README.md`; if the hub counts it, the total is 273 (bar p < 0.000183). No college number is near either bar.
+**Variants.** 1 for college football, already counted in main's 271 when PR 61 merged. The NFL replay adds 1, and one NFL cut looked at after its results (described in `nfl-weather/README.md`) adds 1, because every look is counted: **273**, bar p < 0.05 / 273 = 0.000183. The era cuts, the bias tables, the coverage counts, the opener comparison and the both/forecast-only split are descriptions of the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 271`). No college number is near the bar.
 
 **No lookahead, checked by hand.** [`scripts/mos_hand_check.py`](scripts/mos_hand_check.py) prints the run selection for 12 real games that cover the edge cases:
 - a noon kickoff, and an 11:59 PM Eastern kickoff that is the next day in UTC;

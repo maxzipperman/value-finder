@@ -239,5 +239,5 @@ Against Open-Meteo previous runs (step 3 of the issue):
   lead 3 (n=203): MOS minus Open-Meteo (game-book scale) +1.12 mph, corr 0.85; vs game-book wind: MOS MAE 3.09, Open-Meteo MAE 2.66
   signals: MOS 63 (31-31-1), Open-Meteo 42 (22-20-0), both 35
 
-Multiple testing: 1 variant for the NFL; with the CFB replay already inside main's running count of 271, this makes 272. Bonferroni bar p < 0.000184. Pooled one-sided p = 0.0283. The era cuts above are descriptive and add none.
+Multiple testing: 1 variant for the NFL, plus 1 for a cut looked at after the results (the seasons outside 2007-21; every look is counted); with the CFB replay already inside main's running count of 271, this makes 273. Bonferroni bar p < 0.000183. Pooled one-sided p = 0.0283. The era cuts above are descriptive and add none.
 Observed-wind history for comparison: 57.2% in 682 observed-wind games since 1999 (STRATEGY.md).

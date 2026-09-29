@@ -54,9 +54,10 @@ from cfbweather.config import OUT, PROC, TABLES
 WIND = 15.0                  # board.RULE_B_WIND; checked in tests/test_mos.py
 ENTRY_ODDS = -110
 BREAK_EVEN = 110 / 210
-# The running count on main is 271 (STATUS.md, Sep 29, 2026), and it already counts this replay (PR 61):
-# 270 other variants + this one. The NFL replay adds 1 when it runs: 272, bar p < 0.05 / 272 = 0.000184.
-VARIANTS_BEFORE = 270
+# The running count on main is 271 (STATUS.md, Sep 29, 2026), and it already counts this replay (PR 61).
+# The NFL replay adds 1, and one NFL cut looked at after its results (the seasons outside 2007-21) adds 1,
+# because every look is counted: 273, bar p < 0.05 / 273 = 0.000183 (hub decision, Sep 29, PR 65).
+VARIANTS_BEFORE = 271
 LEADS = mos.LEADS
 MIN_BIAS_N = 20             # a lead with fewer games with both winds gets no bias row
 # Era cuts, declared before the 2006-25 run (issue #40 brief, Sep 29): descriptive, 0 variants.
@@ -529,8 +530,9 @@ def main():
               f"range {per_season.signals.min()}-{per_season.signals.max()}; from Oct 1: mean "
               f"{per_season.from_oct1.mean():.1f}, range {per_season.from_oct1.min()}-{per_season.from_oct1.max()}",
               "", "Against Open-Meteo, 2024-25 (step 3 of the issue):", *openmeteo_compare(d), "",
-              f"Multiple testing: 1 variant for CFB, already inside main's running count of 271 ({VARIANTS_BEFORE} "
-              f"others + this); the NFL replay adds 1, for {VARIANTS_BEFORE + 2}. Bonferroni bar p < {bar:.6f}. "
+              f"Multiple testing: 1 variant for CFB, already inside main's running count of {VARIANTS_BEFORE}; the NFL "
+              f"replay adds 1 and one NFL cut looked at after its results adds 1, for {VARIANTS_BEFORE + 2}. "
+              f"Bonferroni bar p < {bar:.6f}. "
               f"Pooled one-sided p = {pooled.close_p_one_sided}. The era cuts above are descriptive and add none.",
               f"Observed-wind history for comparison: {OBSERVED_HISTORY}."]
     text = "\n".join(lines)

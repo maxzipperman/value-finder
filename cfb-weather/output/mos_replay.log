@@ -201,5 +201,5 @@ Against Open-Meteo, 2024-25 (step 3 of the issue):
   signals on the same 1670 games: MOS 135 (73-60-2), Open-Meteo 110 (61-46-3), both 65
   Open-Meteo signals that fired only at lead 3 (which GFS MOS rarely reaches): 19 of 110
 
-Multiple testing: 1 variant for CFB, already inside main's running count of 271 (270 others + this); the NFL replay adds 1, for 272. Bonferroni bar p < 0.000184. Pooled one-sided p = 0.0028. The era cuts above are descriptive and add none.
+Multiple testing: 1 variant for CFB, already inside main's running count of 271; the NFL replay adds 1 and one NFL cut looked at after its results adds 1, for 273. Bonferroni bar p < 0.000183. Pooled one-sided p = 0.0028. The era cuts above are descriptive and add none.
 Observed-wind history for comparison: 56.6% in 990 observed-wind games, 2006-25 (STRATEGY.md).

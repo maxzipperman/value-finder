@@ -51,9 +51,10 @@ WIND = 15.0                  # board.RULE_B_WIND
 ENTRY_ODDS = -110
 MIN_UNDER_ODDS = -115        # market.MIN_UNDER_ODDS, the board's price cap
 BREAK_EVEN = 110 / 210
-# The running count on main is 271 (STATUS.md, Sep 29, 2026), which already counts the CFB replay (PR 61):
-# 270 others + the CFB replay. This replay adds 1: 272, bar p < 0.05 / 272 = 0.000184.
-VARIANTS_BEFORE = 270
+# The running count on main is 271 (STATUS.md, Sep 29, 2026), which already counts the CFB replay (PR 61).
+# This replay adds 1, and one cut looked at after its results (the seasons outside 2007-21) adds 1, because
+# every look is counted: 273, bar p < 0.05 / 273 = 0.000183 (hub decision, Sep 29, PR 65).
+VARIANTS_BEFORE = 271
 LEADS = mos.LEADS
 MIN_BIAS_N = 20             # a lead with fewer games with both winds gets no bias row
 # Era cuts, declared before the 2004-25 run (issue #40 brief, Sep 29): descriptive, 0 variants.
@@ -504,8 +505,9 @@ def main():
               per_season.T.to_string(), f"  mean {per_season.signals.mean():.1f}, median {per_season.signals.median():.0f}, "
               f"range {per_season.signals.min()}-{per_season.signals.max()}",
               "", "Against Open-Meteo previous runs (step 3 of the issue):", *openmeteo_compare(d), "",
-              f"Multiple testing: 1 variant for the NFL; with the CFB replay already inside main's running count of "
-              f"271, this makes {VARIANTS_BEFORE + 2}. Bonferroni bar p < {bar:.6f}. Pooled one-sided p = "
+              f"Multiple testing: 1 variant for the NFL, plus 1 for a cut looked at after the results (the seasons "
+              f"outside 2007-21; every look is counted); with the CFB replay already inside main's running count of "
+              f"{VARIANTS_BEFORE}, this makes {VARIANTS_BEFORE + 2}. Bonferroni bar p < {bar:.6f}. Pooled one-sided p = "
               f"{pooled.close_p_one_sided}. The era cuts above are descriptive and add none.",
               f"Observed-wind history for comparison: {OBSERVED_HISTORY}."]
     text = "\n".join(lines)
