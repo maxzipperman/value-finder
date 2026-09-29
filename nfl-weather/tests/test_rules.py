@@ -59,9 +59,9 @@ def test_scorer_grades_wind_only_rule_b(tmp_path):
     import subprocess
 
     import pandas as pd
-    led = pd.DataFrame([dict(snapshot_utc="2026-10-08T15:00:00Z", rules_version="v2", game_id="TEST_G1",
+    led = pd.DataFrame([dict(snapshot_utc="2026-10-08T15:00:00Z", rules_version="v2-2026-09-28", game_id="TEST_G1",
                              gameday="2026-10-11", gametime="13:00", away_team="A", home_team="B", lead_days=3,
-                             wx_src="era5", wx_wind=16, wx_temp=60, wx_precip=0, wx_snow=0, line_src="nflverse",
+                             wx_src="era5", wx_wind=16, wx_temp=60, wx_precip=0, wx_snow=0, line_src="pinnacle",
                              total_line=44, under_odds=-110, over_odds=-110, p_under=0.54, p_market=0.5, lean="",
                              ev_under=0.08, rule_b="SIGNAL")])
     games = pd.DataFrame([dict(game_id="TEST_G1", total=40, total_line=42, gameday="2026-10-11", gametime="13:00",
@@ -111,7 +111,7 @@ def test_scorer_reports_cost_of_waiting(tmp_path):
     import subprocess
 
     import pandas as pd
-    led = pd.DataFrame([dict(snapshot_utc="2026-10-08T15:00:00Z", rules_version="v2", game_id="TEST_G1",
+    led = pd.DataFrame([dict(snapshot_utc="2026-10-08T15:00:00Z", rules_version="v2-2026-09-28", game_id="TEST_G1",
                              gameday="2026-10-11", gametime="13:00", away_team="A", home_team="B", lead_days=3,
                              wx_src="era5", wx_wind=16, wx_temp=60, wx_precip=0, wx_snow=0, line_src="pinnacle",
                              total_line=44, under_odds=-110, over_odds=-110, p_under=0.54, p_market=0.5, lean="",

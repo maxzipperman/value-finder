@@ -11,9 +11,9 @@ Version 2 follows an independent audit; see `PREREGISTRATION.md` amendment 2.
 
 | | |
 |---|---|
-| **Trigger** | Outdoor stadium, kickoff wind forecast **≥ 15 mph** (game-book scale), **1–3 days before kickoff**. |
-| **Price gate** | A posted total, an under price of **−115 or better**, and **positive expected value at that line and price**. The alert computes EV from what actually happened after comparable windy lines (1999–2023), so a worse number or price can fail even when the wind trigger fires. |
-| **Alert** | `RULE B WIND UNDER 42.5 at −110: …`. A wind trigger without a usable price arrives as `WATCH … no bet (no price / price too high / negative EV)`. |
+| **Trigger** | Outdoor stadium, kickoff wind forecast **≥ 15 mph** (game-book scale), **1–3 days before kickoff**. *Amendment 5:* days are calendar days (the kickoff's Eastern date minus the run's date), so a signal can be logged about 11 to 82 hours out. |
+| **Price gate** | A posted total, an under price of **−115 or better**, and **positive expected value at that line and price**. The alert computes EV from what actually happened after comparable windy lines (1999–2023), so a worse number or price can fail even when the wind trigger fires. *Amendment 5:* the pricing model is registered in full in `PREREGISTRATION.md`. At the rule's own number the value only reaches zero at about −136, so inside the −115 cap this gate can't reject a bet: in practice the gates are the wind, the window and the price. **Pinnacle's price is the registered test.** When Pinnacle has no quote, a signal at the backup consensus line is labelled *secondary price*, reported separately, and left out of the decision. |
+| **Alert** | `RULE B WIND UNDER 42.5 at −110: …`. A wind trigger without a usable price arrives as `WATCH … no bet (no price / price too high / negative EV)`. *Amendment 5:* the alert also names the best number any logged book offers, with its value (`Best number: under 43.5 at −108 (FanDuel), expected value +12.1%`). A point of total is worth about 2.4 points of win probability. |
 | **Action** | Take that number or better, right away. Rain or snow in the forecast does not change the stake. |
 | **Stake** | Paper-trade it until 20 settled signals show positive average CLV. If you bet before then, flat 0.5% of bankroll per signal, never more. |
 | **Line lag** | Same gates, plus the wind forecast rose 5+ mph since the last check while a posted total barely moved (`RULE B LINE LAG`). |

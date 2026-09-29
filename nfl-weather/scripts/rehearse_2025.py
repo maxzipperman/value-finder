@@ -46,10 +46,13 @@ for lead, col in ((3, "fc3_wind"), (1, "fc1_wind")):
     s["wx_src"] = np.where(outdoor, "era5", np.where(s.wx_src.isin(["gamebook", "era5"]), "missing", "indoor"))
     s["wx_wind"] = (cal["wind_intercept"] + cal["wind_slope"] * s[col]).clip(lower=0).where(outdoor)
     s["lead_days"] = lead
-    s["line_src"] = "nflverse close"
+    # The rehearsal has one price per game, the nflverse close, so it stands in for the rule book:
+    # a signal here is a primary one. Live, a consensus-priced signal is labelled secondary (amendment 5).
+    s["line_src"] = board.PRIMARY_SRC
     s["mkt_total"], s["mkt_under"], s["mkt_over"] = s.total_line, s.under_odds, s.over_odds
     s["ev_under"] = ev_under(s.mkt_total, s.mkt_under, s.mkt_total, resid)
     s["rule_b"] = s.apply(board.rule_b_status, axis=1)
+    s["line_src"] = "nflverse close"
     s["snapshot_utc"] = s.kick - pd.Timedelta(days=lead)
     rows.append(s)
 S = pd.concat(rows, ignore_index=True)

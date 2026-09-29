@@ -70,6 +70,17 @@ During the season, a weekly refresh is just `fetch_data.py`, `build_data.py`
 and `this_week.py`. Everything is cached under `data/raw`, so only new games,
 new weather and new lines are downloaded.
 
+## The Sep 29 audit and what changed
+
+An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-09-29-astra-audit.md)) traced each rule from trigger to scored result. Amendment 5 settles every gap it found. In short:
+
+- **The pricing model is registered in full**, with a frozen cohort file and hash. A half-point line can't push. The size of the total doesn't move the price, because the data showed no dependence ([`../strategy-research/gate_level_check.py`](../strategy-research/gate_level_check.py)).
+- **Inside the −115 cap the expected-value gate can't reject a bet at the rule's own number.** The model's real use is pricing a better number at another book, which every run now logs.
+- **Pinnacle's price is the registered test.** A signal at the backup consensus line is labelled secondary and reported separately.
+- **Crosswind is logged** on every row (`wx_cross`, `wx_along`), from stadium orientations in `data/processed/stadium_headings.csv` (greerreNFL/stadiums, cross-checked against ThompsonJamesBliss/WeatherData; three closed stadiums where the sources disagree are left out). No rule uses it.
+- **The scorer enforces the test:** registered versions only, pre-kickoff rows only, inside the test window, with each decision computed and labelled interim or final.
+- **Log, don't drop:** every run leaves a row in `data/forward/runs.csv`; every forecast behind a logged row is kept under its content hash in `data/forward/forecasts/`.
+
 ## Where the data comes from
 
 | Source | What | Notes |

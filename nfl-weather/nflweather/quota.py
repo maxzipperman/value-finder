@@ -5,8 +5,9 @@ free plan, reset on the 1st). The last quota the API reported is kept in one
 file outside the repo, ~/.cache/value-finder/odds_quota.json, so each project
 sees what the other spent.
 
-* Scheduled alert runs (launchd sets XPC_SERVICE_NAME to the job label) call the
-  API until the quota is gone; an exhausted quota just means no price that run.
+* Scheduled runs (the alert jobs and close capture; launchd sets XPC_SERVICE_NAME to the
+  job label) call the API until the quota is gone; an exhausted quota just means no price
+  that run.
 * Manual runs skip the API when fewer than MANUAL_FLOOR credits remain, so the
   alerts keep their budget for the rest of the month.
 * Background loggers (the trigger poller, the props log and the other live uses; their
@@ -43,8 +44,11 @@ BACKGROUND_MIN_FLOOR = 2_000      # background loggers leave at least this many 
 BACKGROUND_SHARE = 0.02           # or 2% of the plan if that is more (100K on the 5M plan)
 
 
+SCHEDULED_JOBS = (".alerts", ".closecapture")    # launchd labels: the alert jobs and close capture
+
+
 def scheduled() -> bool:
-    return os.environ.get("XPC_SERVICE_NAME", "").endswith(".alerts")
+    return os.environ.get("XPC_SERVICE_NAME", "").endswith(SCHEDULED_JOBS)
 
 
 def fingerprint(key: str | None) -> str | None:

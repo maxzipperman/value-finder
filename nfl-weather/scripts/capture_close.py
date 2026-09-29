@@ -5,8 +5,10 @@ Runs every 15 minutes (ops/capture_closes.sh, launchd). When NFL games kick off 
 (1 credit) records the current total and prices of every logged book (LIVE_BOOKS) for
 every game in the slot; the secondary CLV uses Pinnacle's.
 Rows are appended to data/forward/closes.csv. A slot that fails (no key, quota low,
-API down) is retried on the next run while it's still inside the window, and
-otherwise stays missing: score_forward.py reports missing closes and never imputes them.
+API down), or that comes back without Pinnacle's total for some game, is retried on the
+next run while it's still inside the window (at most MAX_TRIES calls per slot). What is
+still missing then stays missing: score_forward.py reports missing closes and never
+imputes them. The scorer takes each game's last captured row.
 
     python scripts/capture_close.py [--now 2026-10-09T00:05:00Z]
 """
@@ -23,6 +25,7 @@ from nflweather import oddsapi
 from nflweather.config import RAW, ROOT
 
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
+MAX_TRIES = 2
 FWD = ROOT / "data" / "forward"
 CLOSES, STATE = FWD / "closes.csv", FWD / "close_state.json"
 
@@ -35,6 +38,7 @@ g = pd.read_csv(RAW / "games.csv")
 g = g[g.result.isna() & g.gametime.notna()].copy()
 g["kick_utc"] = pd.to_datetime(g.gameday + " " + g.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
 state = json.loads(STATE.read_text()) if STATE.exists() else {"captured": []}
+state.setdefault("tries", {})
 due = g[(g.kick_utc - now).between(*WINDOW)]
 slots = sorted({t.strftime("%Y-%m-%dT%H:%MZ") for t in due.kick_utc} - set(state["captured"]))
 if not slots:
@@ -55,8 +59,14 @@ rows = due[["game_id", "kick_utc", "home_team", "away_team"]].merge(
 rows["kick_utc"] = rows.kick_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 FWD.mkdir(parents=True, exist_ok=True)
 rows.to_csv(CLOSES, mode="a", header=not CLOSES.exists(), index=False)
-state["captured"] = sorted(set(state["captured"]) | set(slots))
+slot_of = dict(zip(due.game_id, due.kick_utc.dt.strftime("%Y-%m-%dT%H:%MZ")))
+have = set(rows.loc[rows.book.eq("pinnacle") & rows.close_total.notna(), "game_id"])
+for slot in slots:
+    state["tries"][slot] = state["tries"].get(slot, 0) + 1
+    complete = all(g in have for g, sl in slot_of.items() if sl == slot)
+    if complete or state["tries"][slot] >= MAX_TRIES:
+        state["captured"] = sorted(set(state["captured"]) | {slot})
 STATE.write_text(json.dumps(state))
-pin_games = rows.loc[rows.book.eq("pinnacle") & rows.close_total.notna(), "game_id"].nunique()
+pin_games = len(have)
 print(f"{now:%Y-%m-%d %H:%M}Z close capture: Pinnacle close for {pin_games}/{due.game_id.nunique()} games, "
       f"{rows.book.nunique()} books logged, for {', '.join(slots)}")

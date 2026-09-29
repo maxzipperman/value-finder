@@ -1,0 +1,64 @@
+stadium_id,stadium_name,heading,roof_type,second_source_gap_deg,use
+ATL00,Georgia Dome,270.0,Dome,,True
+ATL97,Mercedes-Benz Stadium,80.0,Outdoors,9.1,True
+BAL00,M&T Bank Stadium,290.0,Outdoors,0.5,True
+BOS00,Gillette Stadium,342.0,Outdoors,1.0,True
+BOS99,Foxboro Stadium,356.0,Outdoors,2.3,True
+BRG00,Tiger Stadium (LSU),337.0,Outdoors,1.0,True
+BUF00,Highmark Stadium,302.0,Outdoors,0.1,True
+BUF01,Rogers Centre,73.0,Dome,86.6,False
+CAR00,Bank of America Stadium,320.0,Outdoors,2.4,True
+CHI98,Soldier Field,356.0,Outdoors,2.1,True
+CHI99,Memorial Stadium (Champaign),359.0,Outdoors,1.0,True
+CIN00,Paycor Stadium,321.0,Outdoors,0.4,True
+CIN99,Cinergy Field,292.0,Outdoors,,True
+CLE00,Huntington Bank Field,56.0,Outdoors,0.1,True
+DAL00,AT&T Stadium,69.0,Outdoors,1.0,True
+DAL99,Texas Stadium,40.0,Outdoors,,True
+DEN00,Empower Field at Mile High,0.0,Outdoors,0.0,True
+DEN99,Mile High Stadium,0.0,Outdoors,0.0,True
+DET00,Ford Field,334.0,Dome,,True
+DET99,Pontiac Silverdome,313.0,Dome,,True
+FRA00,Deutsche Bank Park,306.0,Outdoors,,True
+GER00,Allianz Arena,345.0,Outdoors,,True
+GNB00,Lambeau Field,359.0,Outdoors,1.0,True
+HOU00,Reliant Stadium,0.0,Outdoors,1.8,True
+IND00,Lucas Oil Stadium,26.0,Outdoors,0.6,True
+IND99,RCA Dome,272.0,Dome,,True
+JAX00,EverBank Stadium,14.0,Outdoors,2.7,True
+KAN00,GEHA Field at Arrowhead Stadium,316.0,Outdoors,0.3,True
+LAX01,SoFi Stadium,335.0,Dome,3.2,True
+LAX97,StubHub Center,0.0,Outdoors,0.0,True
+LAX99,Los Angeles Memorial Coliseum,270.0,Outdoors,0.0,True
+LON00,Wembley Stadium,270.0,Outdoors,0.0,True
+LON01,Twickenham Stadium,326.0,Outdoors,1.2,True
+LON02,Tottenham Hotspur Stadium,356.0,Outdoors,4.0,True
+MEX00,Estadio Banorte,6.0,Outdoors,0.1,True
+MIA00,Hard Rock Stadium,301.0,Outdoors,1.1,True
+MIN00,Mall of America Field,30.0,Dome,,True
+MIN01,U.S. Bank Stadium,312.0,Dome,,True
+MIN98,TCF Bank Stadium,270.0,Outdoors,0.0,True
+MUN01,FC Bayern Munich Stadium,345.0,Dome,,True
+NAS00,Nissan Stadium,335.0,Outdoors,0.4,True
+NOR00,Caesars Superdome,292.0,Dome,,True
+NYC00,Giants Stadium,346.0,Outdoors,0.5,True
+NYC01,MetLife Stadium,346.0,Outdoors,,True
+OAK00,Ring Central Coliseum,325.0,Outdoors,0.3,True
+PHI00,Lincoln Financial Field,352.0,Outdoors,1.0,True
+PHI99,Veterans Stadium,8.0,Outdoors,82.0,False
+PHO00,State Farm Stadium,328.0,Outdoors,2.0,True
+PHO99,Sun Devil Stadium,14.0,Outdoors,0.2,True
+PIT00,Acrisure Stadium,335.0,Outdoors,1.1,True
+PIT99,Three Rivers Stadium,308.0,Outdoors,52.0,False
+SAN00,Alamo Dome,0.0,Dome,,True
+SAO00,Arena Corinthians,0.0,Outdoors,,True
+SDG00,Qualcomm Stadium,291.0,Outdoors,,True
+SEA00,Lumen Field,0.0,Outdoors,0.0,True
+SEA98,Seattle Kingdome,0.0,Dome,,True
+SEA99,Husky Stadium,288.0,Outdoors,1.6,True
+SFO00,Candlestick Park,358.0,Outdoors,2.0,True
+SFO01,Levi's Stadium,331.0,Outdoors,1.0,True
+STL00,Edward Jones Dome,15.0,Dome,,True
+TAM00,Raymond James Stadium,0.0,Outdoors,0.0,True
+VEG00,Allegiant Stadium,25.0,Dome,,True
+WAS00,Northwest Stadium,299.0,Outdoors,4.0,True

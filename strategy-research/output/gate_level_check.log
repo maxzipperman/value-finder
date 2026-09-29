@@ -1,0 +1,37 @@
+
+===== NFL: frozen cohort n=656 (through 2023); 2024-25 check n=36
+                games  under_rate  final_minus_total
+total_line                                          
+(29.999, 38.0]    168       0.613             -1.667
+(38.0, 41.5]      164       0.518              0.256
+(41.5, 45.0]      165       0.624             -3.315
+(45.0, 58.0]      149       0.544             -1.812
+logit slope per 10 points of total: -0.059 (se 0.167, p 0.722); final - total per point: -0.134 (se 0.117, p 0.249)
+
+===== CFB: frozen cohort n=855 (through 2023); 2024-25 check n=145
+                games  under_rate  final_minus_total
+total_line                                          
+(30.499, 47.0]    220       0.595             -1.860
+(47.0, 53.0]      206       0.544             -0.269
+(53.0, 59.5]      219       0.543             -0.709
+(59.5, 82.5]      200       0.585             -1.333
+logit slope per 10 points of total: -0.016 (se 0.077, p 0.833); final - total per point: +0.009 (se 0.065, p 0.893)
+
+sport                model  cohort_n  loso_log_loss  logit_slope_per_10  logit_slope_p  check_games  rejected_at_minus_115 kept_record  p_under_at_36  p_under_at_48  p_under_at_60
+  NFL  kernel, bandwidth 2       656        0.68845              -0.059          0.722           36                      0       18-18          0.595          0.553          0.923
+  NFL  kernel, bandwidth 3       656        0.68719              -0.059          0.722           36                      0       18-18          0.581          0.562          0.716
+  NFL  kernel, bandwidth 4       656        0.68638              -0.059          0.722           36                      0       18-18          0.574          0.563          0.612
+  NFL  kernel, bandwidth 6       656        0.68539              -0.059          0.722           36                      0       18-18          0.571          0.563          0.563
+  NFL  kernel, bandwidth 8       656        0.68496              -0.059          0.722           36                      0       18-18          0.570          0.564          0.561
+  NFL kernel, bandwidth 12       656        0.68466              -0.059          0.722           36                      0       18-18          0.568          0.565          0.563
+  NFL                 flat       656        0.68442              -0.059          0.722           36                      0       18-18          0.567          0.567          0.567
+  CFB  kernel, bandwidth 2       855        0.69110              -0.016          0.833          145                     17       71-57          0.552          0.540          0.574
+  CFB  kernel, bandwidth 3       855        0.68817              -0.016          0.833          145                      1       81-63          0.576          0.549          0.569
+  CFB  kernel, bandwidth 4       855        0.68714              -0.016          0.833          145                      0       81-64          0.583          0.550          0.564
+  CFB  kernel, bandwidth 6       855        0.68641              -0.016          0.833          145                      0       81-64          0.580          0.552          0.558
+  CFB  kernel, bandwidth 8       855        0.68598              -0.016          0.833          145                      0       81-64          0.572          0.553          0.556
+  CFB kernel, bandwidth 12       855        0.68540              -0.016          0.833          145                      0       81-64          0.563          0.556          0.556
+  CFB                 flat       855        0.68454              -0.016          0.833          145                      0       81-64          0.560          0.560          0.560
+
+lowest leave-one-season-out log loss: {'CFB': 'flat', 'NFL': 'flat'}
+break-even at -115 is 53.5%; variants: 2

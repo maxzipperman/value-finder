@@ -1,6 +1,9 @@
 """Betting helpers shared by the backtests and the weekly board."""
 from __future__ import annotations
 
+import hashlib
+import json
+
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -131,22 +134,56 @@ def cohort_residuals(hist, mask):
     return np.sort((hist.total - hist.total_line)[mask].dropna().to_numpy())
 
 
+def pricing_cohort():
+    """The frozen residuals behind the pricing model: final total minus closing total for outdoor games
+    with 15+ mph observed wind, through 2023. They come from a committed file, so rebuilding the games
+    table can't move the model (data/processed/pricing_cohort.json, written once by
+    scripts/freeze_pricing_cohort.py; its sha256 is registered in PREREGISTRATION.md)."""
+    js = json.loads((PROC / "pricing_cohort.json").read_text())
+    return np.sort(np.asarray(js["residuals"], float))
+
+
+def cohort_hash(resid_sorted) -> str:
+    return hashlib.sha256(np.sort(np.asarray(resid_sorted, float)).round(4).tobytes()).hexdigest()
+
+
+def _mid(resid_sorted, t):
+    """G(t) = P(d < t) + P(d = t) / 2 over the cohort residuals d: ties are split evenly."""
+    t = np.asarray(t, float)
+    below = np.searchsorted(resid_sorted, t, side="left")
+    upto = np.searchsorted(resid_sorted, t, side="right")
+    return (below + upto) / (2 * len(resid_sorted))
+
+
 def p_under_at(line, market_total, resid_sorted):
-    """(P(win), P(push)) for an under at `line` when the market total is `market_total`."""
-    x = np.asarray(line, float) - np.asarray(market_total, float)
-    n = len(resid_sorted)
-    below = np.searchsorted(resid_sorted, x, side="left")
-    at = np.searchsorted(resid_sorted, x, side="right") - below
-    return below / n, at / n
+    """(P(win), P(push)) for an under at the offered `line`, against the reference total `market_total`.
+    This is the registered pricing model (PREREGISTRATION.md, "the pricing model").
+
+    The final total is the reference plus a residual drawn from the frozen cohort, and it is a whole
+    number. With x = line - reference:
+      * a half-point line can't push: P(win) = G(x);
+      * a whole-number line wins below it, pushes on it and loses above it:
+        P(win) = G(x - 1/2), P(push) = G(x + 1/2) - G(x - 1/2).
+    The residual does not depend on the size of the total. That was tested on the frozen cohort and the
+    flat model scored best (strategy-research/gate_level_check.py), so the offered number matters only
+    through x and through whole-number versus half-point lines."""
+    line = np.asarray(line, float)
+    x = line - np.asarray(market_total, float)
+    whole = np.isclose(line % 1, 0)
+    lo, mid, hi = _mid(resid_sorted, x - 0.5), _mid(resid_sorted, x), _mid(resid_sorted, x + 0.5)
+    return np.where(whole, lo, mid), np.where(whole, hi - lo, 0.0)
 
 
 def ev_under(line, odds, market_total, resid_sorted):
-    """Expected profit per unit staked on the under at `line` and American `odds`
-    (pushes return the stake). NaN when the line or price is missing."""
+    """Expected profit per unit staked on the under at the offered `line` and American `odds`, against
+    the reference total `market_total` (pushes return the stake). NaN when the line, the reference or
+    the price is missing."""
     p_win, p_push = p_under_at(line, market_total, resid_sorted)
     profit = american_to_profit(odds)
     ev = p_win * profit - (1 - p_win - p_push)
-    bad = pd.isna(pd.Series(np.atleast_1d(odds))).to_numpy() | pd.isna(pd.Series(np.atleast_1d(line))).to_numpy()
+    bad = np.zeros(1, bool)
+    for v in (odds, line, market_total):
+        bad = bad | pd.isna(pd.Series(np.atleast_1d(v))).to_numpy()
     return np.where(bad, np.nan, ev)
 
 

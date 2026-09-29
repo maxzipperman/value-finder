@@ -5,8 +5,10 @@ schedule, forecasts and lines, then alerts once per event:
 RULE B (the forward-tested betting rule; see STRATEGY.md for stakes)
   WIND UNDER   outdoor game, kickoff wind forecast >= 15 mph, 1-3 days out, AND a posted
                total with an under price no worse than -115 and positive expected value
-               at that line and price (board.rule_b_status == "SIGNAL"). Otherwise nothing
-               actionable is sent; a wind trigger without a usable price is a WATCH.
+               at that line and price under the registered pricing model. Priced at Pinnacle
+               it is the registered test (board status "SIGNAL"); priced at the backup
+               consensus line it is labelled SECONDARY PRICE and reported separately.
+               A wind trigger without a usable price is a WATCH.
   LINE LAG     same gates, plus the kickoff wind forecast rose >= 5 mph since the last
                check while a total present at both checks moved less than half a point.
 
@@ -20,7 +22,8 @@ overs and underdogs later, favorites now. Log what you actually got with
 scripts/log_fill.py so score_forward.py can measure the cost of waiting.
 
 Delivery: macOS notification, plus an iPhone push when NTFY_TOPIC is set in .env.
-State lives in data/forward/alert_state.json so nothing is sent twice.
+State lives in data/forward/alert_state.json so nothing is sent twice. Every run, finished or
+failed, leaves one row in data/forward/runs.csv.
 
     python scripts/alerts.py              # normal run
     python scripts/alerts.py --dry-run    # print what would be sent (nflverse lines; no Odds API credit)
@@ -35,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
 
-from nflweather import board, notify, oddsapi
+from nflweather import board, notify, oddsapi, runlog
 from nflweather.config import ROOT
 from nflweather.features import RAIN_IN, SNOW_IN
 from nflweather.market import timing_note
@@ -56,14 +59,26 @@ if args.test:
 STATE = ROOT / "data" / "forward" / "alert_state.json"
 STATE.parent.mkdir(parents=True, exist_ok=True)
 state = json.loads(STATE.read_text()) if STATE.exists() else {}
-# a dry run spends no Odds API credits
-up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run)
+RUNS = ROOT / "data" / "forward" / "runs.csv"
+try:
+    # a dry run spends no Odds API credits
+    up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run)
+except Exception as e:      # log, don't drop: a failed run leaves a record and says so
+    if not args.dry_run:
+        runlog.record_run(RUNS, "nfl-alerts", board.RULES_VERSION, "failed", error=f"{type(e).__name__}: {e}")
+        notify.send("NFL weather alerts: run failed", f"{type(e).__name__}: {e}. No games were logged this run.")
+    raise
 now = pd.Timestamp.now(tz="UTC")
 if up.empty:
     print(f"{now:%Y-%m-%d %H:%M}Z no games in the next {args.days} days")
+    if not args.dry_run:
+        runlog.record_run(RUNS, "nfl-alerts", board.RULES_VERSION, "ok")
     sys.exit()
 if not args.dry_run:
     board.save(up)
+    runlog.record_run(RUNS, "nfl-alerts", board.RULES_VERSION, "ok", games=len(up),
+                      signals=int(up.rule_b.isin(board.SIGNALS).sum()), priced=int(up.mkt_total.notna().sum()),
+                      unmapped="; ".join(board.LAST_UNMAPPED))
 kick = pd.to_datetime(up.gameday + " " + up.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
 up = up[(kick > now) & (up.wx_src == "era5")]
 
@@ -87,12 +102,19 @@ for r in up.itertuples():
 
     # RULE B: only a full signal (trigger + horizon + posted line + acceptable price + positive EV) is actionable
     price = "" if pd.isna(r.mkt_under) else f" at {r.mkt_under:+.0f}"
-    if r.rule_b == "SIGNAL":
+    if r.rule_b in board.SIGNALS:
+        second = r.rule_b == "SIGNAL_SECONDARY"
         storm = " (rain/snow also forecast)" if wet else ""
         shop = (f" Best under at this number: {r.best_under:+.0f} ({r.best_under_book})."
                 if pd.notna(r.best_under) and pd.notna(r.mkt_under) and r.best_under > r.mkt_under else "")
-        fire("ruleb", f"RULE B WIND UNDER {r.mkt_total:.1f}{price}: {game}",
-             f"{detail}{storm}. Expected value {100 * r.ev_under:+.1f}% at this line and price.{shop} "
+        if pd.notna(r.best_line) and r.best_line > r.mkt_total:
+            shop += (f" Best number: under {r.best_line:.1f} at {r.best_line_under:+.0f} ({r.best_line_book}), "
+                     f"expected value {100 * r.ev_best_line:+.1f}%.")
+        note = (" SECONDARY PRICE: Pinnacle had no quote, so this is the consensus line. It is logged and "
+                "reported separately, and it is not part of the registered test.") if second else ""
+        fire("ruleb_secondary" if second else "ruleb",
+             f"RULE B WIND UNDER{' (secondary price)' if second else ''} {r.mkt_total:.1f}{price}: {game}",
+             f"{detail}{storm}. Expected value {100 * r.ev_under:+.1f}% at this line and price.{shop}{note} "
              f"Bet only this number or better; paper-log the price you actually get (scripts/log_fill.py). "
              f"{timing_note('under')}", s)
     elif r.rule_b in ("no_price", "price_too_high", "negative_ev"):
@@ -101,7 +123,7 @@ for r in up.itertuples():
 
     # RULE B: forecast jumped while a posted total sat still (both totals must exist)
     w_prev, t_prev = s.get("wind"), s.get("total")
-    if (r.rule_b == "SIGNAL" and w_prev is not None and r.wx_wind - w_prev >= 5
+    if (r.rule_b in board.SIGNALS and w_prev is not None and r.wx_wind - w_prev >= 5
             and t_prev is not None and abs(r.mkt_total - t_prev) < 0.5):
         fire(f"lag{round(r.wx_wind)}", f"RULE B LINE LAG {r.mkt_total:.1f}{price}: {game}",
              f"Kickoff wind {w_prev:.0f} → {r.wx_wind:.0f} mph since the last check; total still {total}. "

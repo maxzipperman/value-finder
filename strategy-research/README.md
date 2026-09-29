@@ -79,7 +79,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 **The bar for new analyses is already p < 0.00026 (0.05 / 191).** The 5M data-use plan commits 56 more variants ([`odds-api-credits.md`](odds-api-credits.md#data-use-plan)), 135 + 56 = 191. They count from the moment they were committed, whether or not their analysis has run yet, so anything analysed from here on is judged against 0.05 / 191, and each new variant beyond the plan raises the count further.
 
-**Running count: 198** (September 29, 2026). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 198 = 0.00025.
+**Running count: 200** (September 28, 2026, evening: 198, plus 2 for the size-of-total check in [`gate_level_check.py`](gate_level_check.py), one per sport; it found no dependence, so the registered pricing model is flat). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 198 = 0.00025.
 
 | Issue | Test | Result | Verdict |
 |---|---|---|---|
