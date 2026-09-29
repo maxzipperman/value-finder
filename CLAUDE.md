@@ -15,6 +15,7 @@ Paper-only sports-betting research: find prices the market gets wrong, and prove
 | `strategy-research/` | 109-variant strategy screen and ranked ideas | `nfl-weather/.venv/bin/python strategy-research/screen.py` from the repo root |
 | `thesis-research/`, `thesis/` | Literature review of the 2014 thesis, and the thesis as text | None |
 | `dashboard/` | Local, read-only dashboard on 127.0.0.1:8787 (standard-library Python; `ops/install_dashboard.sh` runs it at login). Its evidence list is `dashboard/content/evidence.json`. | `uv run --project dashboard pytest -q` from the repo root |
+| `menubar/` | Menu-bar light for the Mac: a small Swift app that shows a green, amber, red or gray dot from the dashboard's `/api/summary`, the only address it reads (`ops/build_menubar.sh`, then `ops/install_menubar.sh`, installs it). | `ops/build_menubar.sh && menubar/tests/run_selftests.sh` from the repo root |
 
 Each project has its own virtual environment. Don't share environments or install one project's dependencies into another's.
 
@@ -30,6 +31,7 @@ Each project has its own virtual environment. Don't share environments or instal
 - **Shared weather code.** `market.py`, `features.py`, `models.py`, `notify.py`, `quota.py` and `runlog.py` are copied between `nfl-weather` and `cfb-weather`. A change to one copy is made to both. Tests fail if `quota.py`, `runlog.py` or the pricing block of `market.py` differ.
 - **Frozen means a committed file.** The pricing cohorts (`*/data/processed/pricing_cohort.json`) have registered hashes, and every alert run checks them. Changing one needs a dated amendment.
 - **Log, don't drop.** Every alert run leaves a row in `data/forward/runs.csv`, finished or failed. Scorers count every excluded ledger row by reason and list them with `--list-excluded`. Error text is scrubbed of keys (`runlog.scrub`) before it is recorded or sent.
+- **The dashboard only reads.** `dashboard/` and `menubar/` never write to a project's data, never change a rule, and start nothing but the scorers in preview (`--now`) and `launchctl list` / `print`.
 
 ## The hub
 
