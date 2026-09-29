@@ -1,0 +1,11 @@
+Dot: green
+Number beside the icon: 3
+Menu:
+  3 signals are live.
+  Next alert run at 3:30 PM
+  Credits left: 19,650
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit

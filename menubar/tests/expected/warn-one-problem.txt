@@ -1,0 +1,13 @@
+Dot: amber
+Number beside the icon: none
+Menu:
+  Something needs a look. No signals.
+  Next alert run at 7:30 PM
+  Credits left: 38
+  --------
+  Only 38 odds credits are left on the free plan.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit

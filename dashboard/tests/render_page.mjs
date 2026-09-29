@@ -1,0 +1,44 @@
+// Draws one screen of the page (vfdash/static/app.js) from a saved JSON answer, with a small stand-in for the
+// browser, and prints what it drew as JSON: {tag, cls, kids} for elements and {text} for text. Tests only: it
+// reads the two files it is given and nothing else, and makes no network request.
+//   node render_page.mjs <app.js> <#hash> <answer.json>
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
+
+const [, , appPath, hash, answerPath] = process.argv;
+const answer = JSON.parse(readFileSync(answerPath, "utf8"));
+
+class Base { constructor() { this.kids = []; } }
+class Text extends Base { constructor(t) { super(); this.text = String(t); } }
+class El extends Base {
+  constructor(tag) { super(); this.tag = tag; this.className = ""; this.attrs = {}; this.style = {}; this.dataset = {}; }
+  setAttribute(k, v) { this.attrs[k] = String(v); }
+  removeAttribute(k) { delete this.attrs[k]; }
+  addEventListener() {}
+  append(...kids) { for (const k of kids) this.kids.push(k instanceof Base ? k : new Text(k)); }
+  replaceChildren(...kids) { this.kids = []; this.append(...kids); }
+  set textContent(t) { this.kids = [new Text(t)]; }
+  get textContent() { return this.kids.map((k) => (k instanceof Text ? k.text : k.textContent)).join(""); }
+  get clientWidth() { return 640; }
+  get namespaceURI() { return "http://www.w3.org/2000/svg"; }
+  insertAdjacentHTML() { this.append(new El("svg")); }
+  querySelector(sel) { return this.kids.find((k) => k instanceof El && k.tag === sel) || null; }
+  getBoundingClientRect() { return { left: 0, top: 0, width: 640, height: 190 }; }
+}
+const byId = { main: new El("main"), stamp: new El("div"), banner: new El("div") };
+Object.assign(globalThis, {
+  Node: Base,
+  document: {
+    hidden: false, getElementById: (id) => byId[id], createElement: (t) => new El(t),
+    createElementNS: (_ns, t) => new El(t), createTextNode: (t) => new Text(t), querySelectorAll: () => [],
+    addEventListener() {},
+  },
+  window: { addEventListener() {}, scrollY: 0, scrollTo() {} },
+  location: { hash },
+  setInterval: () => 0,
+  fetch: async () => ({ json: async () => answer }),
+});
+vm.runInThisContext(readFileSync(appPath, "utf8"), { filename: "app.js" });
+await new Promise((r) => setTimeout(r, 50));
+const out = (n) => (n instanceof Text ? { text: n.text } : { tag: n.tag, cls: n.className, kids: n.kids.map(out) });
+process.stdout.write(JSON.stringify(out(byId.main)));

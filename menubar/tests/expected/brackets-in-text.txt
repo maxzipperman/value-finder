@@ -1,0 +1,13 @@
+Dot: amber
+Number beside the icon: none
+Menu:
+  Something needs a look. No signals.
+  Next alert run at 3:30 PM
+  Credits left: 19,650
+  --------
+  A problem that quotes "{[{[{[{[{[{[{[{[{[{[" and a backslash \ in its text.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit
