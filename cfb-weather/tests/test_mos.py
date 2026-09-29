@@ -198,6 +198,51 @@ def test_replay_signals_and_grades(path):
     assert ((s.total < s.close_total) == s.under_win).all() and ((s.total == s.close_total) == s.push).all()
 
 
+# ---------------------------------------------------------------- the descriptive checks (review, Sep 29)
+@pytest.mark.skipif(not REPLAYS, reason="run scripts/mos_replay.py first")
+@pytest.mark.parametrize("path", REPLAYS, ids=lambda p: p.name)
+def test_checks_split_every_signal_once(path):
+    import mos_replay_checks as ch
+    d = pd.read_parquet(path)
+    m = d[d.has_mos]
+    sp = ch.split(m)
+    assert len(sp["both"]) + len(sp["mos_only"]) == int(m.mos_signal.sum())
+    assert sp["both"].obs_signal.all() and not sp["mos_only"].obs_signal.any()
+    assert 0 < sp["fisher_p"] <= 1
+    assert any("Fisher exact" in line for line in ch.checks(d))
+
+
+def test_matched_threshold_fires_as_often_as_mos_at_15():
+    import mos_replay_checks as ch
+    obs = pd.Series(np.random.default_rng(0).gamma(4, 2, 5000))
+    mos_ = obs + 1.0                              # a forecast that runs exactly 1 mph high
+    t = ch.matched_threshold(mos_, obs)
+    assert t == pytest.approx(14.0, abs=0.05)
+    assert (obs >= t).mean() == pytest.approx((mos_ >= 15).mean(), abs=0.002)
+
+
+# ---------------------------------------------------------------- the pull script
+@pytest.mark.skipif(not Path("/usr/bin/caffeinate").exists(), reason="macOS only (caffeinate)")
+@pytest.mark.parametrize("with_nfl", [True, False])
+def test_pull_runs_every_leg_and_stops_if_a_folder_is_gone(tmp_path, with_nfl):
+    import shutil
+    import subprocess
+    scripts = tmp_path / "cfb-weather" / "scripts"
+    scripts.mkdir(parents=True)
+    shutil.copy(ROOT / "scripts" / "mos_pull_all.sh", scripts)
+    if with_nfl:
+        (tmp_path / "nfl-weather").mkdir()
+    env = dict(PATH="/usr/bin:/bin", HOME=str(tmp_path), PAUSE_S="0", PY_CFB="/bin/echo", PY_NFL="/bin/echo")
+    r = subprocess.run(["/bin/sh", str(scripts / "mos_pull_all.sh")], env=env, capture_output=True, text=True)
+    legs = [line for line in r.stdout.splitlines() if line.startswith("scripts/mos_fetch.py")]
+    if with_nfl:
+        assert r.returncode == 0 and "mos_pull_all: finished" in r.stdout
+        assert legs == ["scripts/mos_fetch.py --seasons 2023-2025", "scripts/mos_fetch.py", "scripts/mos_fetch.py"]
+    else:
+        assert r.returncode == 1 and "is gone; stopping" in r.stdout and "finished" not in r.stdout
+        assert len(legs) == 2
+
+
 # ---------------------------------------------------------------- station map
 def test_station_map_keeps_only_stations_within_40_km():
     m = pd.read_csv(ROOT / "data" / "processed" / "mos_station_map.csv")
