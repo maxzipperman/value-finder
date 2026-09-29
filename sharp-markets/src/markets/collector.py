@@ -17,7 +17,9 @@ state, heartbeat or cache, never spends an Odds API credit and never writes the 
 A last_tick in the future (a clock change, or state from an old --now run) counts as due.
 
 Every response is stored before use, one parquet per source per tick (RawCache: temp file, then rename):
-data/raw/{sport}/collector_kalshi/ and data/raw/{sport}/collector_oddsapi/.
+data/raw/{sport}/collector_kalshi/{date}/ and data/raw/{sport}/collector_oddsapi/{date}/. Each tick's
+requests are keyed to its own time, so the cache looks only in that date's directory, never the whole
+season's history.
 
 Credits: a background logger under the weather projects' shared quota file
 (~/.cache/value-finder/odds_quota.json). As in nfl-weather/nflweather/quota.py's background kind, it
@@ -49,6 +51,7 @@ QUOTA_FILE = Path(os.environ.get("ODDS_QUOTA_FILE", Path.home() / ".cache" / "va
 FREE_PLAN, BACKGROUND_MIN_FLOOR, BACKGROUND_SHARE = 500, 2_000, 0.02
 LOCK_STALE = timedelta(minutes=10)
 SCHEDULE_TTL = timedelta(hours=1)
+COLLECTOR_SOURCES = ("collector_kalshi", "collector_oddsapi")   # tick-keyed: looked up in the tick's date dir only
 HEARTBEAT_FIELDS = ["tick_utc", "action", "games_in_window", "final_window", "kalshi_status", "kalshi_events",
                     "kalshi_markets", "odds_status", "odds_events", "credits_last", "remaining", "gap_min", "note"]
 
@@ -123,7 +126,7 @@ class Collector:
         self.c = cfg or load_collector_config(sport)
         self.sport = self.c["sport"]
         self.dir = Path(data_dir) / "collector" / self.sport
-        self.cache = RawCache(Path(data_dir) / "raw")
+        self.cache = RawCache(Path(data_dir) / "raw", dated_sources=frozenset(COLLECTOR_SOURCES))
         self.odds = odds_session or new_session()
         self.limiter = RateLimiter(5)
         self.kalshi = KalshiClient(self.sport, self.cache)

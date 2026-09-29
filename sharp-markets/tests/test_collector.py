@@ -146,6 +146,19 @@ def test_dry_run_spends_nothing_and_writes_no_quota(tmp_path, monkeypatch):
     assert row["odds_status"] == "skipped" and "dry run" in row["note"] and row["kalshi_status"] == 200
     assert not any(u.endswith("/odds") for u in odds.calls) and not (tmp_path / "quota.json").exists()
 
+def test_ticks_look_only_in_their_own_date_directory(env):
+    """#33 item 12: a tick never lists the collector's whole raw history, only its own date's directory."""
+    c, odds, kalshi, tmp = env
+    now = TIP - timedelta(hours=3)
+    paid(tmp, now=now)
+    old = tmp / "raw" / "nba" / "collector_oddsapi" / "2026-10-20"
+    old.mkdir(parents=True)
+    (old / "0123456789abcdef0123.parquet").write_bytes(b"not read")
+    assert c.tick(now)["odds_status"] == 200
+    keys = set(c.cache._index)
+    assert ("nba", "collector_oddsapi") not in keys and ("nba", "collector_kalshi") not in keys
+    assert ("nba", "collector_oddsapi", now.date().isoformat()) in keys
+
 def test_one_minute_ticks_in_the_final_window_when_enabled(env):
     c, odds, kalshi, tmp = env
     c.c["final_every_min"] = 1

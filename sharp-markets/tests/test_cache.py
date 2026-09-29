@@ -29,3 +29,18 @@ def test_errors_not_cached(tmp_path):
     rec = c.get_or_fetch(sport="nba", source="s", data_date="d", url="u", params={},
                          fetch=lambda: Fetched(500, {}, "boom"), cache_statuses=(200,))
     assert rec["http_status"] == 500 and not list(tmp_path.rglob("*.parquet"))
+
+
+def test_dated_sources_hit_in_their_date_directory_only(tmp_path):
+    """#33 item 12: a dated source is looked up in data_date's directory only, and still hits there."""
+    calls = []
+
+    def fetch():
+        calls.append(1)
+        return Fetched(200, {}, "{}")
+    kw = dict(sport="nba", source="collector_oddsapi", url="u", params={"a": 1}, fetch=fetch,
+              key_extra={"tick": "2026-10-21T20:00:00Z"})
+    RawCache(tmp_path, dated_sources=frozenset({"collector_oddsapi"})).get_or_fetch(data_date="2026-10-21", **kw)
+    again = RawCache(tmp_path, dated_sources=frozenset({"collector_oddsapi"}))
+    again.get_or_fetch(data_date="2026-10-21", **kw)
+    assert calls == [1] and set(again._index) == {("nba", "collector_oddsapi", "2026-10-21")}
