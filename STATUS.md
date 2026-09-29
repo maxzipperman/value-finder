@@ -48,7 +48,7 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
        - the 2026 NFL and CFB seasons;
        - calendar-2026 MLB, soccer and World Cup games;
        - the 2026-27 NBA and NHL seasons.
-     - **Variants:** the plan commits 56, so the count is 191 and new analyses already use p < 0.00026 (0.05 / 191).
+     - **Variants:** the plan commits 56, so the count is 191 and new analyses already use p < 0.00026 (0.05 / 191). The props pre-registration draft ([#41](https://github.com/maxzipperman/value-finder/issues/41), Sep 29) adds 1: **192**.
      - **Pullers (PR B):** `sharp-markets` now has the bulk puller (`uv run markets odds5m`). It is tested against mocked responses; the hub runs it on day one by [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](sharp-markets/docs/ODDS5M_DAY_ONE.md). The first step is a probe of about 10.6K credits that builds exact schedules and checks the billing.
      - **Live uses (PR C):** three logging-only launchd jobs, described in [`ops/LIVE_USES.md`](ops/LIVE_USES.md). The hub installs them with `ops/install_live_uses.sh` once the paid key is in the `.env` files:
        - the wind-trigger price poller (NFL + CFB);
@@ -87,7 +87,7 @@ One issue per idea from [`strategy-research/`](strategy-research/README.md#ideas
 | [#7](https://github.com/maxzipperman/value-finder/issues/7) | Home teams off a bye; Week 1 unders (paper) | nfl-weather | Nothing new |
 | [#8](https://github.com/maxzipperman/value-finder/issues/8) | Price engine: beat the sharp fair line (most proven) | sharp-markets | Multi-book lines for 2020–26, 162K credits, plus NFL alternates, 46K credits, both in the March 5M month. Kalshi and Polymarket (free). |
 | [#9](https://github.com/maxzipperman/value-finder/issues/9) | Kalshi/Polymarket microstructure | sharp-markets | Free Kalshi and Polymarket data |
-| [#10](https://github.com/maxzipperman/value-finder/issues/10) | Player props: median vs mean | nfl-weather | About 46K Odds API credits (NFL 2023–26 at the close), in the March 5M month |
+| [#10](https://github.com/maxzipperman/value-finder/issues/10) | Player props: does the line sit above the median? | nfl-weather | F3's prop lines at T−24h and the close. Free pre-check done ([#41](https://github.com/maxzipperman/value-finder/issues/41), Sep 29): receiving yards' mean is 7.6% above the median and rushing yards' 3.2%; passing yards aren't skewed. The pre-registration draft is in [`strategy-research/README.md`](strategy-research/README.md#7-prop-structure-the-line-against-the-median). |
 | [#11](https://github.com/maxzipperman/value-finder/issues/11) | CFB injury reports and early-season priors | cfb-weather | CFBD data pulled (2014–25, 252 calls): `cfb-weather/data/processed/cfbd_{lines,team_box,returning,talent}.parquet`. Next: the priors model. |
 | [#21](https://github.com/maxzipperman/value-finder/issues/21) | Kicker props: kicking-points unders in wind and cold | nfl-weather | Outcomes are in (`player_week.parquet`). Prices: 22,800 credits, added to the March 5M month (M6). |
 | [#16](https://github.com/maxzipperman/value-finder/issues/16) | Line-move reversal: do day-to-day moves reverse before the close? | sharp-markets | The multi-book lines in the March 5M month |
