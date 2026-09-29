@@ -143,6 +143,11 @@ def cmd_odds5m(args) -> None:
     bulk.main(args)
 
 
+def cmd_price_engine(args) -> None:
+    from .research.price_engine import run
+    run.main(args)
+
+
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     p = argparse.ArgumentParser(prog="markets", description="Paper-only Kalshi vs sharp-book research pipeline")
@@ -213,6 +218,13 @@ def main(argv: list[str] | None = None) -> None:
                    help="stop when the account would drop below this (the reserve: 300K + X3's 231,630)")
     f.add_argument("--rate", type=float, default=8.0, help="requests per second (the API allows 30)")
     f.set_defaults(fn=cmd_odds5m)
+
+    pe = sub.add_parser("price-engine", help="price-engine backtest on F1, issues #8 and #53 "
+                        "(docs/PRICE_ENGINE_PREREGISTRATION.md); no API calls")
+    pe.add_argument("--fixture", action="store_true", help="run on a synthetic fixture instead (nothing in it is data)")
+    pe.add_argument("--out", default=None, help="output folder (default reports/price_engine; a scratch folder with "
+                    "--fixture)")
+    pe.set_defaults(fn=cmd_price_engine)
 
     args = p.parse_args(argv)
     args.fn(args)
