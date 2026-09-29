@@ -160,6 +160,18 @@ def test_snapshot_is_cached_for_thirty_seconds(root, home):
     assert store.snapshot() is not first
 
 
+def test_board_is_worked_out_once_a_minute(root, home):
+    from datetime import datetime, timedelta, timezone
+    clock = Clock(datetime(2026, 10, 4, 16, 59, 5, tzinfo=timezone.utc))      # BUF at NE kicks off at 17:00 UTC
+    store = make_store(root, home, clock=clock)
+    first = api.board(store)
+    assert "2026_05_BUF_NE" in {g["game_id"] for g in first["games"]}
+    clock.t += timedelta(seconds=20)                                           # the same minute and snapshot
+    assert api.board(store)["games"] is first["games"]
+    clock.t += timedelta(seconds=40)                                           # 17:00:05: it has kicked off
+    assert "2026_05_BUF_NE" not in {g["game_id"] for g in api.board(store)["games"]}
+
+
 def test_jobs(store):
     d = api.jobs_screen(store)
     assert d["runs"]["nfl-weather"]["rows"][0]["when"] == "Fri Oct 2, 7:30 AM"   # newest first

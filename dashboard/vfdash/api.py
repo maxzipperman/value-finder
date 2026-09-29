@@ -461,17 +461,26 @@ def home(store: Store) -> dict:
     })
 
 
-def board(store: Store) -> dict:
-    scr = Screen(store)
-    rows = []
-    for L in scr.snap.ledgers.values():
-        if not L.readable:
-            scr.notes.append(L.note or f"The {L.name} ledger could not be read.")
+def board_rows(scr: Screen) -> tuple[list[dict], list[str]]:
+    """The board's rows, signals first, and what couldn't be shown."""
+    rows, before = [], len(scr.notes)
     for sport, L, r in upcoming(scr.snap, scr.now):
         g = scr.part("a game row", lambda sport=sport, L=L, r=r: game_row(scr, sport, L, r))
         if g:
             rows.append(g)
     rows.sort(key=lambda g: (not g["signal"], g["kick_utc"] or "", g["matchup"]))
+    return rows, scr.notes[before:]
+
+
+def board(store: Store) -> dict:
+    scr = Screen(store)
+    for L in scr.snap.ledgers.values():
+        if not L.readable:
+            scr.notes.append(L.note or f"The {L.name} ledger could not be read.")
+    # worked out once a minute from each snapshot: a refresh, a second tab or the light reuses it
+    minute = scr.now.astimezone(scr.tz).strftime("%Y-%m-%d %H:%M")
+    rows, row_notes = store.derived(("board", minute), lambda: board_rows(scr))
+    scr.notes.extend(n for n in row_notes if n not in scr.notes)
     runs = {}
     for sport, L in scr.snap.ledgers.items():
         t = words.parse_utc(L.latest_snapshot)

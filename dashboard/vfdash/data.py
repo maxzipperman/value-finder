@@ -230,6 +230,7 @@ class Store:
         self.lock = threading.RLock()
         self._snap: Snap | None = None
         self._snap_at: float | None = None
+        self._derived: dict = {}
         self._scores: dict[str, Scored] = {}
         self._score_locks = {p: threading.Lock() for p in PROJECTS}
 
@@ -246,7 +247,16 @@ class Store:
             if self._snap is None or self._snap_at is None or abs(now.timestamp() - self._snap_at) >= SNAPSHOT_SECONDS:
                 self._snap = self._build(now)
                 self._snap_at = now.timestamp()
+                self._derived = {}
             return self._snap
+
+    def derived(self, key, fn):
+        """fn(), worked out once per key from the current snapshot and kept until the snapshot is rebuilt."""
+        with self.lock:
+            self.snapshot()
+            if key not in self._derived:
+                self._derived[key] = fn()
+            return self._derived[key]
 
     def _expect(self, snap: Snap, r: Read, what: str):
         if r.data is None:

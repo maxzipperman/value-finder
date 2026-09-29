@@ -28,7 +28,8 @@ schedules), not from a `TZ` setting: `TZ=... uv run ...` in a rehearsal doesn't 
 Home (`#home`), Board (`#board`, with `?sport=nfl|cfb&signals=1`), a game (`#game/<id>`), Forward tests
 (`#tests`), Jobs and records (`#jobs`, and `#jobs/records` for `ops/RUN_RECORDS.md`), Thursday's pull (`#pull`)
 and Research (`#research`). Data refreshes every 60 seconds; the server re-reads the files at most every 30
-seconds and runs each scorer preview at most every 10 minutes.
+seconds (and works out the board's rows at most once a minute from each read) and runs each scorer preview at
+most every 10 minutes.
 
 ## What it reads, and the only programs it starts
 
