@@ -62,6 +62,17 @@ underdogs later. After you bet, log what you actually got, e.g.
 `scripts/log_fill.py 2026_06_BUF_NYJ --rule rule_b --line 41.5 --price -108 --book fanduel`;
 `score_forward.py` then reports the cost of waiting against the alert-time quote.
 
+**Close capture** (amendment 3). Every 15 minutes `ops/capture_closes.sh` runs `scripts/capture_close.py`.
+When games kick off in 2–20 minutes, it makes one Odds API call and adds each logged book's total and prices
+for every game in that kickoff slot to `data/forward/closes.csv`; the scorer uses Pinnacle's row. If some game
+in the slot has no Pinnacle total, the slot is tried once more on the next run, for a second credit. Since
+Sep 29 each game takes at most one feed listing: one with its two teams that starts within 6 hours of its
+scheduled kickoff, preferring a listing Pinnacle prices (as the board does), then the one nearest the kickoff.
+Before, it matched on the teams alone, so when the feed listed the same teams twice with Pinnacle prices on
+both, it wrote both and the scorer took whichever the feed gave last. A tie between two equally good listings,
+or no listing within 6 hours, leaves the game's close missing, and the log says why. Tests:
+`tests/test_close_capture.py`.
+
 For iPhone pushes: install the free ntfy app, subscribe to the topic in
 `NTFY_TOPIC` (pick something long and random; anyone who knows it can read it),
 and allow notifications. macOS may ask once to allow notifications from Script Editor.
