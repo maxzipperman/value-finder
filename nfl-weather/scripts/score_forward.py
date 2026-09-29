@@ -115,4 +115,6 @@ if fills_path.exists():
     if len(wc):
         print(f"\nCost of waiting, RULE_B: {len(wc)} paper fills; vs the alert-time quote the fill gained "
               f"{wc.pts_gained.mean():+.2f} pts and {wc.profit_gained.mean():+.3f} units of payout per unit staked")
-print("\nVariants under forward test: 2 (MODEL_LEAN, RULE_B).")
+print("\nDecision horizon (amendment 4): once, after the 2027 season, on 2026 Weeks 5+ and 2027 pooled, "
+      "or at 40 signals if sooner. A 2026-only result is an interim read and decides nothing.")
+print("Variants under forward test: 2 (MODEL_LEAN, RULE_B).")
