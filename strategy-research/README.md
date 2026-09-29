@@ -144,9 +144,11 @@ Before the forward tests start, two free exercises. Neither is evidence for any 
 |---|---|---|---|
 | NFL Rule B | Archived 1- and 3-day forecasts; nflverse closes, so CLV is 0 | 17 in Weeks 5–18, 0 to 5 a week, clustered in windy weeks. 2 more were blocked by price. | 11–6 at the close |
 | CFB Rule B | Observed wind as a *perfect* forecast; cfbfastR open then close, at −110 | 32 from Week 5, 1 to 8 a week | 21–10–1; open-to-close CLV +1.81 (95% CI +1.09 to +2.54). Optimistic. |
-| CFB Rule HT | Last quote, the close | 34 from Week 6, about 3 to 5 a week | 19–15 (55.9%) |
+| CFB Rule HT | Last quote, the close | 43 from Week 6, about 3 to 6 a week (rerun Sep 29; was 34, about 3 to 5 a week) | 24–19 (55.8%), +2.82 units (was 19–15, 55.9%) |
 
 Everything ran end to end: statuses, ledger rows, the 53-week date shift into the 2026 windows, and both scorers.
+
+*Rerun, Sep 29:* pull request 48 rebuilt the CFB games table, so the rehearsal's 2025 Rule HT threshold is now computed from a 2024 mean over 1,552 games, not 948. It moved from 62.66 to 62.22, which is why Rule HT now has 43 rehearsal signals instead of 34. The frozen 2026 threshold (62.6175) and the forward test are unchanged. The NFL and CFB Rule B rows are unchanged. Both logs were rerun through the scorers as amended on Sep 29 (nfl-weather amendment 6, cfb-weather amendment 4), which also print pending and void counts.
 
 **Simulations.** [`simulate_decisions.py`](simulate_decisions.py) runs 20,000 seasons at the pre-registered stake ([`output/simulations.log`](output/simulations.log)).
 

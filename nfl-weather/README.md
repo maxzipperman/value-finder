@@ -84,11 +84,26 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 **A second review of those fixes (Sep 29, before they went live)** found one crash and eight places where the new code still fell short of the amendment. All are fixed, each with a test in `tests/test_review.py`:
 
 - **Decisions follow the registered horizons.** Rule B and the model lean are decided after Week 18 of 2026 with 40 bets in the 2026 regular season, and otherwise once, after the 2027 regular season. A decision uses only the bets that kicked off by its horizon, so it can't change later. Before the horizon the scorer prints the numbers and no verdict.
+  - *Note, Sep 29 (amendment 6):* "it can't change later" now rests on the written record, not on the horizon alone. A decision waits until each bet that kicked off by its horizon has a result or is void. The first final decision is written to `data/forward/decisions.csv` by a run on the live ledger, on the real clock, with a schedule refreshed in the last 2 days (the daily check-in's run is one). Every later run prints that record; if a corrected score would now change the numbers, the scorer shows both and the recorded decision stands. An inconclusive 2026 decision is decided once more after the 2027 regular season.
 - **The best line is logged for every game the feed lists**, including the ones Pinnacle doesn't quote. A Pinnacle total with no under price no longer blocks the backup price.
 - **Every run checks the pricing cohort** against its registered hash and stops if it differs.
 - **A run that fails at any stage is recorded and notified**, not only one that fails while building the board. Keys are blanked from error text.
 - **The one-time ledger rewrite keeps old rows character for character** and leaves a copy of the ledger as it stood.
 - **A number that isn't a price is no price** (anything between −100 and +100), and quarter-point lines are priced as half a bet at each neighbour.
+
+**A review of the scorer (Sep 29) found readings the text still left open.** Amendment 6 settles each one before any outcome exists; no trigger, gate, price cap, stake or metric changes. A final review before registration, the same day, added the last four items. Each has a test in `tests/test_readings.py`:
+
+- **Void.** A bet whose game kicked off more than 24 hours from the kickoff on its entry row (postponed, moved or cancelled), or that still has no result 30 days after that kickoff, is void: listed by reason and not graded, as a sportsbook would. A result that lands later brings the bet back; a decision already recorded still stands.
+- **Pending.** A bet with no result yet holds its decision open. The old test treated a game with no result a week after kickoff as not played, so a late result could flip a final decision.
+- **Decided once, and written down** in `data/forward/decisions.csv`, under a fixed decision id, with the positions and a fingerprint of the ledger rows behind it. Every later run rechecks the fingerprint and warns if those rows changed; the record still stands. Only a real run on the live ledger writes it. A preview with `--now`, a schedule more than 2 days old, a copy of the ledger in `data/forward/`, a copy of the scorer in a worker's folder, or a scorer whose `data/forward` is a link to another folder records nothing and says why. A preview shows only the decisions made by its date. A run on a test ledger writes its own `decisions.csv` beside that ledger; a preview on one records only with `--test-record`, which exists for tests. A decision recorded after 2027 with none for 2026 is never followed by a 2026 one. One run at a time writes, under a lock; a damaged record stops recording, not the scores; a lost record is restored from its nightly copy on the ledgers branch, never decided again unless it is lost before that night's copy is made.
+- **"After Week 18" is a date:** the season's last regular-season kickoff.
+- **The model lean enters at its first snapshot 24 hours out that has a posted total.** The live ledger already had a lean with a blank total, which the old code would have graded as a loss.
+- **After 2026.** A keep or a drop in 2026 is the decision. An inconclusive 2026 result is decided once more after the 2027 regular season, on both seasons pooled.
+- **Ties with the close** are left out of the win rate against the close. Two quoted numbers in amendment 5 are corrected (the gate's zero point is about −135 on a half-point line, and at −115 it rejects an under from 1.5 points below the reference).
+- **Listings.** A game postponed by more than a day that signals again on its new date is two listings, each with its own entry; the one that matches the actual kickoff is graded. Before, the second signal was dropped and the game was never a bet.
+- **"Before kickoff"** is before the earlier of the kickoff on the row and the kickoff in the schedule, for every use.
+- **20 closes.** A decision in which fewer than 20 bets have a primary close is inconclusive, and the scorer says why and how many bets have no close.
+- **What it replaces.** The amendment ends with a list of every earlier sentence it changes, quoted. It tests nothing; the running variant count stays 271 (p < 0.000185).
 
 ## Forecast replay on NWS MOS, 2004–25 (issue #40, Sep 29)
 

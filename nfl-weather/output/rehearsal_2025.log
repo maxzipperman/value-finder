@@ -9,35 +9,45 @@ rule_b_signals           0   3   3   0   0   1   5   0   3   0   0   2   0   0
 blocked_by_price_or_ev   0   0   0   0   0   0   0   0   0   0   0   1   0   1
 
 Scorer output (entry = close here, so CLV is 0 by construction):
+ledger rows: 416; in the test: 416
 
-MODEL_LEAN: 0 signals, 0 settled
+MODEL_LEAN: 0 signals, 0 settled, 0 pending, 0 void (not graded)
 
-RULE_B (wind under): 17 signals, 17 settled
-  record at entry line 11-6-0   units +3.96 (ROI +23.3%; 0 graded at an assumed -110)
-  mean CLV +0.00 pts  (95% CI +0.00 to +0.00)
-        game_id  side  total_line  close_total  total  clv_pts    profit
-2025_06_DEN_NYJ UNDER        43.5         43.5   24.0      0.0  0.892857
- 2025_06_LA_BAL UNDER        43.5         43.5   20.0      0.0  0.925926
-2025_06_DAL_CAR UNDER        47.5         47.5   57.0      0.0 -1.000000
- 2025_07_NO_CHI UNDER        43.5         43.5   40.0      0.0  0.909091
-2025_07_MIA_CLE UNDER        34.5         34.5   37.0      0.0 -1.000000
-2025_07_CAR_NYJ UNDER        39.5         39.5   19.0      0.0  0.980392
-2025_10_NYG_CHI UNDER        45.5         45.5   44.0      0.0  0.892857
- 2025_11_GB_NYG UNDER        41.5         41.5   47.0      0.0 -1.000000
- 2025_11_TB_BUF UNDER        46.5         46.5   76.0      0.0 -1.000000
-2025_11_BAL_CLE UNDER        37.5         37.5   39.0      0.0 -1.000000
-2025_11_CIN_PIT UNDER        48.5         48.5   46.0      0.0  0.909091
-2025_11_DET_PHI UNDER        46.5         46.5   25.0      0.0  0.925926
-2025_13_CHI_PHI UNDER        43.5         43.5   39.0      0.0  0.869565
- 2025_13_SF_CLE UNDER        35.5         35.5   34.0      0.0  0.892857
-2025_13_BUF_PIT UNDER        44.5         44.5   33.0      0.0  0.892857
- 2025_16_LA_SEA UNDER        42.5         42.5   75.0      0.0 -1.000000
-2025_16_MIN_NYG UNDER        41.5         41.5   29.0      0.0  0.869565
+RULE_B (wind under): 17 signals, 17 settled, 0 pending, 0 void (not graded)
+  record at entry line 11-6-0   units +3.96 (ROI +23.3% per bet placed; 0 graded at an assumed -110)
+  mean CLV +0.00 pts  (95% CI +0.00 to +0.00; 17 of 17 bets have a primary close)
+  secondary (amendment 3): no captured closes for these 17 bets
+        game_id  side line_src  total_line  close_total  total  clv_pts    profit
+2025_06_DEN_NYJ UNDER pinnacle        43.5         43.5   24.0      0.0  0.892857
+ 2025_06_LA_BAL UNDER pinnacle        43.5         43.5   20.0      0.0  0.925926
+2025_06_DAL_CAR UNDER pinnacle        47.5         47.5   57.0      0.0 -1.000000
+2025_07_MIA_CLE UNDER pinnacle        34.5         34.5   37.0      0.0 -1.000000
+ 2025_07_NO_CHI UNDER pinnacle        43.5         43.5   40.0      0.0  0.909091
+2025_07_CAR_NYJ UNDER pinnacle        39.5         39.5   19.0      0.0  0.980392
+2025_10_NYG_CHI UNDER pinnacle        45.5         45.5   44.0      0.0  0.892857
+ 2025_11_GB_NYG UNDER pinnacle        41.5         41.5   47.0      0.0 -1.000000
+ 2025_11_TB_BUF UNDER pinnacle        46.5         46.5   76.0      0.0 -1.000000
+2025_11_BAL_CLE UNDER pinnacle        37.5         37.5   39.0      0.0 -1.000000
+2025_11_CIN_PIT UNDER pinnacle        48.5         48.5   46.0      0.0  0.909091
+2025_11_DET_PHI UNDER pinnacle        46.5         46.5   25.0      0.0  0.925926
+2025_13_CHI_PHI UNDER pinnacle        43.5         43.5   39.0      0.0  0.869565
+ 2025_13_SF_CLE UNDER pinnacle        35.5         35.5   34.0      0.0  0.892857
+2025_13_BUF_PIT UNDER pinnacle        44.5         44.5   33.0      0.0  0.892857
+ 2025_16_LA_SEA UNDER pinnacle        42.5         42.5   75.0      0.0 -1.000000
+2025_16_MIN_NYG UNDER pinnacle        41.5         41.5   29.0      0.0  0.869565
+  decision (Rule B: once, after the 2027 regular season, both seasons pooled): INTERIM read, decides nothing. The decision comes after Week 18 of 2027, or after Week 18 of 2026 with 40 signals in the 2026 regular season.
+    mean CLV +0.00 (95% CI +0.00 to +0.00, n=17); win rate vs the close 64.7% (11 of the 17 bets that have a primary close and didn't tie it; 0 ties left out); mean CLV by season: {'2026': 0.0}
+    only 17 bets have a primary close; a verdict needs at least 20 (amendment 6, reading 11)
+    keep needs: mean CLV > 0 (not met); 95% interval above zero (not met); win rate vs the close at least 52.4% (met); mean CLV positive in both seasons (not met). Drop if mean CLV <= 0 or the interval's upper bound is below +0.25 (met).
 
-Wind triggers by final status (a game counts once, at its best status):
-rule_b
+RULE_B, secondary price (not part of the decision): 0 signals
+
+Wind triggers (a game counts once, at the best status it reached):
+status
 SIGNAL            17
 price_too_high     2
 
+Decision horizons (amendment 5, section 4, and amendment 6), for Rule B and the model lean alike: with 40 in the 2026 regular season, after Week 18 of 2026 (its last regular-season kickoff) on those bets, where a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A decision waits for every bet that kicked off by its horizon to settle or be void, needs at least 20 bets with a primary close, and the first final one is written down.
+Decision record: the first final decision is written to decisions.csv beside this test ledger.
 Variants under forward test: 2 (MODEL_LEAN, RULE_B).
 

@@ -107,7 +107,8 @@ def test_a_bet_with_no_close_is_not_a_loss_against_the_close(tmp_path):
     games[3]["total_line"] = np.nan
     out = rule_b(score(tmp_path, rows, games + [unplayed(2026)], "2026-11-15"))
     assert "3 of 4 bets have a primary close" in out
-    assert "win rate vs the close 100.0% (3 of 3 with a close, 0 ties)" in out
+    # amendment 6 (the review's m9): one meaning of "with a primary close" per printout
+    assert "win rate vs the close 100.0% (3 of the 3 bets that have a primary close and didn't tie it; 0 ties" in out
 
 
 def test_keep_and_drop_both_met_is_a_drop(tmp_path):

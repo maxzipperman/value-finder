@@ -177,3 +177,234 @@ change.
   decision, Sep 28) and registered by a dated amendment before 2027 Week 0.
 
 Variants under forward test: still **2**.
+
+## Amendment 4 (2026-09-29 Pacific, before the first eligible game on Oct 1; no Rule B or Rule HT signal logged)
+
+A review of the scorer, made after amendment 3 was merged (pull request 50), found readings the earlier
+text left open. Every one is settled here, before any outcome exists. **No trigger, gate, price cap,
+stake or metric changes.** Section 6 settles which quote is Rule B's primary close, the question
+amendment 3 (section 7) left to the owner. The rules version stays `cfb-v3-2026-09-28`, because the
+board behaves exactly as before; only `scripts/score_forward.py` changes. Where this amendment and
+any earlier text differ, this one applies. The last section lists every earlier sentence it changes. A
+final review before registration (Sep 29) added sections 10 to 12 and that list. Registered by the hub
+on the owner's standing instruction of September 29, 2026 (the hub decides questions of how the tests
+are graded and reports them; money, and any rule's trigger, gate or price cap, stay the owner's). The
+registering commit is the merge of pull request 59. The owner can change any reading here by a dated
+amendment made before the first outcome it would affect.
+
+### 1. A bet whose game was moved or never played is void
+
+* A bet is **void** when its game did not kick off within 24 hours of the kickoff time on its entry
+  row (the game was postponed, moved or cancelled), or when the schedule still shows no result 30 days
+  after that kickoff. The entry row's kickoff is its `start_utc`; the scorer compares it with the
+  schedule's kickoff for the same game id.
+* A void bet is counted and listed by reason. It is not graded: it is left out of the record, the
+  units, the CLV and the count toward 40.
+* A sportsbook voids the same bets. Wind rules meet this case more than most, because hurricanes
+  postpone games. The review's example: a signal logged for Oct 10 on a game played Oct 31 under the
+  same game id was graded at the Oct 10 line.
+* A result that lands after day 30 brings the bet back: it is graded like any other bet from then on.
+  If a decision on its horizon is already recorded, the record stands, and the scorer prints the fresh
+  computation beside it (section 3).
+
+### 2. A bet still waiting for its result holds its decision open
+
+* A bet whose game has no result yet, and that is not void, is **pending**. The scorer prints how many
+  bets are pending.
+* No decision is final while any bet that kicked off on or before the decision's horizon is pending.
+* This replaces amendment 3's reading of "a cancelled game can't hold a decision open", which treated
+  a game with no score a week after kickoff as never played. Under that reading a score that arrived
+  late could change a decision after it was made. A cancelled game now holds a decision open for at
+  most 30 days, and then it is void.
+
+### 3. A decision is made once, and written down
+
+* The first time a decision is final, the scorer appends it to `data/forward/decisions.csv`: its
+  decision id, the rule, the horizon, the time it was decided (UTC), the number of bets, every number
+  the decision used, the verdict, the positions in the ledger of the rows that entered it (1 is the
+  first row after the header): the entry rows, and for Rule B the later quotes used as closes (section
+  6), and a fingerprint of those rows.
+* **The decision id is fixed:** `CFB_RULE_B` for Rule B and `CFB_RULE_HT` for Rule HT. The record is
+  looked up by its decision id, never by the wording of its label.
+* **The fingerprint** is the sha256 of the ledger's header line followed by each row that entered the
+  decision, exactly as written in the ledger and in the order of the ledger, each line followed by a
+  newline (`\n`), the whole encoded as UTF-8. (If a row was ever written across several lines, the
+  rows are taken as the scorer reads them instead.) Every later run recomputes the fingerprint from the
+  rows at the recorded positions and, if it differs, prints a warning that the ledger has changed since
+  the decision was recorded. The recorded decision still stands.
+* Every later run prints the recorded decision, even when no bet is settled any more. If a fresh
+  computation on the same horizon would now come out differently (a corrected score, say), the scorer
+  prints both and says the recorded one stands. A preview with `--now` shows a recorded decision only
+  if it was decided at or before the preview's date.
+* **Only a real run writes the record.** That is a run of the scorer on the live ledger
+  (`data/forward/ledger.csv`), on the real clock, reading the default cfbfastR schedule when the
+  current season's schedule file (`schedules_<season>.parquet`) was refreshed in the last 2 days; the
+  other seasons' files don't count. Every alert run refreshes the current season's schedule. The hub's
+  daily check-in runs the scorer this way, so the first check-in after a decision becomes final
+  records it. A scorer is live only if its `data/forward` folder, with links resolved, is inside its
+  own project folder. In every other case the scorer prints the decision and says why it wasn't
+  recorded:
+  * a run with `--now` (a preview as of another time, for tests and rehearsals) records nothing, except
+    with `--test-record` beside a test ledger (below);
+  * a schedule last refreshed more than 2 days ago records nothing, because played games would look
+    unscored and could be voided; refresh it and run the scorer again;
+  * a run on another ledger kept in `data/forward/` (the rewrite's backup copy) neither reads nor
+    writes the record;
+  * a copy of the scorer in another folder (a worker's worktree) run on the live ledger reads the record
+    but never writes it;
+  * a scorer whose `data/forward` folder is a link to a folder outside its own project reads that
+    folder's record but never writes it.
+* A run on a test ledger kept anywhere else (`--ledger`) writes `decisions.csv` beside that ledger,
+  never into `data/forward/`. `--test-record` exists for tests only: with `--now`, it records decisions
+  beside a test ledger as if they were made at that time, and it is refused on a live ledger or any
+  other ledger in `data/forward/`.
+* **One run at a time.** A run that writes takes a lock on the record and reads it again before it
+  appends, so two runs at once can't record the same decision twice.
+* **A damaged record.** If `decisions.csv` can't be read (a half-written line, wherever it was cut; a
+  line without exactly its 10 fields; a missing header; an empty file; a decision id, verdict or
+  numbers the scorer doesn't know or can't print), the scorer says so, records nothing until the file
+  is repaired or restored from the ledgers branch, and still prints the scores. It never adds a line
+  to a damaged file.
+* **A lost record.** The record is copied to the ledgers branch every night. A lost record is restored
+  from that copy; it is never decided again. When the live record is missing, a real run reads the
+  copy (`origin/ledgers`, as this checkout last fetched it; the scorer never fetches), restores the
+  file from it and prints what it restored, before it decides anything. Any other run on the live
+  ledger (a preview, a run on a stale schedule, a worker's copy of the scorer) reads the copy too,
+  prints its decisions as recorded, and leaves the file alone. It records a new decision only when
+  neither the file nor the copy holds one. If git can't show a copy (there is no ledgers branch, or no
+  record in it), there is no copy. A copy that is there but can't be read (a damaged file was copied
+  before the damage was repaired) stops recording, as a damaged file does, until the file is restored
+  from a readable earlier copy in the branch's history (`git log origin/ledgers --
+  cfb-weather/decisions.csv`). A record made since the last nightly copy exists only on the Mac until
+  that night: if it is lost before then, neither the file nor a copy holds it, and the next real run
+  decides it again.
+
+### 4. Horizons are dates
+
+* The dates are as registered in amendment 3: Rule B is decided after the later of Dec 12, 2026 (the
+  end of the regular season) and the 40th settled signal's kickoff; Rule HT after Feb 1, 2028.
+* A game dated after a test's end (Feb 1, 2028) never counts, whatever season label it carries. The
+  scorer labels a season from July to June, so a game in February 2028 used to count as 2027.
+
+### 5. What a quote is, and Rule HT's entry
+
+* A **quote** is a posted total with a valid under price (at or beyond 100 either side of zero,
+  amendment 3, section 1).
+* Rule HT's entry is the game's last logged quote before kickoff in that sense (for each listing,
+  section 10). A later row with a total and no usable under price is not a quote, so it doesn't replace
+  the entry. (The scorer used to take such a row as the game's last quote, and the bet vanished.)
+* Pushes are left out of Rule HT's exact test, and count in the denominator of ROI (a push is a bet
+  placed that won nothing).
+
+### 6. Rule B's primary close (settles amendment 3, section 7)
+
+* Rule B's primary close is **the last logged quote before kickoff that is later than the entry row.**
+  The quote comes from the entry's own listing (section 10).
+* If there is none, the close captured by amendment 2 is used. **This replaces amendment 2's "What it
+  can't change" for Rule B's primary close:** when no later quote was logged, the captured close now
+  enters the primary CLV, and so the keep/drop decision. Everywhere else the captured close stays
+  descriptive, as amendment 2 says.
+* If there is neither, the bet has no primary close: it is counted, and left out of the CLV.
+* The scorer prints the book behind the entry and the book behind the close. They can differ: a
+  Pinnacle entry can close at DraftKings when Pinnacle takes its line down.
+* Why: when a signal fires on the last run before kickoff, the entry row was also the last logged
+  quote, so its CLV was 0 by construction. The entry is never its own close now.
+* Amendment 3, section 7 listed this as an open owner decision. The hub settled it on September 29,
+  2026 under the owner's standing instruction; the owner can change it by a dated amendment before the
+  first Rule B signal settles.
+
+### 7. "Not kept"
+
+* A Rule B result of **not kept** means no money goes on the rule. It can stay on paper for 2027 only
+  by a dated amendment before 2027 Week 0.
+
+### 8. Rule HT by price source
+
+* The scorer reports Rule HT's bets by price source (Pinnacle, DraftKings, ESPN), each with its record
+  and units, as amendment 3, section 2 says. This is reporting only: the decision uses every bet.
+
+### 9. Corrections to amendment 3's quoted numbers (2026-09-29)
+
+Amendment 3's text is left as written. Two numbers in section 1 were off:
+
+* The value at the rule's own number reaches zero at **about −130** (−130.5 on a half-point line,
+  −130.3 on a whole number), not "about −131". The conclusion stands: inside the −115 cap the gate
+  can't reject a bet at the rule's own number.
+* At −115 the model rejects an under **from 1.5 points below the reference** (reference 42.5, under
+  41: −0.6%), not only "2 points below". One point below still passes (+1.2%).
+
+### 10. A postponed game that signals again is two listings
+
+* A game's rows are grouped into **listings** by the kickoff on each row (`start_utc`): rows whose
+  kickoffs are within 24 hours of each other are one listing. Precisely: in order of each row's
+  kickoff, a row whose kickoff is more than 24 hours after the first kickoff of the current listing
+  starts a new listing.
+* A listing's entry is its earliest signal: for Rule B its earliest `SIGNAL` row, whose primary close
+  comes from the same listing (section 6). For Rule HT, whose entry is the last quote (section 5), it
+  is the listing's last quote, when that quote is a signal.
+* A listing whose entry's kickoff is more than 24 hours from the game's actual kickoff is void
+  (section 1). The listing that matches the actual kickoff is graded like any other bet. If two
+  listings are each within 24 hours of the actual kickoff, the nearer one is graded (the later one if
+  they are equally near) and the other is void. If the schedule gives no kickoff for the game, the
+  check for moved games is off, and the listing with the latest kickoff is the one graded.
+* So a game is still graded once, and a game postponed by more than a day that signals again on its
+  new date is graded at its new entry. Before this reading the second signal was dropped as a repeat
+  of the first, which was void, so the game was never a bet.
+
+### 11. "Before kickoff"
+
+* "Before kickoff" means before the earlier of the kickoff on the row and the kickoff in the schedule,
+  in both scorers and for every use: which rows count, the entries, the last quotes and the
+  later-quote closes. Here the row's kickoff is its `start_utc`, and the uses are which rows count,
+  Rule B's entry, Rule HT's last quote and Rule B's later-quote close.
+* Why: a row carries the kickoff cfbfastR showed when it was logged. When a game is moved earlier
+  before the schedule shows it, a quote logged after the real kickoff could otherwise enter Rule HT or
+  close Rule B at an in-play price.
+
+### 12. A closing-line decision needs 20 closes
+
+* A closing-line decision needs closing lines. If fewer than 20 of the bets in a decision have a
+  primary close, the result is **inconclusive**, and the scorer says why. This applies to Rule B. It
+  does not apply to Rule HT, which is graded on results. The result is inconclusive in the same sense
+  as when the test ends with fewer than 40 settled signals (amendment 3, section 4).
+* Whenever some bets in a decision have no primary close, the scorer prints how many.
+
+### What this amendment replaces
+
+Each earlier sentence below is quoted as registered; the section of this amendment named beside it
+applies instead.
+
+* Amendment 1: "Entry is at each game's last logged quote before kickoff." Amendment 2: "Rule HT
+  (amendment 1) keeps its entry at the last logged quote before kickoff." Amendment 3, section 3: "The
+  entry is unchanged: the game's last logged quote before kickoff." A quote is a total with a valid
+  under price (section 5), each listing has its own last quote (section 10), and before kickoff is
+  before the earlier kickoff (section 11).
+* Amendment 3, section 3: "A quote logged by hand after the last scheduled run is a logged quote, so it
+  becomes the entry." It does so only if it is a quote (section 5), in the listing that is graded
+  (section 10), logged before the earlier kickoff (section 11).
+* Amendment 2: "The primary CLV compares the entry with the last alert quote before kickoff."
+  Amendment 3, section 7: "The primary CLV compares the entry with the last logged quote before
+  kickoff." and "Whether to require a later quote is an open owner decision". Replaced by section 6:
+  the last quote of the same listing logged later than the entry row, else the captured close.
+* Amendment 2: "It doesn't change which bets count, the primary CLV, or the keep/drop decision." For
+  Rule B's primary close only, section 6 lets the captured close enter the primary CLV, and so the
+  decision.
+* Amendment 3, section 1: "The value reaches zero at about −131" and "because the model does reject an
+  under offered 2 points below the reference". Corrected by section 9.
+* Amendment 3, section 4: "keep only if mean CLV > 0 with a 95% interval above zero". With fewer than
+  20 signals that have a primary close, the result is inconclusive whatever its numbers (section 12).
+* Amendment 3, section 4: "the later of Dec 12, 2026 and the 40th signal's kickoff". It is the 40th
+  settled signal's kickoff: a void signal doesn't count (sections 1 and 4).
+* Amendment 3, section 4: "The decision uses the signals that kicked off by that horizon". Void signals
+  among them are left out (section 1), and the decision waits while any of them is pending (section 2).
+* Amendment 3, section 4: "Later signals never enter it, so a later run of the scorer prints the same
+  result." A later run prints the recorded decision, and a fresh computation beside it when that now
+  differs (section 3).
+* Amendment 3, section 4: "A cancelled game can't hold a decision open." A game with no score holds
+  its decision open for at most 30 days, and then it is void (section 2).
+* Amendment 3, section 5: "logged before kickoff, inside the test window". Before kickoff now means
+  before the earlier of the row's kickoff and the schedule's (section 11).
+
+Variants under forward test: still **2**. Nfl-weather amendment 6 and cfb-weather amendment 4 test
+nothing and leave the running variant count unchanged. On the day of registration it is **271**, so
+the multiple-testing bar is p < 0.000185 (`strategy-research/README.md`, `STATUS.md`).
