@@ -188,7 +188,7 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **A run that fails at any stage is recorded and notified.** One game's alert failing doesn't stop the others. Keys are blanked from error text.
 - **The one-time ledger rewrite keeps old rows character for character** and leaves a copy of the ledger as it stood.
 
-**A review of the scorer (Sep 29) found readings the text still left open.** Amendment 4 settles each one before any outcome exists; no trigger, gate, price cap, stake or metric changes. A final review of the draft the same day added the last four items. Each has a test in `tests/test_readings.py`:
+**A review of the scorer (Sep 29) found readings the text still left open.** Amendment 4 settles each one before any outcome exists; no trigger, gate, price cap, stake or metric changes. A final review before registration, the same day, added the last four items. Each has a test in `tests/test_readings.py`:
 
 - **Void.** A bet whose game kicked off more than 24 hours from the kickoff on its entry row (postponed, moved or cancelled), or that still has no result 30 days after that kickoff, is void: listed by reason and not graded, as a sportsbook would. The review's example was a hurricane-postponed game graded at the old line. A result that lands later brings the bet back; a decision already recorded still stands.
 - **Pending.** A bet with no result yet holds its decision open. The old test treated a game with no score a week after kickoff as never played, so a late score could flip a final decision.

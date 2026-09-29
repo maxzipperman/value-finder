@@ -323,8 +323,12 @@ A review of the scorer, made after amendment 5 was merged (pull request 50), fou
 text left open. Every one is settled here, before any outcome exists. **No trigger, gate, price cap,
 stake or metric changes.** The rules version stays `v3-2026-09-28`, because the board behaves exactly
 as before; only `scripts/score_forward.py` changes. Where this amendment and any earlier text differ,
-this one applies. The last section lists every earlier sentence it changes. A final review of this
-draft (Sep 29) added sections 9 to 11 and that list.
+this one applies. The last section lists every earlier sentence it changes. A final review before
+registration (Sep 29) added sections 9 to 11 and that list. Registered by the hub on the owner's
+standing instruction of September 29, 2026 (the hub decides questions of how the tests are graded and
+reports them; money, and any rule's trigger, gate or price cap, stay the owner's). The registering
+commit is the merge of pull request 59. The owner can change any reading here by a dated amendment made
+before the first outcome it would affect.
 
 ### 1. A bet whose game was moved or never played is void
 

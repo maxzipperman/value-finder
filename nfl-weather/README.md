@@ -91,7 +91,7 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **The one-time ledger rewrite keeps old rows character for character** and leaves a copy of the ledger as it stood.
 - **A number that isn't a price is no price** (anything between −100 and +100), and quarter-point lines are priced as half a bet at each neighbour.
 
-**A review of the scorer (Sep 29) found readings the text still left open.** Amendment 6 settles each one before any outcome exists; no trigger, gate, price cap, stake or metric changes. A final review of the draft the same day added the last four items. Each has a test in `tests/test_readings.py`:
+**A review of the scorer (Sep 29) found readings the text still left open.** Amendment 6 settles each one before any outcome exists; no trigger, gate, price cap, stake or metric changes. A final review before registration, the same day, added the last four items. Each has a test in `tests/test_readings.py`:
 
 - **Void.** A bet whose game kicked off more than 24 hours from the kickoff on its entry row (postponed, moved or cancelled), or that still has no result 30 days after that kickoff, is void: listed by reason and not graded, as a sportsbook would. A result that lands later brings the bet back; a decision already recorded still stands.
 - **Pending.** A bet with no result yet holds its decision open. The old test treated a game with no result a week after kickoff as not played, so a late result could flip a final decision.

@@ -186,7 +186,11 @@ stake or metric changes.** Section 6 settles which quote is Rule B's primary clo
 amendment 3 (section 7) left to the owner. The rules version stays `cfb-v3-2026-09-28`, because the
 board behaves exactly as before; only `scripts/score_forward.py` changes. Where this amendment and
 any earlier text differ, this one applies. The last section lists every earlier sentence it changes. A
-final review of this draft (Sep 29) added sections 10 to 12 and that list.
+final review before registration (Sep 29) added sections 10 to 12 and that list. Registered by the hub
+on the owner's standing instruction of September 29, 2026 (the hub decides questions of how the tests
+are graded and reports them; money, and any rule's trigger, gate or price cap, stay the owner's). The
+registering commit is the merge of pull request 59. The owner can change any reading here by a dated
+amendment made before the first outcome it would affect.
 
 ### 1. A bet whose game was moved or never played is void
 
@@ -305,8 +309,9 @@ final review of this draft (Sep 29) added sections 10 to 12 and that list.
   Pinnacle entry can close at DraftKings when Pinnacle takes its line down.
 * Why: when a signal fires on the last run before kickoff, the entry row was also the last logged
   quote, so its CLV was 0 by construction. The entry is never its own close now.
-* Amendment 3, section 7 listed this as an open owner decision. This reading is the hub's
-  recommendation, and the owner's approval of this amendment settles it.
+* Amendment 3, section 7 listed this as an open owner decision. The hub settled it on September 29,
+  2026 under the owner's standing instruction; the owner can change it by a dated amendment before the
+  first Rule B signal settles.
 
 ### 7. "Not kept"
 
