@@ -62,6 +62,43 @@ def test_static_table_is_only_the_static_folder():
     assert set(table) == {"/", "/static/index.html", "/static/app.css", "/static/app.js"}
 
 
+def test_a_link_in_the_static_folder_is_never_followed(tmp_path, monkeypatch):
+    """A link planted in the static folder (to a .env file, to STATUS.md, even to a file beside it) is not served
+    and not opened."""
+    import os
+    import shutil
+
+    from vfdash import server
+    folder = tmp_path / "static"
+    shutil.copytree(server.STATIC_DIR, folder)
+    env = tmp_path / "nfl-weather" / ".env"
+    env.parent.mkdir()
+    env.write_text("ODDS_API_KEY=FAKEKEY-SECRET\n")
+    (tmp_path / "STATUS.md").write_text("# Value Finder: status\n")
+    os.symlink(env, folder / "leak.css")
+    os.symlink(tmp_path / "STATUS.md", folder / "status.html")
+    os.symlink(folder / "app.js", folder / "again.js")
+    monkeypatch.setattr(server, "STATIC_DIR", folder)
+    opened = []
+    real_os_open, real_open = os.open, builtins.open
+
+    def spy_os_open(path, *a, **k):
+        opened.append(os.path.realpath(path))
+        return real_os_open(path, *a, **k)
+
+    def spy_open(file, *a, **k):
+        if isinstance(file, (str, os.PathLike)):
+            opened.append(os.path.realpath(file))
+        return real_open(file, *a, **k)
+    monkeypatch.setattr(os, "open", spy_os_open)
+    monkeypatch.setattr(builtins, "open", spy_open)
+    monkeypatch.setattr(io, "open", spy_open)
+    table = server.static_table()
+    assert set(table) == {"/", "/static/index.html", "/static/app.css", "/static/app.js"}
+    assert not any(b"FAKEKEY" in body or b"Value Finder: status" in body for body, _ in table.values())
+    assert str(env.resolve()) not in opened and str((tmp_path / "STATUS.md").resolve()) not in opened
+
+
 def test_other_hosts_are_refused(served):
     for host in ("evil.example", "127.0.0.1.nip.io:%d" % served.port, "attacker.test:%d" % served.port):
         status, body = raw_get(served.port, "/api/summary", host=host)
@@ -119,6 +156,79 @@ def test_unknown_game_id_is_plain_text_lookup(store):
 def test_a_burst_of_requests_waits_in_line():
     from vfdash.server import LocalServer
     assert LocalServer.request_queue_size >= 64
+
+
+def closed_by_server(sock, wait: float) -> bool:
+    sock.settimeout(wait)
+    try:
+        return sock.recv(1024) == b""                 # closed, with no answer
+    except ConnectionResetError:
+        return True
+    except TimeoutError:
+        return False
+
+
+def test_a_request_that_is_never_finished_is_dropped(store, monkeypatch, capsys):
+    """A connection that sends part of a request and waits, or drips it a byte at a time, is closed once the time
+    for a request is up, so a pile of them can't use up the server; it answers everyone else meanwhile."""
+    import socket
+    import threading
+    import time
+
+    from conftest import Running
+    from vfdash import server
+    monkeypatch.setattr(server, "REQUEST_SECONDS", 1.0, raising=False)
+    s = Running(store)
+    stop = threading.Event()
+    try:
+        idle = socket.create_connection(("127.0.0.1", s.port))
+        idle.sendall(b"GET /api/summary HTTP/1.1\r\nHost: 127.0.0.1\r\n")        # never the blank line
+        half = socket.create_connection(("127.0.0.1", s.port))
+        half.sendall(b"GET /api/summ")                                          # not even the first line
+        drip = socket.create_connection(("127.0.0.1", s.port))
+        drip.sendall(b"GET /api/summary HTTP/1.1\r\n")
+
+        def dripping():
+            while not stop.is_set():
+                try:
+                    drip.sendall(b"X")
+                except OSError:
+                    return
+                time.sleep(0.2)
+        threading.Thread(target=dripping, daemon=True).start()
+        assert s.get("/api/summary")[0] == 200
+        t0 = time.monotonic()
+        assert closed_by_server(idle, 6) and closed_by_server(drip, 6) and closed_by_server(half, 6)
+        assert time.monotonic() - t0 < 5
+        # a request sent in full is answered as before
+        assert s.get("/api/summary")[0] == 200
+    finally:
+        stop.set()
+        s.close()
+    assert "Exception occurred" not in capsys.readouterr().err       # dropped quietly, not with a traceback
+
+
+def test_the_open_file_limit_is_raised_at_start(monkeypatch):
+    """launchd starts its jobs with a soft limit of 256 open files; each connection holds one."""
+    import errno
+    import resource
+
+    from vfdash import server
+    inf = resource.RLIM_INFINITY
+    for soft, hard, want in ((256, inf, (4096, inf)), (256, 1024, (1024, 1024)), (8192, inf, None), (inf, inf, None)):
+        calls = []
+        server.raise_open_file_limit(get=lambda _, s=soft, h=hard: (s, h), set_=lambda _, v, c=calls: c.append(v))
+        assert calls == ([want] if want else []), (soft, hard)
+    order = []
+    monkeypatch.setattr(server, "raise_open_file_limit", lambda: order.append("limit"))
+
+    def busy(*a, **k):
+        order.append("bind")
+        raise OSError(errno.EADDRINUSE, "in use")
+    monkeypatch.setattr(server, "make_server", busy)
+    with pytest.raises(server.PortInUse):
+        server.serve(store=None, port=8787)
+    assert order == ["limit", "bind"]
 
 
 def test_security_headers(served):

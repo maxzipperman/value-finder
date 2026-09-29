@@ -75,7 +75,7 @@ def test_board(store):
     assert buf["matchup"] == "BUF at NE"
     assert buf["forecast"] == "17 mph, 61°F"
     assert (buf["total"], buf["under"], buf["source"]) == ("44.5", "−108", "Pinnacle")
-    assert buf["model_chance"] == "52%" and buf["ev"] == "+10.4%"
+    assert buf["lean_chance"] == "52%" and buf["wind_value"] == "+10.4%"
     assert buf["rules"][0] == {"rule": "Rule B", "value": "SIGNAL", "words": "Signal", "signal": True, "lean": False}
     assert buf["best"] == "45.0 at −110 (FanDuel)"
     assert buf["days"] == 2
@@ -229,6 +229,63 @@ def test_research(store):
         assert e["bar_words"] == "Does not clear the multiple-testing bar"
 
 
+def paren_depth(s: str) -> int:
+    depth = top = 0
+    for ch in s:
+        depth += (ch == "(") - (ch == ")")
+        top = max(top, depth)
+    return top
+
+
+def test_each_results_bar_is_one_plain_sentence(store):
+    ev = {e["id"]: e for e in api.research(store)["entries"]}
+    assert ev["nfl-rule-b-replay-mos"]["bar_sentence"] == (
+        "Does not clear the multiple-testing bar in force when it was measured: p < 0.000183 (273 variants).")
+    assert ev["cfb-rule-b-replay-openmeteo-2024-25"]["bar_sentence"] == (
+        "Does not clear the multiple-testing bar in force when it was measured: 0.05 split over 135 variants (this "
+        "replay made the count 135).")
+    assert ev["cfb-rule-b-observed-2006-25"]["bar_sentence"] == (
+        "No multiple-testing bar was stated in the source, so it is not counted as clearing one.")
+    assert ev["money-gate-today"]["bar_sentence"] == "Not a betting test: it adds no variants."
+    for e in ev.values():
+        s = e["bar_sentence"]
+        assert s[:1].isupper() and s.endswith(".") and paren_depth(s) <= 1, s
+    for e in api.home(store)["evidence"]:
+        assert e["bar_sentence"] == ev[e["id"]]["bar_sentence"]
+    js = (CONTENT.parent / "vfdash" / "static" / "app.js").read_text()
+    row = js.split("function evidenceRow(", 1)[1].split("\n  }\n", 1)[0]
+    assert "e.bar_sentence" in row and "in force when measured (" not in row
+
+
+def test_bars_as_the_hub_may_write_them(root, home, tmp_path):
+    content = copy_content(tmp_path / "content")
+    base = {"title": "T", "result": "R.", "record": None, "win_rate": None, "n": 10, "p_value": None,
+            "source": "STATUS.md", "date": "2026-09-01"}
+    entries = [dict(base, id="a", clears_bar=False, bar=None), dict(base, id="b", clears_bar=False, bar=""),
+               dict(base, id="c", clears_bar=False, bar="not stated"),
+               dict(base, id="d", clears_bar=True, bar="p < 0.0001 (500 variants)", p_value=0.00001)]
+    (content / "evidence.json").write_text(json.dumps(entries))
+    ev = {e["id"]: e for e in api.research(make_store(root, home, content=content))["entries"]}
+    none = "No multiple-testing bar was stated in the source, so it is not counted as clearing one."
+    assert [ev[k]["bar_sentence"] for k in "abc"] == [none] * 3
+    assert ev["d"]["bar_sentence"] == ("Clears the multiple-testing bar in force when it was measured: p < 0.0001 "
+                                       "(500 variants).")
+
+
+def test_the_research_stamp_is_the_newest_entrys_date(root, home, tmp_path):
+    """Not the evidence file's modification time, which is only when git last wrote it."""
+    content = copy_content(tmp_path / "content")
+    newest = max(e["date"] for e in json.loads((CONTENT / "evidence.json").read_text()))
+    from datetime import date
+    d = date.fromisoformat(newest)
+    os.utime(content / "evidence.json", (0, 0))                        # Jan 1, 1970
+    h = api.research(make_store(root, home, content=content))["header"]
+    assert h["last_written"] == f"Newest entry dated {d:%a} {d:%b} {d.day}, {d.year}"
+    (content / "evidence.json").write_text(json.dumps([{"id": "x", "title": "T", "result": "R.", "date": "soon"}]))
+    h = api.research(make_store(root, home, content=content))["header"]
+    assert h["last_written"] == "No entry in the evidence list is dated"
+
+
 def test_evidence_sources_exist_in_the_repo():
     repo = CONTENT.parents[1]
     for e in json.loads((CONTENT / "evidence.json").read_text()):
@@ -373,7 +430,7 @@ def test_ledger_grows_between_reads(root, home):
     from conftest import nfl_row
     with nfl.open("a") as f:
         f.write(nfl_row("2026-10-02T18:30:07Z", "2026_05_NYJ_MIA", "2026-10-04", "13:00", "NYJ", "MIA", "SIGNAL") + "\n")
-    clock.t += timedelta(seconds=31)
+    clock.t += timedelta(minutes=91)                  # 18:31 UTC: after that run was logged
     s = api.summary(store)
     assert s["games_on_board"] == 3 + 1            # the NFL latest run now has one game
     assert s["signals_live"] == 3 + 1 - 0
@@ -412,7 +469,8 @@ def test_a_logging_time_that_cant_be_read_is_left_out(root, home):
     b = api.board(store)
     assert b["runs"]["nfl"] == {"sport": "NFL", "latest_run": "7:30 AM", "games": 6}
     assert "2026_05_NYJ_MIA" not in {g["game_id"] for g in b["games"]}
-    assert "1 row of the NFL ledger has a logging time (snapshot_utc) that can't be read; it is left out." in b["notes"]
+    assert ("1 row of the NFL ledger (nfl-weather/data/forward/ledger.csv) has a logging time (snapshot_utc) that "
+            "can't be read; it is left out.") in b["notes"]
     assert b["header"]["last_written"] == "Last run 7:30 AM"
 
 
@@ -499,3 +557,81 @@ def test_a_failed_scorer_is_not_read_as_progress(root, home):
             assert by_id[tid]["progress"].startswith("The scorer stopped with an error; "), by_id[tid]["progress"]
             assert "settled" not in by_id[tid]["progress"] and by_id[tid]["scorer_counts"] is None
     assert tests["groups"][0]["scorer"]["text"].startswith("ledger rows: 8")        # what it printed is shown
+
+
+def test_a_row_logged_later_than_now_is_not_the_latest_run(root, home):
+    """One row stamped in the future (a clock set ahead) is left out until its time comes: it doesn't become the
+    latest run or empty a sport's board. It is counted and named in the notes, and health turns to warn."""
+    from datetime import datetime, timedelta, timezone
+    ledger = root / "nfl-weather" / "data" / "forward" / "ledger.csv"
+    last = ledger.read_text().splitlines()[-1]                        # ATL at NO, in the 7:30 AM run
+    append(ledger, "2026-12-01T00:00:00Z," + last.split(",", 1)[1] + "\n")
+    clock = Clock()
+    store = make_store(root, home, clock=clock)
+    b = api.board(store)
+    assert b["runs"]["nfl"] == {"sport": "NFL", "latest_run": "7:30 AM", "games": 5}
+    assert b["header"]["last_written"] == "Last run 7:30 AM"
+    note = ("1 row of the NFL ledger (nfl-weather/data/forward/ledger.csv) is logged later than now: game "
+            "2026_05_ATL_NO at Mon Nov 30, 4:00 PM. It is left out until then.")
+    assert note in b["notes"]
+    s = api.summary(store)
+    assert s["games_on_board"] == 8 and s["signals_live"] == 3
+    assert s["health"] == "warn"
+    assert s["problems"] == ["The NFL ledger has 1 row logged later than now, which is left out; check the Mac's "
+                             "clock."]
+    status, g = api.game(store, "2026_05_ATL_NO")                     # the game's own rows leave it out too
+    assert [r["logged"] for r in g["rows"]] == ["7:30 AM"]
+    # once that time has come, the row is read like any other
+    clock.t = datetime(2026, 12, 1, 0, 1, tzinfo=timezone.utc)        # Mon Nov 30, 4:01 PM Pacific
+    b = api.board(store)
+    assert b["runs"]["nfl"]["latest_run"] == "4:00 PM"
+    assert not any("later than now" in n for n in b["notes"])
+    clock.t += timedelta(seconds=31)
+    assert "later than now" not in " ".join(api.summary(store)["problems"])
+
+
+def test_several_rows_logged_later_than_now_are_counted(root, home):
+    ledger = root / "cfb-weather" / "data" / "forward" / "ledger.csv"
+    lines = ledger.read_text().splitlines()[1:]
+    for i, ln in enumerate(lines):
+        append(ledger, f"2027-01-0{i + 1}T12:00:00Z," + ln.split(",", 1)[1] + "\n")
+    store = make_store(root, home)
+    b = api.board(store)
+    assert b["runs"]["cfb"]["games"] == 3
+    note = next(n for n in b["notes"] if "later than now" in n)
+    assert note.startswith("5 rows of the college football ledger (cfb-weather/data/forward/ledger.csv) are logged "
+                           "later than now: game 401000001 at Fri Jan 1, 4:00 AM; game 401000002 at Sat Jan 2, 4:00 AM;")
+    assert note.endswith("; and 2 more. They are left out until then.")
+    assert ("The college football ledger has 5 rows logged later than now, which are left out; check the Mac's clock."
+            in api.summary(store)["problems"])
+
+
+def test_a_run_recorded_later_than_now_does_not_hide_a_stopped_job(root, home):
+    """The same for runs.csv: a run stamped in the future is not taken as the last run, so a job that stopped
+    still fails health."""
+    from datetime import datetime, timezone
+    runs = root / "nfl-weather" / "data" / "forward" / "runs.csv"
+    append(runs, "2026-12-01T00:00:00Z,nfl-alerts,v3-2026-09-28,ok,5,2,5,,,4\r\n")
+    store = make_store(root, home, clock=Clock(datetime(2026, 10, 3, 17, 0, tzinfo=timezone.utc)))   # a day on
+    s = api.summary(store)
+    assert s["health"] == "fail"
+    assert any(p.startswith("The NFL alerts have not recorded a run since Fri Oct 2, 7:30 AM") for p in s["problems"])
+    assert ("The NFL run record has 1 row logged later than now, which is left out; check the Mac's clock."
+            in s["problems"])
+    j = api.jobs_screen(store)
+    assert ("1 row of the NFL run record (nfl-weather/data/forward/runs.csv) is logged later than now: Mon Nov 30, "
+            "4:00 PM. It is left out until then.") in j["notes"]
+    assert j["runs"]["nfl-weather"]["rows"][0]["when"] == "Fri Oct 2, 7:30 AM"
+
+
+@pytest.mark.parametrize("how, words", [("remove", "is missing."), ("empty", "is empty."),
+                                        ("cut", "has only a partly written first line.")])
+def test_a_ledger_that_cant_be_read_is_named_in_a_full_sentence(root, home, how, words):
+    ledger = root / "nfl-weather" / "data" / "forward" / "ledger.csv"
+    if how == "remove":
+        ledger.unlink()
+    else:
+        ledger.write_text("" if how == "empty" else "snapshot_utc,game")
+    b = api.board(make_store(root, home))
+    assert f"The NFL ledger (nfl-weather/data/forward/ledger.csv) {words}" in b["notes"]
+    assert not any(n[:1].islower() for n in b["notes"])

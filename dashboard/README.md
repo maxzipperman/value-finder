@@ -72,4 +72,30 @@ A ledger is read by its column names. One without `snapshot_utc`, `game_id` or i
 (`gameday` and `gametime`; for college football `start_utc` or `kick_et`), and a `runs.csv` without `run_utc`
 and `status`, can't be read: the light turns amber and says which column is missing. Each row's logging time
 is read as a time; the latest run is the latest time that can be read, and a row whose time can't be read is
-left out and counted in a note.
+left out and counted in a note. A row logged more than 5 minutes later than now (a clock set ahead when it was
+written) is left out until its time comes, so it never becomes the latest run; it is counted and named in the
+notes, and the light turns amber.
+
+A game whose kickoff time isn't set yet (the college job logs it with cfbfastR's placeholder, midnight Eastern
+at the start of the game's date, and with `wx_src` `time_tbd` at an outdoor venue; or an NFL row with no
+`gametime`) is shown as "Time not set" with its date. It stays on the board, in `games_on_board` and, if one of
+its rules signals, in `signals_live` until its date has passed in Eastern time. Rule B can't signal on such a
+game (it has no forecast), but Rule HT is priced without one, so the college job can log a Rule HT signal on it.
+
+## What the board shows beside a game
+
+"Wind rule's value" is Rule B's expected value for the under (`ev_under`, and `ev_best_line` at the best
+number). The jobs log it on nearly every priced row, but it is priced from the frozen cohort of outdoor games
+with 15+ mph wind, so it is the value of an under in a windy game. The Board and Game screens show it only on a
+row whose Rule B status says the wind trigger was met (`SIGNAL`, `SIGNAL_SECONDARY`, `price_too_high`,
+`negative_ev`, `no_price`, `outside_horizon`), and a dash elsewhere. "Lean model's chance of the under"
+(`p_under`) is the NFL lean model's, a different model, in its own column and only for outdoor NFL games with a
+forecast (`wx_src` `era5`, the lean rule's own gate). Neither is a proven edge, and the page says so under the
+board.
+
+## Connections
+
+A request must arrive in full within 15 seconds: a connection that sends part of one and waits, or drips it a
+byte at a time, is closed. At start-up the dashboard raises its own limit on open files from launchd's 256 to
+4,096, so a pile of connections can't stop it answering. A link inside `vfdash/static` is never followed or
+served, and a data file that is a link to a `.env` file is not opened (the screen says so).

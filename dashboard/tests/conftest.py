@@ -43,8 +43,8 @@ def nfl_row(snap, gid, day, time, away, home, rule_b, lean="", wind="8.1", src="
                      "fanduel", "0.12", snap, snap, "abc123", snap, "270.0", "1.1", "7.9"])
 
 
-def cfb_row(snap, gid, kick_et, away, home, rule_b, rule_ht, start, total="55.0", extra="x"):
-    return ",".join([snap, "cfb-v3-2026-09-28", gid, kick_et, away, home, '"Stadium, The"', "3", "forecast", "9.9",
+def cfb_row(snap, gid, kick_et, away, home, rule_b, rule_ht, start, total="55.0", extra="x", src="forecast"):
+    return ",".join([snap, "cfb-v3-2026-09-28", gid, kick_et, away, home, '"Stadium, The"', "3", src, "9.9",
                      "70.1", "0.0", "pinnacle", total, "-109.0", "-109.0", "0.08", rule_b, "-108.0", "lowvig",
                      "62.617539", rule_ht, total, total, "-108.0", "lowvig", "0.087", snap, snap, "ffee", snap, "98.0",
                      start, extra])

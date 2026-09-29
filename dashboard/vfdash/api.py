@@ -3,7 +3,7 @@ bad data, and says in plain words what it couldn't read."""
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from . import health as health_mod
 from . import status_md, words
@@ -28,6 +28,10 @@ TESTS = [
 SCORE_LINE = re.compile(r"^(RULE_B|MODEL_LEAN|RULE_HT)\b[^:\n]*:\s*(\d+) signals[^,\n]*,\s*(\d+) settled,\s*(\d+) pending,"
                         r"\s*(\d+) void", re.M)
 RULE_NAMES = {"rule_b": "Rule B", "rule_ht": "Rule HT", "lean": "Model lean"}
+# Rule B statuses a row reaches only once the wind trigger is met (nflweather/live.py and cfbweather/live.py
+# call this set TRIGGERED). Rule B's expected value is priced from the frozen cohort of outdoor games with 15+ mph
+# wind, so it means something only on these rows, though the jobs log it on every priced row.
+WIND_TRIGGER_MET = ("SIGNAL", "SIGNAL_SECONDARY", "price_too_high", "negative_ev", "no_price", "outside_horizon")
 
 
 class Screen:
@@ -90,13 +94,18 @@ def run_times(snap: Snap) -> list[tuple[int, int]]:
     return sorted(times) or DEFAULT_RUN_TIMES
 
 
+def to_play(L, r, now: datetime) -> bool:
+    """Not yet kicked off; a game whose time isn't set, until its date has passed in Eastern time."""
+    u = L.until(r)
+    return u is not None and u > now
+
+
 def upcoming(snap: Snap, now: datetime):
     """(sport, ledger, row) for each game not yet kicked off in the latest run of each sport."""
     for sport, L in snap.ledgers.items():
         for n in L.latest_rows:
             r = L.rows[n]
-            k = L.kickoff(r)
-            if k is not None and k > now:
+            if to_play(L, r, now):
                 yield sport, L, r
 
 
@@ -107,8 +116,7 @@ def signals_live(snap: Snap, now: datetime) -> int:
     for L in snap.ledgers.values():
         for idx in L.by_game.values():
             r = L.rows[idx[-1]]
-            k = L.kickoff(r)
-            if k is not None and k > now and L.signal(r):
+            if L.signal(r) and to_play(L, r, now):
                 n += 1
     return n
 
@@ -119,8 +127,7 @@ def leans_live(snap: Snap, now: datetime) -> int:
     n = 0
     for idx in (L.by_game.values() if L is not None else ()):
         r = L.rows[idx[-1]]
-        k = L.kickoff(r)
-        if k is not None and k > now and get(r, "lean").strip() in ("UNDER lean", "OVER lean"):
+        if get(r, "lean").strip() in ("UNDER lean", "OVER lean") and to_play(L, r, now):
             n += 1
     return n
 
@@ -173,19 +180,39 @@ def rule_cells(sport: str, r) -> list[dict]:
     return out
 
 
+def wind_rule_met(r) -> bool:
+    """Rule B's wind trigger was met: the row's Rule B status is one the rule reaches only after the wind gate."""
+    return get(r, "rule_b").strip() in WIND_TRIGGER_MET
+
+
+def lean_model_applies(sport: str, r) -> bool:
+    """The NFL lean model's chance of the under means something only for an outdoor NFL game with a forecast (the
+    lean rule's own gate, wx_src "era5"); the jobs log p_under on every row."""
+    return sport == "nfl" and get(r, "wx_src").strip() == "era5"
+
+
 def game_row(scr: Screen, sport: str, L, r) -> dict:
     k = L.kickoff(r)
+    timed = L.time_set(r)
     logged = L.logged(r)
+    met = wind_rule_met(r)
     return {
         "sport": SPORT_OF[L.project], "sport_key": sport, "game_id": get(r, "game_id"),
-        "kickoff": words.kickoff_et(k), "kick_utc": words.iso_z(k),
+        "kickoff": words.kickoff_et(k) if timed or k is None else f"{words.day_label(k, words.EASTERN)}, time not set",
+        "kick_day": words.day_label(k, words.EASTERN) if k else "", "time_set": timed,
+        "kick_utc": words.iso_z(k) if timed else None,
         "matchup": f"{get(r, 'away_team')} at {get(r, 'home_team')}", "venue": get(r, "venue"),
         "forecast": forecast_words(sport, r), "wind": words.num(get(r, "wx_wind")),
         "total": words.total(get(r, "total")), "total_num": words.num(get(r, "total")),
         "under": words.odds(get(r, "under")), "over": words.odds(get(r, "over")),
         "source": words.book(get(r, "line_src")) if get(r, "line_src") else "",
-        "model_chance": words.pct(get(r, "p_under")), "market_chance": words.pct(get(r, "p_market")),
-        "ev": words.pct(get(r, "ev_under"), signed=True, digits=1),
+        "market_chance": words.pct(get(r, "p_market")),
+        # Rule B's expected value, priced as a 15+ mph wind game: only where the wind trigger was met
+        "wind_rule_met": met,
+        "wind_value": words.pct(get(r, "ev_under"), signed=True, digits=1) if met else "",
+        "wind_value_best": words.pct(get(r, "ev_best_line"), signed=True, digits=1) if met else "",
+        # the NFL lean model's chance of the under, a different model: outdoor NFL games only
+        "lean_chance": words.pct(get(r, "p_under")) if lean_model_applies(sport, r) else "",
         "rules": rule_cells(sport, r), "signal": L.signal(r), "best": best_words(r),
         "days": words.days_to(k, scr.now, scr.tz), "lead_days": get(r, "lead_days"),
         "logged": scr.when(logged), "logged_utc": words.iso_z(logged), "rules_version": get(r, "rules_version"),
@@ -388,6 +415,33 @@ def jobs(scr: Screen) -> list[dict]:
     return out
 
 
+def bar_sentence(clears: bool, bar) -> str:
+    """Whether a result clears the bar it was measured against, and that bar, as one plain sentence. The bar is
+    written as it was when measured (it may have parentheses of its own, so it follows a colon)."""
+    b = " ".join(str(bar or "").split()).rstrip(".")
+    if not b or b.lower().startswith("not stated"):
+        return ("No multiple-testing bar was stated in the source, so it is "
+                + ("counted as clearing one." if clears else "not counted as clearing one."))
+    if b.lower().startswith("not a betting test"):
+        return words.cap(b) + "."
+    return (f"{'Clears' if clears else 'Does not clear'} the multiple-testing bar in force when it was measured: "
+            f"{b}.")
+
+
+def evidence_stamp(entries: list[dict]) -> str:
+    """The Research screen's stamp: the date of the newest entry (the file's own time is only when git wrote it)."""
+    dates = []
+    for e in entries:
+        try:
+            dates.append(date.fromisoformat(e["date"]))
+        except (TypeError, ValueError):
+            continue
+    if not dates:
+        return "No entry in the evidence list is dated"
+    d = max(dates)
+    return f"Newest entry dated {d:%a} {d:%b} {d.day}, {d.year}"
+
+
 def evidence(scr: Screen) -> tuple[list[dict], int | None, str | None]:
     raw = scr.snap.evidence.data
     entries = []
@@ -414,6 +468,7 @@ def evidence(scr: Screen) -> tuple[list[dict], int | None, str | None]:
                 else f"p = {e['p_value']}"),
             "clears_bar": clears,
             "bar_words": ("Clears the multiple-testing bar" if clears else "Does not clear the multiple-testing bar"),
+            "bar_sentence": bar_sentence(clears, e.get("bar")),
             "bar": str(e.get("bar") or ""), "kind": str(e.get("kind") or ""), "note": str(e.get("note") or ""),
             "source": str(e.get("source") or ""), "date": str(e.get("date") or ""),
         })
@@ -467,16 +522,16 @@ def board_rows(scr: Screen) -> tuple[list[dict], list[str]]:
     for sport, L, r in upcoming(scr.snap, scr.now):
         g = scr.part("a game row", lambda sport=sport, L=L, r=r: game_row(scr, sport, L, r))
         if g:
-            rows.append(g)
-    rows.sort(key=lambda g: (not g["signal"], g["kick_utc"] or "", g["matchup"]))
-    return rows, scr.notes[before:]
+            rows.append((L.until(r), g))              # a game with no time set comes after its date's timed games
+    rows.sort(key=lambda x: (not x[1]["signal"], x[0], x[1]["matchup"]))
+    return [g for _, g in rows], scr.notes[before:]
 
 
 def board(store: Store) -> dict:
     scr = Screen(store)
     for L in scr.snap.ledgers.values():
         if not L.readable:
-            scr.notes.append(L.note or f"The {L.name} ledger could not be read.")
+            scr.notes.append(words.cap(L.note) or f"{words.cap(L.csv.label)} could not be read.")
     # worked out once a minute from each snapshot: a refresh, a second tab or the light reuses it
     minute = scr.now.astimezone(scr.tz).strftime("%Y-%m-%d %H:%M")
     rows, row_notes = store.derived(("board", minute), lambda: board_rows(scr))
@@ -696,7 +751,6 @@ def research(store: Store) -> dict:
     ev, n, bar = scr.part("evidence list", lambda: evidence(scr), ([], None, None))
     if scr.snap.evidence.data is None:
         scr.notes.append(words.cap(scr.snap.evidence.note))
-    mt = scr.snap.evidence.mtime
-    at = datetime.fromtimestamp(mt, UTC) if mt else None
-    return scr.done({"header": scr.header("Evidence list updated", at), "entries": ev, "variants": n,
-                     "bar": bar})
+    header = scr.header("Newest entry", None)
+    header["last_written"], header["last_written_utc"] = evidence_stamp(ev), None
+    return scr.done({"header": header, "entries": ev, "variants": n, "bar": bar})

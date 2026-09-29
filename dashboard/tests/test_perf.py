@@ -3,7 +3,7 @@ the jobs append a run) reads only the new lines."""
 from __future__ import annotations
 
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from conftest import NFL_HEADER, Clock, make_home, make_root, make_store, nfl_row
 
@@ -31,13 +31,14 @@ def test_hundred_thousand_rows_under_a_second(tmp_path):
     root, home = make_root(tmp_path), make_home(tmp_path)
     ledger = root / "nfl-weather" / "data" / "forward" / "ledger.csv"
     big_ledger(ledger)
-    clock = Clock()
+    clock = Clock(datetime(2026, 10, 31, 17, 0, tzinfo=timezone.utc))    # after every run in the big ledger
     store = make_store(root, home, clock=clock)
     t = time.perf_counter()
     store.snapshot()
     first = time.perf_counter() - t
     assert len(store.ledgers["nfl"].rows) == ROWS
     assert first < 1.0, f"first read took {first:.2f} s"
+    assert not store.ledgers["nfl"].future and store.ledgers["nfl"].latest_rows
     # each request after that uses the cached read
     t = time.perf_counter()
     for _ in range(5):

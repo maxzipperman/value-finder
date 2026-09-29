@@ -5,7 +5,7 @@ fail: the latest run of either alert job is recorded failed; or the last exit st
       the hours between 7:30 AM and 11:30 PM local (so a quiet night is not an outage).
 warn: otherwise, a ledger's newest row is more than 5 such hours old; or the credit balance is below 50
       on the free plan (a balance under 1,000 is taken to be the free plan); or a file the dashboard
-      expects can't be read.
+      expects can't be read; or a ledger has a row logged later than now (it is left out until then).
 ok:   none of that.
 """
 from __future__ import annotations
@@ -100,7 +100,7 @@ def assess(snap, now: datetime, tz: tzinfo) -> Health:
             continue
         t = words.parse_utc(ledger.latest_snapshot)
         if t is not None and words.working_hours_between(t, now, tz) > STALE_HOURS:
-            h.warn(f"The newest row in the {ledger.name} ledger is from {words.when(t, tz, now)}: more than 5 hours "
+            h.warn(f"The newest row in {ledger.short} is from {words.when(t, tz, now)}: more than 5 hours "
                    "of the 7:30 AM to 11:30 PM day ago.")
     # --- credits
     q = snap.quota
@@ -110,6 +110,6 @@ def assess(snap, now: datetime, tz: tzinfo) -> Health:
         if seen is None or (seen.year, seen.month) == (now.year, now.month):
             h.warn(f"Only {remaining} Odds API credits are left this month (free plan).")
     # --- files the dashboard expects
-    for sentence in snap.unreadable:
+    for sentence in snap.unreadable + snap.warnings:
         h.warn(sentence)
     return h.done()

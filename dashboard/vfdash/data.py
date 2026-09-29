@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 
 from . import commands, words
-from .ledger import Ledger
+from .ledger import FUTURE_SLACK, Ledger
 from .readers import AppendOnlyCSV, Read, read_csv, read_json, read_plist, read_text
 
 UTC = timezone.utc
@@ -58,9 +58,11 @@ def label(project: str, what: str, name: str) -> str:
     return f"the {SPORT_OF[project] if project in SPORT_OF else project} {what} ({project}/data/forward/{name})"
 
 
-def read_runs(path: Path, what: str) -> Read:
+def read_runs(path: Path, what: str, now: datetime | None = None, tz: tzinfo = UTC) -> Read:
     """An alert job's runs.csv. Without its run_utc and status columns it can't be read (a damaged or foreign
-    file, not an empty record); a row whose run time can't be read is left out and counted."""
+    file, not an empty record); a row whose run time can't be read is left out and counted. With `now`, a row
+    logged later than now is left out until its time comes (it would hide a job that stopped), counted and named;
+    `future` on the result says how many."""
     r = read_csv(path, what)
     if r.data is None:
         return r
@@ -77,7 +79,15 @@ def read_runs(path: Path, what: str) -> Read:
         n = len(rows) - len(timed)
         notes.append(f"{words.count(n, 'row')} of {what} {'has' if n == 1 else 'have'} a run time (run_utc) that "
                      f"can't be read; {'it is' if n == 1 else 'they are'} left out.")
-    return Read(data=(header, timed), note=" ".join(notes), mtime=r.mtime)
+    later = sorted(t for t in (words.parse_utc(row.get("run_utc")) for row in timed)
+                   if now is not None and t > now + FUTURE_SLACK)
+    if later:
+        timed = [row for row in timed if words.parse_utc(row.get("run_utc")) <= now + FUTURE_SLACK]
+        n = len(later)
+        named = "; ".join(words.when_full(t, tz) for t in later[:3]) + (f"; and {n - 3:,} more" if n > 3 else "")
+        notes.append(f"{words.count(n, 'row')} of {what} {'is' if n == 1 else 'are'} logged later than now: {named}. "
+                     f"{'It is' if n == 1 else 'They are'} left out until then.")
+    return Read(data=(header, timed), note=" ".join(notes), mtime=r.mtime, future=len(later))
 
 
 @dataclass
@@ -119,6 +129,8 @@ class Snap:
     manifest: dict | None = None
     manifest_note: str = ""
     unreadable: list = field(default_factory=list)        # expected files that couldn't be read (health: warn)
+    warnings: list = field(default_factory=list)          # other things health warns about (rows logged later
+                                                          # than now)
     notes: list = field(default_factory=list)             # other things worth saying
 
 
@@ -273,18 +285,25 @@ class Store:
         snap = Snap(built=now, ledgers=self.ledgers)
         for L in self.ledgers.values():
             try:
-                L.refresh()
+                L.refresh(now)
             except Exception as e:                        # noqa: BLE001 (never an error page)
-                snap.unreadable.append(f"The {L.name} ledger could not be read ({type(e).__name__}).")
+                snap.unreadable.append(f"{cap(L.csv.label)} could not be read ({type(e).__name__}).")
                 continue
             if not L.readable:
                 snap.unreadable.append(cap(L.note))
             elif L.note:
                 snap.notes.append(cap(L.note))
+            if L.future:
+                snap.notes.append(L.future_note(cfg.tz))
+                snap.warnings.append(L.future_problem())
         for p in PROJECTS:
             fwd = cfg.forward(p)
-            snap.runs[p] = read_runs(fwd / "runs.csv", label(p, "run record", "runs.csv"))
+            snap.runs[p] = read_runs(fwd / "runs.csv", label(p, "run record", "runs.csv"), now, cfg.tz)
             self._expect(snap, snap.runs[p], label(p, "run record", "runs.csv"))
+            n = snap.runs[p].future
+            if n:
+                snap.warnings.append(f"The {SPORT_OF[p]} run record has {words.count(n, 'row')} logged later than "
+                                     f"now, {'which is' if n == 1 else 'which are'} left out; check the Mac's clock.")
             snap.alert_state[p] = read_json(fwd / "alert_state.json", label(p, "alert record", "alert_state.json"))
             if snap.alert_state[p].data is not None and not isinstance(snap.alert_state[p].data, dict):
                 snap.alert_state[p] = Read(note=label(p, "alert record", "alert_state.json") + " is not in the "

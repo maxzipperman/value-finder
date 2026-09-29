@@ -1,6 +1,6 @@
 """Reading files, and nothing else. Every file the dashboard looks at is opened here, read-only.
 
-* No file whose name is or ends with ".env" is ever opened (`refuse`).
+* No file whose name is or ends with ".env" is ever opened, nor a link to one (`refuse`).
 * A missing, empty, cut-off or damaged file is never an error: each reader returns what it could read and
   a plain sentence saying what it couldn't.
 * Ledgers only grow between rewrites, so `AppendOnlyCSV` reads each new line once and keeps the rest; a
@@ -22,12 +22,26 @@ class Refused(Exception):
     """A path the dashboard must never open."""
 
 
+class RefusedLink(Refused):
+    """A link (or a path through a linked folder) that leads to a file the dashboard must never open."""
+
+
+def _env_name(name: str) -> bool:
+    name = name.lower()
+    return name == ".env" or name.endswith(".env") or name.startswith(".env.")
+
+
 def refuse(path) -> Path:
     p = Path(path)
-    name = p.name.lower()
-    if name == ".env" or name.endswith(".env") or name.startswith(".env."):
+    if _env_name(p.name):
         raise Refused(f"{p.name} is never opened")
+    if _env_name(os.path.basename(os.path.realpath(p))):
+        raise RefusedLink(f"{p.name} leads to a file that is never opened")
     return p
+
+
+def _link_note(label: str) -> str:
+    return f"{label} is a link to a file the dashboard never opens, so it is not read."
 
 
 @dataclass
@@ -38,6 +52,7 @@ class Read:
     note: str = ""
     missing: bool = False
     mtime: float | None = None
+    future: int = 0                                     # rows left out: logged later than now (runs.csv)
 
 
 def _open_bytes(path: Path, start: int = 0, limit: int | None = None) -> bytes:
@@ -54,6 +69,8 @@ def read_bytes(path, label: str, tail: int | None = None) -> Read:
         st = os.stat(refuse(p))
     except FileNotFoundError:
         return Read(note=f"{label} is missing.", missing=True)
+    except RefusedLink:
+        return Read(note=_link_note(label))
     except Refused:
         raise
     except OSError as e:
@@ -63,6 +80,8 @@ def read_bytes(path, label: str, tail: int | None = None) -> Read:
         data = _open_bytes(p, start)
     except FileNotFoundError:
         return Read(note=f"{label} is missing.", missing=True)
+    except RefusedLink:
+        return Read(note=_link_note(label))
     except OSError as e:
         return Read(note=f"{label} could not be read ({e.strerror or type(e).__name__}).")
     return Read(data=data, mtime=st.st_mtime)
@@ -199,6 +218,10 @@ class AppendOnlyCSV:
             self._reset()
             self.missing, self.readable, self.note, self._key = True, False, f"{self.label} is missing.", None
             return
+        except RefusedLink:
+            self._reset()
+            self.missing, self.readable, self.note, self._key = False, False, _link_note(self.label), None
+            return
         except OSError as e:
             self._reset()
             self.missing, self.readable, self._key = False, False, None
@@ -211,6 +234,10 @@ class AppendOnlyCSV:
                 self._reset()
                 self._key = key
             data = _open_bytes(p, self._offset)
+        except RefusedLink:
+            self._reset()
+            self.readable, self._key, self.note = False, None, _link_note(self.label)
+            return
         except OSError as e:
             self._reset()
             self.readable, self._key = False, None

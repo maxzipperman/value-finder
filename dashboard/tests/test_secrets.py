@@ -66,6 +66,43 @@ def test_readers_refuse_env_names(tmp_path, name):
         readers.AppendOnlyCSV(p, "x", lambda h: (lambda r: r)).refresh()
 
 
+def test_a_link_to_an_env_file_is_never_opened(root, home, monkeypatch):
+    """A data file that is a link to a .env file is not opened: the screen says so and shows the rest."""
+    runs = root / "nfl-weather" / "data" / "forward" / "runs.csv"
+    ledger = root / "cfb-weather" / "data" / "forward" / "ledger.csv"
+    runs.unlink()
+    ledger.unlink()
+    os.symlink(root / "nfl-weather" / ".env", runs)
+    os.symlink(root / "cfb-weather" / ".env", ledger)
+    opened = []
+    real_open, real_os_open = builtins.open, os.open
+
+    def spy_open(file, *a, **k):
+        if isinstance(file, (str, os.PathLike)):
+            opened.append(os.path.realpath(file))
+        return real_open(file, *a, **k)
+
+    def spy_os_open(path, *a, **k):
+        opened.append(os.path.realpath(path))
+        return real_os_open(path, *a, **k)
+    monkeypatch.setattr(builtins, "open", spy_open)
+    monkeypatch.setattr(io, "open", spy_open)
+    monkeypatch.setattr(os, "open", spy_os_open)
+    store = make_store(root, home)
+    s = api.summary(store)
+    b = api.board(store)
+    assert not [p for p in opened if is_env(p)], opened
+    assert s["health"] == "warn"
+    assert ("The NFL run record (nfl-weather/data/forward/runs.csv) is a link to a file the dashboard never opens, "
+            "so it is not read.") in s["problems"]
+    assert ("The college football ledger (cfb-weather/data/forward/ledger.csv) is a link to a file the dashboard "
+            "never opens, so it is not read.") in b["notes"]
+    assert b["runs"]["nfl"]["games"] == 5                             # the rest is shown
+    for r in (readers.read_text(runs, "x"), readers.read_json(runs, "x")):
+        assert r.data is None and "never opens" in r.note
+    assert SECRET_KEY not in json.dumps([s, b])
+
+
 def test_nothing_secret_is_served(served):
     for path in ENDPOINTS + ["/", "/static/app.js"]:
         status, body, _ = served.get(path)
