@@ -1,0 +1,23 @@
+CFB Rule B forecast replay, 2024-25 (forecasts that existed at bet time; entry at the close, -110)
+  eligible games: 1709; with a forecast: 1709; no forecast (own count): 0
+
+sample  games  with_forecast  no_forecast  fc_signals  obs_signals  fc_not_obs  obs_not_fc  agreement fc_record  fc_win_pct  fc_roi_pct  fc_p_one_sided  opener_n opener_record  opener_clv_mean  opener_clv_ci_lo  opener_clv_ci_hi obs_record  obs_win_pct
+  2024    833            833            0          57           37          34          14     0.9423   32-22-3        59.3        13.1          0.1908        57       36-21-0             0.96              0.40              1.51    16-20-1         44.4
+  2025    876            876            0          53           35          30          12     0.9519   29-24-0        54.7         4.5          0.4205        53       29-22-2             1.45              0.87              2.02    23-12-0         65.7
+pooled   1709           1709            0         110           72          64          26     0.9472   61-46-3        57.0         8.8          0.1945       110       65-43-2             1.19              0.79              1.59    39-32-1         54.9
+  lead 1: forecast minus observed station wind, mean +0.63 mph, MAE 2.35, corr 0.71 (n=1706)
+  lead 2: forecast minus observed station wind, mean +1.12 mph, MAE 2.56, corr 0.69 (n=1706)
+  lead 3: forecast minus observed station wind, mean +1.07 mph, MAE 2.72, corr 0.64 (n=1706)
+
+Where the edge sits (descriptive; these splits are not rules):
+  forecast and observed both fire: 46 games, 28-17-1 (62.2%)
+  forecast only (the wind didn't arrive): 64 games, 33-29-2 (53.2%)
+  observed only (the forecast missed it): 26 games, 11-15-0 (42.3%)
+  forecast signals by first lead: {1.0: 10, 2.0: 29, 3.0: 71}
+
+Comparisons:
+  observed-wind evidence: 56.6% under vs the close in 990 observed-wind games, 2006-25 (STRATEGY.md)
+  2025 dress rehearsal: 21-10-1 at the opener, 2025 Week 5 on, with a perfect forecast (output/rehearsal_2025.log)
+  this replay, same window and entry (2025 Week 5 on, at the opener): 26-19-2 (the opener predates the forecast, so this overstates what was achievable)
+  quotes: every entry is the closing total, which exists at kickoff, after each lead's forecast was public
+  variants added: 1 (running total 135)

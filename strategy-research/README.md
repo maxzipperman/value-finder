@@ -75,7 +75,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 ### Pre-checks on the backlog (added September 28, 2026)
 
-[`prechecks.py`](prechecks.py) ran 25 more tests on free data ([`output/prechecks.csv`](output/prechecks.csv), [`output/prechecks.log`](output/prechecks.log)). **The running count is now 134 variants, so the Bonferroni bar is p < 0.00037. Nothing passes.**
+[`prechecks.py`](prechecks.py) ran 25 more tests on free data ([`output/prechecks.csv`](output/prechecks.csv), [`output/prechecks.log`](output/prechecks.log)). **The running count is now 135 variants (134, plus 1 for the CFB Rule B forecast replay in [`../cfb-weather/scripts/forecast_replay.py`](../cfb-weather/scripts/forecast_replay.py)), so the Bonferroni bar is p < 0.00037. Nothing passes.**
 
 | Issue | Test | Result | Verdict |
 |---|---|---|---|
