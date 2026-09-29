@@ -900,7 +900,9 @@ def test_the_summaries_name_amendment_7():
             in strategy)
     # amendment 6's dated note is left as written, and a new dated note after it says the copy never loses a line
     old = "never decided again unless it is lost before that night's copy is made (3)"
-    new = "never decided again unless it was recorded and lost on the same day, before that night's copy (section 3)"
+    new = ("never decided again unless it is lost before any nightly copy has published it. Normally that means "
+           "recorded and lost on the same day; while the nightly copy holds the record back because a published "
+           "line in it has changed, it means any decision recorded until the hub puts that line back (section 3)")
     assert old in strategy and new in strategy and strategy.index(old) < strategy.index(new)
     status = (ROOT.parent / "STATUS.md").read_text()
     assert "nfl-weather amendment 7 and cfb-weather amendment 5" in status
@@ -1238,7 +1240,8 @@ def test_amendment_7_reading_3_a_line_lost_after_the_check_in_survives_the_night
     text = amendment7_section(3)
     assert "the published copy never loses a line" in text.lower()
     assert "a decision that was ever published is never decided again" in text
-    assert "a decision recorded and lost on the same day, before that night's copy" in text
+    assert ("The one case left is a decision recorded since the last nightly copy that published the file and "
+            "lost before the next one") in text
 
 
 def test_amendment_7_reading_3_a_restore_appends_the_copy_s_own_line(tmp_path):
@@ -1292,3 +1295,80 @@ def test_amendment_7_states_the_review_s_smaller_points(tmp_path):
     status = (ROOT.parent / "STATUS.md").read_text()
     assert "40,000 simulated paths of 40 bets per case" in status and "simulated seasons per case" not in status
     assert "scratch scripts, not kept in the repository" in amendment7_section(2)
+
+
+# ================================================================== the third review of pull request 64 (Sep 29)
+def test_amendment_7_reading_3_a_decision_recorded_while_the_copy_is_held_back_is_on_the_mac_only(tmp_path):
+    """The third review (its e2e_window). Day 1 records Rule B's KEEP and that night's copy publishes it. Day 2 the
+    file is re-saved with other line endings, which the scorer still reads, and the model lean's KEEP is recorded
+    into it; that night the copy holds the whole file back, because every published line changed. Day 3 the file is
+    lost and the closes are corrected: the next real run restores Rule B from the copy but decides the lean again,
+    DROP. Section 3 said the one case left was a decision recorded and lost on the same day; it now states this
+    one, and the replaced sentence of amendment 6 is named."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)                # CLV +1 each: KEEP
+    leans, gl = season(2026, list(range(5, 19)), 40, first_id=200, line=43.0, lean="UNDER lean")
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "nfl-weather", good, gg + filler(2026), "2027-01-20T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    games = proj / "data" / "raw" / "games.csv"
+    out = on_clock(tmp_path, "2027-01-20T17:00", scorer).stdout                # day 1
+    assert "FINAL: KEEP" in part(out, *RB) and "recorded in decisions.csv" not in part(out, *LEAN)
+    assert "not published" not in nightly(tmp_path, repo)                     # night 1: published
+    day1 = (fwd / "decisions.csv").read_bytes()
+    (fwd / "decisions.csv").write_bytes(day1.replace(b"\n", b"\r\n"))          # day 2: re-saved
+    pd.DataFrame(good + leans).to_csv(fwd / "ledger.csv", index=False)         # the lean's decision is now final
+    pd.DataFrame(gg + gl + filler(2026)).to_csv(games, index=False)
+    touch(games, "2027-01-21T16:00")
+    lean = part(on_clock(tmp_path, "2027-01-21T17:00", scorer).stdout, *LEAN)
+    assert "FINAL: KEEP" in lean and "recorded in decisions.csv on 2027-01-21T17:00:00Z" in lean
+    out = nightly(tmp_path, repo)                                             # night 2: held back
+    assert ("nfl-weather: decisions.csv not published (it has lost or changed a line that the published copy holds); "
+            "the published copy is kept as it is") in out
+    assert git(repo, "show", "origin/ledgers:nfl-weather/decisions.csv") + "\n" == day1.decode()
+    (fwd / "decisions.csv").unlink()                                          # day 3: lost; closes corrected
+    pd.DataFrame([dict(x, total_line=46) for x in gg + gl] + filler(2026)).to_csv(games, index=False)
+    touch(games, "2027-01-22T16:00")
+    out = on_clock(tmp_path, "2027-01-22T17:00", scorer).stdout
+    assert "restored 1 recorded decision from its copy on the ledgers branch" in out
+    rb = part(out, *RB)
+    assert "FINAL: KEEP" in rb and "recorded in decisions.csv on 2027-01-20T17:00:00Z" in rb   # restored, as stated
+    lean = part(out, *LEAN)
+    assert "FINAL: DROP" in lean and "recorded in decisions.csv on 2027-01-22T17:00:00Z" in lean  # decided again
+    # what section 3 and its list of replaced sentences now say
+    three = amendment7_section(3)
+    assert ("while the nightly copy holds the file back because a published line in it has changed (a hand edit, "
+            "say, or a spreadsheet re-saving the file with other line endings, which the scorer still reads), the "
+            "scorer goes on recording and nothing new is published, so every decision recorded until the hub puts that "
+            "line back exists only on the Mac") in three
+    assert "recorded and lost on the same day, before that night's copy" not in norm(amendment(7))
+    replaces = norm(amendment(7).split("### What this amendment replaces")[1])
+    assert ('Amendment 6, section 3: "A record made since the last nightly copy exists only on the Mac until that '
+            'night: if it is lost before then, neither the file nor a copy holds it, and the next real run decides it '
+            'again."') in replaces
+    cfb = ROOT.parent / "cfb-weather"
+    for f in (ROOT / "STRATEGY.md", ROOT / "README.md", ROOT.parent / "STATUS.md", ROOT / "scripts" / "score_forward.py",
+              cfb / "STRATEGY.md", cfb / "README.md", cfb / "scripts" / "score_forward.py"):
+        text = " ".join(f.read_text().split())
+        assert "recorded and lost on the same day, before that night's copy" not in text, f
+        assert "since the last nightly copy that published" in text or "before any nightly copy has published it" in (
+            text), f
+
+
+def test_amendment_7_says_why_the_two_looks_are_measured_not_certain():
+    """The third review: section 1 said of every case, the two looks included, that the registered test keeps a
+    no-edge rule no more often than the others "as it must: a path it keeps, both of the others keep". Over the two
+    looks keep and drop both met is a drop, so a wider interval can turn a drop into a keep: there it is measured
+    (keep_test_check.py counts such paths: none), not certain. Also: the check's run time is stated the same way in
+    the script and in strategy-research/README.md."""
+    one = amendment7_section(1)
+    assert "as it must" not in one
+    assert ("For the keep test on its own this must be so: a path it keeps, both of the others keep. Over the two "
+            "looks it need not be, because keep and drop both met is a drop, and a wider interval can turn a drop into "
+            "a keep; there it is measured instead: every simulated path the registered test keeps, both of the others "
+            "keep too.") in one
+    log = (ROOT.parent / "strategy-research" / "output" / "keep_test_check.log").read_text()
+    assert "In (3), paths kept by the wider test and not the grouped one: 0; not the plain one: 0" in log
+    script = (ROOT.parent / "strategy-research" / "keep_test_check.py").read_text()
+    readme = (ROOT.parent / "strategy-research" / "README.md").read_text()
+    assert "It takes about a minute." in script and "the run takes about a minute" in readme

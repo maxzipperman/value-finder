@@ -33,7 +33,7 @@ test (its half-width is at least the grouped one) and by the plain test (t(0.975
 
 Outputs: output/keep_test_check.csv and output/keep_test_check.log (the console). Deterministic for a seed.
 Run from the repo root:  nfl-weather/.venv/bin/python strategy-research/keep_test_check.py [--seed 29]
-It takes about half a minute.
+It takes about a minute.
 """
 import argparse
 import contextlib

@@ -623,8 +623,11 @@ made before the first outcome it would affect.
     historical line move and 66% if it is the full move (plain 34% and 73%; grouped 29% and 67%); over the two
     looks, 26% and 60%.
   * In every case the registered test keeps a rule with no edge no more often than the plain or the grouped
-    interval alone, as it must: a path it keeps, both of the others keep. The script checks this path by path.
-    Run with seed 6 instead, the registered test's rates agree with these to within 0.3 points.
+    interval alone. For the keep test on its own this must be so: a path it keeps, both of the others keep. Over
+    the two looks it need not be, because keep and drop both met is a drop, and a wider interval can turn a drop
+    into a keep; there it is measured instead: every simulated path the registered test keeps, both of the others
+    keep too. The script checks both, path by path. Run with seed 6 instead, the registered test's rates agree with
+    these to within 0.3 points.
 * **Where the grouped interval alone fell short, the registered test holds.**
   * Day totals that balance: 40 bets on 4 game days, 10 a day, whose CLVs add up to the same amount on each day
     (two of +5.5 and eight of -1.0) give a grouped interval of zero width, +0.30 to +0.30, which the first draft
@@ -705,13 +708,19 @@ and the reviews of this amendment found that the nightly copy itself could lose 
 * **The published copy never loses a line.** Before the nightly copy (`ops/sync_ledgers.sh`, about 11:45 PM on the
   Mac) copies `decisions.csv`, it compares the file with the copy already published on the ledgers branch. If any
   line of the published copy is missing from the file, or the file is missing, empty, cut (its last line has no
-  line break) or does not start with the same header line, it keeps the published copy as it is, prints one line
+  line break) or does not start with the record's header line, it keeps the published copy as it is, prints one line
   saying which project's record it did not publish and why, and syncs every other file as usual; it never fails the
   sync and never removes the published copy. A file that holds every published line, plus new ones, is published as
-  before. So a decision that was ever published is never decided again: if the file loses it, the copy still holds
-  it, and the next real run restores it. The one case left is a decision recorded and lost on the same day, before
-  that night's copy: neither the file nor the copy holds it, and the next real run decides it again, as amendment 6
-  says. A line that the file still holds under the same decision id but has changed is not restored by the scorer
+  before. The first copy is checked the same way: while nothing is published, a file that is empty, cut or does not
+  start with the header is not published either, and the line says that nothing has been published yet (with no
+  file at all, as before the first decision, it says nothing). So a decision that was ever published is never
+  decided again: if the file loses it, the copy still holds it, and the next real run restores it. The one case
+  left is a decision recorded since the last nightly copy that published the file and lost before the next one:
+  neither the file nor the copy holds it, and the next real run decides it again, as amendment 6 says. Normally that
+  is a decision recorded and lost on the same day. But while the nightly copy holds the file back because a
+  published line in it has changed (a hand edit, say, or a spreadsheet re-saving the file with other line endings,
+  which the scorer still reads), the scorer goes on recording and nothing new is published, so every decision
+  recorded until the hub puts that line back exists only on the Mac. A changed line is not restored by the scorer
   (the file holds a decision under that id): the nightly copy keeps the published line, says so every night, and the
   hub puts the published line back by hand.
 * **A copy that can't be read.** Because the copy is now read on every run, amendment 6's rule for a damaged copy
@@ -719,10 +728,12 @@ and the reviews of this amendment found that the nightly copy itself could lose 
   so on every run. Each decision on a line of the copy that can still be read (the same test as for a damaged file)
   is held: if the file doesn't hold it, it is printed from the copy as recorded, never decided again, and it is not
   restored from a damaged copy (the hub can restore it by hand). Recording resumes once the copy can be read again.
-  The nightly copy replaces a damaged copy only with a file that holds every line of it (an empty copy, say); a copy
-  with a damaged line the repaired file no longer holds is replaced by the hub by hand, with a commit to the ledgers
-  branch. When the file is missing, it is first restored by hand from a readable earlier copy in the branch's
-  history (`git log origin/ledgers -- nfl-weather/decisions.csv`), as amendment 6 says.
+  The nightly copy never replaces a published copy that is itself cut or does not start with the record's header
+  line: it keeps it, and its line says that the published copy is damaged, not the file. An empty copy is replaced
+  as a first copy is published. A copy with any other damaged line is replaced only by a file that holds every line
+  of it. Otherwise the hub replaces a damaged copy by hand, with a commit to the ledgers branch. When the file is
+  missing, it is first restored by hand from a readable earlier copy in the branch's history (`git log
+  origin/ledgers -- nfl-weather/decisions.csv`), as amendment 6 says.
 
 ### What this amendment replaces
 
@@ -735,7 +746,9 @@ instead.
 * `STRATEGY.md`, Rule B, "Decision", the dated note of amendment 6: "a lost record is restored from its nightly copy
   on the ledgers branch, never decided again unless it is lost before that night's copy is made". This holds, and
   now also for a decision lost from a file that still exists: the nightly copy never publishes a file that has lost
-  a published line (section 3). A new dated note in `STRATEGY.md` says so.
+  a published line. That night's copy now means the next nightly copy that publishes the file: while the nightly
+  copy holds the file back because a published line in it has changed, the first one after the hub puts that line
+  back (section 3). A new dated note in `STRATEGY.md` says so.
 * The original file, "Decision": "Mean CLV > 0 and its 95% CI lower bound > 0." and "Drop it if mean CLV ≤ 0 or its
   95% CI upper bound is below +0.25 points." The 95% interval is the wider of the plain one and the one grouped by
   game day, and with fewer than 2 game days (or 2 bets) there is none and the result is inconclusive, whatever the
@@ -768,18 +781,25 @@ instead.
   it decides anything." A single decision missing from a file that still exists is restored from the copy too, by
   appending the copy's own line (section 3).
 * Amendment 6, section 3: "The record is copied to the ledgers branch every night." The nightly copy publishes
-  `decisions.csv` only when it holds every line of the copy already published; otherwise it keeps the published
-  copy and says so (section 3).
+  `decisions.csv` only when the file ends with a line break, starts with the record's header line and holds every
+  line of the copy already published; otherwise it keeps the published copy (or, before the first copy, publishes
+  none) and says so (section 3).
 * Amendment 6, section 3: "A lost record is restored from that copy; it is never decided again." This holds, and now
   also for a line lost from a file that still exists: the published copy never loses a line, so a decision that
-  was ever published is never decided again; the one case left is a decision recorded and lost on the same day,
-  before that night's copy (section 3).
+  was ever published is never decided again; the one case left is a decision recorded since the last nightly copy
+  that published the file and lost before the next one (section 3).
+* Amendment 6, section 3: "A record made since the last nightly copy exists only on the Mac until that night: if it
+  is lost before then, neither the file nor a copy holds it, and the next real run decides it again." A record made
+  since the last nightly copy that published the file exists only on the Mac until the next one that publishes it:
+  normally that night, but while the nightly copy holds the file back because a published line in it has changed,
+  not before the hub puts that line back (section 3).
 * Amendment 6, section 3: "A copy that is there but can't be read (a damaged file was copied before the damage was
   repaired) stops recording, as a damaged file does, until the file is restored from a readable earlier copy in the
   branch's history (`git log origin/ledgers -- nfl-weather/decisions.csv`)." This now applies whether or not the file
   is there; the decisions on the copy's readable lines are printed from it as recorded; recording resumes once the
-  copy can be read again; and the nightly copy replaces a damaged copy only with a file that holds every line of
-  it, so otherwise the hub replaces it by hand (section 3).
+  copy can be read again; and the nightly copy never replaces a copy that is cut or does not start with the
+  record's header line, and replaces any other damaged copy only with a file that holds every line of it, so
+  otherwise the hub replaces it by hand (section 3).
 
 Rule variants under forward test: still **2**. This amendment tests nothing and leaves the running variant
 count unchanged: on the day of registration it is **271**, so the multiple-testing bar is p < 0.000185

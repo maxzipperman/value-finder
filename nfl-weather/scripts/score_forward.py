@@ -56,9 +56,11 @@ printed as recorded, never as a fresh FINAL. A decision that a decisions.csv sti
 its copy on the ledgers branch holds it, is restored from the copy by a real run (and read from the copy by
 any other run), never decided again; the restore appends the copy's own line, byte for byte. The nightly copy
 (ops/sync_ledgers.sh) never publishes a file that has lost a line of the published copy, so the copy keeps every
-decision it ever held: the one case left is a decision recorded and lost on the same day, before that night's
-copy. A copy that can't be read stops recording whether or not the file is there, and each decision on a line
-of it that can still be read is printed from it as recorded; nothing is restored from a damaged copy.
+decision it ever held: the one case left is a decision recorded since the last nightly copy that published the
+file and lost before the next one (normally the same day; longer while a changed published line holds the file
+back, until the hub puts it right). A copy that can't be read stops recording whether or not the file is
+there, and each decision on a line of it that can still be read is printed from it as recorded; nothing is
+restored from a damaged copy.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against

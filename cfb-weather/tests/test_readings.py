@@ -886,7 +886,9 @@ def test_the_summaries_name_amendment_5():
             in strategy)
     # amendment 4's dated note is left as written, and a new dated note after it says the copy never loses a line
     old = "never decided again unless it is lost before that night's copy is made (3)"
-    new = "never decided again unless it was recorded and lost on the same day, before that night's copy (section 3)"
+    new = ("never decided again unless it is lost before any nightly copy has published it. Normally that means "
+           "recorded and lost on the same day; while the nightly copy holds the record back because a published "
+           "line in it has changed, it means any decision recorded until the hub puts that line back (section 3)")
     assert old in strategy and new in strategy and strategy.index(old) < strategy.index(new)
     readme = (ROOT / "README.md").read_text()
     assert "feed listing" not in readme and "one feed event" in readme
@@ -1164,7 +1166,8 @@ def test_amendment_5_reading_3_a_line_lost_after_the_check_in_survives_the_night
     text = amendment5_section(3)
     assert "the published copy never loses a line" in text.lower()
     assert "a decision that was ever published is never decided again" in text
-    assert "a decision recorded and lost on the same day, before that night's copy" in text
+    assert ("The one case left is a decision recorded since the last nightly copy that published the file and "
+            "lost before the next one") in text
 
 
 def test_amendment_5_reading_3_a_restore_appends_the_copy_s_own_line(tmp_path):
@@ -1211,3 +1214,26 @@ def test_amendment_5_states_the_review_s_smaller_points(tmp_path):
     assert "even of zero width" not in one.split("Known limit")[-1]                    # the draft's limit is gone
     assert "-0.54 to +1.14" in one and "not kept" in one
     assert "scratch scripts, not kept in the repository" in amendment5_section(2)
+
+
+# ================================================================== the third review of pull request 64 (Sep 29)
+def test_amendment_5_states_the_decisions_a_held_back_copy_leaves_on_the_mac_only():
+    """The third review (its e2e_window, run on the NFL scorer; the record code and the nightly copy are the same
+    here, and nfl-weather/tests/test_readings.py replays it end to end): while the nightly copy holds the file back
+    because a published line changed, which the scorer still reads, a decision recorded meanwhile is not published,
+    and if the file is then lost it is decided again. Section 3 said the one case left was a decision recorded and
+    lost on the same day. It now states this case, and names amendment 4's sentence that it changes."""
+    three = amendment5_section(3)
+    assert ("while the nightly copy holds the file back because a published line in it has changed (a hand edit, "
+            "say, or a spreadsheet re-saving the file with other line endings, which the scorer still reads), the "
+            "scorer goes on recording and nothing new is published, so every decision recorded until the hub puts that "
+            "line back exists only on the Mac") in three
+    assert "The first copy is checked the same way" in three
+    assert "its line says that the published copy is damaged, not the file" in three
+    assert "recorded and lost on the same day, before that night's copy" not in norm(amendment5())
+    replaces = norm(amendment5().split("### What this amendment replaces")[1])
+    assert ('Amendment 4, section 3: "A record made since the last nightly copy exists only on the Mac until that '
+            'night: if it is lost before then, neither the file nor a copy holds it, and the next real run decides it '
+            'again."') in replaces
+    scorer = (ROOT / "scripts" / "score_forward.py").read_text()
+    assert "# Amendment 6, section 3" not in scorer and scorer.count("# Amendment 4, section 3") == 2

@@ -61,9 +61,11 @@ printed as recorded, never as a fresh FINAL. A decision that a decisions.csv sti
 its copy on the ledgers branch holds it, is restored from the copy by a real run (and read from the copy by
 any other run), never decided again; the restore appends the copy's own line, byte for byte. The nightly copy
 (ops/sync_ledgers.sh) never publishes a file that has lost a line of the published copy, so the copy keeps every
-decision it ever held: the one case left is a decision recorded and lost on the same day, before that night's
-copy. A copy that can't be read stops recording whether or not the file is there, and each decision on a line
-of it that can still be read is printed from it as recorded; nothing is restored from a damaged copy.
+decision it ever held: the one case left is a decision recorded since the last nightly copy that published the
+file and lost before the next one (normally the same day; longer while a changed published line holds the file
+back, until the hub puts it right). A copy that can't be read stops recording whether or not the file is
+there, and each decision on a line of it that can still be read is printed from it as recorded; nothing is
+restored from a damaged copy.
 
     python scripts/score_forward.py [--ledger PATH] [--schedule PATH] [--list-excluded]
 """
@@ -315,7 +317,7 @@ if DECISIONS is not None:
     copy = published_copy() if FWD is not None else None
     held, copy_broken = parse_record(copy) if copy is not None else (None, "")
     if copy_broken:
-        # Amendment 6, section 3: a copy that can't be read stops recording, as a damaged file does, whether or not
+        # Amendment 4, section 3: a copy that can't be read stops recording, as a damaged file does, whether or not
         # the file is there. Amendment 5, reading 3: each decision on a line of it that can still be read is held,
         # so it is printed from the copy as recorded and never decided again; nothing is restored from a damaged copy.
         held = readable_records(copy)
@@ -360,7 +362,7 @@ if DECISIONS is not None:
             NOT_RECORDED = ("the decision record is unreadable; nothing will be recorded until it is repaired or "
                             "restored from the ledgers branch")
         if copy_broken:
-            # Amendment 6, section 3, and amendment 5, reading 3: the file is there, but its copy can't be read, so
+            # Amendment 4, section 3, and amendment 5, reading 3: the file is there, but its copy can't be read, so
             # nothing is recorded until the copy can be read again, and the copy's readable decisions are held
             print(f"Decision record: its copy on the ledgers branch ({PUBLISHED}) is unreadable ({copy_broken}). "
                   "Nothing will be recorded until the copy can be read again: the nightly copy of a readable "

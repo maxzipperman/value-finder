@@ -1,9 +1,9 @@
-"""Close capture (scripts/capture_close.py, amendment 3) writes at most one closing listing per game. A game is
-matched to the feed on its two teams AND its kickoff: among the listings of those teams that start within 6 hours
+"""Close capture (scripts/capture_close.py, amendment 3) takes at most one feed event per game. A game is
+matched to the feed on its two teams AND its kickoff: among the feed events of those teams that start within 6 hours
 of the scheduled kickoff, one with a complete Pinnacle quote first (as on the board), then the one nearest the
 kickoff. Before Sep 29, 2026 it matched on the teams alone, so a feed that listed the same two
 teams twice gave the game two sets of rows, and the scorer (which keeps a game's last Pinnacle row) could
-grade against the wrong listing. Everything here runs offline: the Odds API call is replaced by the
+grade against the wrong feed event. Everything here runs offline: the Odds API call is replaced by the
 project's own parser run on a made-up feed, and data/forward is a temp folder. Nothing is spent."""
 import json
 import runpy
@@ -31,7 +31,7 @@ WRONG = {"pinnacle": (46.5, -104, -108), "draftkings": (46.0, -110, -110), "fand
 GB = {"pinnacle": (39.5, -103, -109), "draftkings": (39.5, -112, -108)}
 
 
-def listing(eid, home, away, start, books):
+def event(eid, home, away, start, books):
     """One event as The Odds API returns it. books: {book: (total, under price, over price)}."""
     return dict(id=eid, sport_key="americanfootball_nfl", commence_time=start, home_team=NAME[home],
                 away_team=NAME[away],
@@ -73,15 +73,15 @@ def scorer_reads(tmp_path):
                                          "2026-10-18T17:00:00Z",       # (b) a week later
                                          "2026-12-13T18:00:00Z"])      # (c) two months later
 @pytest.mark.parametrize("wrong_first", [False, True])
-def test_a_game_listed_twice_takes_the_listing_nearest_its_kickoff(tmp_path, monkeypatch, capsys, other_start,
+def test_a_game_listed_twice_takes_the_feed_event_nearest_its_kickoff(tmp_path, monkeypatch, capsys, other_start,
                                                                    wrong_first):
-    right = listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT)
-    wrong = listing("e2", "CHI", "PHI", other_start, WRONG)
-    events = ([wrong, right] if wrong_first else [right, wrong]) + [listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    right = event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT)
+    wrong = event("e2", "CHI", "PHI", other_start, WRONG)
+    events = ([wrong, right] if wrong_first else [right, wrong]) + [event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     rows = pd.read_csv(tmp_path / "data" / "forward" / "closes.csv")
     chi = rows[rows.game_id == "2026_05_PHI_CHI"]
-    assert list(chi.book) == ["pinnacle", "draftkings", "fanduel"]           # one row per book: one listing only
+    assert list(chi.book) == ["pinnacle", "draftkings", "fanduel"]           # one row per book: one feed event only
     assert list(chi.close_total) == [42.5, 42.5, 43.0]
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}
@@ -89,10 +89,10 @@ def test_a_game_listed_twice_takes_the_listing_nearest_its_kickoff(tmp_path, mon
     assert "kept e1, the nearest the kickoff with a Pinnacle quote" in out
 
 
-def test_two_listings_equally_near_kickoff_are_left_unmatched_and_reported(tmp_path, monkeypatch, capsys):
-    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
-              listing("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", WRONG),
-              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+def test_two_feed_events_equally_near_kickoff_are_left_unmatched_and_reported(tmp_path, monkeypatch, capsys):
+    events = [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+              event("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", WRONG),
+              event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"     # recorded as missing
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
@@ -103,54 +103,54 @@ def test_two_listings_equally_near_kickoff_are_left_unmatched_and_reported(tmp_p
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
 
 
-def test_a_listing_more_than_6_hours_from_kickoff_is_not_the_close(tmp_path, monkeypatch, capsys):
-    events = [listing("e2", "CHI", "PHI", "2026-10-18T17:00:00Z", WRONG),
-              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+def test_a_feed_event_more_than_6_hours_from_kickoff_is_not_the_close(tmp_path, monkeypatch, capsys):
+    events = [event("e2", "CHI", "PHI", "2026-10-18T17:00:00Z", WRONG),
+              event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
     assert "none starts within 6 hours of the kickoff, so the close is missing" in out
 
 
-def test_a_listing_a_few_minutes_off_the_schedule_still_matches(tmp_path, monkeypatch, capsys):
+def test_a_feed_event_a_few_minutes_off_the_schedule_still_matches(tmp_path, monkeypatch, capsys):
     """The feed moves a game's start to the actual kickoff once it's under way (seen: 3 minutes)."""
-    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:03:12Z", RIGHT), listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    events = [event("e1", "CHI", "PHI", "2026-10-11T17:03:12Z", RIGHT), event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     _, _, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert "feed event" not in out and "listing" not in out  # nothing to report
 
 
-# ------------------------------------------------------------------ a listing Pinnacle prices comes first, as on the board
-# board.one_row_per_game keeps the listing with a complete Pinnacle quote when a game is listed twice. Close
-# capture ranks the listings within 6 hours the same way before it looks at the time, so a stale relisting
+# ------------------------------------------------------------ a feed event Pinnacle prices comes first, as on the board
+# board.one_row_per_game keeps the feed event with a complete Pinnacle quote when a game is listed twice. Close
+# capture ranks the feed events within 6 hours the same way before it looks at the time, so a stale relisting
 # without Pinnacle never displaces the priced one. origin/main recorded 42.5 in these cases too (it wrote both
-# listings, and the scorer reads only Pinnacle's row).
+# feed events, and the scorer reads only Pinnacle's row).
 STALE = {"draftkings": (44.5, -110, -110), "fanduel": (44.5, -110, -110)}          # no Pinnacle
 
 
 @pytest.mark.parametrize("fresh_start", ["2026-10-11T17:00:00Z",       # a relisted event at the same time
                                          "2026-10-11T17:05:00Z"])      # the unpriced one is nearer the kickoff
 @pytest.mark.parametrize("stale_first", [False, True])
-def test_a_listing_with_a_pinnacle_quote_beats_a_nearer_one_without(tmp_path, monkeypatch, capsys, fresh_start,
+def test_a_feed_event_with_a_pinnacle_quote_beats_a_nearer_one_without(tmp_path, monkeypatch, capsys, fresh_start,
                                                                     stale_first):
-    stale = listing("e_stale", "CHI", "PHI", "2026-10-11T17:00:00Z", STALE)
-    fresh = listing("e_fresh", "CHI", "PHI", fresh_start, RIGHT)
-    events = ([stale, fresh] if stale_first else [fresh, stale]) + [listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    stale = event("e_stale", "CHI", "PHI", "2026-10-11T17:00:00Z", STALE)
+    fresh = event("e_fresh", "CHI", "PHI", fresh_start, RIGHT)
+    events = ([stale, fresh] if stale_first else [fresh, stale]) + [event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     rows = pd.read_csv(tmp_path / "data" / "forward" / "closes.csv")
     chi = rows[rows.game_id == "2026_05_PHI_CHI"]
-    assert list(chi.book) == ["pinnacle", "draftkings", "fanduel"]           # the priced listing's books only
+    assert list(chi.book) == ["pinnacle", "draftkings", "fanduel"]           # the priced feed event's books only
     assert list(chi.close_total) == [42.5, 42.5, 43.0]
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}   # one call, complete
     assert "kept e_fresh, the nearest the kickoff with a Pinnacle quote" in out
 
 
-def test_two_listings_without_pinnacle_at_the_same_time_are_a_tie(tmp_path, monkeypatch, capsys):
+def test_two_feed_events_without_pinnacle_at_the_same_time_are_a_tie(tmp_path, monkeypatch, capsys):
     """Neither gives a close the scorer can use, and the game takes neither: one empty row, retried once."""
-    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", STALE),
-              listing("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"draftkings": (45.0, -110, -110)}),
-              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    events = [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", STALE),
+              event("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"draftkings": (45.0, -110, -110)}),
+              event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
     assert "2 are equally good and equally near the kickoff" in out
@@ -162,10 +162,10 @@ def test_two_listings_without_pinnacle_at_the_same_time_are_a_tie(tmp_path, monk
 # are the same game listed twice: the first in the feed is taken. Before, it was a tie and the close was lost (the
 # second review of PR 62: main recorded 42.5 there, PR 62 recorded nothing and spent a second credit).
 @pytest.mark.parametrize("first", ["e1", "e2"])
-def test_two_listings_with_the_same_pinnacle_quote_are_one_game_listed_twice(tmp_path, monkeypatch, capsys, first):
-    e1 = listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT)                      # Pinnacle, DK and FanDuel
-    e2 = listing("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"pinnacle": RIGHT["pinnacle"]})   # Pinnacle alone
-    events = ([e1, e2] if first == "e1" else [e2, e1]) + [listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+def test_two_feed_events_with_the_same_pinnacle_quote_are_one_game_listed_twice(tmp_path, monkeypatch, capsys, first):
+    e1 = event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT)                      # Pinnacle, DK and FanDuel
+    e2 = event("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"pinnacle": RIGHT["pinnacle"]})   # Pinnacle alone
+    events = ([e1, e2] if first == "e1" else [e2, e1]) + [event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     rows = pd.read_csv(tmp_path / "data" / "forward" / "closes.csv")
     chi = rows[rows.game_id == "2026_05_PHI_CHI"]
@@ -177,10 +177,10 @@ def test_two_listings_with_the_same_pinnacle_quote_are_one_game_listed_twice(tmp
 
 
 @pytest.mark.parametrize("other", [(42.5, -110, -102), (43.0, -106, -106)], ids=["prices", "total"])
-def test_equally_near_listings_whose_pinnacle_quotes_differ_are_still_a_tie(tmp_path, monkeypatch, capsys, other):
-    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
-              listing("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"pinnacle": other}),
-              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+def test_equally_near_feed_events_whose_pinnacle_quotes_differ_are_still_a_tie(tmp_path, monkeypatch, capsys, other):
+    events = [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+              event("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"pinnacle": other}),
+              event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
     assert "2 are equally good and equally near the kickoff, so none is kept and the close is missing" in out
@@ -190,8 +190,8 @@ def test_equally_near_listings_whose_pinnacle_quotes_differ_are_still_a_tie(tmp_
 # ------------------------------------------------------------------ amendment 7, reading 2: no usable feed event
 # The second review of pull request 64 ran a feed with one event whose books list was empty: the note said "the odds
 # feed returned no events at all", which wasn't what happened. The note now says which of the two it was.
-UNPRICED = [dict(listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", {}), bookmakers=[]),
-            dict(listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", {}), bookmakers=[])]
+UNPRICED = [dict(event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", {}), bookmakers=[]),
+            dict(event("e3", "GB", "DET", "2026-10-11T17:00:00Z", {}), bookmakers=[])]
 
 
 @pytest.mark.parametrize("events, said", [
@@ -220,16 +220,16 @@ def test_a_feed_with_no_usable_event_records_the_slot_and_says_what_happened(tmp
 
 def test_a_feed_with_no_events_and_then_a_price_records_the_price(tmp_path, monkeypatch, capsys):
     capture(tmp_path, monkeypatch, capsys, NOW, [])
-    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
-              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    events = [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+              event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", events)
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}
 
 
 # ------------------------------------------------------------------ a malformed start time costs only its own game
-def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path, monkeypatch, capsys):
-    events = [listing("e1", "CHI", "PHI", None, RIGHT), listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+def test_a_feed_event_with_no_start_time_leaves_only_its_own_game_missing(tmp_path, monkeypatch, capsys):
+    events = [event("e1", "CHI", "PHI", None, RIGHT), event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
@@ -238,8 +238,8 @@ def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path,
 
 
 def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
-    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00.000Z", RIGHT),
-              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    events = [event("e1", "CHI", "PHI", "2026-10-11T17:00:00.000Z", RIGHT),
+              event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}
@@ -248,14 +248,14 @@ def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
 
 # ------------------------------------------------------------------ ordinary slots: unchanged, byte for byte
 # The expected files are what origin/main's script (commit e83c7f8, before this change) wrote from these same
-# made-up responses. Listings of games not due (DAL at NYG later that day, BUF at KC next week) are ignored.
+# made-up responses. Feed events of games not due (DAL at NYG later that day, BUF at KC next week) are ignored.
 HEADER = "game_id,kick_utc,home_team,away_team,capture_utc,book,close_total,close_under,close_over,book_update\n"
 ORDINARY = {
     "one slot, two games, other games listed": (
-        [(NOW, [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
-                listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB),
-                listing("e4", "NYG", "DAL", "2026-10-11T20:25:00Z", WRONG),
-                listing("e5", "KC", "BUF", "2026-10-18T20:05:00Z", RIGHT)])],
+        [(NOW, [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+                event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB),
+                event("e4", "NYG", "DAL", "2026-10-11T20:25:00Z", WRONG),
+                event("e5", "KC", "BUF", "2026-10-18T20:05:00Z", RIGHT)])],
         HEADER
         + "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,pinnacle,42.5,-106,-106,2026-10-11T16:48:30Z\n"
         "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,draftkings,42.5,-110,-110,2026-10-11T16:48:30Z\n"
@@ -264,11 +264,11 @@ ORDINARY = {
         "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,2026-10-11T1650Z,draftkings,39.5,-112,-108,2026-10-11T16:48:30Z\n",
         {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}),
     "no Pinnacle for one game: retried once, then closed": (
-        [(NOW, [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
-                listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", {"draftkings": (39.5, -112, -108)})]),
-         ("2026-10-11T16:58:00Z", [listing("e1", "CHI", "PHI", "2026-10-11T17:01:00Z", RIGHT),
-                                   listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", {"draftkings": (40.0, -110, -110)})]),
-         ("2026-10-11T16:59:00Z", [listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)])],
+        [(NOW, [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+                event("e3", "GB", "DET", "2026-10-11T17:00:00Z", {"draftkings": (39.5, -112, -108)})]),
+         ("2026-10-11T16:58:00Z", [event("e1", "CHI", "PHI", "2026-10-11T17:01:00Z", RIGHT),
+                                   event("e3", "GB", "DET", "2026-10-11T17:00:00Z", {"draftkings": (40.0, -110, -110)})]),
+         ("2026-10-11T16:59:00Z", [event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)])],
         HEADER
         + "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,pinnacle,42.5,-106,-106,2026-10-11T16:48:30Z\n"
         "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,draftkings,42.5,-110,-110,2026-10-11T16:48:30Z\n"
@@ -280,8 +280,8 @@ ORDINARY = {
         "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,2026-10-11T1658Z,draftkings,40.0,-110,-110,2026-10-11T16:48:30Z\n",
         {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}),
     "a game the feed doesn't list": (
-        [(NOW, [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
-                listing("e4", "NYG", "DAL", "2026-10-11T20:25:00Z", WRONG)])],
+        [(NOW, [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+                event("e4", "NYG", "DAL", "2026-10-11T20:25:00Z", WRONG)])],
         HEADER
         + "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,pinnacle,42.5,-106.0,-106.0,2026-10-11T16:48:30Z\n"
         "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,draftkings,42.5,-110.0,-110.0,2026-10-11T16:48:30Z\n"
