@@ -23,6 +23,14 @@ Every bet alert ends with timing advice (issue #5): wind unders now, Rule HT at 
 Log the price you actually got with `scripts/log_fill.py`, and `score_forward.py`
 reports how much waiting gained or cost against the alert-time quote.
 
+**Close capture** (amendment 2). Every 15 minutes `ops/capture_closes.sh` runs `scripts/capture_close.py`.
+When FBS games kick off in 2–20 minutes, it makes one Odds API call and adds one row per game in that kickoff
+slot to `data/forward/closes.csv`: Pinnacle's total and prices, else DraftKings'. Since Sep 29 each game takes
+exactly one feed listing: the one for its two teams that starts nearest its scheduled kickoff, and only within
+6 hours of it. Before, it matched on the teams alone, so a relisted event, or a rematch such as a conference
+title game showing in the same feed, would have added a second row. If two listings are equally near, the
+game's close is left missing and the log says why. Tests: `tests/test_close_capture.py`.
+
 ## Forecast replay (2024–25)
 
 Every earlier CFB Rule B number used the wind *observed* at the nearest airport. Live, the rule fires on a *forecast* 1–3 days out. [`scripts/forecast_replay.py`](scripts/forecast_replay.py) replays 2024 and 2025 using only the forecasts that existed at bet time.
