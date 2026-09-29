@@ -149,3 +149,56 @@ def test_props_rows_keep_player_and_line():
 
 def test_props_markets_fit_one_region():
     assert len(live.PROP_BOOKS) <= 10 and len(set(live.PROP_MARKETS)) == 9
+
+
+def run_log_props(tmp_path, monkeypatch, get):
+    """Run scripts/log_props.py against a fake Odds API, with every path under tmp_path."""
+    import runpy
+
+    from nflweather import config, oddsapi
+    monkeypatch.setattr(config, "ROOT", tmp_path)
+    monkeypatch.setattr(oddsapi, "CACHE", tmp_path / "raw" / "oddsapi")
+    monkeypatch.setattr(oddsapi, "_get", get)
+    monkeypatch.setenv("ODDS_QUOTA_KIND", "background")
+    monkeypatch.setenv("ODDS_API_TIER", "paid")
+    monkeypatch.setattr(sys, "argv", ["log_props.py"])
+    runpy.run_path(str(Path(__file__).resolve().parents[1] / "scripts" / "log_props.py"), run_name="__main__")
+
+
+def test_props_log_saves_each_slot_before_the_next_and_asks_for_decimal_odds(tmp_path, monkeypatch):
+    """#33 items 5 and 6: an error part way through never re-fetches (and re-bills) a slot already paid
+    for, the raw text is on disk before parsing, and prices come in decimal odds like F2/F3."""
+    kick = (pd.Timestamp.now(tz="UTC") + pd.Timedelta(hours=24) - pd.Timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    events = [dict(EV, id=i, commence_time=kick) for i in ("e1", "e2")]
+    calls = []
+
+    class R:
+        headers = {"x-requests-last": "3", "x-requests-remaining": "4000000"}
+
+        def __init__(self, body):
+            self.text = json.dumps(body)
+
+        def json(self):
+            return json.loads(self.text)
+
+    def get(path, params, fail_on=None):
+        calls.append((path, params))
+        if path.endswith("/events"):
+            return R(events)
+        if fail_on and fail_on in path:
+            raise RuntimeError("boom")
+        return R(dict(EV, id=path.split("/")[-2], bookmakers=[{"key": "pinnacle", "markets": [{"key": "team_totals",
+                      "outcomes": [{"name": "Over", "description": "Green Bay Packers", "point": 24.5, "price": 1.91}]}]}]))
+
+    with pytest.raises(RuntimeError):
+        run_log_props(tmp_path, monkeypatch, lambda p, q: get(p, q, fail_on="/e2/"))
+    state = json.loads((tmp_path / "data" / "forward" / "props_state.json").read_text())
+    assert state["captured"] == ["e1:24"]
+    (raw,) = (tmp_path / "raw" / "oddsapi" / "props").glob("*_e1_T24.json")
+    assert json.loads(json.loads(raw.read_text())["body"])["id"] == "e1"
+    assert all(q["oddsFormat"] == "decimal" for p, q in calls if p.endswith("/odds"))
+    calls.clear()
+    run_log_props(tmp_path, monkeypatch, get)
+    assert [p for p, _ in calls if p.endswith("/odds")] == ["/sports/americanfootball_nfl/events/e2/odds"]
+    log = pd.read_csv(tmp_path / "data" / "forward" / "props_log.csv")
+    assert sorted(log.event_id) == ["e1", "e2"] and set(log.price) == {1.91}

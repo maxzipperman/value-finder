@@ -13,10 +13,15 @@ data/forward/trigger_polls.csv. It shows how the price moves between the four da
 
 Props log (scripts/log_props.py, every 15 minutes): for every NFL game, event odds for PROP_MARKETS
 at PROP_BOOKS at T-48h, T-24h, T-2h and the close (2-20 minutes before kickoff, as close capture
-does). That continues the historical F2/F3 series live. Each call costs 1 credit per market
-returned (up to 9). Rows go to data/forward/props_log.csv; raw responses to data/raw/oddsapi/props/.
+does). That continues the historical F2/F3 series live, in the same decimal odds. Each call costs
+1 credit per market returned (up to 9). Rows go to data/forward/props_log.csv; raw response text to
+data/raw/oddsapi/props/ (under "body"), written before it is parsed.
 """
 from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -29,6 +34,7 @@ PROP_MARKETS = ("alternate_spreads", "alternate_totals", "team_totals", "player_
                 "player_reception_yds", "player_receptions", "player_kicking_points", "player_field_goals")
 PROP_BOOKS = ("pinnacle", "lowvig", "betonlineag", "draftkings", "fanduel", "betmgm", "williamhill_us", "fanatics",
               "betrivers", "espnbet")                     # 10 books = 1 region
+PROP_ODDS_FORMAT = "decimal"                              # as the historical F2/F3 pulls
 PROP_OFFSETS_H = (48, 24, 2, 0)
 OFFSET_WINDOW = pd.Timedelta(minutes=30)                  # a slot is due for 30 minutes after its target
 CLOSE_WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
@@ -94,3 +100,12 @@ def props_rows(body: dict, snapshot_utc: str, offset_h: int) -> pd.DataFrame:
                                  market_update=mk.get("last_update"), outcome=o.get("name"),
                                  player=o.get("description"), point=o.get("point"), price=o.get("price")))
     return pd.DataFrame(rows)
+
+
+def save_state(path: Path, state: dict) -> None:
+    """Write the props log's state atomically (temp file, then rename), so a crash never leaves it half-written."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(state))
+    os.replace(tmp, path)

@@ -6,6 +6,10 @@ The event list is free; each due snapshot costs 1 credit per market returned (up
 logger: it runs only on a paid plan and stops at the background floor (quota.py). A slot missed
 while the Mac slept stays missing; nothing is imputed.
 
+Prices are requested in decimal odds, as the historical F2/F3 pulls are (sharp-markets/config/odds5m.yaml).
+props_state.json is rewritten (temp file, then rename) after every captured slot, so an error part
+way through never re-fetches a slot it already paid for.
+
     python scripts/log_props.py [--now 2026-10-11T15:00:00Z]
 
 --now is a dry run: it lists the slots that would be due then (the event list is free) and spends
@@ -55,29 +59,34 @@ for ev, h in due:
     try:
         r = oddsapi._get(f"/sports/{oddsapi.SPORT}/events/{ev['id']}/odds",
                          dict(bookmakers=",".join(live.PROP_BOOKS), markets=",".join(live.PROP_MARKETS),
-                              oddsFormat="american", dateFormat="iso"))
+                              oddsFormat=live.PROP_ODDS_FORMAT, dateFormat="iso"))
     except SystemExit as e:
         print(f"  {ev['away_team']} @ {ev['home_team']} T-{h}h: no prices ({e}); retried while the slot is open")
         continue
     last = int(float(r.headers.get("x-requests-last") or 0))
     spent += last
     stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
-    body = r.json()
+    # The raw text goes to disk, and the slot is marked captured, before anything is parsed: a crash
+    # after this point never re-fetches (and re-bills) the slot. Rows can be rebuilt from the raw file.
     dest = oddsapi.CACHE / "props" / f"{stamp.replace(':', '')}_{ev['id']}_T{h}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps({"snapshot_utc": stamp, "offset_h": h, "credits_last": last,
-                                "credits_remaining": r.headers.get("x-requests-remaining"), "data": body}))
-    rows = live.props_rows(body, stamp, h)
+                                "credits_remaining": r.headers.get("x-requests-remaining"),
+                                "odds_format": live.PROP_ODDS_FORMAT, "body": r.text}))
+    captured.add(f"{ev['id']}:{h}")
+    state["captured"] = sorted(captured)
+    live.save_state(STATE, state)
+    try:
+        rows = live.props_rows(json.loads(r.text), stamp, h)
+    except ValueError as e:
+        print(f"  {ev['away_team']} @ {ev['home_team']} T-{h}h: unreadable body ({e}); raw kept in {dest.name}")
+        continue
     if len(rows):
         FWD.mkdir(parents=True, exist_ok=True)
         rows.to_csv(OUT, mode="a", header=not OUT.exists(), index=False)
-    captured.add(f"{ev['id']}:{h}")
     done.append(f"{ev['away_team']} @ {ev['home_team']} T-{h}h ({len(rows)} quotes, {last} cr)")
     if last > len(live.PROP_MARKETS):
         print(f"  circuit breaker: one call billed {last} credits, more than {len(live.PROP_MARKETS)} markets")
         break
-state["captured"] = sorted(captured)
-FWD.mkdir(parents=True, exist_ok=True)
-STATE.write_text(json.dumps(state))
 if done:
     print(f"{now:%Y-%m-%d %H:%M}Z props log: {len(done)} snapshots, {spent} credits: " + "; ".join(done))
