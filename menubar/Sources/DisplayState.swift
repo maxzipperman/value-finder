@@ -58,7 +58,7 @@ struct DisplayState: Equatable, Sendable {
             var lines: [MenuLine] = [
                 .text(headline),
                 .text("Next alert run at " + Clock.twelveHour(hhmm: summary.nextRunLocal)),
-                .text("Credits left: " + (summary.creditsRemaining.map(Self.grouped) ?? "not known")),
+                .text("Credits left: " + Self.credits(summary.creditsRemaining)),
             ]
             let problems = Self.problemLines(summary.problems)
             if !problems.isEmpty {
@@ -74,21 +74,21 @@ struct DisplayState: Equatable, Sendable {
             )
 
         case .notRunning(let why):
-            self.init(unusable: "The dashboard is not running.", extra: nil, why: why, footer: footer)
+            self.init(unusable: "The dashboard is not running.", why: why, footer: footer)
         case .notAnswering(let why):
-            self.init(unusable: "The dashboard is not answering.", extra: nil, why: why, footer: footer)
+            self.init(unusable: "The dashboard is not answering.", why: why, footer: footer)
         case .unreachable(let why):
-            self.init(unusable: "The dashboard cannot be reached.", extra: nil, why: why, footer: footer)
+            self.init(unusable: "The dashboard cannot be reached.", why: why, footer: footer)
         case .unreadable(let why):
-            self.init(unusable: "The dashboard cannot be reached.",
-                      extra: "Its answer could not be read.", why: why, footer: footer)
+            // Gray, like "cannot be reached", but worded so it does not say the dashboard
+            // was unreachable when it did answer.
+            self.init(unusable: "The dashboard answered, but its answer could not be read.",
+                      why: why, footer: footer)
         }
     }
 
-    private init(unusable headline: String, extra: String?, why: String, footer: [MenuLine]) {
-        var lines: [MenuLine] = [.text(headline)]
-        if let extra { lines.append(.text(extra)) }
-        self.init(dot: .gray, number: nil, menu: lines + footer,
+    private init(unusable headline: String, why: String, footer: [MenuLine]) {
+        self.init(dot: .gray, number: nil, menu: [.text(headline)] + footer,
                   spoken: "Value Finder: " + headline, detail: why)
     }
 
@@ -114,14 +114,19 @@ struct DisplayState: Equatable, Sendable {
         }
     }
 
-    /// Each problem on its own line: control characters become spaces, blank ones are dropped,
-    /// a very long one is shortened, and after eight the rest are counted instead of listed.
+    /// Each problem on its own line: line breaks of every kind (including the Unicode line and
+    /// paragraph separators) and invisible control characters become spaces, runs of spaces
+    /// become one, blank ones are dropped, a very long one is shortened, and after eight the
+    /// rest are counted instead of listed. The zero-width joiners that hold an emoji such as
+    /// a family together are kept.
     static func problemLines(_ problems: [String]) -> [String] {
         let cleaned = problems
             .map { text in
                 String(String.UnicodeScalarView(text.unicodeScalars.map {
-                    CharacterSet.controlCharacters.contains($0) ? " " : $0
+                    isBreakOrControl($0) ? " " : $0
                 }))
+                .split(separator: " ", omittingEmptySubsequences: true)
+                .joined(separator: " ")
                 .trimmingCharacters(in: .whitespaces)
             }
             .filter { !$0.isEmpty }
@@ -130,6 +135,23 @@ struct DisplayState: Equatable, Sendable {
         let shown = Array(cleaned.prefix(mostProblemLines - 1))
         let rest = cleaned.count - shown.count
         return shown + ["\(rest) more problems are on the dashboard."]
+    }
+
+    /// Zero-width non-joiner and joiner: invisible, harmless, and part of some emoji and scripts.
+    private static let joiners: Set<Unicode.Scalar> = ["\u{200C}", "\u{200D}"]
+
+    static func isBreakOrControl(_ scalar: Unicode.Scalar) -> Bool {
+        if joiners.contains(scalar) { return false }
+        return CharacterSet.newlines.contains(scalar)
+            || CharacterSet.controlCharacters.contains(scalar)
+            || scalar.properties.generalCategory == .lineSeparator
+            || scalar.properties.generalCategory == .paragraphSeparator
+    }
+
+    /// "19,650", or "none" when the balance is 0 or below, or "not known" when it is null.
+    static func credits(_ remaining: Int?) -> String {
+        guard let remaining else { return "not known" }
+        return remaining <= 0 ? "none" : grouped(remaining)
     }
 
     static func grouped(_ number: Int) -> String {

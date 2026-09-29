@@ -3,7 +3,8 @@
 # It starts a stand-in for the dashboard (stub_server.py) on a free port of 127.0.0.1,
 # runs the built app with --selftest once per case, and then checks that the app asked
 # each address exactly once, followed no redirect, refused addresses off this Mac, only
-# ever connected to the stand-in, and left no cache or saved-state files behind.
+# ever connected to the stand-in, kept memory small on a huge answer, and left no cache
+# or saved-state files behind.
 # It reads the app and writes only to a temporary folder (and to expected/ with --update).
 #   menubar/tests/run_selftests.sh            compare; exits 1 on any difference
 #   menubar/tests/run_selftests.sh --update   rewrite the expected files
@@ -38,7 +39,9 @@ normalize() { sed -E 's/Checked at [0-9]{1,2}:[0-9]{2} (AM|PM)/Checked at <time>
 
 CASES=(ok-no-signals ok-two-signals warn-one-problem fail-two-problems invalid-json
        missing-field wrong-type no-server credits-null boolean-count unknown-health
-       http-error redirect many-problems extra-field utc-offset hang)
+       http-error redirect many-problems extra-field utc-offset hang
+       utc-minutes credits-negative deep-object brackets-in-text separators empty
+       too-large-length too-large-stream)
 FAILED=0
 ASKED=()
 for name in $CASES; do
@@ -48,7 +51,12 @@ for name in $CASES; do
     url="http://127.0.0.1:$PORT/$name"
     ASKED+=("GET /$name")
   fi
-  "$BIN" --selftest "$url" | normalize > "$WORK/$name.txt"
+  # A crash (for example a stack overflow) prints nothing; record its exit status instead,
+  # so it shows as a difference rather than stopping the run.
+  rc=0
+  "$BIN" --selftest "$url" > "$WORK/$name.raw" || rc=$?
+  normalize < "$WORK/$name.raw" > "$WORK/$name.txt"
+  (( rc == 0 )) || echo "Exit status: $rc" >> "$WORK/$name.txt"
   if (( UPDATE )); then
     cp "$WORK/$name.txt" "$EXPECTED/$name.txt"
     echo "updated  $name"
@@ -90,6 +98,19 @@ only_local_connection() {
   ! grep -qv -- "^127\.0\.0\.1:[0-9]*->127\.0\.0\.1:$PORT\$" "$WORK/connections.txt"
 }
 check "its only connection was to 127.0.0.1:$PORT" only_local_connection
+
+# A 256 MB answer is cut off at 256 KB as it arrives, so memory stays small. Reading the
+# whole answer first, as the first version did, took about twice the answer's size.
+MOST_MEMORY=$(( 64 * 1024 * 1024 ))
+small_memory_on_large_answer() {
+  local rss
+  /usr/bin/time -l "$BIN" --selftest "http://127.0.0.1:$PORT/too-large-stream" \
+    > /dev/null 2> "$WORK/time.txt" || true
+  rss="$(awk '/maximum resident set size/ { print $1 }' "$WORK/time.txt")"
+  echo "   most memory used: $(( ${rss:-0} / 1024 / 1024 )) MB (limit $(( MOST_MEMORY / 1024 / 1024 )) MB)"
+  [[ "$rss" == <-> ]] && (( rss < MOST_MEMORY ))
+}
+check "a 256 MB answer is cut off without filling memory" small_memory_on_large_answer
 
 # No cache, cookie store or saved window state was written for the app.
 no_files_written() {

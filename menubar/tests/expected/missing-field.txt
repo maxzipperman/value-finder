@@ -1,8 +1,7 @@
 Dot: gray
 Number beside the icon: none
 Menu:
-  The dashboard cannot be reached.
-  Its answer could not be read.
+  The dashboard answered, but its answer could not be read.
   --------
   Open dashboard
   Checked at <time>

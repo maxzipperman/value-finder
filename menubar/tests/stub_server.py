@@ -40,8 +40,25 @@ CASES = {
                               + ["  ", "A sentence\nwith a line break in it."]),
     "/extra-field": summary(signals_live=3, version="1"),
     "/utc-offset": summary(generated_utc="2026-09-29T17:31:00+00:00"),
+    "/utc-minutes": summary(generated_utc="2026-09-29T17:31Z"),
+    "/credits-negative": summary(credits_remaining=-5),
+    # 512 objects inside one another: 3 KB of valid JSON that used to overflow the JSON
+    # reader's stack and crash the app.
+    "/deep-object": '{"a":' * 512 + "1" + "}" * 512,
+    # Brackets and an escaped quote inside a problem's text are not nesting.
+    "/brackets-in-text": summary(health="warn", problems=[
+        'A problem that quotes "{[{[{[{[{[{[{[{[{[{[" and a backslash \\ in its text.']),
+    # Every kind of line break becomes a space; an emoji family's joiners are kept;
+    # a right-to-left override (an invisible control character) becomes a space.
+    "/separators": summary(health="warn", problems=[
+        "Line one line two line three\u0085line four\r\nline five.",
+        "The family \U0001F468‍\U0001F469‍\U0001F467 stays together;‮ no reversed text."]),
+    "/empty": "",
     "/slow": summary(),
 }
+
+# Answers far over the light's 256 KB limit. The light should stop reading, not fill memory.
+LARGE = {"/too-large-length": 1 << 30, "/too-large-stream": 256 << 20}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -55,6 +72,22 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/hang":  # accepts, then never answers within the light's 10 seconds
             time.sleep(15)
+            return
+        if self.path in LARGE:
+            # /too-large-length announces 1 GB in its length header; /too-large-stream sends
+            # 256 MB with no length header, so only counting the bytes can stop it.
+            size = LARGE[self.path]
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            if self.path == "/too-large-length":
+                self.send_header("Content-Length", str(size))
+            self.end_headers()
+            chunk = b" " * (1 << 20)
+            try:
+                for _ in range(size // len(chunk)):
+                    self.wfile.write(chunk)
+            except OSError:  # the light hung up, as it should
+                pass
             return
         if self.path == "/slow":  # holds the connection open so it can be observed
             time.sleep(3)

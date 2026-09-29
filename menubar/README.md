@@ -15,7 +15,7 @@ light needs the dashboard running. Without it, the dot is gray.
 | Green | All jobs ran and nothing needs you. |
 | Amber | Something needs a look: for example the newest ledger row is more than 5 hours old, credits are low on the free plan, or the dashboard couldn't read one of its files. |
 | Red | A scheduled job has a problem: an alert run was recorded as failed, a job last exited with an error, or an alert job hasn't run for more than 5 hours during the day (7:30 AM to 11:30 PM). |
-| Gray | The dashboard isn't running, isn't answering, or sent something the light couldn't read. |
+| Gray | The dashboard isn't running, isn't answering, or answered with something the light couldn't read ("The dashboard answered, but its answer could not be read."). |
 
 A number beside the symbol is how many signals are live: games not yet kicked off whose latest
 logged row is a signal under any rule. A signal means a pre-registered rule fired in the paper
@@ -23,8 +23,9 @@ forward test. It is not evidence that the rule works; the dashboard shows each f
 its sample size.
 
 The menu, top to bottom: one line in plain words ("All jobs ran. No signals.", "1 signal is
-live.", "The dashboard is not running."), the next alert run, the credits left, each problem the
-dashboard reports, **Open dashboard**, the time of the last check, and **Quit**.
+live.", "The dashboard is not running."), the next alert run, the credits left ("none" when the
+balance is 0 or below), each problem the dashboard reports on a line of its own, **Open
+dashboard**, the time of the last check, and **Quit**.
 
 ## Build, install, remove
 
@@ -50,6 +51,9 @@ To update it after a change: quit it (Quit in its menu), build, install, open.
   in the menu bar in the app's own preferences.)
 - It never starts another program, except that **Open dashboard** opens
   `http://127.0.0.1:8787/` in your default browser.
+- It stops reading any answer larger than 256 KB as it arrives, and refuses one nested more
+  than 8 levels deep without reading it, so another program answering on the dashboard's port
+  can neither fill its memory nor crash it. Either shows gray.
 - It has nothing to do with placing bets. Paper only.
 
 ## Checking it without opening it
@@ -64,8 +68,9 @@ without putting anything in the menu bar:
 `menubar/tests/run_selftests.sh` reruns the saved cases in `menubar/tests/expected/` against a
 stand-in server (`menubar/tests/stub_server.py`) on a free local port, and also checks that
 the app asked each address exactly once, followed no redirect, refused addresses off this Mac,
-connected only to the stand-in, wrote no cache or saved-state files, and that its code names
-only the two dashboard addresses. Run it after building. `--update` rewrites the expected files
+connected only to the stand-in, stayed under 64 MB of memory on a 256 MB answer, wrote no cache
+or saved-state files, and that its code names only the two dashboard addresses. A case that
+crashes the app shows as a difference with its exit status. Run it after building. `--update` rewrites the expected files
 after a deliberate change to the wording.
 
 ## The files
@@ -73,8 +78,8 @@ after a deliberate change to the wording.
 | File | What it does |
 |---|---|
 | `Sources/Address.swift` | The two fixed addresses, and the rule that only 127.0.0.1 is ever asked. |
-| `Sources/Fetcher.swift` | The one GET request: no cache, no cookies, no proxy, no redirects, 10-second limit. |
-| `Sources/Summary.swift` | Checks every field of the answer. A missing field or a wrong type means gray. |
+| `Sources/Fetcher.swift` | The one GET request: no cache, no cookies, no proxy, no redirects, 10-second limit, stops reading at 256 KB. |
+| `Sources/Summary.swift` | Checks every field of the answer. A missing field, a wrong type, or nesting more than 8 levels deep means gray. |
 | `Sources/DisplayState.swift` | Turns an answer into the dot, the number and the menu lines. |
 | `Sources/Icon.swift` | Draws the wind symbol, the dot and the number. |
 | `Sources/LightApp.swift` | The menu-bar item and the once-a-minute check. |

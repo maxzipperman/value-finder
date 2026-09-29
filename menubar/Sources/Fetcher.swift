@@ -11,18 +11,35 @@ enum FetchOutcome: Equatable, Sendable {
     /// Any other failure to connect.
     case unreachable(String)
     /// It answered, but not with a summary the light can use (an HTTP error,
-    /// a redirect, text that is not JSON, a missing field or a wrong type).
+    /// a redirect, text that is not JSON, a missing field, a wrong type, or an answer
+    /// too large or too deeply nested to read).
     case unreadable(String)
 }
 
 /// Asks one local address for the summary with a plain GET. It keeps no cache and no cookies,
-/// ignores any system proxy, never follows a redirect, and refuses any address that is not
-/// http on 127.0.0.1.
-final class SummaryFetcher: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+/// ignores any system proxy, never follows a redirect, refuses any address that is not
+/// http on 127.0.0.1, and stops reading an answer as soon as it passes 256 KB, so a large
+/// answer never fills memory.
+final class SummaryFetcher: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     static let timeoutSeconds: TimeInterval = 10
     static let largestAnswer = 256 * 1024
 
+    /// One request in flight: the bytes received so far, the reason it was stopped early
+    /// (if it was), and what to call when it ends. Touched only on the session's own queue,
+    /// which runs one thing at a time, except when `fetch` files it under `lock`.
+    private final class Pending: @unchecked Sendable {
+        let completion: @Sendable (FetchOutcome) -> Void
+        var data = Data()
+        var stopped: FetchOutcome?
+
+        init(_ completion: @escaping @Sendable (FetchOutcome) -> Void) {
+            self.completion = completion
+        }
+    }
+
     private var session: URLSession?
+    private let lock = NSLock()
+    private var pending: [Int: Pending] = [:]
 
     override init() {
         super.init()
@@ -62,9 +79,72 @@ final class SummaryFetcher: NSObject, URLSessionTaskDelegate, @unchecked Sendabl
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         request.timeoutInterval = Self.timeoutSeconds
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        session.dataTask(with: request) { data, response, error in
-            completion(Self.outcome(data: data, response: response, error: error))
-        }.resume()
+        // A task without a completion handler, so the answer arrives piece by piece through
+        // the delegate methods below and can be cut off at 256 KB.
+        let task = session.dataTask(with: request)
+        lock.lock()
+        pending[task.taskIdentifier] = Pending(completion)
+        lock.unlock()
+        task.resume()
+    }
+
+    private func entry(for task: URLSessionTask, remove: Bool = false) -> Pending? {
+        lock.lock()
+        defer { lock.unlock() }
+        return remove ? pending.removeValue(forKey: task.taskIdentifier) : pending[task.taskIdentifier]
+    }
+
+    private static let tooLarge = FetchOutcome.unreadable(
+        "the answer was larger than \(largestAnswer / 1024) KB, so the light stopped reading it")
+
+    /// The status and length arrive before the body: stop here for anything but a 200,
+    /// or for a body that says it is larger than 256 KB.
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void
+    ) {
+        let stop: FetchOutcome?
+        if let http = response as? HTTPURLResponse {
+            if http.statusCode != 200 {
+                stop = .unreadable("it answered with HTTP status \(http.statusCode), not 200")
+            } else if response.expectedContentLength > Int64(Self.largestAnswer) {
+                stop = Self.tooLarge
+            } else {
+                stop = nil
+            }
+        } else {
+            stop = .unreadable("the answer was not an HTTP response")
+        }
+        if let stop {
+            entry(for: dataTask)?.stopped = stop
+            completionHandler(.cancel)
+        } else {
+            completionHandler(.allow)
+        }
+    }
+
+    /// Each piece of the body: keep it, unless the total passes 256 KB, and then stop reading.
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard let entry = entry(for: dataTask), entry.stopped == nil else { return }
+        if entry.data.count + data.count > Self.largestAnswer {
+            entry.stopped = Self.tooLarge
+            entry.data = Data()
+            dataTask.cancel()
+        } else {
+            entry.data.append(data)
+        }
+    }
+
+    /// The request is over, finished, failed or stopped: work out the outcome, once.
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard let entry = entry(for: task, remove: true) else { return }
+        if let stopped = entry.stopped {
+            entry.completion(stopped)
+        } else {
+            entry.completion(Self.outcome(data: entry.data, response: task.response, error: error))
+        }
     }
 
     static func outcome(data: Data?, response: URLResponse?, error: Error?) -> FetchOutcome {
@@ -87,8 +167,11 @@ final class SummaryFetcher: NSObject, URLSessionTaskDelegate, @unchecked Sendabl
         guard http.statusCode == 200 else {
             return .unreadable("it answered with HTTP status \(http.statusCode), not 200")
         }
-        guard let data, data.count <= largestAnswer else {
-            return .unreadable("the answer was empty or larger than \(largestAnswer / 1024) KB")
+        guard let data, !data.isEmpty else {
+            return .unreadable("the answer was empty")
+        }
+        guard data.count <= largestAnswer else {
+            return tooLarge
         }
         switch Summary.parse(data) {
         case .success(let summary):

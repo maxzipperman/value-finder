@@ -1,0 +1,11 @@
+Dot: green
+Number beside the icon: none
+Menu:
+  All jobs ran. No signals.
+  Next alert run at 3:30 PM
+  Credits left: none
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit
