@@ -1,0 +1,10 @@
+Dot: gray
+Number beside the icon: none
+Menu:
+  The dashboard answered, but its answer could not be read.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit
+Detail (self-test only): the field health should be one of "ok", "warn" or "fail"
