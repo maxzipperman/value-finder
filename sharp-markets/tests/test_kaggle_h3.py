@@ -240,7 +240,7 @@ GAMES = [
     ("G1", "2021-11-01", "Boston Celtics", "Miami Heat", (1.5, 2.8, 80, 60, 1), (1.8, 2.0, 70, 55, 1), (1.91, 1.91, 60, 70, 1)),
     ("G2", "2021-11-01", "Chicago Bulls", "Utah Jazz", (2.5, 1.6, 30, 40, 0), (1.91, 1.91, 40, 52, 1), (1.87, 1.95, 75, 60, 0)),
     ("G3", "2022-12-01", "Denver Nuggets", "LA Clippers", (1.25, 4.2, 85, 90, 1), (1.91, 1.91, 55, 50, 0), (1.91, 1.91, 50, 25, 1)),
-    ("G4", "2023-12-01", "Phoenix Suns", "Orlando Magic", (1.91, 1.91, 50, 50, 0), (1.91, 1.91, 50, 50, 1), (1.91, 1.91, 35, 50, 0)),
+    ("G4", "2023-12-01", "Phoenix Suns", "New York",(1.91, 1.91, 50, 50, 0), (1.91, 1.91, 50, 50, 1), (1.91, 1.91, 35, 50, 0)),
     ("G5", "2024-12-01", "Golden State Warriors", "Dallas Mavericks", (1.4, 3.1, 60, 70, 0), (1.91, 1.91, 30, 20, 1), (1.91, 1.91, 50, 50, "push")),
     ("G6", "2025-12-01", "Toronto Raptors", "Detroit Pistons", (3.0, 1.4, 20, 35, 1), (1.91, 1.91, 45, 75, 1), (1.95, 1.87, 70, 65, 1)),
     ("G7", "2026-01-31", "Sacramento Kings", "Houston Rockets", (1.7, 2.2, 57, 50, 1), (1.91, 1.91, 62, 50, 0), (1.91, 1.91, 40, 72, 1)),
@@ -261,7 +261,7 @@ def _csv_text(games=GAMES, drop=()):
     w = __import__("csv").DictWriter(buf, fieldnames=cols, extrasaction="ignore")
     w.writeheader()
     for gid, d, home, away, *mk in games:
-        row = {"game_id": gid, "game_date": d, "home_team": home, "away_team": away}
+        row = {"game_id": gid, "game_date": f"{d}-10:00", "home_team": home, "away_team": away}   # the file's format
         for m, (p1, p2, st1, wg1, won1) in zip(k.MARKETS, mk):
             s1, s2 = k.SIDES[m]
             w1, w2 = {1: ("True", "False"), 0: ("False", "True"), "push": ("False", "False"),
@@ -336,7 +336,19 @@ def test_cutoff_pushes_and_missing_figures():
     assert res["excluded"]["spread"] == {"push": 1, "missing figure": 1}          # G9, G10
     assert res["excluded"]["total"] == {"push": 1, "margin below 0% or above 20%": 1}   # G5, G11
     assert res["n_records"] == {"money": 10, "spread": 8, "total": 8}
-    assert not info["unknown_teams"]
+    # an unresolved team name is counted, and the game stays in the test (team names play no part in it)
+    assert info["unknown_teams"] == {"New York": 1}
+    g4 = next(g for g in games if g["key"] == "G4")
+    assert g4["away"] is None and g4["home"] == "PHX"
+
+
+def test_the_files_date_format():
+    assert k._date("2021-10-19-10:00").isoformat() == "2021-10-19"
+    assert k._date("2026-01-31-10:00") == k.CUTOFF
+    assert k._date("2026-02-01-10:00") > k.CUTOFF
+    assert k._date("2021-10-19") .isoformat() == "2021-10-19"
+    assert k._date("") is None and k._date("2021-13-40-10:00") is None and k._date("garbage") is None
+    assert k.season_of(k._date("2022-08-01-10:00")) == "2022-23" and k.season_of(k._date("2022-07-31")) == "2021-22"
 
 
 def test_family_a_spread_by_hand():

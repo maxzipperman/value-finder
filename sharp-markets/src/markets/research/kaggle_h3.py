@@ -255,8 +255,16 @@ def _b(v):
 
 
 def _date(v):
+    """The file's game date. all_odds.csv writes it as '2021-10-19-10:00' (the same date as in the game id, on every
+    row); the first ten characters are the date."""
     s = str(v or "").strip()
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+    m = re.match(r"(\d{4}-\d{2}-\d{2})(?:$|[-T ])", s)
+    if m:
+        try:
+            return date.fromisoformat(m.group(1))
+        except ValueError:
+            return None
+    for fmt in ("%m/%d/%Y",):
         try:
             return datetime.strptime(s[:19], fmt).date()
         except ValueError:
@@ -304,6 +312,10 @@ def parse_games(rows: list[dict], teams) -> tuple[list[dict], dict]:
                 info["unknown_teams"][str(name)] += 1
         g = {"key": r.get(COL_ID), "date": d, "season": season_of(d), "home": home, "away": away,
              "names": (r.get(COL_HOME), r.get(COL_AWAY)), "m": {}}
+        digits = re.sub(r"\D", "", str(r.get(COL_ID) or ""))
+        info["id_date_checked"] = info.get("id_date_checked", 0) + bool(digits)
+        info["id_date_differs"] = info.get("id_date_differs", 0) + (bool(digits) and
+                                                                     not digits.startswith(d.strftime("%Y%m%d")))
         for m in MARKETS:
             g["m"][m] = {}
             for s in SIDES[m]:
@@ -313,7 +325,8 @@ def parse_games(rows: list[dict], teams) -> tuple[list[dict], dict]:
                 st, wg = _num(r.get(_col(m, s, "stake"))), _num(r.get(_col(m, s, "wager")))
                 g["m"][m][s] = {"dec": dec, "stake": None if st is None else st * info["share_scale"],
                                 "wager": None if wg is None else wg * info["share_scale"],
-                                "won": _b(r.get(_col(m, s, "won"))), "line": _num(r.get(_col(m, s, "line")))}
+                                "won": _b(r.get(_col(m, s, "won"))), "line": _num(r.get(_col(m, s, "line"))),
+                                "american": _num(r.get(f"{m}_{s}_odds"))}
         games.append(g)
     return games, info
 
@@ -322,10 +335,7 @@ def market_records(games: list[dict], market: str) -> tuple[list[dict], Counter]
     """One record per game with every figure of this market present and decided; the rest counted by reason."""
     s1, s2 = SIDES[market]
     recs, excl = [], Counter()
-    for g in games:
-        if g["home"] is None or g["away"] is None:
-            excl["team name not resolved"] += 1
-            continue
+    for g in games:                     # team names play no part in the test: an unresolved name only loses its code
         a, b = g["m"][market][s1], g["m"][market][s2]
         if any(v is None for o in (a, b) for v in (o["dec"], o["stake"], o["wager"], o["won"])) \
                 or a["dec"] <= 1 or b["dec"] <= 1:
@@ -548,6 +558,11 @@ def file_checks(games: list[dict], info: dict) -> dict:
             if a["line"] is not None and b["line"] is not None:
                 off = (a["line"] + b["line"]) if m == "spread" else (a["line"] - b["line"]) if m == "total" else 0
                 c["lines that don't mirror"] += abs(off) > 1e-9
+            for o in (a, b):
+                conv = _american_to_decimal(o.get("american"))
+                if conv is not None and o["dec"] is not None:
+                    c["prices checked against American odds"] += 1
+                    c["decimal and American differ by more than 0.01"] += abs(conv - o["dec"]) > 0.01
         markets[m] = {"counts": c, "n": len(games),
                       **{f"{w}_sum_within_1": (sum(abs(x - 100) <= 1 for x in v) / len(v)) if v else float("nan")
                          for w, v in sums.items()},
@@ -749,15 +764,14 @@ def write_report(res: dict, reports_dir) -> Path:
     for v in vs:
         L.append(f"| {_name(v)} | " + " | ".join(
             f"{_pts(v['season'][s][0])} (n {v['season'][s][1]:,})" for s in SEASONS) + " |")
+    reasons = ("missing figure", "margin below 0% or above 20%", "both sides marked won", "push")
     L += ["", "### Games left out, by market and reason", "",
-          "| Market | Games tested | " + " | ".join(r for r in ("team name not resolved", "missing figure",
-                                                            "margin below 0% or above 20%", "both sides marked won",
-                                                            "push")) + " |", "|" + "---|" * 7]
+          f"Out of {res['n_games']:,} games dated on or before {CUTOFF.isoformat()}.", "",
+          "| Market | Games tested | " + " | ".join(reasons) + " |", "|" + "---|" * (len(reasons) + 2)]
     for m in MARKETS:
         e = res["excluded"][m]
-        L.append(f"| {MARKET_LABEL[m]} | {res['n_records'][m]:,} | " + " | ".join(
-            f"{e.get(r, 0):,}" for r in ("team name not resolved", "missing figure", "margin below 0% or above 20%",
-                                          "both sides marked won", "push")) + " |")
+        L.append(f"| {MARKET_LABEL[m]} | {res['n_records'][m]:,} | " + " | ".join(f"{e.get(r, 0):,}" for r in reasons)
+                 + " |")
     both = [(v, v["both_sides"]) for v in vs if v["both_sides"]]
     L += ["", "Games where both sides met a family A or C rule (left out of that variant): "
           + ("; ".join(f"{_name(v)}: {n}" for v, n in both) if both else "none") + ".", "",
@@ -779,9 +793,14 @@ def write_report(res: dict, reports_dir) -> Path:
           f"; prices as {'American odds, converted to decimal' if info['american_prices'] else 'decimal odds'}.",
           f"- **Duplicated games** (same date, home and away team): {ch['dup_games']:,}; duplicated game ids: "
           f"{ch['dup_ids']:,}.",
-          "- **Team names that don't resolve:** " + (", ".join(f"{n} ({c:,})" for n, c in
-                                                            sorted(res["unknown_teams"].items()))
-                                                  if res["unknown_teams"] else "none") + ".",
+          f"- **Dates:** every game id carries a date; it matches the `game_date` column on "
+          f"{info.get('id_date_checked', 0) - info.get('id_date_differs', 0):,} of {info.get('id_date_checked', 0):,} "
+          "tested rows.",
+          "- **Team names that don't resolve** against `config/teams/nba.csv`: "
+          + (", ".join(f"\"{n}\" ({c:,} appearances)" for n, c in sorted(res["unknown_teams"].items()))
+             if res["unknown_teams"] else "none")
+          + ". Team names play no part in the test, so these games stay in it; they only get no team code in the "
+            "`splits` table and can't join to a Kalshi game.",
           f"- **Games that join to a Kalshi game** (same Eastern date, away and home team): "
           f"{res['kalshi_joined_games']:,}. Their closing splits are in the `splits` table of `data/markets.duckdb`.",
           "", "| Season | Rows tested | Games | First date | Last date | Rows after the cut-off |", "|---|---|---|---|---|---|"]
@@ -801,6 +820,10 @@ def write_report(res: dict, reports_dir) -> Path:
                  f"{k_['missing or impossible price']:,} | {k_['margin below 0%']:,} | {k_['margin above 20%']:,} | "
                  f"{_pct(c['margin_median'], 2)} | {_range(c['dec_range'], 2)} | {k_['missing result']:,} | "
                  f"{k_['push']:,} | {k_['both sides marked won']:,} | {mirror:,} |")
+    L += ["", "Prices: the test uses the file's decimal prices as given. "
+          + "; ".join(f"{MARKET_LABEL[m]}: {ch['markets'][m]['counts']['decimal and American differ by more than 0.01']:,}"
+                      f" of {ch['markets'][m]['counts']['prices checked against American odds']:,} prices differ "
+                      "from the file's American odds by more than 0.01" for m in MARKETS) + "."]
     L += ["", "## Record", "",
           f"- **Registration:** commit `{REGISTRATION['commit']}`, committed {REGISTRATION['committed_utc']} and pushed "
           f"by {REGISTRATION['pushed_utc']} (UTC), before the download.",
