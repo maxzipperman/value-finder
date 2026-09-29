@@ -116,6 +116,16 @@ def cmd_h4a(args) -> None:
     print(f"report: {res['report']}")
 
 
+def cmd_collect(args) -> None:
+    import json
+
+    from .collector import Collector
+    from .settings import parse_ts
+    row = Collector(args.sport).tick(parse_ts(args.now) if args.now else None)
+    if row:
+        print(json.dumps(row, default=str))
+
+
 def cmd_odds5m(args) -> None:
     from .oddsapi import bulk
     bulk.main(args)
@@ -162,6 +172,10 @@ def main(argv: list[str] | None = None) -> None:
     h.add_argument("--nfl-dir", required=True, help="path to the nfl-weather study project (read-only)")
     h.add_argument("--season", type=int, default=2025)
     h.set_defaults(fn=cmd_h4a, sport="nfl")
+
+    col = sub.add_parser("collect", help="one forward-collector tick (PLAN.md section 7; launchd runs it every minute)")
+    col.add_argument("--now", help="pretend it's this UTC time (testing)")
+    col.set_defaults(fn=cmd_collect)
 
     f = sub.add_parser("odds5m", help="5M-credit month: bulk historical Odds API pulls (docs/ODDS5M_DAY_ONE.md)")
     f.add_argument("stage", choices=["probe", "plan", "week", "full", "check"])

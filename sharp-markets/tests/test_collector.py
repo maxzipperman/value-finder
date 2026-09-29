@@ -1,0 +1,146 @@
+"""The NBA forward collector (markets.collector), against fake Kalshi and Odds API sessions. No network."""
+import csv
+import json
+from datetime import date, datetime, timedelta, timezone
+
+import pytest
+
+from markets import collector as col
+
+UTC = timezone.utc
+TIP = datetime(2026, 10, 21, 23, 30, tzinfo=UTC)
+CFG = dict(sport="nba", start=date(2026, 10, 20), window_before_tip_hours=56, window_after_tip_min=15, every_min=5,
+           final_minutes=120, final_every_min=None, series_ticker="KXNBAGAME", sport_key="basketball_nba",
+           bookmakers=["pinnacle", "lowvig", "betonlineag"], markets="h2h")
+
+
+class Resp:
+    def __init__(self, status, body, headers=None):
+        self.status_code, self.text, self.headers = status, json.dumps(body), headers or {}
+
+    def json(self):
+        return json.loads(self.text)
+
+
+class FakeOdds:
+    def __init__(self, remaining=4_000_000):
+        self.calls, self.remaining = [], remaining
+
+    def get(self, url, params=None, timeout=None):
+        self.calls.append(url)
+        if url.endswith("/events"):
+            return Resp(200, [{"id": "e1", "commence_time": TIP.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                               "home_team": "Boston Celtics", "away_team": "New York Knicks"}])
+        self.remaining -= 1
+        return Resp(200, [{"id": "e1", "bookmakers": []}],
+                    {"X-Requests-Last": "1", "X-Requests-Remaining": str(self.remaining),
+                     "X-Requests-Used": str(5_000_000 - self.remaining)})
+
+
+class FakeKalshi:
+    def __init__(self):
+        self.calls = []
+
+    def get(self, url, params=None, timeout=None):
+        self.calls.append(dict(params))
+        return Resp(200, {"events": [{"event_ticker": "KXNBAGAME-26OCT21NYKBOS", "markets": [{}, {}]}], "cursor": ""})
+
+
+@pytest.fixture
+def env(tmp_path, monkeypatch):
+    monkeypatch.setattr(col, "QUOTA_FILE", tmp_path / "quota.json")
+    for v in ("ODDS_API_TIER", "ODDS_BACKGROUND_FLOOR"):
+        monkeypatch.delenv(v, raising=False)
+    odds, kalshi = FakeOdds(), FakeKalshi()
+    c = col.Collector(cfg=dict(CFG), data_dir=tmp_path, odds_session=odds, kalshi_session=kalshi, api_key="SECRET")
+    c.kalshi.limiter = c.limiter
+    return c, odds, kalshi, tmp_path
+
+
+def paid(tmp_path, remaining=4_000_000, used=1_000_000, now=TIP):
+    (tmp_path / "quota.json").write_text(json.dumps(dict(utc=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                                         remaining=remaining, used=used)))
+
+
+def runs(tmp_path):
+    return list(csv.DictReader((tmp_path / "collector" / "nba" / "runs.csv").open()))
+
+
+def test_nothing_before_the_opener(env):
+    c, odds, kalshi, _ = env
+    assert c.tick(datetime(2026, 10, 19, 12, tzinfo=UTC)) is None and odds.calls == [] and kalshi.calls == []
+
+
+def test_collects_inside_the_window_every_five_minutes(env):
+    c, odds, kalshi, tmp = env
+    now = TIP - timedelta(hours=3)
+    paid(tmp, now=now)
+    row = c.tick(now)
+    assert row["action"] == "collected" and row["kalshi_events"] == 1 and row["kalshi_markets"] == 2
+    assert row["odds_status"] == 200 and row["credits_last"] == "1"
+    assert kalshi.calls[0]["status"] == "open" and kalshi.calls[0]["with_nested_markets"] == "true"
+    assert c.tick(now + timedelta(minutes=1)) is None                        # not due yet
+    row = c.tick(now + timedelta(minutes=5))
+    assert row["action"] == "collected" and row["gap_min"] == 5.0
+    assert sum(u.endswith("/odds") for u in odds.calls) == 2 and sum(u.endswith("/events") for u in odds.calls) == 1
+    stored = list((tmp / "raw" / "nba" / "collector_oddsapi").rglob("*.parquet"))
+    assert len(stored) == 2 and all(b"SECRET" not in p.read_bytes() for p in stored)
+    assert len(list((tmp / "raw" / "nba" / "collector_kalshi").rglob("*.parquet"))) == 2
+    assert json.loads((tmp / "quota.json").read_text())["project"] == "sharp-markets"
+
+
+def test_idle_outside_the_window_spends_nothing(env):
+    c, odds, kalshi, tmp = env
+    now = TIP + timedelta(minutes=20)                                        # after tip + 15 min
+    paid(tmp, now=now)
+    assert c.tick(now)["action"] == "idle"
+    assert not any(u.endswith("/odds") for u in odds.calls) and kalshi.calls == []
+    assert [r["action"] for r in runs(tmp)] == ["idle"]
+
+
+def test_free_plan_or_low_quota_skips_the_paid_call_but_keeps_kalshi(env, monkeypatch):
+    c, odds, kalshi, tmp = env
+    now = TIP - timedelta(hours=1)
+    paid(tmp, remaining=450, used=50, now=now)                               # the free plan
+    row = c.tick(now)
+    assert row["odds_status"] == "skipped" and "paid plan" in row["note"] and row["kalshi_status"] == 200
+    assert not any(u.endswith("/odds") for u in odds.calls)
+    paid(tmp, remaining=99_000, used=4_901_000, now=now)                     # below 2% of 5M
+    row = c.tick(now + timedelta(minutes=5))
+    assert row["odds_status"] == "skipped" and "floor 100000" in row["note"]
+    monkeypatch.setenv("ODDS_BACKGROUND_FLOOR", "1000")
+    assert c.tick(now + timedelta(minutes=10))["odds_status"] == 200
+
+
+def test_one_minute_ticks_in_the_final_window_when_enabled(env):
+    c, odds, kalshi, tmp = env
+    c.c["final_every_min"] = 1
+    far = TIP - timedelta(hours=5)
+    paid(tmp, now=far)
+    assert c.tick(far)["final_window"] is False
+    assert c.tick(far + timedelta(minutes=1)) is None                        # 5-minute ticks outside the final 2h
+    now = TIP - timedelta(minutes=90)
+    assert c.tick(now)["final_window"] is True
+    assert c.tick(now + timedelta(minutes=1))["action"] == "collected"       # 1-minute ticks inside it
+
+
+def test_lock_prevents_overlap_and_errors_are_logged(env):
+    c, odds, kalshi, tmp = env
+    now = TIP - timedelta(hours=1)
+    paid(tmp, now=now)
+    (tmp / "collector" / "nba").mkdir(parents=True)
+    (tmp / "collector" / "nba" / "tick.lock").write_text("123")
+    assert c.tick(now) is None
+    (tmp / "collector" / "nba" / "tick.lock").unlink()
+
+    def boom(*a, **k):
+        raise ConnectionError("down")
+    kalshi.get = boom
+    row = c.tick(now)
+    assert row["kalshi_status"] == "error" and row["odds_status"] == 200    # one source failing keeps the other
+
+
+def test_real_config_loads():
+    c = col.load_collector_config("nba")
+    assert c["start"] == date(2026, 10, 20) and c["series_ticker"] == "KXNBAGAME" and c["every_min"] == 5
+    assert c["bookmakers"] == ["pinnacle", "lowvig", "betonlineag"] and not c["final_every_min"]
