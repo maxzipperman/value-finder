@@ -86,7 +86,21 @@ Value is scored 1 to 5. The cut line is 4.5M. Football counts are exact, from ou
 | N2, H1 | Favorite-longshot bias at the best price, by odds band | ROI by band | 4 + 4 |
 | F5, F6 | CFB shrinkage in team totals and alternates; CFB median-vs-mean props | Win rate, ROI | 2 + 2 |
 
-**Variant count:** 56 new variants on top of 135 makes **191**, so the Bonferroni bar is **p < 0.00026**. Nothing without a line in this table gets analysed. X3 carried no variants, so dropping it leaves the count at 191.
+**Variant count:** 56 new variants on top of 135 makes **191**, so the Bonferroni bar is **p < 0.00026**. Nothing without a line in this table gets analysed. X3 carried no variants, so dropping it leaves the count at 191. (Since then, the free pre-checks of September 29 brought the running count to 198: [README](README.md#pre-checks-on-the-backlog-added-september-28-2026).)
+
+#### F4's gate: H16b, reversal before the close (added September 29, 2026, [#42](https://github.com/maxzipperman/value-finder/issues/42))
+
+F4 (hourly football) is pulled only if F1's daily grid shows that moves reverse *before* the close. The free H16a pre-check found that fading the move *at* the close has no edge: 49.6–50.8% at −110 on NFL 2007–21 ([README](README.md#fade-the-move-at-the-close-h16a-added-september-29-2026-42)). So an outcome edge can't justify F4; only CLV can. H16b is one of F1's committed variants and adds none.
+
+| | |
+|---|---|
+| **Signal** | On a daily F1 snapshot (16:00 UTC, 7 to 1 days before kickoff), Pinnacle's spread or total has moved **1 point or more** since the previous daily snapshot. |
+| **Bet** | Against that move, at that snapshot's Pinnacle number. |
+| **Metric** | CLV in points: from the snapshot's number to Pinnacle's close (the last F1 snapshot at least 5 minutes before kickoff), positive when the line comes back. A game with no Pinnacle quote at either end is left out and counted. |
+| **Sample** | F1, 2020–25, NFL and CFB, regular season and postseason; spreads and totals pooled, each also reported. The 2026 seasons are sealed. |
+| **Act (pull F4)** | Mean CLV of at least **0.25 points**, with the 95% interval (clustered by game) above zero, **in both sports**, and the season's interval above zero in **at least 4 of the 6 seasons** in each sport. |
+| **Drop** | Anything else. F4 is not pulled, and hourly history stays deferred. |
+| **When** | Computed from F1 before any F4 credit is spent. |
 
 ### After the month: live uses
 

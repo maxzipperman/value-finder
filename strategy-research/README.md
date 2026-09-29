@@ -79,7 +79,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 **The bar for new analyses is already p < 0.00026 (0.05 / 191).** The 5M data-use plan commits 56 more variants ([`odds-api-credits.md`](odds-api-credits.md#data-use-plan)), 135 + 56 = 191. They count from the moment they were committed, whether or not their analysis has run yet, so anything analysed from here on is judged against 0.05 / 191, and each new variant beyond the plan raises the count further.
 
-**Running count: 192** (September 29, 2026). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The bar is p < 0.05 / 192 = 0.00026.
+**Running count: 198** (September 29, 2026). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 198 = 0.00025.
 
 | Issue | Test | Result | Verdict |
 |---|---|---|---|
@@ -109,6 +109,30 @@ What the evidence says about "proven" betting strategies, how the theses already
   - Passing yards are symmetric, so the mechanism predicts no edge there.
   - The question is where posted lines sit, and only F3's lines can answer it.
 - **A caution, not a test.** A line-setter works from past games. Against each player's previous 6–16 games (`player_week.parquet`, every prop-sized player, no role selection), outcomes fall below the trailing median 56–57% of the time for rushing and receiving yards, and below the trailing mean 59–61% of the time. The causes are regression to the mean, injury exits and usage changes. So "the line sits above a trailing median" would be true even of efficient lines, and can't be the test. The draft below grades the under at its de-vigged price instead.
+
+### Fade the move at the close: H16a (added September 29, 2026, [#42](https://github.com/maxzipperman/value-finder/issues/42))
+
+[`fade_move_sbr.py`](fade_move_sbr.py) ([`output/fade_move_sbr.csv`](output/fade_move_sbr.csv)).
+
+- **The bet:** take the side the line moved *away* from between the open and the close, at the closing number. Spreads and totals are graded separately, on win rate and ROI at −110 (break-even 52.38%), since the bet is at the close.
+- **The question:** Moskowitz (2021, Table III) finds NFL open-to-close moves partly reverse by the final score, after the close, but not by enough to beat transaction costs. This asks whether that reversal pays at the price.
+- **Data:** SBR open and close, NFL 2007–21, regular season and playoffs, joined to nflverse results (`games.parquet`). Pushes are counted but aren't bets.
+- **Variants:** 6 (moves of ≥ 0.5, ≥ 1 and ≥ 1.5 points, × 2 markets). They bring the running count to 198.
+- **Result, pooled 2007–21:**
+
+  | Market | Move ≥ | Bets | Fade wins | ROI at −110 | One-sided p vs break-even |
+  |---|---|---|---|---|---|
+  | Spread | 0.5 | 3,201 | 50.8% | −3.0% | 0.97 |
+  | Spread | 1 | 2,267 | 49.8% | −4.9% | 0.99 |
+  | Spread | 1.5 | 1,608 | 49.6% | −5.3% | 0.99 |
+  | Total | 0.5 | 3,475 | 50.5% | −3.5% | 0.99 |
+  | Total | 1 | 2,621 | 50.3% | −3.9% | 0.98 |
+  | Total | 1.5 | 1,851 | 50.3% | −4.0% | 0.97 |
+
+  Only 3 to 5 of the 15 seasons are above break-even in any variant, and no variant is above it in most seasons.
+- **Outlier-odds audit** (the research sweep's recommendation, after Clegg & Cartlidge 2024): the SBR close matches nflverse's own close exactly in 56–57% of games, and differs by 0.3 points on average. Only 6 rows differ by more than 3 points (4 spreads, 2 totals; listed by the script). Without them, every result is unchanged to the first decimal.
+- **Verdict: no edge at the close.** Moves reverse slightly, about as Moskowitz finds: fading a half-point move wins 50.5–50.8% before the vig. That is nowhere near the 52.4% the vig needs. H16a is dropped.
+- **Consequence for F4:** hourly history can't be justified by an outcome edge at the close. Only a reversal *before* the close (H16b, graded on CLV) could earn it; its gate is in [`odds-api-credits.md`](odds-api-credits.md#f4s-gate-h16b-reversal-before-the-close-added-september-29-2026-42).
 
 ### What to expect this season (added September 28, 2026)
 
