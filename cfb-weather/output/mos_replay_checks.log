@@ -1,0 +1,54 @@
+MOS replay checks, 2006-2025 (from data/processed/mos_replay.parquet)
+
+Games with a MOS forecast: 12501
+
+Why MOS fires more often than the observed wind:
+  lead 1 at 15+: 1059 (8.47%); lead 2 at 15+: 1092 (8.74%); either lead (the rule): 1284 (10.27%)
+  observed at 15+: 844 (6.75%)
+  signals from lead 1 alone: 1059; added only by lead 2: 225
+  observed threshold reached as often as lead-1 MOS reaches 15 (n=12388): 14.20 mph
+  observed threshold reached as often as either lead reaches 15 (n=12388): 13.53 mph
+  games with lead-1 MOS of 14-16 mph: n=568, mean MOS 14.83, mean observed 13.30 mph
+
+Lead-1 MOS minus observed (n=12388): mean +0.80, MAE 2.33, corr 0.696 mph
+  2006: n=277, mean +0.67 mph
+  2007: n=449, mean +1.27 mph
+  2008: n=235, mean +1.23 mph
+  2009: n=500, mean +0.74 mph
+  2010: n=490, mean +0.43 mph
+  2011: n=596, mean +0.88 mph
+  2012: n=548, mean +1.03 mph
+  2013: n=649, mean +0.74 mph
+  2014: n=667, mean +0.24 mph
+  2015: n=688, mean +1.05 mph
+  2016: n=675, mean +0.32 mph
+  2017: n=692, mean +0.91 mph
+  2018: n=709, mean +0.58 mph
+  2019: n=707, mean +0.68 mph
+  2020: n=485, mean +0.73 mph
+  2021: n=759, mean +0.60 mph
+  2022: n=782, mean +0.87 mph
+  2023: n=813, mean +1.03 mph
+  2024: n=814, mean +1.08 mph
+  2025: n=853, mean +1.04 mph
+
+Where the wins fell (descriptive; uses the result, so not a rule):
+  MOS and observed both >= 15: 602 games, 350-244-8 (58.9%); vs break-even one-sided p = 0.001 (unadjusted, and the group is picked using the observed wind)
+  MOS only: 682 games, 365-311-6 (54.0%); vs break-even one-sided p = 0.212
+  gap between the two, Fisher exact two-sided p = 0.079
+  MOS signals the observed-wind evidence also counts (observed >= 15): 602 of 1284
+
+Open-Meteo replay (games in both, n=1670):
+  Open-Meteo signals: 110; also MOS signals: 65
+  Open-Meteo both-fired: 46 games, 28-17-1 (62.2%), of which MOS signals 39
+  Open-Meteo forecast-only: 64 games, 33-29-2 (53.2%), of which MOS signals 26
+  Open-Meteo by season, all its games (data/processed/forecast_replay.parquet):
+    2024: 57 games, 32-22-3 (59.3%)
+    2025: 53 games, 29-24-0 (54.7%)
+
+Run cycle the replay read (UTC hour of the run: games):
+  lead 1: {12: 10, 18: 12491}
+  lead 2: {12: 32, 18: 12469}
+  lead 3: {18: 17}
+
+Variants added: 0 (these are descriptions of the one replayed rule).
