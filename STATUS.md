@@ -79,12 +79,7 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
    - **Keep the Mac awake at kickoff.** A slot missed while it sleeps is reported as missing, never filled in.
 4. **Phone alerts.** Subscribe to the `NTFY_TOPIC` from either `.env` in the ntfy app, if you haven't yet.
 5. **The alert book list (hub's call).** The review asks to switch the alerts' 10 books to F1's `us10` so the free 2026 archive continues F1 exactly. It touches live alert behaviour, and two of the `us10` books are paid-only, so it is described in the [plan's hygiene section](strategy-research/odds-api-credits.md#free-before-october-1-hygiene) and left for the hub.
-6. **Rebuild the CFB games table with the spread fix ([#36](https://github.com/maxzipperman/value-finder/issues/36)).**
-   - **The fix:** the consensus home spread was missing for a third of (game, book) pairs. The fix recovers all but 0.26%, and it agrees with CFBD as closely as before (97.2% within a point). Details are in [`cfb-weather/README.md`](cfb-weather/README.md#consensus-home-spread-issue-36-sep-28).
-   - **Why `games.parquet` is unchanged:** rebuilding it moves Rule HT's 2016–25 record from 373–273 (57.7%) to 502–393 (56.1%), or 434–326 (57.1%) on FBS-involved games. It also shifts the screen's CFB rows. Rule HT and its frozen 2026 threshold of 62.6 stay as registered.
-   - **Decisions that come with the rebuild:**
-     - Should the 2027 threshold's mean cover every game with a spread, or only FBS-involved games? That needs a dated amendment before 2027 Week 0. The two means differ by 0.01 points on 2025 data and by up to 0.55 in 2022–24.
-     - What should happen to `test_ht_2026_threshold_matches_the_screen`, which would recompute 62.53?
+6. **CFB games table rebuilt with the spread fix ([#36](https://github.com/maxzipperman/value-finder/issues/36), Sep 28, owner decision).** The consensus home spread was missing for a third of (game, book) pairs; the fix recovers all but 0.26%. Rule HT's by-spread history is restated on more games: 502–393 (56.1%) overall, 434–326 (57.1%) on FBS-involved games, against the cited 373–273 (57.7%); the screen's row is unchanged. The rule, its frozen 2026 threshold and the forward test are as registered. **2027 threshold:** computed over FBS-involved games (owner decision); a dated amendment goes into `cfb-weather/PREREGISTRATION.md` before 2027 Week 0. Details in [`cfb-weather/README.md`](cfb-weather/README.md#consensus-home-spread-issue-36-sep-28).
 
 ## Research sweep (Sep 28)
 
