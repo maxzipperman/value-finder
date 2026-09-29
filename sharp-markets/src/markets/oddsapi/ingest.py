@@ -6,6 +6,7 @@ from collections import Counter
 
 from ..context import Context
 from ..games import Game
+from ..http import scrub
 from .bulk import DISK_HELP, Stop, run_calls
 from .client import OddsApiClient
 from .schedule import credits_per_snapshot, describe, plan_snapshots, tier_label
@@ -31,6 +32,7 @@ def snapshot_plan(ctx: Context, games: list[Game], schedule: str) -> dict:
 
 
 def _refused(why: str) -> dict:
+    why = scrub(why)                     # the reason can quote a header the key check got back
     print(f"STOPPED before the first paid call, nothing spent: {why}", flush=True)
     return {"fetched": 0, "credits_spent": 0, "remaining": None, "stopped": why}
 

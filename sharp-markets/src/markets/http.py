@@ -56,6 +56,16 @@ def scrub(text, params: dict | None = None) -> str:
     return _SECRET_IN_QUERY.sub(r"\1" + REDACTED, text)
 
 
+def blank_secrets(text: str) -> str:
+    """`text` with every secret value http_get has sent blanked, and nothing else changed (unlike `scrub`, no
+    query-parameter pattern is applied). For a successful answer's body, which is kept exactly as it came unless it
+    holds the key itself."""
+    for form in sorted(_KNOWN_SECRETS, key=len, reverse=True):
+        if form in text:
+            text = text.replace(form, REDACTED)
+    return text
+
+
 class _ScrubSecrets(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         try:

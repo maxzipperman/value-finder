@@ -1559,3 +1559,178 @@ def test_a_game_in_no_window_is_judged_by_its_call(tmp_path, monkeypatch):
         rows, _, sealed_out, _, _ = run.sharp_odds_rows(duckdb.connect(), "nba", load_teams("nba"))
         assert bool(rows) != sealed_snapshot, day
         assert dict(sealed_out) == ({"2026-27 (game in no window)": 2} if sealed_snapshot else {}), day
+
+
+# ---------------------------------------------------------------- review of the follow-up, round 2 (Sep 29)
+class EchoesTheKey(FakeOddsApi):
+    """Puts the request's key where a misbehaving server or proxy might: "paid" into every paid answer's billing
+    headers, "sports" into the free key check's balance header, "body" into every paid 200's JSON body."""
+
+    def __init__(self, where, **kw):
+        super().__init__(**kw)
+        self.where = where
+
+    def get(self, url, params=None, timeout=None):
+        r = super().get(url, params, timeout)
+        key = params["apiKey"]
+        if url.endswith("/sports"):
+            if self.where == "sports":
+                r.headers["X-Requests-Remaining"] = f"bad-{key}"
+            return r
+        if self.where == "paid":
+            r.headers.update({"X-Requests-Last": f"cost-{key}", "X-Requests-Remaining": f"left-{key}"})
+        elif self.where == "body" and r.status_code == 200:
+            body = json.loads(r.text)
+            body["message"] = f"served GET {url}?apiKey={key} for {key}"
+            r.text = json.dumps(body)
+        return r
+
+
+@pytest.mark.parametrize("where", ["paid", "sports", "body"])
+def test_a_key_echoed_into_a_billing_header_or_a_body_never_shows(cfg, tmp_path, monkeypatch, capsys, caplog, where):
+    """Round 2, blocker: a billing header that carried the key was printed in the STOPPED line (x-requests-last
+    'cost-<key>'), in the key check's refusal (x-requests-remaining 'bad-<key>'), and saved in the cache's headers, and
+    a 200 body that echoed the request was cached as it came. Now every header value is scrubbed when it arrives, every
+    STOPPED line is scrubbed when it is printed, and a 200's body has the key itself blanked, for odds5m (balance,
+    probe, full) and odds-pull alike."""
+    from markets.oddsapi.ingest import pull_snapshots
+    caplog.set_level(logging.DEBUG)
+    exits, rcs = [], []
+    for stage, kw in (("balance", {}), ("probe", {"sports": "americanfootball_nfl"}), ("full", {})):
+        _saved_test_nfl(cfg, tmp_path / stage)
+        try:
+            rcs.append(_main(cfg, tmp_path / stage, monkeypatch, EchoesTheKey(where), stage=stage, **kw))
+        except SystemExit as e:
+            exits.append(str(e))
+    oc, ctx, plan = _oddspull(tmp_path / "odds-pull", EchoesTheKey(where))
+    res = pull_snapshots(ctx, plan, 1_000, client=oc)
+    out = capsys.readouterr()
+    stored = "".join(p.read_bytes().decode("latin-1") for p in tmp_path.rglob("*") if p.is_file())
+    for place, text in {"stdout": out.out, "stderr": out.err, "log": caplog.text, "files": stored,
+                        "exits": " ".join(exits), "odds-pull": str(res["stopped"])}.items():
+        assert KEY not in text, place
+    if where == "paid":
+        assert "x-requests-last 'cost-REDACTED'" in out.out and rcs[1:] == [1, 1] and res["stopped"]
+    elif where == "sports":
+        assert len(exits) == 3 and all("x-requests-remaining is 'bad-REDACTED'" in e for e in exits)
+        assert "'bad-REDACTED'" in res["stopped"]
+    else:
+        assert rcs == [0, 0, 0] and res["stopped"] is None and "REDACTED" in stored
+
+
+def test_a_cached_probe_answer_prints_its_billing_header_without_the_key(tmp_path):
+    """Round 2, blocker: a probe's JSON line printed the cached x-requests-last as it was stored."""
+    from markets import http
+    from markets.cache import write_record
+    http.remember_secret(KEY)
+    call = _events_call()
+    c = bulk.BulkClient(RawCache(tmp_path), max_credits=0)
+    write_record(tmp_path / call.cache_sport / call.source / "2024-09-03" / f"{call.key}.parquet", {
+        "cache_key": call.key, "sport": call.cache_sport, "source": call.source, "data_date": "2024-09-03",
+        "url": call.url, "params_json": "{}", "fetched_at": NOW, "http_status": 200,
+        "headers_json": json.dumps({"x-requests-last": f"cost-{KEY}"}), "body": json.dumps({"data": []})})
+    assert bulk._probe_row("p", c, call, "x")["billed"] == "cost-REDACTED"
+
+
+def _nba_first(cfg):
+    """The test config with the NBA swept first (11 daily sweeps, Oct 20-30, 2025), then the NFL."""
+    cfg["sports"]["basketball_nba"]["windows"][0]["to"] = date(2025, 10, 30)
+    cfg["sports"] = {s: cfg["sports"][s] for s in ("basketball_nba", "americanfootball_nfl")}
+    return cfg
+
+
+class RefusesNba(FakeOddsApi):
+    """Answers every NBA /events sweep with `nba_status` (the API's answer to a date outside its history is a 422)."""
+
+    def __init__(self, nba_status, **kw):
+        super().__init__(**kw)
+        self.nba_status = nba_status
+
+    def get(self, url, params=None, timeout=None):
+        if "/basketball_nba/events" in url:
+            self.calls.append((url, dict(params)))
+            return self._r(self.nba_status, {"message": "INVALID_HISTORICAL_TIMESTAMP"}, 0)
+        return super().get(url, params, timeout)
+
+
+def test_a_sport_whose_sweeps_keep_getting_refused_is_skipped_and_the_others_go_on(cfg, tmp_path, monkeypatch,
+                                                                                 capsys):
+    """Round 2, major 1: five refused sweeps in a row in one sport stopped the whole probe at the same place on every
+    rerun: no schedule was saved for any sport, the sports after it were never swept, and the probes never ran. Now
+    the refused sport is skipped after five refusals in a row (the count starts again with each sport), the other
+    sports' sweeps and the probes go on, and the STOPPED line and the hint say what happened. A run of server errors
+    (HTTP 5xx, each retried first) still stops the probe, and then the probe says to tell the hub."""
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    cfg = _nba_first(cfg)
+    for attempt in (1, 2):
+        api = RefusesNba(422)
+        out = bulk.stage_probe(cfg, RawCache(tmp_path), args(), now=NOW, session=api)
+        printed = capsys.readouterr().out
+        assert sum("/basketball_nba/events" in u for u, _ in api.calls) == 5, attempt       # then skipped
+        assert out["incomplete"] == ["basketball_nba"] and out["skipped"] == {"basketball_nba": 6}
+        assert bulk.schedule_path(tmp_path, "americanfootball_nfl").exists()
+        assert not bulk.schedule_path(tmp_path, "basketball_nba").exists()
+        assert out["probes"][0]["probe"] == "featured NFL, 10 books, 3 markets" and not out["probes"][0].get("stopped")
+        assert ("basketball_nba (5 sweeps answered with an error: 2025-10-20 HTTP 422, 2025-10-21 HTTP 422, 2025-10-22 "
+                "HTTP 422 and 2 more; 6 sweeps skipped after 5 errors in a row)") in printed
+        assert "basketball_nba: 5 errors in a row; the last was HTTP 422" in printed
+        assert "If a rerun stops again on the same sweeps with an error answer, don't keep rerunning: tell the hub" in printed
+    api = RefusesNba(500)
+    out = bulk.stage_probe(cfg, RawCache(tmp_path / "5xx"), args(), now=NOW, session=api)
+    printed = capsys.readouterr().out
+    assert "STOPPED: 5 errors in a row; the last was HTTP 500" in printed and not out["probes"]
+    assert not any("/americanfootball_nfl/" in u for u, _ in api.calls)
+    assert "Tell the hub before rerunning" in printed and "Rerun the same command" not in printed
+
+
+def test_the_probe_says_rerun_only_after_a_stop_a_rerun_cannot_make_worse(cfg, tmp_path, monkeypatch, capsys):
+    """Round 2, major 2: after a billing alarm the probe said to rerun until `P0 done`. The rerun bought more, and once
+    the alarm's answers were cached it printed `P0 done` with the alarm gone; with sweeps reported as free, following
+    the hint never ended. Now a billing alarm or the floor says to tell the hub before rerunning; a budget stop says to
+    rerun."""
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    nfl = ["americanfootball_nfl"]
+    tell, rerun = "Tell the hub before rerunning", "Rerun the same command until it prints `P0 done`"
+    for name, api, kw, why, hint in (
+            ("overbilled", FakeOddsApi(overbill=50), {}, "billed 80 credits", tell),
+            ("sweeps free", Mangled(put={"X-Requests-Last": "0"}), {}, "the billing cannot be trusted", tell),
+            ("floor", FakeOddsApi(), {"floor": 5_000_000 - 20}, "the floor is", tell),
+            ("budget", FakeOddsApi(), {"max_credits": 2}, "run budget", rerun)):
+        out = bulk.stage_probe(cfg, RawCache(tmp_path / name), args(sports=nfl, **kw), now=NOW, session=api)
+        printed = capsys.readouterr().out
+        assert why in out["stopped"] and hint in printed, name
+        assert (tell if hint == rerun else rerun) not in printed, name
+
+
+class ToppedUp(Overcharges):
+    """Overcharges, and `add` credits land on the account just before the `at`-th paid answer (a top-up or the
+    monthly renewal), so that answer's balance is higher than the one before it."""
+
+    def __init__(self, at=0, add=1_000_000, **kw):
+        super().__init__(**kw)
+        self.at, self.add, self.n = at, add, 0
+
+    def _r(self, status, body, cost):
+        if cost:
+            self.n += 1
+            if self.n == self.at:
+                self.remaining += self.add
+        return super()._r(status, body, cost)
+
+
+@pytest.mark.parametrize("at", [0, 2, 5])
+def test_a_balance_that_rises_mid_run_still_counts_the_falls_after_it(cfg, tmp_path, at):
+    """Round 2, major 3: after the balance rose during a run (a top-up, the monthly renewal), the run stopped counting
+    the balance, so an API charging more than it reports (40 for a call it reports as 20, upper bound 60: too little
+    to trip the breaker) went past --max-credits: 480 charged on a 300 budget here. Now the rise is taken out of every later
+    reading and the falls after it still count; only the extra hidden in the one interval of the rise (20) can go
+    past. at=0: no rise (the control)."""
+    api = ToppedUp(at=at, extra=20)
+    c = client(tmp_path, api, max_credits=300)
+    c.account()
+    res = bulk.run_calls(c, _nfl_calls(cfg, 7))
+    assert "run budget" in res["stopped"]
+    assert api.billed <= 300 + (20 if at else 0), api.billed
+    assert c.risen == (0 if not at else 1_000_000 - 40)

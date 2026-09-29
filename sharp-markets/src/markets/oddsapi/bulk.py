@@ -20,7 +20,9 @@ Safety. Nothing is fetched without --confirm. Each run has a --max-credits budge
 each call's upper-bound cost before the call and before every retry, and a --floor on the account's
 remaining credits (the live-use reserve). What a run has cost is the largest of what the responses report,
 what the documentation says they cost (worked out from what came back), and how far the balance has
-fallen, so a call billed twice (a retried timeout) or reported as free still counts (BulkClient).
+fallen, so a call billed twice (a retried timeout) or reported as free still counts (BulkClient); a balance
+that rises during the run (a top-up, the monthly renewal) is taken out of later readings, so the falls
+after it still count.
 A run starts only when the free /sports check returns a readable balance at or above the floor. The
 billing headers fail closed: a billed response whose `x-requests-last` can't be read counts its upper
 bound and stops the run, one that reports less than its documented cost stops it, and an unreadable
@@ -29,8 +31,9 @@ upper bound (`x-requests-last`), when the balance falls by more than the reporte
 bound on three calls in a row, when the key is rejected or the quota runs out, after repeated errors,
 when the network fails past the retries, or when a billed response can't be kept (a body that isn't
 JSON, a full disk). Every stop, Ctrl-C included, ends the run with a STOPPED line and its summary, never a
-traceback, and `markets` exits with status 1 (0 only when the run is done); error text, error bodies and
-log lines never hold the key (markets.http.scrub).
+traceback, and `markets` exits with status 1 (0 only when the run is done); error text, error bodies,
+response headers, STOPPED lines and log lines never hold the key (markets.http.scrub), and a successful
+answer's body is kept with the key itself blanked if it ever holds it (markets.http.blank_secrets).
 Every answered request is logged to data/raw/_manifest/oddsapi_manifest.csv: requested vs returned
 snapshot time, credits billed (blank when unreadable: the upper bound was counted), credits remaining,
 a SHA-256 of the body, the cache key, sealed flag.
@@ -40,8 +43,13 @@ Season slices: a pull with `require_seasons:` in the config (F3) is bought one d
 from a trailing comma, are dropped first), and `full` refuses --seasons for every other pull (they are
 bought whole).
 
-A probe saves a sport's schedule only when that sport's sweep finished; `plan` lists every pull, and one
-that waits for its game list (HB1, HS1) counts as 0 calls until `markets weather qualifying` has run.
+A probe saves a sport's schedule only when that sport's sweep finished. A sport whose sweeps get five
+refusals (HTTP 4xx) in a row is skipped and the other sports' sweeps go on. After a stop the probe says
+what comes next: rerun (a budget stop, the network, a full disk, Ctrl-C, a rejected key, a rate limit,
+sweeps that didn't finish), or tell the hub before rerunning (a billing alarm, the floor, repeated errors,
+a bug), because a rerun would buy more and not show the alarm again (Stop.rerun). `plan` lists every
+pull, and one that waits for its game list (HB1, HS1) counts as 0 calls until `markets weather
+qualifying` has run.
 
 Cache first: responses land in data/raw/{sport_key}/oddsapi/{hist_events,hist_odds,hist_event_odds}/
 before use, so reruns and interrupted runs resume for free.
@@ -72,7 +80,7 @@ import requests
 import yaml
 
 from ..cache import Fetched, RawCache, body_json, cache_key, read_record
-from ..http import RateLimiter, http_get, new_session, scrub
+from ..http import RateLimiter, blank_secrets, http_get, new_session, scrub
 from ..settings import CONFIG_DIR, DATA_DIR, env, parse_ts, utcnow
 from .normalize import outcome_rows
 
@@ -92,7 +100,21 @@ MANIFEST_FIELDS = ["logged_at", "pull", "sport", "source", "path", "event_id", "
 
 
 class Stop(RuntimeError):
-    """The run has to stop: budget, floor, or circuit breaker."""
+    """The run has to stop: budget, floor, or circuit breaker.
+
+    `rerun` says what comes next. True: running the same command again is the next step, because a rerun buys only
+    what is missing and nothing looks wrong with the billing (the run budget, the network, a full disk, Ctrl-C, an
+    answer that wasn't data, a rejected key, a rate limit, a lost balance; a rerun starts with the free key check,
+    which reads the balance again). False: the
+    hub has to look first, because a rerun could buy more of what the stop is about (a call billed above its upper
+    bound, billing that can't be read or trusted, a balance that can't be read, the account charged more than
+    reported, the floor, repeated error answers, a bug)."""
+    rerun = False
+
+    def __init__(self, message: str = "", *, rerun: bool | None = None):
+        super().__init__(message)
+        if rerun is not None:
+            self.rerun = rerun
 
 
 class BudgetExceeded(Stop):
@@ -101,6 +123,14 @@ class BudgetExceeded(Stop):
 
 class CircuitBreaker(Stop):
     pass
+
+
+class TooManyErrors(CircuitBreaker):
+    """max_errors error answers in a row; `status` is the last one's HTTP status."""
+
+    def __init__(self, message: str, status: int):
+        super().__init__(message)
+        self.status = status
 
 
 # ---------------------------------------------------------------- config and time helpers
@@ -460,6 +490,13 @@ def _balance(value) -> int | None:
     return int(x) if math.isfinite(x) and x >= 0 else None
 
 
+def _headers(r) -> dict[str, str]:
+    """A response's headers, names lower-cased, every value with the key blanked (markets.http.scrub). A server or
+    proxy that echoed the request into a header, the billing headers included, would otherwise put the key in a
+    STOPPED line, a log line or the cache (review of the follow-up, round 2)."""
+    return {str(k).lower(): scrub(v) for k, v in r.headers.items()}
+
+
 def _is_json(body: str) -> bool:
     try:
         return isinstance(json.loads(body), (dict, list))
@@ -492,7 +529,10 @@ class BulkClient:
       from what came back (documented_cost), or its upper bound when `x-requests-last` can't be read. A response
       with data that reports less than its documented cost stops the run: the billing can't be trusted;
     - the balance (`x-requests-remaining`) is tracked as the lower of what the API reports and the previous
-      balance less what was counted, so a balance that rises or makes no sense is never believed;
+      balance less what was counted. A rise in the reported balance (a top-up, the monthly renewal, or a figure that
+      makes no sense) is taken out of every later reading: the run keeps counting the balance's falls after it and
+      never counts the rise as credits back. Only what the rise hides in that one interval between readings goes
+      unseen by the balance (the reports still count it);
     - the run's cost is the larger of the sum of those counts and how far the balance has fallen since the key
       check. A call that is billed twice (a retried timeout or error) or reports 0 while the balance drops is
       caught this way. Other uses of the key during the run (the alerts, the collectors) count too, which errs
@@ -524,6 +564,7 @@ class BulkClient:
         self.start_remaining: int | None = None
         self.remaining: int | None = None
         self.last_reading: int | None = None   # the last readable x-requests-remaining, as reported
+        self.risen = 0                         # the sum of every rise in the reported balance during the run
         self.not_saved: dict[str, int] = {}    # cache key -> HTTP status of a call whose last answer was an error
         self.manifest = Path(cache.raw_dir) / "_manifest" / "oddsapi_manifest.csv"
 
@@ -555,14 +596,22 @@ class BulkClient:
         True when the run must stop because the account is being charged more than the API reports."""
         if self.start_remaining is None:             # no key check ran (library use): start from the first reading
             self.start_remaining = left + counted
+        # A rise in the reported balance (a top-up, the monthly renewal, or a figure that makes no sense) is taken out
+        # of this and every later reading, so the falls after it still count. Working from the reported levels, a rise
+        # hid every later fall until the balance came back below where it was, and charges the answers under-reported
+        # went past --max-credits (review of the follow-up, round 2). Only what the rise hides between these two
+        # readings goes unseen here; the reports still count it.
+        if self.last_reading is not None and left > self.last_reading:
+            log.warning("the reported balance rose from %s to %s during the run (credits added, or a figure that makes "
+                        "no sense); the run keeps counting its falls from here and never counts the rise",
+                        self.last_reading, left)
+            self.risen += left - self.last_reading
+        seen = left - self.risen                     # the reported balance with every rise during the run taken out
         prev = self.remaining
         if prev is None:
-            self.remaining = left
+            self.remaining = seen
         else:
-            if left > prev:
-                log.warning("the reported balance rose from %s to %s during the run; keeping the lower figure",
-                            prev, left)
-            self.remaining = min(left, prev - counted)
+            self.remaining = min(seen, prev - counted)
             if prev - self.remaining > counted:
                 log.warning("the balance fell by %s, more than the %s this call was counted at: an attempt that got no "
                             "answer was billed too, or another use of the key spent in the meantime. The run counts "
@@ -572,7 +621,7 @@ class BulkClient:
         # balance never shows stays counted for the rest of the run: no reading can prove that it is current (a
         # balance two answers late, or one that never moves, looks like a live one), so an attempt that was never
         # billed can't be told from one whose bill hasn't shown yet. The next run's key check reads the true balance.
-        beyond = (self.start_remaining - left) - self.spent
+        beyond = (self.start_remaining - seen) - self.spent
         if beyond > self.explained:
             clear, self.explained = beyond - self.explained, beyond
             for i, amount in enumerate(self._pending):
@@ -594,11 +643,12 @@ class BulkClient:
                  if self.unanswered else "")
         if self.counted + call.expected > self.max_credits:
             raise BudgetExceeded(f"{what} could cost {call.expected}; {self.counted:,} of the {self.max_credits:,}-credit "
-                                 f"run budget is counted{maybe}")
+                                 f"run budget is counted{maybe}", rerun=True)
         if self.remaining is None:
             if self.floor > 0:
                 raise BudgetExceeded(f"the account balance is unknown, so the floor of {self.floor:,} can't be "
-                                     "checked. Nothing more was fetched; a new run reads the balance before it starts")
+                                     "checked. Nothing more was fetched; a new run reads the balance before it starts",
+                                     rerun=True)
         elif self.remaining - self.unanswered - call.expected < self.floor:
             raise BudgetExceeded(f"{self.remaining - self.unanswered:,} credits remain at most{maybe}; {what} could "
                                  f"cost {call.expected}, and the floor is {self.floor:,}")
@@ -626,7 +676,7 @@ class BulkClient:
                          "check reads the true balance.")
             raise CircuitBreaker(
                 f"no answer from the Odds API after the retries ({type(e).__name__}: {scrub(e)}). Nothing was cached "
-                f"for this call, so a rerun asks again.{maybe}") from None
+                f"for this call, so a rerun asks again.{maybe}", rerun=True) from None
 
     def account(self) -> dict:
         """GET /v4/sports: free. Checks the key and reads the credits remaining. Never cached.
@@ -635,15 +685,16 @@ class BulkClient:
         doesn't return HTTP 200, the balance (`x-requests-remaining`) is missing or unreadable, the balance
         is already below the floor, or its manifest row can't be written (a full disk)."""
         r = self._get(self._base() + "/sports", {})
-        h = {k.lower(): v for k, v in r.headers.items()}
+        h = _headers(r)                  # every value with the key blanked, in case a header echoes the request
         self.remaining = self.start_remaining = self.last_reading = _balance(h.get("x-requests-remaining"))
+        self.risen = 0
         try:
             self._log({"pull": "account", "path": "/sports", "http_status": r.status_code,
-                       "credits_last": h.get("x-requests-last", ""), "remaining": self.remaining,
+                       "credits_last": _cost(h.get("x-requests-last")), "remaining": self.remaining,
                        "sha256": hashlib.sha256(r.text.encode()).hexdigest()})
         except OSError as e:
             raise CircuitBreaker(f"the key check's manifest row could not be written ({e.strerror or e}): is the disk "
-                                 f"full? The key check is free, so nothing was spent. {DISK_HELP}") from None
+                                 f"full? The key check is free, so nothing was spent. {DISK_HELP}", rerun=True) from None
         if r.status_code == 401:
             raise CircuitBreaker("the Odds API rejected the key (401): check ODDS_API_KEY in sharp-markets/.env")
         if r.status_code != 200:
@@ -675,9 +726,10 @@ class BulkClient:
 
         def fetch() -> Fetched:
             r = self._get(call.url, dict(call.params), call)
-            # an error body is kept only with the key blanked, in case a server or proxy echoes the request
-            f = Fetched(r.status_code, {k.lower(): v for k, v in r.headers.items()},
-                        r.text if r.status_code == 200 else scrub(r.text))
+            # Kept only with the key blanked, in case a server or proxy echoes the request: the headers and an error
+            # body in full (scrub), a 200's body only where it holds the key itself (blank_secrets changes nothing
+            # else in a body with data).
+            f = Fetched(r.status_code, _headers(r), blank_secrets(r.text) if r.status_code == 200 else scrub(r.text))
             sent.append(f)
             if f.status == 200 and not _is_json(f.body):
                 raise _Unusable
@@ -694,7 +746,8 @@ class BulkClient:
             raise                        # not reached: _account raises CircuitBreaker when given a problem
         except OSError as e:
             if not sent:
-                raise CircuitBreaker(f"the cache could not be read ({e.strerror or e}). Nothing was fetched.") from None
+                raise CircuitBreaker(f"the cache could not be read ({e.strerror or e}). Nothing was fetched.",
+                                     rerun=True) from None
             self._account(call, self._record(call, sent[-1]),
                           problem=f"the response could not be saved ({e.strerror or e}): is the disk full? It was "
                                   f"billed and is counted, but not cached, so a rerun buys it again. {DISK_HELP}")
@@ -741,7 +794,10 @@ class BulkClient:
         """
         h = json.loads(rec["headers_json"] or "{}")
         body, status = rec["body"] or "", rec["http_status"]
-        raw_last, raw_left = h.get("x-requests-last"), h.get("x-requests-remaining")
+        # the raw values go into STOPPED lines and log lines, so the key is blanked in them (they are scrubbed when
+        # fetched too; this covers a record from anywhere else)
+        raw_last, raw_left = (None if v is None else scrub(v) for v in (h.get("x-requests-last"),
+                                                                         h.get("x-requests-remaining")))
         last, left = _cost(raw_last), _balance(raw_left)
         documented = documented_cost(call, status, body)
         counted = call.expected if last is None else max(last, documented)
@@ -773,14 +829,17 @@ class BulkClient:
                        f"the disk full? {DISK_HELP}")
         if problem:
             billed = _credits(counted) if last is not None else f"its upper bound, {_credits(call.expected)}"
+            above = bool(last and last > call.expected)
             raise CircuitBreaker(f"{where}: {problem} It counted {billed} (x-requests-last {raw_last!r})"
-                                 + (f", more than its upper bound of {call.expected}" if last and last > call.expected
-                                    else "") + ".")
+                                 + (f", more than its upper bound of {call.expected}" if above else "") + ".",
+                                 rerun=not above)
         err = scrub(body)[:200]          # error bodies are printed and logged only with any key blanked
+        # A rejected key or a rate limit: a rerun starts with the free key check and buys nothing before the API
+        # takes requests again, so rerunning is the next step (after the checks in the runbook's table).
         if status == 401:
-            raise CircuitBreaker("the Odds API rejected the key (401)")
+            raise CircuitBreaker("the Odds API rejected the key (401)", rerun=True)
         if status == 429:
-            raise CircuitBreaker(f"HTTP 429 after retries (quota used up or rate limited): {err}")
+            raise CircuitBreaker(f"HTTP 429 after retries (quota used up or rate limited): {err}", rerun=True)
         if last is not None and last > call.expected:
             raise CircuitBreaker(f"{where} billed {last} credits; it should cost at most "
                                  f"{call.expected}. Stopped: check the billing before going on.")
@@ -811,7 +870,7 @@ class BulkClient:
         self.errors_in_row += 1
         log.warning("%s at %s -> HTTP %s: %s", call.path, iso(call.at), status, err)
         if self.errors_in_row >= self.max_errors:
-            raise CircuitBreaker(f"{self.errors_in_row} errors in a row; the last was HTTP {status}: {err}")
+            raise TooManyErrors(f"{self.errors_in_row} errors in a row; the last was HTTP {status}: {err}", status)
 
     def _log(self, row: dict) -> None:
         self.manifest.parent.mkdir(parents=True, exist_ok=True)
@@ -837,28 +896,51 @@ def summary_line(client: BulkClient, stopped, fetched: int | None = None, credit
             f"(this run {client.counted:,}), remaining {_n(client.remaining)}")
 
 
-def run_calls(client: BulkClient, calls: list[Call], label: str = "") -> dict:
+def run_calls(client: BulkClient, calls: list[Call], label: str = "", *, skip_sport_on_errors: bool = False) -> dict:
     """Fetch the calls not yet cached, in order. Every way a run can end (done, budget, floor, circuit breaker,
     unreadable billing, network, a full disk, Ctrl-C, even a bug) ends here with a STOPPED line when it stopped,
-    then one summary line with this pull's own counts. "credits" is what BulkClient.counted rose by."""
+    then one summary line with this pull's own counts. "credits" is what BulkClient.counted rose by. Stop text is
+    printed and returned with the key blanked. "rerun" says whether rerunning is the next step (Stop.rerun).
+
+    skip_sport_on_errors (the probe's sweeps): the count of error answers in a row starts again with each sport, and
+    when one sport's calls get max_errors error answers in a row that are all refusals (HTTP 4xx: the API answered, but
+    not for those dates), the rest of that sport's calls are skipped and the run goes on with the next sport, instead
+    of stopping every sport at the same place on every rerun. Server errors (5xx, each retried for a minute and a
+    half first) still stop the run. "skipped" maps each skipped sport to the calls it did not ask."""
     todo = [c for c in calls if not client.is_cached(c)]
     print(f"{label}: {len(calls):,} calls, {len(calls) - len(todo):,} cached, {len(todo):,} to fetch, "
           f"at most {sum(c.expected for c in todo):,} credits", flush=True)
     fetched0, counted0 = client.fetched, client.counted
-    stopped, interrupted = None, False
+    stopped, interrupted, rerun = None, False, False
+    skipped: dict[str, int] = {}
+    sport = None
     for i, c in enumerate(todo, 1):
+        if skip_sport_on_errors:
+            if c.sport in skipped:
+                skipped[c.sport] += 1
+                continue
+            if c.sport != sport:
+                sport, client.errors_in_row = c.sport, 0
         try:
             client.fetch(c)
+        except TooManyErrors as e:
+            if skip_sport_on_errors and 400 <= e.status < 500:
+                skipped[c.sport] = 0
+                client.errors_in_row = 0
+                print(f"  {c.sport}: {scrub(e)}. The rest of its calls are skipped; going on with the next sport.",
+                      flush=True)
+            else:
+                stopped, rerun = scrub(e), e.rerun
         except Stop as e:
-            stopped = str(e)
+            stopped, rerun = scrub(e), e.rerun
         except KeyboardInterrupt:
             client.in_flight(c)
-            stopped, interrupted = (f"{INTERRUPTED} (Ctrl-C). The call that was out may have been billed, so it is "
-                                    f"counted at its upper bound, {_credits(c.expected)}. A rerun resumes from the "
-                                    "cache and may buy that one call again."), True
+            stopped, interrupted, rerun = (f"{INTERRUPTED} (Ctrl-C). The call that was out may have been billed, so it "
+                                           f"is counted at its upper bound, {_credits(c.expected)}. A rerun resumes "
+                                           "from the cache and may buy that one call again."), True, True
         except OSError as e:
-            stopped = (f"a file could not be read or written ({e.strerror or e}): is the disk full? The call that was "
-                       f"out is not cached, so a rerun asks again. {DISK_HELP}")
+            stopped, rerun = (f"a file could not be read or written ({e.strerror or e}): is the disk full? The call "
+                              f"that was out is not cached, so a rerun asks again. {DISK_HELP}"), True
         except Exception as e:          # noqa: BLE001 - a bug still ends the run with its summary, key blanked
             stopped = f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: {scrub(e)})"
             log.error("the run stopped on an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
@@ -873,7 +955,7 @@ def run_calls(client: BulkClient, calls: list[Call], label: str = "") -> dict:
     print(summary_line(client, stopped, fetched, spent, errors), flush=True)
     return {"calls": len(calls), "todo": len(todo), "fetched": fetched, "spent": spent,
             "run_fetched": client.fetched, "run_spent": client.counted, "remaining": client.remaining,
-            "stopped": stopped, "interrupted": interrupted, "errors": errors}
+            "stopped": stopped, "interrupted": interrupted, "rerun": rerun, "errors": errors, "skipped": skipped}
 
 
 # ---------------------------------------------------------------- reading the cache
@@ -1010,7 +1092,7 @@ def _client(cache, args, session=None) -> BulkClient:
     try:
         info = c.account()
     except Stop as e:
-        raise SystemExit(f"STOPPED before the first paid call, nothing spent: {e}") from None
+        raise SystemExit(f"STOPPED before the first paid call, nothing spent: {scrub(e)}") from None
     print(f"key ok: HTTP {info['status']}, {info['remaining']:,} credits remaining, {info['used']} used; "
           f"floor {c.floor:,}")
     return c
@@ -1028,7 +1110,7 @@ def stage_balance(cfg, cache, args, session=None) -> dict:
     try:
         info = c.account()
     except Stop as e:
-        raise SystemExit(f"STOPPED: {e}") from None
+        raise SystemExit(f"STOPPED: {scrub(e)}") from None
     print(f"key ok: HTTP {info['status']}, {info['remaining']:,} credits remaining, {info['used']} used; "
           f"floor {c.floor:,}. Nothing was spent.")
     return info
@@ -1047,7 +1129,9 @@ def stage_probe(cfg, cache, args, now=None, session=None) -> dict:
         print("dry run: add --confirm --max-credits N to run it")
         return {"sweep_calls": n}
     client = _client(cache, args, session)
-    res = run_calls(client, [c for v in sweeps.values() for c in v], "P0 sweeps")
+    # A sport whose sweeps keep getting refused (5 HTTP 4xx answers in a row) is skipped, and the other sports' sweeps
+    # go on; before, the whole probe stopped at the same place on every rerun (review of the follow-up, round 2).
+    res = run_calls(client, [c for v in sweeps.values() for c in v], "P0 sweeps", skip_sport_on_errors=True)
     # A sport's schedule is saved only when its sweep finished: every one of its /events calls is cached. A
     # stopped or partial sweep leaves the earlier schedule file as it was, and the sport is listed as incomplete.
     counts, incomplete, refused = {}, {}, {}
@@ -1063,32 +1147,47 @@ def stage_probe(cfg, cache, args, now=None, session=None) -> dict:
         print(f"  {s:36} {len(games):6,} games  " + "  ".join(f"{k}: {v}" for k, v in sorted(counts[s].items())))
     if incomplete:
         print(f"  incomplete, schedule not saved (any earlier schedule file is kept): {', '.join(incomplete)}")
-    # The billing probes need only the sweeps that finished, so they run unless the sweeps themselves stopped (a
-    # sport whose sweep got an error answer doesn't hold them up).
-    stopped = res["stopped"]
+    # The billing probes need only the sweeps that finished, so they run unless the sweeps themselves stopped. A sport
+    # whose sweeps got error answers doesn't hold them up, unless it is the NFL: the probes start from its games.
+    stopped, rerun = res["stopped"], res["rerun"]
     probes = [] if stopped else billing_probes(cfg, client, load_schedules(cfg, cache.raw_dir), now)
-    stopped = stopped or next((p["result"] for p in probes if p.get("stopped")), None)
+    if not stopped and (hit := next((p for p in probes if p.get("stopped")), None)):
+        stopped, rerun = hit["result"], hit["rerun"]
     errors = False                       # the sweeps ran to the end, but some got an error answer
     if incomplete and not stopped:
-        errors = any(refused.values())
-        what = "; ".join(f"{s} ({_unfinished(incomplete[s], refused[s])})" for s in incomplete)
+        errors, rerun = any(refused.values()), True
+        what = "; ".join(f"{s} ({_unfinished(incomplete[s], refused[s], s in res['skipped'], client.max_errors)})"
+                         for s in incomplete)
         stopped = (f"the sweeps did not finish for {len(incomplete)} sport(s), so their schedules were not saved: "
                    f"{what}")
         print(f"  STOPPED: {stopped}", flush=True)
     print(f"P0 {'stopped' if stopped else 'done'}: credits this run {client.counted:,}, remaining "
           f"{_n(client.remaining)}", flush=True)
     if stopped:
-        print("  Rerun the same command until it prints `P0 done` before going on: the sweeps already fetched are "
-              "cached, so a rerun buys only what is missing."
-              + (" If a rerun stops again on the same sweeps with an error answer, don't keep rerunning: tell the "
-                 "hub (the other sports' schedules are saved)." if errors else ""), flush=True)
-    return {**res, "stopped": stopped, "spent": client.counted, "remaining": client.remaining, "games": counts,
-            "incomplete": list(incomplete), "probes": probes}
+        print("  " + _probe_next_step(rerun, errors), flush=True)
+    return {**res, "stopped": stopped, "rerun": rerun, "spent": client.counted, "remaining": client.remaining,
+            "games": counts, "incomplete": list(incomplete), "probes": probes}
 
 
-def _unfinished(missing: list[Call], refused: list[tuple[Call, int]]) -> str:
+def _probe_next_step(rerun: bool, errors: bool) -> str:
+    """What the probe tells the operator after a stop. Rerun only after a stop that a rerun can't make worse (the run
+    budget, the network, a full disk, Ctrl-C, a rejected key or a rate limit, sweeps that didn't finish). After a
+    billing alarm, the floor, repeated error answers or a bug, tell the hub first: a rerun would buy more, and once
+    the alarm's answers are cached it would end `P0 done` with the alarm gone (review of the follow-up, round 2)."""
+    if not rerun:
+        return ("Tell the hub before rerunning: a rerun could buy more of what this STOPPED line is about, and it "
+                "would not stop again on an answer that is already saved (docs/ODDS5M_DAY_ONE.md, If a run stops, "
+                "says what the line means).")
+    return ("Rerun the same command until it prints `P0 done` before going on: the sweeps already fetched are cached, "
+            "so a rerun buys only what is missing. "
+            + ("If a rerun stops again on the same sweeps with an error answer, don't keep rerunning: tell the hub (the "
+               "other sports' schedules are saved)." if errors else "If it stops the same way twice, tell the hub."))
+
+
+def _unfinished(missing: list[Call], refused: list[tuple[Call, int]], skipped: bool = False,
+                max_errors: int = 5) -> str:
     """Which of a sport's sweeps are missing: the ones answered with an error (date and HTTP status, the first
-    three), and how many were never reached."""
+    three), and how many were skipped (after max_errors error answers in a row) or never reached."""
     parts = []
     if refused:
         shown = ", ".join(f"{iso(c.at)[:10]} HTTP {status}" for c, status in refused[:3])
@@ -1096,16 +1195,19 @@ def _unfinished(missing: list[Call], refused: list[tuple[Call, int]]) -> str:
         parts.append(f"{len(refused)} sweep{'s' if len(refused) != 1 else ''} answered with an error: {shown}{more}")
     if len(missing) > len(refused):
         n = len(missing) - len(refused)
-        parts.append(f"{n} sweep{'s' if n != 1 else ''} not reached")
+        parts.append(f"{n} sweep{'s' if n != 1 else ''} "
+                     + (f"skipped after {max_errors} errors in a row" if skipped else "not reached"))
     return "; ".join(parts)
 
 
 def _probe_row(name: str, client: BulkClient, call: Call, want: str) -> dict:
     """One probe call through client.fetch, so it has the same budget, floor, billing and circuit-breaker
-    checks as any pull. A stop (or an unexpected error) is printed like run_calls prints it and marked `stopped`."""
+    checks as any pull. A stop (or an unexpected error) is printed like run_calls prints it, key blanked, and marked
+    `stopped`, with `rerun` as Stop.rerun gives it."""
     try:
         rec = client.fetch(call)
     except (Exception, KeyboardInterrupt) as e:   # noqa: BLE001 - Stop, Ctrl-C or a bug: the probes end with their summary
+        rerun = True
         if isinstance(e, KeyboardInterrupt):
             client.in_flight(call)
             why = (f"{INTERRUPTED} (Ctrl-C). The probe that was out may have been billed, so it is counted at its "
@@ -1114,19 +1216,22 @@ def _probe_row(name: str, client: BulkClient, call: Call, want: str) -> dict:
         elif isinstance(e, OSError):
             why = f"a file could not be read or written ({e.strerror or e}): is the disk full? {DISK_HELP}"
         elif isinstance(e, Stop):
-            why = str(e)
+            why, rerun = scrub(e), e.rerun
         else:
-            why = f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: {scrub(e)})"
+            why, rerun = (f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: "
+                          f"{scrub(e)})"), False
             log.error("the probes stopped on an unexpected error:\n%s",
                       scrub("".join(traceback.format_exception(e))))
         print(f"  STOPPED: {why}", flush=True)
-        return {"probe": name, "result": f"stopped: {why}", "stopped": True}
+        return {"probe": name, "result": f"stopped: {why}", "stopped": True, "rerun": rerun}
     h = json.loads(rec["headers_json"] or "{}")
+    billed = h.get("x-requests-last")
     body = body_json(rec) if rec["http_status"] == 200 else {}
     rows = outcome_rows(body or {}, iso(call.at))
     mk = sorted({r["market_key"] for r in rows})
     return {"probe": name, "http_status": rec["http_status"], "expected_max": call.expected,
-            "billed": h.get("x-requests-last"), "markets_returned": mk, "books_returned": sorted({r["bookmaker"] for r in rows}),
+            "billed": None if billed is None else scrub(billed), "markets_returned": mk,
+            "books_returned": sorted({r["bookmaker"] for r in rows}),
             "events": len({r["odds_event_id"] for r in rows}), "check": want,
             **({"billing_rule": f"10 x {len(mk)} markets returned = {10 * len(mk)}"} if call.source == SRC_EVENT_ODDS else {})}
 
@@ -1329,7 +1434,7 @@ def main(args) -> int:
         print(f"  STOPPED: a file could not be read or written ({e.strerror or e}): is the disk full? {DISK_HELP}",
               flush=True)
     except Stop as e:
-        print(f"  STOPPED: {e}", flush=True)
+        print(f"  STOPPED: {scrub(e)}", flush=True)
     if _ACTIVE is not None:
         print(summary_line(_ACTIVE, True), flush=True)
     return 1
