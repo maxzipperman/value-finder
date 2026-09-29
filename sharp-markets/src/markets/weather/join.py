@@ -2,7 +2,12 @@
 venue, roof, and the weather at the kickoff hour, observed (ERA5) and as forecast a day earlier.
 
 Writes data/weather/game_weather.parquet and data/weather/unresolved.csv (games whose venue couldn't be
-placed, with the reason). No odds and no scores: outcomes are joined only by the pre-registered analysis
+placed, with the reason and any venue name the source gave).
+
+Coordinates: an MLB park takes the MLB Stats API's own coordinates when they're cached (one pair per park,
+so every game there shares its weather requests), and the table's otherwise. Where both exist,
+coord_gap_km says how far apart they are; `markets weather plan` lists parks more than COORD_FLAG_KM
+apart, so the table can be corrected. No odds and no scores: outcomes are joined only by the pre-registered analysis
 (docs/HEAT_HYPOTHESES.md), which also keeps the sealed seasons out.
 """
 from __future__ import annotations
@@ -19,11 +24,12 @@ from ..settings import DATA_DIR
 from . import openmeteo as om
 from .gamevenues import GameVenues, nearest
 from .heat import heat_index_f
-from .venues import MLB, canonical, fixture_venue, home_venue, norm, venues
+from .venues import MLB, canonical, distance_km, fixture_venue, home_venue, norm, venues
 
 OUT_DIR = DATA_DIR / "weather"
 FIXTURE_SPORTS = {"soccer_fifa_world_cup", "soccer_uefa_european_championship"}
 ESPN_ONLY = {"soccer_conmebol_copa_america", "soccer_fifa_club_world_cup", "soccer_concacaf_gold_cup"}
+COORD_FLAG_KM = 2.0
 
 
 def weather_sports(cfg: dict) -> list[str]:
@@ -65,8 +71,20 @@ def resolve(sport: str, g: dict, game_rows: list[dict]) -> tuple[str | None, str
         vid = fixture_venue(sport, home, away, kick)
         return vid, "fixture table" if vid else "not in the fixture table", {}
     if sport in ESPN_ONLY:
+        if hit:                                  # ESPN has the match, at a ground the table doesn't know
+            name = hit.get("venue_name") or "(no name)"
+            return None, f"ESPN venue not in table: {name}", {"venue_name": hit.get("venue_name") or ""}
         return None, "needs ESPN venues (markets weather venues --confirm)", {}
     return (*home_venue(sport, home, kick.date(), away), {})
+
+
+def statsapi_coords(game_rows: list[dict]) -> dict[str, tuple[float, float]]:
+    """venue_id -> the MLB Stats API's coordinates for that park (the first cached pair; they're per park)."""
+    out = {}
+    for r in game_rows:
+        if r.get("venue_id") and r.get("lat") is not None and r.get("lon") is not None:
+            out.setdefault(r["venue_id"], (float(r["lat"]), float(r["lon"])))
+    return out
 
 
 def build(cfg: dict, cache: RawCache, *, sports: list[str] | None = None, weather: bool = True,
@@ -84,23 +102,35 @@ def build(cfg: dict, cache: RawCache, *, sports: list[str] | None = None, weathe
             continue
         lo, hi = min(g["commence_time"] for g in games).date(), max(g["commence_time"] for g in games).date()
         cached = gv.mlb(lo, hi) if sport == MLB else gv.espn(sport, lo, hi) if sport not in FIXTURE_SPORTS else []
+        api = statsapi_coords(cached) if sport == MLB else {}
         for g in games:
             vid, how, extra = resolve(sport, g, cached)
             base = {"sport": sport, "id": g["id"], "season": g["season"], "sealed": g["sealed"],
                     "commence_time": g["commence_time"], "home_team": g["home_team"], "away_team": g["away_team"],
                     "venue_how": how}
-            if vid is None and not extra:
-                unresolved.append({**base, "commence_time": g["commence_time"].isoformat()})
+            if vid is None and extra.get("lat") is None:
+                unresolved.append({**base, "commence_time": g["commence_time"].isoformat(),
+                                   "venue_name": extra.get("venue_name", "")})
                 continue
             v = V.get(vid)
             row = {**base, "venue_id": vid or "", "venue_name": v.name if v else extra["venue_name"],
                    "roof": v.roof if v else "unknown", "lat": v.lat if v else float(extra["lat"]),
-                   "lon": v.lon if v else float(extra["lon"])}
+                   "lon": v.lon if v else float(extra["lon"]),
+                   "coord_source": "table" if v else "statsapi", "coord_gap_km": None}
+            if v and vid in api:                 # the Stats API's own coordinates win; the gap is kept
+                row.update(lat=api[vid][0], lon=api[vid][1], coord_source="statsapi",
+                           coord_gap_km=round(distance_km(v.lat, v.lon, *api[vid]), 2))
             if weather:
                 row.update(kickoff_weather(meteo, vid or f"statsapi:{norm(row['venue_name'])}", row["lat"],
                                            row["lon"], g["commence_time"]))
             rows.append(row)
     return rows, unresolved
+
+
+def coord_flags(rows: list[dict]) -> dict[str, float]:
+    """venue_id -> km between the table's and the Stats API's coordinates, for parks over COORD_FLAG_KM."""
+    return {r["venue_id"]: r["coord_gap_km"] for r in rows
+            if r.get("coord_gap_km") is not None and r["coord_gap_km"] > COORD_FLAG_KM}
 
 
 def kick_hour(kick):
@@ -141,7 +171,7 @@ def write(rows: list[dict], unresolved: list[dict], out_dir: Path = OUT_DIR) -> 
     if rows:
         pq.write_table(pa.Table.from_pylist(rows), out_dir / "game_weather.parquet")
     with (out_dir / "unresolved.csv").open("w", newline="") as f:
-        cols = ["sport", "id", "season", "sealed", "commence_time", "home_team", "away_team", "venue_how"]
+        cols = ["sport", "id", "season", "sealed", "commence_time", "home_team", "away_team", "venue_how", "venue_name"]
         w = csv.DictWriter(f, cols)
         w.writeheader()
         w.writerows({k: u.get(k) for k in cols} for u in unresolved)
@@ -171,6 +201,11 @@ def main(args) -> None:
     print(f"{len(rows):,} games placed; {len(unresolved):,} unresolved: "
           f"{dict(Counter(u['venue_how'] for u in unresolved))}")
     print("placed by: " + str(dict(Counter(r["venue_how"] for r in rows))))
+    far = coord_flags(rows)
+    if far:
+        print(f"parks whose table coordinates are more than {COORD_FLAG_KM:g} km from the MLB Stats API's "
+              f"(the Stats API's are used; correct config/venues/mlb_parks.csv): "
+              + ", ".join(f"{vid} {km:.1f} km" for vid, km in far.items()))
     if args.stage in ("plan", "fetch"):
         reqs = plan(rows)
         meteo = om.OpenMeteo(cache)

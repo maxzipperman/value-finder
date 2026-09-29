@@ -54,12 +54,17 @@ def build_mlb(SRC, OUT):
             "Milwaukee Brewers": "Milwaukee", "Pittsburgh Pirates": "Pittsburgh", "St. Louis Cardinals": "St. Louis",
             "Arizona Diamondbacks": "Phoenix", "Colorado Rockies": "Denver", "Los Angeles Dodgers": "Los Angeles",
             "San Diego Padres": "San Diego", "San Francisco Giants": "San Francisco"}
+    # GeoJSON-Ballparks places these two parks off the field (Truist Park ~7 km, TD Ballpark ~12 km; still so
+    # upstream on Sep 29, 2026). Corrected by hand (#33); at join time the MLB Stats API's coordinates win anyway.
+    FIX = {"Truist Park": (33.8908, -84.4678), "TD Ballpark": (28.0034, -82.7866)}
     rows = []
     def vid(name):
         import re, unicodedata
         s = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
         return re.sub(r"[^a-z0-9]+", "_", s).strip("_")
     def add(name, city, country, lat, lon, roof, src, note=""):
+        if name in FIX:
+            (lat, lon), src = FIX[name], "manual (verify on the Mac); GeoJSON-Ballparks point was off the field"
         rows.append(dict(venue_id=vid(name), name=name, aliases=ALIAS.get(name, ""), city=city, country=country,
                          lat=round(float(lat), 5), lon=round(float(lon), 5), roof=roof, source=src, notes=note))
     for x in f:

@@ -35,9 +35,9 @@ sahlen_field,Sahlen Field,,Buffalo,US,42.89139,-78.87833,open,GeoJSON-Ballparks,
 sutter_health_park,Sutter Health Park,,West Sacramento,US,38.58028,-121.51389,open,GeoJSON-Ballparks,
 t_mobile_park,T-Mobile Park,,Seattle,US,47.59139,-122.3325,retractable,GeoJSON-Ballparks,
 target_field,Target Field,,Minneapolis,US,44.98167,-93.27833,open,GeoJSON-Ballparks,
-td_ballpark,TD Ballpark,,Dunedin,US,27.8925,-82.79833,open,GeoJSON-Ballparks,Blue Jays temporary home 2020-21
+td_ballpark,TD Ballpark,,Dunedin,US,28.0034,-82.7866,open,manual (verify on the Mac); GeoJSON-Ballparks point was off the field,Blue Jays temporary home 2020-21
 tokyo_dome,Tokyo Dome,,Tokyo,JP,35.70566,139.75191,dome,GeoJSON-Ballparks (legacy),Tokyo Series 2025 (neutral)
 tropicana_field,Tropicana Field,,St. Petersburg,US,27.76802,-82.65325,dome,GeoJSON-Ballparks (legacy),Rays through 2024; return in 2026 to verify
-truist_park,Truist Park,,Cumberland,US,33.95389,-84.45472,open,GeoJSON-Ballparks,
+truist_park,Truist Park,,Cumberland,US,33.8908,-84.4678,open,manual (verify on the Mac); GeoJSON-Ballparks point was off the field,
 wrigley_field,Wrigley Field,,Chicago,US,41.94833,-87.65556,open,GeoJSON-Ballparks,
 yankee_stadium,Yankee Stadium,,Bronx,US,40.82917,-73.92639,open,GeoJSON-Ballparks,

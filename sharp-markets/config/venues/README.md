@@ -15,7 +15,8 @@ These tables are used by `markets weather` (`src/markets/weather/`) to place eac
 - **Coordinates.**
   - Hand-made rows say `manual (verify on the Mac)`.
   - Rows marked "city-level location" in `used_by`/`notes` are placed at the city, not the stadium. That's within one Open-Meteo grid cell of the ground, which is fine for heat, but not for wind at a specific park.
-  - On the Mac, `markets weather venues --confirm` pulls the MLB Stats API's own park coordinates and places every MLB game exactly.
+  - On the Mac, `markets weather venues --confirm` pulls the MLB Stats API's own park coordinates and places every MLB game exactly. Once cached, the join uses the Stats API's coordinates for every game at that park, and `markets weather plan` lists any park whose row here is more than 2 km away, so the row can be corrected.
+  - GeoJSON-Ballparks puts Truist Park about 7 km and TD Ballpark about 12 km from the field. Both rows were corrected by hand (September 29, 2026), and `build_venues.py` keeps the corrections.
 - **Team names.** Names are matched after normalizing: no accents, no case, and no "FC"/"SC"/"Club".
   - After the day-one probe, `markets weather plan` lists every game it couldn't place and why, for example "unknown home team".
   - To fix one, add the Odds API's spelling to `aliases`. Never guess a venue.
