@@ -101,6 +101,34 @@ def test_falls_back_to_an_earlier_run_of_the_same_day_never_a_later_day():
     assert sel[1] is None and sel[2]["runtime"] == pd.Timestamp("2025-10-02T18:00")
 
 
+def test_lead_status_says_why_a_lead_is_missing_and_agrees_with_select_runs():
+    kick = pd.Timestamp("2025-10-04T19:30:00Z")          # Saturday 3:30 PM Eastern
+    runs = _runs("2025-09-29", "2025-10-04T18:00")
+    sel = mos.select_runs(runs, kick)
+    status = {n: mos.lead_status(runs, kick, n) for n in mos.LEADS}
+    assert status == {1: "forecast", 2: "forecast", 3: "run ends before the window"}
+    assert all((sel[n] is not None) == (status[n] == "forecast") for n in mos.LEADS)
+    no_friday = runs[runs.runtime.dt.date != date(2025, 10, 3)]
+    assert mos.lead_status(no_friday, kick, 1) == "no run that day"
+    windless = runs.copy()
+    windless.loc[windless.runtime.dt.date == date(2025, 10, 3), "wsp"] = np.nan
+    assert mos.lead_status(windless, kick, 1) == "gap or no wind"
+    assert mos.select_runs(windless, kick)[1] is None
+    assert mos.lead_status(runs.iloc[0:0], kick, 1) == "no run that day"
+
+
+def test_window_status_reports_every_requested_window(tmp_path):
+    _cached(tmp_path, "KDMH", NO_WIND)
+    _cached(tmp_path, "KIGX", NO_RUNS)
+    _cached(tmp_path, "KBWI", WITH_WIND)
+    w = pd.DataFrame(dict(icao=["KDMH", "KIGX", "KBWI", "KADW"], season=2024, games=[3, 2, 1, 4],
+                          sts=pd.Timestamp("2024-10-01"), ets=pd.Timestamp("2024-11-01")))
+    s = mos.window_status(w, cache=tmp_path)
+    assert s.status.tolist() == ["no wind", "no runs", "ok", "not downloaded"]
+    assert s.runs.tolist() == [1, 0, 1, 0] and s.wind_rows.tolist() == [0, 0, 2, 0]
+    assert s.file.tolist()[3] == "" and s.file.tolist()[2].startswith("KBWI_GFS_")
+
+
 # ---------------------------------------------------------------- the window
 def test_window_interpolates_between_three_hourly_steps():
     steps = pd.DataFrame(dict(ftime=pd.to_datetime(["2025-10-04T15:00", "2025-10-04T18:00", "2025-10-04T21:00"]),
@@ -156,6 +184,77 @@ def test_rate_limit_is_retried_and_never_cached(tmp_path, monkeypatch):
     assert mos.load_station("KXYZ", cache=tmp_path).empty
 
 
+# ---------------------------------------------------------------- answers with no forecast (Sep 29 full pull)
+# The header IEM sent for KIGX 2023 (no runs), and a trimmed KDMH answer: Baltimore Inner Harbor has
+# every MOS variable but wind, so IEM's CSV leaves the wdr and wsp columns out altogether.
+NO_RUNS = "runtime,ftime,model,n_x,tmp,dpt,cld,wdr,wsp,p06,p12,station,t06,t12\n"
+NO_WIND = ("runtime,ftime,model,n_x,tmp,dpt,cld,p06,p12,station,t06,t12\n"
+           "2024-10-12 18:00:00,2024-10-13 00:00:00,GFS,,74,60,CL,,,KDMH,,\n"
+           "2024-10-12 18:00:00,2024-10-13 03:00:00,GFS,,68,59,CL,0,,KDMH,,\n")
+WITH_WIND = ("runtime,ftime,model,n_x,tmp,dpt,cld,wdr,wsp,p06,p12,station,t06,t12\n"
+             "2024-10-12 18:00:00,2024-10-13 00:00:00,GFS,,74,60,CL,300,12,,,KBWI,,\n"
+             "2024-10-12 18:00:00,2024-10-13 03:00:00,GFS,,68,59,CL,310,14,0,,KBWI,,\n")
+
+
+def _cached(tmp_path, station, text, span=("2024-09-01", "2024-12-31T18:00")):
+    f = mos.cache_file(station, *span, cache=tmp_path)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(text)
+    return f
+
+
+@pytest.mark.parametrize("text,status,rows", [
+    (WITH_WIND, "ok", 2),
+    (NO_RUNS, "no runs", 0),
+    (NO_WIND, "no wind", 2),
+    ("", "unreadable", 0),                                            # a zero-byte file
+    ("<html><body>Service unavailable</body></html>\n", "unreadable", 0),
+    ("runtime,ftime,wsp\n2024-10-12 18:00:00,2024-10-13 00:00:00,M\n", "no wind", 1),   # a missing value
+])
+def test_every_kind_of_answer_reads_without_crashing(tmp_path, text, status, rows):
+    f = _cached(tmp_path, "KXYZ", text)
+    d = mos.read_file(f)                  # the Sep 29 pull crashed here: no 'wsp' attribute
+    assert set(mos.COLUMNS) <= set(d.columns) and len(d) == rows
+    assert mos.file_status(f) == status
+    assert (d.wsp.notna().any()) == (status == "ok")
+
+
+def test_a_station_with_no_wind_is_a_missing_forecast(tmp_path):
+    """A run with no wind value is no forecast: every lead is missing, nothing is guessed."""
+    _cached(tmp_path, "KDMH", NO_WIND)
+    runs = mos.load_station("KDMH", cache=tmp_path)
+    assert len(runs) == 2 and runs.wsp.isna().all()
+    sel = mos.select_runs(runs, pd.Timestamp("2024-10-13T17:00:00Z"), how="kickoff")
+    assert all(v is None for v in sel.values())
+    empty = mos.load_station("KIGX", cache=tmp_path)           # no folder at all
+    assert empty.empty and set(mos.COLUMNS) <= set(empty.columns)
+
+
+def test_no_wind_files_mixed_with_good_ones_keep_the_good_rows(tmp_path):
+    _cached(tmp_path, "KXYZ", NO_WIND.replace("2024-10-12 18", "2023-10-12 18"), span=("2023-09-01", "2023-12-31T18:00"))
+    _cached(tmp_path, "KXYZ", WITH_WIND)
+    runs = mos.load_station("KXYZ", cache=tmp_path)
+    assert runs.wsp.notna().sum() == 2 and runs.wsp.isna().sum() == 2          # different runs: all kept
+    _cached(tmp_path, "KXYZ", NO_WIND, span=("2024-08-01", "2024-12-31T18:00"))  # sorts before WITH_WIND's file
+    runs = mos.load_station("KXYZ", cache=tmp_path)
+    same = runs[runs.runtime == pd.Timestamp("2024-10-12 18:00")]
+    assert len(same) == 2 and same.wsp.tolist() == [12, 14]                    # the same run twice: wind wins
+
+
+def test_the_fetchers_treat_a_windless_answer_as_empty(tmp_path, monkeypatch):
+    """So the next-nearest station is tried, as PR 61 specified for a station with no forecast."""
+    import mos_fetch
+    _cached(tmp_path, "KDMH", NO_WIND)
+    _cached(tmp_path, "KIGX", NO_RUNS)
+    _cached(tmp_path, "KBWI", WITH_WIND)
+    monkeypatch.setattr(mos, "CACHE", tmp_path)
+    monkeypatch.setattr(mos, "fetch_runs", lambda *a, **k: pytest.fail("fetched a cached window"))
+    w = pd.DataFrame(dict(icao=["KDMH", "KIGX", "KBWI"], season=2024, games=1,
+                          sts=pd.Timestamp("2024-10-01"), ets=pd.Timestamp("2024-11-01")))
+    res = mos_fetch.run_windows(w, log=lambda m: None)
+    assert [(icao, n) for icao, _, n, _ in res] == [("KDMH", 0), ("KIGX", 0), ("KBWI", 2)]
+
+
 def test_user_agent_is_the_projects():
     from cfbweather.config import USER_AGENT
     assert mos._session.headers["User-Agent"] == USER_AGENT
@@ -196,6 +295,75 @@ def test_replay_signals_and_grades(path):
     assert (fired == d.mos_signal).all()
     s = d[d.mos_signal]
     assert ((s.total < s.close_total) == s.under_win).all() and ((s.total == s.close_total) == s.push).all()
+
+
+# ---------------------------------------------------------------- hand-checked real games (full run, Sep 29)
+# Worked by hand from output/mos_hand_check.log (scripts/mos_hand_check.py): lead -> (run, mean knots
+# over the four window hours, mph as the log prints it). The MOS rows are in tests/fixtures/.
+FIX = ROOT / "tests" / "fixtures"
+HAND_CHECKED = {
+    401752822: {1: ("2025-09-05 18:00", 125 / 12, 11.99), 2: ("2025-09-04 18:00", 133 / 12, 12.75), 3: None},
+    401643858: {1: ("2024-08-23 18:00", 17.0, 19.56), 2: ("2024-08-22 18:00", 17.5, 20.14), 3: None},
+    401525461: {1: ("2023-08-30 18:00", 41 / 12, 3.93), 2: ("2023-08-29 18:00", 4.25, 4.89), 3: None},
+    272510276: {1: ("2007-09-07 18:00", 4.0, 4.60), 2: ("2007-09-06 18:00", 3.5, 4.03),
+                3: ("2007-09-05 18:00", 4.25, 4.89)},
+    282570248: {1: ("2008-09-12 18:00", 17.0, 19.56), 2: ("2008-09-11 18:00", 15.5, 17.84),
+                3: ("2008-09-10 18:00", 17.0, 19.56)},
+    272932711: {1: ("2007-10-19 18:00", 13.0, 14.96), 2: ("2007-10-18 18:00", 14.0, 16.11), 3: None},
+    273140265: {1: ("2007-11-09 18:00", 157 / 12, 15.06), 2: ("2007-11-08 18:00", 107 / 12, 10.26), 3: None},
+    263010120: {1: ("2006-10-27 18:00", 205 / 12, 19.66), 2: ("2006-10-26 18:00", 178 / 12, 17.07), 3: None},
+    401635615: {1: ("2024-11-22 18:00", 2.5, 2.88), 2: ("2024-11-21 18:00", 41 / 12, 3.93), 3: None},
+    401247332: {1: ("2020-11-26 12:00", 10.5, 12.08), 2: ("2020-11-25 18:00", 10.5, 12.08), 3: None},
+    401769076: {1: ("2026-01-18 18:00", 8.5, 9.78), 2: ("2026-01-17 18:00", 6.5, 7.48), 3: None},
+    401760405: {1: ("2025-10-31 18:00", 16 / 3, 6.14), 2: ("2025-10-30 18:00", 65 / 12, 6.23), 3: None},
+}
+FIRES = {401643858, 282570248, 272932711, 273140265, 263010120}
+
+
+def _hand_checked():
+    runs = pd.read_csv(FIX / "mos_hand_checked_runs.csv", parse_dates=["runtime", "ftime"])
+    games = pd.read_csv(FIX / "mos_hand_checked_games.csv")
+    games["start_utc"] = pd.to_datetime(games.start_utc, utc=True)
+    return runs, games.set_index("game_id")
+
+
+def test_at_least_ten_hand_checked_games_with_game_day_runs_on_hand():
+    runs, games = _hand_checked()
+    assert len(HAND_CHECKED) >= 10 and set(games.index) == set(HAND_CHECKED)
+    on_game_day = sum(any(rt.date() == mos.kick_date(games.start_utc[g]) for rt in runs[runs.game_id == g].runtime)
+                      for g in games.index)
+    assert on_game_day >= 10          # the game day's own runs were there to be (wrongly) used, and weren't
+
+
+@pytest.mark.parametrize("gid", sorted(HAND_CHECKED))
+def test_run_selection_matches_the_hand_check(gid):
+    from datetime import timedelta
+    runs, games = _hand_checked()
+    kick = games.start_utc[gid]
+    sel = mos.select_runs(runs[runs.game_id == gid], kick, how=games.how[gid])
+    for n, want in HAND_CHECKED[gid].items():
+        if want is None:
+            assert sel[n] is None
+            continue
+        rt, kt, mph = want
+        got = sel[n]
+        assert got["runtime"] == pd.Timestamp(rt)
+        assert got["runtime"].date() == mos.kick_date(kick) - timedelta(days=n)       # no lookahead
+        assert got["published_utc"] <= got["bet_by_utc"] < kick
+        assert got["wind_kt"] == pytest.approx(kt, abs=1e-9)
+        assert got["wind_mph"] == pytest.approx(kt * 1.150779, abs=1e-5) and round(got["wind_mph"], 2) == mph
+    fired = any(v is not None and v["wind_mph"] >= 15 for v in sel.values())
+    assert fired == (gid in FIRES)
+
+
+@pytest.mark.skipif(not (ROOT / "data" / "processed" / "mos_replay.parquet").exists(), reason="run scripts/mos_replay.py")
+def test_the_replay_rows_match_the_hand_check():
+    d = pd.read_parquet(ROOT / "data" / "processed" / "mos_replay.parquet").set_index("game_id")
+    for gid, leads in HAND_CHECKED.items():
+        for n, want in leads.items():
+            v = d.loc[gid, f"mos{n}_mph"]
+            assert (np.isnan(v) if want is None else v == pytest.approx(want[1] * mos.KT_TO_MPH, abs=1e-9)), (gid, n)
+        assert bool(d.loc[gid, "mos_signal"]) == (gid in FIRES)
 
 
 # ---------------------------------------------------------------- the descriptive checks (review, Sep 29)

@@ -1,0 +1,281 @@
+Hand check of the MOS run selection (no lookahead), CFB. Lead L must use a run from the kickoff's
+Eastern date minus L, published (run time + 5 h) before the last alert run that day (7:30 PM Pacific).
+Runs from the kickoff date itself are never used. Wind: knots x 1.150779 = mph.
+
+401752822 Iowa at Iowa State, 2025 week 2 (noon Saturday, summer time)
+  station KAMW, 3.0 km, rank 0 of KAMW 3.0 km, KBNW 18.1 km, KIKV 36.4 km
+  kickoff 2025-09-06 16:00 UTC = Sat 2025-09-06 12:00 Eastern; Eastern date 2025-09-06
+  runs cached for 2025-09-03 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2025-09-04 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2025-09-05 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2025-09-06 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2025-09-05): run 2025-09-05 18Z, published by 2025-09-05 23:00 UTC; last alert run that day 2025-09-06 02:30 UTC; kickoff 2025-09-06 16:00 UTC
+    09-06 16:00Z: steps 09-06 15Z 8 kt, 09-06 18Z 11 kt -> 9.000 kt
+    09-06 17:00Z: steps 09-06 15Z 8 kt, 09-06 18Z 11 kt -> 10.000 kt
+    09-06 18:00Z: steps 09-06 18Z 11 kt, 09-06 18Z 11 kt -> 11.000 kt
+    09-06 19:00Z: steps 09-06 18Z 11 kt, 09-06 21Z 13 kt -> 11.667 kt
+    mean 10.417 kt x 1.150779 = 11.99 mph
+  lead 2 (runs of 2025-09-04): run 2025-09-04 18Z, published by 2025-09-04 23:00 UTC; last alert run that day 2025-09-05 02:30 UTC; kickoff 2025-09-06 16:00 UTC
+    09-06 16:00Z: steps 09-06 15Z 8 kt, 09-06 18Z 12 kt -> 9.333 kt
+    09-06 17:00Z: steps 09-06 15Z 8 kt, 09-06 18Z 12 kt -> 10.667 kt
+    09-06 18:00Z: steps 09-06 18Z 12 kt, 09-06 18Z 12 kt -> 12.000 kt
+    09-06 19:00Z: steps 09-06 18Z 12 kt, 09-06 21Z 13 kt -> 12.333 kt
+    mean 11.083 kt x 1.150779 = 12.75 mph
+  lead 3 (runs of 2025-09-03): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 11.99, lead 2 12.75, lead 3 none; signal False
+
+401643858 Delaware State at Hawai'i, 2024 week 1 (late kickoff: 11:59 PM Eastern is the next day in UTC; fires)
+  station PHNL, 13.0 km, rank 0 of PHNL 13.0 km, PHNG 15.9 km, PHJR 26.1 km
+  kickoff 2024-08-25 03:59 UTC = Sat 2024-08-24 23:59 Eastern; Eastern date 2024-08-24
+  runs cached for 2024-08-21 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2024-08-22 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2024-08-23 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2024-08-24 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2024-08-23): run 2024-08-23 18Z, published by 2024-08-23 23:00 UTC; last alert run that day 2024-08-24 02:30 UTC; kickoff 2024-08-25 03:59 UTC
+    08-25 03:00Z: steps 08-25 03Z 18 kt, 08-25 03Z 18 kt -> 18.000 kt
+    08-25 04:00Z: steps 08-25 03Z 18 kt, 08-25 06Z 16 kt -> 17.333 kt
+    08-25 05:00Z: steps 08-25 03Z 18 kt, 08-25 06Z 16 kt -> 16.667 kt
+    08-25 06:00Z: steps 08-25 06Z 16 kt, 08-25 06Z 16 kt -> 16.000 kt
+    mean 17.000 kt x 1.150779 = 19.56 mph  (>= 15: fires)
+  lead 2 (runs of 2024-08-22): run 2024-08-22 18Z, published by 2024-08-22 23:00 UTC; last alert run that day 2024-08-23 02:30 UTC; kickoff 2024-08-25 03:59 UTC
+    08-25 03:00Z: steps 08-25 03Z 19 kt, 08-25 03Z 19 kt -> 19.000 kt
+    08-25 04:00Z: steps 08-25 03Z 19 kt, 08-25 06Z 16 kt -> 18.000 kt
+    08-25 05:00Z: steps 08-25 03Z 19 kt, 08-25 06Z 16 kt -> 17.000 kt
+    08-25 06:00Z: steps 08-25 06Z 16 kt, 08-25 06Z 16 kt -> 16.000 kt
+    mean 17.500 kt x 1.150779 = 20.14 mph  (>= 15: fires)
+  lead 3 (runs of 2024-08-21): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 19.56, lead 2 20.14, lead 3 none; signal True
+
+401525461 Elon at Wake Forest, 2023 week 1 (Thursday night)
+  station KINT, 2.2 km, rank 0 of KINT 2.2 km, KGSO 27.9 km, KEXX 39.2 km
+  kickoff 2023-08-31 23:00 UTC = Thu 2023-08-31 19:00 Eastern; Eastern date 2023-08-31
+  runs cached for 2023-08-28 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2023-08-29 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2023-08-30 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2023-08-31 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2023-08-30): run 2023-08-30 18Z, published by 2023-08-30 23:00 UTC; last alert run that day 2023-08-31 02:30 UTC; kickoff 2023-08-31 23:00 UTC
+    08-31 23:00Z: steps 08-31 21Z 8 kt, 09-01 00Z 3 kt -> 4.667 kt
+    09-01 00:00Z: steps 09-01 00Z 3 kt, 09-01 00Z 3 kt -> 3.000 kt
+    09-01 01:00Z: steps 09-01 00Z 3 kt, 09-01 03Z 3 kt -> 3.000 kt
+    09-01 02:00Z: steps 09-01 00Z 3 kt, 09-01 03Z 3 kt -> 3.000 kt
+    mean 3.417 kt x 1.150779 = 3.93 mph
+  lead 2 (runs of 2023-08-29): run 2023-08-29 18Z, published by 2023-08-29 23:00 UTC; last alert run that day 2023-08-30 02:30 UTC; kickoff 2023-08-31 23:00 UTC
+    08-31 23:00Z: steps 08-31 21Z 10 kt, 09-01 00Z 4 kt -> 6.000 kt
+    09-01 00:00Z: steps 09-01 00Z 4 kt, 09-01 00Z 4 kt -> 4.000 kt
+    09-01 01:00Z: steps 09-01 00Z 4 kt, 09-01 03Z 3 kt -> 3.667 kt
+    09-01 02:00Z: steps 09-01 00Z 4 kt, 09-01 03Z 3 kt -> 3.333 kt
+    mean 4.250 kt x 1.150779 = 4.89 mph
+  lead 3 (runs of 2023-08-28): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 3.93, lead 2 4.89, lead 3 none; signal False
+
+272510276 West Virginia at Marshall, 2007 week 2 (11 AM kickoff: lead 3's run reaches it)
+  station KHTS, 12.8 km, rank 0 of KHTS 12.8 km
+  kickoff 2007-09-08 15:02 UTC = Sat 2007-09-08 11:02 Eastern; Eastern date 2007-09-08
+  runs cached for 2007-09-05 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2007-09-06 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2007-09-07 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2007-09-08 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2007-09-07): run 2007-09-07 18Z, published by 2007-09-07 23:00 UTC; last alert run that day 2007-09-08 02:30 UTC; kickoff 2007-09-08 15:02 UTC
+    09-08 15:00Z: steps 09-08 15Z 3 kt, 09-08 15Z 3 kt -> 3.000 kt
+    09-08 16:00Z: steps 09-08 15Z 3 kt, 09-08 18Z 5 kt -> 3.667 kt
+    09-08 17:00Z: steps 09-08 15Z 3 kt, 09-08 18Z 5 kt -> 4.333 kt
+    09-08 18:00Z: steps 09-08 18Z 5 kt, 09-08 18Z 5 kt -> 5.000 kt
+    mean 4.000 kt x 1.150779 = 4.60 mph
+  lead 2 (runs of 2007-09-06): run 2007-09-06 18Z, published by 2007-09-06 23:00 UTC; last alert run that day 2007-09-07 02:30 UTC; kickoff 2007-09-08 15:02 UTC
+    09-08 15:00Z: steps 09-08 15Z 2 kt, 09-08 15Z 2 kt -> 2.000 kt
+    09-08 16:00Z: steps 09-08 15Z 2 kt, 09-08 18Z 5 kt -> 3.000 kt
+    09-08 17:00Z: steps 09-08 15Z 2 kt, 09-08 18Z 5 kt -> 4.000 kt
+    09-08 18:00Z: steps 09-08 18Z 5 kt, 09-08 18Z 5 kt -> 5.000 kt
+    mean 3.500 kt x 1.150779 = 4.03 mph
+  lead 3 (runs of 2007-09-05): run 2007-09-05 18Z, published by 2007-09-05 23:00 UTC; last alert run that day 2007-09-06 02:30 UTC; kickoff 2007-09-08 15:02 UTC
+    09-08 15:00Z: steps 09-08 12Z 2 kt, 09-08 18Z 5 kt -> 3.500 kt
+    09-08 16:00Z: steps 09-08 12Z 2 kt, 09-08 18Z 5 kt -> 4.000 kt
+    09-08 17:00Z: steps 09-08 12Z 2 kt, 09-08 18Z 5 kt -> 4.500 kt
+    09-08 18:00Z: steps 09-08 18Z 5 kt, 09-08 18Z 5 kt -> 5.000 kt
+    mean 4.250 kt x 1.150779 = 4.89 mph
+  replay row (data/processed/mos_replay.parquet): lead 1 4.60, lead 2 4.03, lead 3 4.89; signal False
+
+282570248 Air Force at Houston, 2008 week 3 (11 AM kickoff, lead 3, fires at every lead)
+  station KDAL, 6.4 km, rank 0 of KDAL 6.4 km, KADS 15.3 km, KRBD 19.3 km
+  kickoff 2008-09-13 15:00 UTC = Sat 2008-09-13 11:00 Eastern; Eastern date 2008-09-13
+  runs cached for 2008-09-10 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2008-09-11 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2008-09-12 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2008-09-13 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2008-09-12): run 2008-09-12 18Z, published by 2008-09-12 23:00 UTC; last alert run that day 2008-09-13 02:30 UTC; kickoff 2008-09-13 15:00 UTC
+    09-13 15:00Z: steps 09-13 15Z 16 kt, 09-13 15Z 16 kt -> 16.000 kt
+    09-13 16:00Z: steps 09-13 15Z 16 kt, 09-13 18Z 18 kt -> 16.667 kt
+    09-13 17:00Z: steps 09-13 15Z 16 kt, 09-13 18Z 18 kt -> 17.333 kt
+    09-13 18:00Z: steps 09-13 18Z 18 kt, 09-13 18Z 18 kt -> 18.000 kt
+    mean 17.000 kt x 1.150779 = 19.56 mph  (>= 15: fires)
+  lead 2 (runs of 2008-09-11): run 2008-09-11 18Z, published by 2008-09-11 23:00 UTC; last alert run that day 2008-09-12 02:30 UTC; kickoff 2008-09-13 15:00 UTC
+    09-13 15:00Z: steps 09-13 15Z 14 kt, 09-13 15Z 14 kt -> 14.000 kt
+    09-13 16:00Z: steps 09-13 15Z 14 kt, 09-13 18Z 17 kt -> 15.000 kt
+    09-13 17:00Z: steps 09-13 15Z 14 kt, 09-13 18Z 17 kt -> 16.000 kt
+    09-13 18:00Z: steps 09-13 18Z 17 kt, 09-13 18Z 17 kt -> 17.000 kt
+    mean 15.500 kt x 1.150779 = 17.84 mph  (>= 15: fires)
+  lead 3 (runs of 2008-09-10): run 2008-09-10 18Z, published by 2008-09-10 23:00 UTC; last alert run that day 2008-09-11 02:30 UTC; kickoff 2008-09-13 15:00 UTC
+    09-13 15:00Z: steps 09-13 12Z 14 kt, 09-13 18Z 18 kt -> 16.000 kt
+    09-13 16:00Z: steps 09-13 12Z 14 kt, 09-13 18Z 18 kt -> 16.667 kt
+    09-13 17:00Z: steps 09-13 12Z 14 kt, 09-13 18Z 18 kt -> 17.333 kt
+    09-13 18:00Z: steps 09-13 18Z 18 kt, 09-13 18Z 18 kt -> 18.000 kt
+    mean 17.000 kt x 1.150779 = 19.56 mph  (>= 15: fires)
+  replay row (data/processed/mos_replay.parquet): lead 1 19.56, lead 2 17.84, lead 3 19.56; signal True
+
+272932711 Ball State at Western Michigan, 2007 week 8 (13 kt = 14.96 mph at lead 1 (no); 14 kt = 16.11 at lead 2 (fires))
+  station KAZO, 7.5 km, rank 0 of KAZO 7.5 km, KBTL 30.5 km
+  kickoff 2007-10-20 18:00 UTC = Sat 2007-10-20 14:00 Eastern; Eastern date 2007-10-20
+  runs cached for 2007-10-17 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2007-10-18 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2007-10-19 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2007-10-20 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2007-10-19): run 2007-10-19 18Z, published by 2007-10-19 23:00 UTC; last alert run that day 2007-10-20 02:30 UTC; kickoff 2007-10-20 18:00 UTC
+    10-20 18:00Z: steps 10-20 18Z 14 kt, 10-20 18Z 14 kt -> 14.000 kt
+    10-20 19:00Z: steps 10-20 18Z 14 kt, 10-20 21Z 12 kt -> 13.333 kt
+    10-20 20:00Z: steps 10-20 18Z 14 kt, 10-20 21Z 12 kt -> 12.667 kt
+    10-20 21:00Z: steps 10-20 21Z 12 kt, 10-20 21Z 12 kt -> 12.000 kt
+    mean 13.000 kt x 1.150779 = 14.96 mph
+  lead 2 (runs of 2007-10-18): run 2007-10-18 18Z, published by 2007-10-18 23:00 UTC; last alert run that day 2007-10-19 02:30 UTC; kickoff 2007-10-20 18:00 UTC
+    10-20 18:00Z: steps 10-20 18Z 15 kt, 10-20 18Z 15 kt -> 15.000 kt
+    10-20 19:00Z: steps 10-20 18Z 15 kt, 10-20 21Z 13 kt -> 14.333 kt
+    10-20 20:00Z: steps 10-20 18Z 15 kt, 10-20 21Z 13 kt -> 13.667 kt
+    10-20 21:00Z: steps 10-20 21Z 13 kt, 10-20 21Z 13 kt -> 13.000 kt
+    mean 14.000 kt x 1.150779 = 16.11 mph  (>= 15: fires)
+  lead 3 (runs of 2007-10-17): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 14.96, lead 2 16.11, lead 3 none; signal True
+
+273140265 Stanford at Washington State, 2007 week 11 (just over 15 mph at lead 1, winter time)
+  station KPUW, 4.0 km, rank 0 of KPUW 4.0 km
+  kickoff 2007-11-10 23:30 UTC = Sat 2007-11-10 18:30 Eastern; Eastern date 2007-11-10
+  runs cached for 2007-11-07 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2007-11-08 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2007-11-09 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2007-11-10 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2007-11-09): run 2007-11-09 18Z, published by 2007-11-09 23:00 UTC; last alert run that day 2007-11-10 03:30 UTC; kickoff 2007-11-10 23:30 UTC
+    11-10 23:00Z: steps 11-10 21Z 15 kt, 11-11 00Z 14 kt -> 14.333 kt
+    11-11 00:00Z: steps 11-11 00Z 14 kt, 11-11 00Z 14 kt -> 14.000 kt
+    11-11 01:00Z: steps 11-11 00Z 14 kt, 11-11 03Z 10 kt -> 12.667 kt
+    11-11 02:00Z: steps 11-11 00Z 14 kt, 11-11 03Z 10 kt -> 11.333 kt
+    mean 13.083 kt x 1.150779 = 15.06 mph  (>= 15: fires)
+  lead 2 (runs of 2007-11-08): run 2007-11-08 18Z, published by 2007-11-08 23:00 UTC; last alert run that day 2007-11-09 03:30 UTC; kickoff 2007-11-10 23:30 UTC
+    11-10 23:00Z: steps 11-10 21Z 14 kt, 11-11 00Z 9 kt -> 10.667 kt
+    11-11 00:00Z: steps 11-11 00Z 9 kt, 11-11 00Z 9 kt -> 9.000 kt
+    11-11 01:00Z: steps 11-11 00Z 9 kt, 11-11 03Z 7 kt -> 8.333 kt
+    11-11 02:00Z: steps 11-11 00Z 9 kt, 11-11 03Z 7 kt -> 7.667 kt
+    mean 8.917 kt x 1.150779 = 10.26 mph
+  lead 3 (runs of 2007-11-07): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 15.06, lead 2 10.26, lead 3 none; signal True
+
+263010120 Florida State at Maryland, 2006 week 9 (next-nearest station: College Park (KCGS) has no runs before 2010; fires)
+  station KDCA, 17.2 km, rank 1 of KCGS 2.6 km, KDCA 17.2 km, KFME 19.6 km
+  nearer station KCGS: no runs (KCGS_GFS_2006090800_2006122918.csv)
+  kickoff 2006-10-28 23:00 UTC = Sat 2006-10-28 19:00 Eastern; Eastern date 2006-10-28
+  runs cached for 2006-10-25 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2006-10-26 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2006-10-27 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2006-10-28 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2006-10-27): run 2006-10-27 18Z, published by 2006-10-27 23:00 UTC; last alert run that day 2006-10-28 02:30 UTC; kickoff 2006-10-28 23:00 UTC
+    10-28 23:00Z: steps 10-28 21Z 18 kt, 10-29 00Z 17 kt -> 17.333 kt
+    10-29 00:00Z: steps 10-29 00Z 17 kt, 10-29 00Z 17 kt -> 17.000 kt
+    10-29 01:00Z: steps 10-29 00Z 17 kt, 10-29 03Z 17 kt -> 17.000 kt
+    10-29 02:00Z: steps 10-29 00Z 17 kt, 10-29 03Z 17 kt -> 17.000 kt
+    mean 17.083 kt x 1.150779 = 19.66 mph  (>= 15: fires)
+  lead 2 (runs of 2006-10-26): run 2006-10-26 18Z, published by 2006-10-26 23:00 UTC; last alert run that day 2006-10-27 02:30 UTC; kickoff 2006-10-28 23:00 UTC
+    10-28 23:00Z: steps 10-28 21Z 18 kt, 10-29 00Z 14 kt -> 15.333 kt
+    10-29 00:00Z: steps 10-29 00Z 14 kt, 10-29 00Z 14 kt -> 14.000 kt
+    10-29 01:00Z: steps 10-29 00Z 14 kt, 10-29 03Z 16 kt -> 14.667 kt
+    10-29 02:00Z: steps 10-29 00Z 14 kt, 10-29 03Z 16 kt -> 15.333 kt
+    mean 14.833 kt x 1.150779 = 17.07 mph  (>= 15: fires)
+  lead 3 (runs of 2006-10-25): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 19.66, lead 2 17.07, lead 3 none; signal True
+
+401635615 Virginia Tech at Duke, 2024 week 13 (next-nearest station: Chapel Hill (KIGX) has no runs after 2022; 8 PM EST is the next day in UTC)
+  station KRDU, 20.2 km, rank 1 of KIGX 13.1 km, KRDU 20.2 km, KTDF 31.8 km
+  nearer station KIGX: no runs (KIGX_GFS_2024082700_2024112918.csv)
+  kickoff 2024-11-24 01:00 UTC = Sat 2024-11-23 20:00 Eastern; Eastern date 2024-11-23
+  runs cached for 2024-11-20 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2024-11-21 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2024-11-22 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2024-11-23 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2024-11-22): run 2024-11-22 18Z, published by 2024-11-22 23:00 UTC; last alert run that day 2024-11-23 03:30 UTC; kickoff 2024-11-24 01:00 UTC
+    11-24 01:00Z: steps 11-24 00Z 4 kt, 11-24 03Z 2 kt -> 3.333 kt
+    11-24 02:00Z: steps 11-24 00Z 4 kt, 11-24 03Z 2 kt -> 2.667 kt
+    11-24 03:00Z: steps 11-24 03Z 2 kt, 11-24 03Z 2 kt -> 2.000 kt
+    11-24 04:00Z: steps 11-24 03Z 2 kt, 11-24 06Z 2 kt -> 2.000 kt
+    mean 2.500 kt x 1.150779 = 2.88 mph
+  lead 2 (runs of 2024-11-21): run 2024-11-21 18Z, published by 2024-11-21 23:00 UTC; last alert run that day 2024-11-22 03:30 UTC; kickoff 2024-11-24 01:00 UTC
+    11-24 01:00Z: steps 11-24 00Z 5 kt, 11-24 03Z 3 kt -> 4.333 kt
+    11-24 02:00Z: steps 11-24 00Z 5 kt, 11-24 03Z 3 kt -> 3.667 kt
+    11-24 03:00Z: steps 11-24 03Z 3 kt, 11-24 03Z 3 kt -> 3.000 kt
+    11-24 04:00Z: steps 11-24 03Z 3 kt, 11-24 06Z 2 kt -> 2.667 kt
+    mean 3.417 kt x 1.150779 = 3.93 mph
+  lead 3 (runs of 2024-11-20): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 2.88, lead 2 3.93, lead 3 none; signal False
+
+401247332 Nebraska at Iowa, 2020 week 13 (Thanksgiving 2020: the 18Z run is missing, so lead 1 takes that day's 12Z run)
+  station KIOW, 3.2 km, rank 0 of KIOW 3.2 km, KCID 27.5 km
+  kickoff 2020-11-27 18:00 UTC = Fri 2020-11-27 13:00 Eastern; Eastern date 2020-11-27
+  runs cached for 2020-11-24 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2020-11-25 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2020-11-26 (lead 1): 00Z 06Z 12Z
+  runs cached for 2020-11-27 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2020-11-26): run 2020-11-26 12Z, published by 2020-11-26 17:00 UTC; last alert run that day 2020-11-27 03:30 UTC; kickoff 2020-11-27 18:00 UTC
+    11-27 18:00Z: steps 11-27 18Z 10 kt, 11-27 18Z 10 kt -> 10.000 kt
+    11-27 19:00Z: steps 11-27 18Z 10 kt, 11-27 21Z 11 kt -> 10.333 kt
+    11-27 20:00Z: steps 11-27 18Z 10 kt, 11-27 21Z 11 kt -> 10.667 kt
+    11-27 21:00Z: steps 11-27 21Z 11 kt, 11-27 21Z 11 kt -> 11.000 kt
+    mean 10.500 kt x 1.150779 = 12.08 mph
+  lead 2 (runs of 2020-11-25): run 2020-11-25 18Z, published by 2020-11-25 23:00 UTC; last alert run that day 2020-11-26 03:30 UTC; kickoff 2020-11-27 18:00 UTC
+    11-27 18:00Z: steps 11-27 18Z 10 kt, 11-27 18Z 10 kt -> 10.000 kt
+    11-27 19:00Z: steps 11-27 18Z 10 kt, 11-27 21Z 11 kt -> 10.333 kt
+    11-27 20:00Z: steps 11-27 18Z 10 kt, 11-27 21Z 11 kt -> 10.667 kt
+    11-27 21:00Z: steps 11-27 21Z 11 kt, 11-27 21Z 11 kt -> 11.000 kt
+    mean 10.500 kt x 1.150779 = 12.08 mph
+  lead 3 (runs of 2020-11-24): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 12.08, lead 2 12.08, lead 3 none; signal False
+
+401769076 Miami at Indiana, 2025 week 1 (January title game)
+  station KHWO, 4.7 km, rank 0 of KHWO 4.7 km, KOPF 7.7 km, KFLL 15.3 km
+  kickoff 2026-01-20 00:30 UTC = Mon 2026-01-19 19:30 Eastern; Eastern date 2026-01-19
+  runs cached for 2026-01-16 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2026-01-17 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2026-01-18 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2026-01-19 (kickoff date: never used): none
+  lead 1 (runs of 2026-01-18): run 2026-01-18 18Z, published by 2026-01-18 23:00 UTC; last alert run that day 2026-01-19 03:30 UTC; kickoff 2026-01-20 00:30 UTC
+    01-20 00:00Z: steps 01-20 00Z 9 kt, 01-20 00Z 9 kt -> 9.000 kt
+    01-20 01:00Z: steps 01-20 00Z 9 kt, 01-20 03Z 8 kt -> 8.667 kt
+    01-20 02:00Z: steps 01-20 00Z 9 kt, 01-20 03Z 8 kt -> 8.333 kt
+    01-20 03:00Z: steps 01-20 03Z 8 kt, 01-20 03Z 8 kt -> 8.000 kt
+    mean 8.500 kt x 1.150779 = 9.78 mph
+  lead 2 (runs of 2026-01-17): run 2026-01-17 18Z, published by 2026-01-17 23:00 UTC; last alert run that day 2026-01-18 03:30 UTC; kickoff 2026-01-20 00:30 UTC
+    01-20 00:00Z: steps 01-20 00Z 7 kt, 01-20 00Z 7 kt -> 7.000 kt
+    01-20 01:00Z: steps 01-20 00Z 7 kt, 01-20 03Z 6 kt -> 6.667 kt
+    01-20 02:00Z: steps 01-20 00Z 7 kt, 01-20 03Z 6 kt -> 6.333 kt
+    01-20 03:00Z: steps 01-20 03Z 6 kt, 01-20 03Z 6 kt -> 6.000 kt
+    mean 6.500 kt x 1.150779 = 7.48 mph
+  lead 3 (runs of 2026-01-16): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 9.78, lead 2 7.48, lead 3 none; signal False
+
+401760405 Wyoming at San Diego State, 2025 week 10 (the Saturday before summer time ends)
+  station KMYF, 4.7 km, rank 0 of KMYF 4.7 km, KSAN 7.5 km, KNKX 9.7 km
+  kickoff 2025-11-01 23:00 UTC = Sat 2025-11-01 19:00 Eastern; Eastern date 2025-11-01
+  runs cached for 2025-10-29 (lead 3): 00Z 06Z 12Z 18Z
+  runs cached for 2025-10-30 (lead 2): 00Z 06Z 12Z 18Z
+  runs cached for 2025-10-31 (lead 1): 00Z 06Z 12Z 18Z
+  runs cached for 2025-11-01 (kickoff date: never used): 00Z 06Z 12Z 18Z
+  lead 1 (runs of 2025-10-31): run 2025-10-31 18Z, published by 2025-10-31 23:00 UTC; last alert run that day 2025-11-01 02:30 UTC; kickoff 2025-11-01 23:00 UTC
+    11-01 23:00Z: steps 11-01 21Z 7 kt, 11-02 00Z 6 kt -> 6.333 kt
+    11-02 00:00Z: steps 11-02 00Z 6 kt, 11-02 00Z 6 kt -> 6.000 kt
+    11-02 01:00Z: steps 11-02 00Z 6 kt, 11-02 03Z 3 kt -> 5.000 kt
+    11-02 02:00Z: steps 11-02 00Z 6 kt, 11-02 03Z 3 kt -> 4.000 kt
+    mean 5.333 kt x 1.150779 = 6.14 mph
+  lead 2 (runs of 2025-10-30): run 2025-10-30 18Z, published by 2025-10-30 23:00 UTC; last alert run that day 2025-10-31 02:30 UTC; kickoff 2025-11-01 23:00 UTC
+    11-01 23:00Z: steps 11-01 21Z 8 kt, 11-02 00Z 6 kt -> 6.667 kt
+    11-02 00:00Z: steps 11-02 00Z 6 kt, 11-02 00Z 6 kt -> 6.000 kt
+    11-02 01:00Z: steps 11-02 00Z 6 kt, 11-02 03Z 3 kt -> 5.000 kt
+    11-02 02:00Z: steps 11-02 00Z 6 kt, 11-02 03Z 3 kt -> 4.000 kt
+    mean 5.417 kt x 1.150779 = 6.23 mph
+  lead 3 (runs of 2025-10-29): none; run ends before the window
+  replay row (data/processed/mos_replay.parquet): lead 1 6.14, lead 2 6.23, lead 3 none; signal False
+
+12 games; fixture rows: 1271 (tests/fixtures/mos_hand_checked_runs.csv)
