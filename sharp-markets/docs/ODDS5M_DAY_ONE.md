@@ -47,17 +47,17 @@ A command refused before it calls anything (`full --pull F3` without `--seasons`
 game list exists, `balance` without `--confirm`) prints why and exits with status 1 as well. A dry run of `probe`,
 `plan`, `week` or `full` exits 0.
 
-**What can still be lost beyond `--max-credits`.** With honest billing headers, nothing. The API charges for a call
-before we see its answer, so our side can only count after the fact. What that leaves: when the balance arrives one
-answer late and a timed-out try was billed, one call's most possible cost (30 credits for F1, 20 for F2, 60 for F3,
-10 for the NBA week) past the budget or the floor; when a call is billed above its most possible cost, that one call's
-charge; when the API charges more than it reports, three calls' charges before the run stops (four if the balance also
-arrives late), or none at all but less data per credit when the extra is no more than the call's most possible cost
-(the budget still holds, because the run counts the balance); the one call that was out at a Ctrl-C, which a rerun may
-buy again; and one call when two runs share the key near the floor. Only an API that reports less than it charges
-while its balance never moves could spend past the budget without a stop, and only on answers our code can't price
-above what was reported (a snapshot where some of the markets asked for, or all the odds, are missing). Nothing in the
-answers would show that; the account page on the Odds API site would.
+**What can still be lost beyond `--max-credits`.** With honest billing headers, nothing. But the API charges for a
+call before we see its answer, so our side can only count after the fact, and it can only see what the API tells it.
+So a run can end past its budget or its floor by: one call's most possible cost (30 credits for F1, 20 for F2, 60 for
+F3, 10 for the NBA week) when the balance arrives one answer late and a timed-out try was charged; that one call's
+charge when a call is billed above its most possible cost; three calls' charges (four if the balance is also late)
+when the API charges more than it reports by more than a call's most possible cost (a smaller extra never stops the
+run, but the budget still holds, because the run counts the balance; the credits just buy less data); the one call
+that was out at a Ctrl-C, which a rerun may buy again; and one call when two runs share the key near the floor. Only
+an API that reports less than it charges while its balance never moves could spend past the budget without a stop,
+and only on answers our code can't price above what was reported (a snapshot where some of the markets asked for, or
+all the odds, are missing). Nothing in the answers would show that; the account page on the Odds API site would.
 
 ## How a run protects the credits
 
