@@ -185,7 +185,7 @@ text left open. Every one is settled here, before any outcome exists. **No trigg
 stake or metric changes.** Section 6 settles which quote is Rule B's primary close, the question
 amendment 3 (section 7) left to the owner. The rules version stays `cfb-v3-2026-09-28`, because the
 board behaves exactly as before; only `scripts/score_forward.py` changes. Where this amendment and
-amendment 3 differ, this one applies.
+any earlier text differ, this one applies.
 
 ### 1. A bet whose game was moved or never played is void
 
@@ -198,6 +198,9 @@ amendment 3 differ, this one applies.
 * A sportsbook voids the same bets. Wind rules meet this case more than most, because hurricanes
   postpone games. The review's example: a signal logged for Oct 10 on a game played Oct 31 under the
   same game id was graded at the Oct 10 line.
+* A result that lands after day 30 brings the bet back: it is graded like any other bet from then on.
+  If a decision on its horizon is already recorded, the record stands, and the scorer prints the fresh
+  computation beside it (section 3).
 
 ### 2. A bet still waiting for its result holds its decision open
 
@@ -213,12 +216,25 @@ amendment 3 differ, this one applies.
 
 * The first time a decision is final, the scorer appends it to `data/forward/decisions.csv`: the rule,
   the horizon, the time it was decided (UTC), the number of bets, every number the decision used, the
-  verdict, and a fingerprint (sha256) of the ledger rows that entered it.
-* Every later run prints the recorded decision. If a fresh computation on the same horizon would now
-  come out differently (a corrected score, say), the scorer prints both and says the recorded one
-  stands.
-* A run on a test ledger (`--ledger`) writes `decisions.csv` beside that ledger, never into
-  `data/forward/`.
+  verdict, and a fingerprint (sha256) of the ledger rows that entered it: the entry rows, and for Rule
+  B the later quotes used as closes (section 6).
+* Every later run prints the recorded decision, even when no bet is settled any more. If a fresh
+  computation on the same horizon would now come out differently (a corrected score, say), the scorer
+  prints both and says the recorded one stands.
+* **Only a real run writes the record.** That is a run of the scorer on the live ledger
+  (`data/forward/ledger.csv`), on the real clock, reading the default cfbfastR schedule when it was
+  refreshed in the last 2 days. Every alert run refreshes the current season's schedule. The hub's
+  daily check-in runs the scorer this way, so the first check-in after a decision becomes final
+  records it. In every other case the scorer prints the decision and says why it wasn't recorded:
+  * a run with `--now` (a preview as of another time, for tests and rehearsals) records nothing;
+  * a schedule last refreshed more than 2 days ago records nothing, because played games would look
+    unscored and could be voided; refresh it and run the scorer again;
+  * a run on another ledger kept in `data/forward/` (the rewrite's backup copy) neither reads nor
+    writes the record;
+  * a copy of the scorer in another folder (a worker's worktree) run on the live ledger reads the record
+    but never writes it.
+* A run on a test ledger kept anywhere else (`--ledger`) writes `decisions.csv` beside that ledger,
+  never into `data/forward/`.
 
 ### 4. Horizons are dates
 
@@ -240,7 +256,10 @@ amendment 3 differ, this one applies.
 ### 6. Rule B's primary close (settles amendment 3, section 7)
 
 * Rule B's primary close is **the last logged quote before kickoff that is later than the entry row.**
-* If there is none, the close captured by amendment 2 is used.
+* If there is none, the close captured by amendment 2 is used. **This replaces amendment 2's "What it
+  can't change" for Rule B's primary close:** when no later quote was logged, the captured close now
+  enters the primary CLV, and so the keep/drop decision. Everywhere else the captured close stays
+  descriptive, as amendment 2 says.
 * If there is neither, the bet has no primary close: it is counted, and left out of the CLV.
 * The scorer prints the book behind the entry and the book behind the close. They can differ: a
   Pinnacle entry can close at DraftKings when Pinnacle takes its line down.

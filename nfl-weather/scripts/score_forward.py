@@ -19,9 +19,16 @@ that kickoff; a void bet is listed by reason and not graded. It is pending while
 The decisions (amendment 5, section 4, and amendment 6) are computed here and labelled. Horizons are
 dates: "after Week 18" is after the last regular-season kickoff in the schedule. A decision is FINAL
 once its horizon has passed and no bet that kicked off by then is pending. The first FINAL is written
-to decisions.csv beside the ledger, and every later run prints that record; if a fresh computation on
-the same horizon would now differ, it prints both and the recorded one stands. Before that the script
-prints an interim read, which shows the numbers and decides nothing.
+down, and every later run prints that record; if a fresh computation on the same horizon would now
+differ, it prints both and the recorded one stands. Before that the script prints an interim read,
+which shows the numbers and decides nothing.
+
+Who writes a decision down (amendment 6, section 3): a run on the live ledger (data/forward/ledger.csv),
+on the real clock, reading the default schedule refreshed in the last 2 days, writes
+data/forward/decisions.csv. A run with --now is a preview and records nothing. A run on another ledger
+kept in data/forward/ (the rewrite's backup copy) neither reads nor writes a record. A copy of this
+scorer in another folder (a worker's worktree) reads the live record but never writes it. A test
+ledger kept anywhere else writes decisions.csv beside itself.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
@@ -58,18 +65,51 @@ VOID_MOVED = "the game kicked off more than 24 hours from the kickoff on its ent
 VOID_NO_RESULT = "the schedule shows no result 30 days after that kickoff"
 H26, H27 = "after Week 18 of 2026", "after the 2027 regular season"     # the decision horizons, by name
 RECORD_COLS = ["rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers", "ledger_rows_sha256"]
+LIVE = ROOT / "data" / "forward"                      # the live folder: the alert jobs' ledger and its record
+FRESH = pd.Timedelta(days=2)                          # a decision is recorded only from a schedule this fresh
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--ledger", default=str(ROOT / "data" / "forward" / "ledger.csv"))
+ap.add_argument("--ledger", default=str(LIVE / "ledger.csv"))
 ap.add_argument("--games", default=str(RAW / "games.csv"))
 ap.add_argument("--list-excluded", action="store_true", help="print every excluded row with its reason")
-ap.add_argument("--now", help="score as of this UTC time (tests and rehearsals); default: the clock")
+ap.add_argument("--now", help="score as of this UTC time: a preview for tests and rehearsals, which records no "
+                              "decision; default: the clock")
+ap.add_argument("--test-record", action="store_true",
+                help="tests only: with --now, record final decisions beside a test ledger as if made at --now "
+                     "(refused for any ledger in data/forward/)")
 args = ap.parse_args()
-NOW = pd.Timestamp(args.now, tz="UTC") if args.now else pd.Timestamp.now(tz="UTC")
+CLOCK = pd.Timestamp.now(tz="UTC")
+NOW = pd.Timestamp(args.now, tz="UTC") if args.now else CLOCK
 ledger = Path(args.ledger)
 if not ledger.exists():
     sys.exit("no ledger yet: run scripts/this_week.py or scripts/alerts.py first")
-DECISIONS = ledger.parent / "decisions.csv"     # beside the ledger scored: a test ledger never writes to data/forward/
+# Amendment 6, section 3: who writes a decision down, and where. A ledger inside a data/forward/ folder
+# (this checkout's or another's) is a live ledger or a copy of one, never a test ledger.
+FWD = next((q for q in ledger.resolve().parents if q.name == "forward" and q.parent.name == "data"), None)
+IS_LIVE = ledger.resolve() == (LIVE / "ledger.csv").resolve()           # this checkout's live ledger
+if args.test_record and (not args.now or FWD is not None):
+    sys.exit("--test-record needs --now and a test ledger outside data/forward/")
+if FWD is None:
+    DECISIONS = ledger.parent / "decisions.csv"                         # a test ledger's own record
+elif ledger.name == "ledger.csv" and ledger.resolve().parent == FWD:
+    DECISIONS = FWD / "decisions.csv"                                   # a live ledger's record
+else:
+    DECISIONS = None                                                    # a copy, such as the rewrite's backup
+schedule_file = Path(args.games)
+refreshed = pd.Timestamp(schedule_file.stat().st_mtime, unit="s", tz="UTC")
+if DECISIONS is None:
+    NOT_RECORDED = "this ledger is kept in data/forward/ but is not the live ledger, so no record is read or written"
+elif not IS_LIVE and FWD is not None:
+    NOT_RECORDED = "this is another folder's live ledger, and only the scorer in that folder writes its record"
+elif args.now and not args.test_record:
+    NOT_RECORDED = "a run with --now is a preview"
+elif IS_LIVE and schedule_file.resolve() != (RAW / "games.csv").resolve():
+    NOT_RECORDED = "the live record is written only from the default schedule, data/raw/games.csv"
+elif CLOCK - refreshed > FRESH:
+    NOT_RECORDED = (f"the schedule was last refreshed {refreshed:%Y-%m-%d %H:%M} UTC, more than 2 days ago; refresh "
+                    "it (every alert run does, or scripts/fetch_data.py --skip-weather) and run the scorer again")
+else:
+    NOT_RECORDED = ""
 
 
 def eastern(day, time):
@@ -240,7 +280,7 @@ def show(nums):
 
 def recorded(rule, horizon):
     """The decision already written down for this rule and horizon (amendment 6, reading 3), or None."""
-    if not DECISIONS.exists():
+    if DECISIONS is None or not DECISIONS.exists():
         return None
     d = pd.read_csv(DECISIONS, dtype=str, keep_default_na=False)
     d = d[d.rule.eq(rule) & d.horizon.eq(horizon)]
@@ -249,20 +289,26 @@ def recorded(rule, horizon):
 
 def write_down(rule, horizon, horizon_utc, verdict, nums, rows):
     """Append a decision the first time it is FINAL, with a sha256 of the ledger's header and the entry
-    rows that entered it, exactly as written."""
+    rows that entered it, exactly as written (the closes come from the schedule). A run that may not
+    record (a --now preview, a stale schedule, a copy of the ledger in data/forward/) says why instead."""
+    if NOT_RECORDED:
+        print(f"    not recorded: {NOT_RECORDED}.")
+        return
     lines = [HEADER] + [LINES[i] for i in sorted(rows)]
     rec = dict(rule=rule, horizon=horizon, horizon_utc=f"{horizon_utc:%Y-%m-%dT%H:%M:%SZ}",
                decided_utc=f"{NOW:%Y-%m-%dT%H:%M:%SZ}", n_bets=nums["n_bets"], verdict=verdict,
                numbers=json.dumps(nums),
                ledger_rows_sha256=hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest())
     pd.DataFrame([rec], columns=RECORD_COLS).to_csv(DECISIONS, mode="a", header=not DECISIONS.exists(), index=False)
-    return rec
+    print(f"    recorded in decisions.csv on {rec['decided_utc']}, horizon {rec['horizon_utc']}; "
+          f"ledger rows sha256 {rec['ledger_rows_sha256'][:16]}")
 
 
 def decision(rule, horizon, name, h_utc, bets_by, split_by, split_name, pending, when, labels, enough=lambda b: True):
     """One registered decision. Prints the recorded one if it exists (and a fresh computation on the same
-    horizon beside it when that now differs); otherwise FINAL, recorded now, once the horizon has passed
-    and no bet that kicked off by then is pending; otherwise an interim read. Returns the verdict or None."""
+    horizon beside it when that now differs); otherwise FINAL, written down by a run that may record, once
+    the horizon has passed and no bet that kicked off by then is pending; otherwise an interim read.
+    Returns the verdict or None."""
     rec = recorded(rule, horizon)
     if rec is not None:
         h = pd.Timestamp(rec.horizon_utc)
@@ -272,7 +318,9 @@ def decision(rule, horizon, name, h_utc, bets_by, split_by, split_name, pending,
         show(json.loads(rec.numbers))
         print(f"    recorded in decisions.csv on {rec.decided_utc}, horizon {rec.horizon_utc}; "
               f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}")
-        if fresh != rec.verdict or json.dumps(nums) != json.dumps(json.loads(rec.numbers)):
+        if not len(bets):
+            print("    a fresh computation on the same horizon now has no settled bets. The recorded decision stands.")
+        elif fresh != rec.verdict or json.dumps(nums) != json.dumps(json.loads(rec.numbers)):
             print(f"    a fresh computation on the same horizon now gives: {fresh}, on {len(bets)} bets:")
             show(nums)
             print("    The recorded decision stands.")
@@ -283,9 +331,7 @@ def decision(rule, horizon, name, h_utc, bets_by, split_by, split_name, pending,
     if h_utc is not None and NOW > h_utc and not waiting:
         print(f"  decision ({name}), FINAL: {verdict}")
         show(nums)
-        rec = write_down(rule, horizon, h_utc, verdict, nums, bets._row)
-        print(f"    recorded in decisions.csv on {rec['decided_utc']}, horizon {rec['horizon_utc']}; "
-              f"ledger rows sha256 {rec['ledger_rows_sha256'][:16]}")
+        write_down(rule, horizon, h_utc, verdict, nums, bets._row)
         return verdict
     print(f"  decision ({name}): INTERIM read, decides nothing. {when(waiting)}")
     show(nums)
@@ -300,10 +346,13 @@ def horizon_decision(what, unit, bets):
     """Amendment 5, section 4, and amendment 6. With 40 in the 2026 regular season, the decision is made
     after Week 18 of 2026 on those bets, split by half; a keep or a drop then is the decision. Otherwise,
     or when 2026 is inconclusive, it is made once, after the 2027 regular season, on every bet that kicked
-    off by then, split by season. Bets after a horizon never enter it."""
+    off by then, split by season. Bets after a horizon never enter it. A decision recorded on the pooled
+    horizon with none recorded for 2026 is the decision: a 2026 result that lands later can't add one."""
     done, pending = bets[bets.status.eq("settled")], bets[bets.status.eq("pending")]
     h26, h27 = horizon_of(2026), horizon_of(2027)
     reg26 = done[(done.season == 2026) & done.game_type.astype(str).eq("REG")]
+    # 2026 bets still waiting for a result can bring 2026 to 40: its decision then waits for them
+    wait26 = pending[(pending.season == 2026) & pending.game_type.astype(str).eq("REG")]
 
     def ahead(label, h, waiting):
         if h is not None and NOW > h:
@@ -312,7 +361,9 @@ def horizon_decision(what, unit, bets):
             f" (the last regular-season kickoff, {h:%Y-%m-%d %H:%M} UTC)." if h is not None else ".")
 
     rule = what
-    if recorded(rule, H26) is not None or len(reg26) >= ENOUGH:
+    if recorded(rule, H27) is not None and recorded(rule, H26) is None:
+        name = f"{what}: once, after the 2027 regular season, both seasons pooled"
+    elif recorded(rule, H26) is not None or len(reg26) + len(wait26) >= ENOUGH:
         verdict = decision(rule, H26, f"{what}: 40 {unit} in 2026, decided after Week 18 of 2026", h26,
                            lambda h: reg26 if h is None else reg26[reg26.kick_utc <= h], halves, "half", pending,
                            lambda k: ahead("Week 18 of 2026", h26, k),
@@ -389,5 +440,10 @@ print("\nDecision horizons (amendment 5, section 4, and amendment 6), for Rule B
       "a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular "
       "season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A "
       "decision waits for every bet that kicked off by its horizon to settle or be void, and the first final one "
-      f"is written to {DECISIONS.name} beside the ledger.")
+      "is written down.")
+if NOT_RECORDED:
+    print(f"Decision record: none written by this run: {NOT_RECORDED}.")
+else:
+    print("Decision record: the first final decision is written to " + (
+        "data/forward/decisions.csv (the live record)." if IS_LIVE else "decisions.csv beside this test ledger."))
 print("Variants under forward test: 2 (MODEL_LEAN, RULE_B).")

@@ -2,8 +2,11 @@
 built on the reviewers' own scenarios (their inputs are reused here). Each test fails on the scorer as
 merged in pull request 50 and passes under amendment 4."""
 import hashlib
+import os
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -94,7 +97,7 @@ def test_reading_2_a_signal_still_waiting_for_its_score_holds_the_decision_open(
     rows, s = rb_signals(41)
     bad, sb = rb_signals(1, first="2026-12-12T19:00Z", first_id=900, close=56.5)
     waiting = [dict(x, home_points=np.nan, away_points=np.nan, completed=False) for x in sb]
-    out = rb(score(tmp_path, rows + bad, s + waiting, "2026-12-21"))
+    out = rb(score(tmp_path, rows + bad, s + waiting, "2026-12-21", "--test-record"))
     assert "42 signals, 41 settled, 1 pending, 0 void" in out
     assert "INTERIM read, decides nothing. Its horizon has passed: 2026-12-12" in out
     assert "The decision waits for 1 pending signal." in out
@@ -111,7 +114,7 @@ def test_reading_3_the_first_final_decision_is_written_down_and_stands(tmp_path)
         g, sg = g + r, sg + s1
     b, sb = rb_signals(3, first="2026-12-12T17:00Z", every_days=0, first_id=900, close=56.5)
     late = [dict(x, home_points=np.nan, away_points=np.nan, completed=False) for x in sb]
-    first = rb(score(tmp_path, g + b, sg + late, "2027-01-12"))             # 31 days on: the three are void
+    first = rb(score(tmp_path, g + b, sg + late, "2027-01-12", "--test-record"))   # 31 days on: the three are void
     assert "43 signals, 40 settled, 0 pending, 3 void" in first
     assert "FINAL: KEEP, on the 40 signals that kicked off by 2026-12-12, the end of the regular season" in first
 
@@ -120,11 +123,13 @@ def test_reading_3_the_first_final_decision_is_written_down_and_stands(tmp_path)
     r = rec.iloc[0]
     assert (r.rule, r.n_bets, r.verdict, r.decided_utc) == ("Rule B", "40", "KEEP", "2027-01-12T00:00:00Z")
     assert r.horizon == "after 40 signals or the 2026 regular season, whichever is later"
+    # the rows that entered it: each entry and each later quote used as its close (the review's minor 6)
     lines = (tmp_path / "ledger.csv").read_text().splitlines()
-    entries = [lines[0]] + [ln for ln in lines[1:] if ",SIGNAL," in ln and int(ln.split(",")[1]) <= 40]
-    assert r.ledger_rows_sha256 == hashlib.sha256(("\n".join(entries) + "\n").encode()).hexdigest()
+    entered = [lines[0]] + [ln for ln in lines[1:] if int(ln.split(",")[1]) <= 40]
+    assert len(entered) == 81
+    assert r.ledger_rows_sha256 == hashlib.sha256(("\n".join(entered) + "\n").encode()).hexdigest()
 
-    later = rb(score(tmp_path, g + b, sg + sb, "2027-01-20"))               # the scores land
+    later = rb(score(tmp_path, g + b, sg + sb, "2027-01-20", "--test-record"))   # the scores land
     assert "43 signals, 43 settled, 0 pending, 0 void" in later
     assert "FINAL: KEEP, on the 40 signals that kicked off by 2026-12-12" in later
     assert "recorded in decisions.csv on 2027-01-12T00:00:00Z" in later
@@ -136,7 +141,7 @@ def test_reading_3_fewer_than_forty_at_the_end_of_the_test_is_written_down_too(t
     """The reviewers' D1/D2: 25 signals when the test ends."""
     rows, s = rb_signals(25, every_days=7)
     for now in ("2028-02-01", "2028-03-01"):                                 # decided, then reprinted
-        out = rb(score(tmp_path, rows, s, now))
+        out = rb(score(tmp_path, rows, s, now, "--test-record"))
         assert "decision (Rule B), FINAL: INCONCLUSIVE. The test ended with 25 settled signals, fewer than 40." in out
         assert "recorded in decisions.csv on 2028-02-01T00:00:00Z" in out and "fresh" not in out
     rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str)
@@ -216,3 +221,147 @@ def test_reading_13_amendment_4_quotes_the_models_own_numbers():
         return float(np.ravel(ev_under(42.5 - below, -115, 42.5, resid))[0])
     assert ev(1.5) < 0 < ev(1.0)
     assert "from 1.5 points below the reference" in text
+
+
+# ================================================================== the review of this amendment (Sep 29)
+def project(tmp_path):
+    """A copy of the scorer and its package, so a test can use a data/forward/ folder of its own and never
+    touch the real one."""
+    proj = tmp_path / "proj"
+    shutil.copytree(ROOT / "cfbweather", proj / "cfbweather", ignore=shutil.ignore_patterns("__pycache__"))
+    (proj / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts" / "score_forward.py", proj / "scripts" / "score_forward.py")
+    (proj / "data" / "forward").mkdir(parents=True)
+    return proj
+
+
+def run(script, *args):
+    return subprocess.run([sys.executable, str(script), *args], capture_output=True, text=True)
+
+
+def test_reading_3_a_preview_with_now_records_nothing(tmp_path):
+    """The review's C5: a what-if run with --now 2027-02-01, made while the Dec 12 scores were missing,
+    recorded KEEP, and the real run on Dec 15 then had to accept it."""
+    a, sa = rb_signals(40)
+    b, sb = rb_signals(3, first="2026-12-12T17:00Z", every_days=0, first_id=900, close=56.5)
+    late = [dict(x, home_points=np.nan, away_points=np.nan, completed=False) for x in sb]
+    first = rb(score(tmp_path, a + b, sa + late, "2027-02-01"))
+    assert "FINAL: KEEP" in first and "not recorded: a run with --now is a preview." in first
+    assert not (tmp_path / "decisions.csv").exists()
+    real = score(tmp_path, a + b, sa + sb, "2026-12-15")
+    assert "FINAL: NOT KEPT" in rb(real) and "recorded in decisions.csv" not in real
+    assert "Decision record: none written by this run: a run with --now is a preview." in real
+    refused = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(tmp_path / "ledger.csv"), "--schedule",
+                  str(tmp_path / "sched.csv"), "--test-record")
+    assert refused.returncode != 0 and "--test-record needs --now" in refused.stderr
+
+
+def test_reading_3_only_the_live_ledger_writes_the_live_record(tmp_path):
+    """The review's N6, for CFB: a --ledger run on the rewrite's backup copy, which sits in data/forward/,
+    wrote the live decisions.csv."""
+    a, sa = rb_signals(40)
+    score(tmp_path / "t", a, sa, "2026-12-20", "--test-record")                       # a KEEP, recorded in a test
+    proj = project(tmp_path)
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    shutil.copy(tmp_path / "t" / "ledger.csv", fwd / "ledger.before-cfb-v3-2026-09-28.csv")
+    shutil.copy(tmp_path / "t" / "ledger.csv", fwd / "ledger.csv")
+    sched = str(tmp_path / "t" / "sched.csv")
+
+    backup = run(scorer, "--ledger", str(fwd / "ledger.before-cfb-v3-2026-09-28.csv"), "--schedule", sched,
+                 "--now", "2026-12-20").stdout
+    assert "FINAL: KEEP" in backup and not (fwd / "decisions.csv").exists()
+    assert ("not recorded: this ledger is kept in data/forward/ but is not the live ledger, so no record is read "
+            "or written.") in backup
+    shutil.copy(tmp_path / "t" / "decisions.csv", fwd / "decisions.csv")               # the live record, KEEP
+    backup = run(scorer, "--ledger", str(fwd / "ledger.before-cfb-v3-2026-09-28.csv"), "--schedule", sched,
+                 "--now", "2026-12-21").stdout
+    assert "recorded in decisions.csv" not in backup                                  # it never reads it either
+    live = run(scorer, "--schedule", sched, "--now", "2026-12-21").stdout             # the live ledger reads it
+    assert "recorded in decisions.csv on 2026-12-20T00:00:00Z" in live
+    for ledger in ("ledger.csv", "ledger.before-cfb-v3-2026-09-28.csv"):
+        refused = run(scorer, "--ledger", str(fwd / ledger), "--schedule", sched, "--now", "2026-12-22",
+                      "--test-record")
+        assert refused.returncode != 0 and "a test ledger outside data/forward/" in refused.stderr
+    assert len(pd.read_csv(fwd / "decisions.csv")) == 1
+
+    # a copy of the scorer in another folder (a worker's worktree) reads the live record, and never writes it
+    other = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(fwd / "ledger.csv"), "--schedule", sched).stdout
+    assert "recorded in decisions.csv on 2026-12-20T00:00:00Z" in other
+    assert ("Decision record: none written by this run: this is another folder's live ledger, and only the scorer "
+            "in that folder writes its record.") in other
+
+    # on the real clock: from the default schedule only
+    out = run(scorer, "--schedule", sched).stdout
+    assert ("Decision record: none written by this run: the live record is written only from the default "
+            "schedule (cfbfastR).") in out
+    (proj / "data" / "raw" / "cfbfastr").mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(sa).assign(start_time_tbd=False).to_parquet(proj / "data" / "raw" / "cfbfastr" / "schedules_2026.parquet")
+    out = run(scorer).stdout
+    assert "Decision record: the first final decision is written to data/forward/decisions.csv (the live record)." in out
+
+
+def test_reading_3_a_stale_schedule_is_not_recorded(tmp_path):
+    """The review: the daily check-in runs the scorer, and a schedule that stopped being refreshed would void
+    games that were played and record a decision on the rest."""
+    rows, s = rb_signals(40)
+    score(tmp_path, rows, s, "2026-11-01")                                            # writes the files
+    old = time.time() - 3 * 86400
+    os.utime(tmp_path / "sched.csv", (old, old))
+    args = ["--ledger", str(tmp_path / "ledger.csv"), "--schedule", str(tmp_path / "sched.csv"), "--now",
+            "2026-12-20", "--test-record"]
+    out = run(ROOT / "scripts" / "score_forward.py", *args).stdout
+    assert "FINAL: KEEP" in out and "more than 2 days ago; refresh it" in out and "not recorded: the schedule" in out
+    assert not (tmp_path / "decisions.csv").exists()
+    os.utime(tmp_path / "sched.csv")                                                   # refreshed
+    out = run(ROOT / "scripts" / "score_forward.py", *args).stdout
+    assert "recorded in decisions.csv on 2026-12-20T00:00:00Z" in out and (tmp_path / "decisions.csv").exists()
+
+
+def test_reading_3_a_recorded_decision_prints_when_nothing_is_settled(tmp_path):
+    """The review's C6: with a schedule file that has no scores, the recorded decision wasn't printed."""
+    a, sa = rb_signals(40)
+    hts = [ht_bet(100 + i, ts("2026-10-10T23:00Z") + pd.Timedelta(days=7 * i)) for i in range(3)]
+    sh = [sched(100 + i, kick=ts("2026-10-10T23:00Z") + pd.Timedelta(days=7 * i)) for i in range(3)]
+    first = score(tmp_path, a + hts, sa + sh, "2028-02-02", "--test-record")
+    assert "FINAL: KEEP" in rb(first) and "FINAL: STAY ON PAPER" in ht(first)
+    blank = [dict(x, home_points=np.nan, away_points=np.nan, completed=False) for x in sa + sh]
+    later = score(tmp_path, a + hts, blank, "2028-02-03", "--test-record")
+    assert "40 signals, 0 settled, 0 pending, 40 void" in rb(later)
+    for part, verdict in ((rb(later), "FINAL: KEEP"), (ht(later), "FINAL: STAY ON PAPER")):
+        assert verdict in part and "recorded in decisions.csv on 2028-02-02T00:00:00Z" in part
+        assert "a fresh computation on the same horizon now has no settled bets. The recorded decision stands." in part
+    assert len(pd.read_csv(tmp_path / "decisions.csv")) == 2
+
+
+def test_reading_1_a_result_that_lands_after_day_30_brings_the_bet_back(tmp_path):
+    """The review: void at day 30, graded again when the score lands on day 31. Amendment 4 now says so."""
+    rows = [row(9, "2026-10-10T19:30Z", "2026-10-08T14:30Z", rule_b="SIGNAL")]
+    none = [sched(9, np.nan, np.nan, completed=False, kick="2026-10-10T19:30Z")]
+    for now, s, expect in (("2026-11-08T19:30", none, "1 signals, 0 settled, 1 pending, 0 void"),
+                           ("2026-11-09T19:30", none, "1 signals, 0 settled, 0 pending, 1 void"),
+                           ("2026-11-10T19:30", [sched(9, kick="2026-10-10T19:30Z")],
+                            "1 signals, 1 settled, 0 pending, 0 void")):
+        assert expect in rb(score(tmp_path, rows, s, now))
+    text = (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 4 ")[1].split("### 1.")[1].split("### 2.")[0]
+    text = " ".join(text.split())
+    assert "brings the bet back" in text and "the record stands" in text
+
+
+def test_a_schedule_without_kickoff_times_says_the_moved_game_check_is_off(tmp_path):
+    """The review: the reviewers' postponed game, rerun with a schedule that has no kickoff column, was
+    graded as a loss without a word."""
+    rows = [row(77, "2026-10-10T19:30Z", "2026-10-08T14:30Z", rule_b="SIGNAL")]
+    out = score(tmp_path / "a", rows, [dict(game_id=77, home_points=35, away_points=31, completed=True)], "2026-11-02")
+    assert "the schedule has no kickoff times (start_utc or start_date): the check for moved games is off" in out
+    out = score(tmp_path / "b", rows, [sched(77, 35, 31, kick="2026-10-31T19:30Z")], "2026-11-02")
+    assert "check for moved games is off" not in out and "1 void" in rb(out)
+
+
+def test_amendment_4_says_which_earlier_text_it_replaces():
+    """The review: section 6 makes the captured close primary when no later quote exists, which amendment 2
+    said it could never be."""
+    text = " ".join((ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 4 ")[1].split("\n## ")[0].split())
+    assert "Where this amendment and any earlier text differ, this one applies." in text
+    assert "amendment 3 differ" not in text
+    close = text.split("### 6.")[1].split("### 7.")[0]
+    assert "This replaces amendment 2's \"What it can't change\" for Rule B's primary close" in close

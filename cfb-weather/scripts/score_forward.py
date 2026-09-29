@@ -21,10 +21,17 @@ hours from the kickoff on its entry row, or when the schedule still shows no sco
 kickoff; a void bet is listed by reason and not graded. It is pending while it has no score.
 
 The decisions are computed here and labelled. A decision is FINAL once its horizon has passed and no
-bet that kicked off by then is pending. The first FINAL is written to decisions.csv beside the ledger,
-and every later run prints that record; if a fresh computation on the same horizon would now differ,
-it prints both and the recorded one stands. Before that the script prints an interim read, which
-shows the numbers and decides nothing.
+bet that kicked off by then is pending. The first FINAL is written down, and every later run prints
+that record; if a fresh computation on the same horizon would now differ, it prints both and the
+recorded one stands. Before that the script prints an interim read, which shows the numbers and
+decides nothing.
+
+Who writes a decision down (amendment 4, section 3): a run on the live ledger (data/forward/ledger.csv),
+on the real clock, reading the default cfbfastR schedule refreshed in the last 2 days, writes
+data/forward/decisions.csv. A run with --now is a preview and records nothing. A run on another ledger
+kept in data/forward/ (the rewrite's backup copy) neither reads nor writes a record. A copy of this
+scorer in another folder (a worker's worktree) reads the live record but never writes it. A test
+ledger kept anywhere else writes decisions.csv beside itself.
 
     python scripts/score_forward.py [--ledger PATH] [--schedule PATH] [--list-excluded]
 """
@@ -40,7 +47,7 @@ import numpy as np
 import pandas as pd
 
 from cfbweather.board import HT_FIRST_KICK, REGISTERED_VERSIONS, TEST_SEASONS, season_of
-from cfbweather.config import ROOT
+from cfbweather.config import RAW, ROOT
 from cfbweather.market import american_to_profit, cost_of_waiting
 
 FIRST_KICK = pd.Timestamp("2026-10-01", tz="UTC")
@@ -56,18 +63,53 @@ HT_HORIZON = "once, after the 2027 season's title game"
 NOT_KEPT = ("NOT KEPT (no money goes on the rule; it stays on paper for 2027 only by a dated amendment before "
             "2027 Week 0)")
 RECORD_COLS = ["rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers", "ledger_rows_sha256"]
+LIVE = ROOT / "data" / "forward"                      # the live folder: the alert jobs' ledger and its record
+FRESH = pd.Timedelta(days=2)                          # a decision is recorded only from a schedule this fresh
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--ledger", default=str(ROOT / "data" / "forward" / "ledger.csv"))
-ap.add_argument("--schedule", help="CSV with game_id, home_points, away_points (default: cfbfastR schedules)")
+ap.add_argument("--ledger", default=str(LIVE / "ledger.csv"))
+ap.add_argument("--schedule", help="CSV with game_id, home_points, away_points, and start_utc or start_date for the "
+                                   "moved-game check (default: cfbfastR schedules)")
 ap.add_argument("--list-excluded", action="store_true", help="print every excluded row with its reason")
-ap.add_argument("--now", help="score as of this UTC time (tests and rehearsals); default: the clock")
+ap.add_argument("--now", help="score as of this UTC time: a preview for tests and rehearsals, which records no "
+                              "decision; default: the clock")
+ap.add_argument("--test-record", action="store_true",
+                help="tests only: with --now, record final decisions beside a test ledger as if made at --now "
+                     "(refused for any ledger in data/forward/)")
 args = ap.parse_args()
-NOW = pd.Timestamp(args.now, tz="UTC") if args.now else pd.Timestamp.now(tz="UTC")
+CLOCK = pd.Timestamp.now(tz="UTC")
+NOW = pd.Timestamp(args.now, tz="UTC") if args.now else CLOCK
 path = Path(args.ledger)
 if not path.exists():
     sys.exit("no ledger yet: run scripts/alerts.py")
-DECISIONS = path.parent / "decisions.csv"       # beside the ledger scored: a test ledger never writes to data/forward/
+# Amendment 4, section 3: who writes a decision down, and where. A ledger inside a data/forward/ folder
+# (this checkout's or another's) is a live ledger or a copy of one, never a test ledger.
+FWD = next((q for q in path.resolve().parents if q.name == "forward" and q.parent.name == "data"), None)
+IS_LIVE = path.resolve() == (LIVE / "ledger.csv").resolve()             # this checkout's live ledger
+if args.test_record and (not args.now or FWD is not None):
+    sys.exit("--test-record needs --now and a test ledger outside data/forward/")
+if FWD is None:
+    DECISIONS = path.parent / "decisions.csv"                           # a test ledger's own record
+elif path.name == "ledger.csv" and path.resolve().parent == FWD:
+    DECISIONS = FWD / "decisions.csv"                                   # a live ledger's record
+else:
+    DECISIONS = None                                                    # a copy, such as the rewrite's backup
+schedule_files = [Path(args.schedule)] if args.schedule else sorted((RAW / "cfbfastr").glob("schedules_*.parquet"))
+refreshed = max((pd.Timestamp(p.stat().st_mtime, unit="s", tz="UTC") for p in schedule_files),
+                default=pd.Timestamp(0, tz="UTC"))
+if DECISIONS is None:
+    NOT_RECORDED = "this ledger is kept in data/forward/ but is not the live ledger, so no record is read or written"
+elif not IS_LIVE and FWD is not None:
+    NOT_RECORDED = "this is another folder's live ledger, and only the scorer in that folder writes its record"
+elif args.now and not args.test_record:
+    NOT_RECORDED = "a run with --now is a preview"
+elif IS_LIVE and args.schedule:
+    NOT_RECORDED = "the live record is written only from the default schedule (cfbfastR)"
+elif CLOCK - refreshed > FRESH:
+    NOT_RECORDED = (f"the schedule was last refreshed {refreshed:%Y-%m-%d %H:%M} UTC, more than 2 days ago; refresh "
+                    "it (every alert run does, or scripts/fetch_data.py) and run the scorer again")
+else:
+    NOT_RECORDED = ""
 L = pd.read_csv(path)
 text = path.read_text().splitlines()
 # the rows as written, for each decision's fingerprint
@@ -91,6 +133,8 @@ s["total"] = s.home_points + s.away_points
 kick = next((c for c in ("start_utc", "start_date") if c in S), None)
 s["sched_kick"] = (pd.to_datetime(S[kick], utc=True, errors="coerce") if kick
                    else pd.Series(pd.NaT, index=s.index, dtype="datetime64[ns, UTC]"))
+if kick is None:
+    print("the schedule has no kickoff times (start_utc or start_date): the check for moved games is off")
 if "completed" in S:        # the feed scores a game that was never played 0-0: grade completed games only
     played = S.completed.astype(str).str.lower().isin(["true", "1", "1.0"])
     print(f"schedule rows with a score but not marked completed (not graded): "
@@ -159,7 +203,7 @@ def header(bets):
 
 def recorded(rule):
     """The decision already written down for this rule (amendment 4, section 3), or None."""
-    if not DECISIONS.exists():
+    if DECISIONS is None or not DECISIONS.exists():
         return None
     d = pd.read_csv(DECISIONS, dtype=str, keep_default_na=False)
     d = d[d.rule.eq(rule)]
@@ -167,9 +211,14 @@ def recorded(rule):
 
 
 def write_down(rule, horizon, horizon_utc, verdict, nums, rows):
-    """Append a decision the first time it is FINAL, with a sha256 of the ledger's header and the entry
-    rows that entered it, exactly as written."""
-    lines = [HEADER] + [LINES[i] for i in sorted(rows)]
+    """Append a decision the first time it is FINAL, with a sha256 of the ledger's header and the rows
+    that entered it, exactly as written: the entry rows, and for Rule B the later quotes used as closes.
+    A run that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/)
+    says why instead."""
+    if NOT_RECORDED:
+        print(f"    not recorded: {NOT_RECORDED}.")
+        return
+    lines = [HEADER] + [LINES[i] for i in sorted(set(int(r) for r in rows))]
     rec = dict(rule=rule, horizon=horizon, horizon_utc=f"{horizon_utc:%Y-%m-%dT%H:%M:%SZ}",
                decided_utc=f"{NOW:%Y-%m-%dT%H:%M:%SZ}", n_bets=nums["n_bets"], verdict=verdict,
                numbers=json.dumps(nums),
@@ -184,7 +233,9 @@ def reprint(rec, show, fresh_verdict, fresh_nums, n_fresh):
     show(rec.verdict, json.loads(rec.numbers))
     print(f"    recorded in decisions.csv on {rec.decided_utc}, horizon {rec.horizon_utc}; "
           f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}")
-    if fresh_verdict != rec.verdict or json.dumps(fresh_nums) != json.dumps(json.loads(rec.numbers)):
+    if not n_fresh:
+        print("    a fresh computation on the same horizon now has no settled bets. The recorded decision stands.")
+    elif fresh_verdict != rec.verdict or json.dumps(fresh_nums) != json.dumps(json.loads(rec.numbers)):
         print(f"    a fresh computation on the same horizon now gives: {fresh_verdict}, on {n_fresh} bets:")
         show(fresh_verdict, fresh_nums, fresh=True)
         print("    The recorded decision stands.")
@@ -221,8 +272,8 @@ bets = L[L.rule_b == "SIGNAL"].sort_values("snapshot_utc").drop_duplicates("game
 # Amendment 4: the primary close is the last quote logged after the entry row, else the captured close
 later = quotes.merge(bets[["game_id", "snapshot_utc"]].rename(columns={"snapshot_utc": "entry_utc"}), on="game_id")
 later = later[later.snapshot_utc > later.entry_utc].sort_values("snapshot_utc").drop_duplicates("game_id", keep="last")
-bets = bets.merge(later[["game_id", "mkt_total", "snapshot_utc", "line_src"]].rename(
-    columns={"mkt_total": "close_total", "snapshot_utc": "close_utc", "line_src": "close_src"}),
+bets = bets.merge(later[["game_id", "mkt_total", "snapshot_utc", "line_src", "_row"]].rename(
+    columns={"mkt_total": "close_total", "snapshot_utc": "close_utc", "line_src": "close_src", "_row": "close_row"}),
     on="game_id", how="left")
 use_cap = bets.close_total.isna() & bets.game_id.map(cap).notna()
 bets["close_from"] = np.where(bets.close_total.notna(), "later quote", np.where(use_cap, "captured close", "none"))
@@ -231,12 +282,12 @@ bets["close_src"] = np.where(use_cap, "captured close (" + bets.game_id.map(cap_
                              bets.close_src.fillna("none").astype(str))
 bets = settle(bets)
 done = bets[bets.status.eq("settled")].copy()
+win, push = done.total < done.mkt_total, done.total == done.mkt_total
+done["profit"] = np.where(push, 0, np.where(win, american_to_profit(done.mkt_under), -1.0))
+done["clv_pts"] = done.mkt_total - done.close_total
 print(f"\nRULE_B: {len(bets)} signals, ", end="")
 header(bets)
 if len(done):
-    win, push = done.total < done.mkt_total, done.total == done.mkt_total
-    done["profit"] = np.where(push, 0, np.where(win, american_to_profit(done.mkt_under), -1.0))
-    done["clv_pts"] = done.mkt_total - done.close_total
     m, lo, hi, n = mean_ci(done.clv_pts)
     print(f"  record {int(win.sum())}-{int((~win & ~push).sum())}-{int(push.sum())}, units {done.profit.sum():+.2f} "
           f"(ROI {100 * done.profit.sum() / len(done):+.1f}% per bet placed); "
@@ -248,32 +299,42 @@ if len(done):
           f"later quotes were logged more than 6 hours before kickoff")
     secondary(done, "bets")
 
-    # The decision (amendment 3, section 4, and amendment 4): after 40 signals or the end of the 2026
-    # regular season, whichever is later, on the signals that kicked off by then. Later signals never enter it.
-    def rb_numbers(dec):
-        m, lo, hi, n = mean_ci(dec.clv_pts)
-        return ("KEEP" if (m > 0 and lo > 0) else NOT_KEPT), dict(n_bets=len(dec), mean_clv=f(m), ci_low=f(lo),
-                                                                 ci_high=f(hi), n_clv=int(n))
 
-    def rb_show(verdict, nums, fresh=False):
-        if "horizon" not in nums:              # the test ended with fewer than 40
-            print(f"  decision (Rule B), FINAL: {verdict}. The test ended with {nums['n_bets']} settled signals, "
-                  f"fewer than {ENOUGH}.")
-            return
-        m, lo, hi = (np.nan if nums[k] is None else nums[k] for k in ("mean_clv", "ci_low", "ci_high"))
-        lead = ("    " if fresh else
-                "  decision (Rule B: after 40 signals or the 2026 regular season, whichever is later), FINAL: ")
-        print(f"{lead}{verdict}, on the {nums['n_bets']} signals that kicked off by {nums['horizon']}: "
-              f"mean CLV {m:+.2f} (95% CI {lo:+.2f} to {hi:+.2f}, n={nums['n_clv']})")
+# The decision (amendment 3, section 4, and amendment 4): after 40 signals or the end of the 2026
+# regular season, whichever is later, on the signals that kicked off by then. Later signals never enter it.
+def rb_numbers(dec):
+    m, lo, hi, n = mean_ci(dec.clv_pts)
+    return ("KEEP" if (m > 0 and lo > 0) else NOT_KEPT), dict(n_bets=len(dec), mean_clv=f(m), ci_low=f(lo),
+                                                             ci_high=f(hi), n_clv=int(n))
 
-    def label(h):
-        return ("2026-12-12, the end of the regular season (Army-Navy)" if h == REG_END_2026
-                else f"{h:%Y-%m-%d %H:%M} UTC, the 40th signal's kickoff")
 
+def rb_show(verdict, nums, fresh=False):
+    if "horizon" not in nums:              # the test ended with fewer than 40
+        print(f"  decision (Rule B), FINAL: {verdict}. The test ended with {nums['n_bets']} settled signals, "
+              f"fewer than {ENOUGH}.")
+        return
+    m, lo, hi = (np.nan if nums[k] is None else nums[k] for k in ("mean_clv", "ci_low", "ci_high"))
+    lead = ("    " if fresh else
+            "  decision (Rule B: after 40 signals or the 2026 regular season, whichever is later), FINAL: ")
+    print(f"{lead}{verdict}, on the {nums['n_bets']} signals that kicked off by {nums['horizon']}: "
+          f"mean CLV {m:+.2f} (95% CI {lo:+.2f} to {hi:+.2f}, n={nums['n_clv']})")
+
+
+def label(h):
+    return ("2026-12-12, the end of the regular season (Army-Navy)" if h == REG_END_2026
+            else f"{h:%Y-%m-%d %H:%M} UTC, the 40th signal's kickoff")
+
+
+def entered(dec):
+    """The ledger rows behind a Rule B decision: each entry, and each later quote used as its close."""
+    return list(dec._row) + list(dec.close_row.dropna().astype(int))
+
+
+rec = recorded("Rule B")
+if len(done) or rec is not None:           # a recorded decision prints even when nothing is settled now
     by_kick = done.sort_values("start_utc")
     pending = bets[bets.status.eq("pending")]
     horizon = max(by_kick.start_utc.iloc[ENOUGH - 1], REG_END_2026) if len(done) >= ENOUGH else None
-    rec = recorded("Rule B")
     if rec is not None:
         h = pd.Timestamp(rec.horizon_utc)
         dec = by_kick[by_kick.start_utc <= h]
@@ -286,10 +347,10 @@ if len(done):
         verdict, nums = rb_numbers(dec)
         nums["horizon"] = label(horizon)
         rb_show(verdict, nums)
-        write_down("Rule B", RB_HORIZON, horizon, verdict, nums, dec._row)
+        write_down("Rule B", RB_HORIZON, horizon, verdict, nums, entered(dec))
     elif horizon is None and NOW >= TEST_END and not (pending.start_utc < TEST_END).any():
         rb_show("INCONCLUSIVE", {"n_bets": len(done)})
-        write_down("Rule B", RB_HORIZON, TEST_END, "INCONCLUSIVE", {"n_bets": len(done)}, done._row)
+        write_down("Rule B", RB_HORIZON, TEST_END, "INCONCLUSIVE", {"n_bets": len(done)}, entered(done))
     else:
         waiting = int((pending.start_utc <= horizon).sum()) if horizon is not None else len(pending)
         when = (f"Its horizon has passed: {label(horizon)}. The decision waits for {waiting} pending "
@@ -297,6 +358,7 @@ if len(done):
                 else "The decision comes after 40 signals or the 2026 regular season, whichever is later.")
         interim("Rule B", when, {"mean CLV > 0": m > 0, "95% interval above zero": lo > 0,
                                  f"{ENOUGH} settled signals": len(done) >= ENOUGH})
+if len(done):
     print(done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under", "close_src",
                 "close_total", "total", "clv_pts", "profit"]].to_string(index=False))
     print("  by price source:", done.line_src.value_counts().to_dict())
@@ -307,32 +369,37 @@ if len(done):
 ht = last[(last.start_utc >= HT_FIRST_KICK)] if "rule_ht" in last else last.iloc[0:0]
 ht = settle(ht[ht.rule_ht == "SIGNAL"]) if len(ht) else ht.assign(status="", void="", total=np.nan)
 ht_done = ht[ht.status.eq("settled")].copy()
+win, push = ht_done.total < ht_done.mkt_total, ht_done.total == ht_done.mkt_total
+ht_done["profit"] = np.where(push, 0, np.where(win, american_to_profit(ht_done.mkt_under), -1.0))
+ht_done["result"] = np.where(push, "P", np.where(win, "W", "L"))
 print(f"\nRULE_HT: {len(ht)} signals at the last quote before kickoff, ", end="")
 header(ht)
+
+
+def ht_numbers(d):
+    if not len(d):
+        return None, dict(n_bets=0)
+    w, n = int(d.result.eq("W").sum()), int(d.result.ne("P").sum())
+    each = np.asarray(1 / (1 + american_to_profit(d.mkt_under[d.result.ne("P")])), float)   # own break-evens
+    units = float(d.profit.sum())
+    nums = dict(n_bets=len(d), wins=w, losses=n - w, pushes=int(d.result.eq("P").sum()), units=units,
+                roi=units / len(d), avg_break_even=f(np.mean(each)) if n else None,
+                p_one_sided=tail_at_least(w, each) if n else None)
+    promote = bool(nums["p_one_sided"] is not None and nums["p_one_sided"] < 0.05 and nums["roi"] > 0)
+    return ("PROMOTE" if promote else "DROP" if nums["roi"] <= 0 else "STAY ON PAPER"), nums
+
+
+def ht_show(verdict, nums, fresh=False):
+    p = np.nan if nums["p_one_sided"] is None else nums["p_one_sided"]
+    if not fresh:
+        print(f"  decision (Rule HT: once, after the 2027 season), FINAL: {verdict} "
+              f"(promote needs one-sided p < 0.05 and ROI > 0; drop when ROI is zero or below)")
+    print(f"    on {nums['n_bets']} bets: record {nums['wins']}-{nums['losses']}-{nums['pushes']}, units "
+          f"{nums['units']:+.2f}, ROI {100 * nums['roi']:+.1f}%, one-sided p {p:.3f}")
+
+
+verdict, nums = ht_numbers(ht_done)
 if len(ht_done):
-    win, push = ht_done.total < ht_done.mkt_total, ht_done.total == ht_done.mkt_total
-    ht_done["profit"] = np.where(push, 0, np.where(win, american_to_profit(ht_done.mkt_under), -1.0))
-    ht_done["result"] = np.where(push, "P", np.where(win, "W", "L"))
-
-    def ht_numbers(d):
-        w, n = int(d.result.eq("W").sum()), int(d.result.ne("P").sum())
-        each = np.asarray(1 / (1 + american_to_profit(d.mkt_under[d.result.ne("P")])), float)   # own break-evens
-        units = float(d.profit.sum())
-        nums = dict(n_bets=len(d), wins=w, losses=n - w, pushes=int(d.result.eq("P").sum()), units=units,
-                    roi=units / len(d), avg_break_even=f(np.mean(each)) if n else None,
-                    p_one_sided=tail_at_least(w, each) if n else None)
-        promote = bool(nums["p_one_sided"] is not None and nums["p_one_sided"] < 0.05 and nums["roi"] > 0)
-        return ("PROMOTE" if promote else "DROP" if nums["roi"] <= 0 else "STAY ON PAPER"), nums
-
-    def ht_show(verdict, nums, fresh=False):
-        p = np.nan if nums["p_one_sided"] is None else nums["p_one_sided"]
-        if not fresh:
-            print(f"  decision (Rule HT: once, after the 2027 season), FINAL: {verdict} "
-                  f"(promote needs one-sided p < 0.05 and ROI > 0; drop when ROI is zero or below)")
-        print(f"    on {nums['n_bets']} bets: record {nums['wins']}-{nums['losses']}-{nums['pushes']}, units "
-              f"{nums['units']:+.2f}, ROI {100 * nums['roi']:+.1f}%, one-sided p {p:.3f}")
-
-    verdict, nums = ht_numbers(ht_done)
     be = np.nan if nums["avg_break_even"] is None else nums["avg_break_even"]
     p = np.nan if nums["p_one_sided"] is None else nums["p_one_sided"]
     w, n = nums["wins"], nums["wins"] + nums["losses"]
@@ -340,13 +407,14 @@ if len(ht_done):
           f"ROI {100 * nums['roi']:+.1f}% per bet placed; average break-even {100 * be:.1f}%, one-sided p {p:.3f} "
           f"(exact, against each bet's own break-even; pushes are left out of the exact test and count in ROI)")
     secondary(ht_done, "bets")
-    # The decision (amendments 1, 3 and 4): once, after the 2027 season's title game. "At or below
-    # break-even" is read at the prices taken: the bets, together, won nothing.
-    rec = recorded("Rule HT")
+# The decision (amendments 1, 3 and 4): once, after the 2027 season's title game. "At or below
+# break-even" is read at the prices taken: the bets, together, won nothing.
+rec = recorded("Rule HT")
+if len(ht_done) or rec is not None:        # a recorded decision prints even when nothing is settled now
     ht_pending = ht[ht.status.eq("pending")]
     if rec is not None:
-        verdict, nums = ht_numbers(ht_done[ht_done.start_utc < pd.Timestamp(rec.horizon_utc)])
-        reprint(rec, ht_show, verdict, nums, nums["n_bets"])
+        fresh, fresh_nums = ht_numbers(ht_done[ht_done.start_utc < pd.Timestamp(rec.horizon_utc)])
+        reprint(rec, ht_show, fresh, fresh_nums, fresh_nums["n_bets"])
     elif NOW >= TEST_END and not (ht_pending.start_utc < TEST_END).any():
         ht_show(verdict, nums)
         write_down("Rule HT", HT_HORIZON, TEST_END, verdict, nums, ht_done._row)
@@ -356,6 +424,7 @@ if len(ht_done):
                 f"{'s' if waiting != 1 else ''}." if NOW >= TEST_END else
                 "The decision comes once, after the 2027 season's title game (January 2028).")
         interim("Rule HT", when, {"one-sided p < 0.05": p < 0.05, "ROI > 0": nums["roi"] > 0})
+if len(ht_done):
     print(ht_done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under",
                    "ht_threshold", "total", "profit"]].to_string(index=False))
     # Amendment 3, section 2, and amendment 4: reported by price source. The decision uses every bet.
@@ -377,4 +446,9 @@ if fills_path.exists():
         if len(wc):
             print(f"\nCost of waiting, {rule.upper()}: {len(wc)} paper fills; vs the rule's quote the fill gained "
                   f"{wc.pts_gained.mean():+.2f} pts and {wc.profit_gained.mean():+.3f} units of payout per unit staked")
-print("\nVariants under forward test: 2 (RULE_B, RULE_HT).")
+if NOT_RECORDED:
+    print(f"\nDecision record: none written by this run: {NOT_RECORDED}.")
+else:
+    print("\nDecision record: the first final decision is written to " + (
+        "data/forward/decisions.csv (the live record)." if IS_LIVE else "decisions.csv beside this test ledger."))
+print("Variants under forward test: 2 (RULE_B, RULE_HT).")

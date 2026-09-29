@@ -105,5 +105,6 @@ RULE_HT: 43 signals at the last quote before kickoff, 43 settled, 0 pending, 0 v
 401778315 Fri 01-01 20:00 Florida International               UTSA cfbfastR close       62.5     -110.0     62.218106   77.0 -1.000000
   by price source: cfbfastR close 43 (24-19-0, units +2.82)
 
+Decision record: the first final decision is written to decisions.csv beside this test ledger.
 Variants under forward test: 2 (RULE_B, RULE_HT).
 

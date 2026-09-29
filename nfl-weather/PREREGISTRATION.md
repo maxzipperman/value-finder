@@ -322,8 +322,8 @@ size-of-total check (one per sport), to 200.
 A review of the scorer, made after amendment 5 was merged (pull request 50), found readings the earlier
 text left open. Every one is settled here, before any outcome exists. **No trigger, gate, price cap,
 stake or metric changes.** The rules version stays `v3-2026-09-28`, because the board behaves exactly
-as before; only `scripts/score_forward.py` changes. Where this amendment and amendment 5 differ, this
-one applies.
+as before; only `scripts/score_forward.py` changes. Where this amendment and any earlier text differ,
+this one applies.
 
 ### 1. A bet whose game was moved or never played is void
 
@@ -335,6 +335,9 @@ one applies.
   units, the CLV and the count toward 40.
 * A sportsbook voids the same bets. Wind rules meet this case more than most, because hurricanes
   postpone games.
+* A result that lands after day 30 brings the bet back: it is graded like any other bet from then on.
+  If a decision on its horizon is already recorded, the record stands, and the scorer prints the fresh
+  computation beside it (section 3).
 
 ### 2. A bet still waiting for its result holds its decision open
 
@@ -348,12 +351,25 @@ one applies.
 
 * The first time a decision is final, the scorer appends it to `data/forward/decisions.csv`: the rule,
   the horizon, the time it was decided (UTC), the number of bets, every number the decision used, the
-  verdict, and a fingerprint (sha256) of the ledger rows that entered it.
+  verdict, and a fingerprint (sha256) of the ledger rows that entered it (the entry rows; the closes
+  come from the schedule).
 * Every later run prints the recorded decision. If a fresh computation on the same horizon would now
   come out differently (a corrected score, say), the scorer prints both and says the recorded one
   stands.
-* A run on a test ledger (`--ledger`) writes `decisions.csv` beside that ledger, never into
-  `data/forward/`.
+* **Only a real run writes the record.** That is a run of the scorer on the live ledger
+  (`data/forward/ledger.csv`), on the real clock, reading the default schedule (`data/raw/games.csv`)
+  when that file was refreshed in the last 2 days. Every alert run refreshes it. The hub's daily
+  check-in runs the scorer this way, so the first check-in after a decision becomes final records it.
+  In every other case the scorer prints the decision and says why it wasn't recorded:
+  * a run with `--now` (a preview as of another time, for tests and rehearsals) records nothing;
+  * a schedule last refreshed more than 2 days ago records nothing, because played games would look
+    unscored and could be voided; refresh it and run the scorer again;
+  * a run on another ledger kept in `data/forward/` (the rewrite's backup copy) neither reads nor
+    writes the record;
+  * a copy of the scorer in another folder (a worker's worktree) run on the live ledger reads the record
+    but never writes it.
+* A run on a test ledger kept anywhere else (`--ledger`) writes `decisions.csv` beside that ledger,
+  never into `data/forward/`.
 
 ### 4. Horizons are dates
 
@@ -367,9 +383,10 @@ one applies.
 ### 5. The model lean's entry
 
 * The model lean's entry is **the earliest snapshot, at least 24 hours before kickoff, that has both a
-  lean and a posted total.** Amendment 5 said "the earliest snapshot at least 24 hours before kickoff".
-  The code took the earliest such row with a lean, and it could take one with no posted total and
-  grade it as a loss. The live ledger already has such a row: the 7:30 PM run on Sep 28 logged an
+  lean and a posted total.** This replaces the original "What counts" entry at the top of this file
+  ("the earliest snapshot taken at least 24 hours before kickoff"), which amendment 5 repeated. The
+  code took the earliest such row with a lean, and it could take one with no posted total and grade it
+  as a loss. The live ledger already has such a row: the 7:30 PM run on Sep 28 logged an
   under lean on Rams at Eagles (Week 4, outside the test) with a blank total.
 * Rule B's entry is its earliest `SIGNAL` row before kickoff. The 24-hour rule is the model lean's
   only; amendment 5, section 3 already gives Rule B's window as about 11 to 82 hours before kickoff.
@@ -381,6 +398,10 @@ one applies.
 * An inconclusive result at the 2026 horizon carries the rule into 2027 unchanged, as the original
   file says. It is decided once more after the 2027 regular season, on both seasons pooled, with mean
   CLV positive in each season.
+* A decision recorded after the 2027 regular season, with none recorded for 2026, is the decision. If a
+  2026 result lands later and brings 2026 to 40 settled bets, no 2026 decision is made.
+* While 2026 bets are still waiting for results that could bring 2026 to 40, the 2026 decision waits
+  for them; if they end up void and 2026 has fewer than 40, the pooled decision applies.
 * This applies to Rule B and to the model lean.
 
 ### 7. Ties with the close

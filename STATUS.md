@@ -92,9 +92,9 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
 
 8. **Scorer readings: nfl-weather amendment 6 and cfb-weather amendment 4 (Sep 29, registered on your yes).** Three reviews of #50 found no problem with the scheduled alert runs, and found readings the scorers left open. Both amendments settle them before any outcome exists; no trigger, gate, price cap, stake or metric changes. Deadlines: CFB before Thu Oct 1, 5:00 PM Pacific; NFL before Oct 8.
    - **Void and pending.** A bet whose game moved more than 24 hours, or has no result 30 days after kickoff, is void and not graded. A bet waiting for its result holds its decision open. The old one-week rule let a late result flip a final decision.
-   - **Decided once.** The first final decision is written to `data/forward/decisions.csv` and stands; later runs print it.
+   - **Decided once.** The first final decision is written to `data/forward/decisions.csv` and stands; later runs print it. Only a real run on the live ledger, with a schedule refreshed in the last 2 days, writes it; the daily check-in's scorer run is one. A preview with `--now` records nothing.
    - **NFL:** "after Week 18" is the last regular-season kickoff; the model lean enters only on a row with a posted total; an inconclusive 2026 decision is decided once more after 2027; ties with the close are left out of the win rate.
-   - **CFB:** Rule HT enters at the last quote with a valid price; Rule B's close is the last later quote, else the captured close; "not kept" means no money goes on the rule; Rule HT is reported by price source.
+   - **CFB:** Rule HT enters at the last quote with a valid price; Rule B's close is the last later quote, else the captured close (this overrides amendment 2's promise that the captured close never touches the decision); "not kept" means no money goes on the rule; Rule HT is reported by price source.
 
 ## Research sweep (Sep 28)
 

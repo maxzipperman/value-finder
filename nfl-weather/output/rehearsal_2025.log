@@ -46,6 +46,7 @@ status
 SIGNAL            17
 price_too_high     2
 
-Decision horizons (amendment 5, section 4, and amendment 6), for Rule B and the model lean alike: with 40 in the 2026 regular season, after Week 18 of 2026 (its last regular-season kickoff) on those bets, where a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A decision waits for every bet that kicked off by its horizon to settle or be void, and the first final one is written to decisions.csv beside the ledger.
+Decision horizons (amendment 5, section 4, and amendment 6), for Rule B and the model lean alike: with 40 in the 2026 regular season, after Week 18 of 2026 (its last regular-season kickoff) on those bets, where a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A decision waits for every bet that kicked off by its horizon to settle or be void, and the first final one is written down.
+Decision record: the first final decision is written to decisions.csv beside this test ledger.
 Variants under forward test: 2 (MODEL_LEAN, RULE_B).
 
