@@ -61,7 +61,7 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
        - two heat hypotheses pre-registered before any of their odds exist, in [`sharp-markets/docs/HEAT_HYPOTHESES.md`](sharp-markets/docs/HEAT_HYPOTHESES.md):
          - soccer: day-1 forecast heat index ≥ 90 °F → under at Pinnacle's close;
          - MLB: day-1 forecast temperature ≥ 90 °F at an open-air park → over.
-     - **Waiting on you: the plan after October. Decide around Oct 25, from real usage.** Live uses are estimated at about 9,400–19,700 credits a month: 20K ($30) covers the low case, and 100K ($59) the high case (the NBA collector polling all day).
+     - **Waiting on you: the plan after October. Decide around Oct 25, from real usage.** Live uses are estimated at about 14,100–20,000 credits a month (corrected Sep 29, [#33](https://github.com/maxzipperman/value-finder/issues/33): the NBA collector as shipped polls all day, 8,640–8,930 a month). 20K ($30) covers the low case with about 5,900 to spare; the high case (one-minute final-2h ticks on) needs 100K ($59), or the collector's window cut to game windows.
 2. **Close capture is live (Sep 28), as a secondary measure.** A launchd job (`com.valuefinder.closecapture`) runs every 15 minutes. It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the close in `*/data/forward/closes.csv`.
    - Both scorers now also report CLV against that close. The registered primary CLV and the decision rules are unchanged: nfl-weather amendment 3, cfb-weather amendment 2, both dated before any signal.
    - Rule HT keeps its entry at the last logged quote; the scorer also reports the captured close for it.

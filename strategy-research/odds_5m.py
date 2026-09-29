@@ -181,7 +181,11 @@ def live_month():
         ("Close capture (one call per kickoff slot)", "~137 NFL + CFB slots", 137),
         ("Trigger poller: every 10 min while a Rule B wind trigger is active", "~6 polls/h x 72 h x ~6 trigger windows", 2_600),
         ("NFL props, alternates, team totals log (event odds)", "70 games x 9 mkts x 4 snaps", 70 * 9 * 4),
-        ("NBA collector, PLAN.md s7 (5-min h2h ticks + 1-min final 2 h)", "27 game days x (144-288 + 0-205)", 14_175),
+        # As shipped (sharp-markets/config/sports/nba.yaml): a 56 h window before each tip, so in season
+        # some game is always inside it and every 5-minute tick acts: 288 a day, 30-31 days (8,640-8,928).
+        # One-minute final-2h ticks, if turned on, add up to ~205 a game day (27 game days).
+        ("NBA collector, PLAN.md s7 (5-min h2h ticks, 56 h window; + 1-min final 2 h if on)",
+         "288 ticks x 31 days + 27 game days x 0-205", 288 * 31 + 27 * 205),
     ]
     return pd.DataFrame(rows, columns=["live use", "arithmetic", "credits_per_month"])
 
