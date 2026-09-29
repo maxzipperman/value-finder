@@ -1,6 +1,7 @@
-"""Close capture (scripts/capture_close.py, amendment 3) writes one closing listing per game. A game is matched
-to the feed on its two teams AND its kickoff: the listing of those teams that starts nearest the scheduled
-kickoff, within 6 hours. Before Sep 29, 2026 it matched on the teams alone, so a feed that listed the same two
+"""Close capture (scripts/capture_close.py, amendment 3) writes at most one closing listing per game. A game is
+matched to the feed on its two teams AND its kickoff: among the listings of those teams that start within 6 hours
+of the scheduled kickoff, one with a complete Pinnacle quote first (as on the board), then the one nearest the
+kickoff. Before Sep 29, 2026 it matched on the teams alone, so a feed that listed the same two
 teams twice gave the game two sets of rows, and the scorer (which keeps a game's last Pinnacle row) could
 grade against the wrong listing. Everything here runs offline: the Odds API call is replaced by the
 project's own parser run on a made-up feed, and data/forward is a temp folder. Nothing is spent."""
@@ -84,7 +85,8 @@ def test_a_game_listed_twice_takes_the_listing_nearest_its_kickoff(tmp_path, mon
     assert list(chi.close_total) == [42.5, 42.5, 43.0]
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}
-    assert "2026_05_PHI_CHI: 2 feed listings of PHI at CHI" in out and "kept e1, the one nearest the kickoff" in out
+    assert "2026_05_PHI_CHI: 2 feed listings of PHI at CHI" in out
+    assert "kept e1, the nearest the kickoff with a Pinnacle quote" in out
 
 
 def test_two_listings_equally_near_kickoff_are_left_unmatched_and_reported(tmp_path, monkeypatch, capsys):
@@ -94,7 +96,7 @@ def test_two_listings_equally_near_kickoff_are_left_unmatched_and_reported(tmp_p
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"     # recorded as missing
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
-    assert "2 are equally near the kickoff, so none is kept and the close is missing" in out
+    assert "2 are equally good and equally near the kickoff, so none is kept and the close is missing" in out
     assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}       # retried, as for any missing close
     text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", events)
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}   # at most two calls
@@ -116,6 +118,62 @@ def test_a_listing_a_few_minutes_off_the_schedule_still_matches(tmp_path, monkey
     _, _, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert "listing" not in out                                                 # nothing to report
+
+
+# ------------------------------------------------------------------ a listing Pinnacle prices comes first, as on the board
+# board.one_row_per_game keeps the listing with a complete Pinnacle quote when a game is listed twice. Close
+# capture ranks the listings within 6 hours the same way before it looks at the time, so a stale relisting
+# without Pinnacle never displaces the priced one. origin/main recorded 42.5 in these cases too (it wrote both
+# listings, and the scorer reads only Pinnacle's row).
+STALE = {"draftkings": (44.5, -110, -110), "fanduel": (44.5, -110, -110)}          # no Pinnacle
+
+
+@pytest.mark.parametrize("fresh_start", ["2026-10-11T17:00:00Z",       # a relisted event at the same time
+                                         "2026-10-11T17:05:00Z"])      # the unpriced one is nearer the kickoff
+@pytest.mark.parametrize("stale_first", [False, True])
+def test_a_listing_with_a_pinnacle_quote_beats_a_nearer_one_without(tmp_path, monkeypatch, capsys, fresh_start,
+                                                                    stale_first):
+    stale = listing("e_stale", "CHI", "PHI", "2026-10-11T17:00:00Z", STALE)
+    fresh = listing("e_fresh", "CHI", "PHI", fresh_start, RIGHT)
+    events = ([stale, fresh] if stale_first else [fresh, stale]) + [listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    rows = pd.read_csv(tmp_path / "data" / "forward" / "closes.csv")
+    chi = rows[rows.game_id == "2026_05_PHI_CHI"]
+    assert list(chi.book) == ["pinnacle", "draftkings", "fanduel"]           # the priced listing's books only
+    assert list(chi.close_total) == [42.5, 42.5, 43.0]
+    assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
+    assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}   # one call, complete
+    assert "kept e_fresh, the nearest the kickoff with a Pinnacle quote" in out
+
+
+def test_two_listings_without_pinnacle_at_the_same_time_are_a_tie(tmp_path, monkeypatch, capsys):
+    """Neither gives a close the scorer can use, and the game takes neither: one empty row, retried once."""
+    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", STALE),
+              listing("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"draftkings": (45.0, -110, -110)}),
+              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
+    assert "2 are equally good and equally near the kickoff" in out
+    assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}
+
+
+# ------------------------------------------------------------------ a malformed start time costs only its own game
+def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path, monkeypatch, capsys):
+    events = [listing("e1", "CHI", "PHI", None, RIGHT), listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
+    assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
+    assert "1 feed listing of PHI at CHI (e1, no start time); none starts within 6 hours" in out
+    assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}       # the run finished and counted its call
+
+
+def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
+    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00.000Z", RIGHT),
+              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
+    assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}
+    assert "listing" not in out
 
 
 # ------------------------------------------------------------------ ordinary slots: unchanged, byte for byte

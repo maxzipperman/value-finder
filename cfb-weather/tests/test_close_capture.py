@@ -1,6 +1,7 @@
 """Close capture (scripts/capture_close.py, amendment 2) writes one closing row per game. A game is matched to the
-feed on its two teams AND its kickoff: the listing of those teams that starts nearest the scheduled kickoff,
-within 6 hours. Before Sep 29, 2026 it matched on the teams alone, so a feed that listed the same two teams
+feed on its two teams AND its kickoff: among the listings of those teams that start within 6 hours of the
+scheduled kickoff, one priced at Pinnacle first, then DraftKings, then neither (as on the board), then the one
+nearest the kickoff. Before Sep 29, 2026 it matched on the teams alone, so a feed that listed the same two teams
 twice (a relisted event, or a rematch such as a conference title game) gave the game two rows, and the scorer
 (which keeps a game's last row) could grade against the wrong listing. Everything here runs offline: the Odds
 API call is replaced by the project's own parser run on a made-up feed, the schedule is made up, and
@@ -86,7 +87,7 @@ def test_a_game_listed_twice_takes_the_listing_nearest_its_kickoff(tmp_path, mon
     assert scorer_reads(tmp_path) == {401: 48.5, 402: 55.5}
     assert state == {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}
     assert "401: 2 feed listings of Auburn at Alabama" in out
-    assert "kept the one starting 2026-11-28T20:30:00Z, nearest the kickoff" in out
+    assert "kept the one starting 2026-11-28T20:30:00Z, the nearest the kickoff priced at Pinnacle" in out
 
 
 def test_two_listings_equally_near_kickoff_are_left_unmatched_and_reported(tmp_path, monkeypatch, capsys):
@@ -96,7 +97,7 @@ def test_two_listings_equally_near_kickoff_are_left_unmatched_and_reported(tmp_p
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == ",401,2026-11-28T20:30:00Z,Alabama,Auburn,,,,"         # recorded as missing
     assert scorer_reads(tmp_path) == {402: 55.5}
-    assert "2 are equally near the kickoff, so none is kept and the close is missing" in out
+    assert "2 are equally good and equally near the kickoff, so none is kept and the close is missing" in out
     assert state == {"captured": [], "tries": {"2026-11-28T20:30Z": 1}}       # retried, as for any missing close
     text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-11-28T20:25:00Z", events)
     assert state["tries"]["2026-11-28T20:30Z"] == 2 and "2026-11-28T20:30Z" in state["captured"]   # at most two calls
@@ -110,6 +111,64 @@ def test_a_listing_more_than_6_hours_from_kickoff_is_not_the_close(tmp_path, mon
     assert text.splitlines()[1] == ",401,2026-11-28T20:30:00Z,Alabama,Auburn,,,,"
     assert scorer_reads(tmp_path) == {402: 55.5}
     assert "none starts within 6 hours of the kickoff, so the close is missing" in out
+
+
+# ------------------------------------------------------------------ Pinnacle, then DraftKings, then neither, as on the board
+# Registered text (amendment 2): "Pinnacle when it lists the game, else DraftKings, the same as the board".
+# board.one_row_per_game keeps the listing priced at the first of fetch.RULE_BOOKS when a game is listed twice.
+# Close capture ranks the listings within 6 hours the same way before it looks at the time. With an unpriced
+# relisting, origin/main also recorded 48.5 (its unpriced row has no total, and the scorer skips it); with a
+# DraftKings relisting, main recorded whichever listing the feed gave last.
+FD_ONLY = {"fanduel": (51.5, -110, -110)}                                     # priced at neither rule book
+DK_ONLY = {"draftkings": (50.5, -110, -110), "fanduel": (50.5, -110, -110)}
+
+
+@pytest.mark.parametrize("other", [FD_ONLY, DK_ONLY], ids=["unpriced", "draftkings"])
+@pytest.mark.parametrize("pin_start", ["2026-11-28T20:30:00Z",         # a relisted event at the same time
+                                       "2026-11-28T20:35:00Z"])        # the other listing is nearer the kickoff
+@pytest.mark.parametrize("other_first", [False, True])
+def test_a_listing_priced_at_pinnacle_beats_a_nearer_one_that_is_not(tmp_path, monkeypatch, capsys, other,
+                                                                     pin_start, other_first):
+    stale = listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", other, eid="stale")
+    fresh = listing("Alabama", "Auburn", pin_start, RIGHT, eid="fresh")
+    events = ([stale, fresh] if other_first else [fresh, stale]) + [listing("Georgia", "Georgia Tech",
+                                                                            "2026-11-28T20:30:00Z", UGA)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    rows = pd.read_csv(tmp_path / "data" / "forward" / "closes.csv")
+    assert list(rows.game_id) == [401, 402] and list(rows.line_src) == ["pinnacle", "draftkings"]   # one row each
+    assert list(rows.close_total) == [48.5, 55.5] and list(rows.close_under) == [-105, -112]
+    assert state == {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}   # one call, complete
+    assert f"kept the one starting {pin_start}, the nearest the kickoff priced at Pinnacle" in out
+
+
+def test_draftkings_beats_a_listing_priced_at_neither(tmp_path, monkeypatch, capsys):
+    events = [listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", FD_ONLY, eid="stale"),
+              listing("Alabama", "Auburn", "2026-11-28T20:40:00Z", DK_ONLY, eid="dk"),
+              listing("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert scorer_reads(tmp_path) == {401: 50.5, 402: 55.5}
+    assert "kept the one starting 2026-11-28T20:40:00Z, the nearest the kickoff priced at DraftKings" in out
+
+
+# ------------------------------------------------------------------ a malformed start time costs only its own game
+def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path, monkeypatch, capsys):
+    events = [listing("Alabama", "Auburn", None, RIGHT, eid="nostart"),
+              listing("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert text.splitlines()[1:] == [",401,2026-11-28T20:30:00Z,Alabama,Auburn,,,,",
+                                     "2026-11-28T20:15:00Z,402,2026-11-28T20:30:00Z,Georgia,Georgia Tech,draftkings,"
+                                     "55.5,-112.0,-108.0"]
+    assert "401: 1 feed listing of Auburn at Alabama (no start time); none starts within 6 hours" in out
+    assert state == {"captured": [], "tries": {"2026-11-28T20:30Z": 1}}       # the run finished and counted its call
+
+
+def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
+    events = [listing("Alabama", "Auburn", "2026-11-28T20:30:00.000Z", RIGHT),
+              listing("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert scorer_reads(tmp_path) == {401: 48.5, 402: 55.5}
+    assert state == {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}
+    assert "listing" not in out
 
 
 # ------------------------------------------------------------------ ordinary slots: unchanged, byte for byte

@@ -10,12 +10,17 @@ inside the window (at most MAX_TRIES calls per slot). What is still missing then
 missing: score_forward.py reports missing closes and never imputes them. The scorer
 takes each game's last captured row.
 
-Each game takes one feed listing (since Sep 29, 2026): the listing of its two teams that
-starts nearest the scheduled kickoff, and only within NEAR (6 hours) of it. The feed can list
-the same two teams more than once (a relisted event, or a rematch such as a conference title
-game), and matching on the teams alone wrote a row for every listing. Two listings equally
-near kickoff are a tie: the game takes neither and is recorded as missing, like a game the
-feed doesn't list. Every such case is printed. Listings that match no game due now are ignored.
+Each game takes at most one feed listing (since Sep 29, 2026). The feed can list the same two
+teams more than once (a relisted event, or a rematch such as a conference title game), and
+matching on the teams alone wrote a row for every listing. Now a listing counts for a game only
+if it has the game's two teams and starts within NEAR (6 hours) of the scheduled kickoff; one
+with no readable start time never counts. Among those, a listing priced at Pinnacle comes first,
+then one priced at DraftKings, then one priced at neither, as on the board (board.one_row_per_game,
+fetch.RULE_BOOKS); then the one starting nearest the kickoff. Two listings that are equally good
+and equally near are a tie, and the game takes neither. A tie, or no listing within 6 hours,
+leaves the game's close missing, like a game the feed doesn't list, and the slot is retried like
+any other missing close. Every such case is printed. Listings that match no game due now are
+ignored.
 
     python scripts/capture_close.py [--now 2026-10-01T23:50:00Z]
 """
@@ -36,30 +41,40 @@ from cfbweather.config import ROOT
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
 MAX_TRIES = 2
 NEAR = pd.Timedelta(hours=6)       # a listing belongs to a game only if it starts within this of the kickoff
+BOOK_NAME = {"pinnacle": "Pinnacle", "draftkings": "DraftKings"}   # for the printed notes only
 FWD = ROOT / "data" / "forward"
 CLOSES, STATE = FWD / "closes.csv", FWD / "close_state.json"
 
 
 def one_listing(due, feed):
     """The feed listing (its `listing` number; the parsed feed keeps no event id) each due game takes: same
-    home and away teams, starting within NEAR of the scheduled kickoff, the nearest if several do. A tie for
-    nearest takes none. Returns the (game_id, listing) pairs and a note for each game with more than one
-    listing of its teams, or none near."""
+    home and away teams, starting within NEAR of the scheduled kickoff. Among those, Pinnacle's price first,
+    then DraftKings', then neither (fetch.RULE_BOOKS, as board.one_row_per_game ranks them), then the nearest
+    the kickoff. A tie between equally good listings takes none. Returns the (game_id, listing) pairs and a
+    note for each game with more than one listing of its teams, or none taken."""
     c = due[["game_id", "start_utc", "home_team", "away_team"]].merge(
-        feed[["listing", "home_team", "away_team", "commence_utc"]], on=["home_team", "away_team"])
-    c["gap"] = (pd.to_datetime(c.commence_utc, utc=True) - c.start_utc).abs()
+        feed[["listing", "home_team", "away_team", "commence_utc", "line_src"]], on=["home_team", "away_team"])
+    start = pd.to_datetime(c.commence_utc, utc=True, format="ISO8601", errors="coerce")   # unreadable: NaT
+    c["gap"] = (start - c.start_utc).abs()
+    c["rank"] = c.line_src.map({b: i for i, b in enumerate(fetch.RULE_BOOKS)}).fillna(len(fetch.RULE_BOOKS))
+    c["seen"] = [f"starting {t}" if isinstance(t, str) else "no start time" for t in c.commence_utc]
     pick, notes = [], []
     for gid, x in c.groupby("game_id", sort=False):
         near = x[x.gap <= NEAR]
+        near = near[near["rank"] == near["rank"].min()]
         best = near[near.gap == near.gap.min()]
         head = (f"{gid}: {len(x)} feed listing{'s' * (len(x) > 1)} of {x.away_team.iloc[0]} at "
-                f"{x.home_team.iloc[0]}, starting {', '.join(x.commence_utc)}")
+                f"{x.home_team.iloc[0]} ({'; '.join(x.seen)})")
         if len(best) == 1:
             pick.append((gid, best.listing.iloc[0]))
             if len(x) > 1:
-                notes.append(f"{head}; kept the one starting {best.commence_utc.iloc[0]}, nearest the kickoff")
+                src = best.line_src.iloc[0]
+                why = (f"the nearest the kickoff priced at {BOOK_NAME.get(src, src)}" if src
+                       else "the nearest the kickoff; none is priced at Pinnacle or DraftKings")
+                notes.append(f"{head}; kept the one {best.seen.iloc[0]}, {why}")
         elif len(best) > 1:
-            notes.append(f"{head}; {len(best)} are equally near the kickoff, so none is kept and the close is missing")
+            notes.append(f"{head}; {len(best)} are equally good and equally near the kickoff, so none is kept "
+                         "and the close is missing")
         else:
             notes.append(f"{head}; none starts within 6 hours of the kickoff, so the close is missing")
     return pd.DataFrame(pick, columns=["game_id", "listing"]), notes

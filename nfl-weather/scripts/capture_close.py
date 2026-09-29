@@ -10,12 +10,16 @@ next run while it's still inside the window (at most MAX_TRIES calls per slot). 
 still missing then stays missing: score_forward.py reports missing closes and never
 imputes them. The scorer takes each game's last captured row.
 
-Each game takes one feed listing (since Sep 29, 2026): the listing of its two teams that
-starts nearest the scheduled kickoff, and only within NEAR (6 hours) of it. The feed can list
-the same two teams more than once (a relisted event, or a rematch later in the season), and
-matching on the teams alone wrote every listing's rows. Two listings equally near kickoff are
-a tie: the game takes neither and is recorded as missing, like a game the feed doesn't list.
-Every such case is printed. Listings that match no game due now are ignored.
+Each game takes at most one feed listing (since Sep 29, 2026). The feed can list the same two
+teams more than once (a relisted event, or a rematch later in the season), and matching on the
+teams alone wrote every listing's rows. Now a listing counts for a game only if it has the
+game's two teams and starts within NEAR (6 hours) of the scheduled kickoff; one with no readable
+start time never counts. Among those, a listing with a complete Pinnacle quote (a total and a
+valid under price) comes first, as on the board (board.one_row_per_game); then the one starting
+nearest the kickoff. Two listings that are equally good and equally near are a tie, and the game
+takes neither. A tie, or no listing within 6 hours, leaves the game's close missing, like a game
+the feed doesn't list, and the slot is retried like any other missing close. Every such case is
+printed. Listings that match no game due now are ignored.
 
     python scripts/capture_close.py [--now 2026-10-09T00:05:00Z]
 """
@@ -30,6 +34,7 @@ import pandas as pd
 
 from nflweather import oddsapi
 from nflweather.config import RAW, ROOT
+from nflweather.market import valid_odds
 
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
 MAX_TRIES = 2
@@ -40,24 +45,35 @@ CLOSES, STATE = FWD / "closes.csv", FWD / "close_state.json"
 
 def one_listing(due, feed):
     """The feed listing (event_id) each due game takes: same home and away teams, starting within NEAR of
-    the scheduled kickoff, the nearest if several do. A tie for nearest takes none. Returns the
-    (game_id, event_id) pairs and a note for each game with more than one listing of its teams, or none near."""
+    the scheduled kickoff. Among those, one with a complete Pinnacle quote first (as board.one_row_per_game
+    ranks them), then the nearest the kickoff. A tie between equally good listings takes none. Returns the
+    (game_id, event_id) pairs and a note for each game with more than one listing of its teams, or none taken."""
     ev = feed[["event_id", "home_team", "away_team", "commence_utc"]].drop_duplicates("event_id")
+    pin = feed[feed.book.eq(oddsapi.RULE_BOOK)].drop_duplicates("event_id")
+    quoted = set(pin.event_id[pin.close_total.notna() & valid_odds(pin.close_under)])
     c = due[["game_id", "kick_utc", "home_team", "away_team"]].merge(ev, on=["home_team", "away_team"])
-    c["gap"] = (pd.to_datetime(c.commence_utc, utc=True) - c.kick_utc).abs()
+    start = pd.to_datetime(c.commence_utc, utc=True, format="ISO8601", errors="coerce")   # unreadable: NaT
+    c["gap"] = (start - c.kick_utc).abs()
+    c["quoted"] = c.event_id.isin(quoted)
     pick, notes = [], []
     for gid, x in c.groupby("game_id", sort=False):
         near = x[x.gap <= NEAR]
+        if near.quoted.any():
+            near = near[near.quoted]
         best = near[near.gap == near.gap.min()]
-        seen = ", ".join(f"{t} ({e})" for t, e in zip(x.commence_utc, x.event_id))
+        seen = "; ".join(f"{e} starting {t}" if isinstance(t, str) else f"{e}, no start time"
+                         for t, e in zip(x.commence_utc, x.event_id))
         head = (f"{gid}: {len(x)} feed listing{'s' * (len(x) > 1)} of {x.away_team.iloc[0]} at "
-                f"{x.home_team.iloc[0]}, starting {seen}")
+                f"{x.home_team.iloc[0]} ({seen})")
         if len(best) == 1:
             pick.append((gid, best.event_id.iloc[0]))
             if len(x) > 1:
-                notes.append(f"{head}; kept {best.event_id.iloc[0]}, the one nearest the kickoff")
+                why = ("the nearest the kickoff with a Pinnacle quote" if best.quoted.iloc[0]
+                       else "the nearest the kickoff; none has a Pinnacle quote")
+                notes.append(f"{head}; kept {best.event_id.iloc[0]}, {why}")
         elif len(best) > 1:
-            notes.append(f"{head}; {len(best)} are equally near the kickoff, so none is kept and the close is missing")
+            notes.append(f"{head}; {len(best)} are equally good and equally near the kickoff, so none is kept "
+                         "and the close is missing")
         else:
             notes.append(f"{head}; none starts within 6 hours of the kickoff, so the close is missing")
     return pd.DataFrame(pick, columns=["game_id", "event_id"]), notes
