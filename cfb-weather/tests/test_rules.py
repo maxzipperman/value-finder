@@ -62,10 +62,14 @@ def test_rule_ht_status(kw, expected):
     assert board.rule_ht_status(ht(**kw)) == expected
 
 
-def test_ht_2026_threshold_matches_the_screen(monkeypatch):
+def test_ht_2026_threshold_is_frozen_and_the_recompute_is_recorded(monkeypatch):
+    """2026's threshold was frozen at 62.6175 before Week 6 (2025 mean 52.6175 + 10 on the data as it
+    stood). The #36 spread fix (Sep 28) rebuilt games.parquet with a third more spread pairs, and the
+    same recompute now gives 62.53: the frozen value stays, and this test pins both so a silent drift
+    in either would fail."""
     assert board.HT_FROZEN[2026] == pytest.approx(62.6175, abs=1e-3)
     monkeypatch.setattr(board, "HT_FROZEN", {})                   # recompute from the processed data
-    assert board.ht_threshold(2026) == pytest.approx(62.6175, abs=1e-3)
+    assert board.ht_threshold(2026) == pytest.approx(62.53, abs=0.02)
 
 
 def test_scorer_grades_ht_at_the_last_quote(tmp_path):

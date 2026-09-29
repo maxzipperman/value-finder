@@ -88,7 +88,7 @@ This adds **1 variant**, for a running total of 135.
 | After, FBS-involved games only (the forward test's population) | 434–326 (57.1%) |
 | Only the games the old code dropped, old thresholds | 113–99 (53.3%) |
 
-Rule HT and its frozen 2026 threshold of 62.6 don't change. On rebuilt data the threshold recomputes to 62.53, so `tests/test_rules.py` would need a decision. The rebuild waits for the hub; see [`STATUS.md`](../STATUS.md).
+**Rebuilt on Sep 28 (owner decision).** `games.parquet` now holds the corrected column. Rule HT and its frozen 2026 threshold of 62.6175 are unchanged; on the rebuilt data the 2025 mean recomputes to 52.53 (62.53 + 10), 0.08 below the frozen value, and `test_ht_2026_threshold_matches_the_screen` now pins the frozen constant and that recompute. The 109-row screen is unchanged by the rebuild (it uses the spread only as a has-a-line filter). The pre-checks that use the spread itself moved: Rule HT by spread size 179–114 (61.1%) → 249–169 (59.6%) at 14+ and 194–159 (55.0%) → 253–224 (53.0%) under 14; Rule HT at the consensus close 220–158 (58.2%) → 230–171 (57.4%), at the best book 223–156 → 234–168 (58.2%); CFB Rule B 131–102 → 135–102 (57.0%) and 133–100 → 137–100 (57.8%); the Rule HT open-to-close rise +0.83 → +0.85. **2027 threshold:** the owner chose the FBS-involved population for 2027 (the games the rule can fire on); a dated amendment to `PREREGISTRATION.md` will register it before 2027 Week 0. On 2025 data the two means differ by 0.01.
 
 ## Data
 
