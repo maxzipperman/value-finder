@@ -3,9 +3,9 @@
 #
 # windows: date ranges (UTC dates) swept with the historical /events endpoint to build exact
 # schedules; clipped to history_from. sealed: true = the season is a sealed holdout (pulled while the
-# credits last, never analysed until a hypothesis about it is pre-registered). Default rule, pending
-# the owner's decision 1: calendar-2026 games for MLB, soccer and the World Cup; the 2026 season for
-# NFL and CFB; 2026-27 for NBA and NHL (2025-26 is the NBA study season in docs/PLAN.md).
+# credits last, never analysed until a hypothesis about it is pre-registered). Owner decision 1
+# (Sep 28): calendar-2026 games for MLB, soccer and the World Cup; the 2026 season for NFL and CFB;
+# 2026-27 for NBA and NHL (2025-26 is the NBA study season in docs/PLAN.md).
 
 books:
   us10: [pinnacle, lowvig, betonlineag, draftkings, fanduel, betmgm, williamhill_us, fanatics, betrivers, espnbet]
@@ -184,5 +184,5 @@ pulls:
        books: sharp3, markets: h2h, only_seasons: ["2025-26"], cache_as: {sport: nba, source: oddsapi_hist}}
   F6: {kind: event, sports: [americanfootball_ncaaf], books: us10, from: 2023-05-03, offsets: [0],
        markets: "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions"}
-  X3: {kind: featured, sports: [americanfootball_nfl, americanfootball_ncaaf], schedule: hourly, books: exchanges,
-       only_seasons: ["2025"]}
+# X3 (exchange book group, hourly, 2025) was dropped by the owner on Sep 28: the same data is free
+# from Kalshi and Polymarket at better resolution. Its 231,630 credits went to the reserve.

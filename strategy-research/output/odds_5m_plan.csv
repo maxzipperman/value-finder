@@ -1,14 +1,14 @@
-id,pull,arithmetic,credits,value,primary_hypothesis,cumulative,in_plan
-F1,"NFL+CFB featured, 10 books, daily 16:00 UTC for 7 days pre-kickoff + every close, 2020-26","30 x 5,407 snapshots",162210,4,"Soft-book prices beyond the sharp fair line earn CLV (price engine, #8)",162210,True
-F2,"NFL alternate spreads, alternate totals, team totals at T-24h, T-2h, close, 2023-26","10 x 3 mkts x 3 snaps x 1,140 games",102600,3,Alternate lines misprice key-number crossings vs recent-era margins,264810,True
-F3,"NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-48h, T-24h, T-2h, close, 2023-26","10 x 6 mkts x 4 snaps x 1,140 games",273600,3,Yardage-prop unders beat 50% (#10); kicking-points unders in wind/cold (#21),538410,True
-B1,"MLB featured (moneyline, run line, totals), daily + every close, 2020-26","30 x 11,949 snapshots (estimate)",358470,3,Open-air park weather (PR D) -> totals; wind in -> under,896880,True
-S1,"Soccer heat leagues and tournaments, featured (h2h 3-way, spreads, totals), daily + every close","30 x 16,399 snapshots (estimate)",491970,3,Kickoff heat index >= threshold (PR D) -> under at the close,1388850,True
-F4,"NFL+CFB featured, 10 books, HOURLY for 7 days pre-kickoff, 2020-26","30 x 53,481 snapshots",1604430,3,Hour-to-hour line moves reverse before the close (#16),2993280,True
-H1,"NHL featured (moneyline, puck line, totals), daily + every close, 2020-26","30 x 5,462 snapshots (estimate)",163860,2,Favorite-longshot bias and soft-price flags (no weather: indoor),3157140,True
-N2,"NBA featured, daily + every close, seasons other than 2025-26","30 x 5,682 snapshots (estimate)",170460,2,Favorite-longshot bias and soft-price flags at the best price,3327600,True
-F5,"CFB alternate lines and team totals at T-24h and close, 2023-26","10 x 3 mkts x 2 snaps x 3,698 games",221880,2,Rule HT-style shrinkage shows up in team totals and alternates,3549480,True
-N1,"NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D)","10 x 1 mkt x 49,398 snapshots, less cached",478530,2,H1/H2: Kalshi static edge and lag vs Pinnacle (PLAN.md),4028010,True
-F6,"CFB props (4 yardage markets) at the close, 2023-26 (upper bound; thin coverage)","10 x 4 mkts x 3,698 games",147920,1,Median-vs-mean props in CFB,4175930,True
-X3,"Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025","10 x 3 x 7,721 snapshots",231630,1,Better data is free from Kalshi and Polymarket directly,4407560,True
-X2,"5-min NFL+CFB totals for 72h before windy kickoffs, 2024-25","10 x 1 x 70,558 snapshots",705580,1,Forecast-run timing; needs run-issue timestamps first,5113140,False
+id,pull,arithmetic,credits,value,primary_hypothesis,dropped,cumulative,in_plan
+F1,"NFL+CFB featured, 10 books, daily 16:00 UTC for 7 days pre-kickoff + every close, 2020-26","30 x 5,407 snapshots",162210,4,"Soft-book prices beyond the sharp fair line earn CLV (price engine, #8)",False,162210,True
+F2,"NFL alternate spreads, alternate totals, team totals at T-24h, T-2h, close, 2023-26","10 x 3 mkts x 3 snaps x 1,140 games",102600,3,Alternate lines misprice key-number crossings vs recent-era margins,False,264810,True
+F3,"NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-48h, T-24h, T-2h, close, 2023-26","10 x 6 mkts x 4 snaps x 1,140 games",273600,3,Yardage-prop unders beat 50% (#10); kicking-points unders in wind/cold (#21),False,538410,True
+B1,"MLB featured (moneyline, run line, totals), daily + every close, 2020-26","30 x 11,949 snapshots (estimate)",358470,3,Open-air park weather (PR D) -> totals; wind in -> under,False,896880,True
+S1,"Soccer heat leagues and tournaments, featured (h2h 3-way, spreads, totals), daily + every close","30 x 16,399 snapshots (estimate)",491970,3,Kickoff heat index >= threshold (PR D) -> under at the close,False,1388850,True
+F4,"NFL+CFB featured, 10 books, HOURLY for 7 days pre-kickoff, 2020-26","30 x 53,481 snapshots",1604430,3,Hour-to-hour line moves reverse before the close (#16),False,2993280,True
+H1,"NHL featured (moneyline, puck line, totals), daily + every close, 2020-26","30 x 5,462 snapshots (estimate)",163860,2,Favorite-longshot bias and soft-price flags (no weather: indoor),False,3157140,True
+N2,"NBA featured, daily + every close, seasons other than 2025-26","30 x 5,682 snapshots (estimate)",170460,2,Favorite-longshot bias and soft-price flags at the best price,False,3327600,True
+F5,"CFB alternate lines and team totals at T-24h and close, 2023-26","10 x 3 mkts x 2 snaps x 3,698 games",221880,2,Rule HT-style shrinkage shows up in team totals and alternates,False,3549480,True
+N1,"NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D)","10 x 1 mkt x 49,398 snapshots, less cached",478530,2,H1/H2: Kalshi static edge and lag vs Pinnacle (PLAN.md),False,4028010,True
+F6,"CFB props (4 yardage markets) at the close, 2023-26 (upper bound; thin coverage)","10 x 4 mkts x 3,698 games",147920,1,Median-vs-mean props in CFB,False,4175930,True
+X3,"Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025","10 x 3 x 7,721 snapshots",231630,1,Better data is free from Kalshi and Polymarket directly,True,4175930,False
+X2,"5-min NFL+CFB totals for 72h before windy kickoffs, 2024-25","10 x 1 x 70,558 snapshots",705580,1,Forecast-run timing; needs run-issue timestamps first,False,4881510,False

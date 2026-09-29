@@ -10,14 +10,27 @@ Which Odds API plan this repo should pay for, month by month, and what each extr
 
 The owner will buy **one 5M month ($119) as soon as the pullers pass their tests, around October 1–3, 2026**. That replaces the October pilot and the March month below. The target is about 4.5M credits of history, plus a 300K reserve for probes, the live uses during the month and mistakes. [`odds_5m.py`](odds_5m.py) makes the plan. Its outputs are [`output/odds_5m_plan.csv`](output/odds_5m_plan.csv), [`odds_5m_seasons.csv`](output/odds_5m_seasons.csv) and [`odds_5m_live.csv`](output/odds_5m_live.csv).
 
-### Decisions for the owner
+### Owner decisions (answered September 28, 2026)
 
-1. **What counts as "the 2026 season" for NBA and NHL.** 2025-26 is the NBA study season in `sharp-markets/docs/PLAN.md` (H1/H2), so it is *not* sealed here; 2026-27 is.
-   - **Recommendation:** seal games played in calendar 2026 for the calendar-year sports (MLB, all soccer, World Cup 2026), the 2026 season for NFL and CFB, and 2026-27 for NBA and NHL.
-2. **Hourly football history (F4, 1.60M credits, a third of the budget).** It's in the plan because the budget allows it and it answers #16 at hourly resolution. If you'd rather spend it on something else, the next candidate is the 5-minute forecast windows (X2, 706K), which sit below the cut.
-3. **The exchange group (X3, 232K) just makes the cut.** Kalshi and Polymarket history is free from their own APIs. It's kept only because it lines up exactly with the sportsbook snapshots; drop it for more headroom.
-4. **The Odds API terms of use weren't reachable from the cloud.** The plan keeps raw paid data out of git and commits only compact derived tables. The hub should check the terms before the first derived table is committed.
-5. **Live uses after the month:** about 5K–20K credits a month, depending on the NBA collector. The 20K plan ($30) covers the low case. The high case (collector polling all day) needs the 100K plan ($59), or cut the collector to game windows. See [below](#after-the-month-live-uses).
+The owner answered all five questions, via the hub. The purchase is set for **Thursday, October 1**, and the hub runs [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](../sharp-markets/docs/ODDS5M_DAY_ONE.md) on the Mac that day.
+
+1. **Holdout: the recommended split.** Sealed seasons:
+   - the 2026 NFL and CFB seasons;
+   - games played in calendar 2026 for MLB, every soccer league and the 2026 World Cup;
+   - the 2026-27 NBA and NHL seasons.
+
+   NBA research uses 2025-26, the study season in `sharp-markets/docs/PLAN.md`. `sharp-markets/config/odds5m.yaml` matches this exactly.
+2. **Keep F4, the hourly football history (1.60M).** X2, the 5-minute windows, stays below the cut and is deferred.
+3. **Drop X3, the exchange group (232K).** The same data is free from Kalshi and Polymarket at better resolution. Its credits go to the reserve, not to new pulls.
+4. **Terms of use.** The hub checked [the-odds-api.com/terms-and-conditions](https://the-odds-api.com/terms-and-conditions) from the Mac:
+   - Storing data indefinitely is allowed.
+   - Research, dashboards and model training are allowed.
+   - "Calculating and displaying values you derive from our data" is allowed.
+   - Reselling or redistributing the raw data as a standalone data product is not allowed.
+   - The terms don't say whether billing cycles follow the calendar month (see C6 below).
+
+   So compact derived tables may go into this private repo, and raw responses stay out of git. That resolves open question 4.
+5. **After October: the owner decides around October 25, from real usage.** The estimates to decide with are in [below](#after-the-month-live-uses): the 20K plan ($30) covers the low case (about 9,400 credits a month). The high case (about 19,700, with the NBA collector polling all day) needs the 100K plan ($59), or the collector cut to game windows.
 
 ### The pulls, ranked by research value
 
@@ -36,10 +49,10 @@ Value is scored 1 to 5. The cut line is 4.5M. Football counts are exact, from ou
 | F5 | 2 | CFB alternate lines and team totals at T−24h and the close, 2023–26 | 221,880 | 3,549,480 |
 | N1 | 2 | NBA 2025-26 at 5-minute resolution, moneyline, 3 sharp books (PLAN.md schedule D) | 478,530 | 4,028,010 |
 | F6 | 1 | CFB props at the close, 2023–26 (an upper bound; coverage is thin) | 147,920 | 4,175,930 |
-| X3 | 1 | Exchange group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025 | 231,630 | 4,407,560 |
-| *X2* | *1* | *Below the cut:* 5-minute NFL+CFB totals for 72 hours before windy kickoffs, 2024–25 | *705,580* | — |
+| ~~X3~~ | 1 | *Dropped by the owner:* exchange group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025 | ~~231,630~~ | — |
+| *X2* | *1* | *Below the cut, deferred:* 5-minute NFL+CFB totals for 72 hours before windy kickoffs, 2024–25 | *705,580* | — |
 
-**Total:** 4,407,560 credits of history plus the 300,000 reserve comes to 4,707,560 of 5,000,000.
+**Total:** 4,175,930 credits of history. The reserve is 531,630: the original 300,000 plus X3's 231,630. That leaves 292,440 of the 5,000,000 unallocated.
 
 - **Sequencing:** pull the value-4 and value-3 items first, so a mistake can only cost the bottom of the list.
 - **How the soccer leagues were chosen.** They're the summer and heat leagues with Odds API history from mid-2020. (There's no international-friendlies key.)
@@ -59,7 +72,7 @@ Value is scored 1 to 5. The cut line is 4.5M. Football counts are exact, from ou
 
 ### Data-use plan
 
-**Sealed holdout.** Every 2026-season game in every sport is pulled, but it isn't examined until a hypothesis about it is pre-registered. See owner decision 1 for the NBA and NHL definition. All exploration uses 2020–25. The sharp-markets loaders will enforce this with a holdout flag in the manifest (PR B).
+**Sealed holdout.** Every 2026-season game in every sport is pulled, but it isn't examined until a hypothesis about it is pre-registered. Owner decision 1 defines the seasons; for NBA and NHL that's 2026-27. All exploration uses 2020–25 (NBA through 2025-26). The sharp-markets puller enforces this: the manifest flags sealed calls, and `bulk.load_rows()` leaves sealed rows out by default (PR B, #28).
 
 | Pull | Primary hypothesis | Metric | Variants |
 |---|---|---|---|
@@ -73,7 +86,7 @@ Value is scored 1 to 5. The cut line is 4.5M. Football counts are exact, from ou
 | N2, H1 | Favorite-longshot bias at the best price, by odds band | ROI by band | 4 + 4 |
 | F5, F6 | CFB shrinkage in team totals and alternates; CFB median-vs-mean props | Win rate, ROI | 2 + 2 |
 
-**Variant count:** 56 new variants on top of 135 makes **191**, so the Bonferroni bar is **p < 0.00026**. Nothing without a line in this table gets analysed. X3 is context only (0 variants).
+**Variant count:** 56 new variants on top of 135 makes **191**, so the Bonferroni bar is **p < 0.00026**. Nothing without a line in this table gets analysed. X3 carried no variants, so dropping it leaves the count at 191.
 
 ### After the month: live uses
 
@@ -88,7 +101,7 @@ These are live calls, so they cost 1 credit per market per book group per call, 
 | NBA collector from PLAN.md §7, from the Oct 20 opener | 3,900–14,200 |
 | **Total** | **about 9,400–19,700** |
 
-**Flag for the owner:** the low case fits the 20K plan ($30 a month) with room to spare. The high case is at its limit, so either trim the NBA collector to game windows or take the 100K plan ($59) during the NBA season.
+**The owner decides around October 25, from real usage** (decision 5). The low case fits the 20K plan ($30 a month) with room to spare. The high case is at the 20K plan's limit, so either trim the NBA collector to game windows or take the 100K plan ($59) during the NBA season.
 
 ---
 
@@ -147,7 +160,7 @@ These are things you need to do or decide. This pull request doesn't change any 
 6. **Back up what you buy.** Paid data can't be re-created without paying again.
    - Keep `*/data/raw/oddsapi*` in an encrypted backup outside git.
    - Commit a pull manifest (requested and returned timestamps, `x-requests-last`, file hashes).
-   - Commit compact derived tables to `data/processed/` only after checking the Odds API terms of use, which were unreachable from here.
+   - Commit compact derived tables to `data/processed/` only after checking the Odds API terms of use. (Since checked by the hub: derived tables are allowed, and raw responses stay out of git. See the 5M-month decisions above.)
 7. **Keep M1 at 10 books or fewer.** At 11 books it bills as two regions, which doubles M1. Pilot one week first.
 
 ---

@@ -170,7 +170,8 @@ def main(argv: list[str] | None = None) -> None:
     f.add_argument("--week-of", default="auto", help="week stage: YYYY-MM-DD, or auto (first week of the latest unsealed season)")
     f.add_argument("--confirm", action="store_true", help="actually spend credits")
     f.add_argument("--max-credits", type=int, default=0, help="credit budget for this run")
-    f.add_argument("--floor", type=int, default=300_000, help="stop when the account would drop below this")
+    f.add_argument("--floor", type=int, default=531_630,
+                   help="stop when the account would drop below this (the reserve: 300K + X3's 231,630)")
     f.add_argument("--rate", type=float, default=8.0, help="requests per second (the API allows 30)")
     f.set_defaults(fn=cmd_odds5m)
 
