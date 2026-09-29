@@ -1,6 +1,6 @@
 # Value Finder: status
 
-*Updated September 28, 2026*
+*Updated September 29, 2026*
 
 Paper-only sports-betting research. The goal is to find prices the market gets wrong, and to prove each one on a pre-registered forward test graded on closing-line value (CLV) before any money goes in. Nothing in this repo places bets.
 
@@ -47,7 +47,7 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
        - the 2026 NFL and CFB seasons;
        - calendar-2026 MLB, soccer and World Cup games;
        - the 2026-27 NBA and NHL seasons.
-     - **Variants:** they would rise from 135 to 191.
+     - **Variants:** the plan commits 56, so the count is 191 and new analyses already use p < 0.00026 (0.05 / 191).
      - **Pullers (PR B):** `sharp-markets` now has the bulk puller (`uv run markets odds5m`). It is tested against mocked responses; the hub runs it on day one by [`sharp-markets/docs/ODDS5M_DAY_ONE.md`](sharp-markets/docs/ODDS5M_DAY_ONE.md). The first step is a probe of about 10.6K credits that builds exact schedules and checks the billing.
      - **Live uses (PR C):** three logging-only launchd jobs, described in [`ops/LIVE_USES.md`](ops/LIVE_USES.md). The hub installs them with `ops/install_live_uses.sh` once the paid key is in the `.env` files:
        - the wind-trigger price poller (NFL + CFB);
@@ -55,12 +55,15 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
        - the NBA collector (from Oct 20).
 
        They run only on a paid plan and stop at a background floor, so the alerts and close capture keep their credits.
+       - **The paid key goes in all three `.env` files** (sharp-markets, nfl-weather, cfb-weather). The shared quota file now records which key made each call and ignores other keys' records, and the installer refuses to run unless the three keys match ([#33](https://github.com/maxzipperman/value-finder/issues/33)).
      - **Weather joins and heat hypotheses (PR D):**
        - venue tables for every MLB park and every soccer venue in the chosen leagues and tournaments (`sharp-markets/config/venues/`);
        - a free Open-Meteo fetch the hub runs on the Mac after the probe (`markets weather`);
        - two heat hypotheses pre-registered before any of their odds exist, in [`sharp-markets/docs/HEAT_HYPOTHESES.md`](sharp-markets/docs/HEAT_HYPOTHESES.md):
          - soccer: day-1 forecast heat index ≥ 90 °F → under at Pinnacle's close;
          - MLB: day-1 forecast temperature ≥ 90 °F at an open-air park → over.
+       - **Amendments 1–3 (Sep 29, [#33](https://github.com/maxzipperman/value-finder/issues/33)), before any odds or outcome was joined:** consistent roof labels (Euro 2024 now counts; World Cup 2022 is out as a competition); result sources and settlement rules; World Cup 2026 is in the sealed confirmation sample. The file freezes at the first join of any outcome or odds to weather.
+     - **Review fixes (Sep 29, [#33](https://github.com/maxzipperman/value-finder/issues/33)):** a 3-lens review of PRs B–D found no blockers. All 19 findings are fixed, including stable Open-Meteo cache keys, weighted Open-Meteo budgets, `--now` as a dry run everywhere, a crash-safe props log in decimal odds, and a drop-pulls line of 4,440,000 in the day-one doc.
      - **Waiting on you: the plan after October. Decide around Oct 25, from real usage.** Live uses are estimated at about 14,100–20,000 credits a month (corrected Sep 29, [#33](https://github.com/maxzipperman/value-finder/issues/33): the NBA collector as shipped polls all day, 8,640–8,930 a month). 20K ($30) covers the low case with about 5,900 to spare; the high case (one-minute final-2h ticks on) needs 100K ($59), or the collector's window cut to game windows.
 2. **Close capture is live (Sep 28), as a secondary measure.** A launchd job (`com.valuefinder.closecapture`) runs every 15 minutes. It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the close in `*/data/forward/closes.csv`.
    - Both scorers now also report CLV against that close. The registered primary CLV and the decision rules are unchanged: nfl-weather amendment 3, cfb-weather amendment 2, both dated before any signal.
