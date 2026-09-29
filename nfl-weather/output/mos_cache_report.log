@@ -1,0 +1,68 @@
+NFL MOS cache, seasons 2004-2025: what each (station, season) request returned
+  asked of the nearest station: 487 windows (4251 games at 29 stations)
+  nearest station: 487 windows: ok 459, no runs 6, no wind 22, unreadable 0, not downloaded 0
+  next-nearest, for the nearest's empty answers: 28 windows: ok 0, no runs 0, no wind 0, unreadable 0, not downloaded 28
+
+Windows with no usable forecast (56):
+  rank 0 KCGS 2004: no runs, 8 games, KCGS_GFS_2004090900_2005010118.csv
+  rank 0 KCGS 2005: no runs, 8 games, KCGS_GFS_2005090800_2005122318.csv
+  rank 0 KCGS 2006: no runs, 8 games, KCGS_GFS_2006090800_2006122918.csv
+  rank 0 KCGS 2007: no runs, 8 games, KCGS_GFS_2007090600_2007122918.csv
+  rank 0 KCGS 2008: no runs, 8 games, KCGS_GFS_2008091100_2008122018.csv
+  rank 0 KCGS 2009: no runs, 8 games, KCGS_GFS_2009091700_2009122618.csv
+  rank 0 KDMH 2004: no wind, 8 games, KDMH_GFS_2004091600_2005010118.csv
+  rank 0 KDMH 2005: no wind, 8 games, KDMH_GFS_2005090800_2005122418.csv
+  rank 0 KDMH 2006: no wind, 9 games, KDMH_GFS_2006091400_2007011218.csv
+  rank 0 KDMH 2007: no wind, 8 games, KDMH_GFS_2007091300_2007122918.csv
+  rank 0 KDMH 2008: no wind, 8 games, KDMH_GFS_2008090400_2008122718.csv
+  rank 0 KDMH 2009: no wind, 8 games, KDMH_GFS_2009091000_2009121918.csv
+  rank 0 KDMH 2010: no wind, 8 games, KDMH_GFS_2010092300_2011010118.csv
+  rank 0 KDMH 2011: no wind, 9 games, KDMH_GFS_2011090800_2012011418.csv
+  rank 0 KDMH 2012: no wind, 9 games, KDMH_GFS_2012090700_2013010518.csv
+  rank 0 KDMH 2013: no wind, 8 games, KDMH_GFS_2013091200_2013122118.csv
+  rank 0 KDMH 2014: no wind, 8 games, KDMH_GFS_2014090400_2014122718.csv
+  rank 0 KDMH 2015: no wind, 8 games, KDMH_GFS_2015092400_2015122618.csv
+  rank 0 KDMH 2016: no wind, 8 games, KDMH_GFS_2016090800_2016121718.csv
+  rank 0 KDMH 2017: no wind, 8 games, KDMH_GFS_2017091400_2017123018.csv
+  rank 0 KDMH 2018: no wind, 9 games, KDMH_GFS_2018090600_2019010518.csv
+  rank 0 KDMH 2019: no wind, 9 games, KDMH_GFS_2019091200_2020011018.csv
+  rank 0 KDMH 2020: no wind, 8 games, KDMH_GFS_2020091000_2020122618.csv
+  rank 0 KDMH 2021: no wind, 9 games, KDMH_GFS_2021091600_2022010818.csv
+  rank 0 KDMH 2022: no wind, 8 games, KDMH_GFS_2022091500_2022123118.csv
+  rank 0 KDMH 2023: no wind, 11 games, KDMH_GFS_2023090700_2024012718.csv
+  rank 0 KDMH 2024: no wind, 9 games, KDMH_GFS_2024091200_2025011018.csv
+  rank 0 KDMH 2025: no wind, 9 games, KDMH_GFS_2025091100_2025122018.csv
+  rank 1 KADW 2004: not downloaded, 8 games, (nothing cached)
+  rank 1 KADW 2005: not downloaded, 8 games, (nothing cached)
+  rank 1 KADW 2006: not downloaded, 8 games, (nothing cached)
+  rank 1 KADW 2007: not downloaded, 8 games, (nothing cached)
+  rank 1 KADW 2008: not downloaded, 8 games, (nothing cached)
+  rank 1 KADW 2009: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2004: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2005: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2006: not downloaded, 9 games, (nothing cached)
+  rank 1 KBWI 2007: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2008: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2009: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2010: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2011: not downloaded, 9 games, (nothing cached)
+  rank 1 KBWI 2012: not downloaded, 9 games, (nothing cached)
+  rank 1 KBWI 2013: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2014: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2015: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2016: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2017: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2018: not downloaded, 9 games, (nothing cached)
+  rank 1 KBWI 2019: not downloaded, 9 games, (nothing cached)
+  rank 1 KBWI 2020: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2021: not downloaded, 9 games, (nothing cached)
+  rank 1 KBWI 2022: not downloaded, 8 games, (nothing cached)
+  rank 1 KBWI 2023: not downloaded, 11 games, (nothing cached)
+  rank 1 KBWI 2024: not downloaded, 9 games, (nothing cached)
+  rank 1 KBWI 2025: not downloaded, 9 games, (nothing cached)
+
+Next-nearest windows not downloaded: 28 requests, about 3 min (235 games): KADW 6, KBWI 22. Rerunning scripts/mos_fetch.py fetches them.
+
+The whole cache (~/.cache/value-finder/mos, shared with cfb-weather): 2609 files: no runs 13, no wind 22, ok 2574
+  no runs: 13 files, stations KCGS, KIGX
+  no wind: 22 files, stations KDMH

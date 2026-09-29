@@ -1,0 +1,17 @@
+CFB MOS cache, seasons 2006-2025: what each (station, season) request returned
+  asked of the nearest station: 2119 windows (12501 games at 129 stations)
+  nearest station: 2119 windows: ok 2112, no runs 7, no wind 0, unreadable 0, not downloaded 0
+  next-nearest, for the nearest's empty answers: 7 windows: ok 7, no runs 0, no wind 0, unreadable 0, not downloaded 0
+
+Windows with no usable forecast (7):
+  rank 0 KCGS 2006: no runs, 2 games, KCGS_GFS_2006090800_2006122918.csv
+  rank 0 KCGS 2007: no runs, 5 games, KCGS_GFS_2007090600_2007122918.csv
+  rank 0 KCGS 2008: no runs, 2 games, KCGS_GFS_2008091100_2008122018.csv
+  rank 0 KCGS 2009: no runs, 7 games, KCGS_GFS_2009090900_2009112718.csv
+  rank 0 KIGX 2023: no runs, 14 games, KIGX_GFS_2023090100_2023112418.csv
+  rank 0 KIGX 2024: no runs, 13 games, KIGX_GFS_2024082700_2024112918.csv
+  rank 0 KIGX 2025: no runs, 12 games, KIGX_GFS_2025082500_2025112818.csv
+
+The whole cache (~/.cache/value-finder/mos, shared with nfl-weather): 2609 files: no runs 13, no wind 22, ok 2574
+  no runs: 13 files, stations KCGS, KIGX
+  no wind: 22 files, stations KDMH
