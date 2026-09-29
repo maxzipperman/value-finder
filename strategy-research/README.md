@@ -197,7 +197,9 @@ Section 4 of [`simulate_decisions.py`](simulate_decisions.py) ([`output/money_ga
   - CFB is aligned on Army–Navy (Dec 12, 2026); bowls keep their calendar dates.
   - NFL uses the 2026 schedule, Weeks 5–18.
   - The wind cut-off is set so a season averages 25, 40 or 55 CFB signals, or 17 or 25 NFL signals.
-- **Thresholds.** The issue's gates keep their textbook thresholds. The gates added here have thresholds set by simulation, so that with no edge they pass at most 5% (or 10%) of the time in every case: either sport, independent or correlated signals, any season volume, and 0–40% of signals with a CLV of exactly 0. There are two kinds:
+- **Thresholds.** The issue's gates keep their textbook thresholds. The gates added here have thresholds set by simulation on separate draws, so that with no edge they pass at most 5% (or 10%) of the time in every case: either sport, independent or correlated signals, any season volume, and 0–40% of signals with a CLV of exactly 0.
+  - Checked on the main draws, the worst case is 4.96% for the 5% sequential gates and 5.05% for the single looks. That is within the simulation's error of about 0.1 point.
+  - There are two kinds of added gate:
   - a single look at a fixed signal count;
   - sequential gates, which look after every settled signal from the 10th to the 40th.
 - **Terms.**
