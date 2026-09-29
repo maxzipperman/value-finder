@@ -113,14 +113,19 @@ def _get(path, params):
     return r
 
 
-def live(markets=("totals", "spreads"), budget: Budget | None = None):
+def live(markets=("totals", "spreads"), budget: Budget | None = None, tag: str | None = None):
     """Current lines at LIVE_BOOKS (Pinnacle first) for every upcoming NFL game. Costs len(markets)
-    credits. Skipped when quota.check() says the month's credits are too low for this kind of run."""
+    credits. Skipped when quota.check() says the month's credits are too low for this kind of run.
+
+    The raw file is named to the second, plus `_{tag}` when given (the trigger poller passes "poll"),
+    so the alerts, close capture and the poller never overwrite each other's snapshot in the same
+    minute. The payload's snapshot_utc keeps its minute format."""
     why = quota.check()
     if why:
         raise OddsAPIUnavailable(why)
-    ts = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H%MZ")
-    dest = CACHE / "live" / f"{ts}.json"
+    now = pd.Timestamp.now(tz="UTC")
+    ts = now.strftime("%Y-%m-%dT%H%MZ")
+    dest = CACHE / "live" / f"{now:%Y-%m-%dT%H%M%SZ}{'_' + tag if tag else ''}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     r = _get(f"/sports/{SPORT}/odds", dict(bookmakers=",".join(LIVE_BOOKS), markets=",".join(markets),
                                             oddsFormat="american", dateFormat="iso"))
@@ -224,9 +229,14 @@ def backfill(games, seasons=(2024, 2025), markets=("totals",), confirm=False, ma
 
 
 def lines_table(games: pd.DataFrame) -> pd.DataFrame:
-    """Every cached Pinnacle snapshot, matched to nflverse game_id, with minutes to kickoff."""
+    """Every cached Pinnacle snapshot, matched to nflverse game_id, with minutes to kickoff.
+
+    The trigger poller's files (`*_poll.json`) are left out: they are taken only for games with a
+    wind trigger, so they would thicken the snapshot series exactly where Rule B fires, and they are
+    sealed 2026 data (ops/LIVE_USES.md). They stay in data/raw/oddsapi/live/ for their own analysis."""
     frames = []
-    for f in sorted((CACHE / "historical").glob("*.json")) + sorted((CACHE / "live").glob("*.json")):
+    live = [f for f in sorted((CACHE / "live").glob("*.json")) if not f.stem.endswith("_poll")]
+    for f in sorted((CACHE / "historical").glob("*.json")) + live:
         frames.append(parse(json.loads(f.read_text())))
     if not frames:
         return pd.DataFrame()

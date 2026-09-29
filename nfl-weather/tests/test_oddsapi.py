@@ -106,3 +106,20 @@ def test_historical_snapshot_uses_the_api_timestamp(api):
 def test_backfill_budget_covers_the_plan():
     import inspect
     assert inspect.signature(oddsapi.backfill).parameters["max_credits"].default >= 8_260
+
+
+def test_same_minute_snapshots_never_overwrite_and_polls_stay_out_of_the_lines_table(api, tmp_path, monkeypatch):
+    """#33 item 4: the alerts, close capture and the trigger poller can call in the same minute."""
+    monkeypatch.setattr(oddsapi, "PROC", tmp_path / "proc")
+    (tmp_path / "proc").mkdir()
+    api(Resp(body=[EVENT]))
+    t0 = pd.Timestamp("2026-10-11T12:00:05Z")
+    for sec, tag in ((0, None), (20, None), (65, "poll")):
+        monkeypatch.setattr(pd.Timestamp, "now", classmethod(lambda cls, tz=None, s=sec: t0 + pd.Timedelta(seconds=s)))
+        oddsapi.live(markets=("totals",), tag=tag)
+    names = sorted(f.name for f in (oddsapi.CACHE / "live").glob("*.json"))
+    assert names == ["2026-10-11T120005Z.json", "2026-10-11T120025Z.json", "2026-10-11T120110Z_poll.json"]
+    assert json.loads((oddsapi.CACHE / "live" / names[2]).read_text())["snapshot_utc"] == "2026-10-11T1201Z"
+    games = pd.DataFrame([dict(game_id="2026_06_GB_CHI", home_team="CHI", away_team="GB", gameday="2026-10-11")])
+    L = oddsapi.lines_table(games)
+    assert list(L.snapshot_utc.dt.strftime("%H:%M")) == ["12:00"]     # the 12:01 poll file is left out

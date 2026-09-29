@@ -39,7 +39,7 @@ if args.now:
     sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z trigger poll (dry run): would poll {len(active)} triggered games: "
                    + ", ".join(map(str, active.game_id))))
 try:
-    lines = oddsapi.live(markets=("totals",))
+    lines = oddsapi.live(markets=("totals",), tag="poll")     # raw file: data/raw/oddsapi/live/*_poll.json
 except SystemExit as e:
     sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z trigger poll: no prices for {len(active)} triggered games ({e})"))
 rows = live.trigger_rows(active, lines, pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"))
