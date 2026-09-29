@@ -85,7 +85,7 @@ def test_a_game_listed_twice_takes_the_listing_nearest_its_kickoff(tmp_path, mon
     assert list(chi.close_total) == [42.5, 42.5, 43.0]
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}
-    assert "2026_05_PHI_CHI: 2 feed listings of PHI at CHI" in out
+    assert "2026_05_PHI_CHI: 2 feed events of PHI at CHI" in out
     assert "kept e1, the nearest the kickoff with a Pinnacle quote" in out
 
 
@@ -117,7 +117,7 @@ def test_a_listing_a_few_minutes_off_the_schedule_still_matches(tmp_path, monkey
     events = [listing("e1", "CHI", "PHI", "2026-10-11T17:03:12Z", RIGHT), listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
     _, _, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
-    assert "listing" not in out                                                 # nothing to report
+    assert "feed event" not in out and "listing" not in out  # nothing to report
 
 
 # ------------------------------------------------------------------ a listing Pinnacle prices comes first, as on the board
@@ -158,9 +158,9 @@ def test_two_listings_without_pinnacle_at_the_same_time_are_a_tie(tmp_path, monk
 
 
 # ------------------------------------------------------------------ amendment 7, reading 2: the same game listed twice
-# Two listings equally near the kickoff that carry the same complete Pinnacle quote (the same total and prices) are
-# the same game listed twice: the first listed is taken. Before, it was a tie and the close was lost (the second
-# review of PR 62: main recorded 42.5 there, PR 62 recorded nothing and spent a second credit).
+# Two feed events equally near the kickoff that carry the same complete Pinnacle quote (the same total and prices)
+# are the same game listed twice: the first in the feed is taken. Before, it was a tie and the close was lost (the
+# second review of PR 62: main recorded 42.5 there, PR 62 recorded nothing and spent a second credit).
 @pytest.mark.parametrize("first", ["e1", "e2"])
 def test_two_listings_with_the_same_pinnacle_quote_are_one_game_listed_twice(tmp_path, monkeypatch, capsys, first):
     e1 = listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT)                      # Pinnacle, DK and FanDuel
@@ -172,8 +172,8 @@ def test_two_listings_with_the_same_pinnacle_quote_are_one_game_listed_twice(tmp
     assert list(chi.book) == (["pinnacle", "draftkings", "fanduel"] if first == "e1" else ["pinnacle"])  # the first's
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}   # one call, complete
-    assert (f"kept {first}, the first listed: the 2 listings equally near the kickoff carry the same Pinnacle quote, "
-            "so they are the same game listed twice") in out
+    assert (f"kept {first}, the first in the feed: the 2 feed events equally near the kickoff carry the same Pinnacle "
+            "quote, so they are the same game listed twice") in out
 
 
 @pytest.mark.parametrize("other", [(42.5, -110, -102), (43.0, -106, -106)], ids=["prices", "total"])
@@ -187,21 +187,35 @@ def test_equally_near_listings_whose_pinnacle_quotes_differ_are_still_a_tie(tmp_
     assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}
 
 
-# ------------------------------------------------------------------ amendment 7, reading 2: a feed with no events
-def test_a_feed_with_no_events_records_the_slot_and_ends_cleanly(tmp_path, monkeypatch, capsys):
+# ------------------------------------------------------------------ amendment 7, reading 2: no usable feed event
+# The second review of pull request 64 ran a feed with one event whose books list was empty: the note said "the odds
+# feed returned no events at all", which wasn't what happened. The note now says which of the two it was.
+UNPRICED = [dict(listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", {}), bookmakers=[]),
+            dict(listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", {}), bookmakers=[])]
+
+
+@pytest.mark.parametrize("events, said", [
+    ([], "the odds feed returned no events, so every game in the slot is recorded with no feed event"),
+    (UNPRICED, "the odds feed returned 2 events, none priced by any logged book, so every game in the slot is "
+               "recorded with no feed event"),
+    (UNPRICED[:1], "the odds feed returned 1 event, none priced by any logged book, so every game in the slot is "
+                   "recorded with no feed event")], ids=["no events", "two events no book prices", "one such event"])
+def test_a_feed_with_no_usable_event_records_the_slot_and_says_what_happened(tmp_path, monkeypatch, capsys, events,
+                                                                             said):
     """Before: AttributeError ('DataFrame' object has no attribute 'market') before the state was written, so the
-    try was never counted. Now every due game is written with no listing, like a game the feed doesn't list, and
+    try was never counted. Now every due game is written with no feed event, like a game the feed doesn't list, and
     the state is written as for any incomplete slot: tried once more, then closed."""
     blank = ("2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,\n"
              "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,,,,,,\n")
-    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, [])
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text == HEADER + blank
     assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}
     assert "Pinnacle close for 0/2 games, 0 books logged, for 2026-10-11T17:00Z" in out
-    assert "the odds feed returned no events at all, so every game in the slot is recorded with no listing" in out
-    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", [])
+    assert said in out and out.count("close capture:") == 2                 # the summary line and this one note
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", events)
     assert text == HEADER + blank + blank
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}   # at most two calls
+    assert oddsapi.parse.__name__ == "parse"                               # the parser is left as it was
 
 
 def test_a_feed_with_no_events_and_then_a_price_records_the_price(tmp_path, monkeypatch, capsys):
@@ -219,7 +233,7 @@ def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path,
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
-    assert "1 feed listing of PHI at CHI (e1, no start time); none starts within 6 hours" in out
+    assert "1 feed event of PHI at CHI (e1, no start time); none starts within 6 hours" in out
     assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}       # the run finished and counted its call
 
 
@@ -229,7 +243,7 @@ def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}
-    assert "listing" not in out
+    assert "feed event" not in out and "listing" not in out
 
 
 # ------------------------------------------------------------------ ordinary slots: unchanged, byte for byte
@@ -282,6 +296,6 @@ def test_an_ordinary_slot_writes_exactly_what_it_wrote_before(tmp_path, monkeypa
     runs, want_csv, want_state = ORDINARY[case]
     for now, events in runs:
         text, state, out = capture(tmp_path, monkeypatch, capsys, now, events)
-        assert "listing" not in out                                             # no duplicate, nothing to report
+        assert "feed event" not in out and "listing" not in out  # no duplicate, nothing to report
     assert text == want_csv
     assert state == want_state

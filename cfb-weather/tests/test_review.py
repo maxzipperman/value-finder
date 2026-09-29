@@ -23,11 +23,36 @@ PT = "America/Los_Angeles"
 
 
 # ------------------------------------------------------------------ the last scheduled run
-def test_last_run_check_works_on_the_macs_own_clock():
+def before_next_run(now):
+    """A kickoff that falls before the alert job's next scheduled run after `now`, whatever the time of day, so the
+    run at `now` is the last one before it: halfway to that run, and at most 30 minutes out. (A kickoff a fixed 30
+    minutes out failed whenever a scheduled run fell inside those 30 minutes, as it did once at 7:23 AM.)"""
+    nxt = board.next_scheduled_run(now.tz_convert(board.local_zone())).tz_convert("UTC")
+    return now + min(pd.Timedelta(minutes=30), (nxt - now) / 2)
+
+
+# The clock set to 29, 15, 5 and 1 minutes before each of the alert job's four run times (7:30, 11:30, 3:30 and
+# 7:30, the Mac's own time), on a fixed day in each half of the year, and the real clock as it is.
+CLOCKS = [None] + [pd.Timestamp(f"{day} {h:02d}:{m:02d}", tz=board.local_zone()) - pd.Timedelta(minutes=k)
+                   for day in ("2026-10-10", "2027-01-16") for h, m in board.RUN_TIMES for k in (29, 15, 5, 1)]
+CLOCK_IDS = ["the real clock"] + [f"{c:%Y-%m-%d %H:%M}" for c in CLOCKS[1:]]
+
+
+def set_clock(monkeypatch, at):
+    """Stop the clock: pd.Timestamp.now returns `at` (the real time when `at` is None), for the test and for the
+    alert run alike, so the kickoff and the run are placed against the same instant."""
+    at = pd.Timestamp.now(tz="UTC") if at is None else pd.Timestamp(at).tz_convert("UTC")
+    monkeypatch.setattr(pd.Timestamp, "now", staticmethod(lambda tz=None: at.tz_convert(tz) if tz is not None
+                                                          else at.tz_convert(board.local_zone()).tz_localize(None)))
+    return at
+
+
+@pytest.mark.parametrize("at", CLOCKS, ids=CLOCK_IDS)
+def test_last_run_check_works_on_the_macs_own_clock(monkeypatch, at):
     """The alert job calls it without a zone. That path raised, so the first Rule HT signal would have
     stopped every CFB alert."""
-    now = pd.Timestamp.now(tz="UTC")
-    assert board.is_last_run_before(now + pd.Timedelta(minutes=5), now) is True       # no run in 5 minutes
+    now = set_clock(monkeypatch, at)
+    assert board.is_last_run_before(before_next_run(now), now) is True               # no run before it
     assert board.is_last_run_before(now + pd.Timedelta(hours=30), now) is False
     assert board.is_last_run_before(now - pd.Timedelta(minutes=5), now) is False
     assert board.local_zone() is not None
@@ -209,7 +234,7 @@ def test_widening_the_ledger_leaves_old_rows_exactly_as_written(tmp_path):
 
 # ------------------------------------------------------------------ the alert run, end to end and offline
 def board_row(**kw):
-    kick = pd.Timestamp.now(tz="UTC") + pd.Timedelta(minutes=30)          # no scheduled run comes before it
+    kick = before_next_run(pd.Timestamp.now(tz="UTC"))                    # no scheduled run comes before it
     base = dict(game_id=401, away_team="Southern Miss", home_team="Troy", kick_et="Tue 10-06 20:00", lead_days=2,
                 start_utc=kick, wx_wind=18.0, wx_temp=55.0, line_src="pinnacle", mkt_total=63.5, mkt_under=-110.0,
                 ev_under=0.08, rule_b="SIGNAL", rule_ht="SIGNAL", ht_threshold=62.6175, best_under=np.nan,
@@ -234,8 +259,12 @@ def run_alerts(tmp_path, monkeypatch, up, save=None):
     return sent, runs, error
 
 
-def test_a_rule_ht_signal_alerts_on_the_live_path(tmp_path, monkeypatch):
-    """The blocker: with a Rule HT signal on the board the run crashed before any alert went out."""
+@pytest.mark.parametrize("at", CLOCKS, ids=CLOCK_IDS)
+def test_a_rule_ht_signal_alerts_on_the_live_path(tmp_path, monkeypatch, at):
+    """The blocker: with a Rule HT signal on the board the run crashed before any alert went out. The alert job
+    calls the last-run check with no time zone; the kickoff falls before the next scheduled run at any time of
+    day."""
+    set_clock(monkeypatch, at)
     sent, runs, error = run_alerts(tmp_path, monkeypatch, pd.DataFrame([board_row()]))
     assert error is None and runs.status.tolist() == ["ok"] and runs.signals.tolist() == [2]
     assert [t.split(":")[0] for t, _ in sent] == ["CFB HIGH TOTAL UNDER 63.5 at -110 (paper)",

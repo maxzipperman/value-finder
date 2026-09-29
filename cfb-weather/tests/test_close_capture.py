@@ -86,7 +86,7 @@ def test_a_game_listed_twice_takes_the_listing_nearest_its_kickoff(tmp_path, mon
     assert list(rows.game_id) == [401, 402]                                   # one row per game
     assert scorer_reads(tmp_path) == {401: 48.5, 402: 55.5}
     assert state == {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}
-    assert "401: 2 feed listings of Auburn at Alabama" in out
+    assert "401: 2 feed events of Auburn at Alabama" in out
     assert "kept the one starting 2026-11-28T20:30:00Z, the nearest the kickoff priced at Pinnacle" in out
 
 
@@ -151,8 +151,8 @@ def test_draftkings_beats_a_listing_priced_at_neither(tmp_path, monkeypatch, cap
 
 
 # ------------------------------------------------------------------ amendment 5, reading 2: the same game listed twice
-# Two listings equally near the kickoff, priced at the same rule book with the same quote (the same total and
-# prices), are the same game listed twice: the first listed is taken. Before, it was a tie and the close was lost
+# Two feed events equally near the kickoff, priced at the same rule book with the same quote (the same total and
+# prices), are the same game listed twice: the first in the feed is taken. Before, it was a tie and the close was lost
 # (the second review of PR 62: main recorded Georgia's 55.5 there, PR 62 recorded nothing).
 @pytest.mark.parametrize("book", ["pinnacle", "draftkings"])
 @pytest.mark.parametrize("extra_first", [False, True])
@@ -170,8 +170,8 @@ def test_two_listings_with_the_same_rule_book_quote_are_one_game_listed_twice(tm
     assert list(rows.close_total) == [48.5, 55.5] and list(rows.close_under) == [quote[1], -112]
     assert state == {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}   # one call, complete
     name = {"pinnacle": "Pinnacle", "draftkings": "DraftKings"}[book]
-    assert (f"kept the one starting 2026-11-28T20:30:00Z, the first listed: the 2 listings equally near the kickoff "
-            f"carry the same {name} quote, so they are the same game listed twice") in out
+    assert (f"kept the one starting 2026-11-28T20:30:00Z, the first in the feed: the 2 feed events equally near the "
+            f"kickoff carry the same {name} quote, so they are the same game listed twice") in out
 
 
 @pytest.mark.parametrize("other", [{"pinnacle": (48.5, -110, -110)}, {"pinnacle": (49.5, -105, -115)}],
@@ -204,7 +204,7 @@ def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path,
     assert text.splitlines()[1:] == [",401,2026-11-28T20:30:00Z,Alabama,Auburn,,,,",
                                      "2026-11-28T20:15:00Z,402,2026-11-28T20:30:00Z,Georgia,Georgia Tech,draftkings,"
                                      "55.5,-112.0,-108.0"]
-    assert "401: 1 feed listing of Auburn at Alabama (no start time); none starts within 6 hours" in out
+    assert "401: 1 feed event of Auburn at Alabama (no start time); none starts within 6 hours" in out
     assert state == {"captured": [], "tries": {"2026-11-28T20:30Z": 1}}       # the run finished and counted its call
 
 
@@ -214,7 +214,7 @@ def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
     text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
     assert scorer_reads(tmp_path) == {401: 48.5, 402: 55.5}
     assert state == {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}
-    assert "listing" not in out
+    assert "feed event" not in out and "listing" not in out
 
 
 # ------------------------------------------------------------------ ordinary slots: unchanged, byte for byte
@@ -262,6 +262,6 @@ def test_an_ordinary_slot_writes_exactly_what_it_wrote_before(tmp_path, monkeypa
     runs, want_csv, want_state = ORDINARY[case]
     for now, events in runs:
         text, state, out = capture(tmp_path, monkeypatch, capsys, now, events)
-        assert "listing" not in out                                             # no duplicate, nothing to report
+        assert "feed event" not in out and "listing" not in out  # no duplicate, nothing to report
     assert text == want_csv
     assert state == want_state

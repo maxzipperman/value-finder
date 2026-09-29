@@ -29,12 +29,12 @@ down, and every later run prints that record; if a fresh computation on the same
 differ, it prints both and the recorded one stands. Before that the script prints an interim read,
 which shows the numbers and decides nothing.
 
-The 95% interval of mean CLV (amendment 7, reading 1) is grouped by game day: the bets with a primary close
-are grouped by the Eastern calendar date of their game's actual kickoff, and the interval is
-m +/- t x sqrt((G / (G - 1)) x sum over days of (sum of that day's CLV - m)^2 / n^2), with t from Student's t
-on G - 1 degrees of freedom (G days, n bets, m their mean CLV). With fewer than 2 game days there is no
-interval and the decision is INCONCLUSIVE. The plain interval (m +/- 1.96 sd / sqrt(n)) is printed beside it,
-for reference, and both are recorded.
+The 95% interval of mean CLV (amendment 7, reading 1) is the wider of two, over the n bets with a primary close
+and their plain mean m: the plain half-width t(0.975, n - 1) x sd / sqrt(n), and the grouped half-width
+t(0.975, G - 1) x sqrt((G / (G - 1)) x sum over days of (sum of that day's CLV - m)^2 / n^2), the bets grouped by
+the Eastern calendar date of their game's actual kickoff (G days). The interval is m plus or minus the larger.
+With fewer than 2 game days (or 2 bets) there is no interval and the decision is INCONCLUSIVE. The scorer prints
+which of the two is the wider, and both; the record keeps the interval, both half-widths and G.
 
 Who writes a decision down (amendment 6, section 3): a run on the live ledger (data/forward/ledger.csv),
 on the real clock, reading the default schedule refreshed in the last 2 days, writes
@@ -54,10 +54,11 @@ recording without stopping the scores.
 Amendment 7, reading 3: in a damaged record, every decision whose line can still be read on its own is
 printed as recorded, never as a fresh FINAL. A decision that a decisions.csv still in place is missing, while
 its copy on the ledgers branch holds it, is restored from the copy by a real run (and read from the copy by
-any other run), never decided again. The copy protects a lost line only until the nightly copy publishes the
-shortened file; the scorer doesn't read the branch's earlier copies. A copy that can't be read stops recording
-whether or not the file is there, and each decision on a line of it that can still be read is printed from
-it as recorded; nothing is restored from a damaged copy.
+any other run), never decided again; the restore appends the copy's own line, byte for byte. The nightly copy
+(ops/sync_ledgers.sh) never publishes a file that has lost a line of the published copy, so the copy keeps every
+decision it ever held: the one case left is a decision recorded and lost on the same day, before that night's
+copy. A copy that can't be read stops recording whether or not the file is there, and each decision on a line
+of it that can still be read is printed from it as recorded; nothing is restored from a damaged copy.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
@@ -166,10 +167,10 @@ else:
 # ---------------------------------------------------------------- the decision record (amendment 6, reading 3)
 # What a recorded decision must hold for a later run to print it: its counts, its numbers (null when there is
 # none, as for an interval on one bet) and how its bets were split. Amendment 7: ci_low and ci_high are the
-# registered interval, grouped by game day over game_days days; plain_ci_low and plain_ci_high are the plain one,
-# kept for reference. No decision has been recorded yet, so no record without these keys exists.
+# registered interval, the mean plus or minus the wider of plain_half_width and grouped_half_width (the latter over
+# game_days game days). No decision has been recorded yet, so no record without these keys exists.
 COUNTS = ("n_bets", "n_clv", "beat_close", "vs_close_no_tie", "ties", "game_days")
-NUMBERS = ("mean_clv", "ci_low", "ci_high", "plain_ci_low", "plain_ci_high", "win_rate_vs_close")
+NUMBERS = ("mean_clv", "ci_low", "ci_high", "plain_half_width", "grouped_half_width", "win_rate_vs_close")
 
 
 def is_number(v, none_ok=False):
@@ -288,6 +289,14 @@ def copy_lines(readable):
             " No recorded decision in the copy can still be read.")
 
 
+def lines_held(data, ids):
+    """Amendment 7, reading 3: a readable copy's own record lines for these decision ids, byte for byte and in the
+    copy's order. A restore appends them as they are, so the file again holds every line of the published copy, and
+    the nightly copy (which never publishes a file that has lost a published line) publishes it again."""
+    pieces = data.split(b"\n")[1:-1]            # after the header; a readable copy ends with a line break
+    return b"".join(p + b"\n" for p in pieces if next(csv.reader([p.decode("utf-8")]), [""])[0] in ids)
+
+
 if DECISIONS is not None:
     # A lost live record is restored from its nightly copy before anything is decided, so it is never decided
     # again. Every run on a live ledger reads the copy; only a run that may record restores from it, and any other
@@ -362,7 +371,8 @@ if DECISIONS is not None:
                                     "until it is repaired or restored from the ledgers branch")
                 else:
                     add = lost[~lost.decision_id.isin(now_held.decision_id)]
-                    add.to_csv(DECISIONS, mode="a", header=False, index=False)
+                    with open(DECISIONS, "ab") as fh:         # the copy's own lines, byte for byte
+                        fh.write(lines_held(copy, set(add.decision_id)))
                     RESTORED, RECORD, lost = set(add.decision_id), pd.concat([now_held, add], ignore_index=True), None
             if RESTORED:
                 print(f"Decision record: data/forward/decisions.csv was missing {plural(len(RESTORED))} that its copy "
@@ -525,8 +535,8 @@ def grade(bets, side_col):
 
 
 def mean_ci(x):
-    """The plain interval: mean +/- 1.96 standard errors. The registered CLV interval is `interval` below; this
-    one is printed beside it for reference, and for the secondary CLV (amendment 3), which decides nothing."""
+    """Mean +/- 1.96 standard errors: the interval of the secondary CLV (amendment 3), which decides nothing. The
+    registered CLV interval is `interval` below."""
     x = pd.Series(x).dropna()
     if not len(x):
         return np.nan, np.nan, np.nan, 0
@@ -542,30 +552,42 @@ def game_day(bets):
 
 
 def interval(clv, day):
-    """Amendment 7, reading 1: the registered 95% interval of mean CLV, grouped by game day. Over the n bets that
-    have a CLV (a primary close): m is their mean; they are grouped by game day, G days; s_g is the sum over day
-    g's bets of (CLV - m); the variance of the mean is (G / (G - 1)) x sum(s_g^2) / n^2; the interval is m +/- t x
-    its square root, t the 97.5th percentile of Student's t on G - 1 degrees of freedom. Fewer than 2 game days:
-    no interval (nan). Returns (m, low, high, n, G, plain low, plain high)."""
+    """Amendment 7, reading 1: the registered 95% interval of mean CLV, the wider of two. Over the n bets that have a
+    CLV (a primary close), m is their plain mean.
+      plain half-width    t x s / sqrt(n), s their sample standard deviation, t the 97.5th percentile of Student's t
+                          on n - 1 degrees of freedom;
+      grouped half-width  t x the grouped standard error, t on G - 1 degrees of freedom: the bets grouped by game
+                          day, G days, s_g the sum over day g's bets of (CLV - m), the variance of the mean
+                          (G / (G - 1)) x sum(s_g^2) / n^2.
+    The registered interval is m plus or minus the larger of the two. With fewer than 2 game days or fewer than 2 bets
+    there is none (nan bounds). Returns a dict: m, lo, hi, n, G, plain (half-width) and grouped (half-width)."""
     d = pd.DataFrame({"clv": pd.to_numeric(pd.Series(clv).to_numpy(), errors="coerce"),
                       "day": pd.Series(day).to_numpy()}).dropna(subset=["clv"])
-    m, plo, phi, n = mean_ci(d.clv)
-    G = int(d.day.nunique(dropna=False))
+    n, G = len(d), int(d.day.nunique(dropna=False))
+    m = d.clv.mean() if n else np.nan
+    iv = dict(m=m, lo=np.nan, hi=np.nan, n=n, G=G, plain=np.nan, grouped=np.nan)
+    if n < 2:
+        return iv
+    iv["plain"] = stats.t.ppf(0.975, n - 1) * d.clv.std(ddof=1) / np.sqrt(n)
     if G < 2:
-        return m, np.nan, np.nan, n, G, plo, phi
+        return iv
     s = (d.clv - m).groupby(d.day, dropna=False).sum()
-    half = stats.t.ppf(0.975, G - 1) * np.sqrt(G / (G - 1) * (s ** 2).sum() / n ** 2)
-    return m, m - half, m + half, n, G, plo, phi
+    iv["grouped"] = stats.t.ppf(0.975, G - 1) * np.sqrt(G / (G - 1) * (s ** 2).sum() / n ** 2)
+    half = max(iv["plain"], iv["grouped"])
+    return iv | dict(lo=m - half, hi=m + half)
 
 
-def interval_text(lo, hi, n, G, plo, phi):
-    """The registered interval with its game days, and the plain one beside it."""
+def interval_text(m, lo, hi, n, G, plain, grouped):
+    """The registered interval, which of the two it is, and both."""
     if n < 2:
         return "no interval on one bet" if n else "no interval"
-    plain = f"plain, for reference: {plo:+.2f} to {phi:+.2f}"
     if G < 2:
-        return f"no interval: the bets with a primary close kicked off on 1 game day; {plain}"
-    return f"95% CI {lo:+.2f} to {hi:+.2f}, grouped by game day over {G} days; {plain}"
+        return "no interval: the bets with a primary close kicked off on 1 game day"
+    g, p = f"grouped {m - grouped:+.2f} to {m + grouped:+.2f}", f"plain {m - plain:+.2f} to {m + plain:+.2f}"
+    which = (f"the two are equally wide, over {G} game days ({g}; {p})" if np.isclose(grouped, plain, rtol=1e-9) else
+             f"the wider is the grouped one, over {G} game days ({g}; {p})" if grouped > plain else
+             f"the wider is the plain one ({p}; {g}, over {G} game days)")
+    return f"95% CI {lo:+.2f} to {hi:+.2f}; {which}"
 
 
 def report(name, bets):
@@ -577,12 +599,12 @@ def report(name, bets):
     if settled.empty:
         return settled
     w, p = int(settled.win.sum()), int(settled.push.sum())
-    m, lo, hi, n, G, plo, phi = interval(settled.clv_pts, game_day(settled))
+    iv = interval(settled.clv_pts, game_day(settled))
     print(f"  record at entry line {w}-{len(settled) - w - p}-{p}   units {settled.profit.sum():+.2f} "
           f"(ROI {100 * settled.profit.sum() / len(settled):+.1f}% per bet placed; "
           f"{int((~settled.priced).sum())} graded at an assumed -110)")
-    print(f"  mean CLV {m:+.2f} pts  ({interval_text(lo, hi, n, G, plo, phi)}; {int(settled.close_total.notna().sum())} "
-          f"of {len(settled)} bets have a primary close)")
+    print(f"  mean CLV {iv['m']:+.2f} pts; {int(settled.close_total.notna().sum())} of {len(settled)} bets have a "
+          f"primary close; {interval_text(**iv)}")
     cm, clo, chi, cn = mean_ci(settled.clv_cap)
     if cn:
         print(f"  secondary (amendment 3): mean CLV vs captured Pinnacle close {cm:+.2f} pts "
@@ -598,20 +620,21 @@ def report(name, bets):
 def assess(bets, split, split_name, final_label, enough=True):
     """The registered keep/drop test on `bets`, as numbers and a verdict. `split` labels each bet's half
     (or season); CLV must be positive in every part. Keep and drop both met is a DROP. With fewer than 20
-    bets that have a primary close the result is inconclusive (amendment 6, reading 11). The interval is grouped
-    by game day, and with fewer than 2 game days there is none and the result is inconclusive (amendment 7,
-    reading 1); the plain interval is kept beside it for reference."""
-    m, lo, hi, n, G, plo, phi = interval(bets.clv_pts, game_day(bets))
+    bets that have a primary close the result is inconclusive (amendment 6, reading 11). The interval is the wider
+    of the plain one and the one grouped by game day, and with fewer than 2 game days there is none and the result
+    is inconclusive (amendment 7, reading 1); the record keeps both half-widths and the number of game days."""
+    iv = interval(bets.clv_pts, game_day(bets))
+    n, G = iv["n"], iv["G"]
     has = bets.close_total.notna()
     graded = bets[has & ~bets.tie_close]                           # no close, or a tie with it: left out
     rate = graded.beat_close.mean() if len(graded) else np.nan
     parts = bets.assign(part=split).groupby("part").clv_pts.mean()
     f = lambda v: None if pd.isna(v) else float(v)                # noqa: E731
-    nums = dict(n_bets=len(bets), mean_clv=f(m), ci_low=f(lo), ci_high=f(hi), n_clv=int(n), win_rate_vs_close=f(rate),
-                beat_close=int(graded.beat_close.sum()), vs_close_no_tie=len(graded),
+    nums = dict(n_bets=len(bets), mean_clv=f(iv["m"]), ci_low=f(iv["lo"]), ci_high=f(iv["hi"]), n_clv=int(n),
+                win_rate_vs_close=f(rate), beat_close=int(graded.beat_close.sum()), vs_close_no_tie=len(graded),
                 ties=int((has & bets.tie_close).sum()), split=split_name,
-                by_part={str(k): float(v) for k, v in parts.items()}, game_days=G, plain_ci_low=f(plo),
-                plain_ci_high=f(phi))
+                by_part={str(k): float(v) for k, v in parts.items()}, game_days=G,
+                plain_half_width=f(iv["plain"]), grouped_half_width=f(iv["grouped"]))
     keep, drop = criteria(nums)
     head, tail = final_label[0].split(" (", 1)
     verdict = (final_label[1] if not enough else
@@ -636,13 +659,14 @@ def criteria(nums):
 
 
 def show(nums):
-    m, lo, hi, n, rate, plo, phi = (np.nan if nums[k] is None else nums[k] for k in (
-        "mean_clv", "ci_low", "ci_high", "n_clv", "win_rate_vs_close", "plain_ci_low", "plain_ci_high"))
+    m, lo, hi, n, rate, ph, gh = (np.nan if nums[k] is None else nums[k] for k in (
+        "mean_clv", "ci_low", "ci_high", "n_clv", "win_rate_vs_close", "plain_half_width", "grouped_half_width"))
     keep, drop = criteria(nums)
-    ci = interval_text(lo, hi, n, nums["game_days"], plo, phi)
-    print(f"    mean CLV {m:+.2f} ({ci}; n={n}); win rate vs the close {100 * rate:.1f}% ({nums['beat_close']} of "
-          f"the {nums['vs_close_no_tie']} bets that have a primary close and didn't tie it; {nums['ties']} ties left "
-          f"out); mean CLV by {nums['split']}: { {k: round(v, 2) for k, v in nums['by_part'].items()} }")
+    ci = interval_text(m, lo, hi, n, nums["game_days"], ph, gh)
+    print(f"    mean CLV {m:+.2f}, n={n}; {ci}")
+    print(f"    win rate vs the close {100 * rate:.1f}% ({nums['beat_close']} of the {nums['vs_close_no_tie']} bets "
+          f"that have a primary close and didn't tie it; {nums['ties']} ties left out); mean CLV by "
+          f"{nums['split']}: { {k: round(v, 2) for k, v in nums['by_part'].items()} }")
     if nums["n_bets"] > n:
         print(f"    {nums['n_bets'] - n} of the {nums['n_bets']} bets have no primary close (left out of the CLV and "
               "the win rate)")
@@ -847,8 +871,8 @@ print("\nDecision horizons (amendment 5, section 4, and amendment 6), for Rule B
       "a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular "
       "season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A "
       "decision waits for every bet that kicked off by its horizon to settle or be void, needs at least 20 bets "
-      "with a primary close, and the first final one is written down. Its 95% interval of mean CLV is grouped by "
-      "game day, and it needs at least 2 game days (amendment 7).")
+      "with a primary close, and the first final one is written down. Its 95% interval of mean CLV is the wider of "
+      "the plain one and the one grouped by game day, and it needs at least 2 game days (amendment 7).")
 if NOT_RECORDED:
     print(f"Decision record: none written by this run: {NOT_RECORDED}.")
 else:

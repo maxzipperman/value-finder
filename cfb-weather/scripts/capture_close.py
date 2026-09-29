@@ -10,22 +10,22 @@ inside the window (at most MAX_TRIES calls per slot). What is still missing then
 missing: score_forward.py reports missing closes and never imputes them. The scorer
 takes each game's last captured row.
 
-Each game takes at most one feed listing (since Sep 29, 2026). The feed can list the same two
-teams more than once (a relisted event, or a rematch such as a conference title game), and
-matching on the teams alone wrote a row for every listing. Now a listing counts for a game only
-if it has the game's two teams and starts within NEAR (6 hours) of the scheduled kickoff; one
-with no readable start time never counts. Among those, a listing priced at Pinnacle comes first,
-then one priced at DraftKings, then one priced at neither, as on the board (board.one_row_per_game,
-fetch.RULE_BOOKS); then the one starting nearest the kickoff. Two listings that are equally good
-and equally near are a tie, and the game takes neither. A tie, or no listing within 6 hours,
-leaves the game's close missing, like a game the feed doesn't list, and the slot is retried like
-any other missing close. Every such case is printed. Listings that match no game due now are
-ignored.
+A feed event is one event in The Odds API's odds feed: a game as the feed lists it, with its own start
+time and books. Each game takes at most one feed event (since Sep 29, 2026). The feed can list the same two
+teams more than once (a relisted event, or a rematch such as a conference title game), and matching on the
+teams alone wrote a row for every feed event. Now a feed event counts for a game only if it has the game's
+two teams and starts within NEAR (6 hours) of the scheduled kickoff; one with no readable start time never
+counts. Among those, a feed event priced at Pinnacle comes first, then one priced at DraftKings, then one
+priced at neither, as on the board (board.one_row_per_game, fetch.RULE_BOOKS); then the one starting nearest
+the kickoff. Two feed events that are equally good and equally near are a tie, and the game takes neither.
+A tie, or no feed event within 6 hours, leaves the game's close missing, like a game the feed doesn't list,
+and the slot is retried like any other missing close. Every such case is printed. Feed events that match no
+game due now are ignored.
 
-Amendment 5 (reading 2) registers that rule, with one change: when the equally near listings are all
-priced at the same rule book with the same quote (the same total and the same prices), they are the
-same game listed twice, and the first listed is taken. A tie between different quotes, or between
-listings priced at neither book, still takes neither.
+Amendment 5 (reading 2) registers that rule, with one change: when the equally near feed events are all
+priced at the same rule book with the same quote (the same total and the same prices), they are the same
+game listed twice, and the first in the feed is taken. A tie between different quotes, or between feed
+events priced at neither book, still takes neither.
 
     python scripts/capture_close.py [--now 2026-10-01T23:50:00Z]
 """
@@ -45,22 +45,22 @@ from cfbweather.config import ROOT
 
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
 MAX_TRIES = 2
-NEAR = pd.Timedelta(hours=6)       # a listing belongs to a game only if it starts within this of the kickoff
+NEAR = pd.Timedelta(hours=6)       # a feed event belongs to a game only if it starts within this of the kickoff
 BOOK_NAME = {"pinnacle": "Pinnacle", "draftkings": "DraftKings"}   # for the printed notes only
 FWD = ROOT / "data" / "forward"
 CLOSES, STATE = FWD / "closes.csv", FWD / "close_state.json"
 
 
-def one_listing(due, feed):
-    """The feed listing (its `listing` number; the parsed feed keeps no event id) each due game takes: same
-    home and away teams, starting within NEAR of the scheduled kickoff. Among those, Pinnacle's price first,
-    then DraftKings', then neither (fetch.RULE_BOOKS, as board.one_row_per_game ranks them), then the nearest
-    the kickoff. A tie between equally good listings takes none, unless they are all priced at the same rule
-    book with the same quote (the same total and prices): then they are the same game listed twice, and the
-    first listed is taken (amendment 5, reading 2). Returns the (game_id, listing) pairs and a note for each
-    game with more than one listing of its teams, or none taken."""
+def one_event(due, feed):
+    """The feed event (its `event` number, its place in the feed; the parsed feed keeps no event id) each due
+    game takes: same home and away teams, starting within NEAR of the scheduled kickoff. Among those,
+    Pinnacle's price first, then DraftKings', then neither (fetch.RULE_BOOKS, as board.one_row_per_game ranks
+    them), then the nearest the kickoff. A tie between equally good feed events takes none, unless they are all
+    priced at the same rule book with the same quote (the same total and prices): then they are the same game
+    listed twice, and the first in the feed is taken (amendment 5, reading 2). Returns the (game_id, event)
+    pairs and a note for each game with more than one feed event of its teams, or none taken."""
     c = due[["game_id", "start_utc", "home_team", "away_team"]].merge(
-        feed[["listing", "home_team", "away_team", "commence_utc", "line_src", "mkt_total", "mkt_under", "mkt_over"]],
+        feed[["event", "home_team", "away_team", "commence_utc", "line_src", "mkt_total", "mkt_under", "mkt_over"]],
         on=["home_team", "away_team"])
     start = pd.to_datetime(c.commence_utc, utc=True, format="ISO8601", errors="coerce")   # unreadable: NaT
     c["gap"] = (start - c.start_utc).abs()
@@ -73,16 +73,16 @@ def one_listing(due, feed):
         near = x[x.gap <= NEAR]
         near = near[near["rank"] == near["rank"].min()]
         best = near[near.gap == near.gap.min()]
-        head = (f"{gid}: {len(x)} feed listing{'s' * (len(x) > 1)} of {x.away_team.iloc[0]} at "
+        head = (f"{gid}: {len(x)} feed event{'s' * (len(x) > 1)} of {x.away_team.iloc[0]} at "
                 f"{x.home_team.iloc[0]} ({'; '.join(x.seen)})")
         if len(best) > 1 and best.line_src.isin(fetch.RULE_BOOKS).all() and best.quote.nunique() == 1:
-            first = best.sort_values("listing").iloc[0]
-            pick.append((gid, first.listing))
-            notes.append(f"{head}; kept the one {first.seen}, the first listed: the {len(best)} listings equally near "
-                         f"the kickoff carry the same {BOOK_NAME.get(first.line_src, first.line_src)} quote, so they "
-                         "are the same game listed twice")
+            first = best.sort_values("event").iloc[0]
+            pick.append((gid, first.event))
+            notes.append(f"{head}; kept the one {first.seen}, the first in the feed: the {len(best)} feed events "
+                         f"equally near the kickoff carry the same {BOOK_NAME.get(first.line_src, first.line_src)} "
+                         "quote, so they are the same game listed twice")
         elif len(best) == 1:
-            pick.append((gid, best.listing.iloc[0]))
+            pick.append((gid, best.event.iloc[0]))
             if len(x) > 1:
                 src = best.line_src.iloc[0]
                 why = (f"the nearest the kickoff priced at {BOOK_NAME.get(src, src)}" if src
@@ -93,7 +93,7 @@ def one_listing(due, feed):
                          "and the close is missing")
         else:
             notes.append(f"{head}; none starts within 6 hours of the kickoff, so the close is missing")
-    return pd.DataFrame(pick, columns=["game_id", "listing"]), notes
+    return pd.DataFrame(pick, columns=["game_id", "event"]), notes
 
 
 ap = argparse.ArgumentParser()
@@ -116,11 +116,11 @@ due = due[due.start_utc.dt.strftime("%Y-%m-%dT%H:%MZ").isin(slots)]
 oa = fetch.odds_api_totals(odds_team_names()).dropna(subset=["home_team", "away_team"])
 if oa.empty:
     sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)}; will retry inside the window"))
-oa = oa.reset_index(drop=True).rename_axis("listing").reset_index()
-pick, notes = one_listing(due, oa)
-oa = oa.merge(pick, on="listing")             # only the listing each due game takes, labelled with its game
+oa = oa.reset_index(drop=True).rename_axis("event").reset_index()     # each feed event, numbered in feed order
+pick, notes = one_event(due, oa)
+oa = oa.merge(pick, on="event")               # only the feed event each due game takes, labelled with its game
 got = due[["game_id", "start_utc", "home_team", "away_team"]].merge(
-    oa.drop(columns=["commence_utc", "listing"]), on=["game_id", "home_team", "away_team"], how="left")
+    oa.drop(columns=["commence_utc", "event"]), on=["game_id", "home_team", "away_team"], how="left")
 rows = got.rename(columns={"mkt_total": "close_total", "mkt_under": "close_under", "mkt_over": "close_over",
                            "quote_utc": "capture_utc"})
 rows["start_utc"] = rows.start_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ")

@@ -1,8 +1,10 @@
 """Amendment 4: the scorer readings that a review of pull request 50 found open. One test per reading,
 built on the reviewers' own scenarios (their inputs are reused here). Each test fails on the scorer as
 merged in pull request 50 and passes under amendment 4. Readings are numbered as amendment 4's sections."""
+import csv
 import fcntl
 import hashlib
+import io
 import json
 import os
 import re
@@ -864,40 +866,66 @@ def test_amendment_5_is_registered_as_the_hub_was_told_and_names_what_it_replace
         for q in quotes:
             assert norm(q) in norm(src), (label, q)
     one = amendment5_section(1)
-    for words in ("5.2%, 5.8% and 6.3% of the time; the grouped interval 3.6%, 3.7% and 4.0%",
+    for words in ("2.8%, 2.9% and 3.0% of the time (plain 5.2%, 5.8% and 6.3%; grouped 3.6%, 3.7% and 4.0%)",
+                  "1.9%, 1.7% and 1.7% (plain 2.8%, 2.7% and 2.7%; grouped 3.3%, 3.1% and 3.4%)",
                   "40,000 simulated paths per case", "the owner has not chosen a gate", "Rule HT is graded on results",
-                  "It does not fix the NFL", "0 variants"):
+                  "It does not fix the NFL", "0 variants",
+                  "Until now the scorer computed the plain interval as m plus or minus 1.96 x s / sqrt(n)"):
         assert words in one, words
     two = amendment5_section(2)
-    assert "the first listed in the feed is taken" in two and "none is taken" in two and "within 6 hours" in two
+    assert "the first in the feed is taken" in two and "none is taken" in two and "within 6 hours" in two
     assert "Pinnacle comes first, then one priced at DraftKings" in two and "byte-identical" in two
+    # "listing" is amendment 4's word for a group of ledger rows; a thing in the odds feed is a feed event
+    assert "A **feed event** is one event in the odds feed" in amendment5() and two.count("listing") == 1
+    assert "It is not a listing in the sense of amendment 4, section 10" in two
 
 
 def test_the_summaries_name_amendment_5():
     strategy = (ROOT / "STRATEGY.md").read_text()
-    assert "*Amendment 5 (Sep 29):* the 95% interval is grouped by game day" in strategy
+    assert ("*Amendment 5 (Sep 29):* the 95% interval is the wider of the plain interval and one grouped by game day"
+            in strategy)
+    # amendment 4's dated note is left as written, and a new dated note after it says the copy never loses a line
+    old = "never decided again unless it is lost before that night's copy is made (3)"
+    new = "never decided again unless it was recorded and lost on the same day, before that night's copy (section 3)"
+    assert old in strategy and new in strategy and strategy.index(old) < strategy.index(new)
+    readme = (ROOT / "README.md").read_text()
+    assert "feed listing" not in readme and "one feed event" in readme
+    assert "the copy protects a lost line only until" not in readme.lower()
     status = (ROOT.parent / "STATUS.md").read_text()
     assert "the college football one until Thu Oct 1, 5:00 PM Pacific" in status
     assert "The registered primary CLV and the decision rules are unchanged" not in status
     assert "the captured close enters Rule B's primary CLV when no later quote was logged" in status
-    assert "college football goes from 5.2 to 6.3% to 3.6 to 4.0%" in status
+    assert ("college football 2.8 to 3.0% with the registered test (5.2 to 6.3% with the plain interval as scored "
+            "before, 3.6 to 4.0% with the grouped one alone)") in status
 
 
 def by_hand(clv, days):
     """The registered interval computed here from its definition (amendment 5, reading 1), not with the scorer's
-    code: the plain mean m of the n CLVs; G game days; s_g the sum of (CLV - m) over day g; the variance of the mean
-    (G / (G - 1)) x sum(s_g^2) / n^2; m +/- t(0.975, G - 1) x its square root. Also the plain interval."""
+    code: the plain mean m of the n CLVs; the plain half-width t(0.975, n - 1) x sd / sqrt(n); G game days, s_g the
+    sum of (CLV - m) over day g, the grouped half-width t(0.975, G - 1) x sqrt((G / (G - 1)) x sum(s_g^2) / n^2);
+    the interval m plus or minus the larger half-width, none with fewer than 2 game days."""
     from scipy import stats
     x, d = np.asarray(clv, float), np.asarray(days, object)
     x, d = x[~np.isnan(x)], d[~np.isnan(x)]
     n, m = len(x), x.mean()
     labels = sorted(set(d))
+    G = len(labels)
     s = np.array([(x[d == g] - m).sum() for g in labels])
-    se = np.sqrt(len(labels) / (len(labels) - 1) * (s ** 2).sum() / n ** 2) if len(labels) > 1 else np.nan
-    half = stats.t.ppf(0.975, len(labels) - 1) * se if len(labels) > 1 else np.nan
-    plain = 1.96 * x.std(ddof=1) / np.sqrt(n)
-    return dict(mean_clv=m, ci_low=m - half, ci_high=m + half, n_clv=n, game_days=len(labels),
-                plain_ci_low=m - plain, plain_ci_high=m + plain)
+    plain = stats.t.ppf(0.975, n - 1) * x.std(ddof=1) / np.sqrt(n)
+    grouped = stats.t.ppf(0.975, G - 1) * np.sqrt(G / (G - 1) * (s ** 2).sum() / n ** 2) if G > 1 else np.nan
+    half = max(plain, grouped) if G > 1 else np.nan
+    return dict(mean_clv=m, ci_low=m - half, ci_high=m + half, n_clv=n, game_days=G, plain_half_width=plain,
+                grouped_half_width=grouped)
+
+
+def printed(want):
+    """The line the scorer prints for an interval: the registered one, which of the two it is, and both."""
+    m, g, p, G = want["mean_clv"], want["grouped_half_width"], want["plain_half_width"], want["game_days"]
+    both_g, both_p = f"grouped {m - g:+.2f} to {m + g:+.2f}", f"plain {m - p:+.2f} to {m + p:+.2f}"
+    which = (f"the two are equally wide, over {G} game days ({both_g}; {both_p})" if np.isclose(g, p, rtol=1e-9) else
+             f"the wider is the grouped one, over {G} game days ({both_g}; {both_p})" if g > p else
+             f"the wider is the plain one ({both_p}; {both_g}, over {G} game days)")
+    return f"95% CI {want['ci_low']:+.2f} to {want['ci_high']:+.2f}; {which}"
 
 
 def keep_case(kicks, no_close=()):
@@ -915,9 +943,11 @@ def keep_case(kicks, no_close=()):
     return rows, s, clv, days
 
 
-def test_amendment_5_reading_1_the_keep_interval_is_grouped_by_game_day(tmp_path):
-    """Recomputed here from the registered definition on 1, 2, 5 and 20 game days, with equal CLVs, signals with no
-    close, and a late Saturday game (10:30 PM Eastern, 02:30 UTC Sunday) that groups with Saturday."""
+def test_amendment_5_reading_1_the_keep_interval_is_the_wider_of_two(tmp_path):
+    """Recomputed here from the registered definition on 1, 2, 5, 20 and 40 game days, with equal CLVs, signals with
+    no close, and a late Saturday game (10:30 PM Eastern, 02:30 UTC Sunday) that groups with Saturday. The grouped
+    half-width is the wider in some cases and the plain one in others; with one signal per game day they are equally
+    wide."""
     late = (["2026-10-17T16:00Z"] * 8 + ["2026-10-18T02:30Z"] * 5 + ["2026-10-22T23:30Z"] * 6
             + ["2026-10-24T00:00Z"] * 6 + ["2026-10-24T19:30Z"] * 8 + ["2026-10-31T19:30Z"] * 7)
     cases = {
@@ -925,7 +955,9 @@ def test_amendment_5_reading_1_the_keep_interval_is_grouped_by_game_day(tmp_path
         "two days": (["2026-10-10T19:00Z"] * 20 + ["2026-10-17T19:00Z"] * 20, (3, 17, 30)),
         "five days, late Saturday": (late, (0, 9)),
         "twenty days": ([ts("2026-10-03T19:30Z") + pd.Timedelta(days=3 * (i // 2)) for i in range(40)], (11,)),
+        "forty days, one signal each": ([ts("2026-10-03T19:30Z") + pd.Timedelta(days=i) for i in range(40)], ()),
     }
+    wider = {}
     for name, (kicks, none) in cases.items():
         rows, s, clv, days = keep_case(kicks, none)
         d = tmp_path / name.replace(" ", "_").replace(",", "")
@@ -933,35 +965,39 @@ def test_amendment_5_reading_1_the_keep_interval_is_grouped_by_game_day(tmp_path
         nums = json.loads(pd.read_csv(d / "decisions.csv", dtype=str).numbers[0])
         want = by_hand(clv, days)
         assert (nums["game_days"], nums["n_clv"]) == (want["game_days"], want["n_clv"]), name
-        for k in ("mean_clv", "plain_ci_low", "plain_ci_high"):
+        for k in ("mean_clv", "plain_half_width"):
             assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
         if want["game_days"] < 2:
-            assert nums["ci_low"] is None and nums["ci_high"] is None, name
+            assert nums["ci_low"] is None and nums["ci_high"] is None and nums["grouped_half_width"] is None, name
             assert ("FINAL: INCONCLUSIVE (the 40 signals that have a primary close kicked off on 1 game day, so there "
                     "is no interval)") in out, name
-            assert "no interval: the signals with a primary close kicked off on 1 game day; plain, for reference" in out
+            assert "no interval: the signals with a primary close kicked off on 1 game day" in out, name
             continue
-        for k in ("ci_low", "ci_high"):
+        for k in ("ci_low", "ci_high", "grouped_half_width"):
             assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
-        assert (f"95% CI {want['ci_low']:+.2f} to {want['ci_high']:+.2f}, grouped by game day over "
-                f"{want['game_days']} days; plain, for reference: {want['plain_ci_low']:+.2f} to "
-                f"{want['plain_ci_high']:+.2f}") in out, name
+        assert np.isclose(nums["ci_high"] - nums["mean_clv"], max(nums["plain_half_width"],
+                                                                  nums["grouped_half_width"]), rtol=1e-12), name
+        assert printed(want) in out, (name, printed(want))
+        wider[name] = ("equal" if np.isclose(want["grouped_half_width"], want["plain_half_width"], rtol=1e-9) else
+                       "grouped" if want["grouped_half_width"] > want["plain_half_width"] else "plain")
+    assert set(wider.values()) == {"grouped", "plain", "equal"}, wider
+    assert wider["forty days, one signal each"] == "equal"
     # the late Saturday game is Sunday in UTC, where it would be a day of its own and change the interval
     rows, s, clv, days = keep_case(late, (0, 9))
     utc = [ts(k).strftime("%Y-%m-%d") for k in late]
     assert days[8] == "2026-10-17" and utc[8] == "2026-10-18" and len(set(days)) == 5
-    assert not np.isclose(by_hand(clv, utc)["ci_low"], by_hand(clv, days)["ci_low"])
+    assert not np.isclose(by_hand(clv, utc)["grouped_half_width"], by_hand(clv, days)["grouped_half_width"])
     text = amendment5_section(1)
-    for words in ("grouped by the calendar date of the game's actual kickoff in Eastern time", "(G / (G - 1))",
-                  "97.5th percentile of Student's t with G - 1 degrees of freedom", "fewer than 2 game days",
-                  "plain, for reference"):
-        assert words in text, words
+    for words in ("THE REGISTERED INTERVAL IS", "the larger of the two half-widths", "(G / (G - 1))",
+                  "Student's t with n - 1 degrees of freedom", "Student's t with G - 1 degrees of freedom",
+                  "fewer than 2 game days, or fewer than 2 signals", "the wider is the grouped one, over G game days"):
+        assert words.lower() in text.lower(), words
 
 
-def test_amendment_5_reading_1_the_interim_read_uses_the_grouped_interval(tmp_path):
+def test_amendment_5_reading_1_the_interim_read_uses_the_wider_interval(tmp_path):
     rows, s, clv, days = keep_case([ts("2026-10-03T19:30Z") + pd.Timedelta(days=7 * (i // 3)) for i in range(12)])
     out = rb(score(tmp_path, rows, s, "2026-11-01"))
-    assert "INTERIM read" in out and f"grouped by game day over {len(set(days))} days" in out
+    assert "INTERIM read" in out and printed(by_hand(clv, days)) in out
 
 
 def test_amendment_5_reading_3_a_time_with_no_time_zone_is_damage_not_a_crash(tmp_path):
@@ -1082,30 +1118,79 @@ def test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_
     assert "it is not restored from a damaged copy" in text
 
 
-def test_amendment_5_reading_3_the_copy_protects_a_lost_line_only_until_the_nightly_copy(tmp_path):
-    """The review of pull request 64 (its rec_probe2): a line lost after the morning check-in was gone from the copy
-    once that night's copy published the shortened file (ops/sync_ledgers.sh copies the file as it is), and the next
-    real run decided it again. The scorer doesn't read the branch's earlier copies: this is a stated limit."""
+def nightly(tmp_path, repo):
+    """The real nightly copy: ops/sync_ledgers.sh run for `repo`, whose origin is a local bare repository, with HOME
+    (and so the script's own clone) inside tmp_path; then `git fetch`, as the hub's check-in runs before the
+    scorers. Returns the script's printout."""
+    remote = tmp_path / "remote.git"
+    env = dict(os.environ, HOME=str(tmp_path / "home"), GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
+               GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+    if not remote.exists():
+        subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True, env=env)
+        (repo / "ops").mkdir(exist_ok=True)
+        shutil.copy(ROOT.parent / "ops" / "sync_ledgers.sh", repo / "ops")
+        for p in ("nfl-weather", "cfb-weather"):                     # the script copies both projects' ledgers
+            ledger = repo / p / "data" / "forward" / "ledger.csv"
+            if not ledger.exists():
+                ledger.parent.mkdir(parents=True)
+                ledger.write_text("snapshot_utc\n")
+    r = subprocess.run(["bash", str(repo / "ops" / "sync_ledgers.sh")], capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    subprocess.run(["git", "-C", str(repo), "fetch", "-q", "origin"], check=True, env=env)
+    return r.stdout
+
+
+def test_amendment_5_reading_3_a_line_lost_after_the_check_in_survives_the_nightly_copy(tmp_path):
+    """The reviews of pull request 64 (their rec_probe2): a line lost after the morning check-in was published with
+    the shortened file that night, the copy no longer held it, and the next real run decided it again (NOT KEPT
+    after the recorded KEEP). The nightly copy now never publishes a file that has lost a published line, so the next
+    real run restores it from the copy; once the file holds every published line again, the nightly copy publishes
+    it."""
     repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
-    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # Dec 20, 11:45 PM: the copy holds it
-    (fwd / "decisions.csv").write_text((fwd / "decisions.csv").read_text().splitlines()[0] + "\n")   # lost
-    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # that night: copied as it is
-    season_file(proj, 2026, s, "2026-12-21T16:00")
-    out = rb(on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout)
-    assert "FINAL: NOT KEPT" in out and "recorded in decisions.csv on 2026-12-21T17:00:00Z" in out
+    whole = (fwd / "decisions.csv").read_text()
+    assert "not published" not in nightly(tmp_path, repo)                     # Dec 20, 11:45 PM: the copy holds it
+    (fwd / "decisions.csv").write_text(whole.splitlines()[0] + "\n")          # Dec 21, after the check-in: lost
+    out = nightly(tmp_path, repo)                                             # Dec 21, 11:45 PM
+    assert ("cfb-weather: decisions.csv not published (it has lost or changed a line that the published copy "
+            "holds); the published copy is kept as it is") in out
+    assert git(repo, "show", "origin/ledgers:cfb-weather/decisions.csv") + "\n" == whole
+    season_file(proj, 2026, s, "2026-12-22T16:00")
+    out = on_clock(tmp_path, "2026-12-22T17:00", scorer).stdout               # Dec 22: the check-in
+    assert "restored from the copy. A lost record is never decided again." in out
+    assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and (fwd / "decisions.csv").read_text() == whole
+    assert "not published" not in nightly(tmp_path, repo)                     # Dec 22, 11:45 PM: published again
     text = amendment5_section(3)
-    assert "the copy protects a lost line only until the next nightly copy" in text.lower()
-    assert "a line lost during the day, after the check-in, is gone from the copy by the next morning" in text
-    for f in (ROOT.parent / "STATUS.md", ROOT / "README.md"):
-        assert "as long as the copy still holds it" in f.read_text(), f.name
-    replaces = norm(amendment5().split("### What this amendment replaces")[1])
-    assert '"A lost record is restored from that copy; it is never decided again." Only while the copy holds it' in (
-        replaces)
+    assert "the published copy never loses a line" in text.lower()
+    assert "a decision that was ever published is never decided again" in text
+    assert "a decision recorded and lost on the same day, before that night's copy" in text
+
+
+def test_amendment_5_reading_3_a_restore_appends_the_copy_s_own_line(tmp_path):
+    """A restored line is the copy's line byte for byte, so the file again holds every published line and the next
+    nightly copy publishes it. Before, the scorer wrote the decision out again, and a copy line written another way
+    (every field quoted, say, by a hand repair) came back different: the nightly copy would then never publish."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    head, line = (fwd / "decisions.csv").read_text().splitlines()
+    quoted = io.StringIO()
+    csv.writer(quoted, quoting=csv.QUOTE_ALL, lineterminator="\n").writerow(next(csv.reader([line])))
+    (tmp_path / "copy.csv").write_text(f"{head}\n{quoted.getvalue()}")
+    assert quoted.getvalue() != line + "\n"
+    publish(repo, "cfb-weather", tmp_path / "copy.csv")
+    (fwd / "decisions.csv").write_text(head + "\n")                           # the file lost it
+    season_file(proj, 2026, s, "2026-12-21T16:00")
+    out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+    assert "restored from the copy" in out and "FINAL: KEEP" in rb(out)
+    assert (fwd / "decisions.csv").read_text() == (tmp_path / "copy.csv").read_text()
+    assert "appends the copy's own line for it to the file, byte for byte" in amendment5_section(3)
 
 
 def test_amendment_5_states_the_review_s_smaller_points(tmp_path):
-    """The review of pull request 64, minor points: day totals that balance give the grouped interval zero width,
-    now a stated limit; and the replay counts are labelled as a replay made with scratch scripts."""
+    """The review of pull request 64, minor points, and the hub's answer to the first: day totals that balance give
+    the grouped interval zero width. The draft kept that rule (+0.30 to +0.30); the registered test takes the wider
+    interval, here the plain one, which includes zero, so the rule is not kept. Also: the replay counts are labelled
+    as a replay made with scratch scripts."""
     rows, s = [], []
     kicks = [ts(d) for d in ("2026-10-03T19:00Z", "2026-10-10T19:00Z", "2026-10-17T19:00Z", "2026-10-24T19:00Z")
              for _ in range(10)]
@@ -1115,11 +1200,14 @@ def test_amendment_5_states_the_review_s_smaller_points(tmp_path):
         rows.append(row(1 + i, k, k - pd.Timedelta(hours=3), mkt_total=50.5 - c))
         s.append(sched(1 + i, kick=k))
     out = rb(score(tmp_path, rows, s, "2026-12-20", "--test-record"))
-    nums = json.loads(pd.read_csv(tmp_path / "decisions.csv", dtype=str).numbers[0])
-    assert nums["game_days"] == 4 and np.allclose([nums["ci_low"], nums["ci_high"], nums["mean_clv"]], 0.3,
-                                                  rtol=0, atol=1e-12)
-    assert nums["plain_ci_low"] < 0 < nums["plain_ci_high"]
-    assert "95% CI +0.30 to +0.30, grouped by game day over 4 days; plain, for reference: -0.52 to +1.12" in out
+    rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str)
+    nums = json.loads(rec.numbers[0])
+    assert rec.verdict[0].startswith("NOT KEPT") and nums["game_days"] == 4
+    assert np.isclose(nums["grouped_half_width"], 0, atol=1e-12) and np.isclose(nums["mean_clv"], 0.3, atol=1e-12)
+    assert nums["ci_low"] < 0 < nums["ci_high"] and np.isclose(nums["ci_high"] - 0.3, nums["plain_half_width"])
+    assert ("95% CI -0.54 to +1.14; the wider is the plain one (plain -0.54 to +1.14; grouped +0.30 to +0.30, over 4 "
+            "game days)") in out
     one = amendment5_section(1)
-    assert "the grouped interval can be narrower than the plain one" in one and "even of zero width" in one
+    assert "even of zero width" not in one.split("Known limit")[-1]                    # the draft's limit is gone
+    assert "-0.54 to +1.14" in one and "not kept" in one
     assert "scratch scripts, not kept in the repository" in amendment5_section(2)
