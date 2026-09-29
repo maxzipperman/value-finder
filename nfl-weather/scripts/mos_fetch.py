@@ -76,11 +76,67 @@ def games_with_stations(seasons=SEASONS, rank=0) -> pd.DataFrame:
     return g.merge(m, on="stadium_key", how="inner")
 
 
+def empty_windows(w: pd.DataFrame) -> list:
+    """(icao, season) of each cached window whose answer has no runs or no wind value. Baltimore
+    Inner Harbor (KDMH) has no wind in any season: IEM leaves the column out, which crashed the
+    Sep 29 pull here before its next-nearest step ran."""
+    return [(r.icao, r.season) for r in w.itertuples()
+            if (p := mos.cached_cover(r.icao, r.sts, r.ets)) is not None and mos.file_status(p) != "ok"]
+
+
+def fallback_games(g0: pd.DataFrame, empty, seasons, rank=1) -> pd.DataFrame:
+    """The games whose nearest station's answer for their season was empty, at their rank-`rank` station."""
+    near0 = g0.set_index("game_id").icao
+    g1 = games_with_stations(seasons, rank)
+    return g1[[(near0.get(gid), s) in set(empty) for gid, s in zip(g1.game_id, g1.season)]]
+
+
+def cache_report(seasons) -> tuple[pd.DataFrame, list[str]]:
+    """Every (station, season) window the fetch asks for, and what the cache holds for it. Fetches nothing.
+
+    Rank 0 is the nearest station; rank 1 the next-nearest, asked for the games whose nearest
+    station's answer had no runs or no wind (as main() does)."""
+    g0 = games_with_stations(seasons, 0)
+    w0 = mos.window_status(mos.season_windows(g0)).assign(rank=0)
+    empty = {(r.icao, r.season) for r in w0.itertuples() if r.status != "ok"}
+    g1 = fallback_games(g0, empty, seasons)
+    w1 = mos.window_status(mos.season_windows(g1)).assign(rank=1) if len(g1) else w0.iloc[0:0]
+    w = pd.concat([w0, w1], ignore_index=True)
+    lines = [f"NFL MOS cache, seasons {seasons[0]}-{seasons[1]}: what each (station, season) request returned",
+             f"  asked of the nearest station: {len(w0)} windows ({int(w0.games.sum())} games at {w0.icao.nunique()} "
+             f"stations)"]
+    for label, x in (("nearest station", w0), ("next-nearest, for the nearest's empty answers", w1)):
+        c = x.status.value_counts()
+        lines.append(f"  {label}: {len(x)} windows: " + ", ".join(f"{k} {int(c.get(k, 0))}" for k in
+                     ("ok", "no runs", "no wind", "unreadable", "not downloaded")))
+    bad = w[w.status != "ok"].sort_values(["rank", "icao", "season"])
+    lines += ["", f"Windows with no usable forecast ({len(bad)}):"]
+    lines += [f"  rank {r.rank} {r.icao} {r.season}: {r.status}, {r.games} games, "
+              f"{r.file or '(nothing cached)'}" for r in bad.itertuples()]
+    todo = w1[w1.status == "not downloaded"]
+    if len(todo):
+        lines += ["", f"Next-nearest windows not downloaded: {len(todo)} requests, about "
+                      f"{len(todo) * mos.MIN_INTERVAL_S / 60:.0f} min ({int(todo.games.sum())} games): "
+                      + ", ".join(f"{i} {n}" for i, n in todo.icao.value_counts().sort_index().items())
+                      + ". Rerunning scripts/mos_fetch.py fetches them."]
+    tally = mos.cache_tally()
+    where = str(mos.CACHE.resolve()).replace(str(Path.home()), "~")
+    lines += ["", f"The whole cache ({where}, shared with cfb-weather): "
+                  f"{sum(map(len, tally.values()))} files: " + ", ".join(f"{k} {len(v)}" for k, v in sorted(tally.items()))]
+    for k in ("no runs", "no wind", "unreadable"):
+        stations = sorted({p.parent.name for p in tally.get(k, [])})
+        if stations:
+            lines.append(f"  {k}: {len(tally[k])} files, stations {', '.join(stations)}")
+    return w, lines
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seasons", help="e.g. 2023-2025 (default 2004-2025)")
     ap.add_argument("--plan", action="store_true", help="count the requests; fetch nothing")
     ap.add_argument("--map-only", action="store_true", help="rebuild the station map and stop")
+    ap.add_argument("--report", action="store_true",
+                    help="write what every requested window returned (output/mos_cache_report.log); fetch nothing")
     args = ap.parse_args()
     if args.map_only or not MAP.exists():
         build_map()
@@ -90,6 +146,16 @@ def main():
 
     def log(msg):
         print(time.strftime("%Y-%m-%d %H:%M:%S ") + msg, flush=True)
+
+    if args.report:
+        from nflweather.config import OUT, TABLES
+        w, lines = cache_report(seasons)
+        tag = "" if seasons == SEASONS else f"_{seasons[0]}_{seasons[1]}"
+        TABLES.mkdir(parents=True, exist_ok=True)
+        w.to_csv(TABLES / f"mos_cache_windows{tag}.csv", index=False)
+        (OUT / f"mos_cache_report{tag}.log").write_text("\n".join(lines) + "\n")
+        print("\n".join(lines))
+        return
 
     g0 = games_with_stations(seasons, 0)
     w = mos.season_windows(g0)
@@ -110,13 +176,10 @@ def main():
         if i % 25 == 0 or i == len(todo):
             el = time.time() - t0
             log(f"  {i}/{len(todo)} fetched, {el / 60:.1f} min, about {(len(todo) - i) * el / i / 60:.0f} min left")
-    empty = [(r.icao, r.season) for r in w.itertuples()
-             if (p := mos.cached_cover(r.icao, r.sts, r.ets)) is not None and mos.read_file(p).empty]
+    empty = empty_windows(w)          # no runs, or runs with no wind value: try the next-nearest
     if empty:
         log(f"  empty at the nearest station: {empty}; trying the next-nearest")
-        near0 = g0.set_index("game_id").icao
-        g1 = games_with_stations(seasons, 1)
-        g1 = g1[[(near0.get(gid), s) in set(empty) for gid, s in zip(g1.game_id, g1.season)]]
+        g1 = fallback_games(g0, empty, seasons)
         for r in mos.season_windows(g1).itertuples() if len(g1) else []:
             try:
                 mos.fetch_runs(r.icao, r.sts, r.ets, log=log)
