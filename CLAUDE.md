@@ -28,6 +28,17 @@ Each project has its own virtual environment. Don't share environments or instal
 - **Paid APIs are cache-first.** Odds API calls need an explicit credit budget. Reruns read the cache.
 - **Shared weather code.** `market.py`, `features.py`, `models.py`, `notify.py` and `quota.py` are copied between `nfl-weather` and `cfb-weather`. A change to one copy is made to both.
 
+## The hub
+
+One chat manages the project: **"Value Finder — hub"** (session `local_446fc83e-838e-4341-89c7-77d9c48afd4b`). It's pinned, it's exempt from auto-archive, and it works in `~/code/value-finder` on `main`. It never archives itself.
+
+- **`/hub`** runs one check-in. It covers status, deadlines, PRs, worker chats and Mac health, then does small Mac-only jobs itself and spawns workers for the rest. The rules are in `.claude/commands/hub.md`. A daily check-in runs at about 9 AM while the app is open.
+- **Workers get one issue each,** on their own branch, with one PR that links the issue.
+  - **Cloud workers** get anything that only needs git, and use cloud session credits.
+  - **Local worker chats** get anything that needs the Mac's keys or raw data.
+- **Workers are cleaned up automatically.** The account setting "Auto-archive sessions when their pull request closes" archives each worker once its PR merges.
+- **A local worker chat reports back** with one message to the hub session above: the PR link, the results, and anything that failed.
+
 ## Cloud sessions
 
 A cloud checkout has only what's in git. `ops/cloud_setup.sh` (a SessionStart hook in `.claude/settings.json`) builds each project's venv when `CLAUDE_CODE_REMOTE=true`, and does nothing on the Mac.
