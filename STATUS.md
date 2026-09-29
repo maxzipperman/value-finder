@@ -56,7 +56,7 @@ One issue per idea from [`strategy-research/`](strategy-research/README.md#ideas
 | [#8](https://github.com/maxzipperman/value-finder/issues/8) | Price engine: beat the sharp fair line (most proven) | sharp-markets | Multi-book lines for 2020–26, 162K credits, plus NFL alternates, 46K credits, both in the March 5M month. Kalshi and Polymarket (free). |
 | [#9](https://github.com/maxzipperman/value-finder/issues/9) | Kalshi/Polymarket microstructure | sharp-markets | Free Kalshi and Polymarket data |
 | [#10](https://github.com/maxzipperman/value-finder/issues/10) | Player props: median vs mean | nfl-weather | About 46K Odds API credits (NFL 2023–26 at the close), in the March 5M month |
-| [#11](https://github.com/maxzipperman/value-finder/issues/11) | CFB injury reports and early-season priors | cfb-weather | CFBD API |
+| [#11](https://github.com/maxzipperman/value-finder/issues/11) | CFB injury reports and early-season priors | cfb-weather | CFBD API: the downloader is in (`cfb-weather/scripts/fetch_cfbd.py`). The pull runs on the Mac. |
 | [#21](https://github.com/maxzipperman/value-finder/issues/21) | Kicker props: kicking-points unders in wind and cold | nfl-weather | Outcomes are in (`player_week.parquet`). Prices: 22,800 credits, added to the March 5M month (M6). |
 | [#16](https://github.com/maxzipperman/value-finder/issues/16) | Line-move reversal: do day-to-day moves reverse before the close? | sharp-markets | The multi-book lines in the March 5M month |
 
