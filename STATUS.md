@@ -73,6 +73,10 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
    - **Keep the Mac awake at kickoff.** A slot missed while it sleeps is reported as missing, never filled in.
 3. **Phone alerts.** Subscribe to the `NTFY_TOPIC` from either `.env` in the ntfy app, if you haven't yet.
 
+## Research sweep (Sep 28)
+
+A literature and code search for all eight hypotheses is in [`reviews/2026-09-28-research-sweep.md`](reviews/2026-09-28-research-sweep.md). Three findings became issues: a forecast archive back to 2004 that allows a true as-issued replay of both wind rules ([#40](https://github.com/maxzipperman/value-finder/issues/40)); props should be tested as line-vs-median before the props pull is spent ([#41](https://github.com/maxzipperman/value-finder/issues/41)); line-move reversal splits into two hypotheses, one of which gates the hourly pull ([#42](https://github.com/maxzipperman/value-finder/issues/42)).
+
 ## Backlog
 
 One issue per idea from [`strategy-research/`](strategy-research/README.md#ideas-to-add-ranked), in suggested order. Filter the [`idea` label](https://github.com/maxzipperman/value-finder/issues?q=is%3Aissue+label%3Aidea) on GitHub.
