@@ -2,8 +2,9 @@
 
 The NFL and CFB alert jobs run four times a day on the Mac (7:30 AM, 11:30 AM, 3:30 PM and 7:30 PM). Each project keeps
 its records in its own `data/forward/` folder (`nfl-weather/data/forward/`, `cfb-weather/data/forward/`).
-Every night at 23:45 `ops/sync_ledgers.sh` copies the ledger, `runs.csv`, `alerts.log`, `closes.csv` and
-`fills.csv` to the `ledgers` branch on GitHub, so there is a dated copy outside the Mac.
+Every night at 23:45 `ops/sync_ledgers.sh` copies the ledger, `runs.csv`, `alerts.log`, `closes.csv`,
+`fills.csv` and `decisions.csv` (each one that exists) to the `ledgers` branch on GitHub, so there is a dated
+copy outside the Mac.
 
 ## The four files
 
@@ -28,17 +29,20 @@ The ledger itself (`ledger.csv`) is the forward test. Never edit it or its backu
 | `unmapped` | Team names in the odds feed that matched no scheduled game (those games arrive with no price). |
 | `error` | Why a failed run failed. On an `ok` run it is usually empty (see the note below). |
 
-**Check `rule_priced` against `priced`.** If `rule_priced` is 0 while `priced` is not, the odds service was
-down or out of credits, and every game was priced at the backup instead (for the NFL, the consensus
-line; for CFB, ESPN). An NFL Rule B signal at a backup price is a "secondary price" signal: it is logged,
-but it is not part of the registered test. One such run is nothing to worry about. Several in a row, tell
-the hub.
+**Check `rule_priced` against `priced`.** An odds outage does not fail a run: the run is recorded `ok` with
+`rule_priced` 0, and the games arrive at the backup price (for the NFL, the consensus line; for CFB, ESPN),
+or unpriced where the backup has no price either. So if `rule_priced` is 0, the odds service was down or
+out of credits. An NFL Rule B signal at a backup price is a "secondary price" signal: it is logged, but it
+is not part of the registered test. One such run is nothing to worry about. Several in a row, tell the hub.
 
 **An `ok` run with text in `error`.** That happens only when `alert_state.json` was damaged and couldn't be
 read. The run still saved its ledger row and sent its alerts, so it counts as `ok`. The damaged file is
 kept beside the new one as `alert_state.corrupt-<time>.json`, and the job started over from an empty memory.
 Expect some alerts you have already had to arrive once more. Tell the hub, so it can find out what damaged
 the file.
+
+That run also sends you one notice, "NFL weather alerts: the alert record was damaged" (or "CFB weather
+alerts: …"), naming the copy it kept. A dry run never sends it.
 
 ## What a `failed` row means
 
@@ -47,11 +51,11 @@ The `error` column starts with the step:
 
 | Step in the error | Was the ledger row saved? | What happened |
 |---|---|---|
-| `while building the board` | No | A download failed (the schedule, the forecasts or the odds). Usually the internet or a data site was briefly down. |
+| `while building the board` | No | A download failed (the schedule or the forecasts). Usually the internet or a data site was briefly down. The odds are not in this list: an odds outage leaves the run `ok` (see `rule_priced` above). |
 | `while saving the ledger` | No | The file couldn't be written, most often because the disk is full. |
 | `while reading the alert state` | Yes | `alert_state.json` couldn't be opened at all. The job leaves it untouched and sends no alerts. |
 | `while building the alerts` | Yes | One game's alert text failed. The other games' alerts still went out. That game keeps its last wind and total, so a LINE LAG isn't lost. |
-| `while sending the alerts` | Yes | The notification service couldn't be reached. Every alert sent before that was saved as sent. The rest go out on the next run, and none is sent twice. |
+| `while sending the alerts` | Yes | The notification service couldn't be reached. Every alert sent before that was saved as sent and is not repeated. The one that failed, and any after it, go out on the next run. The failed one's Mac banner may already have shown, so that one alert can show twice. |
 | `while saving the alert state` | Yes | Every alert went out, but the job couldn't record which (usually a full disk). Some may arrive again on the next run. |
 
 ## When you get a "run failed" notice
@@ -61,7 +65,9 @@ The `error` column starts with the step:
    works. If two runs in a row fail, or a signal is close to kickoff, tell the hub.
 3. For any other step, tell the hub. It reads `runs.csv` and the last lines of `alerts.log`, and fixes it.
 4. If you need to know right away what the job would send, the hub (or you, from the project folder) can run
-   `.venv/bin/python scripts/alerts.py --dry-run`. A dry run prints the alerts, sends nothing, adds no ledger
-   row and spends no odds credits.
+   `.venv/bin/python scripts/alerts.py --dry-run`. A dry run fetches the schedule and the forecasts, but it
+   makes no Odds API call (so it spends no credits), and its prices are the backup ones (NFL: the consensus
+   line; CFB: ESPN). It prints the alerts it would send and sends nothing, and it writes no ledger row, no
+   run record and no alert state.
 5. Don't delete `alert_state.json` to "reset" things. Every alert you have already had would be sent again,
    and the NFL job would lose the wind history it needs for LINE LAG.

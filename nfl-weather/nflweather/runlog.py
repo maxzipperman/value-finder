@@ -74,7 +74,8 @@ def widen_runs(path) -> list[str] | None:
     """The columns of the runs.csv at `path` (None when there is no file or it is empty), after adding any
     of RUN_COLS it lacks. The file is then rewritten once: the header gains the new names, and each old
     line keeps every character it had and gains one empty field per new column at its end. The new file
-    is written beside the old one and replaces it in a single step, so a crash leaves the old file."""
+    is written beside the old one, with its permissions, and replaces it in a single step, so a crash
+    leaves the old file."""
     path = Path(path)
     if not path.exists():
         return None
@@ -107,34 +108,35 @@ def widen_runs(path) -> list[str] | None:
     tmp = path.with_name(path.name + ".tmp")
     with tmp.open("w", newline="") as f:
         f.write(new)
+    shutil.copymode(path, tmp)                          # the new file keeps the old one's permissions
     os.replace(tmp, path)
     return header + missing
 
 
-def read_alert_state(path, keep_copy=True) -> tuple[dict, str]:
-    """(state, note) from the alert job's alert_state.json: {game: {"sent": [alert keys], ...}}. A missing
-    file is an empty state. A file that can't be read as that (damaged by a crash or a bad hand edit) is
-    kept beside it as alert_state.corrupt-<UTC time>.json and the run starts from an empty state; `note`
-    says so, for the run record, and is "" otherwise. Alerts already sent may then be sent again. With
-    `keep_copy` False (dry runs) nothing is written. A file that can't be opened at all raises: it is
-    never replaced without a copy."""
+def read_alert_state(path, keep_copy=True) -> tuple[dict, str, str]:
+    """(state, note, kept) from the alert job's alert_state.json: {game: {"sent": [alert keys], ...}}. A
+    missing file is an empty state. A file that can't be read as that (damaged by a crash or a bad hand
+    edit) is kept beside it as alert_state.corrupt-<UTC time>.json, whose name is `kept`, and the run
+    starts from an empty state; `note` says so, for the run record. Both are "" otherwise. Alerts already
+    sent may then be sent again. With `keep_copy` False (dry runs) nothing is written and `kept` is "". A
+    file that can't be opened at all raises: it is never replaced without a copy."""
     path = Path(path)
     if not path.exists():
-        return {}, ""
+        return {}, "", ""
     try:
         state = json.loads(path.read_text())
         if not (isinstance(state, dict) and all(isinstance(s, dict) and isinstance(s.get("sent", []), list)
                                                 for s in state.values())):
             raise ValueError("not a list of sent alerts per game")
-        return state, ""
+        return state, "", ""
     except ValueError as e:                            # includes a JSON syntax error and a bad encoding
         why = f"{type(e).__name__}: {e}"
     if not keep_copy:
-        return {}, f"{path.name} could not be read ({why}); this dry run started from an empty state"
+        return {}, f"{path.name} could not be read ({why}); this dry run started from an empty state", ""
     copy = path.with_name(f"{path.stem}.corrupt-{pd.Timestamp.now(tz='UTC'):%Y%m%dT%H%M%SZ}{path.suffix}")
     shutil.copy2(path, copy)
     return {}, (f"{path.name} could not be read ({why}); kept as {copy.name}; started from an empty state, "
-                f"so alerts sent before may be sent again")
+                f"so alerts sent before may be sent again"), copy.name
 
 
 def write_alert_state(path, state) -> None:

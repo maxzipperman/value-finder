@@ -72,7 +72,7 @@ def board_row(**kw):
 OTHER = dict(game_id=402, home_team="Army", away_team="Navy")
 
 
-def run_alerts(tmp_path, monkeypatch, rows, state=None, send=None, save=None, compute=None):
+def run_alerts(tmp_path, monkeypatch, rows, state=None, send=None, save=None, compute=None, dry=False):
     """One run of scripts/alerts.py with everything under tmp_path: (sent, runs, exit status, saved state)."""
     sent, fwd = [], tmp_path / "data" / "forward"
     fwd.mkdir(parents=True, exist_ok=True)
@@ -82,7 +82,7 @@ def run_alerts(tmp_path, monkeypatch, rows, state=None, send=None, save=None, co
     monkeypatch.setattr(board, "compute", compute or (lambda **k: pd.DataFrame(rows)))
     monkeypatch.setattr(board, "save", save or (lambda up: None))
     monkeypatch.setattr(notify, "send", send or (lambda title, body: sent.append((title, body)) or True))
-    monkeypatch.setattr(sys, "argv", ["alerts.py"])
+    monkeypatch.setattr(sys, "argv", ["alerts.py"] + (["--dry-run"] if dry else []))
     code = 0
     try:
         runpy.run_path(str(ROOT / "scripts" / "alerts.py"), run_name="__main__")
@@ -143,10 +143,32 @@ def test_L8_a_damaged_state_file_costs_no_ledger_row(tmp_path, monkeypatch):
     sent, runs, code, saved = run_alerts(tmp_path, monkeypatch, [board_row()], state='{"401": {"sent": ["ru',
                                          save=saved_boards.append)
     fwd = tmp_path / "data" / "forward"
-    assert code == 0 and len(saved_boards) == 1 and len(sent) == 1
+    assert code == 0 and len(saved_boards) == 1 and len(sent) == 2     # the alert and the damaged-record notice
     assert runs.status.tolist() == ["ok"] and runs.error[0].startswith("alert_state.json could not be read")
     (copy,) = fwd.glob("alert_state.corrupt-*.json")
     assert copy.read_text() == '{"401": {"sent": ["ru' and saved == {"401": {"sent": ["ruleb"]}}
+
+
+DAMAGED = "CFB weather alerts: the alert record was damaged"
+
+
+def test_a_damaged_state_file_tells_the_owner_once(tmp_path, monkeypatch):
+    """The run keeps a copy, starts from an empty state and is recorded ok, and one notice says so."""
+    sent, runs, code, _ = run_alerts(tmp_path, monkeypatch, [board_row()], state='{"401": {"sent": ["ru')
+    (copy,) = (tmp_path / "data" / "forward").glob("alert_state.corrupt-*.json")
+    notices = [body for title, body in sent if title == DAMAGED]
+    assert code == 0 and runs.status.tolist() == ["ok"] and len(notices) == 1
+    assert copy.name in notices[0] and "ledger row was saved" in notices[0] and "once more" in notices[0]
+    assert [t.split(":")[0] for t, _ in sent if t != DAMAGED] == ["CFB RULE B WIND UNDER 50.5 at -110"]
+    sent, runs, code, _ = run_alerts(tmp_path, monkeypatch, [board_row()])     # the next run reads the new state
+    assert code == 0 and sent == []
+
+
+def test_a_dry_run_with_a_damaged_state_file_sends_nothing_and_writes_nothing(tmp_path, monkeypatch):
+    sent, runs, code, _ = run_alerts(tmp_path, monkeypatch, [board_row()], state="[]", dry=True)
+    fwd = tmp_path / "data" / "forward"
+    assert code == 0 and sent == [] and runs is None and (fwd / "alert_state.json").read_text() == "[]"
+    assert not list(fwd.glob("alert_state.corrupt-*"))
 
 
 # ------------------------------------------------------------------ L5: one board row per game

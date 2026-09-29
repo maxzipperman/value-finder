@@ -4,7 +4,11 @@ the trigger poller on the widened ledger, the secondary LINE LAG label, games pr
 the run record, the saved wind and total, one board row per game, a failed run's printout, the alert
 state saved after each send and a damaged state file, prices that aren't prices, and key scrubbing."""
 import json
+import os
 import runpy
+import shutil
+import stat
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -189,7 +193,7 @@ def test_L8_a_damaged_state_file_costs_no_ledger_row(tmp_path, monkeypatch):
     sent, runs, code, saved = run_alerts(tmp_path, monkeypatch, [BOARD], state='{"2026_06_NE_BUF": {"sent": [',
                                          save=saved_boards.append)
     fwd = tmp_path / "data" / "forward"
-    assert code == 0 and len(saved_boards) == 1 and len(sent) == 1           # the ledger saved, the alert sent
+    assert code == 0 and len(saved_boards) == 1 and len(sent) == 2     # the ledger saved, the alert and a notice sent
     assert runs.status.tolist() == ["ok"] and runs.error[0].startswith("alert_state.json could not be read")
     (copy,) = fwd.glob("alert_state.corrupt-*.json")
     assert copy.read_text() == '{"2026_06_NE_BUF": {"sent": [' and copy.name in runs.error[0]
@@ -199,8 +203,98 @@ def test_L8_a_damaged_state_file_costs_no_ledger_row(tmp_path, monkeypatch):
 def test_L8_a_dry_run_leaves_a_damaged_state_file_alone(tmp_path, monkeypatch):
     sent, runs, code, _ = run_alerts(tmp_path, monkeypatch, [BOARD], state="[]", dry=True)
     fwd = tmp_path / "data" / "forward"
-    assert code == 0 and runs is None and (fwd / "alert_state.json").read_text() == "[]"
+    assert code == 0 and runs is None and (fwd / "alert_state.json").read_text() == "[]" and sent == []
     assert not list(fwd.glob("alert_state.corrupt-*"))
+
+
+DAMAGED = "NFL weather alerts: the alert record was damaged"
+
+
+def test_a_damaged_state_file_tells_the_owner_once(tmp_path, monkeypatch):
+    """The run keeps a copy, starts from an empty state and is recorded ok, and one notice says so."""
+    sent, runs, code, _ = run_alerts(tmp_path, monkeypatch, [BOARD], state='{"2026_06_NE_BUF": {"sent": [')
+    (copy,) = (tmp_path / "data" / "forward").glob("alert_state.corrupt-*.json")
+    notices = [body for title, body in sent if title == DAMAGED]
+    assert code == 0 and runs.status.tolist() == ["ok"] and len(notices) == 1
+    assert copy.name in notices[0] and "ledger row was saved" in notices[0] and "once more" in notices[0]
+    assert [t for t, _ in sent if t != DAMAGED] == ["RULE B WIND UNDER 44.5 at -108: NE @ BUF 10-13 13:00 ET"]
+    sent, runs, code, _ = run_alerts(tmp_path, monkeypatch, [BOARD])       # the next run reads the new state
+    assert code == 0 and sent == []
+
+
+def test_a_damaged_state_notice_that_cannot_be_sent_does_not_stop_the_run(tmp_path, monkeypatch):
+    got = []
+
+    def send(title, body):
+        if title == DAMAGED:
+            raise ConnectionError("ntfy unreachable")
+        return got.append(title) or True
+    _, runs, code, saved = run_alerts(tmp_path, monkeypatch, [BOARD], state="[]", send=send)
+    assert code == 0 and runs.status.tolist() == ["ok"] and len(got) == 1 and saved[BOARD["game_id"]]["sent"] == ["ruleb"]
+
+
+# ------------------------------------------------------------------ a stored wind or total that isn't a number
+@pytest.mark.parametrize("wind,total", [("12", 44.5), (12.0, "44.5"), ([12.0], 44.5), (True, 44.5), (12.0, {"t": 1})])
+def test_a_stored_wind_or_total_that_is_not_a_number_counts_as_missing(tmp_path, monkeypatch, wind, total):
+    """A hand edit used to fail that game's alerts on every run until kickoff."""
+    state = {BOARD["game_id"]: {"sent": ["ruleb"], "wind": wind, "total": total}}
+    sent, runs, code, saved = run_alerts(tmp_path, monkeypatch, [BOARD], state=state)
+    assert code == 0 and runs.status.tolist() == ["ok"] and sent == []          # no earlier check: no LINE LAG
+    assert (saved[BOARD["game_id"]]["wind"], saved[BOARD["game_id"]]["total"]) == (18.0, 44.5)
+    state = {BOARD["game_id"]: {"sent": ["ruleb"], "wind": 12, "total": 44.5}}  # a whole number is still a number
+    sent, _, code, _ = run_alerts(tmp_path, monkeypatch, [BOARD], state=state)
+    assert code == 0 and [t.split(":")[0] for t, _ in sent] == ["RULE B LINE LAG 44.5 at -108"]
+
+
+# ------------------------------------------------------------------ widening runs.csv keeps its permissions
+@pytest.mark.parametrize("mode", [0o600, 0o664])
+def test_widening_the_run_record_keeps_its_permissions(tmp_path, mode):
+    path = tmp_path / "runs.csv"
+    path.write_text("run_utc,job,rules_version,status,games,signals,priced,unmapped,error\n"
+                    "2026-09-29T14:30:05Z,nfl-alerts,v3,ok,1,0,1,,\n")
+    path.chmod(mode)
+    runlog.record_run(path, "nfl-alerts", "v3", "ok", rule_priced=1)
+    assert pd.read_csv(path).columns[-1] == "rule_priced" and stat.S_IMODE(path.stat().st_mode) == mode
+
+
+# ------------------------------------------------------------------ the nightly ledger sync
+def sync_ledgers(tmp_path, files):
+    """Run ops/sync_ledgers.sh on a throwaway repo whose origin is a local bare repo, with HOME (and so the
+    script's clone) inside tmp_path; nothing outside tmp_path is read or written. Returns the exit status
+    and the files on the `ledgers` branch of the bare repo."""
+    repo, remote = tmp_path / "repo", tmp_path / "remote.git"
+    env = dict(os.environ, HOME=str(tmp_path / "home"), GIT_CEILING_DIRECTORIES=str(tmp_path), GIT_CONFIG_NOSYSTEM="1",
+               GIT_CONFIG_GLOBAL=os.devnull, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
+               GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com")
+    git = lambda *a: subprocess.run(["git", *a], check=True, capture_output=True, text=True, env=env).stdout
+    if not remote.exists():
+        git("init", "-q", "--bare", str(remote))
+        (repo / "ops").mkdir(parents=True)
+        shutil.copy(ROOT.parent / "ops" / "sync_ledgers.sh", repo / "ops")
+        git("init", "-q", str(repo))
+        git("-C", str(repo), "remote", "add", "origin", str(remote))
+    for name, text in files.items():
+        (repo / name).parent.mkdir(parents=True, exist_ok=True)
+        (repo / name).write_text(text)
+    code = subprocess.run(["bash", str(repo / "ops" / "sync_ledgers.sh")], capture_output=True, env=env).returncode
+    return code, git("--git-dir", str(remote), "ls-tree", "-r", "--name-only", "ledgers").split()
+
+
+def test_the_nightly_sync_publishes_decisions_csv(tmp_path):
+    ledgers = {f"{p}/data/forward/ledger.csv": "snapshot_utc\n2026-09-29T14:30:05Z\n" for p in ("nfl-weather", "cfb-weather")}
+    code, files = sync_ledgers(tmp_path, ledgers)
+    assert code == 0 and files == ["cfb-weather/ledger.csv", "nfl-weather/ledger.csv"]     # no decisions.csv: as before
+    code, files = sync_ledgers(tmp_path, {"nfl-weather/data/forward/decisions.csv": "game_id,decision\ng1,bet\n"})
+    assert code == 0 and files == ["cfb-weather/ledger.csv", "nfl-weather/decisions.csv", "nfl-weather/ledger.csv"]
+
+
+# ------------------------------------------------------------------ the owner's page (ops/RUN_RECORDS.md)
+def test_the_owners_page_says_what_the_jobs_do():
+    page = " ".join((ROOT.parent / "ops" / "RUN_RECORDS.md").read_text().split())
+    assert "none is sent twice" not in page and "can show twice" in page                     # a failed send's banner
+    assert "the forecasts or the odds" not in page and "An odds outage does not fail a run" in page
+    assert "no ledger row, no run record and no alert state" in page and "backup" in page    # a dry run
+    assert "the alert record was damaged" in page
 
 
 def test_L8_the_state_file_is_replaced_in_one_step(tmp_path, monkeypatch):

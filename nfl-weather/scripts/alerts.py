@@ -25,17 +25,17 @@ Delivery: macOS notification, plus an iPhone push when NTFY_TOPIC is set in .env
 State lives in data/forward/alert_state.json so nothing is sent twice: each alert is marked sent,
 and the file saved, right after it goes out, so a send that fails part way can't repeat the earlier
 ones next run. The ledger is saved before the state is read, so a damaged state file can't cost a
-ledger row: it is kept beside the new one, the run starts from an empty state, and the run is still
-recorded "ok", with a note (a run is "failed" only when a step fails or an alert can't be built or
-sent). Every run,
-finished or failed, leaves one row in data/forward/runs.csv; a failed run prints the error with any
-key blanked and exits with status 1. ops/RUN_RECORDS.md explains the records.
+ledger row: it is kept beside the new one, the run starts from an empty state, one notice says so, and
+the run is still recorded "ok", with a note (a run is "failed" only when a step fails or an alert can't
+be built or sent). Every run, finished or failed, leaves one row in data/forward/runs.csv; a failed run
+prints the error with any key blanked and exits with status 1. ops/RUN_RECORDS.md explains the records.
 
     python scripts/alerts.py              # normal run
     python scripts/alerts.py --dry-run    # print what would be sent (nflverse lines; no Odds API credit)
     python scripts/alerts.py --test       # send one test notification
 """
 import argparse
+import math
 import sys
 import traceback
 from pathlib import Path
@@ -77,6 +77,24 @@ def record(status, **kw):
         runlog.record_run(RUNS, JOB, board.RULES_VERSION, status, **kw)
     except Exception as e:
         print(f"  the run record could not be written: {type(e).__name__}: {runlog.scrub(e)}")
+
+
+def damaged_notice(kept):
+    """The one notice for a run that found alert_state.json damaged. The run itself goes on and is recorded
+    "ok"; a notice that can't be sent is reported and never stops the alerts."""
+    try:
+        notify.send("NFL weather alerts: the alert record was damaged",
+                    f"alert_state.json could not be read, so a copy was kept as {kept}. This run's ledger row "
+                    f"was saved. The job started over from an empty alert record, so some alerts you have "
+                    f"already had may arrive once more. See data/forward/runs.csv.")
+    except Exception as e:
+        print(f"  the damaged-record notice could not be sent: {type(e).__name__}")
+
+
+def number(v):
+    """A wind or total saved in alert_state.json, or None when it isn't a number (a hand edit): that game
+    then has no earlier check to compare with, rather than failing its alerts on every run."""
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) else None
 
 
 def fire(key, title, body, s):
@@ -131,7 +149,7 @@ def game_alerts(r, s, game):
              detail + f"{price}. Rule B needs a posted total, an under price of -115 or better, and positive EV.", s)
 
     # RULE B: forecast jumped while a posted total sat still (both totals must exist)
-    w_prev, t_prev = s.get("wind"), s.get("total")
+    w_prev, t_prev = number(s.get("wind")), number(s.get("total"))
     if (r.rule_b in board.SIGNALS and w_prev is not None and r.wx_wind - w_prev >= 5
             and t_prev is not None and abs(r.mkt_total - t_prev) < 0.5):
         fire(f"lag{round(r.wx_wind)}",
@@ -178,9 +196,11 @@ def run(at):
     # read after the ledger is saved: a damaged state file is kept aside and can't cost a ledger row
     at["stage"] = "reading the alert state"
     STATE.parent.mkdir(parents=True, exist_ok=True)
-    state, at["note"] = runlog.read_alert_state(STATE, keep_copy=not args.dry_run)
+    state, at["note"], kept = runlog.read_alert_state(STATE, keep_copy=not args.dry_run)
     if at["note"]:
         print(f"  {runlog.scrub(at['note'])}")
+    if kept:        # a damaged state file: tell the owner once (a dry run keeps no copy and sends nothing)
+        damaged_notice(kept)
     at["stage"] = "building the alerts"
     kick = pd.to_datetime(up.gameday + " " + up.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
     up = up[(kick > now) & (up.wx_src == "era5")]

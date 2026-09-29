@@ -12,11 +12,10 @@ Mac notification plus the same iPhone ntfy topic as the NFL alerts.
 State: data/forward/alert_state.json, so nothing is sent twice: each alert is marked sent, and the
 file saved, right after it goes out, so a send that fails part way can't repeat the earlier ones
 next run. The ledger is saved before the state is read, so a damaged state file can't cost a ledger
-row: it is kept beside the new one, the run starts from an empty state, and the run is still recorded
-"ok", with a note (a run is "failed" only when a step fails or an alert can't be built or sent). Every
-run, finished or
-failed, leaves one row in data/forward/runs.csv; a failed run prints the error with any key blanked
-and exits with status 1. ops/RUN_RECORDS.md explains the records.
+row: it is kept beside the new one, the run starts from an empty state, one notice says so, and the run
+is still recorded "ok", with a note (a run is "failed" only when a step fails or an alert can't be built
+or sent). Every run, finished or failed, leaves one row in data/forward/runs.csv; a failed run prints the
+error with any key blanked and exits with status 1. ops/RUN_RECORDS.md explains the records.
 
     python scripts/alerts.py [--dry-run | --test]    # --dry-run: ESPN prices only, no Odds API credit
 """
@@ -56,6 +55,18 @@ def record(status, **kw):
         print(f"  the run record could not be written: {type(e).__name__}: {runlog.scrub(e)}")
 
 
+def damaged_notice(kept):
+    """The one notice for a run that found alert_state.json damaged. The run itself goes on and is recorded
+    "ok"; a notice that can't be sent is reported and never stops the alerts."""
+    try:
+        notify.send("CFB weather alerts: the alert record was damaged",
+                    f"alert_state.json could not be read, so a copy was kept as {kept}. This run's ledger row "
+                    f"was saved. The job started over from an empty alert record, so some alerts you have "
+                    f"already had may arrive once more. See data/forward/runs.csv.")
+    except Exception as e:
+        print(f"  the damaged-record notice could not be sent: {type(e).__name__}")
+
+
 def run(at):
     """One alert run. `at` holds the stage the run has reached and what it has counted so far, so a
     failure anywhere is recorded with both."""
@@ -71,9 +82,11 @@ def run(at):
     # read after the ledger is saved: a damaged state file is kept aside and can't cost a ledger row
     at["stage"] = "reading the alert state"
     STATE.parent.mkdir(parents=True, exist_ok=True)
-    state, at["note"] = runlog.read_alert_state(STATE, keep_copy=not args.dry_run)
+    state, at["note"], kept = runlog.read_alert_state(STATE, keep_copy=not args.dry_run)
     if at["note"]:
         print(f"  {runlog.scrub(at['note'])}")
+    if kept:        # a damaged state file: tell the owner once (a dry run keeps no copy and sends nothing)
+        damaged_notice(kept)
     at["stage"] = "building the alerts"
     now = pd.Timestamp.now(tz="UTC")
     outbox, problems = [], []       # outbox: (game's state, key, title, body), built and not yet sent
