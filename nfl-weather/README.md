@@ -90,6 +90,27 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **The one-time ledger rewrite keeps old rows character for character** and leaves a copy of the ledger as it stood.
 - **A number that isn't a price is no price** (anything between −100 and +100), and quarter-point lines are priced as half a bet at each neighbour.
 
+## Forecast replay on NWS MOS, 2004–25 (issue #40, Sep 29)
+
+The Rule B evidence (57.2% under vs the close in 682 observed-wind games since 1999, `STRATEGY.md`) uses the wind the game book recorded at kickoff. The live rule bets on a forecast 1–3 days out. [`scripts/mos_replay.py`](scripts/mos_replay.py) replays it on the National Weather Service's GFS MOS station forecasts as they were issued, archived with their run times at the Iowa Environmental Mesonet. It is the NFL half of the college football replay; the method, the no-lookahead timing and the download are described in [`../cfb-weather/README.md`](../cfb-weather/README.md#forecast-replay-on-nws-mos-back-to-2006-issue-40-sep-29), and the shared code is `nflweather/mos.py` (an exact copy of `cfbweather/mos.py`; a test checks).
+
+**No NFL results yet.** The scripts are written and tested, but the NFL download runs after the college one, and the whole pull takes several hours at the rate the site allows. When it finishes, `scripts/mos_replay.py` writes the tables below. Nothing in this section changes Rule B.
+
+What differs from the college version:
+
+- **The wind is read at the kickoff instant**, as the live rule reads its forecast (interpolated between the 3-hourly MOS steps), not averaged over four hours.
+- **"Observed" is the game book's stadium wind** (else calibrated ERA5), the scale Rule B's evidence and its 15 mph threshold use. MOS forecasts the airport's wind, so the bias table matters more here: if MOS runs higher than the game book, 15 mph on MOS fires more often than 15 mph did in the evidence.
+- **Lead 3 is available for early kickoffs.** A run from three days before reaches 72 hours ahead, which covers a 1:00 PM Eastern Sunday kickoff but not a late-afternoon or night one.
+- **Stations:** 30 of the 37 stadiums that hosted outdoor games in 2004–25 have a MOS station within 40 km (median 7.9 km; [`data/processed/mos_station_map.csv`](data/processed/mos_station_map.csv)). The seven without one are the international venues (Wembley, Tottenham, Twickenham, Frankfurt, Munich, Mexico City, São Paulo; 49 games). 4,251 eligible games remain.
+- **Prices:** the nflverse closing total at an assumed −110 (the primary); nflverse's under price where it is −115 or better, the board's cap; and the SBR opener, 2007–21.
+- **Variants:** 1, the same trigger as the live rule (MOS ≥ 15 mph at lead 1, 2 or 3). No threshold is tuned.
+
+```bash
+.venv/bin/python scripts/mos_fetch.py --map-only    # the stadium map
+.venv/bin/python scripts/mos_fetch.py               # the download (cache-first; ../cfb-weather/scripts/mos_pull_all.sh runs both sports)
+.venv/bin/python scripts/mos_replay.py              # tables: output/tables/mos_replay_seasons.csv, mos_bias.csv; log: output/mos_replay.log
+```
+
 ## Where the data comes from
 
 | Source | What | Notes |
