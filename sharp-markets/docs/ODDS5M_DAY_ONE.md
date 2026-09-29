@@ -62,7 +62,8 @@ Run every command from `sharp-markets/`.
    ```bash
    uv run markets odds5m plan
    ```
-   It prints calls and the upper-bound credits per pull from the real schedules, in value order, with a running total. The PR A estimate was 4.18M for F1 through F6 (X3 was dropped by the owner). If the running total passes 4.5M, drop pulls from the bottom of the list (F6 first, then N1) rather than trimming seasons, and tell the owner. Never go below the 531,630-credit reserve: that's 300K plus X3's credits, which the owner assigned to the reserve.
+   It prints calls and the upper-bound credits per pull from the real schedules, in value order, with a running total. The PR A estimate was 4.18M for F1 through F6 (X3 was dropped by the owner). If the running total passes **4,440,000**, drop pulls from the bottom of the list (F6 first, then N1) rather than trimming seasons, and tell the owner. Never go below the 531,630-credit reserve: that's 300K plus X3's credits, which the owner assigned to the reserve.
+   - Where 4,440,000 comes from: 5,000,000 − 531,630 (the `--floor` reserve) − about 10,600 (the probe) − about 9,200 (October's live use on the same key: alerts 248, close capture ~385, trigger poller ~2,600, props log ~2,520, NBA collector from Oct 20 ~3,460) ≈ 4,448,600, rounded down. The floor stops every run at 4.47M spent, so a plan above this line can't finish anyway.
 4. **One week per sport**, to check coverage before the big spend. Dry run first to see the cost, then set `--max-credits` a little above it:
    ```bash
    uv run markets odds5m week                                 # prints the upper bound per pull
