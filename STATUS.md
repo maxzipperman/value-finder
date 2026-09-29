@@ -19,7 +19,7 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 | Rule | Scored from | Signals so far | Decision |
 |---|---|---|---|
-| NFL Rule B: early wind under ([`STRATEGY.md`](nfl-weather/STRATEGY.md)) | Week 5, Oct 8, 2026 | 0 | After Week 18 or 40 signals: keep only if average CLV > 0 with a 95% interval above zero. |
+| NFL Rule B: early wind under ([`STRATEGY.md`](nfl-weather/STRATEGY.md)) | Week 5, Oct 8, 2026 | 0 | Once, after the 2027 season, on 2026 and 2027 pooled (amendment 4, Sep 28), or at 40 signals if sooner: keep only if average CLV > 0 with a 95% interval above zero. The 2026 result is an interim read. |
 | CFB Rule B: early wind under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Oct 1, 2026 | 0 | After 40 signals or the regular season, whichever is later, by the same test. |
 | CFB Rule HT: high total → under ([`STRATEGY.md`](cfb-weather/STRATEGY.md)) | Week 6, Oct 7, 2026 (00:00 UTC) | 0 | Once, after the 2027 season: promote only if the win rate beats the break-even of the prices taken (one-sided p < 0.05) and ROI > 0. Drop at or below break-even. Otherwise keep on paper. |
 

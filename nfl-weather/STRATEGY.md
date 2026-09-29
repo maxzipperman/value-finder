@@ -19,7 +19,7 @@ Version 2 follows an independent audit; see `PREREGISTRATION.md` amendment 2.
 | **Line lag** | Same gates, plus the wind forecast rose 5+ mph since the last check while a posted total barely moved (`RULE B LINE LAG`). |
 | **Evidence for** | 57.2% under vs the close in 682 observed-wind games since 1999 (+9% at −110); 59.7% vs the opener 2007–21; totals fell about 1 point by kickoff; walk-forward bets beat the close 63% of the time. |
 | **Evidence against** | 18–18 on observed wind in 2024–26; 12–12 on 1-day forecasts; 108 variants were examined, and the long result (p ≈ 0.007) doesn't clear a strict multiple-testing bar (p < 0.0005). |
-| **Decision** | Scored from Week 5 (Oct 8, 2026) by `scripts/score_forward.py` at entry line and price. Keep only if average CLV > 0 with a 95% interval above zero after Week 18 or 40 signals. Amendment 3 adds a secondary CLV against Pinnacle's close captured 2–20 minutes before kickoff. |
+| **Decision** | Scored from Week 5 (Oct 8, 2026) by `scripts/score_forward.py` at entry line and price. Keep only if average CLV > 0 with a 95% interval above zero, decided once after the 2027 season on 2026 Weeks 5+ and 2027 pooled, or at 40 signals if sooner (amendment 4; the 2026 result after Week 18 is an interim read only). Amendment 3 adds a secondary CLV against Pinnacle's close captured 2–20 minutes before kickoff. |
 
 ## Watch: log, don't bet
 

@@ -118,3 +118,28 @@ measure or the decision changes.
   count, the primary CLV, or the keep/drop decision (after Week 18 or 40 bets,
   whichever is later).
 * Rule variants under forward test: still **2**.
+
+## Amendment 4 (2026-09-28, before any Week 5 game; no Rule B signal logged and no forward outcome observed)
+
+**The decision horizon pools the 2026 and 2027 seasons.** Nothing about Rule B's
+trigger, gates, entry, CLV metric or stakes changes.
+
+* **Why.** The rule produced 18 forecast triggers in 2024 and 25 in 2025 before its
+  price gates (review of Sep 28, `strategy-research/plan-review-2026-09-28.md`,
+  section 3), so "40 bets" cannot be reached in one season. The original horizon
+  ("after Week 18 or 40 bets, whichever is later") would leave the test undecided
+  until 2028 whatever the result. A CLV rule needs about 33 NFL signals to detect one
+  point of line value and about 130 for half a point (same review, appendix A).
+* **New horizon.** The keep/drop decision is made **once, after the 2027 regular
+  season (Week 18 of the 2027 season), on 2026 Weeks 5+ and 2027 pooled**, or
+  earlier at 40 signals if that comes first. The criteria are unchanged: keep only if
+  mean CLV > 0 with a 95% CI lower bound above zero, win rate vs the close ≥ 52.4%,
+  and mean CLV positive in both seasons (replacing "both halves of the season" as the
+  split); drop if mean CLV ≤ 0 or the 95% CI upper bound is below +0.25 points;
+  anything else is inconclusive and carries forward unchanged.
+* **Interim read.** `score_forward.py` reports the 2026 result after Week 18 as an
+  interim read, labelled as such. It decides nothing and changes nothing; the 2027
+  rule is Rule B as registered here.
+* **What this can't do.** It doesn't lower the bar, add a variant, or let 2026
+  results retune thresholds for 2027.
+* Rule variants under forward test: still **2**.

@@ -31,7 +31,7 @@ Every earlier CFB Rule B number used the wind *observed* at the nearest airport.
 
 - **Forecasts:** Open-Meteo's previous-runs archive (`data/raw/openmeteo_prev/`, cached), for all 1,709 eligible games. None is missing.
 - **Scale:** each forecast is put on the station scale with the frozen calibration. It isn't refit.
-- **Gates:** Rule B's own, exactly as `board.rule_b_status` applies them: 15+ mph at lead 1, 2 or 3; −115 or better; expected value above zero from the ≤ 2023 cohort.
+- **Gates:** the wind trigger (15+ mph at lead 1, 2 or 3) is the only gate that can bind here. cfbfastR has no prices, so every entry is at −110, which passes the −115 gate by construction, and the EV gate is evaluated at the closing total as both line and market reference, so it takes the same value (+0.081) for every game and never rejects one. *Correction, Sep 28:* the first version of this section said the gates were applied "exactly" as on the live board; they were computed, but two of the three could not bind. A replay with real prices needs the Pinnacle history (F1 in the Odds API plan).
 - **Entry:** the closing total at −110. It exists after every lead's forecast was public, and `tests/test_forecast_replay.py` checks that no quote predates its forecast.
 - **Output:** per-game rows in [`data/processed/forecast_replay.parquet`](data/processed/forecast_replay.parquet); the log is [`output/forecast_replay.log`](output/forecast_replay.log).
 
