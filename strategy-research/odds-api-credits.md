@@ -90,7 +90,7 @@ How the newly possible ideas fared:
 
 Each of these reuses M1's snapshots (h2h, spreads and totals from 10 books) and counts toward the variant budget.
 
-- **Line shopping.** What does the best of 10 books add to ROI over the consensus or Pinnacle price? Test it on #4 and on Rule B's history. This is descriptive and doesn't create a new bet rule.
+- **Line shopping.** What does the best of 10 books add to ROI over the consensus or Pinnacle price? Test it on #4 and on Rule B's history. This is descriptive and doesn't create a new bet rule. *A free first pass for CFB is done:* CollegeFootballData's retail books (about 2.4 per game) add about 0.3 points and about half a point of win rate ([pre-checks](README.md#pre-checks-on-the-backlog-added-september-28-2026)). M1 adds prices and more books, including sharp ones.
 - **Line-move reversal.** [Simon (2024)](https://pubsonline.informs.org/doi/10.1287/mnsc.2022.00456) finds negatively autocorrelated line changes across 3,681 MLB games. A [2025 follow-up](https://sage.cnpereading.com/doi/10.1177/15586235251394815) reports the same in NFL, NBA and NHL moneylines.
   - **What the screen already found:** the open-to-close move doesn't predict the *result* (slope −0.05 ± 0.10).
   - **The different question:** does a day-to-day move reverse before the close? That would show up as CLV, not as a better result.
@@ -122,7 +122,7 @@ The Kaunitz outlier-price method is idea 1 itself. Its real-money test ran for f
 | ~~M4~~ | ~~Windy-game first-half and team totals don't reflect the wind~~ (dropped: pre-check failed) | | | 0 |
 | B12, N1 | H1/H2 as specified in PLAN.md | Per PLAN.md | Per PLAN.md | Per PLAN.md |
 
-That's about 26 new football variants. The free pre-checks already raised the running count to 129 ([`prechecks.py`](prechecks.py)), so it would reach 129 + 26 = 155 and the Bonferroni bar would fall to p < 0.00032. Cap new forward tests at one per sport per season.
+That's about 26 new football variants. The free pre-checks already raised the running count to 134 ([`prechecks.py`](prechecks.py)), so it would reach 134 + 26 = 160 and the Bonferroni bar would fall to p < 0.00031. Cap new forward tests at one per sport per season.
 
 ---
 
