@@ -50,7 +50,17 @@ wind 15+ mph 1–3 days out, a posted total, an under price of −115 or better,
 positive expected value at that line and price. Wind triggers without a usable price,
 model leans, big model-vs-market gaps and cold-visitor spots arrive as WATCH items.
 With a key in `.env`, the board and alerts use live Pinnacle totals (1 credit per run);
-without one they fall back to nflverse lines.
+without one, or when the API fails or the month's credits run out, they fall back to
+nflverse lines. The same call logs nine more books at no extra cost (up to 10 books bill
+as one region), so each signal also shows the best under price at Pinnacle's number;
+Rule B still prices at Pinnacle. `alerts.py --dry-run` makes no Odds API call, and
+hand-run commands stop when fewer than 60 credits are left this month
+(the shared `~/.cache/value-finder/odds_quota.json`, see `nflweather/quota.py`).
+
+Every bet alert ends with timing advice (issue #5): unders and favorites now, overs and
+underdogs later. After you bet, log what you actually got, e.g.
+`scripts/log_fill.py 2026_06_BUF_NYJ --rule rule_b --line 41.5 --price -108 --book fanduel`;
+`score_forward.py` then reports the cost of waiting against the alert-time quote.
 
 For iPhone pushes: install the free ntfy app, subscribe to the topic in
 `NTFY_TOPIC` (pick something long and random; anyone who knows it can read it),

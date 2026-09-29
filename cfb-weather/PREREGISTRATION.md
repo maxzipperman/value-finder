@@ -7,7 +7,24 @@ positive EV at the offered line and price). Evaluation covers games from
 Oct 1, 2026. Every board snapshot is appended to `data/forward/ledger.csv` with
 `rules_version = cfb-v1-2026-09-28`. Variants under forward test: 1.
 
-## Amendment 1 (2026-09-28, before the first eligible game on Oct 1; no Rule B signal logged)
+## Amendment 1: Rule HT (high-total under)
+
+Written 2026-09-28. It is locked by the commit that merges it, which must land before the first eligible game: 2026 Week 6, kickoff 2026-10-07 00:00 UTC. No Rule HT outcome existed when it was written.
+
+- **Adds Rule HT** as defined in `STRATEGY.md`:
+  - The posted total is at least the prior season's mean closing total + 10 (2026: 62.6).
+  - The under must be −115 or better.
+  - Entry is at each game's last logged quote before kickoff.
+- **Grading:** win rate and ROI at the entry price, graded once after the 2027 season on 2026 Weeks 6+ and 2027 pooled.
+  - Promote only if one-sided binomial p < 0.05 against the break-even of the prices taken, and ROI > 0.
+  - Drop at or below break-even.
+  - Otherwise stay on paper.
+- **Rule B is unchanged.**
+- **Ledger:** from this amendment on, board snapshots carry `rules_version = cfb-v2-2026-09-28` and two new columns, `ht_threshold` and `rule_ht`.
+- **Variants under forward test:** 2.
+- **Also logged, not graded:** the best under price any logged book offers at the rule's number (`best_under`, `best_under_book`; issue #15). Neither rule's entry price changes.
+
+## Amendment 2 (2026-09-28, before the first eligible game on Oct 1; no Rule B or Rule HT signal logged)
 
 **A secondary CLV measure against the close captured at kickoff.** Nothing about
 the primary measure or the decision changes.
@@ -25,6 +42,6 @@ the primary measure or the decision changes.
   Missing closes are reported, never imputed.
 * **What it can't change.** This measure is descriptive. It doesn't change which bets
   count, the primary CLV, or the keep/drop decision.
-* **For issue #4.** The same captured close is the "latest number available" that
-  #4's rule would bet at, if #4 is registered before 2026 Week 6.
-* Variants under forward test: still **1**.
+* **Rule HT (amendment 1)** keeps its entry at the last logged quote before kickoff.
+  The scorer also reports the captured close next to it, as a descriptive reference.
+* Variants under forward test: still **2**.

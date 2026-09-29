@@ -38,3 +38,61 @@ def test_no_actionable_signal(kw, expected):
 def test_probability_depends_on_line():
     p = [p_under_at(L, 52.5, RESID)[0] for L in (40, 50, 52.5, 55, 65)]
     assert all(a < b for a, b in zip(p, p[1:]))
+
+
+# ---------------------------------------------------------------- Rule HT (amendment 1, issue #4)
+from cfbweather import board  # noqa: E402
+
+
+def ht(**kw):
+    base = dict(mkt_total=64.5, mkt_under=-110.0, ht_threshold=62.6175)
+    base.update(kw)
+    return SimpleNamespace(**base)
+
+
+@pytest.mark.parametrize("kw,expected", [
+    ({}, "SIGNAL"),
+    (dict(mkt_total=62.5), "below_threshold"),
+    (dict(mkt_total=63.0), "SIGNAL"),
+    (dict(mkt_under=-120.0), "price_too_high"),
+    (dict(mkt_total=np.nan), "no_price"),
+    (dict(mkt_under=np.nan), "no_price"),
+])
+def test_rule_ht_status(kw, expected):
+    assert board.rule_ht_status(ht(**kw)) == expected
+
+
+def test_ht_2026_threshold_matches_the_screen(monkeypatch):
+    assert board.HT_FROZEN[2026] == pytest.approx(62.6175, abs=1e-3)
+    monkeypatch.setattr(board, "HT_FROZEN", {})                   # recompute from the processed data
+    assert board.ht_threshold(2026) == pytest.approx(62.6175, abs=1e-3)
+
+
+def test_scorer_grades_ht_at_the_last_quote(tmp_path):
+    import subprocess
+
+    import pandas as pd
+    row = dict(rules_version="cfb-v2-2026-09-28", kick_et="Sat 10-10 15:30", away_team="A", home_team="B",
+               venue="V", lead_days=0, wx_src="forecast", wx_wind=5, wx_temp=60, wx_precip=0, line_src="pinnacle",
+               mkt_over=-110, ev_under=0.0, rule_b="no_trigger", best_under=None, best_under_book="",
+               ht_threshold=62.6175, start_utc="2026-10-10T19:30:00Z")
+    led = pd.DataFrame([
+        dict(row, snapshot_utc="2026-10-10T11:30:00Z", game_id=1, mkt_total=63.5, mkt_under=-110, rule_ht="SIGNAL"),
+        dict(row, snapshot_utc="2026-10-10T15:30:00Z", game_id=1, mkt_total=65.5, mkt_under=-105, rule_ht="SIGNAL"),
+        dict(row, snapshot_utc="2026-10-10T11:30:00Z", game_id=2, mkt_total=64.0, mkt_under=-110, rule_ht="SIGNAL"),
+        dict(row, snapshot_utc="2026-10-10T15:30:00Z", game_id=2, mkt_total=62.0, mkt_under=-110,
+             rule_ht="below_threshold"),
+        dict(row, snapshot_utc="2026-10-03T15:30:00Z", game_id=3, mkt_total=70.0, mkt_under=-110, rule_ht="SIGNAL",
+             start_utc="2026-10-03T19:30:00Z"),                      # before Week 6: not graded
+    ])
+    sched = pd.DataFrame([dict(game_id=1, home_points=30, away_points=31), dict(game_id=2, home_points=40,
+                                                                                away_points=30),
+                          dict(game_id=3, home_points=10, away_points=10)])
+    led.to_csv(tmp_path / "ledger.csv", index=False)
+    sched.to_csv(tmp_path / "sched.csv", index=False)
+    root = Path(__file__).resolve().parents[1]
+    out = subprocess.run([sys.executable, str(root / "scripts" / "score_forward.py"), "--ledger",
+                          str(tmp_path / "ledger.csv"), "--schedule", str(tmp_path / "sched.csv")],
+                         capture_output=True, text=True, check=True).stdout
+    assert "RULE_HT: 1 signals at the last quote before kickoff, 1 settled" in out
+    assert "record 1-0-0" in out and "+0.95" in out               # game 1 at 65.5 / -105, not the earlier 63.5

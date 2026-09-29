@@ -1,0 +1,28 @@
+
+season at 0.5% stakes
+                     rule                scenario  bets  median_pnl_pct  p10_pnl_pct  p90_pnl_pct  p_losing_season  median_max_drawdown_pct  p90_max_drawdown_pct
+  NFL Rule B (Weeks 5-18) historical rate (57.2%)    17           0.727       -1.773        3.364            0.328                    1.545                 3.045
+  NFL Rule B (Weeks 5-18)   half the edge (53.6%)    17           0.136       -2.318        2.636            0.445                    1.682                 3.273
+  NFL Rule B (Weeks 5-18)         no edge (50.0%)    17          -0.364       -2.864        2.045            0.563                    2.045                 3.727
+    CFB Rule B (Oct 1 on) historical rate (56.6%)    25           0.955       -2.000        4.091            0.340                    2.000                 3.682
+    CFB Rule B (Oct 1 on)   half the edge (53.3%)    25           0.273       -2.909        3.227            0.466                    2.182                 4.182
+    CFB Rule B (Oct 1 on)         no edge (50.0%)    25          -0.545       -3.636        2.409            0.598                    2.591                 4.727
+CFB Rule HT (full season) historical rate (57.7%)    65           3.273       -1.545        8.227            0.190                    3.000                 5.182
+CFB Rule HT (full season)   half the edge (53.8%)    65           0.909       -4.000        5.773            0.400                    3.636                 6.545
+CFB Rule HT (full season)         no edge (50.0%)    65          -1.409       -6.409        3.545            0.642                    4.636                 8.182
+
+Rule HT decision after 2027
+       rule            scenario  bets  p_promote  p_keep_on_paper  p_drop
+CFB Rule HT true win rate 57.7%    99      0.250            0.603   0.148
+CFB Rule HT true win rate 55.0%    99      0.114            0.583   0.303
+CFB Rule HT true win rate 52.4%    99      0.041            0.459   0.500
+CFB Rule HT true win rate 50.0%    99      0.015            0.301   0.684
+
+Rule B CLV tests
+      rule                                          scenario  bets  p_keep  p_stake_gate_after_20
+NFL Rule B full open-to-close move (mean +0.99 pts, sd 2.28)    17   0.433                  0.974
+NFL Rule B              half of it (mean +0.49 pts, sd 2.28)    17   0.129                  0.837
+NFL Rule B                 no edge (mean -0.00 pts, sd 2.28)    17   0.020                  0.487
+CFB Rule B full open-to-close move (mean +1.50 pts, sd 2.67)    40   0.943                  0.995
+CFB Rule B              half of it (mean +0.75 pts, sd 2.67)    40   0.433                  0.895
+CFB Rule B                 no edge (mean -0.00 pts, sd 2.67)    40   0.027                  0.506

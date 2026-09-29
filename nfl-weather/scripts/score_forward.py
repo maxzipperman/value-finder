@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from nflweather.config import RAW, ROOT
-from nflweather.market import american_to_profit
+from nflweather.market import american_to_profit, cost_of_waiting
 
 import argparse
 
@@ -105,4 +105,14 @@ if len(trig):
     order = {"SIGNAL": 0, "negative_ev": 1, "price_too_high": 2, "no_price": 3, "outside_horizon": 4}
     best = trig.assign(o=trig.rule_b.map(order)).sort_values("o").drop_duplicates("game_id")
     print(best.rule_b.value_counts().to_string())
+# Cost of waiting (issue #5): paper fills from scripts/log_fill.py vs the alert-time quote
+fills_path = ledger.parent / "fills.csv"
+if fills_path.exists():
+    fills = pd.read_csv(fills_path, dtype={"game_id": str}).drop_duplicates(["game_id", "rule"], keep="last")
+    entries = rb[["game_id", "total_line", "under_odds"]].rename(
+        columns={"total_line": "entry_line", "under_odds": "entry_price"}).assign(rule="rule_b")
+    wc = cost_of_waiting(entries, fills)
+    if len(wc):
+        print(f"\nCost of waiting, RULE_B: {len(wc)} paper fills; vs the alert-time quote the fill gained "
+              f"{wc.pts_gained.mean():+.2f} pts and {wc.profit_gained.mean():+.3f} units of payout per unit staked")
 print("\nVariants under forward test: 2 (MODEL_LEAN, RULE_B).")

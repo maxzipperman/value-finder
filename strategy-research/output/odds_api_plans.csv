@@ -1,4 +1,4 @@
-plan,credits,usd,usd_per_1k,live_oct_2026,pilot_plus_live,main_core_M1_M3,main_all_M1_M5,main_plus_N1_X1
+plan,credits,usd,usd_per_1k,live_oct_2026,pilot_plus_live,main_core_M1_M3,main_all_M1_M3_M5,main_plus_N1_X1
 Free,500,0,0.0,True,False,False,False,False
 20K,20000,30,1.5,True,True,False,False,False
 100K,100000,59,0.59,True,True,False,False,False

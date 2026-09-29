@@ -1,0 +1,86 @@
+CFB dress rehearsal: 2025 from Week 5 through this season's Rule B and Rule HT code and scorer
+  623 FBS games with a closing total; 2492 ledger rows (4 per game); Rule HT threshold for 2025 = 62.66
+  Rule B snapshot statuses: {'no_trigger': 2172, 'no_forecast': 136, 'SIGNAL': 96, 'not_outdoor': 56, 'outside_horizon': 32}
+  Rule HT at the last quote: {'below_threshold': 536, 'before_window': 53, 'SIGNAL': 34}
+
+Per week (2025 week numbers):
+                  5   6   7   8   9  10  11  12  13  14  15  16  bowls
+games            53  51  56  60  53  52  52  59  64  67   9   1     46
+rule_b_signals    2   2   1   4   3   1   2   4   1   8   0   0      4
+rule_ht_signals   0   3   4   5   2   3   5   4   3   3   1   0      1
+
+Scorer output (Rule B entry = the opening total, CLV to the close; Rule HT at the close):
+RULE_B: 32 signals, 32 settled
+  record 21-10-1, units +9.09; mean CLV +1.81 (95% CI +1.09 to +2.54)
+  game_id         kick_et        away_team         home_team  mkt_total  mkt_under  close_total  total  clv_pts    profit
+401757274 Sat 10-03 16:00 New Mexico State        New Mexico      54.50     -110.0        53.50   58.0     1.00 -1.000000
+401760378 Sat 10-03 16:00          Hawai'i         Air Force      53.75     -110.0        52.50   79.0     1.25 -1.000000
+401762873 Sat 10-10 15:30       Miami (OH) Northern Illinois      39.00     -110.0        38.50   39.0     0.50  0.000000
+401752860 Sat 10-10 16:00   Michigan State          Nebraska      53.50     -110.0        48.50   65.0     5.00 -1.000000
+401761623 Sat 10-17 19:00        UL Monroe  Coastal Carolina      44.00     -110.0        46.50   31.0    -2.50  0.909091
+401762488 Sat 10-24 12:00             Army            Tulane      46.50     -110.0        44.50   41.0     2.00  0.909091
+401756925 Sat 10-24 12:00          Arizona           Houston      46.75     -110.0        47.50   59.0    -0.75 -1.000000
+401762839 Sat 10-24 12:00 Central Michigan     Bowling Green      43.50     -110.0        43.50   33.0     0.00  0.909091
+401760392 Sat 10-24 15:30          Wyoming         Air Force      58.50     -110.0        56.50   45.0     2.00  0.909091
+401752952 Sat 10-31 15:30           Toledo  Washington State      50.75     -110.0        44.50   35.0     6.25  0.909091
+401752886 Sat 10-31 19:00        Wisconsin            Oregon      44.75     -110.0        45.00   28.0    -0.25  0.909091
+401756934 Sat 10-31 22:15         Colorado              Utah      53.25     -110.0        50.00   60.0     3.25 -1.000000
+401754583 Sat 11-07 14:30       Notre Dame    Boston College      57.50     -110.0        55.50   35.0     2.00  0.909091
+401756945 Sat 11-14 12:00              BYU        Texas Tech      53.50     -110.0        50.25   36.0     3.25  0.909091
+401752763 Sat 11-14 15:30        Texas A&M          Missouri      49.50     -110.0        48.50   55.0     1.00 -1.000000
+401762861 Sat 11-21 12:00 Eastern Michigan        Ball State      50.00     -110.0        48.50   33.0     1.50  0.909091
+401756951 Sat 11-21 12:00          Arizona        Cincinnati      56.50     -110.0        56.50   54.0     0.00  0.909091
+401752767 Sat 11-21 13:30   Tennessee Tech          Kentucky      52.25     -110.0        52.50   52.0    -0.25  0.909091
+401752903 Sat 11-21 15:30       Penn State    Michigan State      49.50     -110.0        49.00   38.0     0.50  0.909091
+401756958 Sat 11-28 12:00           Kansas        Iowa State      55.25     -110.0        55.50   52.0    -0.25  0.909091
+401762870 Fri 12-04 12:00             Ohio           Buffalo      47.50     -110.0        44.50   57.0     3.00 -1.000000
+401756966 Sat 12-05 12:00       Iowa State    Oklahoma State      49.50     -110.0        46.50   33.0     3.00  0.909091
+401762519 Sat 12-05 12:00    East Carolina  Florida Atlantic      67.00     -110.0        66.50   45.0     0.50  0.909091
+401756962 Sat 12-05 12:00          Houston            Baylor      61.00     -110.0        57.00   55.0     4.00  0.909091
+401757314 Sat 12-05 14:00   Louisiana Tech    Missouri State      51.50     -110.0        45.50   72.0     6.00 -1.000000
+401762517 Sat 12-05 15:00              UAB             Tulsa      60.00     -110.0        56.50   55.0     3.50  0.909091
+401752789 Sat 12-05 15:30              LSU          Oklahoma      38.50     -110.0        36.50   30.0     2.00  0.909091
+401752922 Sat 12-05 19:30     Northwestern          Illinois      47.50     -110.0        44.50   33.0     3.00  0.909091
+401778306 Fri 12-25 11:00   Kennesaw State  Western Michigan      49.50     -110.0        47.50   47.0     2.00  0.909091
+401779840 Fri 12-25 20:00          Alabama          Oklahoma      41.00     -110.0        42.50   58.0    -1.50 -1.000000
+401779841 Sat 12-26 12:00            Miami         Texas A&M      50.50     -110.0        48.50   13.0     2.00  0.909091
+401778312 Wed 12-30 20:00       California           Hawai'i      55.50     -110.0        50.50   66.0     5.00 -1.000000
+
+RULE_HT: 34 signals at the last quote before kickoff, 34 settled
+  record 19-15-0 (55.9%), units +2.27, ROI +6.7%; break-even 52.4%, one-sided p 0.408
+  game_id         kick_et         away_team        home_team  mkt_total  mkt_under  ht_threshold  total    profit
+401757276 Fri 10-09 19:00  Western Kentucky         Delaware       63.0     -110.0     62.664557   51.0  0.909091
+401757165 Sat 10-10 15:30       Boise State       Notre Dame       63.5     -110.0     62.664557   35.0  0.909091
+401761620 Sat 10-10 16:00       Texas State   Arkansas State       63.5     -110.0     62.664557   61.0  0.909091
+401762481 Fri 10-16 19:30     South Florida      North Texas       68.5     -110.0     62.664557   99.0 -1.000000
+401760386 Sat 10-17 15:30         Air Force             UNLV       65.5     -110.0     62.664557   99.0 -1.000000
+401752735 Sat 10-17 16:15          Arkansas        Tennessee       68.5     -110.0     62.664557   65.0  0.909091
+401762482 Sat 10-17 18:00               UAB Florida Atlantic       66.0     -110.0     62.664557   86.0 -1.000000
+401760396 Fri 10-23 21:00    San José State       Utah State       63.5     -110.0     62.664557   55.0  0.909091
+401756927 Sat 10-24 12:00            Baylor              TCU       66.5     -110.0     62.664557   78.0 -1.000000
+401761632 Sat 10-24 15:30       Texas State         Marshall       65.5     -110.0     62.664557   77.0 -1.000000
+401762491 Sat 10-24 15:30              UTSA      North Texas       64.0     -110.0     62.664557   72.0 -1.000000
+401762490 Sat 10-24 19:30  Florida Atlantic    South Florida       72.5     -110.0     62.664557   61.0  0.909091
+401762493 Sat 10-31 15:30  Florida Atlantic             Navy       63.5     -110.0     62.664557   74.0 -1.000000
+401756930 Sat 10-31 16:00            Baylor       Cincinnati       68.5     -110.0     62.664557   61.0  0.909091
+401752891 Sat 11-07 11:00           Rutgers         Illinois       63.5     -110.0     62.664557   48.0  0.909091
+401762499 Sat 11-07 11:00              Navy      North Texas       68.5     -110.0     62.664557   48.0  0.909091
+401752753 Sat 11-07 15:00 Mississippi State         Arkansas       66.5     -110.0     62.664557   73.0 -1.000000
+401762500 Thu 11-12 19:30              UTSA    South Florida       66.5     -110.0     62.664557   78.0 -1.000000
+401752761 Sat 11-14 13:00       The Citadel         Ole Miss       63.5     -110.0     62.664557   49.0  0.909091
+401754590 Sat 11-14 15:30              Duke            UConn       63.0     -110.0     62.664557   71.0 -1.000000
+401761648 Sat 11-14 17:00       Texas State        Louisiana       63.5     -110.0     62.664557   81.0 -1.000000
+401760406 Sat 11-14 18:00         Air Force   San José State       67.5     -110.0     62.664557   42.0  0.909091
+401757174 Sat 11-21 12:00         Air Force            UConn       64.5     -110.0     62.664557   42.0  0.909091
+401762506 Sat 11-21 14:00       North Texas              UAB       69.0     -110.0     62.664557   77.0 -1.000000
+401761654 Sat 11-21 15:30       Texas State    Southern Miss       65.5     -110.0     62.664557   55.0  0.909091
+401760414 Sat 11-21 19:00        Utah State             UNLV       68.5     -110.0     62.664557   55.0  0.909091
+401760418 Fri 11-27 22:30           Hawai'i             UNLV       64.5     -110.0     62.664557   48.0  0.909091
+401762511 Sat 11-28 15:00     South Florida              UAB       68.5     -110.0     62.664557   66.0  0.909091
+401757175 Sat 11-28 15:00             UConn Florida Atlantic       64.0     -110.0     62.664557   93.0 -1.000000
+401762442 Fri 12-04 15:30            Temple      North Texas       65.5     -110.0     62.664557   77.0 -1.000000
+401762519 Sat 12-05 12:00     East Carolina Florida Atlantic       66.5     -110.0     62.664557   45.0  0.909091
+401752791 Sat 12-05 15:30        Vanderbilt        Tennessee       66.5     -110.0     62.664557   69.0 -1.000000
+401777324 Fri 12-11 20:00       North Texas           Tulane       66.5     -110.0     62.664557   55.0  0.909091
+401778311 Tue 12-29 21:00              UNLV             Ohio       64.5     -110.0     62.664557   27.0  0.909091
+

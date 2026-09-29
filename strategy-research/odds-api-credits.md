@@ -10,19 +10,21 @@ Which Odds API plan this repo should pay for, month by month, and what each extr
 
 **Pay for two months: a 20K pilot in October ($30), then one 5M month on March 1, 2027 ($119). Run the live alerts on the free tier the rest of the time.** The total is $149, plus $119 more only if the NBA sample week shows an edge.
 
+*Update, September 28: the free pre-checks dropped two items. The first-half and team-totals pull (M4) is gone, and so is the best-price longshot test. The main month is now 292,960 credits, and it still needs the 5M plan.*
+
 | When | Plan | Cost | What runs | Credits |
 |---|---|---|---|---|
 | **Now, before Oct 1** | Free (500/mo) | $0 | Put the key in all three `.env` files. The NFL and CFB alerts start using prices (L1, L2). If you approve the amendment (see [before you buy](#before-you-buy)), add a close-capture call at each kickoff (L3). | 248 a month; 385 with close capture (October has five Saturdays) |
 | **October 2026** | 20K | $30 | Pilot: probe the unverified billing and coverage facts (P0), run the NFL forecast-time Pinnacle backfill (B1) and the NBA sample week (B12), and test each new puller on one week of real data. | 16,800 + 385 live = 17,185 (86%) |
 | **Nov 2026 to Feb 2027** | Free | $0 | Alerts and close capture only. | 33–378 a month |
-| **March 1, 2027** (after the Feb 14 Super Bowl) | 5M | $119 | Main backfill, NFL and CFB 2020–26: multi-book lines daily plus every close (M1), NFL alternates (M2), and NFL props at the close (M3). Also M4 and M5 if their gates pass. Subscribe on the 1st, since credits reset on the 1st, and cancel the same day so the plan lapses at the end of the cycle. | 253,410 core; 304,400 with M4 and M5 |
+| **March 1, 2027** (after the Feb 14 Super Bowl) | 5M | $119 | Main backfill, NFL and CFB 2020–26: multi-book lines daily plus every close (M1), NFL alternates (M2), and NFL props at the close (M3). Also M5 if H3 proceeds. (M4 was dropped: its play-by-play pre-check failed.) Subscribe on the 1st, since credits reset on the 1st, and cancel the same day so the plan lapses at the end of the cycle. | 253,410 core; 292,960 with M5 |
 | **April to August 2027** | Free | $0 | The alerts cost nothing off-season (the boards skip the API when no game is within 8 days). | 0–130 |
 | **NBA branch**, only if B12's review supports H1/H2 | 5M on Nov 1 or Dec 1, then 20K a month | $119, then $30 a month | Full 2025-26 NBA season at 5-minute resolution (N1), then the forward collector (L4) for the rest of the season. If the new pullers have passed their tests, pull football 2020–25 in the same month. March then needs only the 2026 season (about 47K), which fits the 100K plan ($59). | 478,530; the collector uses 3,888–14,175 a month |
 
 ### Why this plan
 
 - **5M is the only single month that fits the main backfill.** M1 alone is 162,210 credits, more than the 100K plan. Splitting M1–M3 across 100K months takes three months ($177). The cost per 1,000 credits is $1.50 on the 20K plan, $0.59 on 100K, $0.024 on 5M and $0.017 on 15M.
-- **15M is never needed.** The main month plus the NBA season plus the deferred hourly history (X1) comes to 2,387,360 credits, which fits in 5M. If hourly were replaced by 15-minute snapshots, two 5M months ($238) would still cost less than 15M ($249).
+- **15M is never needed.** The main month plus the NBA season plus the deferred hourly history (X1) comes to 2,375,920 credits, which fits in 5M. If hourly were replaced by 15-minute snapshots, two 5M months ($238) would still cost less than 15M ($249).
 - **Pilot first, because most of the pullers don't exist yet.**
   - No code calls historical events or historical event odds.
   - The sharp-markets normalizer drops the `point` field, so it can't store spreads or totals.
@@ -80,7 +82,7 @@ How the newly possible ideas fared:
 | **5-minute line histories around forecast updates** for windy games (#6) | X2: 705,580 for NFL and CFB 2024–25, after removing snapshots M1 already has | **Deferred.** The repo has no record of when each forecast run was issued, CFB games would be picked on observed wind, and alerts that run 4 times a day can't act on a lag measured in minutes. First build a run-level forecast archive on the Mac, then pilot hourly (about 1/12 the cost). |
 | **Props at several snapshots**, NFL and CFB (#10) | X6: 136,800 (NFL, 4 snapshots); X5: 442,240 (CFB) | **NFL at the close only (M3, 45,600).** That's #10's own design, and the median-vs-mean test needs only the close. CFB dropped: props come mostly from FanDuel, BetRivers and Bovada, and `player_games` has only QB, RB1 and WR1. |
 | **Alternate lines** for teaser and key-number pricing (#8) | 45,600 (NFL 2023–26) | **Keep (M2), after the pilot checks whether Pinnacle carries alternates.** Teasers are fixed-payout book rules, so there are no teaser prices to pull. The key-number table comes free from nflverse margins. CFB dropped (X4, 110,560). |
-| **First-half and team totals** for the derivative-market lag (#6) | X7: 580,160 (every 2 hours over 72 hours) | **Redesigned (M4, 11,440).** A 2-hour grid can't see a lag shorter than 2 hours, and books derive these lines from the main total. The testable version checks level instead: does the book's first-half or team-total split ignore wind? Run it at T−24h and the close, and only if a free nflverse play-by-play pre-check shows wind changes the first-half or team split beyond a proportional shift. |
+| **First-half and team totals** for the derivative-market lag (#6) | X7: 580,160 (every 2 hours over 72 hours) | **Dropped after the free pre-check** ([results](README.md#pre-checks-on-the-backlog-added-september-28-2026)): wind doesn't measurably change the first-half or team split. The redesign it would have needed (M4, 11,440) is kept below for reference. A 2-hour grid can't see a lag shorter than 2 hours, and books derive these lines from the main total. The testable version checks level instead: does the book's first-half or team-total split ignore wind? Run it at T−24h and the close, and only if a free nflverse play-by-play pre-check shows wind changes the first-half or team split beyond a proportional shift. |
 | **Multi-book close** for the price engine (#8) | M1: 162,210 (daily and close, 2020–26) | **Keep; this is the core.** It also serves #4 (Pinnacle closes, best price), #5 (NFL openers for 2022–25, which the SBR archive lacks), and the three hypotheses from outside feedback [below](#hypotheses-m1-can-test-at-no-extra-cost). Hourly (X1, 1,604,430) is deferred to a named question. |
 | **A full NBA season** for H1/H2 | N1: 478,530 (schedule D, net of cached snapshots) | **Only if B12 passes.** PLAN.md says no full-season pull until the sample week has been reviewed, and H4a found no Kalshi lag in NFL totals. |
 
@@ -94,7 +96,7 @@ Each of these reuses M1's snapshots (h2h, spreads and totals from 10 books) and 
   - **The different question:** does a day-to-day move reverse before the close? That would show up as CLV, not as a better result.
   - **Test and holdout:** fade the prior day's move and grade on CLV to the close, with 2026 as the holdout.
   - **Follow-up if daily data shows reversal:** hourly NFL (808,050 credits) becomes the named question that justifies part of X1, and it fits in the same 5M month.
-- **Favorite-longshot bias by odds band.** Test at the best available moneyline, not the consensus.
+- **Favorite-longshot bias by odds band.** *Pre-check done: no band shows a tradeable bias at the consensus close ([#17](https://github.com/maxzipperman/value-finder/issues/17), [results](README.md#pre-checks-on-the-backlog-added-september-28-2026)), so this comes off the data-use plan.* The original idea was to test at the best available moneyline, not the consensus.
   - A free pre-check on NFL is possible now, using the nflverse moneylines already in `games.parquet`. It needs no Odds API data.
   - CFB moneylines need M1.
   - Don't read it as "always bet favorites"; the screen's CFB big-underdog result already flips between eras.
@@ -113,13 +115,13 @@ The Kaunitz outlier-price method is idea 1 itself. Its real-money test ran for f
 | M1 | Soft-book prices beyond the 3-book sharp fair by ≥ X earn CLV (idea 1) | Mean CLV per flag | 2026 | 9 (3 thresholds × 3 markets) |
 | M1 | #4 and CFB Rule B history re-graded at the Pinnacle close; value of line shopping | Win rate, ROI | None (descriptive) | 4 |
 | M1 | Day-to-day line moves reverse before the close | CLV of fading the move | 2026 | 4 (2 markets × 2 sports) |
-| M1 | Longshots lose more per dollar at the best price | ROI by odds band | 2026 | 8 (4 bands × 2 sports) |
+| ~~M1~~ | ~~Longshots lose more per dollar at the best price~~ (dropped: the free pre-check found no bias) | | | 0 |
 | M2 | Alternate lines misprice key-number crossings versus recent-era margins | EV at the alternate price | 2026 | 4 |
 | M3 | Yardage-prop unders hit more than 50% (median below mean) | Under rate, ROI at the close | 2026 | 4 (one per market) |
-| M4 | Windy-game first-half and team totals don't reflect the wind | Under rate vs the main total | 2026 | 2 |
+| ~~M4~~ | ~~Windy-game first-half and team totals don't reflect the wind~~ (dropped: pre-check failed) | | | 0 |
 | B12, N1 | H1/H2 as specified in PLAN.md | Per PLAN.md | Per PLAN.md | Per PLAN.md |
 
-That's about 36 new football variants, so the running count would be 109 + 36 = 145 and the Bonferroni bar would fall to p < 0.00034. Cap new forward tests at one per sport per season.
+That's about 26 new football variants. The free pre-checks already raised the running count to 129 ([`prechecks.py`](prechecks.py)), so it would reach 129 + 26 = 155 and the Bonferroni bar would fall to p < 0.00032. Cap new forward tests at one per sport per season.
 
 ---
 
@@ -140,7 +142,7 @@ Credits are per month for live rows (L) and one-time for backfills. Value runs f
 | M1 | Main month | Multi-book featured lines, daily 16:00 UTC for 7 days before kickoff plus every close, NFL+CFB 2020–26 | #8, #4, #5 | 10 × 3 markets × 1 group (10 books) × 5,407 snapshots | 162,210 | 4 | Price-engine data; CFB Pinnacle closes; NFL openers 2022–25 |
 | M2 | Main month | Alternate spreads and totals, NFL 2023–26, T−24h and close | #8 | 10 × 2 × 1 × 2 × 1,140 games | 45,600 | 3 | Needs Pinnacle alternates for a sharp reference |
 | M3 | Main month | Player props (4 markets), NFL 2023–26, close | #10 | 10 × 4 × 1 × 1 × 1,140 | 45,600 | 3 | Idea 7; graded on outcomes at US-book prices |
-| M4 | If pre-check passes | First-half and team totals, windy NFL games (≥ 12 mph observed) plus as many calm games, 2023–26, T−24h and close | #6 | 10 × 2 × 1 × 2 × (143 + 143) | 11,440 | 2 | Level test; gated on the free play-by-play check |
+| M4 | Dropped (pre-check failed) | First-half and team totals, windy NFL games (≥ 12 mph observed) plus as many calm games, 2023–26, T−24h and close | #6 | 10 × 2 × 1 × 2 × (143 + 143) | 11,440 | 1 | The free play-by-play check found no wind effect on the first-half or team split |
 | M5 | If H3 proceeds | NBA Pinnacle closes 2021–26 | H3 | 10 × 1 × 1 × ~3,955 tips | 39,550 | 2 | Waits on licensed data |
 | N1 | If B12 passes | NBA 2025-26 season, 5-minute, market open to tip (schedule D) | H1/H2 | 10 × 1 × 1 × (49,398 − 754 − 791 cached) | 478,530 | 2 | Worth it only after B12 |
 | X1 | Deferred | Hourly multi-book featured lines, 7 days before kickoff, NFL+CFB 2020–26 | #8 | 10 × 3 × 1 × 53,481 | 1,604,430 | 3 | Hourly misses minute-long stale lines, and daily already catches persistent ones |

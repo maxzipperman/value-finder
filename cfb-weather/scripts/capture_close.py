@@ -1,4 +1,4 @@
-"""Record the closing total for each kickoff slot (PREREGISTRATION.md, amendment 1).
+"""Record the closing total for each kickoff slot (PREREGISTRATION.md, amendment 2).
 
 Runs every 15 minutes (ops/capture_closes.sh, launchd). When FBS games kick off in
 2–20 minutes and that kickoff time hasn't been captured yet, one Odds API call

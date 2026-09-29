@@ -185,9 +185,9 @@ def main():
          f"10 x 2 markets x 1 group x 2 snaps x {g_props:,} games", HIST * 2 * 2 * g_props, 3),
         ("M3", "main month", "Player props (4 markets), NFL 2023-26, at the close", "#10",
          f"10 x 4 x 1 x 1 snap x {g_props:,} games", HIST * 4 * g_props, 3),
-        ("M4", "main month if pre-check passes", "1H totals + team totals, windy NFL games (obs >= 12 mph) "
+        ("M4", "dropped (pre-check failed)", "1H totals + team totals, windy NFL games (obs >= 12 mph) "
          "+ as many calm controls, 2023-26, at T-24h and close", "#6 derivative markets",
-         f"10 x 2 x 1 x 2 snaps x ({w12_props} windy + {w12_props} calm)", HIST * 2 * 2 * 2 * w12_props, 2),
+         f"10 x 2 x 1 x 2 snaps x ({w12_props} windy + {w12_props} calm)", HIST * 2 * 2 * 2 * w12_props, 1),
         ("M5", "main month if H3 proceeds", "NBA Pinnacle closes 2021-26 for the H3 Kaggle test (PLAN.md)", "H3",
          "10 x 1 x 1 x ~3,955 tip times", 39_550, 2),
         ("N1", "if B12 passes", "NBA 2025-26 full season, schedule D: 5-min from market open to tip (PLAN.md)",
@@ -214,7 +214,7 @@ def main():
     live_oct = num("L1") + num("L2") + num("L3")
     pilot = num("P0") + num("B1") + num("B12")
     main_core = sum(num(i) for i in ("M1", "M2", "M3"))
-    main_all = main_core + num("M4") + num("M5")
+    main_all = main_core + num("M5")                 # M4 dropped: prechecks.py found no wind effect on the split
     plans = []
     for p, (cr, usd) in PLANS.items():
         plans.append({
@@ -222,7 +222,7 @@ def main():
             "live_oct_2026": live_oct <= cr,
             "pilot_plus_live": (pilot + live_oct <= cr) and p != "Free",
             "main_core_M1_M3": main_core <= cr and p != "Free",
-            "main_all_M1_M5": main_all <= cr and p != "Free",
+            "main_all_M1_M3_M5": main_all <= cr and p != "Free",
             "main_plus_N1_X1": main_all + num("N1") + num("X1") <= cr and p != "Free",
         })
     pl = pd.DataFrame(plans)
@@ -238,7 +238,7 @@ def main():
     print(f"NFL games in Nov 2025: {nfl_nov}\n")
     print(b[["id", "stage", "use", "arithmetic", "credits", "value"]].to_string(index=False), "\n")
     print(f"Live, Oct 2026 (L1-L3): {live_oct:,}   Oct pilot (P0+B1+B12): {pilot:,}   with live: {pilot + live_oct:,}")
-    print(f"Main month core (M1-M3): {main_core:,}   all (M1-M5): {main_all:,}   "
+    print(f"Main month core (M1-M3): {main_core:,}   with M5: {main_all:,}   "
           f"+ N1 + X1: {main_all + num('N1') + num('X1'):,}\n")
     print(pl.to_string(index=False), "\n")
     print("Live credits by month (2025-26 schedule relabelled as 2026-27):")
