@@ -1,0 +1,220 @@
+sport_key,date,kickoff_utc,team1,team2,venue_id,ground
+soccer_fifa_world_cup,2022-11-20,2022-11-20T16:00:00Z,Qatar,Ecuador,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-11-21,2022-11-21T16:00:00Z,Senegal,Netherlands,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-11-25,2022-11-25T13:00:00Z,Qatar,Senegal,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-11-25,2022-11-25T16:00:00Z,Netherlands,Ecuador,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-29,2022-11-29T15:00:00Z,Ecuador,Senegal,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-29,2022-11-29T15:00:00Z,Netherlands,Qatar,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-11-21,2022-11-21T13:00:00Z,England,Iran,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-21,2022-11-21T19:00:00Z,USA,Wales,ahmad_bin_ali_stadium,"Ahmad bin Ali Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-25,2022-11-25T10:00:00Z,Wales,Iran,ahmad_bin_ali_stadium,"Ahmad bin Ali Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-25,2022-11-25T19:00:00Z,England,USA,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-11-29,2022-11-29T19:00:00Z,Wales,England,ahmad_bin_ali_stadium,"Ahmad bin Ali Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-29,2022-11-29T19:00:00Z,Iran,USA,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-11-22,2022-11-22T10:00:00Z,Argentina,Saudi Arabia,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-11-22,2022-11-22T16:00:00Z,Mexico,Poland,stadium_974,"Stadium 974, Doha"
+soccer_fifa_world_cup,2022-11-26,2022-11-26T13:00:00Z,Poland,Saudi Arabia,education_city_stadium,"Education City Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-26,2022-11-26T19:00:00Z,Argentina,Mexico,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-11-30,2022-11-30T19:00:00Z,Poland,Argentina,stadium_974,"Stadium 974, Doha"
+soccer_fifa_world_cup,2022-11-30,2022-11-30T19:00:00Z,Saudi Arabia,Mexico,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-11-22,2022-11-22T13:00:00Z,Denmark,Tunisia,education_city_stadium,"Education City Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-22,2022-11-22T19:00:00Z,France,Australia,al_janoub_stadium,"Al Janoub Stadium, Al Wakrah"
+soccer_fifa_world_cup,2022-11-26,2022-11-26T10:00:00Z,Tunisia,Australia,al_janoub_stadium,"Al Janoub Stadium, Al Wakrah"
+soccer_fifa_world_cup,2022-11-26,2022-11-26T16:00:00Z,France,Denmark,stadium_974,"Stadium 974, Doha"
+soccer_fifa_world_cup,2022-11-30,2022-11-30T15:00:00Z,Australia,Denmark,al_janoub_stadium,"Al Janoub Stadium, Al Wakrah"
+soccer_fifa_world_cup,2022-11-30,2022-11-30T15:00:00Z,Tunisia,France,education_city_stadium,"Education City Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-23,2022-11-23T13:00:00Z,Germany,Japan,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-23,2022-11-23T16:00:00Z,Spain,Costa Rica,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-11-27,2022-11-27T10:00:00Z,Japan,Costa Rica,ahmad_bin_ali_stadium,"Ahmad bin Ali Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-27,2022-11-27T19:00:00Z,Spain,Germany,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-12-01,2022-12-01T19:00:00Z,Japan,Spain,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-01,2022-12-01T19:00:00Z,Costa Rica,Germany,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-11-23,2022-11-23T10:00:00Z,Morocco,Croatia,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-11-23,2022-11-23T19:00:00Z,Belgium,Canada,ahmad_bin_ali_stadium,"Ahmad bin Ali Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-27,2022-11-27T13:00:00Z,Belgium,Morocco,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-11-27,2022-11-27T16:00:00Z,Croatia,Canada,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-01,2022-12-01T15:00:00Z,Croatia,Belgium,ahmad_bin_ali_stadium,"Ahmad bin Ali Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-01,2022-12-01T15:00:00Z,Canada,Morocco,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-11-24,2022-11-24T10:00:00Z,Switzerland,Cameroon,al_janoub_stadium,"Al Janoub Stadium, Al Wakrah"
+soccer_fifa_world_cup,2022-11-24,2022-11-24T19:00:00Z,Brazil,Serbia,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-11-28,2022-11-28T10:00:00Z,Cameroon,Serbia,al_janoub_stadium,"Al Janoub Stadium, Al Wakrah"
+soccer_fifa_world_cup,2022-11-28,2022-11-28T16:00:00Z,Brazil,Switzerland,stadium_974,"Stadium 974, Doha"
+soccer_fifa_world_cup,2022-12-02,2022-12-02T19:00:00Z,Serbia,Switzerland,stadium_974,"Stadium 974, Doha"
+soccer_fifa_world_cup,2022-12-02,2022-12-02T19:00:00Z,Cameroon,Brazil,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-11-24,2022-11-24T13:00:00Z,Uruguay,South Korea,education_city_stadium,"Education City Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-24,2022-11-24T16:00:00Z,Portugal,Ghana,stadium_974,"Stadium 974, Doha"
+soccer_fifa_world_cup,2022-11-28,2022-11-28T13:00:00Z,South Korea,Ghana,education_city_stadium,"Education City Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-11-28,2022-11-28T19:00:00Z,Portugal,Uruguay,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-12-02,2022-12-02T15:00:00Z,Ghana,Uruguay,al_janoub_stadium,"Al Janoub Stadium, Al Wakrah"
+soccer_fifa_world_cup,2022-12-02,2022-12-02T15:00:00Z,South Korea,Portugal,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-12-03,2022-12-03T15:00:00Z,Netherlands,USA,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-03,2022-12-03T19:00:00Z,Argentina,Australia,ahmad_bin_ali_stadium,"Ahmad bin Ali Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-04,2022-12-04T15:00:00Z,France,Poland,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-12-04,2022-12-04T19:00:00Z,England,Senegal,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-12-05,2022-12-05T15:00:00Z,Japan,Croatia,al_janoub_stadium,"Al Janoub Stadium, Al Wakrah"
+soccer_fifa_world_cup,2022-12-05,2022-12-05T19:00:00Z,Brazil,South Korea,stadium_974,"Stadium 974, Doha"
+soccer_fifa_world_cup,2022-12-06,2022-12-06T15:00:00Z,Morocco,Spain,education_city_stadium,"Education City Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-06,2022-12-06T19:00:00Z,Portugal,Switzerland,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-12-09,2022-12-09T15:00:00Z,Croatia,Brazil,education_city_stadium,"Education City Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-09,2022-12-09T19:00:00Z,Netherlands,Argentina,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-12-10,2022-12-10T15:00:00Z,Morocco,Portugal,al_thumama_stadium,"Al Thumama Stadium, Doha"
+soccer_fifa_world_cup,2022-12-10,2022-12-10T19:00:00Z,England,France,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-12-13,2022-12-13T19:00:00Z,Argentina,Croatia,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2022-12-14,2022-12-14T19:00:00Z,France,Morocco,al_bayt_stadium,"Al Bayt Stadium, Al Khor"
+soccer_fifa_world_cup,2022-12-17,2022-12-17T15:00:00Z,Croatia,Morocco,khalifa_international_stadium,"Khalifa International Stadium, Al Rayyan"
+soccer_fifa_world_cup,2022-12-18,2022-12-18T15:00:00Z,Argentina,France,lusail_stadium,"Lusail Iconic Stadium, Lusail"
+soccer_fifa_world_cup,2026-06-11,2026-06-11T19:00:00Z,Mexico,South Africa,estadio_azteca,Mexico City
+soccer_fifa_world_cup,2026-06-11,2026-06-12T02:00:00Z,South Korea,Czech Republic,estadio_akron,Guadalajara (Zapopan)
+soccer_fifa_world_cup,2026-06-18,2026-06-18T16:00:00Z,Czech Republic,South Africa,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-06-18,2026-06-19T01:00:00Z,Mexico,South Korea,estadio_akron,Guadalajara (Zapopan)
+soccer_fifa_world_cup,2026-06-24,2026-06-25T01:00:00Z,Czech Republic,Mexico,estadio_azteca,Mexico City
+soccer_fifa_world_cup,2026-06-24,2026-06-25T01:00:00Z,South Africa,South Korea,estadio_bbva,Monterrey (Guadalupe)
+soccer_fifa_world_cup,2026-06-12,2026-06-12T19:00:00Z,Canada,Bosnia & Herzegovina,bmo_field,Toronto
+soccer_fifa_world_cup,2026-06-13,2026-06-13T19:00:00Z,Qatar,Switzerland,levi_s_stadium,San Francisco Bay Area (Santa Clara)
+soccer_fifa_world_cup,2026-06-18,2026-06-18T19:00:00Z,Switzerland,Bosnia & Herzegovina,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-06-18,2026-06-18T22:00:00Z,Canada,Qatar,bc_place,Vancouver
+soccer_fifa_world_cup,2026-06-24,2026-06-24T19:00:00Z,Switzerland,Canada,bc_place,Vancouver
+soccer_fifa_world_cup,2026-06-24,2026-06-24T19:00:00Z,Bosnia & Herzegovina,Qatar,lumen_field,Seattle
+soccer_fifa_world_cup,2026-06-13,2026-06-13T22:00:00Z,Brazil,Morocco,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_fifa_world_cup,2026-06-13,2026-06-14T01:00:00Z,Haiti,Scotland,gillette_stadium,Boston (Foxborough)
+soccer_fifa_world_cup,2026-06-19,2026-06-19T22:00:00Z,Scotland,Morocco,gillette_stadium,Boston (Foxborough)
+soccer_fifa_world_cup,2026-06-19,2026-06-20T00:30:00Z,Brazil,Haiti,lincoln_financial_field,Philadelphia
+soccer_fifa_world_cup,2026-06-24,2026-06-24T22:00:00Z,Scotland,Brazil,hard_rock_stadium,Miami (Miami Gardens)
+soccer_fifa_world_cup,2026-06-24,2026-06-24T22:00:00Z,Morocco,Haiti,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-06-12,2026-06-13T01:00:00Z,USA,Paraguay,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-06-13,2026-06-14T04:00:00Z,Australia,Turkey,bc_place,Vancouver
+soccer_fifa_world_cup,2026-06-19,2026-06-19T19:00:00Z,USA,Australia,lumen_field,Seattle
+soccer_fifa_world_cup,2026-06-19,2026-06-20T03:00:00Z,Turkey,Paraguay,levi_s_stadium,San Francisco Bay Area (Santa Clara)
+soccer_fifa_world_cup,2026-06-25,2026-06-26T02:00:00Z,Turkey,USA,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-06-25,2026-06-26T02:00:00Z,Paraguay,Australia,levi_s_stadium,San Francisco Bay Area (Santa Clara)
+soccer_fifa_world_cup,2026-06-14,2026-06-14T17:00:00Z,Germany,Curaçao,nrg_stadium,Houston
+soccer_fifa_world_cup,2026-06-14,2026-06-14T23:00:00Z,Ivory Coast,Ecuador,lincoln_financial_field,Philadelphia
+soccer_fifa_world_cup,2026-06-20,2026-06-20T20:00:00Z,Germany,Ivory Coast,bmo_field,Toronto
+soccer_fifa_world_cup,2026-06-20,2026-06-21T00:00:00Z,Ecuador,Curaçao,geha_field_at_arrowhead_stadium,Kansas City
+soccer_fifa_world_cup,2026-06-25,2026-06-25T20:00:00Z,Curaçao,Ivory Coast,lincoln_financial_field,Philadelphia
+soccer_fifa_world_cup,2026-06-25,2026-06-25T20:00:00Z,Ecuador,Germany,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_fifa_world_cup,2026-06-14,2026-06-14T20:00:00Z,Netherlands,Japan,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-06-14,2026-06-15T02:00:00Z,Sweden,Tunisia,estadio_bbva,Monterrey (Guadalupe)
+soccer_fifa_world_cup,2026-06-20,2026-06-20T17:00:00Z,Netherlands,Sweden,nrg_stadium,Houston
+soccer_fifa_world_cup,2026-06-20,2026-06-21T04:00:00Z,Tunisia,Japan,estadio_bbva,Monterrey (Guadalupe)
+soccer_fifa_world_cup,2026-06-25,2026-06-25T23:00:00Z,Japan,Sweden,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-06-25,2026-06-25T23:00:00Z,Tunisia,Netherlands,geha_field_at_arrowhead_stadium,Kansas City
+soccer_fifa_world_cup,2026-06-15,2026-06-15T19:00:00Z,Belgium,Egypt,lumen_field,Seattle
+soccer_fifa_world_cup,2026-06-15,2026-06-16T01:00:00Z,Iran,New Zealand,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-06-21,2026-06-21T19:00:00Z,Belgium,Iran,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-06-21,2026-06-22T01:00:00Z,New Zealand,Egypt,bc_place,Vancouver
+soccer_fifa_world_cup,2026-06-26,2026-06-27T03:00:00Z,Egypt,Iran,lumen_field,Seattle
+soccer_fifa_world_cup,2026-06-26,2026-06-27T03:00:00Z,New Zealand,Belgium,bc_place,Vancouver
+soccer_fifa_world_cup,2026-06-15,2026-06-15T16:00:00Z,Spain,Cape Verde,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-06-15,2026-06-15T22:00:00Z,Saudi Arabia,Uruguay,hard_rock_stadium,Miami (Miami Gardens)
+soccer_fifa_world_cup,2026-06-21,2026-06-21T16:00:00Z,Spain,Saudi Arabia,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-06-21,2026-06-21T22:00:00Z,Uruguay,Cape Verde,hard_rock_stadium,Miami (Miami Gardens)
+soccer_fifa_world_cup,2026-06-26,2026-06-27T00:00:00Z,Cape Verde,Saudi Arabia,nrg_stadium,Houston
+soccer_fifa_world_cup,2026-06-26,2026-06-27T00:00:00Z,Uruguay,Spain,estadio_akron,Guadalajara (Zapopan)
+soccer_fifa_world_cup,2026-06-16,2026-06-16T19:00:00Z,France,Senegal,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_fifa_world_cup,2026-06-16,2026-06-16T22:00:00Z,Iraq,Norway,gillette_stadium,Boston (Foxborough)
+soccer_fifa_world_cup,2026-06-22,2026-06-22T21:00:00Z,France,Iraq,lincoln_financial_field,Philadelphia
+soccer_fifa_world_cup,2026-06-22,2026-06-23T00:00:00Z,Norway,Senegal,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_fifa_world_cup,2026-06-26,2026-06-26T19:00:00Z,Norway,France,gillette_stadium,Boston (Foxborough)
+soccer_fifa_world_cup,2026-06-26,2026-06-26T19:00:00Z,Senegal,Iraq,bmo_field,Toronto
+soccer_fifa_world_cup,2026-06-16,2026-06-17T01:00:00Z,Argentina,Algeria,geha_field_at_arrowhead_stadium,Kansas City
+soccer_fifa_world_cup,2026-06-16,2026-06-17T04:00:00Z,Austria,Jordan,levi_s_stadium,San Francisco Bay Area (Santa Clara)
+soccer_fifa_world_cup,2026-06-22,2026-06-22T17:00:00Z,Argentina,Austria,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-06-22,2026-06-23T03:00:00Z,Jordan,Algeria,levi_s_stadium,San Francisco Bay Area (Santa Clara)
+soccer_fifa_world_cup,2026-06-27,2026-06-28T02:00:00Z,Algeria,Austria,geha_field_at_arrowhead_stadium,Kansas City
+soccer_fifa_world_cup,2026-06-27,2026-06-28T02:00:00Z,Jordan,Argentina,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-06-17,2026-06-17T17:00:00Z,Portugal,DR Congo,nrg_stadium,Houston
+soccer_fifa_world_cup,2026-06-17,2026-06-18T02:00:00Z,Uzbekistan,Colombia,estadio_azteca,Mexico City
+soccer_fifa_world_cup,2026-06-23,2026-06-23T17:00:00Z,Portugal,Uzbekistan,nrg_stadium,Houston
+soccer_fifa_world_cup,2026-06-23,2026-06-24T02:00:00Z,Colombia,DR Congo,estadio_akron,Guadalajara (Zapopan)
+soccer_fifa_world_cup,2026-06-27,2026-06-27T23:30:00Z,Colombia,Portugal,hard_rock_stadium,Miami (Miami Gardens)
+soccer_fifa_world_cup,2026-06-27,2026-06-27T23:30:00Z,DR Congo,Uzbekistan,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-06-17,2026-06-17T20:00:00Z,England,Croatia,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-06-17,2026-06-17T23:00:00Z,Ghana,Panama,bmo_field,Toronto
+soccer_fifa_world_cup,2026-06-23,2026-06-23T20:00:00Z,England,Ghana,gillette_stadium,Boston (Foxborough)
+soccer_fifa_world_cup,2026-06-23,2026-06-23T23:00:00Z,Panama,Croatia,bmo_field,Toronto
+soccer_fifa_world_cup,2026-06-27,2026-06-27T21:00:00Z,Panama,England,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_fifa_world_cup,2026-06-27,2026-06-27T21:00:00Z,Croatia,Ghana,lincoln_financial_field,Philadelphia
+soccer_fifa_world_cup,2026-06-28,2026-06-28T19:00:00Z,South Africa,Canada,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-06-29,2026-06-29T20:30:00Z,Germany,Paraguay,gillette_stadium,Boston (Foxborough)
+soccer_fifa_world_cup,2026-06-29,2026-06-30T01:00:00Z,Netherlands,Morocco,estadio_bbva,Monterrey (Guadalupe)
+soccer_fifa_world_cup,2026-06-29,2026-06-29T17:00:00Z,Brazil,Japan,nrg_stadium,Houston
+soccer_fifa_world_cup,2026-06-30,2026-06-30T21:00:00Z,France,Sweden,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_fifa_world_cup,2026-06-30,2026-06-30T17:00:00Z,Ivory Coast,Norway,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-06-30,2026-07-01T01:00:00Z,Mexico,Ecuador,estadio_azteca,Mexico City
+soccer_fifa_world_cup,2026-07-01,2026-07-01T16:00:00Z,England,DR Congo,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-07-01,2026-07-02T00:00:00Z,USA,Bosnia & Herzegovina,levi_s_stadium,San Francisco Bay Area (Santa Clara)
+soccer_fifa_world_cup,2026-07-01,2026-07-01T20:00:00Z,Belgium,Senegal,lumen_field,Seattle
+soccer_fifa_world_cup,2026-07-02,2026-07-02T23:00:00Z,Portugal,Croatia,bmo_field,Toronto
+soccer_fifa_world_cup,2026-07-02,2026-07-02T19:00:00Z,Spain,Austria,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-07-02,2026-07-03T03:00:00Z,Switzerland,Algeria,bc_place,Vancouver
+soccer_fifa_world_cup,2026-07-03,2026-07-03T22:00:00Z,Argentina,Cape Verde,hard_rock_stadium,Miami (Miami Gardens)
+soccer_fifa_world_cup,2026-07-03,2026-07-04T01:30:00Z,Colombia,Ghana,geha_field_at_arrowhead_stadium,Kansas City
+soccer_fifa_world_cup,2026-07-03,2026-07-03T18:00:00Z,Australia,Egypt,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-07-04,2026-07-04T21:00:00Z,Paraguay,France,lincoln_financial_field,Philadelphia
+soccer_fifa_world_cup,2026-07-04,2026-07-04T17:00:00Z,Canada,Morocco,nrg_stadium,Houston
+soccer_fifa_world_cup,2026-07-05,2026-07-05T20:00:00Z,Brazil,Norway,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_fifa_world_cup,2026-07-05,2026-07-06T00:00:00Z,Mexico,England,estadio_azteca,Mexico City
+soccer_fifa_world_cup,2026-07-06,2026-07-06T19:00:00Z,Portugal,Spain,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-07-06,2026-07-07T00:00:00Z,USA,Belgium,lumen_field,Seattle
+soccer_fifa_world_cup,2026-07-07,2026-07-07T16:00:00Z,Argentina,Egypt,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-07-07,2026-07-07T20:00:00Z,Switzerland,Colombia,bc_place,Vancouver
+soccer_fifa_world_cup,2026-07-09,2026-07-09T20:00:00Z,France,Morocco,gillette_stadium,Boston (Foxborough)
+soccer_fifa_world_cup,2026-07-10,2026-07-10T19:00:00Z,Spain,Belgium,sofi_stadium,Los Angeles (Inglewood)
+soccer_fifa_world_cup,2026-07-11,2026-07-11T21:00:00Z,Norway,England,hard_rock_stadium,Miami (Miami Gardens)
+soccer_fifa_world_cup,2026-07-11,2026-07-12T01:00:00Z,Argentina,Switzerland,geha_field_at_arrowhead_stadium,Kansas City
+soccer_fifa_world_cup,2026-07-14,2026-07-14T19:00:00Z,France,Spain,at_t_stadium,Dallas (Arlington)
+soccer_fifa_world_cup,2026-07-15,2026-07-15T19:00:00Z,England,Argentina,mercedes_benz_stadium,Atlanta
+soccer_fifa_world_cup,2026-07-18,2026-07-18T21:00:00Z,France,England,hard_rock_stadium,Miami (Miami Gardens)
+soccer_fifa_world_cup,2026-07-19,2026-07-19T19:00:00Z,Spain,Argentina,metlife_stadium,New York/New Jersey (East Rutherford)
+soccer_uefa_european_championship,2024-06-14,2024-06-14T19:00:00Z,Germany,Scotland,allianz_arena,München
+soccer_uefa_european_championship,2024-06-15,2024-06-15T13:00:00Z,Hungary,Switzerland,rheinenergiestadion,Köln
+soccer_uefa_european_championship,2024-06-19,2024-06-19T16:00:00Z,Germany,Hungary,mhparena,Stuttgart
+soccer_uefa_european_championship,2024-06-19,2024-06-19T19:00:00Z,Scotland,Switzerland,rheinenergiestadion,Köln
+soccer_uefa_european_championship,2024-06-23,2024-06-23T19:00:00Z,Switzerland,Germany,deutsche_bank_park,Frankfurt
+soccer_uefa_european_championship,2024-06-23,2024-06-23T19:00:00Z,Scotland,Hungary,mhparena,Stuttgart
+soccer_uefa_european_championship,2024-06-15,2024-06-15T16:00:00Z,Spain,Croatia,olympiastadion_berlin,Berlin
+soccer_uefa_european_championship,2024-06-15,2024-06-15T19:00:00Z,Italy,Albania,signal_iduna_park,Dortmund
+soccer_uefa_european_championship,2024-06-19,2024-06-19T13:00:00Z,Croatia,Albania,volksparkstadion,Hamburg
+soccer_uefa_european_championship,2024-06-20,2024-06-20T19:00:00Z,Spain,Italy,veltins_arena,Gelsenkirchen
+soccer_uefa_european_championship,2024-06-24,2024-06-24T19:00:00Z,Albania,Spain,merkur_spiel_arena,Düsseldorf
+soccer_uefa_european_championship,2024-06-24,2024-06-24T19:00:00Z,Croatia,Italy,red_bull_arena_leipzig,Leipzig
+soccer_uefa_european_championship,2024-06-16,2024-06-16T16:00:00Z,Slovenia,Denmark,mhparena,Stuttgart
+soccer_uefa_european_championship,2024-06-16,2024-06-16T19:00:00Z,Serbia,England,veltins_arena,Gelsenkirchen
+soccer_uefa_european_championship,2024-06-20,2024-06-20T13:00:00Z,Slovenia,Serbia,allianz_arena,München
+soccer_uefa_european_championship,2024-06-20,2024-06-20T16:00:00Z,Denmark,England,deutsche_bank_park,Frankfurt
+soccer_uefa_european_championship,2024-06-25,2024-06-25T19:00:00Z,England,Slovenia,rheinenergiestadion,Köln
+soccer_uefa_european_championship,2024-06-25,2024-06-25T19:00:00Z,Denmark,Serbia,allianz_arena,München
+soccer_uefa_european_championship,2024-06-16,2024-06-16T13:00:00Z,Poland,Netherlands,volksparkstadion,Hamburg
+soccer_uefa_european_championship,2024-06-17,2024-06-17T19:00:00Z,Austria,France,merkur_spiel_arena,Düsseldorf
+soccer_uefa_european_championship,2024-06-21,2024-06-21T16:00:00Z,Poland,Austria,olympiastadion_berlin,Berlin
+soccer_uefa_european_championship,2024-06-21,2024-06-21T19:00:00Z,Netherlands,France,red_bull_arena_leipzig,Leipzig
+soccer_uefa_european_championship,2024-06-25,2024-06-25T16:00:00Z,Netherlands,Austria,olympiastadion_berlin,Berlin
+soccer_uefa_european_championship,2024-06-25,2024-06-25T16:00:00Z,France,Poland,signal_iduna_park,Dortmund
+soccer_uefa_european_championship,2024-06-17,2024-06-17T13:00:00Z,Romania,Ukraine,allianz_arena,München
+soccer_uefa_european_championship,2024-06-17,2024-06-17T16:00:00Z,Belgium,Slovakia,deutsche_bank_park,Frankfurt
+soccer_uefa_european_championship,2024-06-21,2024-06-21T13:00:00Z,Slovakia,Ukraine,merkur_spiel_arena,Düsseldorf
+soccer_uefa_european_championship,2024-06-22,2024-06-22T19:00:00Z,Belgium,Romania,rheinenergiestadion,Köln
+soccer_uefa_european_championship,2024-06-26,2024-06-26T16:00:00Z,Slovakia,Romania,deutsche_bank_park,Frankfurt
+soccer_uefa_european_championship,2024-06-26,2024-06-26T16:00:00Z,Ukraine,Belgium,mhparena,Stuttgart
+soccer_uefa_european_championship,2024-06-18,2024-06-18T16:00:00Z,Turkey,Georgia,signal_iduna_park,Dortmund
+soccer_uefa_european_championship,2024-06-18,2024-06-18T19:00:00Z,Portugal,Czech Republic,red_bull_arena_leipzig,Leipzig
+soccer_uefa_european_championship,2024-06-22,2024-06-22T13:00:00Z,Georgia,Czech Republic,volksparkstadion,Hamburg
+soccer_uefa_european_championship,2024-06-22,2024-06-22T16:00:00Z,Turkey,Portugal,signal_iduna_park,Dortmund
+soccer_uefa_european_championship,2024-06-26,2024-06-26T19:00:00Z,Georgia,Portugal,veltins_arena,Gelsenkirchen
+soccer_uefa_european_championship,2024-06-26,2024-06-26T19:00:00Z,Czech Republic,Turkey,volksparkstadion,Hamburg
+soccer_uefa_european_championship,2024-06-29,2024-06-29T16:00:00Z,Switzerland,Italy,olympiastadion_berlin,Berlin
+soccer_uefa_european_championship,2024-06-29,2024-06-29T19:00:00Z,Germany,Denmark,signal_iduna_park,Dortmund
+soccer_uefa_european_championship,2024-06-30,2024-06-30T16:00:00Z,England,Slovakia,veltins_arena,Gelsenkirchen
+soccer_uefa_european_championship,2024-06-30,2024-06-30T19:00:00Z,Spain,Georgia,rheinenergiestadion,Köln
+soccer_uefa_european_championship,2024-07-01,2024-07-01T16:00:00Z,France,Belgium,merkur_spiel_arena,Düsseldorf
+soccer_uefa_european_championship,2024-07-01,2024-07-01T19:00:00Z,Portugal,Slovenia,deutsche_bank_park,Frankfurt
+soccer_uefa_european_championship,2024-07-02,2024-07-02T16:00:00Z,Romania,Netherlands,allianz_arena,München
+soccer_uefa_european_championship,2024-07-02,2024-07-02T19:00:00Z,Austria,Turkey,red_bull_arena_leipzig,Leipzig
+soccer_uefa_european_championship,2024-07-05,2024-07-05T16:00:00Z,Spain,Germany,mhparena,Stuttgart
+soccer_uefa_european_championship,2024-07-05,2024-07-05T19:00:00Z,Portugal,France,volksparkstadion,Hamburg
+soccer_uefa_european_championship,2024-07-06,2024-07-06T16:00:00Z,England,Switzerland,merkur_spiel_arena,Düsseldorf
+soccer_uefa_european_championship,2024-07-06,2024-07-06T19:00:00Z,Netherlands,Turkey,olympiastadion_berlin,Berlin
+soccer_uefa_european_championship,2024-07-09,2024-07-09T19:00:00Z,Spain,France,allianz_arena,München
+soccer_uefa_european_championship,2024-07-10,2024-07-10T19:00:00Z,Netherlands,England,signal_iduna_park,Dortmund
+soccer_uefa_european_championship,2024-07-14,2024-07-14T19:00:00Z,Spain,England,olympiastadion_berlin,Berlin

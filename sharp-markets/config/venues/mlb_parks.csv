@@ -1,0 +1,43 @@
+venue_id,name,aliases,city,country,lat,lon,roof,source,notes
+american_family_field,American Family Field,Miller Park,Milwaukee,US,43.04083,-87.96806,retractable,GeoJSON-Ballparks,
+angel_stadium,Angel Stadium,,Anaheim,US,33.80028,-117.88306,open,GeoJSON-Ballparks,
+bowman_field,Bowman Field,,Williamsport,US,41.24235,-77.04707,open,GeoJSON-Ballparks (legacy),Little League Classic (neutral)
+bristol_motor_speedway,Bristol Motor Speedway,,Bristol,US,36.5157,-82.257,open,manual (verify on the Mac),Speedway Classic 2025 (neutral)
+busch_stadium,Busch Stadium,,St. Louis,US,38.625,-90.19306,open,GeoJSON-Ballparks,
+chase_field,Chase Field,,Phoenix,US,33.45444,-112.08028,retractable,GeoJSON-Ballparks,
+citi_field,Citi Field,,Queens,US,40.75722,-73.83333,open,GeoJSON-Ballparks,
+citizens_bank_park,Citizens Bank Park,,Philadelphia,US,39.90583,-75.16639,open,GeoJSON-Ballparks,
+comerica_park,Comerica Park,,Detroit,US,42.33917,-83.04861,open,GeoJSON-Ballparks,
+coors_field,Coors Field,,Denver,US,39.75639,-104.99444,open,GeoJSON-Ballparks,
+daikin_park,Daikin Park,Minute Maid Park,Houston,US,29.75694,-95.35556,retractable,GeoJSON-Ballparks,
+dodger_stadium,Dodger Stadium,,Los Angeles,US,34.08111,-118.23944,open,GeoJSON-Ballparks,
+estadio_alfredo_harp_helu,Estadio Alfredo Harp Helú,,Mexico City,MX,19.40361,-99.08528,open,GeoJSON-Ballparks (legacy),Mexico City Series (neutral)
+fenway_park,Fenway Park,,Boston,US,42.34639,-71.0975,open,GeoJSON-Ballparks,
+field_of_dreams,Field of Dreams,,Dyersville,US,42.4983,-91.0553,open,manual (verify on the Mac),MLB at Field of Dreams 2021-22 (neutral)
+george_m_steinbrenner_field,George M. Steinbrenner Field,Steinbrenner Field,Tampa,US,27.98028,-82.50667,open,GeoJSON-Ballparks,
+globe_life_field,Globe Life Field,,Arlington,US,32.75139,-97.08306,retractable,GeoJSON-Ballparks,
+gocheok_sky_dome,Gocheok Sky Dome,,Seoul,KR,37.4984,126.86719,dome,GeoJSON-Ballparks (legacy),Seoul Series 2024 (neutral)
+great_american_ball_park,Great American Ball Park,,Cincinnati,US,39.095,-84.50583,open,GeoJSON-Ballparks,
+kauffman_stadium,Kauffman Stadium,,Kansas City,US,39.05139,-94.47917,open,GeoJSON-Ballparks,
+loandepot_park,loanDepot Park,loanDepot park;Marlins Park,Miami,US,25.77611,-80.22139,retractable,GeoJSON-Ballparks,
+london_stadium,London Stadium,,London,GB,51.5387,-0.0166,open,manual (verify on the Mac),London Series (neutral)
+nationals_park,Nationals Park,,Washington,US,38.87389,-77.00889,open,GeoJSON-Ballparks,
+oakland_coliseum,Oakland Coliseum,RingCentral Coliseum;Oakland-Alameda County Coliseum,Oakland,US,37.75126,-122.20116,open,GeoJSON-Ballparks (legacy),Athletics through 2024
+oracle_park,Oracle Park,,San Francisco,US,37.795,-122.38972,open,GeoJSON-Ballparks,
+oriole_park_at_camden_yards,Oriole Park at Camden Yards,,Baltimore,US,39.28389,-76.62167,open,GeoJSON-Ballparks,
+petco_park,Petco Park,,San Diego,US,32.70778,-117.15694,open,GeoJSON-Ballparks,
+pnc_park,PNC Park,,Pittsburgh,US,40.4475,-80.00972,open,GeoJSON-Ballparks,
+progressive_field,Progressive Field,,Cleveland,US,41.49583,-81.68528,open,GeoJSON-Ballparks,
+rate_field,Rate Field,Guaranteed Rate Field,Chicago,US,41.83,-87.63389,open,GeoJSON-Ballparks,
+rickwood_field,Rickwood Field,,Birmingham,US,33.5017,-86.8503,open,manual (verify on the Mac),MLB at Rickwood Field 2024 (neutral)
+rogers_centre,Rogers Centre,,Toronto,CA,43.64139,-79.39,retractable,GeoJSON-Ballparks,
+sahlen_field,Sahlen Field,,Buffalo,US,42.89139,-78.87833,open,GeoJSON-Ballparks,Blue Jays temporary home 2020-21
+sutter_health_park,Sutter Health Park,,West Sacramento,US,38.58028,-121.51389,open,GeoJSON-Ballparks,
+t_mobile_park,T-Mobile Park,,Seattle,US,47.59139,-122.3325,retractable,GeoJSON-Ballparks,
+target_field,Target Field,,Minneapolis,US,44.98167,-93.27833,open,GeoJSON-Ballparks,
+td_ballpark,TD Ballpark,,Dunedin,US,27.8925,-82.79833,open,GeoJSON-Ballparks,Blue Jays temporary home 2020-21
+tokyo_dome,Tokyo Dome,,Tokyo,JP,35.70566,139.75191,dome,GeoJSON-Ballparks (legacy),Tokyo Series 2025 (neutral)
+tropicana_field,Tropicana Field,,St. Petersburg,US,27.76802,-82.65325,dome,GeoJSON-Ballparks (legacy),Rays through 2024; return in 2026 to verify
+truist_park,Truist Park,,Cumberland,US,33.95389,-84.45472,open,GeoJSON-Ballparks,
+wrigley_field,Wrigley Field,,Chicago,US,41.94833,-87.65556,open,GeoJSON-Ballparks,
+yankee_stadium,Yankee Stadium,,Bronx,US,40.82917,-73.92639,open,GeoJSON-Ballparks,

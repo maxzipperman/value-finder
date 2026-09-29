@@ -1,0 +1,37 @@
+team,aliases,venue_id,from,to,notes
+Arizona Diamondbacks,,chase_field,2020-01-01,,
+Atlanta Braves,,truist_park,2020-01-01,,
+Baltimore Orioles,,oriole_park_at_camden_yards,2020-01-01,,
+Boston Red Sox,,fenway_park,2020-01-01,,
+Chicago Cubs,,wrigley_field,2020-01-01,,
+Chicago White Sox,,rate_field,2020-01-01,,
+Cincinnati Reds,,great_american_ball_park,2020-01-01,,
+Cleveland Guardians,Cleveland Indians,progressive_field,2020-01-01,,
+Colorado Rockies,,coors_field,2020-01-01,,
+Detroit Tigers,,comerica_park,2020-01-01,,
+Houston Astros,,daikin_park,2020-01-01,,
+Kansas City Royals,,kauffman_stadium,2020-01-01,,
+Los Angeles Angels,,angel_stadium,2020-01-01,,
+Los Angeles Dodgers,,dodger_stadium,2020-01-01,,
+Miami Marlins,,loandepot_park,2020-01-01,,
+Milwaukee Brewers,,american_family_field,2020-01-01,,
+Minnesota Twins,,target_field,2020-01-01,,
+New York Mets,,citi_field,2020-01-01,,
+New York Yankees,,yankee_stadium,2020-01-01,,
+Oakland Athletics,Athletics,oakland_coliseum,2020-01-01,2024-12-31,
+Oakland Athletics,Athletics,sutter_health_park,2025-01-01,,Sacramento through 2027 (Las Vegas planned)
+Philadelphia Phillies,,citizens_bank_park,2020-01-01,,
+Pittsburgh Pirates,,pnc_park,2020-01-01,,
+San Diego Padres,,petco_park,2020-01-01,,
+San Francisco Giants,,oracle_park,2020-01-01,,
+Seattle Mariners,,t_mobile_park,2020-01-01,,
+St. Louis Cardinals,St Louis Cardinals,busch_stadium,2020-01-01,,
+Tampa Bay Rays,,tropicana_field,2020-01-01,2024-12-31,
+Tampa Bay Rays,,george_m_steinbrenner_field,2025-01-01,2025-12-31,Tropicana roof storm damage
+Tampa Bay Rays,,tropicana_field,2026-01-01,,return to the Trop in 2026: verify with the MLB Stats API
+Texas Rangers,,globe_life_field,2020-01-01,,
+Toronto Blue Jays,,sahlen_field,2020-01-01,2020-12-31,2020 at Buffalo (first home games at opponents' parks)
+Toronto Blue Jays,,td_ballpark,2021-01-01,2021-05-31,2021 opened at Dunedin
+Toronto Blue Jays,,sahlen_field,2021-06-01,2021-07-29,
+Toronto Blue Jays,,rogers_centre,2021-07-30,,
+Washington Nationals,,nationals_park,2020-01-01,,
