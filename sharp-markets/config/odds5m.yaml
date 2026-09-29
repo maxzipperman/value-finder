@@ -165,9 +165,10 @@ sports:
 # (N1 lands where `markets build --sport nba` looks); its params must match that pipeline's exactly.
 # games_from limits a pull to the games listed in that CSV (sport, id), relative to the data directory;
 # `markets weather qualifying` writes it from the pre-registered heat triggers before any odds are bought.
-# require_seasons: the pull is bought one season slice at a time, so `full` refuses it without --seasons
-# (the dry run too). Its value names each slice's seasons, which the refusal prints as commands. It changes
-# nothing about what a slice fetches or where it is cached. A cache_as pull may never plan a sealed call.
+# require_seasons: the pull is bought one season slice at a time. `full` refuses it (the dry run too) unless
+# --seasons names exactly one slice, and refuses --seasons for any pull without require_seasons. Its value
+# names each slice's seasons, which the refusal prints as commands. It changes nothing about what a slice
+# fetches or where it is cached. A cache_as pull may never plan a sealed call.
 soccer: &soccer [soccer_usa_mls, soccer_mexico_ligamx, soccer_brazil_campeonato, soccer_japan_j_league,
                  soccer_korea_kleague1, soccer_fifa_world_cup, soccer_uefa_european_championship,
                  soccer_conmebol_copa_america, soccer_fifa_club_world_cup, soccer_concacaf_gold_cup,
@@ -179,7 +180,7 @@ pulls:
        markets: "alternate_spreads,alternate_totals"}
   F3: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [24, 0],
        markets: "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_kicking_points,player_field_goals",
-       require_seasons: {day_one: "2025", gated: "2023,2024,2026"}}   # F3a on day one; F3b once its gate passes
+       require_seasons: {F3a: "2025", F3b: "2023,2024,2026"}}   # F3a on day one; F3b once its gate passes
   HB1: {kind: featured, sports: [baseball_mlb], schedule: close, books: us10, only_seasons: ["2024", "2025"],
         games_from: weather/heat_qualifying.csv}
   HS1: {kind: featured, sports: *soccer, schedule: close, books: soccer10, only_seasons: ["2024", "2025"],

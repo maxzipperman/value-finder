@@ -19,18 +19,21 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
   - the key is rejected (check `ODDS_API_KEY` in `sharp-markets/.env`);
   - the check doesn't come back cleanly, or comes back without a readable balance (wait a few minutes and run the same command again);
   - the balance is already below the floor. The message gives both numbers. Stop and tell the owner.
-- **Run budget.** `--max-credits N` is checked before each call against that call's upper-bound cost, so a run can never go over N.
-- **Reserve floor.** `--floor` defaults to 531,630: the 300K reserve plus the 231,630 freed by dropping X3. The run stops before the account's remaining credits would drop below it. If the run ever loses track of the balance, it stops rather than guess (`STOPPED: the account balance is unknown ...`).
+- **Run budget.** `--max-credits N` is checked before each call, and before each retry of a call, against the most that call could cost. What the run counts as spent is the larger of two figures: what the responses say they cost, and how far the account's balance has actually fallen since the key check. So a call the API bills twice (a first try that timed out but was still charged) still counts. A run stays within N, with one exception: a single call that the API bills above its own upper bound. The circuit breaker stops the run right after such a call (below).
+  - Other uses of the key while a run is going (the alerts, the collectors) also lower the balance, so they count toward N. That is a few credits a day and only makes a run stop a little early. Run one `markets` command at a time, though: two pulls at once would each count the other's spending.
+  - When the balance falls by more than a call said it cost, the run prints a line saying so (`the balance fell by ..., more than the ... this call reported`). One now and then is the other uses of the key. The same line on call after call means the API is charging more than it reports: stop the run (Ctrl-C) and tell the hub.
+- **Reserve floor.** `--floor` defaults to 531,630: the 300K reserve plus the 231,630 freed by dropping X3. The run stops before the account's remaining credits could drop below it, counting any try that got no answer as if it had been charged. If the run ever loses track of the balance, it stops rather than guess (`STOPPED: the account balance is unknown ...`). It never believes a balance that goes up during a run, or one that makes no sense; it keeps the lower figure.
 - **Billing the run can't read.** Every paid response should say what it cost (`x-requests-last`) and what is left (`x-requests-remaining`).
-  - If a successful response doesn't say what it cost, or says something that isn't a number, the run counts the most that call could have cost, keeps the response, and stops: `STOPPED: the billing could not be read ...`.
+  - If a successful response doesn't say what it cost, or says something that isn't a number, the run counts the most that call could have cost, keeps the response, and stops: `STOPPED: the billing could not be read ...`. A cost with a fraction is rounded up.
   - If it doesn't say what is left, the run stops: `STOPPED: the balance could not be read ...`.
-  - What to do: tell the hub before rerunning. The response is cached, so a rerun won't buy it again, but the next call would probably have the same problem. Compare the balance the next key check prints (`key ok: ... credits remaining`) with the last `remaining` in the manifest.
+  - What to do: tell the hub before rerunning. The response is cached, so a rerun won't buy it again, but the next call would probably have the same problem. To read the balance without spending anything, run `uv run markets odds5m balance --confirm`. It makes only the free key check and prints `key ok: ... credits remaining`. Compare that with the last `remaining` in the manifest.
   - A "not found" (404) or error response without a readable cost doesn't stop the run, because the API's documentation doesn't charge for responses with no data. The run still counts the most that call could have cost, so the budget errs toward stopping early. Errors still stop the run after 5 in a row.
-- **Network failures.** If the API can't be reached after the retries (seven tries, spread over at least a minute and a half), the run stops with `STOPPED: no answer from the Odds API ...`. Nothing is cached for that call, so when the connection is back, the same command picks up where it stopped. A call that timed out may still have been billed, so check the balance the rerun's key check prints.
-- **The key never shows in error text.** Error messages, the collector's heartbeat notes and logs print the key as `REDACTED`.
-- **Every run ends with a summary.** After any `STOPPED:` line, each pull prints `done:` or `stopped:` with the calls fetched, the credits counted this run and the balance; the probe prints `P0 done:` or `P0 stopped:`. A billing or network problem ends in these lines, never in a Python error dump.
+- **Network failures.** Each call gets up to seven tries, spread over at least a minute and a half. A try that gets no answer might still have been charged, so the run counts the most it could have cost until the next response shows the real balance. It checks the budget and the floor again before each new try. If the API still can't be reached, the run stops with `STOPPED: no answer from the Odds API ...`. Nothing is cached for that call, so when the connection is back, the same command picks up where it stopped. Run `balance --confirm` first if you want to see what the failed tries really cost.
+- **Responses that can't be kept.** If the disk is full, or a successful response isn't readable data (for example a web page from a network problem), the run counts the call and stops (`STOPPED: ... could not be saved ...: is the disk full?`, or `STOPPED: ... a body that is not JSON`). Neither is cached, so a rerun asks again. A full disk means that call is bought again on the rerun, so free space first ([Before buying](#before-buying), step 2).
+- **The key never shows.** Error messages, error pages the server sends back, the collector's heartbeat notes and every log line of a `markets` command show the key as `REDACTED`. A cached "not found" response is stored the same way.
+- **Every run ends with a summary.** After any `STOPPED:` line, each pull prints `done:` or `stopped:` with the calls fetched, the credits counted this run and the balance; the probe prints `P0 done:` or `P0 stopped:`. A billing, network or disk problem ends in these lines, never in a Python error dump. So does a bug: that `STOPPED:` line starts `unexpected error, probably a bug`. Tell the hub before rerunning.
 - **Groups, not `all`.** `--pull` takes pull IDs or a group from the config: `day_one` (F1, F2, F3, HB1, HS1), `gated` (N1, F4), `march` (H1, N2, F5, F6). The `full` stage refuses `--pull all`, so nothing runs every pull in the config by accident.
-- **F3 only by season slice.** `full --pull F3` refuses to run without `--seasons`, and so does `full --pull day_one`. The dry run shows the same refusal, so you see it before spending. The refusal prints the day-one command (`--seasons 2025`) and the gated one (`--seasons 2023,2024,2026`). This is `require_seasons` on F3 in the config. It changes nothing about what a slice fetches or where it is stored.
+- **F3 only by season slice.** F3 is bought in two slices: F3a is `--seasons 2025` (day one) and F3b is `--seasons 2023,2024,2026` (gated). `full` refuses F3 unless `--seasons` names exactly one of those, in any order. So `full --pull F3` alone is refused, and so are four seasons at once, a season that doesn't exist, and `full --pull day_one`. `full` also refuses `--seasons` for every other pull, because the plan buys those whole: `full --pull day_one --seasons 2025` would otherwise have cut F1 and F2 down to 2025 without a word. The dry run shows the same refusals, so you see them before spending, and each refusal prints the F3a and F3b commands. This is `require_seasons` on F3 in the config. It changes nothing about what a slice fetches or where it is stored.
 - **Circuit breaker.** The run stops at once:
   - when a call bills more than its upper bound (`x-requests-last` above 10 × markets × regions, or above 1 for `/events`);
   - on HTTP 401 (key rejected);
@@ -40,9 +43,9 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
   The breaker can only see what a call cost after the API has billed it, so no code on our side can stop one overbilling call from being paid for. That is why the probe runs first: it tries one call of each kind before any pull. It is also why `--max-credits` stays tight on the first run of each kind of call.
 - **The probe follows the same rules.** Its seven single calls go through the same budget, floor, billing and circuit-breaker checks. The first stop ends the probes, and the ones after it are listed as `not run`.
 - **Cache first and resumable.** Every response is stored before it is used, under `data/raw/{sport_key}/oddsapi/...`. N1 is the exception: it is stored under `data/raw/nba/oddsapi_hist/`, where `markets build --sport nba` reads it, and where the sample week's `odds-pull` snapshots already are. Rerunning a command skips everything cached, so a stopped or interrupted run resumes for free. Errors aren't cached, so they are retried.
-- **Manifest.** Every real request gets a row in `data/raw/_manifest/oddsapi_manifest.csv`. Each row has:
+- **Manifest.** Every answered request gets a row in `data/raw/_manifest/oddsapi_manifest.csv`. Each row has:
   - the requested and returned snapshot times;
-  - credits billed and credits remaining;
+  - credits billed (blank when the response didn't say; the run counted the call's upper bound instead) and credits remaining;
   - the SHA-256 of the body;
   - the cache key;
   - the sealed flag.
@@ -53,7 +56,7 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
 
   `bulk.load_rows()` leaves those rows out unless `include_sealed=True`, which only a pre-registered test may pass. The seasons change if the owner decides differently (decision 1). In that case, edit `sealed:` in the config before the pull.
 
-  `markets build` reads `data/raw/nba/oddsapi_hist/` directly, where N1 and `odds-pull` store their snapshots, so it has its own guard. It leaves out odds rows for games in a sealed season, prints how many (`odds rows left out for games in sealed seasons`), and records them as a `sealed_odds_left_out` anomaly. The puller also refuses to plan a sealed-season call for any pull stored in another pipeline's folder (N1).
+  `markets build` reads `data/raw/nba/oddsapi_hist/` directly, where N1 and `odds-pull` store their snapshots, so it has its own guard. It leaves out odds rows for games in a sealed season, prints how many (`odds rows left out for games in sealed seasons`), and records them as a `sealed_odds_left_out` anomaly. A row with no readable game time is left out too, because its season can't be told; it is recorded as an `odds_row_without_commence_time` anomaly. (`bulk.load_rows()` judges such a row by its call instead: left out when the call was in a sealed season.) The puller also refuses to plan a sealed-season call for any pull stored in another pipeline's folder (N1).
 
 ## Before buying
 
@@ -115,8 +118,11 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
    uv run markets odds5m check --pull F3 --seasons 2025
    ```
    - At the default 8 requests a second, F1's roughly 5,400 calls take about 12 minutes, F2's 4,600 about 10, and F3a's 570 about a minute. `--rate 20` is safe if nothing else is using the key heavily (the API allows 30).
-   - If a run stops, read the `STOPPED:` line. A budget or floor stop is expected. A circuit-breaker stop, or a billing or balance that couldn't be read, means something needs a look before rerunning ([How a run protects the credits](#how-a-run-protects-the-credits)).
-   - F3 always needs `--seasons`: the puller refuses `full --pull F3` without it, dry run included. `--seasons 2025` is the first slice (34,200 at most); the rest is gated (F3b, below). Without the guard, `full --pull F3` would have pulled all of 2023–26 (136,800).
+   - If a run stops, read the `STOPPED:` line ([How a run protects the credits](#how-a-run-protects-the-credits)):
+     - **Budget stop** (`... run budget is counted`): the pull needed more than `--max-credits`. Run the same command without `--confirm` to see what is left to fetch, then rerun it with `--max-credits` a little above that. If the whole pull comes out more than about 10% above its plan figure, stop and tell the owner first.
+     - **Floor stop** (`... the floor is 531,630`): on day one this is an alarm, not a routine stop. The account starts near 5,000,000, so reaching the floor means about 4.47 million credits are gone. Stop and tell the owner; run `balance --confirm` to read the balance.
+     - **Anything else** (the circuit breaker, a billing or balance that couldn't be read, a network failure, a full disk, an unexpected error): something needs a look. Tell the hub before rerunning.
+   - F3 always needs exactly one slice: `--seasons 2025` is F3a, the day-one slice (34,200 at most); F3b (`--seasons 2023,2024,2026`) is gated (below). The puller refuses anything else, dry run included. Without the guard, `full --pull F3` would have pulled all of 2023–26 (136,800).
 6. **The NBA sample week (N0), 7,540 credits, through the NBA pipeline, not the bulk puller.** PLAN.md §8 step 3 requires it before any full season; the week's Kalshi candles and trades are already cached, and the snapshots land where N1 will look:
    ```bash
    uv run markets odds-plan --start 2026-01-05 --end 2026-01-11                              # free: 754 snapshots, 7,540 credits
@@ -125,6 +131,8 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
    uv run markets backtest --start 2026-01-05 --end 2026-01-11                               # H1, H2, lead-lag -> reports/
    ```
    Report the H1 and H2 tables to the hub: they are N1's gate.
+
+   `odds-pull` is the NBA pipeline's older client, and it has fewer protections than `odds5m`. It refuses to start when the plan is above `--max-credits`, and a response that doesn't say what it cost counts its upper bound and stops the pull with a `STOPPED:` line, with the key blanked. It has no key check, no floor and no balance tracking, and it doesn't catch a call charged twice. If it stops, don't rerun it; tell the hub.
 7. **Heat closes (HB1, HS1), trigger first.** Run the free weather joins ([below](#weather-joins-for-the-heat-hypotheses-free-after-the-probe)), then:
    ```bash
    uv run markets weather qualifying                          # applies the registered triggers -> data/weather/heat_qualifying.csv
@@ -138,6 +146,8 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
    uv run python -c "import duckdb; print(duckdb.sql(\"SELECT pull, count(*) calls, sum(credits_last) billed, sum(expected_credits) upper_bound, max(remaining) FROM 'data/raw/_manifest/oddsapi_manifest.csv' GROUP BY 1 ORDER BY 1\"))"
    ```
    The NBA week is logged by the NBA pipeline's own fetch log, not this manifest; add its `credits spent this run` line from step 6.
+   - A blank `credits_last` means that response didn't say what it cost. The run counted that row's `upper_bound` instead, and the `billed` sum leaves it out.
+   - The `max(remaining)` column is the highest balance a pull saw. Compare the lowest balance in the manifest with what `uv run markets odds5m balance --confirm` prints now (free).
 
 ## Gated pulls: decided by about October 20
 

@@ -59,16 +59,18 @@ def _b2b(games: list[Game]) -> dict[tuple[str, str], bool]:
             for g in games if g.game_date_et for t in (g.away_code, g.home_code)}
 
 
-def sharp_odds_rows(con, sport: str, teams, *, include_sealed: bool = False) -> tuple[list[dict], Counter, Counter]:
+def sharp_odds_rows(con, sport: str, teams, *, include_sealed: bool = False) -> tuple[list[dict], Counter, Counter, int]:
     """Snapshot rows from data/raw/{sport}/oddsapi_hist (`odds-pull`, and N1 through cache_as), the team-name
-    misses, and the rows left out by sealed season label. A row whose game falls in a sealed season of
-    config/odds5m.yaml is left out unless include_sealed=True (only a pre-registered test may pass it),
-    the same rule as bulk.load_rows."""
-    rows_out, unknown_names, sealed_out = [], Counter(), Counter()
+    misses, the rows left out by sealed season label, and the rows left out because their game time can't be
+    read. A row whose game falls in a sealed season of config/odds5m.yaml is left out unless
+    include_sealed=True (only a pre-registered test may pass it), the same rule as bulk.load_rows. A row with no
+    readable commence_time is always left out (and counted): its season can't be told, and no game can be
+    matched to it."""
+    rows_out, unknown_names, sealed_out, no_kick = [], Counter(), Counter(), 0
     glob = _raw_glob(sport, "oddsapi_hist")
     if not glob:
-        return rows_out, unknown_names, sealed_out
-    from ..oddsapi.bulk import load_config, window_for
+        return rows_out, unknown_names, sealed_out, no_kick
+    from ..oddsapi.bulk import game_time, load_config, window_for
     odds5m = load_config()
     key = ODDS5M_SPORT_KEY.get(sport)
     if key not in odds5m["sports"]:
@@ -78,14 +80,17 @@ def sharp_odds_rows(con, sport: str, teams, *, include_sealed: bool = False) -> 
             f"SELECT params_json, body FROM read_parquet('{glob}') WHERE http_status = 200").fetchall():
         rows, unknown = snapshot_rows(json.loads(body), json.loads(params_json)["date"], teams)
         for r in rows:
-            k = parse_ts(r["commence_time"])
-            w = window_for(odds5m, key, k) if k is not None else None
+            k = game_time(r["commence_time"])
+            if k is None:
+                no_kick += 1
+                continue
+            w = window_for(odds5m, key, k)
             if w and w["sealed"] and not include_sealed:
                 sealed_out[w["label"]] += 1
                 continue
             rows_out.append({**r, "sport": sport})
         unknown_names.update(unknown)
-    return rows_out, unknown_names, sealed_out
+    return rows_out, unknown_names, sealed_out, no_kick
 
 
 def build(ctx: Context, *, include_sealed: bool = False) -> dict:
@@ -103,8 +108,9 @@ def build(ctx: Context, *, include_sealed: bool = False) -> dict:
         con.execute(sql.YES_TAKER_1M)
 
     # -- Sharp odds (Python: team-name resolution; sealed seasons left out) -------------------------
-    odds_rows, unknown_names, sealed_out = sharp_odds_rows(con, sport, teams, include_sealed=include_sealed)
+    odds_rows, unknown_names, sealed_out, no_kick = sharp_odds_rows(con, sport, teams, include_sealed=include_sealed)
     summary["sealed_odds_rows_left_out"] = dict(sealed_out)
+    summary["odds_rows_without_commence_time"] = no_kick
     odds_schema = pa.schema([(c, pa.string()) for c in (
         "sport", "snapshot_ts", "requested_ts", "odds_event_id", "commence_time", "home_team", "away_team",
         "home_code", "away_code", "bookmaker", "book_last_update", "market_key", "market_last_update",
@@ -203,6 +209,11 @@ def build(ctx: Context, *, include_sealed: bool = False) -> dict:
         anom_rows.append({"sport": sport, "kind": "sealed_odds_left_out", "game_id": None, "market_ticker": None,
                           "ts": None, "detail": f"{n} odds rows for games in sealed season {label} "
                                                 "(config/odds5m.yaml) left out of sharp_odds"})
+    if no_kick:
+        anom_rows.append({"sport": sport, "kind": "odds_row_without_commence_time", "game_id": None,
+                          "market_ticker": None, "ts": None,
+                          "detail": f"{no_kick} odds rows with no readable commence_time left out of sharp_odds "
+                                    "(their season, sealed or not, can't be told)"})
 
     s = pa.string()
     _load(con, "stg_games", game_rows, pa.schema([(k, s) for k in game_rows[0]] if game_rows else []))
