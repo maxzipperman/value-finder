@@ -19,7 +19,7 @@ You are the Value Finder **hub**, the pinned chat "Value Finder — hub" working
   - Odds API credits left: `~/.cache/value-finder/odds_quota.json`.
   - Kickoff slots in the last 24h that are missing from `*/data/forward/closes.csv`.
   - The date of the last push to the `ledgers` branch.
-- **Forward tests.** Run both `scripts/score_forward.py` scripts. They're fast and make no API calls.
+- **Forward tests.** Run both `scripts/score_forward.py` scripts. They're fast and make no API calls. Before them, run `git fetch` in `~/code/value-finder` first (wait for it to finish; don't run it alongside), so that a lost decision record is restored from the latest published copy: nfl-weather amendment 6 / cfb-weather amendment 4, section 3, read `origin/ledgers` as the checkout last fetched it, and the scorers never fetch.
 
 ## 2. Decide who does each piece of work
 

@@ -408,3 +408,161 @@ applies instead.
 Variants under forward test: still **2**. Nfl-weather amendment 6 and cfb-weather amendment 4 test
 nothing and leave the running variant count unchanged. On the day of registration it is **271**, so
 the multiple-testing bar is p < 0.000185 (`strategy-research/README.md`, `STATUS.md`).
+
+## Amendment 5 (2026-09-29 Pacific, before the first eligible game on Oct 1; no Rule B or Rule HT signal logged)
+
+This amendment groups the 95% interval behind Rule B's keep test by game day, because the closing-line
+moves of windy games on the same day move together and the plain interval keeps a rule with no edge too
+often. It also registers which odds-feed listing gives a game's captured close, and closes three small
+gaps in the decision record. **No trigger, gate, price cap or stake changes.** The rules version stays
+`cfb-v3-2026-09-28`, because the board behaves exactly as before; only `scripts/score_forward.py` and
+`scripts/capture_close.py` change. Where this amendment and any earlier text differ, this one applies,
+and the last section lists every earlier sentence it changes. Registered by the hub on the owner's
+standing instruction of September 29, 2026 (the hub decides questions of how the tests are graded and
+reports them; money, and any rule's trigger, gate or price cap, stay the owner's). The registering commit
+is the merge of pull request 64. The owner can change any reading here by a dated amendment made before
+the first outcome it would affect.
+
+### 1. The keep test's interval is grouped by game day
+
+* **Why.** The paper-to-money study (`strategy-research/README.md`, "The paper-to-money gate", and
+  `strategy-research/simulate_decisions.py`) found that the closing-line moves of windy games on the same
+  day move together. The plain interval treats every signal as independent, so the registered keep test
+  keeps a rule with no edge more often than the 2.5% it is meant to.
+  [`strategy-research/keep_test_check.py`](../strategy-research/keep_test_check.py) measures by how much,
+  and what grouping by game day does about it.
+* **The reading.** Rule B's keep test uses mean CLV with a 95% interval:
+  * the mean is the plain mean m of the CLVs of the n signals in the decision that have a primary close
+    (amendment 4, section 6);
+  * the signals are grouped by the calendar date of the game's actual kickoff in Eastern time
+    (America/New_York), the kickoff in the schedule (when the schedule gives no kickoff for a game, as
+    amendment 4, section 10 allows, the kickoff on its entry row); G is the number of days with at least
+    one such signal; for each day g, s_g is the sum over that day's signals of (CLV - m);
+  * the variance of the mean is (G / (G - 1)) x (the sum over days of s_g squared) / n squared, and the
+    standard error is its square root;
+  * the interval is m plus or minus t x the standard error, where t is the 97.5th percentile of Student's t
+    with G - 1 degrees of freedom;
+  * with fewer than 2 game days there is no interval and the result is inconclusive;
+  * everything else is unchanged: the keep test's other criteria, the 20-close limit, void and pending
+    bets, the horizon and the decision record.
+  * Rule HT is graded on results, not CLV, and doesn't change.
+* **What the scorer shows.** It prints the grouped interval as the registered one, with its number of game
+  days, and the plain interval (m plus or minus 1.96 standard deviations over the square root of n) beside
+  it, labelled "plain, for reference". The decision record stores both: `ci_low` and `ci_high` are the
+  grouped interval, and `game_days`, `plain_ci_low` and `plain_ci_high` are added. No decision has been
+  recorded, so no record has to change.
+* **What it measured.** `keep_test_check.py` reuses the study's model: the open-to-close moves of 426
+  windy games (2016–25), the same-day dependence it estimated, and the dates of the windiest FBS games of
+  2016–25 replayed onto 2026 from Oct 1, aligned on Army–Navy. Run with seed 29: 40,000 simulated paths per
+  case, 40 signals per path, no edge, at 25, 40 and 55 signals a season.
+  * Realistic dependence (same day 0.11; no season effect was found): the plain interval keeps a rule with
+    no edge 5.2%, 5.8% and 6.3% of the time; the grouped interval 3.6%, 3.7% and 4.0%.
+  * Stress dependence (same day 0.17): plain 6.6%, 7.3% and 8.7%; grouped 3.8%, 3.9% and 4.4%.
+  * With no model at all, whole historical days resampled: plain 4.6%, grouped 3.1%.
+  * Independent signals: plain 2.8%, 2.7% and 2.7%; grouped 3.3%, 3.1% and 3.4%. Here the grouped interval
+    keeps a no-edge rule slightly more often than the plain one: 40 signals fall on only 10 to 16 game days
+    (the median), and a standard error built from so few days is itself noisy.
+  * It also keeps a real edge less often. At 40 signals a season, realistic case: 32% against 45% if the
+    true edge is half the historical line move, and 79% against 90% if it is the full move.
+  * These agree with the check made before this amendment (seed 6: plain 5.3 to 6.5%, grouped 3.5 to 4.0%)
+    to within 0.2 points.
+* **Known limit.** The grouped interval keeps a rule with no edge less often than the plain one in every
+  case with dependence and in the model-free check, so it is registered as an improvement, and its
+  remaining error is stated plainly: about 3.6 to 4.0% in the realistic case and up to 4.4% in the stress
+  case, against the intended 2.5%. It does not fix the NFL, where the swing is season-wide and one or two
+  seasons can't measure it (nfl-weather amendment 7); in college football the study found no season-wide
+  swing.
+* **The money gate is a separate question.** When real money goes in (`STRATEGY.md`, "Stake") is the
+  owner's decision, and the owner has not chosen a gate. Nothing here changes it.
+* **Variants.** This changes how a test is graded, not a betting rule: 0 variants.
+
+### 2. Which feed listing gives a game's captured close
+
+Pull request 62 (merged Sep 29) made close capture take one odds-feed listing per game. This registers the
+rule it implements, with one change.
+
+* **The rule.** When a kickoff slot is due, the feed can list a game's two teams more than once (a
+  relisted event, or a rematch such as a conference title game):
+  * a listing counts for a game only if it has the game's home and away teams and starts within 6 hours
+    of the scheduled kickoff; a listing with no readable start time never counts;
+  * among those, a listing priced at Pinnacle comes first, then one priced at DraftKings, then one priced
+    at neither (a listing's price is the first of Pinnacle, then DraftKings, that quotes both a total and
+    an under price, as on the board, amendment 3, section 2); among the listings left, the one starting
+    nearest the scheduled kickoff is taken;
+  * the game's row in `data/forward/closes.csv` carries that listing's price: its book, total and
+    prices.
+* **The change.** When two or more listings are equally near the kickoff and are all priced at the same
+  book with the same quote (the same total and the same under and over prices), they are the same game
+  listed twice, and the first listed in the feed is taken. Until now that case was a tie and the close was
+  lost.
+* **Still a tie.** Equally near listings whose quotes differ, or that are priced at neither book, are a
+  tie, and none is taken.
+* **A game with no usable listing** (a tie, no listing within 6 hours, no readable start time, or not
+  listed at all) has no captured close for that slot. Its row is written with the price columns blank,
+  and the slot is tried once more if the next run still falls 2 to 20 minutes before kickoff (at most two
+  calls per slot). What is still missing then stays missing: it is reported, never imputed.
+* **A feed that returns nothing usable** (no key, the quota floor, an error, or no priced event whose two
+  teams it knows) writes nothing and counts no try, as before; the next run inside the window tries again.
+* **Nothing else changes:** the book recorded, the 2 to 20 minute window, at most two calls per slot, the
+  quota floor, the columns of `closes.csv` and the shape of the state file. Every cached real feed (3
+  responses; 184 runs over their kickoff slots, 633 rows) and 8 made-up ordinary slot sequences, replayed
+  offline through the script as it was before this amendment and as it is now, give byte-identical
+  `closes.csv`, state file and printout.
+
+### 3. Three gaps in the decision record
+
+A review after amendment 4 found three rare cases where the code did not do what section 3 of amendment 4
+says. Each is settled here.
+
+* **A time with no time zone.** A recorded time with no time zone (a spreadsheet can re-save
+  `2026-12-13T08:00:00Z` as `2026-12-13 08:00:00`) couldn't be compared with the scorer's times, and it
+  stopped the whole run, so the day's report was lost. Now a record whose time cannot be read as a UTC time
+  is a damaged record, and section 3's rule for damaged records applies: the scorer says so, records
+  nothing until the file is repaired, and still prints the scores.
+* **A damaged record still shows what it can.** With a damaged `decisions.csv`, any decision in it that can
+  still be read is still printed as recorded, and no fresh "FINAL" that contradicts it is printed for that
+  decision; the scorer says the record is damaged and records nothing until it is repaired. A decision can
+  still be read when its line, taken on its own, has exactly the record's 10 fields and passes every check
+  a recorded decision must pass. A decision whose line can't be read, and that the copy on the ledgers
+  branch doesn't hold, is computed fresh and printed with the reason it isn't recorded, as before.
+* **A decision missing from a file that still exists.** A decision that is missing from a `decisions.csv`
+  which still exists, while the copy on the ledgers branch holds it, is restored from the copy, never
+  decided again. A real run appends the copy's line for it to the file, under the lock, and prints what it
+  restored; any other run on the live ledger prints it from the copy as recorded and leaves the file alone.
+  When the file is damaged, the decision is printed from the copy, and restored once the file is repaired.
+  Until now the copy was read only when the whole file was missing. The scorer still never fetches: the
+  hub's daily check-in runs `git fetch` in the live checkout before it runs the scorers, so the copy read
+  is the latest one published.
+
+### What this amendment replaces
+
+Each earlier sentence below is quoted as registered; the section of this amendment named beside it applies
+instead.
+
+* `STRATEGY.md`, Rule B, "Decision": "Keep only if average CLV > 0 with a 95% interval above zero". The 95%
+  interval is grouped by game day, and with fewer than 2 game days there is none and the result is
+  inconclusive (section 1).
+* Amendment 3, section 4: "keep only if mean CLV > 0 with a 95% interval above zero." The same (section 1).
+* Amendment 4, section 12: "If fewer than 20 of the bets in a decision have a primary close, the result is
+  inconclusive, and the scorer says why." A decision whose signals with a primary close kicked off on
+  fewer than 2 game days is inconclusive too (section 1).
+* Amendment 2: "It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the
+  total and prices for every FBS game in the slot in `data/forward/closes.csv`." Each game's row comes from
+  the one listing it takes, and a game with no usable listing has none (section 2).
+* Amendment 2: "The source is Pinnacle when it lists the game, else DraftKings, the same as the board."
+  Where close capture and the board differ (a listing more than 6 hours from the kickoff, two listings
+  priced at the same book at different times, or equally near listings with different quotes), section 2
+  gives the close.
+* Amendment 4, section 3: "If `decisions.csv` can't be read (a half-written line, wherever it was cut; a
+  line without exactly its 10 fields; a missing header; an empty file; a decision id, verdict or numbers
+  the scorer doesn't know or can't print), the scorer says so, records nothing until the file is repaired
+  or restored from the ledgers branch, and still prints the scores." A time that can't be read as a UTC
+  time is damage too, and the decisions that can still be read are printed as recorded (section 3).
+* Amendment 4, section 3: "When the live record is missing, a real run reads the copy (`origin/ledgers`, as
+  this checkout last fetched it; the scorer never fetches), restores the file from it and prints what it
+  restored, before it decides anything." A single decision missing from a file that still exists is
+  restored from the copy too (section 3).
+
+Variants under forward test: still **2**. This amendment tests nothing and leaves the running variant count
+unchanged: on the day of registration it is **271**, so the multiple-testing bar is p < 0.000185
+(`strategy-research/README.md`, `STATUS.md`).

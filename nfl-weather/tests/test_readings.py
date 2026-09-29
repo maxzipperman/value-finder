@@ -834,6 +834,72 @@ def amendment7_section(n):
     return " ".join(amendment(7).split(f"### {n}.")[1].split("\n### ")[0].split())
 
 
+REGISTERED_BY_HUB = ("Registered by the hub on the owner's standing instruction of September 29, 2026 (the hub decides "
+                     "questions of how the tests are graded and reports them; money, and any rule's trigger, gate or "
+                     "price cap, stay the owner's). The registering commit is the merge of pull request 64. The owner "
+                     "can change any reading here by a dated amendment made before the first outcome it would affect.")
+
+
+def replaced_sources(whole, strategy, amend):
+    """Each bullet of an amendment's "What this amendment replaces": (its source's text, the sentences it quotes).
+    A bullet names its source before the first quoted sentence: STRATEGY.md, the original file, or an amendment
+    and, when given, its section."""
+    out = []
+    for bullet in amend.split("### What this amendment replaces")[1].split("\n* ")[1:]:
+        label, rest = bullet.split(': "', 1)
+        quotes = re.findall(r'"([^"]+)"', '"' + rest)
+        if label.startswith("`STRATEGY.md`"):
+            src = strategy
+        elif label.startswith("The original file"):
+            src = whole.split("## Amendment 1 ")[0]
+        else:
+            m = re.match(r"Amendment (\d+)(?:, section (\d+))?", label)
+            src = whole.split(f"## Amendment {m[1]} ")[1].split("\n## ")[0]
+            if m[2]:
+                src = src.split(f"### {m[2]}.")[1].split("\n### ")[0]
+        out.append((label, norm(src), quotes))
+    return out
+
+
+def test_amendment_7_is_registered_as_the_hub_was_told_and_names_what_it_replaces():
+    text = norm(amendment(7))
+    assert REGISTERED_BY_HUB in text
+    assert "No trigger, gate, price cap or stake changes." in text and "The rules version stays v3-2026-09-28" in text
+    assert "on the day of registration it is 271, so the multiple-testing bar is p < 0.000185" in text
+    whole = (ROOT / "PREREGISTRATION.md").read_text()
+    earlier = whole.split("## Amendment 7 ")[0]
+    sources = replaced_sources(earlier, (ROOT / "STRATEGY.md").read_text(), amendment(7))
+    assert len(sources) >= 8
+    for label, src, quotes in sources:
+        assert quotes, label
+        for q in quotes:
+            assert norm(q) in src, (label, q)
+    one = amendment7_section(1)
+    for words in ("8.0% of the time at 17 signals a season and 10.3% at 25; the grouped interval 6.4% and 8.1%",
+                  "40,000 simulated paths per case", "7.1% of the time at 17 signals a season and 8.9% at 25",
+                  "the owner has not chosen a gate", "one or two seasons can't measure a season-wide swing",
+                  "0 variants"):
+        assert words in one, words
+    two = amendment7_section(2)
+    assert "the first listed in the feed is taken" in two and "none is taken" in two and "within 6 hours" in two
+    assert "the run ends cleanly" in two and "byte-identical" in two
+    hub = (ROOT.parent / ".claude" / "commands" / "hub.md").read_text()
+    assert "run `git fetch` in `~/code/value-finder` first" in hub
+
+
+def test_the_summaries_name_amendment_7():
+    strategy = (ROOT / "STRATEGY.md").read_text()
+    assert "*Amendment 7 (Sep 29):* the 95% interval is grouped by game day" in strategy
+    status = (ROOT.parent / "STATUS.md").read_text()
+    assert "nfl-weather amendment 7 and cfb-weather amendment 5" in status
+    assert status.count("the college football one until Thu Oct 1, 5:00 PM Pacific; the NFL one until Thu Oct 8") == 2
+    assert "7.1 to 8.9% for its two looks together" in status
+    readme = (ROOT.parent / "strategy-research" / "README.md").read_text()
+    assert "### The keep test grouped by game day (added September 29, 2026)" in readme
+    assert "the running count stays at 200." in readme                     # the study's text is left as written
+    assert "*Note, Sep 29, 2026:* the running count at the top of this file reads **271**" in readme
+
+
 def by_hand(clv, days):
     """The registered interval computed here from its definition (amendment 7, reading 1), not with the scorer's
     code: the plain mean m of the n CLVs; G game days; s_g the sum of (CLV - m) over day g; the variance of the mean

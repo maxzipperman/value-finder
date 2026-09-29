@@ -33,6 +33,10 @@ alone, so a relisted event, or a rematch such as a conference title game in the 
 and when both rows had a price the scorer took whichever the feed gave last. A tie between two equally good
 listings, or no listing within 6 hours, leaves the game's close missing, and the log says why. Tests:
 `tests/test_close_capture.py`.
+*Note, Sep 29 (amendment 5):* this rule is now registered, with one change. Two listings equally near the
+kickoff that are priced at the same book with the same quote (the same total and prices) are the same game
+listed twice, so the first listed is taken; a tie between different quotes, or between listings priced at
+neither book, still leaves the close missing.
 
 ## Forecast replay (2024–25)
 
@@ -213,6 +217,12 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **"Before kickoff"** is before the earlier of the kickoff on the row and the kickoff in the schedule, for every use, so an in-play quote can't become Rule HT's entry or Rule B's close.
 - **20 closes.** A Rule B decision in which fewer than 20 signals have a primary close is inconclusive, and the scorer says why and how many have no close. Rule HT is graded on results, so the limit doesn't apply to it.
 - **What it replaces.** The amendment ends with a list of every earlier sentence it changes, quoted. It tests nothing; the running variant count stays 271 (p < 0.000185).
+
+**Amendment 5 (Sep 29)** follows up the money-gate study and the last review of amendment 4. No trigger, gate, price cap or stake changes. Tests in `tests/test_readings.py` and `tests/test_close_capture.py`:
+
+- **Rule B's keep interval is grouped by game day.** Closing-line moves of windy games on the same day move together, so the plain interval kept a rule with no edge about 5 to 6% of the time instead of 2.5%. The interval of mean CLV now groups the signals by the Eastern date of their game's kickoff and uses Student's t on one less than the number of game days; with fewer than 2 game days there is no interval and the decision is inconclusive. The plain interval is printed beside it, for reference, and both are recorded. In simulation ([`../strategy-research/keep_test_check.py`](../strategy-research/keep_test_check.py), 40,000 paths per case) the grouped interval keeps a no-edge rule 3.6 to 4.0% of the time in the realistic case, up to 4.4% in the stress case. Rule HT is graded on results and doesn't change.
+- **Close capture's listing rule is registered** (above).
+- **Three record gaps.** A recorded time with no time zone is a damaged record, not a crash; a damaged record still prints each decision in it that can be read, as recorded; and a decision missing from a record file that still exists is restored from the ledgers-branch copy, never decided again.
 
 ## Data
 

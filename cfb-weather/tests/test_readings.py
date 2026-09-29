@@ -828,9 +828,59 @@ def test_the_summaries_say_a_record_lost_before_its_copy_can_be_decided_again():
 
 
 # ================================================================== amendment 5 (Sep 29): the keep test and the record
+def amendment5():
+    return (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 5 ")[1].split("\n## ")[0]
+
+
 def amendment5_section(n):
-    text = (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 5 ")[1].split("\n## ")[0]
-    return " ".join(text.split(f"### {n}.")[1].split("\n### ")[0].split())
+    return " ".join(amendment5().split(f"### {n}.")[1].split("\n### ")[0].split())
+
+
+REGISTERED_BY_HUB = ("Registered by the hub on the owner's standing instruction of September 29, 2026 (the hub decides "
+                     "questions of how the tests are graded and reports them; money, and any rule's trigger, gate or "
+                     "price cap, stay the owner's). The registering commit is the merge of pull request 64. The owner "
+                     "can change any reading here by a dated amendment made before the first outcome it would affect.")
+
+
+def test_amendment_5_is_registered_as_the_hub_was_told_and_names_what_it_replaces():
+    text = norm(amendment5())
+    assert REGISTERED_BY_HUB in text
+    assert "No trigger, gate, price cap or stake changes." in text and "The rules version stays cfb-v3-2026-09-28" in text
+    assert "on the day of registration it is 271, so the multiple-testing bar is p < 0.000185" in text
+    whole = (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 5 ")[0]
+    strategy = (ROOT / "STRATEGY.md").read_text()
+    bullets = amendment5().split("### What this amendment replaces")[1].split("\n* ")[1:]
+    assert len(bullets) >= 7
+    for bullet in bullets:
+        label, rest = bullet.split(': "', 1)
+        if label.startswith("`STRATEGY.md`"):
+            src = strategy
+        else:
+            m = re.match(r"Amendment (\d+)(?:, section (\d+))?", label)
+            src = whole.split(f"## Amendment {m[1]} ")[1].split("\n## ")[0]
+            src = src.split(f"### {m[2]}.")[1].split("\n### ")[0] if m[2] else src
+        quotes = re.findall(r'"([^"]+)"', '"' + rest)
+        assert quotes, label
+        for q in quotes:
+            assert norm(q) in norm(src), (label, q)
+    one = amendment5_section(1)
+    for words in ("5.2%, 5.8% and 6.3% of the time; the grouped interval 3.6%, 3.7% and 4.0%",
+                  "40,000 simulated paths per case", "the owner has not chosen a gate", "Rule HT is graded on results",
+                  "It does not fix the NFL", "0 variants"):
+        assert words in one, words
+    two = amendment5_section(2)
+    assert "the first listed in the feed is taken" in two and "none is taken" in two and "within 6 hours" in two
+    assert "Pinnacle comes first, then one priced at DraftKings" in two and "byte-identical" in two
+
+
+def test_the_summaries_name_amendment_5():
+    strategy = (ROOT / "STRATEGY.md").read_text()
+    assert "*Amendment 5 (Sep 29):* the 95% interval is grouped by game day" in strategy
+    status = (ROOT.parent / "STATUS.md").read_text()
+    assert "the college football one until Thu Oct 1, 5:00 PM Pacific" in status
+    assert "The registered primary CLV and the decision rules are unchanged" not in status
+    assert "the captured close enters Rule B's primary CLV when no later quote was logged" in status
+    assert "college football goes from 5.2 to 6.3% to 3.6 to 4.0%" in status
 
 
 def by_hand(clv, days):

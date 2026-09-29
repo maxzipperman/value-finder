@@ -72,6 +72,11 @@ Before, it matched on the teams alone, so when the feed listed the same teams tw
 both, it wrote both and the scorer took whichever the feed gave last. A tie between two equally good listings,
 or no listing within 6 hours, leaves the game's close missing, and the log says why. Tests:
 `tests/test_close_capture.py`.
+*Note, Sep 29 (amendment 7):* this rule is now registered, with one change. Two listings equally near the
+kickoff that carry the same Pinnacle quote (the same total and prices) are the same game listed twice, so the
+first listed is taken; a tie between different quotes still leaves the close missing. A feed that answers
+with no events at all is recorded as a slot with no listings (each due game with its book columns blank) and
+counted as a try; it used to stop the script with an error before the try was counted.
 
 For iPhone pushes: install the free ntfy app, subscribe to the topic in
 `NTFY_TOPIC` (pick something long and random; anyone who knows it can read it),
@@ -115,6 +120,12 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **"Before kickoff"** is before the earlier of the kickoff on the row and the kickoff in the schedule, for every use.
 - **20 closes.** A decision in which fewer than 20 bets have a primary close is inconclusive, and the scorer says why and how many bets have no close.
 - **What it replaces.** The amendment ends with a list of every earlier sentence it changes, quoted. It tests nothing; the running variant count stays 271 (p < 0.000185).
+
+**Amendment 7 (Sep 29)** follows up the money-gate study and the last review of amendment 6. No trigger, gate, price cap or stake changes. Tests in `tests/test_readings.py` and `tests/test_close_capture.py`:
+
+- **The keep test's interval is grouped by game day.** Closing-line moves of windy games on the same day move together, so the plain interval kept a rule with no edge about 8 to 10% of the time instead of 2.5%. The interval of mean CLV now groups the bets by the Eastern date of their game's kickoff and uses Student's t on one less than the number of game days; with fewer than 2 game days there is no interval and the decision is inconclusive. The plain interval is printed beside it, for reference, and both are recorded. In simulation ([`../strategy-research/keep_test_check.py`](../strategy-research/keep_test_check.py), 40,000 paths per case) the grouped interval keeps a no-edge rule 6.4 to 8.1% of the time in the realistic case, and the two looks together 7.1 to 8.9%. That is better, not fixed: NFL seasons swing as a whole, and grouping by day can't correct that.
+- **Close capture's listing rule is registered** (above).
+- **Three record gaps.** A recorded time with no time zone is a damaged record, not a crash; a damaged record still prints each decision in it that can be read, as recorded; and a decision missing from a record file that still exists is restored from the ledgers-branch copy, never decided again.
 
 ## Forecast replay on NWS MOS, 2004–25 (issue #40, Sep 29)
 
