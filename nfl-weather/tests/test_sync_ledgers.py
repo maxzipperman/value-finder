@@ -162,8 +162,10 @@ def test_the_nightly_copy_checks_the_header_the_scorers_write():
     assert header + "\n" == HEADER
 
 
+BLANKS = "\n   \n"                                                   # a blank line, and a line of only spaces
 FIRST = {"cut": (HEADER + A[:40], "its last line is cut, with no line break at the end"),
          "empty": ("", "the file is empty"),
+         "only blank lines": (BLANKS, "the file holds only blank lines"),
          "no header": (A, "its first line is not the record's header"),
          "another file's header": ("snapshot_utc\n" + A, "its first line is not the record's header")}
 
@@ -203,6 +205,7 @@ def test_a_first_copy_saved_with_other_line_endings_is_published_as_the_scorers_
 
 
 DAMAGED_COPY = {"no header": (A, "its first line is not the record's header"),
+                "no header, after a blank line": ("\n" + A, "its first line is not the record's header"),
                 "cut": (HEADER + A + B[:40], "its last line is cut, with no line break at the end")}
 
 
@@ -225,15 +228,16 @@ def test_a_damaged_published_copy_is_named_as_the_damaged_one(tmp_path, case):
     assert (s.repo / NFL).read_text() == HEADER + A + B, case                     # the live file is left alone
 
 
-def test_an_empty_published_copy_is_replaced_only_by_a_good_file(tmp_path):
+@pytest.mark.parametrize("empty", ["", BLANKS])
+def test_an_empty_published_copy_is_replaced_only_by_a_good_file(tmp_path, empty):
     """An empty copy holds no line, so a good file replaces it, as a first copy would be published; a damaged file
-    doesn't."""
+    doesn't. A copy of only blank lines holds no line either (the fourth review: a blank line is not damage)."""
     s = Sync(tmp_path)
     s.run({NFL: HEADER + A})
-    s.publish_by_hand("nfl-weather/decisions.csv", "")
+    s.publish_by_hand("nfl-weather/decisions.csv", empty)
     out = s.run({NFL: A})[1]
     assert ("nfl-weather: decisions.csv not published (its first line is not the record's header); the published copy "
-            "is kept as it is") in out and s.published("nfl-weather/decisions.csv") == ""
+            "is kept as it is") in out and s.published("nfl-weather/decisions.csv") == empty
     assert "not published" not in s.run({NFL: HEADER + A})[1]
     assert s.published("nfl-weather/decisions.csv") == HEADER + A
 
@@ -257,3 +261,54 @@ def test_while_a_changed_line_holds_the_record_back_a_new_decision_is_not_publis
         three = " ".join(text.split("### 3.")[1].split("\n### ")[0].split())
         assert ("while the nightly copy holds the file back because a published line in it has changed" in three
                 and "the one case left is a decision recorded and lost on the same day" not in three.lower()), project
+
+
+# ================================================================== the fourth review of pull request 64 (Sep 29)
+def with_blanks(text, where):
+    """`text` with a blank line and a line of only spaces at its start, before its last line, or at its end."""
+    lines = text.splitlines(keepends=True)
+    at = {"start": 0, "middle": len(lines) - 1, "end": len(lines)}[where]
+    return "".join(lines[:at]) + BLANKS + "".join(lines[at:])
+
+
+@pytest.mark.parametrize("where", ["start", "middle", "end"])
+@pytest.mark.parametrize("side", ["file", "copy", "both"])
+def test_blank_lines_are_skipped_on_both_sides_and_never_published(tmp_path, side, where):
+    """The fourth review (its sync_probe trailing_blank_line and e2e_record blank): a hand edit left a blank line in
+    decisions.csv, the nightly copy published it, and the scorer's restore from that copy then stopped the whole run.
+    A blank line, or a line of only spaces, in the file or in the published copy is not a record and is not damage:
+    the comparison skips it on both sides, a file that lost a line is still held back, and the file is published
+    without its blank lines (the first copy too). A copy with blank lines can only come from a hand commit."""
+    s = Sync(tmp_path)
+    blank = (lambda t: t) if side == "copy" else (lambda t: with_blanks(t, where))
+    code, out = s.run({NFL: blank(HEADER + A)})                                   # the first copy
+    assert code == 0 and "not published" not in out and s.published("nfl-weather/decisions.csv") == HEADER + A, out
+    copy = HEADER + A if side == "file" else with_blanks(HEADER + A, where)
+    if side != "file":
+        s.publish_by_hand("nfl-weather/decisions.csv", copy)                      # a hand repair left blank lines
+    code, out = s.run({NFL: blank(HEADER + B)})                                   # lost A: held back
+    assert code == 0 and NOT_PUBLISHED.format(LOST) in out and out.count("not published") == 1, out
+    assert s.published("nfl-weather/decisions.csv") == copy
+    code, out = s.run({NFL: blank(HEADER + A)})                                   # the copy's lines: published
+    assert code == 0 and "not published" not in out, out
+    assert s.published("nfl-weather/decisions.csv") == HEADER + A                 # without blank lines
+    code, out = s.run({NFL: blank(HEADER + A + B)})                               # a new decision
+    assert code == 0 and "not published" not in out, out
+    assert s.published("nfl-weather/decisions.csv") == HEADER + A + B
+    assert (s.repo / NFL).read_text() == blank(HEADER + A + B)                    # the live file is left as it is
+    for project, n in (("nfl-weather", 7), ("cfb-weather", 5)):
+        text = (ROOT.parent / project / "PREREGISTRATION.md").read_text().split(f"## Amendment {n} ")[1]
+        three = " ".join(text.split("### 3.")[1].split("\n### ")[0].split())
+        assert ("the nightly copy ignores blank lines on both sides when it compares the file with the published copy "
+                "and publishes the file without them") in three, project
+
+
+def test_a_blank_line_in_a_file_saved_with_other_line_endings_is_skipped_too(tmp_path):
+    """A blank line in a file saved with Windows line endings is a lone carriage return: blank, as the scorers read
+    it. A line of only spaces with a carriage return is blank too."""
+    s = Sync(tmp_path)
+    crlf = (HEADER + A).replace("\n", "\r\n")
+    assert "not published" not in s.run({NFL: crlf})[1]
+    code, out = s.run({NFL: crlf + "\r\n  \r\n" + B.replace("\n", "\r\n")})
+    assert code == 0 and "not published" not in out, out
+    assert s.published("nfl-weather/decisions.csv") == crlf + B.replace("\n", "\r\n")

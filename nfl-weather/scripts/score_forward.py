@@ -60,7 +60,9 @@ decision it ever held: the one case left is a decision recorded since the last n
 file and lost before the next one (normally the same day; longer while a changed published line holds the file
 back, until the hub puts it right). A copy that can't be read stops recording whether or not the file is
 there, and each decision on a line of it that can still be read is printed from it as recorded; nothing is
-restored from a damaged copy.
+restored from a damaged copy, and the hub replaces a damaged published copy by hand with a commit to the ledgers
+branch. A blank line, or a line of only spaces, in the file or its copy is not a record and is not damage: it is
+skipped when read and never copied by a restore.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
@@ -208,16 +210,27 @@ def check_row(r):
         raise ValueError(f"{r.decision_id}'s fingerprint is not 64 hexadecimal characters")
 
 
+def record_lines(data):
+    """Amendment 7, reading 3: a record's lines, as bytes without their line breaks, in order. A blank line, or a line
+    of only spaces (before a CRLF line's carriage return), is not a record and is not damage: it is left out here,
+    so it is skipped when the file or its copy is read, never counted as a decision and never copied by a restore.
+    Whatever follows the last line break (nothing, in a file that can be read) is left out too."""
+    return [p for p in data.split(b"\n")[:-1] if not re.fullmatch(rb" *\r?", p)]
+
+
 def parse_record(data):
     """The decision record from a file's bytes: (rows, "") or (None, why it can't be read). The file must end with
     a complete line, its first line must be the record's header, every line must have exactly its 10 fields, and
     each row must be one of this scorer's decisions, with valid times, the numbers a later run prints, row
     positions and a full fingerprint. A half-written line (wherever it was cut), a missing header or column, an
-    empty file or a damaged number makes it unreadable."""
+    empty file or a damaged number makes it unreadable. Blank lines are skipped (record_lines)."""
     try:
         text = data.decode("utf-8")
         if not text.endswith("\n"):             # a cut last line, or an empty file: never append to it
             raise ValueError("the file is empty" if not text else "its last line is not complete (no line break)")
+        text = b"".join(p + b"\n" for p in record_lines(data)).decode("utf-8")
+        if not text:
+            raise ValueError("the file holds only blank lines")
         lines = [f for f in csv.reader(io.StringIO(text, newline=""), strict=True) if f]
         if not lines or lines[0] != RECORD_COLS:
             raise ValueError("its first line is not the record's header")
@@ -294,9 +307,10 @@ def copy_lines(readable):
 def lines_held(data, ids):
     """Amendment 7, reading 3: a readable copy's own record lines for these decision ids, byte for byte and in the
     copy's order. A restore appends them as they are, so the file again holds every line of the published copy, and
-    the nightly copy (which never publishes a file that has lost a published line) publishes it again."""
-    pieces = data.split(b"\n")[1:-1]            # after the header; a readable copy ends with a line break
-    return b"".join(p + b"\n" for p in pieces if next(csv.reader([p.decode("utf-8")]), [""])[0] in ids)
+    the nightly copy (which never publishes a file that has lost a published line) publishes it again. Blank lines
+    are never copied (record_lines)."""
+    pieces = record_lines(data)[1:]             # after the header, blank lines left out
+    return b"".join(p + b"\n" for p in pieces if (next(csv.reader([p.decode("utf-8")]), None) or [""])[0] in ids)
 
 
 if DECISIONS is not None:
@@ -316,8 +330,9 @@ if DECISIONS is not None:
                                                                       "this line of it can still be read")
             print(f"Decision record: data/forward/decisions.csv is missing, and its copy on the ledgers branch "
                   f"({PUBLISHED}) is unreadable ({copy_broken}). Nothing will be recorded until the file is restored "
-                  f"from a readable copy in that branch's history ({HISTORY}) and the copy can be read again (the "
-                  "nightly copy of the restored file does that); the scores below are printed as usual."
+                  f"from a readable copy in that branch's history ({HISTORY}) and the copy can be read again: the hub "
+                  "replaces a damaged published copy by hand with a commit to the ledgers branch, and recording "
+                  "resumes once the copy can be read. The scores below are printed as usual."
                   + copy_lines(held) + (" They are printed below as recorded." if len(held) else ""))
             NOT_RECORDED = ("the decision record is missing and its copy on the ledgers branch is unreadable; nothing "
                             f"will be recorded until the file is restored from a readable copy ({HISTORY}) and the "
@@ -325,8 +340,8 @@ if DECISIONS is not None:
         elif held is not None and len(held):
             if IS_LIVE and not NOT_RECORDED:
                 with record_lock():
-                    if not DECISIONS.exists():
-                        DECISIONS.write_bytes(copy)
+                    if not DECISIONS.exists():            # the copy's own lines, blank lines left out
+                        DECISIONS.write_bytes(b"".join(p + b"\n" for p in record_lines(copy)))
                         RESTORED = set(held.decision_id)
                 if RESTORED:
                     print(f"Decision record: data/forward/decisions.csv was missing; restored {plural(len(held))} "
@@ -354,14 +369,16 @@ if DECISIONS is not None:
             # Amendment 6, section 3, and amendment 7, reading 3: the file is there, but its copy can't be read, so
             # nothing is recorded until the copy can be read again, and the copy's readable decisions are held
             print(f"Decision record: its copy on the ledgers branch ({PUBLISHED}) is unreadable ({copy_broken}). "
-                  "Nothing will be recorded until the copy can be read again: the nightly copy of a readable "
-                  "data/forward/decisions.csv does that. The scorer never restores from a damaged copy; if the file "
+                  "Nothing will be recorded until the copy can be read again: the hub replaces a damaged published "
+                  "copy by hand with a commit to the ledgers branch, and recording resumes once the copy can be "
+                  "read. The scorer never restores from a damaged copy; if the file "
                   f"has lost a decision, restore it by hand from a readable copy in the branch's history ({HISTORY})."
                   + copy_lines(held))
             NOT_RECORDED = (("the decision record and its copy on the ledgers branch are unreadable; nothing will be "
                              "recorded until the file is repaired and the copy can be read again") if DAMAGED else
-                            ("its copy on the ledgers branch is unreadable; nothing will be recorded until the copy can "
-                             "be read again (the nightly copy of a readable file does that)"))
+                            ("its copy on the ledgers branch is unreadable; the hub replaces a damaged published copy "
+                             "by hand with a commit to the ledgers branch, and recording resumes once the copy can be "
+                             "read"))
         # Amendment 7, reading 3: a decision the file is missing while its copy holds it is restored from the copy,
         # never decided again. A run that may record appends it to the file; any other run prints it from the copy.
         lost = held[~held.decision_id.isin(RECORD.decision_id)] if held is not None else None
@@ -392,7 +409,7 @@ if DECISIONS is not None:
                   f"({NOT_RECORDED}); " + (
                       f"a damaged copy is never restored from: restore {them} by hand, from this copy's readable "
                       f"line{'s' if len(lost) != 1 else ''} or a readable copy in the branch's history ({HISTORY}), "
-                      f"before the nightly copy replaces the damaged one, after which the copy no longer holds {them}."
+                      f"before the hub replaces the damaged copy by hand, after which the copy no longer holds {them}."
                       if copy_broken else
                       f"{them} will be restored once the file is repaired." if DAMAGED else
                       f"the next run that may record restores {them}."))

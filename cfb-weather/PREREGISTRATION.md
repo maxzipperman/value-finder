@@ -571,13 +571,17 @@ and the reviews of this amendment found that the nightly copy itself could lose 
   applies whether or not the file is there: while the copy can't be read, nothing is recorded, and the scorer says
   so on every run. Each decision on a line of the copy that can still be read (the same test as for a damaged file)
   is held: if the file doesn't hold it, it is printed from the copy as recorded, never decided again, and it is not
-  restored from a damaged copy (the hub can restore it by hand). Recording resumes once the copy can be read again.
-  The nightly copy never replaces a published copy that is itself cut or does not start with the record's header
-  line: it keeps it, and the line it prints says that the published copy is damaged, not the file. An empty copy
-  is replaced as a first copy is published. A copy with any other damaged line is replaced only by a file that
-  holds every line of it. Otherwise the hub replaces a damaged copy by hand, with a commit to the ledgers branch.
-  When the file is missing, it is first restored by hand from a readable earlier copy in the branch's history (`git log
-  origin/ledgers -- cfb-weather/decisions.csv`), as amendment 4 says.
+  restored from a damaged copy (the hub can restore it by hand). The nightly copy never replaces a published copy
+  that is itself cut or does not start with the record's header line: it keeps it, and the line it prints says that
+  the published copy is damaged, not the file. An empty copy is replaced as a first copy is published. A copy with
+  any other damaged line is replaced only by a file that holds every line of it. Otherwise the hub replaces a
+  damaged published copy by hand with a commit to the ledgers branch, and recording resumes once the copy can be
+  read. When the file is missing, it is first restored by hand from a readable earlier copy in the branch's history
+  (`git log origin/ledgers -- cfb-weather/decisions.csv`), as amendment 4 says.
+* **A blank line is skipped.** A blank line, or a line of only spaces, anywhere in `decisions.csv` or in its
+  published copy is not a record and is not damage: the scorer skips it when it reads the file or the copy, never
+  counts it as a decision and never copies it when it restores, and the nightly copy ignores blank lines on both
+  sides when it compares the file with the published copy and publishes the file without them.
 
 ### What this amendment replaces
 

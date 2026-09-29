@@ -27,10 +27,19 @@ fi
 # checks guard the first copy. A published copy that is itself damaged (cut, or not starting with the
 # header) is never replaced here: the line says so, and the hub replaces it by hand. The sync never fails
 # over any of this. The header is the scorers' RECORD_COLS (a test checks that they agree).
+# A blank line, or a line of only spaces, in the file or in the published copy is not a record and is not damage:
+# every check below skips it on both sides, and the file is published without its blank lines.
 RECORD_HEADER="decision_id,rule,horizon,horizon_utc,decided_utc,n_bets,verdict,numbers,ledger_rows,ledger_rows_sha256"
+BLANK='^ *\r?$'                             # a blank line, or one of only spaces (a CRLF line's \r is its ending)
 
-# Why a record file can't be published (nothing when it can): missing, empty, cut, or a first line that is not
-# the record's header. A header line ending in a carriage return is accepted, as the scorers read it.
+# Whether a file holds a line that is not blank (a copy of only blank lines holds no line, like an empty one).
+holds_lines() {
+  [ -f "$1" ] && LC_ALL=C awk -v blank="$BLANK" '$0 !~ blank { found = 1; exit } END { exit !found }' "$1"
+}
+
+# Why a record file can't be published (nothing when it can): missing, empty (or only blank lines), cut, or a first
+# line that is not the record's header, blank lines skipped. A header line ending in a carriage return is accepted,
+# as the scorers read it.
 record_damage() {
   local f="$1" first=""
   if [ ! -f "$f" ]; then
@@ -39,8 +48,10 @@ record_damage() {
     echo "the file is empty"
   elif [ -n "$(tail -c 1 "$f")" ]; then
     echo "its last line is cut, with no line break at the end"
+  elif ! holds_lines "$f"; then
+    echo "the file holds only blank lines"
   else
-    first="$(head -n 1 "$f")"
+    first="$(LC_ALL=C awk -v blank="$BLANK" '$0 !~ blank { print; exit }' "$f")"
     if [ "${first%$'\r'}" != "$RECORD_HEADER" ]; then
       echo "its first line is not the record's header"
     fi
@@ -53,7 +64,7 @@ publish_decisions() {
   if [ ! -e "$old" ] && [ ! -e "$new" ]; then
     return 0                                # no decision recorded and nothing published yet: nothing to do
   fi
-  if [ -s "$old" ]; then
+  if holds_lines "$old"; then
     why="$(record_damage "$old")"
     if [ -n "$why" ]; then
       echo "$p: decisions.csv not published (the published copy is damaged: $why); the published copy is kept" \
@@ -62,10 +73,11 @@ publish_decisions() {
     fi
   fi
   why="$(record_damage "$new")"
-  if [ -z "$why" ] && [ -s "$old" ]; then
-    # awk exits 0 when a line of the published copy is not a line of the new file, 1 when every line is
-    awk -v new="$new" 'FILENAME == new { have[$0] = 1; next } !($0 in have) { lost = 1 }
-                       END { exit (lost ? 0 : 1) }' "$new" "$old" || rc=$?
+  if [ -z "$why" ] && holds_lines "$old"; then
+    # awk exits 0 when a line of the published copy that is not blank is not a line of the new file, 1 when every
+    # such line is
+    LC_ALL=C awk -v new="$new" -v blank="$BLANK" 'FILENAME == new { have[$0] = 1; next } $0 ~ blank { next }
+                       !($0 in have) { lost = 1 } END { exit (lost ? 0 : 1) }' "$new" "$old" || rc=$?
     if [ "$rc" -eq 0 ]; then
       why="it has lost or changed a line that the published copy holds"
     elif [ "$rc" -ne 1 ]; then
@@ -80,7 +92,7 @@ publish_decisions() {
     fi
     return 0
   fi
-  cp "$new" "$old"
+  LC_ALL=C awk -v blank="$BLANK" '$0 !~ blank' "$new" > "$old"   # the file's lines, blank lines left out
 }
 
 cd "$CLONE"

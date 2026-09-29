@@ -16,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -1072,6 +1073,12 @@ def test_amendment_5_reading_3_a_decision_missing_from_the_file_is_restored_from
 
 
 # ================================================================== the review of pull request 64 (Sep 29)
+# The fourth review: the nightly copy keeps a damaged published copy, so the scorer no longer says that the nightly
+# copy repairs it; it says this, as section 3, hub.md and ops/RUN_RECORDS.md do
+HUB_REPLACES = ("the hub replaces a damaged published copy by hand with a commit to the ledgers branch, and recording "
+                "resumes once the copy can be read")
+
+
 def test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_can(tmp_path):
     """The review of pull request 64 (its rec_probe c3 and c4, on the NFL scorer; the record code is the same
     here): the copy's first record line could be read and the line after it was cut. With the file present but
@@ -1096,6 +1103,9 @@ def test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_
             (fwd / "decisions.csv").write_text(content)
         out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
         assert unreadable in out and "1 recorded decision in the copy can still be read (CFB_RULE_B)." in out, name
+        assert HUB_REPLACES in out and "does that" not in out and "before the nightly copy" not in out, name
+        if content is not None:
+            assert "before the hub replaces the damaged copy by hand, after which the copy no longer holds it" in out
         assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out), name
         assert f"read from its copy on the ledgers branch ({why})" in rb(out), name
         assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out), name
@@ -1111,6 +1121,7 @@ def test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_
     out = on_clock(tmp_path, "2026-12-21T18:00", scorer).stdout
     assert unreadable in out and "No recorded decision in the copy can still be read." in out
     assert "FINAL: NOT KEPT" in rb(out) and "not recorded: its copy on the ledgers branch is unreadable" in rb(out)
+    assert f"not recorded: its copy on the ledgers branch is unreadable; {HUB_REPLACES}." in rb(out)
     assert (fwd / "decisions.csv").read_text() == head + "\n"
     publish(repo, "cfb-weather", fwd / "decisions.csv")                       # the nightly copy of the file
     out = on_clock(tmp_path, "2026-12-21T19:00", scorer).stdout
@@ -1239,3 +1250,108 @@ def test_amendment_5_states_the_decisions_a_held_back_copy_leaves_on_the_mac_onl
     assert "# Amendment 6, section 3" not in scorer                        # the NFL's number for the same section
     assert "# Amendment 4, section 3: a copy that can't be read stops recording" in scorer
     assert "# Amendment 4, section 3, and amendment 5, reading 3: the file is there" in scorer
+
+
+# ================================================================== the fourth review of pull request 64 (Sep 29)
+BLANKS = "\n   \n"                                                   # a blank line, and a line of only spaces
+
+
+def with_blanks(text, where):
+    """`text` with a blank line and a line of only spaces at its start, before its last line, or at its end."""
+    lines = text.splitlines(keepends=True)
+    at = {"start": 0, "middle": len(lines) - 1, "end": len(lines)}[where]
+    return "".join(lines[:at]) + BLANKS + "".join(lines[at:])
+
+
+def shown(repo, name):
+    """The published copy exactly as `git show` gives it (git() strips the ends, where a blank line may be)."""
+    return subprocess.run(["git", "-C", str(repo), "show", f"origin/ledgers:{name}"], capture_output=True, text=True,
+                          check=True).stdout
+
+
+def commit_by_hand(tmp_path, repo, name, text):
+    """The hub's hand commit to the ledgers branch, made in the nightly copy's own clone (HOME is inside tmp_path) and
+    pushed to the local bare remote; then `git fetch`, as the check-in runs before the scorers."""
+    env = dict(os.environ, HOME=str(tmp_path / "home"), GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
+               GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+    clone = tmp_path / "home" / "code" / ".value-finder-ledgers"
+    (clone / name).write_bytes(text.encode())
+    for args in (["add", name], ["commit", "-q", "-m", "by hand"], ["push", "-q", "origin", "ledgers"]):
+        subprocess.run(["git", "-C", str(clone), *args], check=True, capture_output=True, env=env)
+    subprocess.run(["git", "-C", str(repo), "fetch", "-q", "origin"], check=True, env=env)
+    assert shown(repo, name) == text
+
+
+@pytest.mark.parametrize("where", ["start", "middle", "end"])
+@pytest.mark.parametrize("side", ["file", "copy", "both"])
+def test_amendment_5_reading_3_a_blank_line_is_skipped_never_damage_never_copied(tmp_path, side, where):
+    """The fourth review of pull request 64 (its e2e_blank_cfb): a hand edit left a blank line in decisions.csv, the
+    nightly copy published it, the file then lost its decision, and the next real run stopped with IndexError while
+    restoring it, so the decision was not restored and the day's report was lost. Now a blank line, or a line of only
+    spaces, anywhere in the file or its published copy is not a record and is not damage: the scorer skips it when it
+    reads, never counts it and never copies it when it restores, and the nightly copy ignores it on both sides and
+    publishes the file without it. Both decisions (Rule B and Rule HT) are recorded on Feb 2, 2028; the blank lines
+    are at `where` in the file, in the copy (put there by a hand commit, as the nightly copy no longer publishes
+    them), or in both; the real nightly copy runs on a throwaway repository whose origin is a local bare
+    repository."""
+    rows, s = rb_and_ht()
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "cfb-weather", rows, s, "2028-02-02T16:00")
+    current = season_file(proj, 2027, [sched(999999, kick="2027-10-02T19:00Z")], "2028-02-02T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    rec, name = fwd / "decisions.csv", "cfb-weather/decisions.csv"
+    day1 = "recorded in decisions.csv on 2028-02-02T17:00:00Z"
+    assert on_clock(tmp_path, "2028-02-02T17:00", scorer).stdout.count(day1) == 2         # day 1: both recorded
+    whole = rec.read_text()
+    head, first, second = whole.splitlines(keepends=True)
+    assert "not published" not in nightly(tmp_path, repo) and shown(repo, name) == whole   # night 1
+    copy = whole if side == "file" else with_blanks(whole, where)
+    if side != "file":
+        commit_by_hand(tmp_path, repo, name, copy)                           # a hand repair left blank lines
+    kept = head + second if side == "copy" else with_blanks(head + second, where)
+    rec.write_text(kept)                                                      # day 2: the file loses a decision
+    out = nightly(tmp_path, repo)                                             # night 2: held back, blank lines aside
+    assert ("cfb-weather: decisions.csv not published (it has lost or changed a line that the published copy holds); "
+            "the published copy is kept as it is") in out and shown(repo, name) == copy
+    touch(current, "2028-02-04T16:00")
+    r = on_clock(tmp_path, "2028-02-04T17:00", scorer)                        # day 3: the check-in
+    assert r.returncode == 0, r.stderr
+    lost = first.split(",")[0]
+    assert (f"data/forward/decisions.csv was missing 1 recorded decision that its copy on the ledgers branch "
+            f"(origin/ledgers:{name}) holds ({lost}); restored from the copy") in r.stdout
+    assert "unreadable" not in r.stdout and r.stdout.count(day1) == 2 and "on 2028-02-04T17:00:00Z" not in r.stdout
+    assert rec.read_text() == kept + first                                    # the copy's line only, no blank line
+    if side != "file":                                                        # the whole file lost: no blank lines
+        rec.unlink()
+        r = on_clock(tmp_path, "2028-02-04T18:00", scorer)
+        assert r.returncode == 0, r.stderr
+        assert "restored 2 recorded decisions from its copy on the ledgers branch" in r.stdout
+        assert r.stdout.count(day1) == 2 and rec.read_text() == whole
+    out = nightly(tmp_path, repo)                                             # night 3: published, no blank lines
+    assert "not published" not in out
+    assert shown(repo, name) == (head + second + first if side == "file" else whole)
+    assert ("A blank line, or a line of only spaces, anywhere in `decisions.csv` or in its published copy is not a "
+            "record and is not damage") in amendment5_section(3)
+
+
+def test_amendment_5_reading_3_a_record_of_only_blank_lines_is_unreadable(tmp_path):
+    """Blank lines are skipped, so a file of only blank lines holds no header: it can't be read, as an empty file
+    can't, and nothing is added to it."""
+    rows, s = rb_signals(40)
+    (tmp_path / "decisions.csv").write_text(BLANKS)
+    out = score(tmp_path, rows, s, "2026-12-20", "--test-record")
+    assert "Decision record: decisions.csv is unreadable (ValueError: the file holds only blank lines)" in out
+    assert "FINAL: KEEP" in rb(out) and (tmp_path / "decisions.csv").read_text() == BLANKS
+
+
+def test_amendment_5_section_3_hub_md_and_run_records_say_who_replaces_a_damaged_copy():
+    """The fourth review's minor finding: while the published copy can't be read, the scorer said that the nightly
+    copy of a readable file would repair it, but the nightly copy keeps a damaged published copy (section 3), so
+    recording stayed stopped until the hub worked that out. The scorer's lines (checked in
+    test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_can), section 3, hub.md and
+    ops/RUN_RECORDS.md now say the same."""
+    assert HUB_REPLACES in amendment5_section(3)
+    assert "Recording resumes once the copy can be read again." not in amendment5_section(3)
+    for doc in (ROOT.parent / ".claude" / "commands" / "hub.md", ROOT.parent / "ops" / "RUN_RECORDS.md"):
+        assert HUB_REPLACES in " ".join(doc.read_text().replace("`", "").split()), doc
