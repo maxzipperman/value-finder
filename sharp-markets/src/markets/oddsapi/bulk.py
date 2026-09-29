@@ -32,7 +32,8 @@ kept, and nothing else changed (markets.http.blank_key). Every answer is logged 
 data/raw/_manifest/oddsapi_manifest.csv (a 429 or 5xx that was retried included): requested vs returned snapshot
 time, credits billed (blank when unreadable: the upper bound was counted), the balance reported, a SHA-256 of the
 body as stored, the cache key, sealed flag. Errors other than 404 are never cached; a 404 is cached as "nothing
-there at that time", every summary line counts a pull's cached 404s, and `--retry-404` asks them again.
+there at that time", each pull's summary line counts its cached 404s (not the line after Ctrl-C, which doesn't read
+the cache), and `--retry-404` asks them again.
 
 Season slices: a pull with `require_seasons:` in the config (F3) is bought one declared slice at a time:
 `full` and `week` refuse it, dry run included, unless --seasons names exactly one slice (blank entries, as
@@ -505,6 +506,19 @@ class _Unusable(Exception):
 DISK_HELP = "Free some space (docs/ODDS5M_DAY_ONE.md, Before buying, step 2), then rerun."
 
 
+class _Sending:
+    """The session as BulkClient hands it to http_get: it marks a request as out (BulkClient._sent) just before the
+    request is sent. So a Ctrl-C while the next request only waits (for the rate limit, or a retry's backoff) counts
+    nothing for it, and one while a request is out counts that request's upper bound."""
+
+    def __init__(self, client: "BulkClient"):
+        self.client = client
+
+    def get(self, *a, **k):
+        self.client._sent = True
+        return self.client.session.get(*a, **k)
+
+
 class BulkClient:
     """The one client that spends Odds API credits (the bulk puller, and odds-pull through OddsApiClient).
 
@@ -517,8 +531,9 @@ class BulkClient:
     attempt starts that could take the count past --max-credits, and no call returns while it is past it.
 
     The balance (`x-requests-remaining`): the key check's is the start; each readable one after it can lower `lowest`;
-    one above the balance before it (credits added, the monthly renewal) logs a warning, and the run starts again from
-    there (the start becomes it plus the count so far). `remaining`, the estimate of the balance, is the lower of
+    one above the balance before it (credits added, the monthly renewal, or an out-of-date reading after a current
+    one) makes the run start again from there (the start becomes it plus the count so far); the first such rise is
+    logged, and run_calls logs how many more there were. `remaining`, the estimate of the balance, is the lower of
     `lowest` and the start less the count; no attempt starts that could take it below --floor. The one alarm: the
     account's unexplained fall, (start - lowest) - count, above `margin` (the larger of 300 and 5% of --max-credits).
     """
@@ -530,13 +545,14 @@ class BulkClient:
         self.session = session or new_session()
         self.limiter = RateLimiter(rate_per_sec)
         self.api_key, self.max_retries, self.max_errors = api_key, max_retries, max_errors
-        self.counted = self.unanswered = self.fetched = self.errors_in_row = 0
+        self.counted = self.unanswered = self.fetched = self.errors_in_row = self.rises = 0
         self.start: int | None = None          # the balance the count is measured from (the key check's)
         self.lowest: int | None = None         # the lowest balance reported since the start
         self.last_seen: int | None = None      # the last readable balance, as reported
         self.not_saved: dict[str, int] = {}    # cache key -> HTTP status of a call whose last answer was an error
         self._out: Call | None = None          # the call being fetched, and an answer to it not counted yet (Ctrl-C)
         self._answer: tuple[Call, Fetched] | None = None
+        self._sent = False                     # a request for `_out` is out, its answer not yet counted or held
         self.manifest = Path(cache.raw_dir) / "_manifest" / "oddsapi_manifest.csv"
 
     def _base(self) -> str:
@@ -563,11 +579,16 @@ class BulkClient:
         """An attempt at `call` got no answer. It may have been billed: its upper bound counts, to the end of the run."""
         self.counted += call.expected
         self.unanswered += call.expected
+        self._sent = False
 
     def _saw_balance(self, left: int) -> None:
         if self.start is not None and left > self.last_seen:
-            log.warning("the reported balance rose from %s to %s during the run (credits added, or the monthly "
-                        "renewal); the run starts again from there", f"{self.last_seen:,}", f"{left:,}")
+            self.rises += 1
+            if self.rises == 1:          # the later ones are counted; run_calls logs how many at the end of the pull
+                log.warning("the reported balance rose from %s to %s during the run (credits added, the monthly "
+                            "renewal, or a reading of the balance that was out of date); the run starts again from "
+                            "there. Any later rise is counted, and the count is logged when the pull ends",
+                            f"{self.last_seen:,}", f"{left:,}")
         if self.start is None or left > self.last_seen:   # no key check ran (library use), or credits were added
             self.start, self.lowest = left + self.counted, left
         self.lowest, self.last_seen = min(self.lowest, left), left
@@ -602,7 +623,7 @@ class BulkClient:
         """One GET with the key added; for a paid `call`, each retry goes through `_retrying`, and a network failure
         that outlasts the retries counts its upper bound and stops the run. Error text never holds the key."""
         try:
-            return http_get(self.session, url, {**params, "apiKey": self._key()}, self.limiter,
+            return http_get(_Sending(self), url, {**params, "apiKey": self._key()}, self.limiter,
                             max_retries=self.max_retries,
                             before_retry=None if call is None else (lambda why, r: self._retrying(call, why, r)))
         except requests.RequestException as e:
@@ -674,13 +695,13 @@ class BulkClient:
 
         def fetch() -> Fetched:
             f = self._fetched(self._get(call.url, dict(call.params), call))
-            self._answer = (call, f)
+            self._answer, self._sent = (call, f), False
             sent.append(f)
             if f.status == 200 and not _is_json(f.body):
                 raise _Unusable
             return f
 
-        self._out = call
+        self._out, self._sent = call, False
         try:
             rec = self.cache.get_or_fetch(sport=call.cache_sport, source=call.source,
                                           data_date=call.at.date().isoformat(), url=call.url, params=dict(call.params),
@@ -710,7 +731,8 @@ class BulkClient:
 
     def interrupted(self) -> str:
         """Ctrl-C: counts the call that was out, and says how, for the STOPPED line. An answer that had come back
-        counts what it cost and gets its manifest row; a call with no answer yet counts its upper bound."""
+        counts what it cost and gets its manifest row; a request with no answer yet counts its upper bound; and when
+        no request was out (the next one was waiting for the rate limit, or for a retry), nothing more is counted."""
         out, self._out = self._out, None
         if self._answer is not None:
             call, answer = self._answer
@@ -725,6 +747,9 @@ class BulkClient:
                     + ("." if saved else ", and a rerun buys it again."))
         if out is None:
             return "No call was out."
+        if not self._sent:
+            return ("No request was out (the next one was waiting for the rate limit or for a retry), so nothing more "
+                    "is counted for it.")
         self._no_answer(out)
         return (f"The call that was out may have been billed, so it is counted at its upper bound, "
                 f"{_credits(out.expected)}, and a rerun may buy it again.")
@@ -750,7 +775,7 @@ class BulkClient:
         documented = documented_cost(call, status, body)
         cost = call.expected if last is None else max(last, documented)
         self.counted += cost
-        self._answer = None
+        self._answer, self._sent = None, False
         self.fetched += not retrying
         if left is not None:
             self._saw_balance(left)
@@ -766,9 +791,11 @@ class BulkClient:
                        "sha256": hashlib.sha256(body.encode()).hexdigest(), "cache_key": rec["cache_key"],
                        "sealed": call.sealed})
         except OSError as e:
+            saved = not retrying and self.is_cached(call)
             problem = (f"{problem} The manifest row could not be written either." if problem else
-                       f"the response is cached, but its manifest row could not be written ({e.strerror or e}): is "
-                       f"the disk full? {DISK_HELP}")
+                       ("the response is cached, but its manifest row" if saved else
+                        "the answer was not saved (a rerun asks for it again), and its manifest row")
+                       + f" could not be written ({e.strerror or e}): is the disk full? {DISK_HELP}")
         above = last is not None and last > call.expected
         if problem:
             billed = _credits(cost) if last is not None else f"its upper bound, {_credits(call.expected)}"
@@ -853,6 +880,16 @@ def _ctrl_c(client: BulkClient) -> str:
     return f"{INTERRUPTED} (Ctrl-C). {client.interrupted()} A rerun resumes from the cache."
 
 
+def _log_rises(client: BulkClient, rises0: int, label: str) -> None:
+    """After a pull: how many times the reported balance rose during it, when BulkClient didn't log each one (it
+    logs only the run's first rise)."""
+    n = client.rises - rises0
+    if n and client.rises > 1:
+        log.warning("the reported balance rose %s during %s (%s in this run): credits added, the monthly renewal, "
+                    "or readings of the balance that were out of date; the run started again from each",
+                    "once" if n == 1 else f"{n:,} times", label or "the pull", f"{client.rises:,}")
+
+
 def run_calls(client: BulkClient, calls: list[Call], label: str = "", *, skip_sport_on_errors: bool = False,
               retry_404: bool = False) -> dict:
     """Fetch the calls not yet cached, in order (with retry_404, the cached 404s too, each kept only if it comes back
@@ -865,7 +902,7 @@ def run_calls(client: BulkClient, calls: list[Call], label: str = "", *, skip_sp
     print(f"{label}: {len(calls):,} calls, {len(calls) - len(todo):,} cached, {len(todo):,} to fetch"
           + (f" ({again:,} of them cached 404s asked again)" if again else "")
           + f", at most {sum(c.expected for c in todo):,} credits", flush=True)
-    fetched0, counted0 = client.fetched, client.counted
+    fetched0, counted0, rises0 = client.fetched, client.counted, client.rises
     stopped, interrupted, rerun = None, False, False
     skipped: dict[str, int] = {}
     sport = None
@@ -903,6 +940,7 @@ def run_calls(client: BulkClient, calls: list[Call], label: str = "", *, skip_sp
             print(f"  {i:,}/{len(todo):,}  credits this run {client.counted:,}  remaining {_n(client.remaining)}",
                   flush=True)
     fetched, spent = client.fetched - fetched0, client.counted - counted0
+    _log_rises(client, rises0, label)
     errors = sum(c.key in client.not_saved for c in todo)
     n404 = None if interrupted else sum(client.cached_status(c) == 404 for c in calls)
     print(summary_line(client, stopped, fetched, spent, errors, n404), flush=True)
@@ -1243,7 +1281,7 @@ def billing_probes(cfg: dict, client: BulkClient, schedules: dict, now: datetime
             specs.append((name, None, f"skipped: no {sport} {season} game in the schedule"))
         else:
             specs.append((name, fe(cfg["books"][books], g, sport), want))
-    rows, stopped_at = [], None
+    rows, stopped_at, rises0 = [], None, client.rises
     for name, call, want in specs:
         if call is None:
             rows.append({"probe": name, "result": want})
@@ -1253,6 +1291,7 @@ def billing_probes(cfg: dict, client: BulkClient, schedules: dict, now: datetime
             rows.append(_probe_row(name, client, call, want))
             if rows[-1].get("stopped"):
                 stopped_at = name
+    _log_rises(client, rises0, "the billing probes")
     for r in rows:
         print("  " + json.dumps(r, default=str))
     return rows

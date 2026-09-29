@@ -91,6 +91,8 @@ Everything here has its outcomes on disk already, so analysis starts the same we
 | F5: CFB alternate lines and team totals at T−24h and the close, 2023–26 | 221,880 (the team-totals slice at the close alone is 36,980) | Only if Rule HT's re-grade at Pinnacle's close (F1, 2020–25) keeps its win rate above the break-even of the prices; the team-totals slice is the part worth having |
 | F6: CFB props at the close, 2023–26 (upper bound; coverage is thin) | 147,920 | Only if #10 passes on NFL (F3) and a 30-credit probe finds CFB props at the close |
 
+*Note, September 29, 2026: the NHL's 2026-27 sealed window now starts September 28, because opening night was September 29 (the hub's decision, which also added three `/events` sweeps to the probe). So H1 covers the September 29–30 games as well: at most 810 more credits (27 more snapshots), within the estimate above, which is left as it is.*
+
 The plan size for March follows from the gates: 100K ($59) covers the completions and F5's team-totals slice; anything with H1, N2 or F4 needs 5M ($119).
 
 ### Not pulled

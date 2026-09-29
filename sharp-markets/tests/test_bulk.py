@@ -1937,7 +1937,10 @@ def test_billed_timeouts_count_their_upper_bound_and_never_pass_the_budget(fast,
 def test_odds_pull_stops_at_the_key_check_or_after_the_first_overcharged_call(tmp_path):
     """Astra C1: two NBA sample-week snapshots expected at 10 credits that report 300 each, with a balance below the
     floor. odds-pull runs on the bulk client, so it refuses at the key check (nothing bought); with no floor it stops
-    after the first call; and called directly, as Astra's script does, the second call is never sent."""
+    after the first call; and called directly as Astra's check_legacy.py calls it (a loop that doesn't catch the
+    exception), the first call raises CircuitBreaker, which ends the loop before the second is sent. The client keeps
+    no stopped state: a caller that caught the exception and called again would send the next call (no command does;
+    each stops at the first Stop)."""
     from markets.oddsapi.ingest import pull_snapshots
 
     class Astra:
@@ -2131,3 +2134,95 @@ def test_sweeps_answered_404_never_finish_a_sport_with_no_games(cfg, tmp_path, m
     assert not any(u.endswith("/events") for u, _ in api.calls)    # the 404s are cached: a rerun asks nothing
     out = bulk.stage_probe(cfg, RawCache(tmp_path / "new"), args(sports=nfl), now=NOW, session=Sweeps(200))
     assert out["stopped"] is None and out["games"][nfl[0]] == {}   # nothing saved before, no 404: an empty schedule
+
+
+# ---------------------------------------------------------------- review round 4 (Sep 29): minors
+def test_a_full_disk_at_the_manifest_says_whether_the_answer_was_saved(cfg, tmp_path, monkeypatch):
+    """A full disk when an answer's manifest row is written: the STOPPED line said "the response is cached" even for
+    an error answer, which is never cached (a 500 about to be retried, or the last one). Now it says so only when the
+    answer was saved, and otherwise that it was not saved and a rerun asks for it again."""
+    import errno
+
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    log_row = bulk.BulkClient._log
+
+    def full(self, row):
+        if row.get("pull") != "account":
+            raise OSError(errno.ENOSPC, "No space left on device")
+        log_row(self, row)
+
+    monkeypatch.setattr(bulk.BulkClient, "_log", full)
+    (call,) = _f1_calls(cfg)[-1:]
+    cases = [([(500, "0", "1000"), (200, "30", "970")], 1, False),     # a 500 about to be retried
+             ([(500, "0", "1000")], 0, False),                          # the last answer, a 500
+             ([(200, "30", "970")], 0, True)]                           # a 200, saved
+    for i, (answers, retries, saved) in enumerate(cases):
+        api = Scripted(answers)
+        c = bulk.BulkClient(RawCache(tmp_path / str(i)), max_credits=1_000, session=api, api_key=KEY, rate_per_sec=1e6,
+                            max_retries=retries)
+        c.account()
+        res = bulk.run_calls(c, [call])
+        assert api.paid == 1 and c.is_cached(call) == saved, i
+        assert "manifest row could not be written (No space left on device): is the disk full?" in res["stopped"], i
+        assert ("the response is cached" in res["stopped"]) == saved, (i, res["stopped"])
+        assert ("the answer was not saved (a rerun asks for it again)" in res["stopped"]) == (not saved), i
+
+
+def test_ctrl_c_while_the_next_request_waits_counts_nothing_more(cfg, tmp_path, monkeypatch):
+    """Ctrl-C while no request was out (the backoff before a retry, whose answer was already counted, or the rate
+    limiter's wait before a try) counted the call's upper bound and said it may have been billed. Now nothing more is
+    counted and the line says no request was out. Ctrl-C while a request is out still counts its upper bound."""
+    from markets import http
+    (call,) = _f1_calls(cfg)[-1:]                                 # upper bound 30
+
+    def interrupt(*a, **k):
+        raise KeyboardInterrupt
+
+    def run(api, where, retries=3):
+        c = bulk.BulkClient(RawCache(tmp_path / where), max_credits=1_000, session=api, api_key=KEY, rate_per_sec=1e6,
+                            max_retries=retries)
+        c.account()
+        if where == "limiter":
+            monkeypatch.setattr(c.limiter, "wait", interrupt)
+        return c, bulk.run_calls(c, [call])
+
+    monkeypatch.setattr(http.time, "sleep", interrupt)              # Ctrl-C in the backoff after a counted 500
+    api = Scripted([(500, "20", "980"), (200, "30", "950")])
+    c, res = run(api, "backoff")
+    assert res["interrupted"] and api.paid == 1 and c.counted == 20 and c.unanswered == 0
+    assert "No request was out (the next one was waiting for the rate limit or for a retry)" in res["stopped"]
+    monkeypatch.undo()
+    api = Scripted([(200, "30", "970")])                            # Ctrl-C in the rate limiter's wait
+    c, res = run(api, "limiter")
+    assert res["interrupted"] and api.paid == 0 and c.counted == 0 and "No request was out" in res["stopped"]
+
+    class Hangs(Scripted):                                          # Ctrl-C while the request is out
+        def get(self, url, params=None, timeout=None):
+            if url.endswith("/sports"):
+                return super().get(url, params, timeout)
+            self.paid += 1
+            raise KeyboardInterrupt
+    api = Hangs([])
+    c, res = run(api, "out")
+    assert api.paid == 1 and c.counted == c.unanswered == 30
+    assert "may have been billed, so it is counted at its upper bound, 30 credits" in res["stopped"]
+
+
+def test_a_balance_that_jitters_logs_its_first_rise_and_then_a_count(cfg, tmp_path, caplog):
+    """A balance header late by a number of answers that varies goes up and down, and rule 6 logged "credits added"
+    for every rise (hundreds in a 5,000-call pull). Now the run's first rise is logged, saying it may be a reading that
+    was out of date, and the end of the pull logs how many there were. Rule 6 itself is unchanged: the run starts
+    again from each rise, and nothing was added to or taken from the count."""
+    caplog.set_level(logging.WARNING)
+    calls = _f1_calls(cfg)
+    shown = (970, 1000, 940, 970, 910, 940, 880, 850)               # the balance, late by 0 or 1 answers
+    assert len(calls) == len(shown)
+    api = Scripted([(200, "30", str(b)) for b in shown])
+    c = bulk.BulkClient(RawCache(tmp_path), max_credits=1_000, session=api, api_key=KEY, rate_per_sec=1e6, max_retries=0)
+    c.account()
+    res = bulk.run_calls(c, calls, "F1")
+    assert res["stopped"] is None and c.counted == 240 and c.rises == 3
+    assert caplog.text.count("rose from") == 1 and "rose from 970 to 1,000" in caplog.text
+    assert "a reading of the balance that was out of date" in caplog.text
+    assert caplog.text.count("the reported balance rose 3 times during F1 (3 in this run)") == 1
