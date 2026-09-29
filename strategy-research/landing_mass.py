@@ -56,7 +56,18 @@ VARIANTS (each is a model specification on one cohort; each is read on two metri
   NFL margins, all games: primary (with its Wong-leg calibration readout)                              1
   Registered frozen cohort as-is, windy, trained through 2023, tested on 2024-25: NFL, CFB             2
   Wong teaser legs by closing total (<= 49 and above), descriptive                                     1
-  Total                                                                                              26
+  Total declared before the first run                                                                26
+
+ADDED AFTER THE FIRST RUN (exploratory; they were not declared and cannot rescue the primary result)
+  The first run showed that, since 2015, NFL games land on a whole-number closing total far less often
+  than either model says, and that the margin table under-predicts Wong teaser legs. So:
+  * a third readout on every comparison, 'neighbour': at a half-point closing line T, the log loss of
+    P(final = T - 0.5) and P(final = T + 0.5), the landing a half-point buy crosses. It is what an
+    alternate line depends on, and it is untouched by how books choose between whole and half lines;
+  * held-out calibration of landing by line type (whole-number vs half-point lines), descriptive     1
+  * the margin table with its shape from 2015 on as well ("pure 2015")                                1
+  Total with the additions                                                                            28
+  (Each model variant is read on the two declared metrics plus the exploratory one.)
 
 PRICES (step 3) come from the primary table fitted on every season (NFL shape 1999-2025, landing
 2015-2025; CFB 2006-2025). The windy tables use the registered frozen cohort as their shape, so they
@@ -65,8 +76,10 @@ are the registered model plus landing multipliers.
 Inputs: nfl-weather/data/processed/games.parquet, cfb-weather/data/processed/games.parquet and both
 pricing_cohort.json files (read-only). No downloads and no API calls. Seasons stop at 2025.
 Outputs (strategy-research/output/): landing_mass_loso.csv, landing_mass_loso_by_season.csv,
-landing_mass_multipliers.csv, landing_mass_prices.csv, landing_mass_teasers.csv,
-landing_mass_tables.csv, landing_mass.log
+landing_mass_calibration.csv, landing_mass_multipliers.csv, landing_mass_prices.csv,
+landing_mass_teasers.csv, landing_mass.log, and the tables themselves (one row per market line,
+one column per outcome): landing_mass_table_nfl_totals.csv, landing_mass_table_nfl_margins.csv,
+landing_mass_table_cfb_totals.csv
 
     nfl-weather/.venv/bin/python strategy-research/landing_mass.py [--no-save]
 """
@@ -238,10 +251,25 @@ def loso(d, mod, sport, market, cohort, spec, base_from, kv, symmetric, legs=Non
                                       game_id=te.game_id.values, line=T, final=te.total.values,
                                       whole=np.isclose(T % 1, 0), under=te.total.values < T,
                                       push=te.total.values == T, table_under=pt_u, table_push=pt_p,
-                                      resid_under=pr_u, resid_push=pr_p)))
+                                      resid_under=pr_u, resid_push=pr_p, **neighbours(te, T, f, g, kv, resid, mod))))
         if legs is not None:
-            legs.append(wong_leg_preds(te, f, g, kv, resid, mod, s))
+            legs.append(wong_leg_preds(te, f, g, kv, resid, mod, s).assign(variant=spec.name))
     return pd.concat(rows, ignore_index=True)
+
+
+def neighbours(te, T, f, g, kv, resid, mod):
+    """Added after the first run (exploratory). At a half-point market line T, the chance of landing on each
+    whole number next to it (T - 0.5 and T + 0.5): the mass a half-point buy crosses. NaN at whole lines."""
+    P = masses(T, f, g, kv)
+    half = ~np.isclose(T % 1, 0)
+    out = {}
+    for tag, off in (("lo", -0.5), ("hi", 0.5)):
+        tp = (P * np.isclose(kv[None, :], (T + off)[:, None])).sum(1)
+        rp = np.atleast_1d(mod.p_under_at(T + off, T, resid)[1])
+        out[f"nb_{tag}_event"] = np.where(half, te.total.values == T + off, np.nan)
+        out[f"table_nb_{tag}"] = np.where(half, tp, np.nan)
+        out[f"resid_nb_{tag}"] = np.where(half, rp, np.nan)
+    return out
 
 
 def frozen_check(d, mod, sport, frozen, g_from, kv):
@@ -256,7 +284,27 @@ def frozen_check(d, mod, sport, frozen, g_from, kv):
     return pd.DataFrame(dict(sport=sport, market="total", cohort="windy", variant="frozen file, 2024-25",
                              season=te.season.values, game_id=te.game_id.values, line=T, final=te.total.values,
                              whole=np.isclose(T % 1, 0), under=te.total.values < T, push=te.total.values == T,
-                             table_under=pt_u, table_push=pt_p, resid_under=pr_u, resid_push=pr_p))
+                             table_under=pt_u, table_push=pt_p, resid_under=pr_u, resid_push=pr_p,
+                             **neighbours(te, T, f, g, kv, frozen, mod)))
+
+
+def line_type_check(mod):
+    """Added after the first run (descriptive). How often NFL games land on a whole-number closing total, and on
+    the whole numbers next to a half-point closing total, by era, in nflverse's closes and in SBR's."""
+    g = mod.load_games(first=1999, last=2025)
+    rows = []
+    for source, col in (("nflverse close", "total_line"), ("SBR close", "sbr_total_close")):
+        for era, lo, hi in (("1999-2014", 1999, 2014), ("2015-2025", 2015, 2025)):
+            x = g[g.season.between(lo, hi) & g[col].notna() & g.total.notna()]
+            if x.empty:
+                continue
+            w, h = x[np.isclose(x[col] % 1, 0)], x[np.isclose(x[col] % 1, 0.5)]
+            nb = np.r_[(h.total == h[col] - 0.5).to_numpy(), (h.total == h[col] + 0.5).to_numpy()]
+            rows.append(dict(sport="NFL", market="total", cohort="all", variant=source,
+                             seasons=f"{x.season.min()}-{x.season.max()}", whole_lines=len(w),
+                             pushes=int((w.total == w[col]).sum()), push_rate=float((w.total == w[col]).mean()),
+                             half_lines=len(h), neighbour_landings=int(nb.sum()), neighbour_rate=float(nb.mean())))
+    return pd.DataFrame(rows)
 
 
 def ll(p, o):
@@ -269,6 +317,11 @@ def compare(sub, metric, rng, by_game=False):
     if metric == "push":
         sub = sub[sub.whole]
         o, pt, pr = sub.push, sub.table_push, sub.resid_push
+    elif metric == "neighbour":         # two binary events per half-point line: land on T - 0.5, land on T + 0.5
+        h = sub[~sub.whole]
+        sub = pd.concat([h.assign(ev=h.nb_lo_event, pt=h.table_nb_lo, pr=h.resid_nb_lo),
+                         h.assign(ev=h.nb_hi_event, pt=h.table_nb_hi, pr=h.resid_nb_hi)])
+        o, pt, pr = sub.ev.astype(bool), sub.pt, sub.pr
     else:
         o, pt, pr = sub.under, sub.table_under, sub.resid_under
     lt, lr = ll(pt, o), ll(pr, o)
@@ -326,11 +379,20 @@ def total_ladder(sport, cohort, Ks, f, g, kv, resid, mod, raw):
                            half_point_below_worth_cents=round(cents(prev) - cents(fu), 1) if prev is not None else np.nan)
                 prev = fu
                 rows.append(row)
-        n_raw = raw[(raw.total_line >= K - 0.5) & (raw.total_line <= K + 0.5)]
-        rows.append(dict(sport=sport, market="total", cohort=cohort, key=K, market_line=K, model="raw frequency",
-                         line=K, p_push=round(float((n_raw.total == K).mean()), 4), raw_games=len(n_raw),
-                         raw_landed=int((n_raw.total == K).sum())))
+        rows += raw_rows(sport, "total", cohort, K, raw, "raw")
     return rows
+
+
+def raw_rows(sport, market, cohort, K, raw, lab):
+    """How often games landed on K: when the market line sat on K, and when it was a half-point away."""
+    out = []
+    for sel, what in ((np.isclose(raw.total_line, K), "market on K"),
+                      (np.isclose((raw.total_line - K).abs(), 0.5), "market a half-point from K")):
+        r = raw[sel]
+        out.append(dict(sport=sport, market=market, cohort=cohort, key=K, market_line=K, model=f"{lab}, {what}", line=K,
+                        p_push=round(float((r.total == K).mean()), 4) if len(r) else np.nan, raw_games=len(r),
+                        raw_landed=int((r.total == K).sum())))
+    return out
 
 
 def spread_ladder(Ks, f, g, kv, resid, mod, raw):
@@ -353,10 +415,7 @@ def spread_ladder(Ks, f, g, kv, resid, mod, raw):
                 prev = ff
         for lab, lo, hi in (("raw 2015-2025", 2015, 2025), ("raw 2015-2019", 2015, 2019), ("raw 2020-2025", 2020, 2025),
                             ("raw 1999-2014", 1999, 2014)):
-            r = raw[raw.season.between(lo, hi) & (raw.total_line >= K - 0.5) & (raw.total_line <= K + 0.5)]
-            rows.append(dict(sport="NFL", market="spread", cohort="all", key=K, market_line=K, model=lab, line=K,
-                             p_push=round(float((r.total == K).mean()), 4), raw_games=len(r),
-                             raw_landed=int((r.total == K).sum())))
+            rows += raw_rows("NFL", "spread", "all", K, raw[raw.season.between(lo, hi)], lab)
     return rows
 
 
@@ -419,36 +478,73 @@ def main():
             preds.append(loso(cfb_tot, cfbm, "CFB", "total", cohort, sp, 2006, K_TOTAL, False))
     preds.append(loso(nfl_mar, nflm, "NFL", "spread", "all", Spec("primary", g_from=2015, eval_from=2015), 1999,
                       K_MARGIN, True, legs=legs))
+    # added after the first run: the margin shape from 2015 on too (margins tightened; see the log)
+    preds.append(loso(nfl_mar, nflm, "NFL", "spread", "all",
+                      Spec("pure 2015 (added after the first run)", f_from=2015, g_from=2015, eval_from=2015), 1999,
+                      K_MARGIN, True, legs=legs))
     preds.append(frozen_check(nfl_tot, nflm, "NFL", nfl_frozen, 2015, K_TOTAL))
     preds.append(frozen_check(cfb_tot, cfbm, "CFB", cfb_frozen, 2006, K_TOTAL))
     P = pd.concat(preds, ignore_index=True)
 
     res, seasons = [], []
     for (sport, market, cohort, variant), sub in P.groupby(["sport", "market", "cohort", "variant"], sort=False):
-        for metric in ("under", "push"):
+        for metric in ("under", "push", "neighbour"):
             o, by = compare(sub, metric, rng)
             res.append(dict(sport=sport, market=market, cohort=cohort, variant=variant, metric=metric,
                             tested=f"{sub.season.min()}-{sub.season.max()}", **o))
             seasons.append(by.assign(sport=sport, market=market, cohort=cohort, variant=variant))
     R = pd.DataFrame(res)
+    R["ci_lo_pct"], R["ci_hi_pct"] = 100 * R.ci_lo / R.ll_resid, 100 * R.ci_hi / R.ll_resid
     S = pd.concat(seasons, ignore_index=True)
     show = R.assign(ll_table=R.ll_table.round(5), ll_resid=R.ll_resid.round(5), diff=(R["diff"] * 1000).round(3),
                     diff_pct=R.diff_pct.round(2), se=(R.se * 1000).round(3), ci_lo=(R.ci_lo * 1000).round(3),
-                    ci_hi=(R.ci_hi * 1000).round(3), p_two_sided=R.p_two_sided.round(4))
-    say("\n===== Leave-one-season-out log loss at the closing line (diff, se, ci in thousandths; negative = table better)")
-    say(show.drop(columns=["resampled"]).to_string(index=False))
+                    ci_hi=(R.ci_hi * 1000).round(3), p_two_sided=R.p_two_sided.round(4),
+                    ci_lo_pct=R.ci_lo_pct.round(2), ci_hi_pct=R.ci_hi_pct.round(2))
+    say("\n===== Leave-one-season-out log loss at the closing line (diff, se, ci in thousandths; negative = table better)"
+        "\n      'neighbour' (added after the first run): landing on the whole number either side of a half-point line")
+    for metric in ("under", "push", "neighbour"):
+        say(f"-- {metric}")
+        say(show[show.metric == metric].drop(columns=["resampled", "metric"]).to_string(index=False))
+
+    # Calibration by line type, primary specification (held-out predictions)
+    say("\n===== Held-out calibration of landing, primary specification: actual rate vs the mean predicted chance")
+    cal = []
+    prim = P[P.variant.isin(["primary", "pure 2015 (added after the first run)", "era: landing 1999 on, tested 1999-2025"])]
+    for (sport, market, cohort, variant), x in prim.groupby(["sport", "market", "cohort", "variant"], sort=False):
+        for era, xs in (("all tested", x), ("to 2014", x[x.season <= 2014]), ("2015 on", x[x.season >= 2015])):
+            w, h = xs[xs.whole], xs[~xs.whole]
+            if len(w) + len(h) == 0:
+                continue
+            nb_ev = np.r_[h.nb_lo_event, h.nb_hi_event]
+            cal.append(dict(sport=sport, market=market, cohort=cohort, variant=variant, seasons=era,
+                            whole_lines=len(w), pushes=int(w.push.sum()),
+                            push_rate=w.push.mean() if len(w) else np.nan,
+                            table_push=w.table_push.mean() if len(w) else np.nan,
+                            resid_push=w.resid_push.mean() if len(w) else np.nan,
+                            half_lines=len(h), neighbour_landings=int(nb_ev.sum()),
+                            neighbour_rate=nb_ev.mean() if len(h) else np.nan,
+                            table_neighbour=np.r_[h.table_nb_lo, h.table_nb_hi].mean() if len(h) else np.nan,
+                            resid_neighbour=np.r_[h.resid_nb_lo, h.resid_nb_hi].mean() if len(h) else np.nan))
+    CAL = pd.DataFrame(cal)
+    say(CAL.round(4).to_string(index=False))
+    lt = line_type_check(nflm)
+    say("\n===== Raw line-type check, NFL totals: landing on a whole-number close, and next to a half-point close"
+        "\n      (nflverse closes, and the independent SBR closes that games.parquet carries for 2007-21)")
+    say(lt.round(4).to_string(index=False))
+    CAL = pd.concat([CAL.assign(source="held-out predictions"), lt.assign(source="raw line-type check")], ignore_index=True)
 
     # Wong legs, held-out seasons
     L = pd.concat(legs, ignore_index=True)
     say("\n===== Wong teaser legs in held-out seasons 2015-2025 (margin table vs residual analog, both left-one-season-out)")
     wl = []
-    for side, x in list(L.groupby("side")) + [("both", L)]:
+    for (variant, side), x in list(L.groupby(["variant", "side"])) + [((v, "both"), x) for v, x in L.groupby("variant")]:
         w, p, lo_ = (x.outcome == "win").sum(), (x.outcome == "push").sum(), (x.outcome == "loss").sum()
         tw = (x.table_win / (1 - x.table_push)).mean()
         rw = (x.resid_win / (1 - x.resid_push)).mean()
-        wl.append(dict(side=side, legs=len(x), won=int(w), pushed=int(p), lost=int(lo_), actual_win_rate=w / (w + lo_),
-                       table_predicted=tw, residual_predicted=rw))
-    say(pd.DataFrame(wl).round(4).to_string(index=False))
+        wl.append(dict(variant=variant, side=side, legs=len(x), won=int(w), pushed=int(p), lost=int(lo_),
+                       actual_win_rate=w / (w + lo_), table_predicted=tw, residual_predicted=rw))
+    WL = pd.DataFrame(wl)
+    say(WL.round(4).to_string(index=False))
 
     # ---------------- full fits for the prices
     kvt, kvm = K_TOTAL, K_MARGIN
@@ -500,10 +596,15 @@ def main():
         say(at_key(sport, "total", cohort, Ks).round(4).to_string())
     say("\n===== NFL spreads: P(favorite wins by exactly K | favorite -K)")
     say(at_key("NFL", "spread", "all", NFL_KEY_SPREADS).round(4).to_string())
+    cm = M[(M.sport == "CFB") & M.k.between(35, 75)].sort_values("multiplier")
+    cfb_keys = sorted(cm.k.tail(6)) + sorted(cm.k.head(4))      # descriptive: the strongest and weakest landing totals
+    for cohort in ("all", "windy"):
+        say(f"\n===== CFB {cohort}: P(final = K | market total K), the 6 strongest and 4 weakest landing totals in 35-75")
+        say(at_key("CFB", "total", cohort, cfb_keys).loc[cfb_keys].round(4).to_string())
     say("\n===== Half-point worth in cents of fair (no-vig) price, at a market line on the key number K:"
         "\n      'onto' = K-0.5 to K for an under (K+0.5 to K for a favorite); 'off' = K to K+0.5 for an under (K to K-0.5 for a favorite)")
     for (sport, market, cohort), x in PR[PR.model.isin(["table", "residual"])].groupby(["sport", "market", "cohort"], sort=False):
-        keys = NFL_KEY_TOTALS if (sport == "NFL" and market == "total") else NFL_KEY_SPREADS if market == "spread" else (45, 48, 51, 52, 55)
+        keys = NFL_KEY_TOTALS if (sport == "NFL" and market == "total") else NFL_KEY_SPREADS if market == "spread" else cfb_keys
         out = []
         for K in keys:
             for model in ("table", "residual"):
@@ -515,54 +616,68 @@ def main():
 
     # ---------------- Wong teaser legs, full table and raw 2015-2025
     tz = []
+    m15 = nfl_mar[nfl_mar.season >= 2015]
+    f_mar15 = smooth(m15.total - m15.total_line, H_PRIMARY)     # the 2015-only shape (added after the first run)
     for side, s, Lt in WONG:
         pb, pp = line_probs(Lt, s, f_mar, g_mar, kvm)
         tw = 1 - pb - pp if side == "favorite" else pb
+        qb, qp = line_probs(Lt, s, f_mar15, g_mar, kvm)
+        qw = 1 - qb - qp if side == "favorite" else qb
         for lab, sel in (("all totals", nfl_mar.closing_total > 0), ("closing total <= 49", nfl_mar.closing_total <= 49),
                          ("closing total > 49", nfl_mar.closing_total > 49)):
             x = nfl_mar[(nfl_mar.season >= 2015) & np.isclose(nfl_mar.total_line, s) & sel]
             oc = leg_outcome(side, x.total.values, Lt)
             w, p, lo_ = (oc == "win").sum(), (oc == "push").sum(), (oc == "loss").sum()
             tz.append(dict(side=side, spread=s, teased_to=Lt, totals=lab, table_win=round(tw, 4), table_push=round(pp, 4),
-                           table_win_ex_push=round(tw / (1 - pp), 4), legs_2015_2025=len(x), won=int(w), pushed=int(p),
+                           table_win_ex_push=round(tw / (1 - pp), 4), table2015_win_ex_push=round(qw / (1 - qp), 4),
+                           legs_2015_2025=len(x), won=int(w), pushed=int(p),
                            lost=int(lo_), actual_win_ex_push=round(w / (w + lo_), 4) if w + lo_ else np.nan))
     TZ = pd.DataFrame(tz)
     say("\n===== Wong teaser legs: the table (full fit) and the raw record 2015-2025")
     say(TZ.to_string(index=False))
     for lab in ("all totals", "closing total <= 49", "closing total > 49"):
         x = TZ[TZ.totals == lab]
-        say(f"pooled, {lab}: {x.won.sum()}-{x.lost.sum()} ({x.pushed.sum()} pushes), "
-            f"{x.won.sum() / (x.won.sum() + x.lost.sum()):.4f}")
+        w, n = int(x.won.sum()), int(x.won.sum() + x.lost.sum())
+        lo_, hi_ = nflm.wilson(w, n)
+        p120 = stats.binomtest(w, n, breakeven(dec(-120), 2), alternative="greater").pvalue
+        say(f"pooled, {lab}: {w}-{n - w} ({x.pushed.sum()} pushes), {w / n:.4f} (95% {lo_:.3f}-{hi_:.3f}); "
+            f"one-sided p against the -120 break-even: {p120:.3f}")
     be = {f"2-team {a}": breakeven(dec(a), 2) for a in (-110, -120, -130, -140)}
     be.update({f"3-team {a:+d}": breakeven(dec(a), 3) for a in (140, 150, 160, 180)})
     say("leg break-evens: " + ", ".join(f"{k} {v:.4f}" for k, v in be.items()))
 
-    # ---------------- the tables themselves (long format, the useful range)
+    # ---------------- the tables themselves: one row per market line, one column per final total (or margin),
+    # dropping only the outcomes whose chance rounds to zero on every row
     tabs = []
-    for sport, market, cohort, f, g, kv, Tg, klo, khi in (
-            ("NFL", "total", "all", f_nfl_all, g_nfl, kvt, np.arange(30, 60.01, 0.5), 10, 90),
-            ("NFL", "total", "windy", f_nfl_w, g_nfl, kvt, np.arange(30, 60.01, 0.5), 10, 90),
-            ("CFB", "total", "all", f_cfb_all, g_cfb, kvt, np.arange(35, 80.01, 0.5), 5, 130),
-            ("CFB", "total", "windy", f_cfb_w, g_cfb, kvt, np.arange(35, 80.01, 0.5), 5, 130),
-            ("NFL", "margin", "all", f_mar, g_mar, kvm, np.arange(0, 20.01, 0.5), -40, 60)):
-        Pm = masses(Tg, f, g, kv)
-        keep = (kv >= klo) & (kv <= khi)
-        wide = pd.DataFrame(Pm[:, keep].round(5), columns=[str(k) for k in kv[keep]])
-        wide.insert(0, "market_line", Tg)
-        wide.insert(0, "cohort", cohort)
-        wide.insert(0, "market", market)
-        wide.insert(0, "sport", sport)
-        tabs.append(wide)
-    TAB = pd.concat(tabs, ignore_index=True)
+    for sport, market, cohort, f, g, kv, Tg in (
+            ("NFL", "total", "all", f_nfl_all, g_nfl, kvt, np.arange(30, 60.01, 0.5)),
+            ("NFL", "total", "windy", f_nfl_w, g_nfl, kvt, np.arange(30, 60.01, 0.5)),
+            ("CFB", "total", "all", f_cfb_all, g_cfb, kvt, np.arange(35, 80.01, 0.5)),
+            ("CFB", "total", "windy", f_cfb_w, g_cfb, kvt, np.arange(35, 80.01, 0.5)),
+            ("NFL", "margin", "all", f_mar, g_mar, kvm, np.arange(0, 20.01, 0.5))):
+        Pm = masses(Tg, f, g, kv).round(4)
+        keep = Pm.max(0) > 0
+        tabs.append(((sport, market), pd.concat([pd.DataFrame(dict(cohort=cohort, market_line=Tg)),
+                                                 pd.DataFrame(Pm[:, keep], columns=[str(k) for k in kv[keep]])], axis=1)))
+    TABS = {}
+    for key in dict(tabs):
+        t = pd.concat([t for k2, t in tabs if k2 == key], ignore_index=True)
+        outcomes = sorted((c for c in t.columns if c not in ("cohort", "market_line")), key=int)
+        TABS[key] = t[["cohort", "market_line"] + outcomes]
 
-    say("\nvariants: 26 (see the docstring); running count before this script: 200")
+    say("\nvariants: 28 (26 declared before the first run, 2 added after it; see the docstring); "
+        "running count before this script: 200")
     if not args.no_save:
         R.to_csv(OUT / "landing_mass_loso.csv", index=False)
         S.to_csv(OUT / "landing_mass_loso_by_season.csv", index=False)
+        CAL.to_csv(OUT / "landing_mass_calibration.csv", index=False)
         M.to_csv(OUT / "landing_mass_multipliers.csv", index=False)
         PR.to_csv(OUT / "landing_mass_prices.csv", index=False)
-        TZ.to_csv(OUT / "landing_mass_teasers.csv", index=False)
-        TAB.to_csv(OUT / "landing_mass_tables.csv", index=False)
+        pd.concat([TZ.assign(source="full-data table and raw record 2015-2025"),
+                   WL.assign(source="held-out seasons 2015-2025")], ignore_index=True).to_csv(
+            OUT / "landing_mass_teasers.csv", index=False)
+        for (sport, market), t in TABS.items():
+            t.fillna(0.0).to_csv(OUT / f"landing_mass_table_{sport.lower()}_{market}s.csv", index=False)
         (OUT / "landing_mass.log").write_text("\n".join(LOG) + "\n")
 
 
