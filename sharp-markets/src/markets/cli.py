@@ -75,8 +75,10 @@ def cmd_odds_plan(args, *, pull: bool = False) -> None:
         print("dry run: add --confirm to spend credits")
         return
     res = pull_snapshots(ctx, plan, args.max_credits)
-    print(f"fetched {res['fetched']} snapshots; credits spent this run={res['credits_spent']}; "
-          f"remaining on plan={res['remaining']}")
+    if res["stopped"]:
+        print(f"STOPPED: {res['stopped']}")
+    print(f"{'stopped' if res['stopped'] else 'done'}: fetched {res['fetched']} snapshots; credits spent this "
+          f"run={res['credits_spent']}; remaining on plan={res['remaining']}")
 
 
 def cmd_build(args) -> None:
@@ -87,6 +89,11 @@ def cmd_build(args) -> None:
     print("games by match_status:", s["match_status"])
     print("exclusions by reason:", s["exclusions"])
     print("anomalies by kind:", s["anomalies"])
+    sealed = s["sealed_odds_rows_left_out"]
+    print(f"odds rows left out for games in sealed seasons (config/odds5m.yaml): {sum(sealed.values()):,}",
+          sealed or "")
+    if s["odds_rows_without_commence_time"]:
+        print(f"odds rows left out with no readable game time: {s['odds_rows_without_commence_time']:,}")
     print(f"http requests this run: {ctx.cache.http_requests}")
 
 
@@ -149,7 +156,9 @@ def cmd_price_engine(args) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    from .http import scrub_log_handlers
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    scrub_log_handlers()        # every log line, from any logger, with keys blanked (markets.http.scrub)
     p = argparse.ArgumentParser(prog="markets", description="Paper-only Kalshi vs sharp-book research pipeline")
     p.add_argument("--sport", default="nba")
     p.add_argument("--as-of", default="v1", help="cache label for listing endpoints; change to refresh")
@@ -205,12 +214,14 @@ def main(argv: list[str] | None = None) -> None:
     w.set_defaults(fn=cmd_weather)
 
     f = sub.add_parser("odds5m", help="5M-credit month: bulk historical Odds API pulls (docs/ODDS5M_DAY_ONE.md)")
-    f.add_argument("stage", choices=["probe", "plan", "week", "full", "check"])
+    f.add_argument("stage", choices=["probe", "balance", "plan", "week", "full", "check"],
+                   help="balance: the free key check alone (with --confirm), to read the credits left after a stop")
     f.add_argument("--pull", default="all", help="pull IDs or groups (day_one, gated, march) from config/odds5m.yaml, "
                    "comma-separated; `all` works for plan, week and check but not for full")
     f.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
     f.add_argument("--seasons", default=None, help="only these season labels from config/odds5m.yaml, comma-separated "
-                   "(e.g. 2025 for the first F3 slice)")
+                   "(e.g. 2025 for the first F3 slice); `full` needs exactly one slice of a pull with require_seasons "
+                   "(F3) and refuses --seasons for any other pull")
     f.add_argument("--week-of", default="auto", help="week stage: YYYY-MM-DD, or auto (first week of the latest unsealed season)")
     f.add_argument("--confirm", action="store_true", help="actually spend credits")
     f.add_argument("--max-credits", type=int, default=0, help="credit budget for this run")

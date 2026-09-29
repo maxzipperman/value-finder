@@ -187,6 +187,48 @@ def test_lock_prevents_overlap_and_errors_are_logged(env):
     assert row["kalshi_status"] == "error" and row["odds_status"] == 200    # one source failing keeps the other
 
 
+def test_a_network_error_note_never_holds_the_key(tmp_path, monkeypatch):
+    """The heartbeat keeps each error's text. requests puts the URL, key included, into its errors;
+    markets.http blanks it before the error reaches the collector (audit 2, finding 1)."""
+    import requests
+
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    monkeypatch.setattr(col, "QUOTA_FILE", tmp_path / "quota.json")
+
+    class Down:
+        def get(self, url, params=None, timeout=None):     # what requests raises when the host can't be reached
+            raise requests.ConnectionError(f"HTTPSConnectionPool(host='odds.invalid', port=443): Max retries exceeded "
+                                           f"with url: /v4{url.split('/v4')[1]}?dateFormat=iso&apiKey={params['apiKey']}")
+
+    c = col.Collector(cfg=dict(CFG), data_dir=tmp_path, odds_session=Down(), kalshi_session=FakeKalshi(),
+                      api_key="FAKESECRETKEY999")
+    row = c.tick(TIP - timedelta(hours=3))
+    assert row["action"] == "error" and "apiKey=REDACTED" in row["note"]
+    stored = "".join(p.read_text() for p in (tmp_path / "collector").rglob("*") if p.is_file())
+    assert "FAKESECRETKEY999" not in stored and "FAKESECRETKEY999" not in json.dumps(row)
+
+
+def test_an_echoed_error_body_never_reaches_the_heartbeat(tmp_path, monkeypatch):
+    """Audit 2 review: the schedule error kept the first 200 characters of the body, so a server or proxy that
+    echoes the request would have written the key into runs.csv (the collector's log on the Mac)."""
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    monkeypatch.setattr(col, "QUOTA_FILE", tmp_path / "quota.json")
+
+    class Echo:
+        def get(self, url, params=None, timeout=None):
+            return Resp(500, {"message": f"oops GET /v4/sports/basketball_nba/events?apiKey={params['apiKey']}",
+                              "path": f"/moved/{params['apiKey']}"})
+
+    c = col.Collector(cfg=dict(CFG), data_dir=tmp_path, odds_session=Echo(), kalshi_session=FakeKalshi(),
+                      api_key="FAKESECRETKEY999")
+    row = c.tick(TIP - timedelta(hours=3))
+    assert row["action"] == "error" and "HTTP 500" in row["note"] and "REDACTED" in row["note"]
+    stored = "".join(p.read_text() for p in (tmp_path / "collector").rglob("*") if p.is_file())
+    assert "FAKESECRETKEY999" not in stored and "FAKESECRETKEY999" not in json.dumps(row)
+
+
 def test_real_config_loads():
     c = col.load_collector_config("nba")
     assert c["start"] == date(2026, 10, 20) and c["series_ticker"] == "KXNBAGAME" and c["every_min"] == 5
