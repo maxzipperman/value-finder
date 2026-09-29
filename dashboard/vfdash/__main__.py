@@ -4,10 +4,11 @@ There is no --host: the dashboard listens on 127.0.0.1 only."""
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from .data import Config, Store
-from .server import serve
+from .server import PortInUse, serve
 from .words import local_zone
 
 HERE = Path(__file__).resolve().parent            # dashboard/vfdash
@@ -30,8 +31,15 @@ def main(argv=None):
     root = a.root.expanduser().resolve()
     cfg = Config(root=root, scorer_root=(a.scorer_root or root).expanduser().resolve(),
                  home=a.home.expanduser().resolve(), content=HERE.parent / "content", tz=local_zone(), port=a.port)
-    serve(Store(cfg), a.port)
+    try:
+        serve(Store(cfg), a.port)
+    except PortInUse:
+        print(f"The dashboard could not start: something else on this Mac is already using port {a.port} "
+              f"(often another copy of the dashboard; http://127.0.0.1:{a.port}/ may already work).",
+              file=sys.stderr, flush=True)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

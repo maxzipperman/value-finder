@@ -139,6 +139,49 @@ def test_real_run_uses_a_clean_environment(tmp_path, monkeypatch):
     assert r.timed_out and not r.ok
 
 
+CONFIGS = {"nfl-weather": PKG.parents[1] / "nfl-weather" / "nflweather" / "config.py",
+           "cfb-weather": PKG.parents[1] / "cfb-weather" / "cfbweather" / "config.py"}
+
+
+def folders_config_creates(path: Path) -> set[str]:
+    """The folders a project's config.py creates when it is imported, relative to the project folder: the
+    `for p in (...): p.mkdir(...)` loop, with each name worked out from the assignments above it."""
+    tree = ast.parse(path.read_text())
+    names: dict[str, str] = {}
+
+    def value(node) -> str:
+        if isinstance(node, ast.Name):
+            return names[node.id]
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            left = value(node.left)
+            return f"{left}/{value(node.right)}" if left else value(node.right)
+        raise ValueError(ast.dump(node))
+    out = set()
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            if node.targets[0].id == "ROOT":
+                names["ROOT"] = ""
+                continue
+            try:
+                names[node.targets[0].id] = value(node.value)
+            except (ValueError, KeyError):
+                pass
+        elif isinstance(node, ast.For) and "mkdir" in ast.unparse(node):
+            out |= {value(e) for e in node.iter.elts}
+    assert out, f"no folder loop found in {path}"
+    return out
+
+
+@pytest.mark.parametrize("project", commands.PROJECTS)
+def test_scorer_folders_match_config(project):
+    """The folders the dashboard checks before starting a scorer are the ones its config.py would create."""
+    if not CONFIGS[project].exists():
+        pytest.skip("no config.py in this checkout")
+    assert set(commands.SCORER_FOLDERS[project]) == folders_config_creates(CONFIGS[project])
+
+
 def test_missing_scorer_python_is_reported_not_raised(tmp_path):
     allowed = commands.Allowed(tmp_path, tmp_path)
     cmd, cwd = commands.scorer_command(tmp_path, tmp_path, "nfl-weather", NOW)

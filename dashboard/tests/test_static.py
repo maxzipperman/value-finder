@@ -36,6 +36,14 @@ def test_no_network_calls_but_its_own_api():
         assert banned not in js
 
 
+def test_a_damaged_address_falls_back_to_home():
+    """decodeURIComponent throws on a damaged address (#game/%E0%A4%A); the page must not get stuck."""
+    js = (STATIC / "app.js").read_text()
+    body = js.split("function parseHash()", 1)[1].split("\n  }\n", 1)[0]
+    assert re.search(r"try\s*\{\s*raw = decodeURIComponent\(", body) and "catch" in body
+    assert js.count("decodeURIComponent(") == 1
+
+
 def test_paper_only_label_and_dark_mode():
     html = (STATIC / "index.html").read_text()
     assert "Paper only" in html

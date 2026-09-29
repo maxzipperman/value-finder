@@ -37,7 +37,7 @@
     "name": "College football high-total under (Rule HT)",
     "rule": "Bet the under when the posted total is at least 62.6 (last season's average closing total plus 10), at −115 or better, at the last quote before kickoff.",
     "starts_utc": "2026-10-07T00:00:00Z",
-    "starts_text": "Week 6, Oct 7, 2026 (00:00 UTC)",
+    "starts_text": "Week 6, with games kicking off from Tue Oct 6, 2026, 8:00 PM ET",
     "decided_text": "Once, after the 2027 season's title game, on 2026 Week 6 onward and 2027 pooled. Promoted only if the win rate beats the break-even of the prices taken (one-sided p < 0.05) and ROI is above zero. About 105 bets are expected.",
     "money_gate": "not chosen",
     "note": "Graded at the last quote before kickoff, so an early signal can still fall away. Stays on paper through 2027.",

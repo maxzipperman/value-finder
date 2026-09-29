@@ -195,8 +195,10 @@ PRINT_OK = ("gui/501/x = {\n\tactive count = 0\n\tstate = not running\n\truns = 
 class FakeRunner:
     """Answers the allowed commands with canned output and records every call."""
 
-    def __init__(self, listing=LIST_OK, scorer="ok", nfl_text=NFL_SCORE, cfb_text=CFB_SCORE):
+    def __init__(self, listing=LIST_OK, scorer="ok", nfl_text=NFL_SCORE, cfb_text=CFB_SCORE,
+                 stderr="Traceback ...\nValueError: boom"):
         self.listing, self.scorer, self.nfl_text, self.cfb_text = listing, scorer, nfl_text, cfb_text
+        self.stderr = stderr
         self.calls = []
         self.lock = threading.Lock()
 
@@ -217,7 +219,9 @@ class FakeRunner:
                 return commands.Result(ok=False, stdout="ledger rows: 8", timed_out=True, seconds=60)
             if self.scorer == "missing":
                 return commands.Result(ok=False, missing=True)
-            return commands.Result(ok=False, stdout="", stderr="Traceback ...\nValueError: boom", code=1)
+            if self.scorer == "failed_after_printing":
+                return commands.Result(ok=False, stdout=text, stderr=self.stderr, code=1)
+            return commands.Result(ok=False, stdout="", stderr=self.stderr, code=1)
         raise AssertionError(f"unexpected command {cmd!r}")
 
 

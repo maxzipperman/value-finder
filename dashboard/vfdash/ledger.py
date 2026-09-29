@@ -2,7 +2,11 @@
 
 The NFL and CFB ledgers have different headers (and older rows leave newer columns blank), so each row is
 reduced to the same fixed set of fields, found by column name. A column the ledger doesn't have is blank;
-a column the dashboard doesn't know is ignored."""
+a column the dashboard doesn't know is ignored.
+
+A ledger without the columns every row needs (when it was logged, the game, its kickoff) can't be read, and
+says so. Each row's logging time is read as a time, never compared as text: the latest run is the latest
+time that could be read, and a row whose time can't be read is left out and counted."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,6 +26,10 @@ ALIASES = {"total": ("total_line", "mkt_total"), "under": ("under_odds", "mkt_un
            "over": ("over_odds", "mkt_over")}
 SPORTS = {"nfl": ("nfl-weather", "NFL", "the NFL ledger"), "cfb": ("cfb-weather", "CFB", "the college football ledger")}
 RULES = {"nfl": ("rule_b", "lean"), "cfb": ("rule_b", "rule_ht")}
+# Columns a ledger must have to be read at all. Each entry is a set of names, any one of which will do: a CFB
+# row's kickoff is start_utc, or kick_et on rows logged before start_utc was added.
+REQUIRED = {"nfl": (("snapshot_utc",), ("game_id",), ("gameday",), ("gametime",)),
+            "cfb": (("snapshot_utc",), ("game_id",), ("start_utc", "kick_et"))}
 
 
 def picker(header: list[str]):
@@ -45,18 +53,22 @@ class Ledger:
     def __init__(self, sport: str, root: Path):
         self.sport = sport
         folder, self.name, label = SPORTS[sport]
+        self.project = folder                           # nfl-weather or cfb-weather
         self.path = root / folder / "data" / "forward" / "ledger.csv"
         self.csv = AppendOnlyCSV(self.path, label, picker)
         self._derived_key = None
         self._kick_memo: dict = {}
+        self._time_memo: dict = {}
         self.by_game: dict[str, list[int]] = {}
-        self.latest_snapshot = ""
+        self.latest_snapshot = ""                       # the latest run's time, as "2026-10-02T14:30:07Z"
         self.latest_rows: list[int] = []
+        self.missing_columns: list[str] = []
+        self.untimed = 0                                # rows left out: their logging time can't be read
 
     # ------------------------------------------------------------ reading
     def refresh(self) -> "Ledger":
         self.csv.refresh()
-        key = (self.csv._key, len(self.csv.rows))
+        key = (self.csv._key, len(self.csv.rows), tuple(self.csv.header))
         if key != self._derived_key:
             self._derive()
             self._derived_key = key
@@ -68,29 +80,69 @@ class Ledger:
 
     @property
     def readable(self) -> bool:
-        return self.csv.readable
+        """Readable: the file was read, it has the columns every row needs, and when it has rows, at least one
+        has a logging time that can be read."""
+        return (self.csv.readable and not self.missing_columns
+                and not (self.csv.rows and self.untimed == len(self.csv.rows)))
 
     @property
     def note(self) -> str:
-        return self.csv.note
+        if not self.csv.readable:
+            return self.csv.note
+        if self.missing_columns:
+            return (f"{words.cap(self.csv.label)} ({self._where}) {words.missing_columns(self.missing_columns)}, "
+                    "so it can't be read. Its games are not shown.")
+        notes = [self.csv.note] if self.csv.note else []
+        if self.untimed:
+            if self.untimed == len(self.csv.rows):
+                notes.append(f"No row of {self.csv.label} ({self._where}) has a logging time (snapshot_utc) that "
+                             "can be read, so its games are not shown.")
+            else:
+                notes.append(f"{words.count(self.untimed, 'row')} of {self.csv.label} "
+                             f"{'has' if self.untimed == 1 else 'have'} a logging time (snapshot_utc) that can't "
+                             f"be read; {'it is' if self.untimed == 1 else 'they are'} left out.")
+        return " ".join(notes)
+
+    @property
+    def _where(self) -> str:
+        return f"{self.project}/data/forward/ledger.csv"
+
+    def _time(self, text: str):
+        """A row's logging time, read once per distinct text (a run's rows share one)."""
+        t = self._time_memo.get(text, False)
+        if t is False:
+            t = self._time_memo[text] = words.parse_utc(text)
+        return t
 
     def _derive(self):
+        header = set(self.csv.header)
+        self.missing_columns = [names[0] + "".join(f" (or {n})" for n in names[1:]) for names in REQUIRED[self.sport]
+                                if not any(n in header for n in names)] if self.csv.readable else []
         by_game: dict[str, list[int]] = {}
+        times: dict[int, object] = {}
         snap_i, gid_i = I["snapshot_utc"], I["game_id"]
-        latest = ""
-        for n, r in enumerate(self.csv.rows):
-            by_game.setdefault(r[gid_i], []).append(n)
-            if r[snap_i] > latest:
-                latest = r[snap_i]
-        for idx in by_game.values():                    # time order, whatever order the lines were written in
-            idx.sort(key=lambda n: self.csv.rows[n][snap_i])
+        latest = None
+        untimed = 0
+        if not self.missing_columns:
+            for n, r in enumerate(self.csv.rows):
+                t = self._time(r[snap_i])
+                if t is None:
+                    untimed += 1
+                    continue
+                times[n] = t
+                by_game.setdefault(r[gid_i], []).append(n)
+                if latest is None or t > latest:
+                    latest = t
+            for idx in by_game.values():                # time order, whatever order the lines were written in
+                idx.sort(key=times.__getitem__)
         self.by_game = by_game
-        self.latest_snapshot = latest
-        self.latest_rows = [n for n, r in enumerate(self.csv.rows) if r[snap_i] == latest] if latest else []
+        self.untimed = untimed
+        self.latest_snapshot = words.iso_z(latest) or ""
+        self.latest_rows = [n for n, t in times.items() if t == latest] if latest is not None else []
 
     # ------------------------------------------------------------ one row
     def logged(self, r) -> datetime | None:
-        return words.parse_utc(r[I["snapshot_utc"]])
+        return self._time(r[I["snapshot_utc"]])
 
     def kickoff(self, r) -> datetime | None:
         if self.sport == "nfl":

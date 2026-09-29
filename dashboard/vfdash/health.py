@@ -95,7 +95,7 @@ def assess(snap, now: datetime, tz: tzinfo) -> Health:
                 h.fail(f"The {name} job last ended with an error (exit status {status}).")
     # --- ledgers going stale
     for ledger in snap.ledgers.values():
-        project = ledger.path.parent.parent.parent.name
+        project = ledger.project
         if not ledger.readable or project in stale_run:
             continue
         t = words.parse_utc(ledger.latest_snapshot)

@@ -20,10 +20,13 @@ SPORT_OF = {"nfl-weather": "NFL", "cfb-weather": "CFB"}
 QUOTA_FIELDS = ("utc", "remaining", "used", "last", "project", "status")     # never the key's fingerprint
 DEFAULT_RUN_TIMES = [(7, 30), (11, 30), (15, 30), (19, 30)]
 JOBS = [
-    {"label": "com.nflweather.alerts", "name": "NFL alerts", "project": "nfl-weather"},
-    {"label": "com.cfbweather.alerts", "name": "College football alerts", "project": "cfb-weather"},
-    {"label": "com.valuefinder.closecapture", "name": "Close capture", "log": "valuefinder-closecapture.log"},
-    {"label": "com.valuefinder.ledgersync", "name": "Nightly ledger copy", "log": "valuefinder-ledgersync.log"},
+    {"label": "com.nflweather.alerts", "name": "NFL alerts", "in_a_sentence": "NFL alerts", "project": "nfl-weather"},
+    {"label": "com.cfbweather.alerts", "name": "College football alerts", "in_a_sentence": "college football alerts",
+     "project": "cfb-weather"},
+    {"label": "com.valuefinder.closecapture", "name": "Close capture", "in_a_sentence": "close capture",
+     "log": "valuefinder-closecapture.log"},
+    {"label": "com.valuefinder.ledgersync", "name": "Nightly ledger copy", "in_a_sentence": "nightly ledger copy",
+     "log": "valuefinder-ledgersync.log"},
 ]
 MANIFEST = Path("sharp-markets") / "data" / "raw" / "_manifest" / "oddsapi_manifest.csv"
 
@@ -55,6 +58,28 @@ def label(project: str, what: str, name: str) -> str:
     return f"the {SPORT_OF[project] if project in SPORT_OF else project} {what} ({project}/data/forward/{name})"
 
 
+def read_runs(path: Path, what: str) -> Read:
+    """An alert job's runs.csv. Without its run_utc and status columns it can't be read (a damaged or foreign
+    file, not an empty record); a row whose run time can't be read is left out and counted."""
+    r = read_csv(path, what)
+    if r.data is None:
+        return r
+    header, rows = r.data
+    missing = [c for c in RUNS_REQUIRED if c not in header]
+    if missing:
+        return Read(note=f"{cap(what)} {words.missing_columns(missing)}, so it can't be read.", mtime=r.mtime)
+    timed = [row for row in rows if words.parse_utc(row.get("run_utc")) is not None]
+    if rows and not timed:
+        return Read(note=f"No row of {what} has a run time (run_utc) that can be read, so the dashboard can't "
+                         "tell when that job last ran.", mtime=r.mtime)
+    notes = [r.note] if r.note else []
+    if len(timed) < len(rows):
+        n = len(rows) - len(timed)
+        notes.append(f"{words.count(n, 'row')} of {what} {'has' if n == 1 else 'have'} a run time (run_utc) that "
+                     f"can't be read; {'it is' if n == 1 else 'they are'} left out.")
+    return Read(data=(header, timed), note=" ".join(notes), mtime=r.mtime)
+
+
 @dataclass
 class Launchctl:
     listed: dict | None = None      # label -> {"pid": int|None, "status": int|None}; None when unreadable
@@ -65,7 +90,7 @@ class Launchctl:
 @dataclass
 class Scored:
     project: str
-    status: str                     # ok, failed, timed_out, missing, waiting
+    status: str                     # ok, failed, timed_out, missing, skipped, waiting
     text: str = ""
     error: str = ""
     ran_at: datetime | None = None
@@ -97,8 +122,8 @@ class Snap:
     notes: list = field(default_factory=list)             # other things worth saying
 
 
-def cap(s: str) -> str:
-    return s[:1].upper() + s[1:] if s else s
+cap = words.cap
+RUNS_REQUIRED = ("run_utc", "status")           # without these a runs.csv row says nothing
 
 
 # ---------------------------------------------------------------- launchd
@@ -248,15 +273,15 @@ class Store:
                 snap.notes.append(cap(L.note))
         for p in PROJECTS:
             fwd = cfg.forward(p)
-            snap.runs[p] = read_csv(fwd / "runs.csv", label(p, "run record", "runs.csv"))
+            snap.runs[p] = read_runs(fwd / "runs.csv", label(p, "run record", "runs.csv"))
             self._expect(snap, snap.runs[p], label(p, "run record", "runs.csv"))
             snap.alert_state[p] = read_json(fwd / "alert_state.json", label(p, "alert record", "alert_state.json"))
             if snap.alert_state[p].data is not None and not isinstance(snap.alert_state[p].data, dict):
                 snap.alert_state[p] = Read(note=label(p, "alert record", "alert_state.json") + " is not in the "
                                            "form the alert jobs write.")
             self._expect(snap, snap.alert_state[p], label(p, "alert record", "alert_state.json"))
-            for key, name, what in (("closes", "closes.csv", "closing lines"), ("decisions", "decisions.csv",
-                                    "decision record"), ("fills", "fills.csv", "paper fills")):
+            for key, name, what in (("closes", "closes.csv", "closing-line record"), ("decisions", "decisions.csv",
+                                    "decision record"), ("fills", "fills.csv", "paper-fill record")):
                 r = read_csv(fwd / name, label(p, what, name))
                 getattr(snap, key)[p] = r
                 self._optional(snap, r)
@@ -276,13 +301,13 @@ class Store:
         # launchd job files (schedule only)
         for job in JOBS:
             lbl = job["label"]
-            r = read_plist(cfg.plist(lbl), f"the launchd file for the {job['name'].lower()} "
+            r = read_plist(cfg.plist(lbl), f"the launchd file for the {job['in_a_sentence']} job "
                                            f"(~/Library/LaunchAgents/{lbl}.plist)")
             snap.plists[lbl] = schedule_of(r.data) if isinstance(r.data, dict) else None
             if r.data is None:
                 snap.unreadable.append(cap(r.note))
             if "log" in job:
-                lr = read_text(cfg.log(job["log"]), f"the {job['name'].lower()} log", tail=4096)
+                lr = read_text(cfg.log(job["log"]), f"the {job['in_a_sentence']} log", tail=4096)
                 last = next((ln for ln in reversed((lr.data or "").splitlines()) if ln.strip()), "")
                 snap.logs[lbl] = {"mtime": lr.mtime, "last_line": words.scrub(last)[:200], "note": lr.note}
         snap.launchctl = self._launchctl()
@@ -295,7 +320,7 @@ class Store:
         snap.evidence = read_json(cfg.content / "evidence.json", "the evidence list (dashboard/content/evidence.json)")
         self._expect(snap, snap.evidence, "the evidence list")
         snap.tests_content = read_json(cfg.content / "forward_tests.json",
-                                       "the forward-test descriptions (dashboard/content/forward_tests.json)")
+                                       "the file of forward-test descriptions (dashboard/content/forward_tests.json)")
         self._expect(snap, snap.tests_content, "the forward-test descriptions")
         # Thursday's pull
         self.manifest.refresh()
@@ -355,6 +380,11 @@ class Store:
             if have is not None and have.ran_at is not None and (now - have.ran_at) < timedelta(seconds=SCORER_SECONDS):
                 return have
             cmd, cwd = commands.scorer_command(self.cfg.scorer_root, self.cfg.root, project, now)
+            would_create = commands.folders_a_scorer_would_create(self.cfg.scorer_root, project)
+            if would_create:
+                res = Scored(project, "skipped", error=", ".join(would_create), ran_at=now)
+                self._scores[project] = res
+                return res
             try:
                 r = self._run(cmd, cwd, commands.SCORER_TIMEOUT)
             except PermissionError:
@@ -362,15 +392,16 @@ class Store:
             except Exception as e:                        # noqa: BLE001
                 res = Scored(project, "failed", error=f"{type(e).__name__}", ran_at=now)
             else:
+                out = words.scrub(r.stdout)               # as printed, except that anything like a key is blanked
                 if r.missing:
                     res = Scored(project, "missing", ran_at=now)
                 elif r.timed_out:
-                    res = Scored(project, "timed_out", text=r.stdout, ran_at=now, seconds=r.seconds)
+                    res = Scored(project, "timed_out", text=out, ran_at=now, seconds=r.seconds)
                 elif not r.ok:
-                    res = Scored(project, "failed", text=r.stdout, error=words.scrub(r.stderr)[-2000:], ran_at=now,
+                    res = Scored(project, "failed", text=out, error=words.scrub(r.stderr)[-2000:], ran_at=now,
                                  seconds=r.seconds)
                 else:
-                    res = Scored(project, "ok", text=r.stdout, ran_at=now, seconds=r.seconds)
+                    res = Scored(project, "ok", text=out, ran_at=now, seconds=r.seconds)
             self._scores[project] = res
             return res
 

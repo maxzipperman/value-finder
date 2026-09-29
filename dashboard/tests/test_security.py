@@ -87,15 +87,16 @@ def test_bad_game_ids_are_refused(store, runner, bad, monkeypatch):
     def spy(file, *a, **k):
         opened.append(str(file))
         return real_open(file, *a, **k)
+    store.snapshot()                                  # the files as read in the last 30 seconds
     monkeypatch.setattr(builtins, "open", spy)
     monkeypatch.setattr(io, "open", spy)
     before = len(runner.calls)
     status, payload = api.game(store, bad)
     assert status == 400
     assert "isn't a game id" in payload["error"]
-    assert not any(bad in p for p in opened if bad not in ("", "."))
-    for cmd, _cwd, _ in runner.calls[before:]:
-        assert bad not in " ".join(cmd)
+    assert payload["header"]["last_written"].startswith("Last run")      # the page's stamp is this screen's
+    assert opened == []                               # a refused id opens nothing
+    assert runner.calls[before:] == []                # and starts nothing
 
 
 def test_bad_game_ids_over_http(served):
@@ -113,6 +114,11 @@ def test_query_values_elsewhere_are_ignored(served):
 def test_unknown_game_id_is_plain_text_lookup(store):
     status, payload = api.game(store, "2026_99_NOT_REAL")
     assert status == 404
+
+
+def test_a_burst_of_requests_waits_in_line():
+    from vfdash.server import LocalServer
+    assert LocalServer.request_queue_size >= 64
 
 
 def test_security_headers(served):

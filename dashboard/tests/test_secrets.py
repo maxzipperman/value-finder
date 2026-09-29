@@ -2,16 +2,20 @@
 environment value ever appears in what the dashboard serves."""
 from __future__ import annotations
 
+import ast
 import builtins
+import csv
 import io
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
-from conftest import ENDPOINTS, FINGERPRINT, PLIST_SECRET, SECRET_KEY
+from conftest import (ENDPOINTS, FINGERPRINT, PLIST_SECRET, SECRET_KEY, FakeRunner, Running, make_home, make_root,
+                      make_store)
 
-from vfdash import api, readers
+from vfdash import api, readers, words
 from vfdash.server import static_table
 
 
@@ -75,3 +79,99 @@ def test_credit_file_keeps_only_whitelisted_fields(store):
     snap = store.snapshot()
     assert set(snap.quota) <= {"utc", "remaining", "used", "last", "project", "status"}
     assert FINGERPRINT not in json.dumps(snap.quota)
+
+
+# ---------------------------------------------------------------- the scrub, against the jobs' own
+
+REPO = Path(__file__).resolve().parents[2]
+RUNLOGS = [REPO / "nfl-weather" / "nflweather" / "runlog.py", REPO / "cfb-weather" / "cfbweather" / "runlog.py"]
+
+
+def jobs_patterns(path: Path) -> dict:
+    """_VALUE, SECRET and BEARER as the jobs' runlog.py builds them (their assignments only; runlog.py itself
+    needs pandas, which the dashboard doesn't have)."""
+    tree = ast.parse(path.read_text())
+    ns = {"re": re}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in ("_VALUE", "SECRET", "BEARER")
+                                                for t in node.targets):
+            exec(compile(ast.Module([node], []), str(path), "exec"), ns)
+    return ns
+
+
+@pytest.mark.parametrize("path", RUNLOGS, ids=["nfl", "cfb"])
+def test_the_scrub_is_the_jobs_scrub(path):
+    if not path.exists():
+        pytest.skip(f"{path} is not in this checkout")
+    ns = jobs_patterns(path)
+    assert ns["_VALUE"] == words._VALUE
+    for name in ("SECRET", "BEARER"):
+        assert (ns[name].pattern, ns[name].flags) == (getattr(words, name).pattern, getattr(words, name).flags), name
+
+    def jobs_scrub(text):                                             # runlog.scrub, without pandas
+        text = " ".join(str(text).split())
+        text = ns["SECRET"].sub(lambda m: f"{m['name']}{m['mid']}***", text)
+        return ns["BEARER"].sub(lambda m: f"{m['name']}***", text)
+    for s in SHAPES + HARMLESS:
+        assert words.scrub(s) == jobs_scrub(s), s
+
+
+SHAPES = ["ODDS_API_KEY=abc123secret", '{"key": "abc123secret"}', "oddsApiKey=abc123secret",
+          "Authorization: Bearer abc123secret", "GET /v4/sports?apiKey=abc123secret&regions=us",
+          "x-api-key: abc123secret", "'token': 'abc123secret'", "?apiKey%3Dabc123secret", "bearer abc123secret",
+          "password=abc123secret; next", "CFBD_API_KEY = abc123secret"]
+HARMLESS = ["monkey business", "KeyError: 'total'", "keyword arguments", "a turkey sandwich", "tokenizer ready"]
+
+
+@pytest.mark.parametrize("text", SHAPES + ["NTFY_TOPIC=abc123secret", '"NTFY_TOPIC": "abc123secret"',
+                                           "ntfy_topic => abc123secret"])
+def test_every_shape_of_key_is_blanked(text):
+    out = words.scrub(text)
+    assert "abc123secret" not in out and "***" in out, out
+
+
+@pytest.mark.parametrize("text", HARMLESS + ["ledger rows: 8; in the test: 0",
+                                             "RULE_B (wind under): 3 signals, 1 settled, 2 pending, 0 void"])
+def test_ordinary_words_are_left_alone(text):
+    assert words.scrub(text) == text
+
+
+def test_line_breaks_are_kept():
+    assert words.scrub("first line\napiKey=abc123secret\nthird line") == "first line\napiKey=***\nthird line"
+
+
+def test_a_value_already_blanked_is_left_as_written():
+    """ops/RUN_RECORDS.md says keys are blanked (`apiKey=***`); the closing mark stays."""
+    text = "Keys are blanked (`apiKey=***`) before anything is printed."
+    assert words.scrub(text) == text
+
+
+PLANTED = ('error apiKey=PLANTED0 and {"key": "PLANTED1"} ODDS_API_KEY=PLANTED2 oddsApiKey=PLANTED3 '
+           "Authorization: Bearer PLANTED4 NTFY_TOPIC=PLANTED5")
+
+
+def test_planted_keys_are_never_served(tmp_path):
+    """Every shape at once, in each place the page shows text the jobs wrote: a job's log, a run's error, the
+    alert log, and a scorer's output and error output."""
+    root, home = make_root(tmp_path), make_home(tmp_path)
+    for log in ("valuefinder-closecapture.log", "valuefinder-ledgersync.log"):
+        (home / "Library" / "Logs" / log).write_text(f"2026-10-02 00:02Z close capture: {PLANTED}\n")
+    runs = root / "cfb-weather" / "data" / "forward" / "runs.csv"
+    with runs.open("a", newline="") as f:
+        csv.writer(f, lineterminator="\r\n").writerow(
+            ["2026-10-02T15:10:00Z", "cfb-alerts", "cfb-v3", "failed", 0, 0, 0, "", f"while pricing: {PLANTED}", 0])
+    alerts = root / "nfl-weather" / "data" / "forward" / "alerts.log"
+    alerts.write_text(alerts.read_text().replace("apiKey=abcdef0123", PLANTED))
+    runner = FakeRunner(scorer="failed_after_printing", nfl_text=f"ledger rows: 8\n{PLANTED}\n",
+                        stderr=f"Traceback ...\nValueError: {PLANTED}")
+    store = make_store(root, home, runner=runner)
+    s = Running(store)
+    try:
+        for path in ENDPOINTS:
+            status, body, _ = s.get(path)
+            text = body.decode("utf-8")
+            assert "PLANTED" not in text, (path, [t for t in re.findall(r"\S*PLANTED\S*", text)])
+        _, body, _ = s.get("/api/jobs")
+        assert "***" in body.decode("utf-8")                             # the lines are shown, blanked
+    finally:
+        s.close()

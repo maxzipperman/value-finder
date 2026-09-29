@@ -43,7 +43,12 @@
 
   // ------------------------------------------------------------------ routing
   function parseHash() {
-    const raw = decodeURIComponent((location.hash || "#home").slice(1));
+    let raw;
+    try {
+      raw = decodeURIComponent((location.hash || "#home").slice(1));
+    } catch (e) {
+      raw = "home";                                   // a damaged address: show the home screen
+    }
     const [path, query] = raw.split("?");
     const parts = path.split("/");
     const params = new URLSearchParams(query || "");
@@ -146,7 +151,9 @@
   function drawHome(d) {
     const n = d.numbers || {};
     const tiles = h("div", { class: "tiles" },
-      tile("Signals today", fmtInt(n.signals_live), "Games not yet kicked off whose latest row signals"),
+      tile("Signals today", fmtInt(n.signals_live), "Rule B and Rule HT, games not yet kicked off. " +
+        (n.leans_live ? "Model leans, which are watches, not signals: " + fmtInt(n.leans_live) + "."
+          : "Model leans are watches and aren’t counted.")),
       tile("Games on the board", fmtInt(n.games_on_board), "Not yet kicked off, in the latest runs"),
       tile("Next run", n.next_run, n.next_run_day ? "Both alert jobs, " + n.next_run_day : ""),
       tile("Credits left", n.credits === null || n.credits === undefined ? "Not known" : fmtInt(n.credits),
@@ -351,6 +358,7 @@
       (a.sent || []).length ? h("ul", { class: "rows" }, a.sent.map((s) => h("li", null, h("div", { class: "name" }, s.words),
         s.first_seen ? h("div", { class: "faint" }, s.first_seen) : ""))) : h("p", { class: "muted" }, "No alert has been sent for this game."),
       (a.log_lines || []).length ? h("div", null, h("h3", null, "The alert log’s lines for this game"),
+        h("p", { class: "muted" }, "These are the alert job’s own words, copied as it logged them. A watch is not a bet, and a signal is a paper entry for the forward test, not a proven bet."),
         h("p", { class: "faint" }, "The alert log doesn’t stamp each alert with a time. Where the ledger shows when an alert’s condition was first logged, that time is shown above."),
         h("pre", null, a.log_lines.join("\n"))) : ""));
 

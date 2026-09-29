@@ -101,7 +101,8 @@ def upcoming(snap: Snap, now: datetime):
 
 
 def signals_live(snap: Snap, now: datetime) -> int:
-    """Games not yet kicked off whose latest logged row is a signal under Rule B (either price) or Rule HT."""
+    """Games not yet kicked off whose latest logged row is a signal under Rule B (either price) or Rule HT.
+    The NFL model lean is a watch, as the alert job and runs.csv count it, and is counted apart (leans_live)."""
     n = 0
     for L in snap.ledgers.values():
         for idx in L.by_game.values():
@@ -109,6 +110,18 @@ def signals_live(snap: Snap, now: datetime) -> int:
             k = L.kickoff(r)
             if k is not None and k > now and L.signal(r):
                 n += 1
+    return n
+
+
+def leans_live(snap: Snap, now: datetime) -> int:
+    """NFL games not yet kicked off whose latest logged row is a model lean (under or over)."""
+    L = snap.ledgers.get("nfl")
+    n = 0
+    for idx in (L.by_game.values() if L is not None else ()):
+        r = L.rows[idx[-1]]
+        k = L.kickoff(r)
+        if k is not None and k > now and get(r, "lean").strip() in ("UNDER lean", "OVER lean"):
+            n += 1
     return n
 
 
@@ -164,7 +177,7 @@ def game_row(scr: Screen, sport: str, L, r) -> dict:
     k = L.kickoff(r)
     logged = L.logged(r)
     return {
-        "sport": SPORT_OF[L.path.parent.parent.parent.name], "sport_key": sport, "game_id": get(r, "game_id"),
+        "sport": SPORT_OF[L.project], "sport_key": sport, "game_id": get(r, "game_id"),
         "kickoff": words.kickoff_et(k), "kick_utc": words.iso_z(k),
         "matchup": f"{get(r, 'away_team')} at {get(r, 'home_team')}", "venue": get(r, "venue"),
         "forecast": forecast_words(sport, r), "wind": words.num(get(r, "wx_wind")),
@@ -249,10 +262,14 @@ def scorer_block(scr: Screen, project: str, wait: bool) -> dict:
                      "ledger.",
         "failed": f"The {name} scorer stopped with an error, so its read is not shown in full. The counts above are "
                   "from the ledger.",
+        "skipped": (f"The {name} scorer was not started: starting it would create "
+                    f"{'this folder' if ',' not in s.error else 'these folders'} ({s.error}), and the dashboard never "
+                    "changes the project folders. The counts above are from the ledger."),
     }[s.status]
     return {"project": project, "status": s.status, "words": words_, "text": s.text or "",
             "error": s.error[-1200:] if s.status == "failed" else "",
-            "ran": scr.when(s.ran_at) if s.ran_at else None, "counts": scorer_counts(s.text)}
+            "ran": scr.when(s.ran_at) if s.ran_at and s.status != "skipped" else None,
+            "counts": scorer_counts(s.text) if s.status == "ok" else {}}
 
 
 def forward_tests(scr: Screen, wait: bool) -> list[dict]:
@@ -271,16 +288,22 @@ def forward_tests(scr: Screen, wait: bool) -> list[dict]:
         sc = blocks[t["project"]]
         sk = sc["counts"].get(t["scorer_key"])
         target = t["target"]
+        logged = words.count((counts or {}).get("signals", 0), "signal")
         if not started:
             progress = f"Starts {c.get('starts_text', 'on a date not written in the content file')}"
             detail = "Not started yet. Games before the start don't count."
-        elif sk is not None:
+        elif sk is not None:                              # only from a scorer that finished (scorer_block)
             progress = (f"{sk['settled']} of {target} settled" if target else f"{sk['settled']} settled") + (
                 f", {sk['pending']} waiting for a result" if sk["pending"] else "")
             detail = (f"{sk['signals']} signals, {sk['settled']} settled, {sk['pending']} waiting for a result, "
                       f"{sk['void']} void (the scorer's count)")
+        elif sc["status"] in ("failed", "timed_out", "missing", "skipped"):
+            why = {"failed": "stopped with an error", "timed_out": "took too long and was stopped",
+                   "missing": "can't be run here", "skipped": "was not started"}[sc["status"]]
+            progress = f"The scorer {why}; {logged} logged (from the ledger)"
+            detail = progress
         else:
-            progress = f"{counts.get('signals', 0)} signals logged; the settled count comes from the scorer"
+            progress = f"{logged} logged; the settled count comes from the scorer"
             detail = progress
         decisions = decisions_for(scr, t)
         gate = c.get("money_gate", "not chosen")
@@ -426,6 +449,7 @@ def home(store: Store) -> dict:
         "header": scr.header("Last run", at),
         "numbers": {
             "signals_live": s["signals_live"], "games_on_board": s["games_on_board"],
+            "leans_live": scr.part("model leans", lambda: leans_live(scr.snap, scr.now), 0),
             "next_run": words.clock(nxt, scr.tz) if nxt else "Not known",
             "next_run_day": ("today" if nxt and nxt.astimezone(scr.tz).date() == scr.now.astimezone(scr.tz).date()
                              else "tomorrow" if nxt else ""),
@@ -460,9 +484,10 @@ def board(store: Store) -> dict:
 
 
 def game(store: Store, game_id: str) -> tuple[int, dict]:
-    if not isinstance(game_id, str) or not GAME_ID.match(game_id):
-        return 400, {"error": "That isn't a game id the dashboard can look up. Open a game from the board."}
     scr = Screen(store)
+    if not isinstance(game_id, str) or not GAME_ID.match(game_id):
+        return 400, scr.done({"error": "That isn't a game id the dashboard can look up. Open a game from the board.",
+                              "header": scr.header("Last run", latest_alert_run(scr.snap))})
     found = None
     for sport, L in scr.snap.ledgers.items():
         if game_id in L.by_game:
@@ -472,7 +497,7 @@ def game(store: Store, game_id: str) -> tuple[int, dict]:
         return 404, scr.done({"error": "No game with that id is in either ledger.",
                               "header": scr.header("Last run", latest_alert_run(scr.snap))})
     sport, L = found
-    project = L.path.parent.parent.parent.name
+    project = L.project
     rows = [game_row(scr, sport, L, r) for r in L.game_rows(game_id)]
     last = rows[-1]
     charts = {"total": [[g["logged_utc"], g["total_num"], g["logged"]] for g in rows if g["total_num"] is not None],
@@ -631,9 +656,9 @@ def recent_closes(scr: Screen) -> list[dict]:
 def run_records(store: Store) -> dict:
     from .readers import read_text
     scr = Screen(store)
-    r = read_text(store.cfg.root / "ops" / "RUN_RECORDS.md", "ops/RUN_RECORDS.md")
+    r = read_text(store.cfg.root / "ops" / "RUN_RECORDS.md", "the guide to the run records (ops/RUN_RECORDS.md)")
     if r.data is None:
-        scr.notes.append(r.note[:1].upper() + r.note[1:])
+        scr.notes.append(words.cap(r.note))
     return scr.done({"header": scr.header("Last run", latest_alert_run(scr.snap)),
                      "text": words.scrub(r.data or "")})
 
@@ -661,7 +686,7 @@ def research(store: Store) -> dict:
     scr = Screen(store)
     ev, n, bar = scr.part("evidence list", lambda: evidence(scr), ([], None, None))
     if scr.snap.evidence.data is None:
-        scr.notes.append(scr.snap.evidence.note[:1].upper() + scr.snap.evidence.note[1:])
+        scr.notes.append(words.cap(scr.snap.evidence.note))
     mt = scr.snap.evidence.mtime
     at = datetime.fromtimestamp(mt, UTC) if mt else None
     return scr.done({"header": scr.header("Evidence list updated", at), "entries": ev, "variants": n,

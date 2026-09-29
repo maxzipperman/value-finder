@@ -38,13 +38,15 @@ def test_home(store):
     d = api.home(store)
     assert d["header"]["last_written"] == "Last run 7:30 AM"
     assert d["header"]["read_at"] == "Read at 10:00 AM"
-    assert d["numbers"] == {"signals_live": 3, "games_on_board": 8, "next_run": "11:30 AM", "next_run_day": "today",
-                            "credits": 491, "credits_read": "7:30 AM"}
+    # the model lean on ARI_NYG is a watch: counted apart from the signals (PIT_CLE's lean has kicked off)
+    assert d["numbers"] == {"signals_live": 3, "games_on_board": 8, "leans_live": 1, "next_run": "11:30 AM",
+                            "next_run_day": "today", "credits": 491, "credits_read": "7:30 AM"}
     names = [t["name"] for t in d["tests"]]
     assert names == ["NFL wind under (Rule B)", "NFL model lean", "College football wind under (Rule B)",
                      "College football high-total under (Rule HT)"]
     cfb_b = d["tests"][2]
-    assert cfb_b["progress"].startswith("0 of 40 settled") or "signals logged" in cfb_b["progress"]
+    # Home doesn't wait for the scorer: until its read is in, the count is the ledger's
+    assert cfb_b["progress"] == "1 signal logged; the settled count comes from the scorer"
     assert d["tests"][0]["progress"] == "Starts Week 5, Thu Oct 8, 2026"
     assert all(t["money_gate"] == "Money gate: not chosen" for t in d["tests"])
     assert [j["name"] for j in d["jobs"]] == ["NFL alerts", "College football alerts", "Close capture",
@@ -225,6 +227,43 @@ def test_evidence_sources_exist_in_the_repo():
             assert k in e, (e["id"], k)
 
 
+def test_evidence_numbers_are_quoted_from_their_source():
+    """Each entry's record, win rate and sample size are written in the file it names, as written there."""
+    import re
+    repo = CONTENT.parents[1]
+    for e in json.loads((CONTENT / "evidence.json").read_text()):
+        text = (repo / e["source"]).read_text()
+        if e["record"] and "-" in e["record"]:
+            assert e["record"].replace("-", "–") in text, (e["id"], e["record"])
+        if isinstance(e["win_rate"], (int, float)) and f"{e['win_rate']:.1f}%" not in text:
+            w, l_ = map(int, (e["record"] or "x-x").split("-")[:2])           # else it is the record's own rate
+            assert abs(100 * w / (w + l_) - e["win_rate"]) < 0.05, (e["id"], e["win_rate"])
+        if isinstance(e["n"], int) and not re.search(rf"(?<![\d,.])({e['n']:,}|{e['n']})(?![\d,])", text):
+            parts = [int(x) for x in (e["record"] or "").split("-") if x.isdigit()]   # else the record's own count
+            assert parts and e["n"] in (sum(parts), sum(parts[:2])), (e["id"], e["n"])
+        for quote in re.findall(r"“([^”]+)”", e["result"]):
+            assert quote in text, (e["id"], quote)
+
+
+def test_sentences_about_files_read_well(root, home):
+    """A sentence that starts with a path keeps it as written, and plural names don't take "is"."""
+    for path in list(root.rglob("*")) + list(home.rglob("*")):
+        if path.is_file() and path.suffix in (".csv", ".json", ".log", ".plist"):
+            path.write_bytes(b"")
+    (root / "ops" / "RUN_RECORDS.md").unlink()
+    store = make_store(root, home)
+    text = json.dumps([api.summary(store), api.home(store), api.jobs_screen(store), api.run_records(store)],
+                      ensure_ascii=False)
+    assert "Ops/" not in text
+    assert "The guide to the run records (ops/RUN_RECORDS.md) is missing." in text
+    assert "The NFL closing-line record (nfl-weather/data/forward/closes.csv) is empty." in text
+    assert ("The launchd file for the NFL alerts job (~/Library/LaunchAgents/com.nflweather.alerts.plist) could "
+            "not be read as a launchd job file.") in text
+    import re
+    assert not re.search(r"(lines|fills|descriptions) \([^)]*\) is ", text)
+    assert "nfl alerts" not in text                                  # the NFL keeps its capitals mid-sentence
+
+
 # ---------------------------------------------------------------- damaged files
 
 def test_everything_missing(tmp_path):
@@ -331,3 +370,120 @@ def test_ledger_grows_between_reads(root, home):
     os.replace(nfl.with_suffix(".tmp"), nfl)
     clock.t += timedelta(seconds=31)
     assert api.summary(store)["games_on_board"] == 4
+
+
+# ---------------------------------------------------------------- unexpected values in the jobs' own columns
+
+def append(path, line):
+    with path.open("a", newline="") as f:
+        f.write(line)
+
+
+def test_a_logging_time_that_cant_be_read_is_left_out(root, home):
+    """The latest run is the latest time that can be read, never the largest text: one 'pending' row, or a
+    time written without its leading zero, doesn't empty or replace the board."""
+    from conftest import nfl_row
+    ledger = root / "nfl-weather" / "data" / "forward" / "ledger.csv"
+    last = ledger.read_text().splitlines()[-1]
+    append(ledger, "pending," + last.split(",", 1)[1] + "\n")
+    # 2:30 AM UTC written as "T2:30": larger than "T14:30" as text, earlier as a time
+    append(ledger, nfl_row("2026-10-02T2:30:07Z", "2026_05_NYJ_MIA", "2026-10-04", "13:00", "NYJ", "MIA", "SIGNAL")
+           + "\n")
+    # the latest run's time in another format joins that run
+    append(ledger, nfl_row("2026-10-02 14:30:07+00:00", "2026_05_LV_LAC", "2026-10-04", "16:05", "LV", "LAC",
+                           "no_trigger") + "\n")
+    store = make_store(root, home)
+    s = api.summary(store)
+    assert s["health"] == "ok", s["problems"]
+    # LV_LAC joins the board; NYJ_MIA isn't in the latest run, but its latest row signals and it hasn't kicked off
+    assert s["games_on_board"] == 8 + 1 and s["signals_live"] == 3 + 1
+    b = api.board(store)
+    assert b["runs"]["nfl"] == {"sport": "NFL", "latest_run": "7:30 AM", "games": 6}
+    assert "2026_05_NYJ_MIA" not in {g["game_id"] for g in b["games"]}
+    assert "1 row of the NFL ledger has a logging time (snapshot_utc) that can't be read; it is left out." in b["notes"]
+    assert b["header"]["last_written"] == "Last run 7:30 AM"
+
+
+def test_a_ledger_with_no_readable_logging_time_is_unreadable(root, home):
+    ledger = root / "nfl-weather" / "data" / "forward" / "ledger.csv"
+    lines = ledger.read_text().splitlines()
+    ledger.write_text("\n".join([lines[0]] + ["pending," + ln.split(",", 1)[1] for ln in lines[1:]]) + "\n")
+    s = api.summary(make_store(root, home))
+    assert s["health"] == "warn"
+    assert any("No row of the NFL ledger" in p and "snapshot_utc" in p for p in s["problems"])
+    assert s["games_on_board"] == 3                                   # the college games are still shown
+
+
+@pytest.mark.parametrize("project, old, new, words", [
+    ("nfl-weather", "snapshot_utc,", "snapshot_time,", "is missing its snapshot_utc column"),
+    ("nfl-weather", "game_id,gameday,gametime,", "gid,day,clock,", "is missing its game_id, gameday and gametime columns"),
+    ("cfb-weather", "kick_et,", "kickoff_et,", None),                 # start_utc is still there: fine
+])
+def test_a_ledger_without_a_column_it_needs(root, home, project, old, new, words):
+    ledger = root / project / "data" / "forward" / "ledger.csv"
+    text = ledger.read_text()
+    ledger.write_text(text.replace(old, new, 1))
+    store = make_store(root, home)
+    s = api.summary(store)
+    b = api.board(store)
+    if words is None:                                 # readable; only the row with no start_utc loses its kickoff
+        assert s["health"] == "ok" and s["games_on_board"] == 7
+        return
+    assert s["health"] == "warn"
+    assert any(words in p and "so it can't be read" in p for p in s["problems"]), s["problems"]
+    assert any(words in n for n in b["notes"])
+    assert b["runs"]["nfl"]["games"] == 0 and b["runs"]["cfb"]["games"] == 3
+
+
+def test_a_college_ledger_with_neither_kickoff_column(root, home):
+    ledger = root / "cfb-weather" / "data" / "forward" / "ledger.csv"
+    ledger.write_text(ledger.read_text().replace("kick_et,", "k1,", 1).replace("start_utc,", "k2,", 1))
+    s = api.summary(make_store(root, home))
+    assert s["health"] == "warn"
+    assert any("is missing its start_utc (or kick_et) column" in p for p in s["problems"])
+    assert s["games_on_board"] == 5
+
+
+@pytest.mark.parametrize("content, words", [
+    (None, "NFL run record (nfl-weather/data/forward/runs.csv)"),                    # random bytes
+    ("when,job,result\r\n2026-10-02T14:30:07Z,nfl-alerts,ok\r\n", "is missing its run_utc and status columns"),
+    ("run_utc,job,state\r\n2026-10-02T14:30:07Z,nfl-alerts,ok\r\n", "is missing its status column"),
+    ("run_utc,job,status\r\nsoon,nfl-alerts,ok\r\nlater,nfl-alerts,failed\r\n", "No row of the NFL run record"),
+])
+def test_a_run_record_that_cant_be_read_is_a_warning(root, home, content, words):
+    import random
+    runs = root / "nfl-weather" / "data" / "forward" / "runs.csv"
+    if content is None:
+        runs.write_bytes(random.Random(7).randbytes(4096))
+    else:
+        runs.write_text(content)
+    s = api.summary(make_store(root, home))
+    assert s["health"] == "warn", s["problems"]
+    assert any(words in p for p in s["problems"]), s["problems"]
+
+
+def test_one_run_time_that_cant_be_read_is_left_out(root, home):
+    runs = root / "nfl-weather" / "data" / "forward" / "runs.csv"
+    append(runs, "pending,nfl-alerts,v3-2026-09-28,failed,0,0,0,,boom,0\r\n")
+    store = make_store(root, home)
+    s = api.summary(store)
+    assert s["health"] == "ok", s["problems"]                          # the unreadable row isn't the last run
+    j = api.jobs_screen(store)
+    assert "1 row of the NFL run record" in " ".join(j["notes"])
+    assert len(j["runs"]["nfl-weather"]["rows"]) == 2
+
+
+def test_a_failed_scorer_is_not_read_as_progress(root, home):
+    """A scorer that stops with an error may still have printed its counts; they aren't shown as progress,
+    on the Forward tests screen or on Home."""
+    from datetime import datetime, timezone
+    clock = Clock(datetime(2026, 10, 10, 17, 0, tzinfo=timezone.utc))          # both Rule B tests have started
+    store = make_store(root, home, clock=clock, runner=FakeRunner(scorer="failed_after_printing"))
+    tests = api.tests_screen(store)
+    home_ = api.home(store)
+    for listed in ([t for g in tests["groups"] for t in g["tests"]], home_["tests"]):
+        by_id = {t["id"]: t for t in listed}
+        for tid in ("nfl_rule_b", "cfb_rule_b"):
+            assert by_id[tid]["progress"].startswith("The scorer stopped with an error; "), by_id[tid]["progress"]
+            assert "settled" not in by_id[tid]["progress"] and by_id[tid]["scorer_counts"] is None
+    assert tests["groups"][0]["scorer"]["text"].startswith("ledger rows: 8")        # what it printed is shown

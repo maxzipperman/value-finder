@@ -28,8 +28,26 @@ LAUNCHCTL_TIMEOUT = 10
 NOW_FORMAT = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
 
 
+# Importing a scorer's package creates these folders in its project when they are missing (the for loop at the
+# end of nflweather/config.py and cfbweather/config.py). The dashboard never writes, so it starts a scorer only
+# when every one of them is already there; a test checks this list against both config.py files.
+SCORER_FOLDERS = {
+    "nfl-weather": ("data/raw", "data/processed", "output/tables", "output/figures", "data/raw/pbp",
+                    "data/raw/weather"),
+    "cfb-weather": ("data/raw", "data/processed", "output/tables", "data/raw/meteostat", "data/raw/cfbfastr"),
+}
+
+
 def scorer_python(scorer_root: Path, project: str) -> Path:
     return scorer_root / project / ".venv" / "bin" / "python"
+
+
+def folders_a_scorer_would_create(scorer_root: Path, project: str) -> list[str]:
+    """The folders (as project/relative/path) that starting this scorer would create; [] when none, and when
+    there is no scorer to start (run() then reports it missing)."""
+    if not (scorer_root / project / SCORER).is_file():
+        return []
+    return [f"{project}/{rel}" for rel in SCORER_FOLDERS[project] if not (scorer_root / project / rel).is_dir()]
 
 
 def scorer_command(scorer_root: Path, data_root: Path, project: str, now: datetime) -> tuple[list[str], str]:

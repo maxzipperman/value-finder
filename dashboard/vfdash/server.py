@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import errno
 import json
 import logging
 import sys
@@ -143,6 +144,7 @@ class Handler(BaseHTTPRequestHandler):
 class LocalServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
+    request_queue_size = 64                               # a burst of requests waits instead of being dropped
 
 
 def make_server(store: Store, host: str = HOST, port: int = 8787) -> LocalServer:
@@ -159,9 +161,18 @@ def make_server(store: Store, host: str = HOST, port: int = 8787) -> LocalServer
     return server
 
 
+class PortInUse(Exception):
+    """Another program (often a second copy of the dashboard) already listens on the port."""
+
+
 def serve(store: Store, port: int):
     logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(asctime)s %(message)s")
-    server = make_server(store, HOST, port)
+    try:
+        server = make_server(store, HOST, port)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            raise PortInUse(port) from None
+        raise
     store.warm()
     print(f"Value Finder dashboard (paper only, read-only): http://{HOST}:{server.server_address[1]}/", flush=True)
     try:
