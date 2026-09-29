@@ -157,6 +157,62 @@ def test_two_listings_without_pinnacle_at_the_same_time_are_a_tie(tmp_path, monk
     assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}
 
 
+# ------------------------------------------------------------------ amendment 7, reading 2: the same game listed twice
+# Two listings equally near the kickoff that carry the same complete Pinnacle quote (the same total and prices) are
+# the same game listed twice: the first listed is taken. Before, it was a tie and the close was lost (the second
+# review of PR 62: main recorded 42.5 there, PR 62 recorded nothing and spent a second credit).
+@pytest.mark.parametrize("first", ["e1", "e2"])
+def test_two_listings_with_the_same_pinnacle_quote_are_one_game_listed_twice(tmp_path, monkeypatch, capsys, first):
+    e1 = listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT)                      # Pinnacle, DK and FanDuel
+    e2 = listing("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"pinnacle": RIGHT["pinnacle"]})   # Pinnacle alone
+    events = ([e1, e2] if first == "e1" else [e2, e1]) + [listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    rows = pd.read_csv(tmp_path / "data" / "forward" / "closes.csv")
+    chi = rows[rows.game_id == "2026_05_PHI_CHI"]
+    assert list(chi.book) == (["pinnacle", "draftkings", "fanduel"] if first == "e1" else ["pinnacle"])  # the first's
+    assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
+    assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}   # one call, complete
+    assert (f"kept {first}, the first listed: the 2 listings equally near the kickoff carry the same Pinnacle quote, "
+            "so they are the same game listed twice") in out
+
+
+@pytest.mark.parametrize("other", [(42.5, -110, -102), (43.0, -106, -106)], ids=["prices", "total"])
+def test_equally_near_listings_whose_pinnacle_quotes_differ_are_still_a_tie(tmp_path, monkeypatch, capsys, other):
+    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+              listing("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", {"pinnacle": other}),
+              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"
+    assert "2 are equally good and equally near the kickoff, so none is kept and the close is missing" in out
+    assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}
+
+
+# ------------------------------------------------------------------ amendment 7, reading 2: a feed with no events
+def test_a_feed_with_no_events_records_the_slot_and_ends_cleanly(tmp_path, monkeypatch, capsys):
+    """Before: AttributeError ('DataFrame' object has no attribute 'market') before the state was written, so the
+    try was never counted. Now every due game is written with no listing, like a game the feed doesn't list, and
+    the state is written as for any incomplete slot: tried once more, then closed."""
+    blank = ("2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,\n"
+             "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,,,,,,\n")
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, [])
+    assert text == HEADER + blank
+    assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}
+    assert "Pinnacle close for 0/2 games, 0 books logged, for 2026-10-11T17:00Z" in out
+    assert "the odds feed returned no events at all, so every game in the slot is recorded with no listing" in out
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", [])
+    assert text == HEADER + blank + blank
+    assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}   # at most two calls
+
+
+def test_a_feed_with_no_events_and_then_a_price_records_the_price(tmp_path, monkeypatch, capsys):
+    capture(tmp_path, monkeypatch, capsys, NOW, [])
+    events = [listing("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+              listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", events)
+    assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
+    assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}
+
+
 # ------------------------------------------------------------------ a malformed start time costs only its own game
 def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path, monkeypatch, capsys):
     events = [listing("e1", "CHI", "PHI", None, RIGHT), listing("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]

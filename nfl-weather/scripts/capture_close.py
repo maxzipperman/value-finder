@@ -21,6 +21,13 @@ takes neither. A tie, or no listing within 6 hours, leaves the game's close miss
 the feed doesn't list, and the slot is retried like any other missing close. Every such case is
 printed. Listings that match no game due now are ignored.
 
+Amendment 7 (reading 2) registers that rule, with one change: when the equally near listings all carry
+the same complete Pinnacle quote (the same total and the same prices), they are the same game listed
+twice, and the first listed is taken. A tie between different Pinnacle quotes, or between listings
+without one, still takes neither. A feed that returns no events at all is a slot with no listings: every
+due game is written as missing, the try is counted as for any incomplete slot, and the run ends cleanly
+(it used to stop with an AttributeError before the state was written).
+
     python scripts/capture_close.py [--now 2026-10-09T00:05:00Z]
 """
 import argparse
@@ -41,16 +48,25 @@ MAX_TRIES = 2
 NEAR = pd.Timedelta(hours=6)       # a listing belongs to a game only if it starts within this of the kickoff
 FWD = ROOT / "data" / "forward"
 CLOSES, STATE = FWD / "closes.csv", FWD / "close_state.json"
+FEED_COLS = ["snapshot_utc", "event_id", "commence_utc", "home", "away", "home_name", "away_name", "book", "market",
+             "book_update", "over_price", "under_price", "total"]      # oddsapi.parse's columns for a totals feed
 
 
 def one_listing(due, feed):
     """The feed listing (event_id) each due game takes: same home and away teams, starting within NEAR of
     the scheduled kickoff. Among those, one with a complete Pinnacle quote first (as board.one_row_per_game
-    ranks them), then the nearest the kickoff. A tie between equally good listings takes none. Returns the
-    (game_id, event_id) pairs and a note for each game with more than one listing of its teams, or none taken."""
+    ranks them), then the nearest the kickoff. A tie between equally good listings takes none, unless they all
+    carry the same complete Pinnacle quote (the same total and prices): then they are the same game listed
+    twice, and the first listed is taken (amendment 7, reading 2). Returns the (game_id, event_id) pairs and a
+    note for each game with more than one listing of its teams, or none taken."""
     ev = feed[["event_id", "home_team", "away_team", "commence_utc"]].drop_duplicates("event_id")
+    ev = ev.assign(order=range(len(ev)))                    # the feed's own order: which listing came first
     pin = feed[feed.book.eq(oddsapi.RULE_BOOK)].drop_duplicates("event_id")
-    quoted = set(pin.event_id[pin.close_total.notna() & valid_odds(pin.close_under)])
+    ok = pin.close_total.notna() & valid_odds(pin.close_under)
+    quoted = set(pin.event_id[ok])
+    q = pin[ok].reindex(columns=["event_id", "close_total", "close_under", "close_over"])
+    quote = {e: tuple(None if pd.isna(v) else float(v) for v in rest)     # Pinnacle's total, under and over prices
+             for e, *rest in q.itertuples(index=False)}
     c = due[["game_id", "kick_utc", "home_team", "away_team"]].merge(ev, on=["home_team", "away_team"])
     start = pd.to_datetime(c.commence_utc, utc=True, format="ISO8601", errors="coerce")   # unreadable: NaT
     c["gap"] = (start - c.kick_utc).abs()
@@ -65,7 +81,12 @@ def one_listing(due, feed):
                          for t, e in zip(x.commence_utc, x.event_id))
         head = (f"{gid}: {len(x)} feed listing{'s' * (len(x) > 1)} of {x.away_team.iloc[0]} at "
                 f"{x.home_team.iloc[0]} ({seen})")
-        if len(best) == 1:
+        if len(best) > 1 and best.quoted.all() and len({quote[e] for e in best.event_id}) == 1:
+            first = best.sort_values("order").iloc[0]
+            pick.append((gid, first.event_id))
+            notes.append(f"{head}; kept {first.event_id}, the first listed: the {len(best)} listings equally near the "
+                         "kickoff carry the same Pinnacle quote, so they are the same game listed twice")
+        elif len(best) == 1:
             pick.append((gid, best.event_id.iloc[0]))
             if len(x) > 1:
                 why = ("the nearest the kickoff with a Pinnacle quote" if best.quoted.iloc[0]
@@ -100,6 +121,9 @@ try:
 except SystemExit as e:
     sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)} ({e}); "
                    "will retry inside the window"))
+no_events = pin.empty       # amendment 7: the feed answered with no events at all, a slot with no listings
+if no_events:
+    pin = pd.DataFrame(columns=FEED_COLS)
 pin = pin[pin.market == "totals"].rename(columns={"home": "home_team", "away": "away_team", "total": "close_total",
                                                   "under_price": "close_under", "over_price": "close_over",
                                                   "snapshot_utc": "capture_utc"})
@@ -123,5 +147,7 @@ STATE.write_text(json.dumps(state))
 pin_games = len(have)
 print(f"{now:%Y-%m-%d %H:%M}Z close capture: Pinnacle close for {pin_games}/{due.game_id.nunique()} games, "
       f"{rows.book.nunique()} books logged, for {', '.join(slots)}")
+if no_events:
+    notes.insert(0, "the odds feed returned no events at all, so every game in the slot is recorded with no listing")
 for note in notes:
     print(f"{now:%Y-%m-%d %H:%M}Z close capture: {note}")

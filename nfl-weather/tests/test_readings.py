@@ -572,7 +572,11 @@ def test_reading_3_a_damaged_record_stops_recording_not_the_scores(tmp_path):
         assert "Decision record: decisions.csv is unreadable" in r.stdout, name
         assert "Nothing will be recorded until it is repaired or restored from the ledgers branch" in r.stdout
         assert "40 signals, 40 settled" in r.stdout and "FINAL: KEEP" in r.stdout
-        assert "not recorded: the decision record is unreadable" in r.stdout
+        if name == "noheader":      # amendment 7, reading 3: a record that can still be read is printed as recorded
+            assert "recorded in decisions.csv on 2027-01-20T00:00:00Z" in r.stdout
+            assert "the file is damaged, and this record can still be read" in r.stdout
+        else:
+            assert "not recorded: the decision record is unreadable" in r.stdout
         assert (d / "decisions.csv").read_text() == content
 
 
@@ -823,3 +827,190 @@ def test_the_summaries_say_a_record_lost_before_its_copy_can_be_decided_again():
         ROOT.parent / "STATUS.md").read_text()
     assert ("if it is lost before then, neither the file nor a copy holds it, and the next real run decides it "
             "again") in section(3)
+
+
+# ================================================================== amendment 7 (Sep 29): the keep test and the record
+def amendment7_section(n):
+    return " ".join(amendment(7).split(f"### {n}.")[1].split("\n### ")[0].split())
+
+
+def by_hand(clv, days):
+    """The registered interval computed here from its definition (amendment 7, reading 1), not with the scorer's
+    code: the plain mean m of the n CLVs; G game days; s_g the sum of (CLV - m) over day g; the variance of the mean
+    (G / (G - 1)) x sum(s_g^2) / n^2; m +/- t(0.975, G - 1) x its square root. Also the plain interval."""
+    from scipy import stats
+    x, d = np.asarray(clv, float), np.asarray(days, object)
+    x, d = x[~np.isnan(x)], d[~np.isnan(x)]
+    n, m = len(x), x.mean()
+    labels = sorted(set(d))
+    s = np.array([(x[d == g] - m).sum() for g in labels])
+    se = np.sqrt(len(labels) / (len(labels) - 1) * (s ** 2).sum() / n ** 2) if len(labels) > 1 else np.nan
+    half = stats.t.ppf(0.975, len(labels) - 1) * se if len(labels) > 1 else np.nan
+    plain = 1.96 * x.std(ddof=1) / np.sqrt(n)
+    return dict(mean_clv=m, ci_low=m - half, ci_high=m + half, n_clv=n, game_days=len(labels),
+                plain_ci_low=m - plain, plain_ci_high=m + plain)
+
+
+def keep_case(bets):
+    """40 Rule B bets from (game id, Eastern date, Eastern time, week, entry line, close or nan, final total): the
+    ledger rows, the schedule (with the 2026 regular season around them), and each bet's CLV."""
+    rows = [row(gid, day, time, total_line=line) for gid, day, time, wk, line, close, total in bets]
+    games = [game(gid, day, time, week=wk, total=total, close=close) for gid, day, time, wk, line, close, total in bets]
+    clv = [line - close for gid, day, time, wk, line, close, total in bets]
+    return rows, games + filler(2026), clv
+
+
+def lines_for(k):
+    """Entry lines that give varied CLVs against a close of 42, some of them equal."""
+    return [42 + ((7 * i) % 11 - 3) * 0.5 for i in range(k)]
+
+
+def eastern_utc(day, time):
+    return pd.Timestamp(f"{day} {time}").tz_localize("America/New_York").tz_convert("UTC")
+
+
+def test_amendment_7_reading_1_the_keep_interval_is_grouped_by_game_day(tmp_path):
+    """Recomputed here from the registered definition on 1, 2, 5 and 20 game days, with ties with the close, bets
+    with no close, and a late Saturday game (8:15 PM Eastern, 01:15 UTC Sunday) that groups with Saturday."""
+    line = lines_for(40)
+    late = ([("2026-12-19", "16:30")] * 6 + [("2026-12-19", "20:15")] * 4 + [("2026-12-20", "13:00")] * 12
+            + [("2026-12-21", "20:15")] * 6 + [("2026-12-24", "20:15")] * 4 + [("2026-12-27", "13:00")] * 8)
+    cases = {
+        "one day": [(f"A{i}", "2026-10-11", "13:00", 5, line[i], 42, 40) for i in range(40)],
+        "two days": [(f"B{i}", "2026-10-11" if i < 20 else "2026-10-18", "13:00", 5 if i < 20 else 6, line[i],
+                      np.nan if i in (3, 17, 30) else 42, 42 if i in (5, 25) else 40) for i in range(40)],
+        "five days, late Saturday": [(f"C{i}", day, time, 15 if day < "2026-12-21" else 16, line[i],
+                                      np.nan if i in (0, 9) else 42, 42 if i == 4 else 40)
+                                     for i, (day, time) in enumerate(late)],
+        "twenty days": [(f"D{i}", wk_day(2026, 5 + i // 4) if i % 4 < 2 else
+                         (pd.Timestamp(wk_day(2026, 5 + i // 4)) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+                         "13:00" if i % 4 < 2 else "20:15", 5 + i // 4, line[i], np.nan if i == 11 else 42, 40)
+                        for i in range(40)],
+    }
+    for name, bets in cases.items():
+        rows, games, clv = keep_case(bets)
+        d = tmp_path / name.replace(" ", "_").replace(",", "")
+        out = part(score(d, rows, games, "2027-01-20", "--test-record"), *RB)
+        nums = json.loads(pd.read_csv(d / "decisions.csv", dtype=str).numbers[0])
+        want = by_hand(clv, [b[1] for b in bets])                     # the Eastern date of each game's kickoff
+        assert (nums["game_days"], nums["n_clv"]) == (want["game_days"], want["n_clv"]), name
+        for k in ("mean_clv", "plain_ci_low", "plain_ci_high"):
+            assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
+        if want["game_days"] < 2:
+            assert nums["ci_low"] is None and nums["ci_high"] is None, name
+            assert ("FINAL: INCONCLUSIVE (the 40 bets that have a primary close kicked off on 1 game day, so there is "
+                    "no interval; carried into 2027 unchanged)") in out, name
+            assert "no interval: the bets with a primary close kicked off on 1 game day; plain, for reference" in out
+            continue
+        for k in ("ci_low", "ci_high"):
+            assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
+        assert (f"95% CI {want['ci_low']:+.2f} to {want['ci_high']:+.2f}, grouped by game day over "
+                f"{want['game_days']} days; plain, for reference: {want['plain_ci_low']:+.2f} to "
+                f"{want['plain_ci_high']:+.2f}") in out, name
+    # the late Saturday game is Sunday in UTC, where it would join Sunday's games and change the interval
+    bets = cases["five days, late Saturday"]
+    clv, utc = keep_case(bets)[2], [eastern_utc(b[1], b[2]).strftime("%Y-%m-%d") for b in bets]
+    assert [utc[i] for i in (6, 10)] == ["2026-12-20", "2026-12-20"] and bets[6][1] == "2026-12-19"
+    assert not np.isclose(by_hand(clv, utc)["ci_low"], by_hand(clv, [b[1] for b in bets])["ci_low"])
+    text = amendment7_section(1)
+    for words in ("grouped by the calendar date of the game's actual kickoff in Eastern time", "(G / (G - 1))",
+                  "97.5th percentile of Student's t with G - 1 degrees of freedom", "fewer than 2 game days",
+                  "plain, for reference"):
+        assert words in text, words
+
+
+def test_amendment_7_reading_1_the_lean_and_the_interim_read_use_the_grouped_interval_too(tmp_path):
+    """Every CLV decision goes through the same test: the model lean's pooled decision is checked here, and the
+    interim read shows the grouped interval."""
+    a, ga = season(2026, list(range(5, 19)), 25, lean="UNDER lean")
+    b, gb = season(2027, list(range(1, 11)), 15, first_id=100, lean="UNDER lean")
+    for i, r in enumerate(a + b):
+        r["total_line"] = lines_for(40)[i]
+    out = score(tmp_path / "lean", a + b, ga + gb + filler(2026) + filler(2027), "2028-01-20", "--test-record")
+    nums = json.loads(pd.read_csv(tmp_path / "lean" / "decisions.csv", dtype=str).numbers[0])
+    want = by_hand([r["total_line"] - 42 for r in a + b], [r["gameday"] for r in a + b])
+    assert nums["game_days"] == want["game_days"] == 24
+    assert np.isclose(nums["ci_low"], want["ci_low"], rtol=1e-12) and "grouped by game day over 24 days" in out
+    early = part(score(tmp_path / "interim", a, ga + filler(2026, played=False), "2026-12-01"), *LEAN)
+    assert "INTERIM read" in early and "grouped by game day over" in early
+
+
+def test_amendment_7_reading_3_a_time_with_no_time_zone_is_damage_not_a_crash(tmp_path):
+    """The second review of amendment 6 (its r2naive): a recorded time re-saved without its 'Z' passed the checks
+    and crashed the whole run with TypeError, so the day's report was lost."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    score(tmp_path, good, gg + filler(2026), "2027-01-20", "--test-record")
+    rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str, keep_default_na=False)
+    for col, naive in (("horizon_utc", "2027-01-10T18:00:00"), ("decided_utc", "2027-01-20 00:00:00")):
+        rec.assign(**{col: naive}).to_csv(tmp_path / "decisions.csv", index=False)
+        before = (tmp_path / "decisions.csv").read_text()
+        r = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(tmp_path / "ledger.csv"), "--games",
+                str(tmp_path / "games.csv"), "--now", "2027-01-21", "--test-record")
+        assert r.returncode == 0, (col, r.stderr[-400:])
+        assert "Decision record: decisions.csv is unreadable (ValueError: a time with no time zone" in r.stdout, col
+        assert "RULE_B, secondary price" in r.stdout and "Variants under forward test" in r.stdout, col
+        assert (tmp_path / "decisions.csv").read_text() == before, col
+    assert "a record whose time cannot be read as a UTC time is a damaged record" in amendment7_section(3)
+
+
+def test_amendment_7_reading_3_a_damaged_record_still_prints_the_decisions_it_can(tmp_path):
+    """The second review of amendment 6 (its r2probe T2): a second record line was cut mid-write and the closes
+    were corrected; the next run printed a fresh FINAL: DROP and never showed the recorded KEEP."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)                # CLV +1 each: KEEP
+    score(tmp_path, good, gg + filler(2026), "2027-01-20", "--test-record")
+    whole = (tmp_path / "decisions.csv").read_text()
+    (tmp_path / "decisions.csv").write_text(whole + "MODEL_LEAN:2026,model lean,after Week 18 of 2026,2027-01-1")
+    before = (tmp_path / "decisions.csv").read_text()
+    corrected = [dict(g_, total_line=46) for g_ in gg] + filler(2026)          # a fresh computation: DROP
+    out = score(tmp_path, good, corrected, "2027-01-22", "--test-record")
+    assert "Decision record: decisions.csv is unreadable" in out
+    assert "1 recorded decision in it can still be read (RULE_B:2026) and is printed below as recorded." in out
+    rb = part(out, *RB)
+    assert "decided after Week 18 of 2026), FINAL: KEEP" in rb
+    assert "recorded in decisions.csv on 2027-01-20T00:00:00Z" in rb
+    assert "the file is damaged, and this record can still be read" in rb
+    assert "a fresh computation on the same horizon now gives: DROP" in rb and "FINAL: DROP" not in rb
+    assert "The recorded decision stands." in rb
+    assert (tmp_path / "decisions.csv").read_text() == before                  # nothing is added to a damaged file
+    assert "any decision in it that can still be read is still printed as recorded" in amendment7_section(3)
+
+
+def test_amendment_7_reading_3_a_decision_missing_from_the_file_is_restored_from_the_copy(tmp_path):
+    """The second review of amendment 6 (its r2probe T3): the record was cut back to its header while the file
+    stayed, the closes were corrected, and the next real run decided DROP although the copy held KEEP."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "nfl-weather", good, gg + filler(2026), "2027-01-20T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    games = proj / "data" / "raw" / "games.csv"
+    assert "FINAL: KEEP" in on_clock(tmp_path, "2027-01-20T17:00", scorer).stdout
+    publish(repo, "nfl-weather", fwd / "decisions.csv")                       # the nightly copy holds KEEP
+    whole = (fwd / "decisions.csv").read_text()
+    head = whole.splitlines()[0] + "\n"
+    (fwd / "decisions.csv").write_text(head)                                  # the file stays; its record is gone
+    pd.DataFrame([dict(x, total_line=46) for x in gg] + filler(2026)).to_csv(games, index=False)   # closes corrected
+    touch(games, "2027-01-19T16:00")                                          # stale: this run may not record
+    out = on_clock(tmp_path, "2027-01-22T17:00", scorer).stdout
+    assert ("data/forward/decisions.csv doesn't hold 1 recorded decision that its copy on the ledgers branch "
+            "(origin/ledgers:nfl-weather/decisions.csv) holds (RULE_B:2026), printed below as recorded") in out
+    rb = part(out, *RB)
+    assert "FINAL: KEEP" in rb and "read from its copy on the ledgers branch (the file is missing it)" in rb
+    assert "FINAL: DROP" not in rb and (fwd / "decisions.csv").read_text() == head
+    touch(games, "2027-01-22T16:00")                                          # a real run restores it
+    out = on_clock(tmp_path, "2027-01-22T18:00", scorer).stdout
+    assert ("data/forward/decisions.csv was missing 1 recorded decision that its copy on the ledgers branch "
+            "(origin/ledgers:nfl-weather/decisions.csv) holds (RULE_B:2026); restored from the copy") in out
+    rb = part(out, *RB)
+    assert "FINAL: KEEP" in rb and "recorded in decisions.csv on 2027-01-20T17:00:00Z" in rb
+    assert "restored from the ledgers branch" in rb and "a fresh computation on the same horizon now gives: DROP" in rb
+    assert (fwd / "decisions.csv").read_text() == whole                        # the copy's line, as it was written
+    # a damaged file whose record can't be read, while the copy holds it: printed from the copy, the file left alone
+    cut = head + whole.splitlines()[1][:60] + "\n"
+    (fwd / "decisions.csv").write_text(cut)
+    out = on_clock(tmp_path, "2027-01-22T19:00", scorer).stdout
+    assert "No recorded decision in it can still be read." in out
+    rb = part(out, *RB)
+    assert "FINAL: KEEP" in rb and "read from its copy on the ledgers branch (the file is damaged)" in rb
+    assert "FINAL: DROP" not in rb and (fwd / "decisions.csv").read_text() == cut
+    assert "is restored from the copy, never decided again" in amendment7_section(3)

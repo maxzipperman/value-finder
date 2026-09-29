@@ -22,6 +22,11 @@ leaves the game's close missing, like a game the feed doesn't list, and the slot
 any other missing close. Every such case is printed. Listings that match no game due now are
 ignored.
 
+Amendment 5 (reading 2) registers that rule, with one change: when the equally near listings are all
+priced at the same rule book with the same quote (the same total and the same prices), they are the
+same game listed twice, and the first listed is taken. A tie between different quotes, or between
+listings priced at neither book, still takes neither.
+
     python scripts/capture_close.py [--now 2026-10-01T23:50:00Z]
 """
 import argparse
@@ -50,14 +55,19 @@ def one_listing(due, feed):
     """The feed listing (its `listing` number; the parsed feed keeps no event id) each due game takes: same
     home and away teams, starting within NEAR of the scheduled kickoff. Among those, Pinnacle's price first,
     then DraftKings', then neither (fetch.RULE_BOOKS, as board.one_row_per_game ranks them), then the nearest
-    the kickoff. A tie between equally good listings takes none. Returns the (game_id, listing) pairs and a
-    note for each game with more than one listing of its teams, or none taken."""
+    the kickoff. A tie between equally good listings takes none, unless they are all priced at the same rule
+    book with the same quote (the same total and prices): then they are the same game listed twice, and the
+    first listed is taken (amendment 5, reading 2). Returns the (game_id, listing) pairs and a note for each
+    game with more than one listing of its teams, or none taken."""
     c = due[["game_id", "start_utc", "home_team", "away_team"]].merge(
-        feed[["listing", "home_team", "away_team", "commence_utc", "line_src"]], on=["home_team", "away_team"])
+        feed[["listing", "home_team", "away_team", "commence_utc", "line_src", "mkt_total", "mkt_under", "mkt_over"]],
+        on=["home_team", "away_team"])
     start = pd.to_datetime(c.commence_utc, utc=True, format="ISO8601", errors="coerce")   # unreadable: NaT
     c["gap"] = (start - c.start_utc).abs()
     c["rank"] = c.line_src.map({b: i for i, b in enumerate(fetch.RULE_BOOKS)}).fillna(len(fetch.RULE_BOOKS))
     c["seen"] = [f"starting {t}" if isinstance(t, str) else "no start time" for t in c.commence_utc]
+    c["quote"] = [(src, *(None if pd.isna(v) else float(v) for v in q))   # the rule book and its total and prices
+                  for src, *q in zip(c.line_src, c.mkt_total, c.mkt_under, c.mkt_over)]
     pick, notes = [], []
     for gid, x in c.groupby("game_id", sort=False):
         near = x[x.gap <= NEAR]
@@ -65,7 +75,13 @@ def one_listing(due, feed):
         best = near[near.gap == near.gap.min()]
         head = (f"{gid}: {len(x)} feed listing{'s' * (len(x) > 1)} of {x.away_team.iloc[0]} at "
                 f"{x.home_team.iloc[0]} ({'; '.join(x.seen)})")
-        if len(best) == 1:
+        if len(best) > 1 and best.line_src.isin(fetch.RULE_BOOKS).all() and best.quote.nunique() == 1:
+            first = best.sort_values("listing").iloc[0]
+            pick.append((gid, first.listing))
+            notes.append(f"{head}; kept the one {first.seen}, the first listed: the {len(best)} listings equally near "
+                         f"the kickoff carry the same {BOOK_NAME.get(first.line_src, first.line_src)} quote, so they "
+                         "are the same game listed twice")
+        elif len(best) == 1:
             pick.append((gid, best.listing.iloc[0]))
             if len(x) > 1:
                 src = best.line_src.iloc[0]

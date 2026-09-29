@@ -13,7 +13,7 @@ Scorer output (Rule B entry = the opening total, CLV to the close; Rule HT at th
 ledger rows: 2492; in the test: 2492
 
 RULE_B: 32 signals, 32 settled, 0 pending, 0 void (not graded)
-  record 21-10-1, units +9.09 (ROI +28.4% per bet placed); mean CLV +1.81 (95% CI +1.09 to +2.54; 32 of 32 bets have a primary close)
+  record 21-10-1, units +9.09 (ROI +28.4% per bet placed); mean CLV +1.81 (95% CI +0.83 to +2.80, grouped by game day over 14 days; plain, for reference: +1.09 to +2.54; 32 of 32 bets have a primary close)
   primary close: 32 from a later logged quote, 0 from the captured close, 0 with none (counted, left out of the CLV); 0 of the later quotes were logged more than 6 hours before kickoff
   secondary (amendment 2): no captured closes for these 32 bets
   decision (Rule B): INTERIM read, decides nothing. The decision comes after 40 signals or the 2026 regular season, whichever is later.

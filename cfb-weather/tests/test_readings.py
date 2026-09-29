@@ -542,7 +542,11 @@ def test_reading_3_a_damaged_record_stops_recording_not_the_scores(tmp_path):
         assert "Decision record: decisions.csv is unreadable" in r.stdout, name
         assert "Nothing will be recorded until it is repaired or restored from the ledgers branch" in r.stdout
         assert "40 signals, 40 settled" in r.stdout and "FINAL: KEEP" in r.stdout
-        assert "not recorded: the decision record is unreadable" in r.stdout
+        if name == "noheader":      # amendment 5, reading 3: a record that can still be read is printed as recorded
+            assert "recorded in decisions.csv on 2026-12-20T00:00:00Z" in r.stdout
+            assert "the file is damaged, and this record can still be read" in r.stdout
+        else:
+            assert "not recorded: the decision record is unreadable" in r.stdout
         assert (d / "decisions.csv").read_text() == content
 
 
@@ -821,3 +825,159 @@ def test_the_summaries_say_a_record_lost_before_its_copy_can_be_decided_again():
             "again") in section(3)
     assert "about 3 to 6 a week (rerun Sep 29; was 34, about 3 to 5 a week)" in (
         ROOT.parent / "strategy-research" / "README.md").read_text()
+
+
+# ================================================================== amendment 5 (Sep 29): the keep test and the record
+def amendment5_section(n):
+    text = (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 5 ")[1].split("\n## ")[0]
+    return " ".join(text.split(f"### {n}.")[1].split("\n### ")[0].split())
+
+
+def by_hand(clv, days):
+    """The registered interval computed here from its definition (amendment 5, reading 1), not with the scorer's
+    code: the plain mean m of the n CLVs; G game days; s_g the sum of (CLV - m) over day g; the variance of the mean
+    (G / (G - 1)) x sum(s_g^2) / n^2; m +/- t(0.975, G - 1) x its square root. Also the plain interval."""
+    from scipy import stats
+    x, d = np.asarray(clv, float), np.asarray(days, object)
+    x, d = x[~np.isnan(x)], d[~np.isnan(x)]
+    n, m = len(x), x.mean()
+    labels = sorted(set(d))
+    s = np.array([(x[d == g] - m).sum() for g in labels])
+    se = np.sqrt(len(labels) / (len(labels) - 1) * (s ** 2).sum() / n ** 2) if len(labels) > 1 else np.nan
+    half = stats.t.ppf(0.975, len(labels) - 1) * se if len(labels) > 1 else np.nan
+    plain = 1.96 * x.std(ddof=1) / np.sqrt(n)
+    return dict(mean_clv=m, ci_low=m - half, ci_high=m + half, n_clv=n, game_days=len(labels),
+                plain_ci_low=m - plain, plain_ci_high=m + plain)
+
+
+def keep_case(kicks, no_close=()):
+    """One Rule B signal per kickoff (UTC), entry 50.5, and a later quote 3 hours out that gives a varied CLV
+    (none for the signals in `no_close`): ledger rows, schedule, each signal's CLV and its Eastern game day."""
+    rows, s, clv = [], [], []
+    for i, k in enumerate(kicks):
+        c = ((7 * i) % 11 - 3) * 0.5                                             # CLVs from -1.5 to +3.5, repeated
+        rows.append(row(1 + i, k, ts(k) - pd.Timedelta(days=2), rule_b="SIGNAL", mkt_total=50.5))
+        if i not in no_close:
+            rows.append(row(1 + i, k, ts(k) - pd.Timedelta(hours=3), mkt_total=50.5 - c))
+        s.append(sched(1 + i, kick=k))
+        clv.append(np.nan if i in no_close else c)
+    days = [ts(k).tz_convert("America/New_York").strftime("%Y-%m-%d") for k in kicks]
+    return rows, s, clv, days
+
+
+def test_amendment_5_reading_1_the_keep_interval_is_grouped_by_game_day(tmp_path):
+    """Recomputed here from the registered definition on 1, 2, 5 and 20 game days, with equal CLVs, signals with no
+    close, and a late Saturday game (10:30 PM Eastern, 02:30 UTC Sunday) that groups with Saturday."""
+    late = (["2026-10-17T16:00Z"] * 8 + ["2026-10-18T02:30Z"] * 5 + ["2026-10-22T23:30Z"] * 6
+            + ["2026-10-24T00:00Z"] * 6 + ["2026-10-24T19:30Z"] * 8 + ["2026-10-31T19:30Z"] * 7)
+    cases = {
+        "one day": (["2026-10-10T19:00Z"] * 40, ()),
+        "two days": (["2026-10-10T19:00Z"] * 20 + ["2026-10-17T19:00Z"] * 20, (3, 17, 30)),
+        "five days, late Saturday": (late, (0, 9)),
+        "twenty days": ([ts("2026-10-03T19:30Z") + pd.Timedelta(days=3 * (i // 2)) for i in range(40)], (11,)),
+    }
+    for name, (kicks, none) in cases.items():
+        rows, s, clv, days = keep_case(kicks, none)
+        d = tmp_path / name.replace(" ", "_").replace(",", "")
+        out = rb(score(d, rows, s, "2026-12-20", "--test-record"))
+        nums = json.loads(pd.read_csv(d / "decisions.csv", dtype=str).numbers[0])
+        want = by_hand(clv, days)
+        assert (nums["game_days"], nums["n_clv"]) == (want["game_days"], want["n_clv"]), name
+        for k in ("mean_clv", "plain_ci_low", "plain_ci_high"):
+            assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
+        if want["game_days"] < 2:
+            assert nums["ci_low"] is None and nums["ci_high"] is None, name
+            assert ("FINAL: INCONCLUSIVE (the 40 signals that have a primary close kicked off on 1 game day, so there "
+                    "is no interval)") in out, name
+            assert "no interval: the signals with a primary close kicked off on 1 game day; plain, for reference" in out
+            continue
+        for k in ("ci_low", "ci_high"):
+            assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
+        assert (f"95% CI {want['ci_low']:+.2f} to {want['ci_high']:+.2f}, grouped by game day over "
+                f"{want['game_days']} days; plain, for reference: {want['plain_ci_low']:+.2f} to "
+                f"{want['plain_ci_high']:+.2f}") in out, name
+    # the late Saturday game is Sunday in UTC, where it would be a day of its own and change the interval
+    rows, s, clv, days = keep_case(late, (0, 9))
+    utc = [ts(k).strftime("%Y-%m-%d") for k in late]
+    assert days[8] == "2026-10-17" and utc[8] == "2026-10-18" and len(set(days)) == 5
+    assert not np.isclose(by_hand(clv, utc)["ci_low"], by_hand(clv, days)["ci_low"])
+    text = amendment5_section(1)
+    for words in ("grouped by the calendar date of the game's actual kickoff in Eastern time", "(G / (G - 1))",
+                  "97.5th percentile of Student's t with G - 1 degrees of freedom", "fewer than 2 game days",
+                  "plain, for reference"):
+        assert words in text, words
+
+
+def test_amendment_5_reading_1_the_interim_read_uses_the_grouped_interval(tmp_path):
+    rows, s, clv, days = keep_case([ts("2026-10-03T19:30Z") + pd.Timedelta(days=7 * (i // 3)) for i in range(12)])
+    out = rb(score(tmp_path, rows, s, "2026-11-01"))
+    assert "INTERIM read" in out and f"grouped by game day over {len(set(days))} days" in out
+
+
+def test_amendment_5_reading_3_a_time_with_no_time_zone_is_damage_not_a_crash(tmp_path):
+    """The second review of amendment 4 (its r2naive): a recorded time re-saved without its 'Z' passed the checks
+    and crashed the whole run with TypeError, so the day's report was lost."""
+    a, sa = rb_signals(40)
+    score(tmp_path, a, sa, "2026-12-20", "--test-record")
+    rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str, keep_default_na=False)
+    for col, naive in (("horizon_utc", "2026-12-13 08:00:00"), ("decided_utc", "2026-12-20T00:00:00")):
+        rec.assign(**{col: naive}).to_csv(tmp_path / "decisions.csv", index=False)
+        before = (tmp_path / "decisions.csv").read_text()
+        r = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(tmp_path / "ledger.csv"), "--schedule",
+                str(tmp_path / "sched.csv"), "--now", "2026-12-21", "--test-record")
+        assert r.returncode == 0, (col, r.stderr[-400:])
+        assert "Decision record: decisions.csv is unreadable (ValueError: a time with no time zone" in r.stdout, col
+        assert "RULE_HT:" in r.stdout and "Variants under forward test" in r.stdout, col
+        assert (tmp_path / "decisions.csv").read_text() == before, col
+    assert "a record whose time cannot be read as a UTC time is a damaged record" in amendment5_section(3)
+
+
+def test_amendment_5_reading_3_a_damaged_record_still_prints_the_decisions_it_can(tmp_path):
+    """The second review of amendment 4 (its r2probe T2): a second record line was cut mid-write; the next run
+    printed a fresh FINAL that contradicted the recorded KEEP and never showed it."""
+    a, sa = rb_signals(40)
+    score(tmp_path, a, sa, "2026-12-20", "--test-record")
+    whole = (tmp_path / "decisions.csv").read_text()
+    (tmp_path / "decisions.csv").write_text(whole + "CFB_RULE_HT,Rule HT,once, after the 2027")
+    before = (tmp_path / "decisions.csv").read_text()
+    worse = [dict(r, mkt_total=56.5) if r["rule_b"] != "SIGNAL" else r for r in a]    # a fresh computation: NOT KEPT
+    out = score(tmp_path, worse, sa, "2026-12-22", "--test-record")
+    assert "Decision record: decisions.csv is unreadable" in out
+    assert "1 recorded decision in it can still be read (CFB_RULE_B) and is printed below as recorded." in out
+    assert "FINAL: KEEP, on the 40 signals" in rb(out) and "recorded in decisions.csv on 2026-12-20T00:00:00Z" in rb(out)
+    assert "the file is damaged, and this record can still be read" in rb(out)
+    assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and "The recorded decision stands." in rb(out)
+    assert (tmp_path / "decisions.csv").read_text() == before                  # nothing is added to a damaged file
+    assert "any decision in it that can still be read is still printed as recorded" in amendment5_section(3)
+
+
+def test_amendment_5_reading_3_a_decision_missing_from_the_file_is_restored_from_the_copy(tmp_path):
+    """The second review of amendment 4 (its r2probe T3): the record was cut back to its header while the file
+    stayed, and the next real run decided NOT KEPT although the copy held KEEP."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # the nightly copy holds KEEP
+    whole = (fwd / "decisions.csv").read_text()
+    head = whole.splitlines()[0] + "\n"
+    (fwd / "decisions.csv").write_text(head)                                  # the file stays; its record is gone
+    season_file(proj, 2026, s, "2026-12-18T16:00")                            # stale: this run may not record
+    out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+    assert ("data/forward/decisions.csv doesn't hold 1 recorded decision that its copy on the ledgers branch "
+            "(origin/ledgers:cfb-weather/decisions.csv) holds (CFB_RULE_B), printed below as recorded") in out
+    assert "FINAL: KEEP" in rb(out) and "read from its copy on the ledgers branch (the file is missing it)" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and (fwd / "decisions.csv").read_text() == head
+    season_file(proj, 2026, s, "2026-12-21T16:00")                            # a real run restores it
+    out = on_clock(tmp_path, "2026-12-21T18:00", scorer).stdout
+    assert ("data/forward/decisions.csv was missing 1 recorded decision that its copy on the ledgers branch "
+            "(origin/ledgers:cfb-weather/decisions.csv) holds (CFB_RULE_B); restored from the copy") in out
+    assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out)
+    assert "restored from the ledgers branch" in rb(out)
+    assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out)
+    assert (fwd / "decisions.csv").read_text() == whole                        # the copy's line, as it was written
+    cut = head + whole.splitlines()[1][:60] + "\n"                            # damaged, and the copy holds it
+    (fwd / "decisions.csv").write_text(cut)
+    out = on_clock(tmp_path, "2026-12-21T19:00", scorer).stdout
+    assert "No recorded decision in it can still be read." in out
+    assert "FINAL: KEEP" in rb(out) and "read from its copy on the ledgers branch (the file is damaged)" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and (fwd / "decisions.csv").read_text() == cut
+    assert "is restored from the copy, never decided again" in amendment5_section(3)

@@ -1,0 +1,71 @@
+Keep test check (nfl-weather amendment 7, cfb-weather amendment 5): seed 29, 40,000 simulated paths per case; 0 variants
+Dependence used (day share, season share), from simulate_decisions.py section 4a:
+  CFB Rule B: realistic 0.11 + 0.00; stress 0.17 + 0.00
+  NFL Rule B: realistic 0.07 + 0.06; stress 0.16 + 0.06
+
+(1) The keep test at 40 bets: share of paths kept, plain interval and interval grouped by game day
+                                                              plain                         grouped                        
+scenario                                                    no edge half the move full move no edge half the move full move
+sport      case                                      volume                                                                
+CFB Rule B independent                               25      0.0276        0.4386    0.9430  0.0328        0.4162    0.9173
+                                                     40      0.0269        0.4352    0.9446  0.0314        0.4020    0.9077
+                                                     55      0.0272        0.4342    0.9422  0.0339        0.3988    0.8946
+           realistic dependence                      25      0.0524        0.4425    0.9099  0.0357        0.3434    0.8282
+                                                     40      0.0576        0.4480    0.9049  0.0367        0.3232    0.7898
+                                                     55      0.0629        0.4504    0.8972  0.0398        0.3132    0.7551
+           stress dependence                         25      0.0664        0.4467    0.8952  0.0383        0.3214    0.7850
+                                                     40      0.0726        0.4590    0.8924  0.0388        0.2961    0.7398
+                                                     55      0.0867        0.4627    0.8790  0.0436        0.2861    0.7026
+NFL Rule B independent                               25      0.0206        0.2609    0.8050  0.0201        0.2413    0.7640
+                                                     17      0.0212        0.2664    0.8059  0.0201        0.2440    0.7712
+           realistic dependence                      25      0.1027        0.3579    0.7084  0.0809        0.3032    0.6446
+                                                     17      0.0798        0.3441    0.7274  0.0644        0.2948    0.6690
+           stress dependence                         25      0.1098        0.3661    0.6996  0.0781        0.2844    0.6071
+                                                     17      0.0904        0.3452    0.7147  0.0660        0.2759    0.6308
+           realistic day share only (season share 0) 25      0.0274        0.2791    0.7860  0.0226        0.2299    0.7102
+                                                     17      0.0263        0.2789    0.7908  0.0210        0.2372    0.7289
+Median game days among the 40 bets: CFB Rule B 25: 16; CFB Rule B 40: 12; CFB Rule B 55: 10; NFL Rule B 17: 23; NFL Rule B 25: 20
+
+(2) Model-free, no edge, 40 bets: share of paths kept
+     sport                    case  blocks  paths  plain  grouped
+CFB Rule B    resampled whole days     143  40000 0.0460   0.0307
+NFL Rule B    resampled whole days     202  40000 0.0374   0.0160
+NFL Rule B resampled whole seasons      15  40000 0.0558   0.0323
+
+(3) NFL, the two looks of amendment 6 section 6, grouped interval: share of paths kept (keep_two_looks: every CLV keep criterion; the win rate against the close is not simulated)
+ volume                 case      scenario  paths  p_look1  median_bets_pooled  keep_two_looks  keep_interval_only  keep_plain_interval_only
+     17          independent       no edge  40000      0.0                37.0          0.0192              0.0196                    0.0203
+     17          independent half the move  40000      0.0                37.0          0.2210              0.2250                    0.2430
+     17          independent     full move  40000      0.0                37.0          0.7140              0.7206                    0.7596
+     17 realistic dependence       no edge  40000      0.0                37.0          0.0709              0.0747                    0.0914
+     17 realistic dependence half the move  40000      0.0                37.0          0.2744              0.2880                    0.3355
+     17 realistic dependence     full move  40000      0.0                37.0          0.6109              0.6298                    0.6835
+     17    stress dependence       no edge  40000      0.0                37.0          0.0701              0.0737                    0.0999
+     17    stress dependence half the move  40000      0.0                37.0          0.2660              0.2772                    0.3488
+     17    stress dependence     full move  40000      0.0                37.0          0.5883              0.6054                    0.6844
+     25          independent       no edge  40000      0.0                53.0          0.0201              0.0206                    0.0197
+     25          independent half the move  40000      0.0                53.0          0.3203              0.3252                    0.3441
+     25          independent     full move  40000      0.0                53.0          0.8763              0.8808                    0.9014
+     25 realistic dependence       no edge  40000      0.0                53.0          0.0889              0.0966                    0.1170
+     25 realistic dependence half the move  40000      0.0                53.0          0.3440              0.3655                    0.4130
+     25 realistic dependence     full move  40000      0.0                53.0          0.7014              0.7292                    0.7751
+     25    stress dependence       no edge  40000      0.0                54.0          0.0861              0.0930                    0.1260
+     25    stress dependence half the move  40000      0.0                54.0          0.3261              0.3438                    0.4202
+     25    stress dependence     full move  40000      0.0                54.0          0.6808              0.7055                    0.7747
+
+Headline, no edge, 40 bets (range over the season volumes):
+  CFB Rule B, independent: plain 2.7 to 2.8%, grouped 3.1 to 3.4%
+  CFB Rule B, realistic dependence: plain 5.2 to 6.3%, grouped 3.6 to 4.0%
+  CFB Rule B, stress dependence: plain 6.6 to 8.7%, grouped 3.8 to 4.4%
+  NFL Rule B, independent: plain 2.1 to 2.1%, grouped 2.0 to 2.0%
+  NFL Rule B, realistic dependence: plain 8.0 to 10.3%, grouped 6.4 to 8.1%
+  NFL Rule B, stress dependence: plain 9.0 to 11.0%, grouped 6.6 to 7.8%
+  CFB Rule B, model-free resampled whole days: plain 4.6%, grouped 3.1%
+  NFL Rule B, model-free resampled whole days: plain 3.7%, grouped 1.6%
+  NFL Rule B, model-free resampled whole seasons: plain 5.6%, grouped 3.2%
+  NFL two looks, 17 signals a season, independent: 1.9% (look 1 reached in 0.0% of paths)
+  NFL two looks, 17 signals a season, realistic dependence: 7.1% (look 1 reached in 0.0% of paths)
+  NFL two looks, 17 signals a season, stress dependence: 7.0% (look 1 reached in 0.0% of paths)
+  NFL two looks, 25 signals a season, independent: 2.0% (look 1 reached in 0.0% of paths)
+  NFL two looks, 25 signals a season, realistic dependence: 8.9% (look 1 reached in 0.0% of paths)
+  NFL two looks, 25 signals a season, stress dependence: 8.6% (look 1 reached in 0.0% of paths)

@@ -150,6 +150,52 @@ def test_draftkings_beats_a_listing_priced_at_neither(tmp_path, monkeypatch, cap
     assert "kept the one starting 2026-11-28T20:40:00Z, the nearest the kickoff priced at DraftKings" in out
 
 
+# ------------------------------------------------------------------ amendment 5, reading 2: the same game listed twice
+# Two listings equally near the kickoff, priced at the same rule book with the same quote (the same total and
+# prices), are the same game listed twice: the first listed is taken. Before, it was a tie and the close was lost
+# (the second review of PR 62: main recorded Georgia's 55.5 there, PR 62 recorded nothing).
+@pytest.mark.parametrize("book", ["pinnacle", "draftkings"])
+@pytest.mark.parametrize("extra_first", [False, True])
+def test_two_listings_with_the_same_rule_book_quote_are_one_game_listed_twice(tmp_path, monkeypatch, capsys, book,
+                                                                             extra_first):
+    quote = RIGHT[book]
+    plain = listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", {book: quote}, eid="plain")
+    extra = listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", {book: quote, "fanduel": (49.0, -108, -112)},
+                    eid="extra")
+    events = ([extra, plain] if extra_first else [plain, extra]) + [listing("Georgia", "Georgia Tech",
+                                                                            "2026-11-28T20:30:00Z", UGA)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    rows = pd.read_csv(tmp_path / "data" / "forward" / "closes.csv")
+    assert list(rows.game_id) == [401, 402] and list(rows.line_src) == [book, "draftkings"]     # one row each
+    assert list(rows.close_total) == [48.5, 55.5] and list(rows.close_under) == [quote[1], -112]
+    assert state == {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}   # one call, complete
+    name = {"pinnacle": "Pinnacle", "draftkings": "DraftKings"}[book]
+    assert (f"kept the one starting 2026-11-28T20:30:00Z, the first listed: the 2 listings equally near the kickoff "
+            f"carry the same {name} quote, so they are the same game listed twice") in out
+
+
+@pytest.mark.parametrize("other", [{"pinnacle": (48.5, -110, -110)}, {"pinnacle": (49.5, -105, -115)}],
+                         ids=["prices", "total"])
+def test_equally_near_listings_whose_quotes_differ_are_still_a_tie(tmp_path, monkeypatch, capsys, other):
+    events = [listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", RIGHT),
+              listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", other, eid="relisted"),
+              listing("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert text.splitlines()[1] == ",401,2026-11-28T20:30:00Z,Alabama,Auburn,,,,"
+    assert "2 are equally good and equally near the kickoff, so none is kept and the close is missing" in out
+    assert state == {"captured": [], "tries": {"2026-11-28T20:30Z": 1}}
+
+
+def test_equally_near_listings_priced_at_neither_book_are_still_a_tie(tmp_path, monkeypatch, capsys):
+    """Neither carries a rule-book quote, so neither gives a close: the tie stands."""
+    events = [listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", FD_ONLY),
+              listing("Alabama", "Auburn", "2026-11-28T20:30:00Z", FD_ONLY, eid="relisted"),
+              listing("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)]
+    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    assert text.splitlines()[1] == ",401,2026-11-28T20:30:00Z,Alabama,Auburn,,,,"
+    assert "2 are equally good and equally near the kickoff" in out
+
+
 # ------------------------------------------------------------------ a malformed start time costs only its own game
 def test_a_listing_with_no_start_time_leaves_only_its_own_game_missing(tmp_path, monkeypatch, capsys):
     events = [listing("Alabama", "Auburn", None, RIGHT, eid="nostart"),

@@ -1,0 +1,73 @@
+section,sport,case,volume,scenario,paths,plain,grouped,median_days,blocks,p_look1,median_bets_pooled,keep_two_looks,keep_interval_only,keep_plain_interval_only
+keep test at 40 bets,CFB Rule B,independent,25,no edge,40000,0.0277,0.0328,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,25,half the move,40000,0.4385,0.4162,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,25,full move,40000,0.9430,0.9173,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,40,no edge,40000,0.0269,0.0314,14.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,40,half the move,40000,0.4352,0.4020,14.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,40,full move,40000,0.9446,0.9077,14.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,55,no edge,40000,0.0272,0.0339,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,55,half the move,40000,0.4341,0.3988,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,independent,55,full move,40000,0.9422,0.8946,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,25,no edge,40000,0.0524,0.0357,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,25,half the move,40000,0.4425,0.3434,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,25,full move,40000,0.9099,0.8283,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,40,no edge,40000,0.0575,0.0367,12.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,40,half the move,40000,0.4480,0.3232,12.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,40,full move,40000,0.9049,0.7898,12.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,55,no edge,40000,0.0629,0.0398,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,55,half the move,40000,0.4504,0.3132,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,realistic dependence,55,full move,40000,0.8972,0.7551,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,25,no edge,40000,0.0664,0.0383,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,25,half the move,40000,0.4467,0.3214,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,25,full move,40000,0.8952,0.7851,16.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,40,no edge,40000,0.0726,0.0388,12.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,40,half the move,40000,0.4591,0.2961,12.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,40,full move,40000,0.8924,0.7398,12.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,55,no edge,40000,0.0867,0.0436,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,55,half the move,40000,0.4627,0.2861,10.0000,,,,,,
+keep test at 40 bets,CFB Rule B,stress dependence,55,full move,40000,0.8790,0.7026,10.0000,,,,,,
+keep test at 40 bets,NFL Rule B,independent,17,no edge,40000,0.0212,0.0201,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,independent,17,half the move,40000,0.2664,0.2440,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,independent,17,full move,40000,0.8059,0.7712,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,independent,25,no edge,40000,0.0205,0.0201,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,independent,25,half the move,40000,0.2609,0.2413,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,independent,25,full move,40000,0.8050,0.7641,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic dependence,17,no edge,40000,0.0798,0.0644,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic dependence,17,half the move,40000,0.3441,0.2948,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic dependence,17,full move,40000,0.7274,0.6690,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic dependence,25,no edge,40000,0.1027,0.0809,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic dependence,25,half the move,40000,0.3579,0.3032,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic dependence,25,full move,40000,0.7085,0.6446,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,stress dependence,17,no edge,40000,0.0904,0.0660,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,stress dependence,17,half the move,40000,0.3453,0.2759,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,stress dependence,17,full move,40000,0.7147,0.6308,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,stress dependence,25,no edge,40000,0.1098,0.0781,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,stress dependence,25,half the move,40000,0.3661,0.2844,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,stress dependence,25,full move,40000,0.6996,0.6071,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic day share only (season share 0),17,no edge,40000,0.0263,0.0210,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic day share only (season share 0),17,half the move,40000,0.2789,0.2371,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic day share only (season share 0),17,full move,40000,0.7908,0.7289,23.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic day share only (season share 0),25,no edge,40000,0.0274,0.0226,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic day share only (season share 0),25,half the move,40000,0.2791,0.2299,20.0000,,,,,,
+keep test at 40 bets,NFL Rule B,realistic day share only (season share 0),25,full move,40000,0.7860,0.7102,20.0000,,,,,,
+"model-free, no edge, 40 bets",CFB Rule B,resampled whole days,,no edge,40000,0.0460,0.0307,,143,,,,,
+"model-free, no edge, 40 bets",NFL Rule B,resampled whole days,,no edge,40000,0.0374,0.0160,,202,,,,,
+"model-free, no edge, 40 bets",NFL Rule B,resampled whole seasons,,no edge,40000,0.0558,0.0323,,15,,,,,
+NFL two looks,NFL Rule B,independent,17,no edge,40000,,,,,0.0000,37.0000,0.0192,0.0196,0.0203
+NFL two looks,NFL Rule B,independent,17,half the move,40000,,,,,0.0000,37.0000,0.2210,0.2250,0.2429
+NFL two looks,NFL Rule B,independent,17,full move,40000,,,,,0.0000,37.0000,0.7140,0.7206,0.7596
+NFL two looks,NFL Rule B,realistic dependence,17,no edge,40000,,,,,0.0000,37.0000,0.0709,0.0747,0.0914
+NFL two looks,NFL Rule B,realistic dependence,17,half the move,40000,,,,,0.0000,37.0000,0.2744,0.2879,0.3355
+NFL two looks,NFL Rule B,realistic dependence,17,full move,40000,,,,,0.0000,37.0000,0.6109,0.6298,0.6835
+NFL two looks,NFL Rule B,stress dependence,17,no edge,40000,,,,,0.0000,37.0000,0.0701,0.0737,0.0999
+NFL two looks,NFL Rule B,stress dependence,17,half the move,40000,,,,,0.0000,37.0000,0.2660,0.2772,0.3488
+NFL two looks,NFL Rule B,stress dependence,17,full move,40000,,,,,0.0000,37.0000,0.5883,0.6055,0.6844
+NFL two looks,NFL Rule B,independent,25,no edge,40000,,,,,0.0000,53.0000,0.0201,0.0206,0.0197
+NFL two looks,NFL Rule B,independent,25,half the move,40000,,,,,0.0000,53.0000,0.3203,0.3252,0.3441
+NFL two looks,NFL Rule B,independent,25,full move,40000,,,,,0.0000,53.0000,0.8763,0.8809,0.9014
+NFL two looks,NFL Rule B,realistic dependence,25,no edge,40000,,,,,0.0000,53.0000,0.0889,0.0966,0.1170
+NFL two looks,NFL Rule B,realistic dependence,25,half the move,40000,,,,,0.0000,53.0000,0.3441,0.3655,0.4129
+NFL two looks,NFL Rule B,realistic dependence,25,full move,40000,,,,,0.0000,53.0000,0.7014,0.7291,0.7751
+NFL two looks,NFL Rule B,stress dependence,25,no edge,40000,,,,,0.0000,54.0000,0.0861,0.0930,0.1260
+NFL two looks,NFL Rule B,stress dependence,25,half the move,40000,,,,,0.0000,54.0000,0.3261,0.3438,0.4203
+NFL two looks,NFL Rule B,stress dependence,25,full move,40000,,,,,0.0000,54.0000,0.6808,0.7055,0.7747
