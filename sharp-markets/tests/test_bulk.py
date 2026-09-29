@@ -1,0 +1,283 @@
+"""The 5M-month bulk puller (markets.oddsapi.bulk), against mocked Odds API responses. No network."""
+import csv
+import json
+from argparse import Namespace
+from datetime import datetime, timezone
+
+import pytest
+
+from markets.cache import RawCache, cache_key
+from markets.oddsapi import bulk
+from markets.oddsapi.normalize import outcome_rows
+
+UTC = timezone.utc
+NOW = datetime(2026, 9, 29, 12, tzinfo=UTC)
+CFG_YAML = """
+books:
+  us10: [pinnacle, lowvig, betonlineag, draftkings, fanduel, betmgm, williamhill_us, fanatics, betrivers, espnbet]
+  sharp3: [pinnacle, lowvig, betonlineag]
+featured: h2h,spreads,totals
+sports:
+  americanfootball_nfl:
+    history_from: 2020-06-06
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-09-08, to: 2020-09-16}
+      - {label: "2024", from: 2024-09-01, to: 2024-09-10}
+      - {label: "2026", from: 2026-09-01, to: 2027-02-20, sealed: true}
+  basketball_nba:
+    history_from: 2020-06-27
+    sweep_every_days: 1
+    windows:
+      - {label: "2025-26", from: 2025-10-20, to: 2025-10-23}
+pulls:
+  F1: {kind: featured, sports: [americanfootball_nfl], schedule: daily_close, books: us10}
+  F3: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [24, 0],
+       markets: "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_kicking_points,player_field_goals"}
+  F4: {kind: featured, sports: [americanfootball_nfl], schedule: hourly, books: us10, only_seasons: ["2024"]}
+  N1: {kind: featured, sports: [basketball_nba], schedule: 5min, lookback_hours: 2, after_minutes: 15,
+       books: sharp3, markets: h2h, cache_as: {sport: nba, source: oddsapi_hist}}
+"""
+
+
+def t(s):
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+@pytest.fixture
+def cfg(tmp_path):
+    p = tmp_path / "odds5m.yaml"
+    p.write_text(CFG_YAML)
+    return bulk.load_config(p)
+
+
+def game(cfg, gid, kick, sport="americanfootball_nfl"):
+    return bulk._label(cfg, {"id": gid, "sport": sport, "commence_time": t(kick)})
+
+
+# ---------------------------------------------------------------- mocked HTTP
+class Resp:
+    def __init__(self, status, body, headers):
+        self.status_code, self.text = status, json.dumps(body) if not isinstance(body, str) else body
+        self.headers = headers
+
+    def json(self):
+        return json.loads(self.text)
+
+
+KICKS = {"ev1": "2024-09-06T00:20:00Z", "ev26": "2026-09-10T00:20:00Z"}
+
+
+class FakeOddsApi:
+    """Routes GETs like the Odds API: bills 10 x markets returned x regions for odds, 1 for /events."""
+
+    def __init__(self, remaining=5_000_000, overbill=0, status=200):
+        self.calls, self.remaining, self.overbill, self.status = [], remaining, overbill, status
+
+    def get(self, url, params=None, timeout=None):
+        self.calls.append((url, dict(params)))
+        p = dict(params)
+        if url.endswith("/sports"):
+            return self._r(200, [{"key": "americanfootball_nfl"}], 0)
+        if self.status != 200:
+            return self._r(self.status, {"message": "nope"}, 0)
+        at = p["date"]
+        if url.endswith("/events"):
+            kick = "2024-09-06T00:20:00Z" if at < "2024-09-04" else "2024-09-06T00:25:00Z"   # a moved kickoff
+            data = [{"id": "ev1", "sport_key": "americanfootball_nfl", "commence_time": kick,
+                     "home_team": "Kansas City Chiefs", "away_team": "Baltimore Ravens"}] if "2024" in at < kick else []
+            if "2020" in at:
+                data = [{"id": "ev20", "commence_time": "2020-09-11T00:20:00Z", "home_team": "A", "away_team": "B"}]
+            return self._r(200, {"timestamp": at, "data": data}, 1 if data else 0)
+        books = p["bookmakers"].split(",")
+        markets = p["markets"].split(",")
+        returned = markets[:2] if "player_pass_yds" in markets else markets        # props: only two markets quoted
+        eid = url.split("/events/")[1].split("/")[0] if "/events/" in url else "ev1"
+        ev = {"id": eid, "commence_time": KICKS.get(eid, KICKS["ev1"]), "home_team": "Kansas City Chiefs",
+              "away_team": "Baltimore Ravens",
+              "bookmakers": [{"key": b, "markets": [{"key": m, "outcomes": [
+                  {"name": "Over", "description": "Patrick Mahomes", "point": 245.5, "price": 1.87},
+                  {"name": "Under", "description": "Patrick Mahomes", "point": 245.5, "price": 1.95}]}
+                  for m in returned]} for b in books if b != "lowvig"]}
+        ts = bulk.iso(t(at) - bulk.FIVE) if t(at).minute % 10 == 5 else at      # older snapshots: 10 minutes apart
+        body = {"timestamp": ts, "previous_timestamp": None, "next_timestamp": None,
+                "data": ev if "/events/" in url else [ev]}
+        cost = 10 * len(returned) * bulk.regions(books) + self.overbill
+        return self._r(200, body, cost)
+
+    def _r(self, status, body, cost):
+        self.remaining -= cost
+        return Resp(status, body, {"X-Requests-Last": str(cost), "X-Requests-Remaining": str(self.remaining),
+                                   "X-Requests-Used": str(5_000_000 - self.remaining)})
+
+
+def client(tmp_path, api=None, **kw):
+    return bulk.BulkClient(RawCache(tmp_path / "raw"), max_credits=kw.pop("max_credits", 10_000),
+                           session=api or FakeOddsApi(), api_key="SECRETKEY", rate_per_sec=1e6, max_retries=0, **kw)
+
+
+def args(**kw):
+    base = dict(pull="all", sports=None, week_of="auto", confirm=True, max_credits=100_000, floor=0, rate=1e6)
+    return Namespace(**{**base, **kw})
+
+
+# ---------------------------------------------------------------- schedules
+def test_close_is_the_last_grid_point_five_minutes_before_kickoff():
+    assert bulk.close_time(t("2024-09-08T17:00:00Z")) == t("2024-09-08T16:55:00Z")
+    assert bulk.close_time(t("2024-09-08T17:03:00Z")) == t("2024-09-08T16:55:00Z")
+    assert bulk.event_snapshots(t("2024-09-08T17:00:00Z"), [24, 2, 0]) == [
+        t("2024-09-07T17:00:00Z"), t("2024-09-08T15:00:00Z"), t("2024-09-08T16:55:00Z")]
+
+
+def test_daily_close_matches_the_budget_grid():
+    # odds_budget.grid(at=16): 16:00 UTC inside [kick - 7d, kick], plus the close
+    pts = bulk.game_snapshots(t("2024-09-08T17:00:00Z"), {"schedule": "daily_close"})
+    assert pts[0] == t("2024-09-02T16:00:00Z") and pts[-2:] == [t("2024-09-08T16:00:00Z"), t("2024-09-08T16:55:00Z")]
+    assert len(pts) == 8
+    hourly = bulk.game_snapshots(t("2024-09-08T17:00:00Z"), {"schedule": "hourly"})
+    assert len(hourly) == 7 * 24 + 1 and hourly[0] == t("2024-09-01T17:00:00Z")
+    five = bulk.game_snapshots(t("2025-10-21T23:30:00Z"), {"schedule": "5min", "lookback_hours": 1, "after_minutes": 15})
+    assert five[0] == t("2025-10-21T22:30:00Z") and five[-1] == t("2025-10-21T23:45:00Z") and len(five) == 16
+
+
+def test_build_schedule_uses_last_sighting_before_kickoff(cfg):
+    bodies = [{"timestamp": "2024-09-02T06:00:00Z", "data": [
+                  {"id": "a", "commence_time": "2024-09-06T00:20:00Z", "home_team": "H", "away_team": "A"}]},
+              {"timestamp": "2024-09-04T06:00:00Z", "data": [
+                  {"id": "a", "commence_time": "2024-09-06T00:25:00Z", "home_team": "H", "away_team": "A"}]},
+              {"timestamp": "2026-09-09T06:00:00Z", "data": [
+                  {"id": "b", "commence_time": "2026-09-11T00:20:00Z", "home_team": "H", "away_team": "A"}]}]
+    games = bulk.build_schedule(cfg, "americanfootball_nfl", bodies)
+    a, b = games
+    assert a["commence_time"] == t("2024-09-06T00:25:00Z") and a["first_seen"] == t("2024-09-02T06:00:00Z")
+    assert (a["season"], a["sealed"]) == ("2024", False) and (b["season"], b["sealed"]) == ("2026", True)
+
+
+def test_plan_unions_snapshots_and_filters_seasons(cfg):
+    sched = {"americanfootball_nfl": [game(cfg, "g1", "2024-09-06T00:20:00Z"), game(cfg, "g2", "2024-09-06T00:20:00Z"),
+                                      game(cfg, "g3", "2024-09-08T17:00:00Z"), game(cfg, "g4", "2026-09-10T00:20:00Z"),
+                                      game(cfg, "g5", "2026-10-04T17:00:00Z"),       # not played yet
+                                      game(cfg, "g6", "2020-09-11T00:20:00Z")]}
+    f1 = bulk.plan_calls(cfg, "F1", sched, now=NOW)
+    times = [c.at for c in f1]
+    assert len(times) == len(set(times))                          # one call per snapshot, shared by g1 and g2
+    assert not any(c.at > NOW for c in f1)
+    assert {c.expected for c in f1} == {30}
+    assert all(c.sealed == (c.at.year == 2026) for c in f1)
+    assert t("2026-10-04T16:55:00Z") not in times
+    f3 = bulk.plan_calls(cfg, "F3", sched, now=NOW)
+    assert {c.event_id for c in f3} == {"g1", "g2", "g3", "g4"}   # 2020 is before additional markets (2023-05-03)
+    assert {c.expected for c in f3} == {60} and len(f3) == 8
+    f4 = bulk.plan_calls(cfg, "F4", sched, now=NOW)
+    assert f4 and all(c.at.year == 2024 for c in f4)
+    assert not any(c.sealed for c in f4)                           # only_seasons: 2024
+    wk = bulk.plan_calls(cfg, "F3", sched, now=NOW, week_of="auto")
+    assert {c.event_id for c in wk} == {"g1", "g2", "g3"}          # first week of the latest unsealed season
+
+
+def test_n1_shares_the_nba_pipeline_cache(cfg):
+    from markets.oddsapi.client import BASE_URL
+    sched = {"basketball_nba": [game(cfg, "n1", "2025-10-21T23:30:00Z", "basketball_nba")]}
+    calls = bulk.plan_calls(cfg, "N1", sched, now=NOW)
+    c = calls[0]
+    assert (c.cache_sport, c.source, c.expected) == ("nba", "oddsapi_hist", 10)
+    # the params OddsApiClient.historical_odds sends for sport nba (config/sports/nba.yaml)
+    theirs = {"bookmakers": "pinnacle,lowvig,betonlineag", "markets": "h2h", "oddsFormat": "decimal",
+              "dateFormat": "iso", "date": c.at.strftime("%Y-%m-%dT%H:%M:%SZ")}
+    assert c.key == cache_key("oddsapi_hist", f"{BASE_URL}/historical/sports/basketball_nba/odds", theirs)
+
+
+# ---------------------------------------------------------------- client safety
+def _one_call(cfg):
+    sched = {"americanfootball_nfl": [game(cfg, "ev1", "2024-09-06T00:20:00Z")]}
+    return bulk.plan_calls(cfg, "F3", sched, now=NOW)
+
+
+def test_fetch_is_cache_first_logged_and_keeps_the_key_out(cfg, tmp_path):
+    api = FakeOddsApi()
+    c = client(tmp_path, api)
+    res = bulk.run_calls(c, _one_call(cfg))
+    assert res["fetched"] == 2 and res["spent"] == 40 and res["stopped"] is None     # 2 of 6 prop markets quoted
+    again = bulk.run_calls(client(tmp_path, api), _one_call(cfg))
+    assert again["todo"] == 0 and len(api.calls) == 2                                 # resumable, no refetch
+    rows = list(csv.DictReader((tmp_path / "raw/_manifest/oddsapi_manifest.csv").open()))
+    assert len(rows) == 2 and rows[0]["credits_last"] == "20" and rows[0]["expected_credits"] == "60"
+    assert rows[0]["returned_ts"] and rows[0]["requested_ts"] and len(rows[0]["sha256"]) == 64
+    assert rows[0]["event_id"] == "ev1" and rows[0]["sealed"] == "False"
+    stored = "".join(p.read_bytes().decode("latin-1") for p in (tmp_path / "raw").rglob("*") if p.is_file())
+    assert "SECRETKEY" not in stored
+    assert list((tmp_path / "raw/americanfootball_nfl/oddsapi/hist_event_odds").glob("*/*.parquet"))
+
+
+def test_budget_and_floor_stop_before_the_call(cfg, tmp_path):
+    api = FakeOddsApi()
+    res = bulk.run_calls(client(tmp_path, api, max_credits=70), _one_call(cfg))
+    assert res["fetched"] == 1 and "run budget" in res["stopped"]                     # 20 spent + up to 60 > 70
+    api2 = FakeOddsApi(remaining=1_000)
+    c = client(tmp_path / "b", api2, floor=950)
+    c.account()
+    res = bulk.run_calls(c, _one_call(cfg))
+    assert res["fetched"] == 0 and "floor" in res["stopped"]
+
+
+def test_circuit_breaker_on_overbilling(cfg, tmp_path):
+    api = FakeOddsApi(overbill=50)                                                    # 20 + 50 = 70 > 60
+    res = bulk.run_calls(client(tmp_path, api), _one_call(cfg))
+    assert res["fetched"] == 1 and "billed 70" in res["stopped"]
+
+
+def test_key_rejected_and_repeated_errors_stop(cfg, tmp_path):
+    res = bulk.run_calls(client(tmp_path, FakeOddsApi(status=401)), _one_call(cfg))
+    assert "401" in res["stopped"]
+    many = bulk.plan_calls(cfg, "F1", {"americanfootball_nfl": [game(cfg, "ev1", "2024-09-06T00:20:00Z")]}, now=NOW)
+    res = bulk.run_calls(client(tmp_path / "b", FakeOddsApi(status=422), max_errors=3), many)
+    assert res["fetched"] == 3 and "3 errors in a row" in res["stopped"]
+    assert not list((tmp_path / "b/raw").rglob("*.parquet"))                           # errors are not cached
+
+
+def test_dry_run_calls_nothing(cfg, tmp_path):
+    api = FakeOddsApi()
+    out = bulk.stage_probe(cfg, RawCache(tmp_path), args(confirm=False), now=NOW, session=api)
+    assert out["sweep_calls"] > 0 and api.calls == []
+    with pytest.raises(SystemExit):
+        bulk._client(RawCache(tmp_path), args(max_credits=0), session=api)
+
+
+# ---------------------------------------------------------------- stages end to end
+def test_probe_then_week_then_check(cfg, tmp_path, monkeypatch):
+    monkeypatch.setenv("ODDS_API_KEY", "SECRETKEY")
+    cache = RawCache(tmp_path)
+    api = FakeOddsApi()
+    out = bulk.stage_probe(cfg, cache, args(sports=["americanfootball_nfl"]), now=NOW, session=api)
+    assert out["stopped"] is None and out["games"]["americanfootball_nfl"]["2024"] == 1
+    sched = bulk.load_schedules(cfg, tmp_path, ["americanfootball_nfl"])["americanfootball_nfl"]
+    assert [g["commence_time"] for g in sched if g["id"] == "ev1"] == [t("2024-09-06T00:25:00Z")]  # moved kickoff
+    probes = {p["probe"]: p for p in out["probes"]}
+    props = probes["event odds NFL props, 10 books"]
+    assert props["billed"] == "20" and props["billing_rule"].endswith("= 20")
+    assert "lowvig" not in probes["featured NFL 2020, sharp books"]["books_returned"]
+    week = bulk.stage_pull(cfg, cache, args(pull="F1,F3", sports=["americanfootball_nfl"]), week=True, now=NOW, session=api)
+    assert [w["pull"] for w in week] == ["F1", "F3"] and all(w["stopped"] is None for w in week)
+    cov = bulk.stage_check(cfg, cache, args(pull="F3"), now=NOW)[0]
+    assert cov["missing_books"] == ["lowvig"] and set(cov["markets"]) == {"player_pass_yds", "player_rush_yds"}
+
+
+def test_load_rows_leaves_sealed_seasons_out(cfg, tmp_path):
+    sched = {"americanfootball_nfl": [game(cfg, "ev1", "2024-09-06T00:20:00Z"), game(cfg, "ev26", "2026-09-10T00:20:00Z")]}
+    calls = bulk.plan_calls(cfg, "F3", sched, now=NOW)
+    c = client(tmp_path)
+    assert bulk.run_calls(c, calls)["fetched"] == 4
+    rows = bulk.load_rows(cfg, calls, c.cache)
+    assert rows and {r["odds_event_id"] for r in rows} == {"ev1"}
+    sealed = bulk.load_rows(cfg, calls, c.cache, include_sealed=True)
+    assert {r["odds_event_id"] for r in sealed} == {"ev1", "ev26"}
+
+
+def test_normalizer_keeps_point_and_description():
+    body = {"timestamp": "2024-09-05T23:55:00Z", "data": {"id": "e", "commence_time": "2024-09-06T00:20:00Z",
+            "home_team": "H", "away_team": "A", "bookmakers": [{"key": "draftkings", "markets": [
+                {"key": "player_pass_yds", "outcomes": [{"name": "Over", "description": "P. Mahomes", "point": 245.5,
+                                                         "price": 1.87}]}]}]}}
+    (r,) = outcome_rows(body, "2024-09-06T00:00:00Z")
+    assert (r["point"], r["description"], r["price_decimal"], r["market_key"]) == ("245.5", "P. Mahomes", "1.87",
+                                                                                    "player_pass_yds")

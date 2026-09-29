@@ -19,6 +19,7 @@ uv run markets odds-pull --start 2026-01-05 --end 2026-01-11 --confirm --max-cre
 uv run markets build                                           # raw -> DuckDB tables, matching, analysis grid
 uv run markets backtest --start 2026-01-05 --end 2026-01-11    # H1, H2, lead-lag -> reports/
 uv run markets h3-kaggle                                       # early H3 test on MGM splits
+uv run markets odds5m plan                                     # 5M month: bulk multi-sport pulls (docs/ODDS5M_DAY_ONE.md)
 ```
 
 ## Module map
@@ -29,7 +30,7 @@ uv run markets h3-kaggle                                       # early H3 test o
 | `markets/sport.py` | sport config + team alias resolution |
 | `markets/games.py` | Kalshi events -> games, exclusions, anomalies |
 | `markets/kalshi/` | GET-only client, discovery, candles (chunked), trades |
-| `markets/oddsapi/` | historical/live odds client with credit budget, snapshot scheduler |
+| `markets/oddsapi/` | historical/live odds client with credit budget, snapshot scheduler; `bulk.py` is the 5M-month puller (config `config/odds5m.yaml`: /events schedules, featured and event-odds pulls, manifest, circuit breaker, sealed holdout) |
 | `markets/fees.py`, `markets/devig.py` | Kalshi fee model, de-vig + multi-book blend |
 | `markets/build/` | DuckDB loaders, matching, SQL views |
 | `markets/analysis/` | fills, CLV, H1, H2, lead-lag, reports |
