@@ -112,6 +112,40 @@ def test_free_plan_or_low_quota_skips_the_paid_call_but_keeps_kalshi(env, monkey
     assert c.tick(now + timedelta(minutes=10))["odds_status"] == 200
 
 
+def test_quota_records_carry_the_key_fingerprint_and_other_keys_are_ignored(env):
+    """#33 item 2: the shared quota file says which key made the call (a fingerprint, never the key)."""
+    c, odds, kalshi, tmp = env
+    now = TIP - timedelta(hours=3)
+    paid(tmp, now=now)                                                       # no fingerprint: still read
+    assert c.tick(now)["odds_status"] == 200
+    s = json.loads((tmp / "quota.json").read_text())
+    assert s["key"] == col.fingerprint("SECRET") and "SECRET" not in (tmp / "quota.json").read_text()
+    other = dict(s, key=col.fingerprint("ANOTHER"))
+    (tmp / "quota.json").write_text(json.dumps(other))                       # a paid plan, but another key's
+    row = c.tick(now + timedelta(minutes=5))
+    assert row["odds_status"] == "skipped" and "paid plan" in row["note"]
+
+def test_a_future_last_tick_counts_as_due(env):
+    """#33 item 3: state from a --now run in the future must not stop real ticks until then."""
+    c, odds, kalshi, tmp = env
+    now = TIP - timedelta(hours=3)
+    paid(tmp, now=now)
+    (tmp / "collector" / "nba").mkdir(parents=True)
+    (tmp / "collector" / "nba" / "state.json").write_text(json.dumps({"last_tick": "2026-12-25T00:00:00Z"}))
+    assert c.tick(now)["action"] == "collected"
+
+
+def test_dry_run_spends_nothing_and_writes_no_quota(tmp_path, monkeypatch):
+    """#33 item 3: `collect --now` runs dry: Kalshi and the free schedule only, no paid call, no quota write."""
+    monkeypatch.setattr(col, "QUOTA_FILE", tmp_path / "quota.json")
+    odds, kalshi = FakeOdds(), FakeKalshi()
+    c = col.Collector(cfg=dict(CFG), data_dir=tmp_path / "scratch", odds_session=odds, kalshi_session=kalshi,
+                      api_key="SECRET", dry_run=True)
+    c.kalshi.limiter = c.limiter
+    row = c.tick(TIP - timedelta(hours=3))
+    assert row["odds_status"] == "skipped" and "dry run" in row["note"] and row["kalshi_status"] == 200
+    assert not any(u.endswith("/odds") for u in odds.calls) and not (tmp_path / "quota.json").exists()
+
 def test_one_minute_ticks_in_the_final_window_when_enabled(env):
     c, odds, kalshi, tmp = env
     c.c["final_every_min"] = 1

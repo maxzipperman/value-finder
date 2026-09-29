@@ -12,6 +12,10 @@ launchd runs one tick a minute (com.valuefinder.nbacollector, ops/install_live_u
   5. writes a heartbeat row to data/collector/{sport}/runs.csv on every acting or idle tick, with the
      gap since the last one, so sleep gaps are measured and logged, never hidden.
 
+`markets collect --now T` (testing) is a dry run in a scratch directory: it never writes the live
+state, heartbeat or cache, never spends an Odds API credit and never writes the shared quota file.
+A last_tick in the future (a clock change, or state from an old --now run) counts as due.
+
 Every response is stored before use, one parquet per source per tick (RawCache: temp file, then rename):
 data/raw/{sport}/collector_kalshi/ and data/raw/{sport}/collector_oddsapi/.
 
@@ -19,11 +23,14 @@ Credits: a background logger under the weather projects' shared quota file
 (~/.cache/value-finder/odds_quota.json). As in nfl-weather/nflweather/quota.py's background kind, it
 runs only on a paid plan (plan size = used + remaining > 500, or ODDS_API_TIER=paid) and stops at the
 background floor (max(2,000, 2% of the plan), or ODDS_BACKGROUND_FLOOR). It records every response's
-quota headers to the same file, so the alerts see what it spent.
+quota headers to the same file, so the alerts see what it spent. Each record carries the key's
+fingerprint (sha256, first 12 hex digits), and a record made with a different key is ignored, as in
+quota.py, so the weather projects never read this key's plan as theirs (or the reverse).
 """
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import time
@@ -58,18 +65,27 @@ def load_collector_config(sport: str) -> dict:
 
 
 # ---------------------------------------------------------------- the shared quota file
-def quota_state(now: datetime) -> dict | None:
+def fingerprint(key: str | None) -> str | None:
+    """A key's identity in the shared file (as quota.fingerprint in the weather projects)."""
+    return hashlib.sha256(key.encode()).hexdigest()[:12] if key else None
+
+
+def quota_state(now: datetime, key: str | None = None) -> dict | None:
+    """The last recorded quota this month, or None (unknown, an earlier month, or another key's record)."""
     try:
         s = json.loads(QUOTA_FILE.read_text())
     except (OSError, ValueError):
+        return None
+    mine = fingerprint(key)
+    if s.get("key") and mine and s["key"] != mine:
         return None
     seen = parse_ts(s.get("utc"))
     return s if seen and (seen.year, seen.month) == (now.year, now.month) else None
 
 
-def quota_block(now: datetime) -> str | None:
+def quota_block(now: datetime, key: str | None = None) -> str | None:
     """Why this background logger must not spend credits now, or None."""
-    s = quota_state(now)
+    s = quota_state(now, key)
     size = s["remaining"] + s["used"] if s and s.get("remaining") is not None and s.get("used") is not None else None
     forced = os.environ.get("ODDS_API_TIER", "").strip().lower()
     paid = forced == "paid" or (forced != "free" and size is not None and size > FREE_PLAN)
@@ -82,14 +98,15 @@ def quota_block(now: datetime) -> str | None:
     return None
 
 
-def quota_record(status: int, headers: dict, now: datetime) -> None:
+def quota_record(status: int, headers: dict, now: datetime, key: str | None = None) -> None:
     def num(name):
         try:
             return int(float(headers[name])) if headers.get(name) is not None else None
         except ValueError:
             return None
     s = dict(utc=now.strftime("%Y-%m-%dT%H:%M:%SZ"), project="sharp-markets", status=status,
-             last=num("x-requests-last"), used=num("x-requests-used"), remaining=num("x-requests-remaining"))
+             last=num("x-requests-last"), used=num("x-requests-used"), remaining=num("x-requests-remaining"),
+             key=fingerprint(key))
     if s["remaining"] is None and s["used"] is None:
         return                      # no quota headers: keep the last known quota
     try:
@@ -102,7 +119,7 @@ def quota_record(status: int, headers: dict, now: datetime) -> None:
 # ---------------------------------------------------------------- tick
 class Collector:
     def __init__(self, sport: str = "nba", *, cfg: dict | None = None, data_dir: Path = DATA_DIR,
-                 odds_session=None, kalshi_session=None, api_key: str | None = None):
+                 odds_session=None, kalshi_session=None, api_key: str | None = None, dry_run: bool = False):
         self.c = cfg or load_collector_config(sport)
         self.sport = self.c["sport"]
         self.dir = Path(data_dir) / "collector" / self.sport
@@ -113,11 +130,15 @@ class Collector:
         if kalshi_session is not None:
             self.kalshi.session = kalshi_session
         self.api_key = api_key
+        self.dry_run = dry_run              # no paid Odds API call and no shared-quota write (--now)
 
     # -- odds api
+    @property
+    def key(self) -> str:
+        return self.api_key or env("ODDS_API_KEY")
+
     def _odds_get(self, path: str, params: dict):
-        r = http_get(self.odds, ODDS_BASE + path, {**params, "apiKey": self.api_key or env("ODDS_API_KEY")},
-                     self.limiter, max_retries=2)
+        r = http_get(self.odds, ODDS_BASE + path, {**params, "apiKey": self.key}, self.limiter, max_retries=2)
         return r.status_code, {k.lower(): v for k, v in r.headers.items()}, r.text
 
     def schedule(self, now: datetime) -> list[dict]:
@@ -130,7 +151,8 @@ class Collector:
         status, headers, text = self._odds_get(f"/sports/{self.c['sport_key']}/events", {"dateFormat": "iso"})
         if status != 200:
             raise RuntimeError(f"Odds API /events -> HTTP {status}: {text[:200]}")
-        quota_record(status, headers, now)
+        if not self.dry_run:
+            quota_record(status, headers, now, self.key)
         events = json.loads(text)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"fetched_utc": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "events": events}))
@@ -145,7 +167,9 @@ class Collector:
         return len(inside), any(t - final <= now <= t + after for t in inside)
 
     def fetch_odds(self, tick: str, now: datetime) -> dict:
-        if (why := quota_block(now)):
+        if self.dry_run:
+            return {"odds_status": "skipped", "note": "dry run (--now): no Odds API call"}
+        if (why := quota_block(now, self.key)):
             return {"odds_status": "skipped", "note": why}
         params = {"bookmakers": ",".join(self.c["bookmakers"]), "markets": self.c["markets"],
                   "oddsFormat": "decimal", "dateFormat": "iso"}
@@ -160,7 +184,7 @@ class Collector:
                                       url=f"{ODDS_BASE}/sports/{self.c['sport_key']}/odds", params=params,
                                       fetch=fetch, key_extra={"tick": tick}, cache_statuses=(200,))
         if sent:
-            quota_record(sent["status"], sent["headers"], now)
+            quota_record(sent["status"], sent["headers"], now, self.key)
         h = json.loads(rec["headers_json"] or "{}")
         body = body_json(rec) if rec["http_status"] == 200 else None
         return {"odds_status": rec["http_status"], "odds_events": len(body or []),
@@ -214,8 +238,8 @@ class Collector:
                 return self._heartbeat({"action": "error", "note": f"schedule: {e}"[:300]}, state, now)
             step = self.c.get("final_every_min") if (final and self.c.get("final_every_min")) else self.c["every_min"]
             last = parse_ts(state.get("last_tick"))
-            if last and now - last < timedelta(minutes=step) - timedelta(seconds=30):
-                return None
+            if last and last <= now and now - last < timedelta(minutes=step) - timedelta(seconds=30):
+                return None                 # not due; a last_tick in the future counts as due
             if n == 0:
                 return self._heartbeat({"action": "idle", "games_in_window": 0}, state, now)
             tick = now.strftime("%Y-%m-%dT%H:%M:%SZ")

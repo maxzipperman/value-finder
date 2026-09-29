@@ -7,6 +7,9 @@ logger: it runs only on a paid plan and stops at the background floor (quota.py)
 while the Mac slept stays missing; nothing is imputed.
 
     python scripts/log_props.py [--now 2026-10-11T15:00:00Z]
+
+--now is a dry run: it lists the slots that would be due then (the event list is free) and spends
+nothing, writes nothing and consumes no real slot.
 """
 import argparse
 import json
@@ -26,12 +29,12 @@ FWD = ROOT / "data" / "forward"
 OUT, STATE = FWD / "props_log.csv", FWD / "props_state.json"
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--now", help="pretend it's this UTC time when picking slots (testing)")
+ap.add_argument("--now", help="pretend it's this UTC time when picking slots (testing; a dry run)")
 args = ap.parse_args()
 now = pd.Timestamp(args.now) if args.now else pd.Timestamp.now(tz="UTC")
 
 why = quota.check()
-if why:
+if why and not args.now:
     sys.exit()          # free plan or below the floor: silent, the job runs every 15 minutes
 try:
     events = oddsapi._get(f"/sports/{oddsapi.SPORT}/events", dict(dateFormat="iso")).json()   # free
@@ -40,6 +43,9 @@ except SystemExit as e:
 state = json.loads(STATE.read_text()) if STATE.exists() else {"captured": []}
 captured = set(state["captured"])
 due = live.props_due(events, captured, now)
+if args.now:
+    sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z props log (dry run): {len(due)} slots due: "
+                   + ("; ".join(f"{ev['away_team']} @ {ev['home_team']} T-{h}h" for ev, h in due) or "none")))
 done, spent = [], 0
 for ev, h in due:
     why = quota.check()

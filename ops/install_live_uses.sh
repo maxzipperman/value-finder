@@ -13,10 +13,18 @@
 #   ops/install_live_uses.sh                     install / reinstall all three
 #   ops/install_live_uses.sh triggerpoll propslog  install some
 #   ops/install_live_uses.sh --remove            uninstall all three
+#
+# The three projects share one quota file, so installing refuses unless ODDS_API_KEY is the same in
+# nfl-weather/.env, cfb-weather/.env and sharp-markets/.env (the keys are compared, never printed).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOGS="$HOME/Library/Logs"
 ALL=(triggerpoll propslog nbacollector)
+
+env_key() {   # ODDS_API_KEY from a .env file: the last assignment, quotes and spaces stripped
+  [[ -f "$1" ]] || return 0
+  sed -n -E 's/^[[:space:]]*(export[[:space:]]+)?ODDS_API_KEY[[:space:]]*=//p' "$1" | tail -n 1 | tr -d "\"' \t\r"
+}
 
 remove=0
 wanted=()
@@ -24,6 +32,21 @@ for a in "$@"; do
   if [[ "$a" == "--remove" ]]; then remove=1; else wanted+=("$a"); fi
 done
 (( ${#wanted[@]} )) || wanted=("${ALL[@]}")
+
+if (( ! remove )); then
+  first=""
+  for proj in nfl-weather cfb-weather sharp-markets; do
+    k="$(env_key "$ROOT/$proj/.env")"
+    if [[ -z "$k" ]]; then echo "refusing to install: no ODDS_API_KEY in $proj/.env"; exit 1; fi
+    if [[ -z "$first" ]]; then
+      first="$k"
+    elif [[ "$k" != "$first" ]]; then
+      echo "refusing to install: ODDS_API_KEY in $proj/.env differs from nfl-weather/.env."
+      echo "Put the same (paid) key in all three .env files first; the projects share one quota file."
+      exit 1
+    fi
+  done
+fi
 
 for job in "${wanted[@]}"; do
   case "$job" in

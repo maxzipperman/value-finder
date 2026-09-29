@@ -39,8 +39,9 @@ Run every command from `sharp-markets/`.
 
 ## Day one
 
-1. **New key.** Put the new key in `sharp-markets/.env` as `ODDS_API_KEY=...`.
-   - The alert jobs read `nfl-weather/.env` and `cfb-weather/.env`. Switching those keys is a separate change to the alert setup, and the owner or hub decides it (PR C covers the paid-tier quota setting).
+1. **New key, in all three `.env` files.** Put the paid key in `sharp-markets/.env`, `nfl-weather/.env` and `cfb-weather/.env` as `ODDS_API_KEY=...`, the same key in each.
+   - The three projects share one quota file (`~/.cache/value-finder/odds_quota.json`). Each record carries a fingerprint of the key that made the call, and a project ignores records made with a different key. With one key everywhere, the alerts, close capture and live uses all see the paid plan's real balance.
+   - `ops/install_live_uses.sh` refuses to install the live uses unless the three keys match.
 2. **Probe (P0), about 10,600 credits at most:**
    ```bash
    uv run markets odds5m probe --confirm --max-credits 11000

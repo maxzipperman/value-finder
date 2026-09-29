@@ -75,6 +75,24 @@ def test_overrides(monkeypatch):
     assert quota.check() is not None
 
 
+def test_a_record_from_another_key_is_ignored(monkeypatch):
+    """#33 item 2: sharp-markets writes the shared file with its own key; a different key's plan never
+    sets this project's tier or floor. Records carry a fingerprint, never the key."""
+    monkeypatch.setenv("ODDS_QUOTA_KIND", "background")
+    monkeypatch.setenv("ODDS_API_KEY", "paid-key")
+
+    class R:
+        status_code, headers = 200, {"x-requests-remaining": "4000000", "x-requests-used": "1000000"}
+    quota.record(R(), "sharp-markets")
+    s = json.loads(quota.STATE.read_text())
+    assert s["key"] == quota.fingerprint("paid-key") and "paid-key" not in quota.STATE.read_text()
+    assert quota.tier() == "paid" and quota.check() is None
+    monkeypatch.setenv("ODDS_API_KEY", "free-key")                  # this project still has the free key
+    assert quota.read() is None and quota.tier() == "free" and "paid plan" in quota.check()
+    seen(4_000_000, 1_000_000)                                       # a record from before fingerprints: still read
+    assert quota.tier() == "paid"
+
+
 # ---------------------------------------------------------------- trigger poller
 def ledger():
     rows = [("2026-10-08T11:30:00Z", "g1", "2026-10-11", "13:00", "CHI", "GB", "no_trigger", 9.0),
