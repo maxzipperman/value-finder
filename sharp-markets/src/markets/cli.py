@@ -190,7 +190,7 @@ def main(argv: list[str] | None = None) -> None:
     col.set_defaults(fn=cmd_collect)
 
     w = sub.add_parser("weather", help="venue and weather joins for MLB and soccer (docs/HEAT_HYPOTHESES.md)")
-    w.add_argument("stage", choices=["check", "venues", "plan", "fetch", "join"])
+    w.add_argument("stage", choices=["check", "venues", "plan", "fetch", "join", "qualifying"])
     w.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
     w.add_argument("--confirm", action="store_true", help="venues/fetch: actually call the free APIs")
     w.add_argument("--max-calls", type=int, default=9000,
@@ -201,8 +201,11 @@ def main(argv: list[str] | None = None) -> None:
 
     f = sub.add_parser("odds5m", help="5M-credit month: bulk historical Odds API pulls (docs/ODDS5M_DAY_ONE.md)")
     f.add_argument("stage", choices=["probe", "plan", "week", "full", "check"])
-    f.add_argument("--pull", default="all", help="pull IDs from config/odds5m.yaml, comma-separated, or all")
+    f.add_argument("--pull", default="all", help="pull IDs or groups (day_one, gated, march) from config/odds5m.yaml, "
+                   "comma-separated; `all` works for plan, week and check but not for full")
     f.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
+    f.add_argument("--seasons", default=None, help="only these season labels from config/odds5m.yaml, comma-separated "
+                   "(e.g. 2025 for the first F3 slice)")
     f.add_argument("--week-of", default="auto", help="week stage: YYYY-MM-DD, or auto (first week of the latest unsealed season)")
     f.add_argument("--confirm", action="store_true", help="actually spend credits")
     f.add_argument("--max-credits", type=int, default=0, help="credit budget for this run")

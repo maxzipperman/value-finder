@@ -16,7 +16,8 @@ p, s, c = o5.plan()
 print("=== odds_5m.plan() reproduced ===")
 print(p[["id", "credits", "value", "dropped", "in_plan"]].to_string(index=False))
 inplan = p[p.in_plan].credits.sum()
-print(f"in-plan total {inplan:,}   (doc says 4,175,930)")
+print(f"in-plan total {inplan:,}   (the Sep 28 plan this review priced was 4,175,930; odds_5m.py was rewritten to the "
+      "reviewed design on Sep 29, #38, so in_plan now means day one plus the gated pulls)")
 print("counts:", c)
 
 # ---------------------------------------------------------------- per-season football counts

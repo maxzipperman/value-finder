@@ -4,6 +4,11 @@ venue, roof, and the weather at the kickoff hour, observed (ERA5) and as forecas
 Writes data/weather/game_weather.parquet and data/weather/unresolved.csv (games whose venue couldn't be
 placed, with the reason and any venue name the source gave).
 
+`markets weather qualifying` then applies the pre-registered triggers (TRIGGERS, from docs/HEAT_HYPOTHESES.md)
+to that table and writes data/weather/heat_qualifying.csv: the games whose closes the HB1 and HS1 pulls buy
+(config/odds5m.yaml `games_from`). The trigger comes first and the odds second, so the count of qualifying
+games is known before a credit is spent on them.
+
 Coordinates: an MLB park takes the MLB Stats API's own coordinates when they're cached (one pair per park,
 so every game there shares its weather requests), and the table's otherwise. Where both exist,
 coord_gap_km says how far apart they are; `markets weather plan` lists parks more than COORD_FLAG_KM
@@ -32,6 +37,17 @@ OUT_DIR = DATA_DIR / "weather"
 FIXTURE_SPORTS = {"soccer_fifa_world_cup", "soccer_uefa_european_championship"}
 ESPN_ONLY = {"soccer_conmebol_copa_america", "soccer_fifa_club_world_cup", "soccer_concacaf_gold_cup"}
 COORD_FLAG_KM = 2.0
+
+# The pre-registered triggers, docs/HEAT_HYPOTHESES.md (S-H1, B-H1; amendment 4 makes both descriptive and
+# closes-only). Day-1 forecast at the kickoff hour, `open` venues only, the 2024-25 test seasons. World Cup 2022
+# is out as a competition (amendment 1) and every 2026 game is sealed, so the World Cup key is excluded outright.
+TRIGGERS = {
+    "HS1": {"sport": lambda s: s.startswith("soccer_") and s != "soccer_fifa_world_cup",
+            "field": "fc1_heat_index_f", "at_least": 90.0},
+    "HB1": {"sport": lambda s: s == MLB, "field": "fc1_temp_f", "at_least": 90.0},
+}
+TEST_SEASONS = ("2024", "2025")
+QUALIFYING_COLS = ["sport", "id", "season", "commence_time", "venue_id", "venue_name", "pull", "trigger", "value"]
 
 
 def weather_sports(cfg: dict) -> list[str]:
@@ -168,6 +184,51 @@ def plan(rows: list[dict]) -> list[om.Request]:
     return om.plan_requests(set(days), locs)
 
 
+def _num(v):
+    return None if v is None or (isinstance(v, float) and v != v) else float(v)
+
+
+def qualifying(rows: list[dict], seasons=TEST_SEASONS) -> list[dict]:
+    """The games whose day-1 forecast meets a trigger in TRIGGERS: `open` venue, an unsealed test season, the
+    forecast present. One row per game and trigger, with the trigger value. Nothing else is read."""
+    out = []
+    for r in rows:
+        if r.get("roof") != "open" or r.get("season") not in seasons or r.get("sealed"):
+            continue
+        for pid, tr in TRIGGERS.items():
+            v = _num(r.get(tr["field"]))
+            if tr["sport"](r["sport"]) and v is not None and v >= tr["at_least"]:
+                out.append({"sport": r["sport"], "id": r["id"], "season": r["season"], "commence_time": r["commence_time"],
+                            "venue_id": r.get("venue_id", ""), "venue_name": r.get("venue_name", ""), "pull": pid,
+                            "trigger": f"{tr['field']} >= {tr['at_least']:g}", "value": round(v, 1)})
+    return sorted(out, key=lambda q: (q["pull"], q["commence_time"], q["id"]))
+
+
+def qualifying_counts(rows: list[dict], quals: list[dict], seasons=TEST_SEASONS) -> list[dict]:
+    """Per trigger and season: games at open venues, of which with a day-1 forecast, of which qualifying."""
+    out = []
+    for pid, tr in TRIGGERS.items():
+        for season in seasons:
+            base = [r for r in rows if tr["sport"](r["sport"]) and r.get("season") == season and not r.get("sealed")
+                    and r.get("roof") == "open"]
+            out.append({"pull": pid, "season": season, "open_venue_games": len(base),
+                        "with_day1_forecast": sum(_num(r.get(tr["field"])) is not None for r in base),
+                        "qualifying": sum(q["pull"] == pid and q["season"] == season for q in quals)})
+    return out
+
+
+def write_qualifying(quals: list[dict], out_dir: Path = OUT_DIR) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "heat_qualifying.csv"
+    with path.open("w", newline="") as f:
+        w = csv.DictWriter(f, QUALIFYING_COLS)
+        w.writeheader()
+        for q in quals:
+            w.writerow({**q, "commence_time": q["commence_time"].isoformat()
+                        if hasattr(q["commence_time"], "isoformat") else q["commence_time"]})
+    return path
+
+
 def write(rows: list[dict], unresolved: list[dict], out_dir: Path = OUT_DIR) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     if rows:
@@ -198,6 +259,18 @@ def main(args) -> None:
         if not args.confirm:
             raise SystemExit("dry run: add --confirm to fetch game-level venues (MLB Stats API, ESPN; free)")
         print(fetch_game_venues(cfg, cache, sports or weather_sports(cfg), leagues_too=args.leagues_too))
+        return
+    if args.stage == "qualifying":
+        table = OUT_DIR / "game_weather.parquet"
+        if not table.exists():
+            raise SystemExit(f"{table} is missing: run `markets weather join` first")
+        rows = pq.read_table(table).to_pylist()
+        quals = qualifying(rows)
+        for c in qualifying_counts(rows, quals):
+            print(f"{c['pull']} {c['season']}: {c['open_venue_games']:,} games at open venues, "
+                  f"{c['with_day1_forecast']:,} with a day-1 forecast, {c['qualifying']:,} qualifying")
+        path = write_qualifying(quals)
+        print(f"wrote {path} ({len(quals):,} rows; the HB1 and HS1 pulls read it). No odds or result was touched.")
         return
     rows, unresolved = build(cfg, cache, sports=sports, weather=args.stage == "join")
     print(f"{len(rows):,} games placed; {len(unresolved):,} unresolved: "

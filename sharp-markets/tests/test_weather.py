@@ -1,4 +1,5 @@
 """Venue tables, venue resolution, heat index, the Open-Meteo plan and the weather join. No network."""
+import csv
 import json
 from datetime import date, datetime, timezone
 
@@ -163,6 +164,40 @@ def test_join_places_games_and_reads_cached_weather(tmp_path):
     assert s1["fc1_heat_index_f"] == pytest.approx(heat_index_f(95.0, 45.0)) and s1["fc1_heat_index_f"] > 90
     path = join.write(rows, [], tmp_path / "out")
     assert path.exists()
+
+
+def test_qualifying_applies_the_registered_triggers(tmp_path):
+    """docs/HEAT_HYPOTHESES.md: S-H1 day-1 heat index >= 90 F, B-H1 day-1 temperature >= 90 F, open venues,
+    the 2024-25 test seasons, nothing sealed, World Cup out; games without a day-1 forecast can't qualify."""
+    def row(gid, sport, season, roof, temp, hi, sealed=False, kick="2024-07-20T23:30:00Z"):
+        return {"id": gid, "sport": sport, "season": season, "sealed": sealed, "roof": roof, "commence_time": t(kick),
+                "venue_id": "v", "venue_name": "V", "fc1_temp_f": temp, "fc1_heat_index_f": hi}
+    rows = [row("m_hot", "baseball_mlb", "2024", "open", 91.0, 99.0),
+            row("m_hi_only", "baseball_mlb", "2024", "open", 88.0, 95.0),          # MLB uses temperature, not the index
+            row("m_roof", "baseball_mlb", "2025", "retractable", 101.0, 105.0),
+            row("m_old", "baseball_mlb", "2023", "open", 95.0, 100.0),
+            row("m_nofc", "baseball_mlb", "2025", "open", None, None),
+            row("m_nan", "baseball_mlb", "2025", "open", float("nan"), float("nan")),
+            row("s_hot", "soccer_usa_mls", "2025", "open", 86.0, 92.0),           # soccer uses the heat index
+            row("s_temp_only", "soccer_usa_mls", "2025", "open", 90.5, 89.0),
+            row("s_sealed", "soccer_usa_mls", "2026", "open", 95.0, 100.0, sealed=True),
+            row("s_wc", "soccer_fifa_world_cup", "2024", "open", 95.0, 100.0),
+            row("s_cup", "soccer_fifa_club_world_cup", "2025", "open", 93.0, 96.0)]
+    q = join.qualifying(rows)
+    assert [(x["pull"], x["id"], x["value"]) for x in q] == [("HB1", "m_hot", 91.0), ("HS1", "s_cup", 96.0), ("HS1", "s_hot", 92.0)]
+    assert q[0]["trigger"] == "fc1_temp_f >= 90" and q[1]["trigger"] == "fc1_heat_index_f >= 90"
+    counts = {(c["pull"], c["season"]): c for c in join.qualifying_counts(rows, q)}
+    assert counts[("HB1", "2024")] == {"pull": "HB1", "season": "2024", "open_venue_games": 2, "with_day1_forecast": 2, "qualifying": 1}
+    assert counts[("HB1", "2025")]["open_venue_games"] == 2 and counts[("HB1", "2025")]["with_day1_forecast"] == 0
+    path = join.write_qualifying(q, tmp_path)
+    with path.open() as f:
+        got = list(csv.DictReader(f))
+    assert [g["id"] for g in got] == ["m_hot", "s_cup", "s_hot"] and got[0]["sport"] == "baseball_mlb"
+    assert list(got[0]) == join.QUALIFYING_COLS and got[0]["commence_time"].startswith("2024-07-20T23:30")
+    # the bulk puller reads exactly this file shape
+    cfg = bulk.load_config()
+    hb1 = {**cfg["pulls"]["HB1"], "games_from": str(path)}
+    assert bulk.games_from(hb1, "baseball_mlb") == {"m_hot"} and bulk.games_from(hb1, "soccer_usa_mls") == {"s_hot"}
 
 
 def test_kick_hour_crosses_the_month_boundary():

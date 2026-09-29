@@ -5,7 +5,7 @@
 **Changes to this file:**
 - Before any S1 or B1 odds are joined to weather, changes are dated amendments at the bottom.
 - After that, nothing here changes.
-- Amendments 1–3 (September 29, 2026) are at the bottom and take precedence over the text above. Amendment 2 widens the freeze to the first join of any outcome, as well as any odds.
+- Amendments 1–4 (September 29, 2026) are at the bottom and take precedence over the text above. Amendment 2 widens the freeze to the first join of any outcome, as well as any odds. **Amendment 4 makes both hypotheses descriptive and closes-only: the decision rules, the forward-test path and the 2026 confirmation below are withdrawn, and the odds come from the close-only pulls HB1 and HS1 rather than S1 and B1.**
 
 ## Common to both
 
@@ -91,3 +91,30 @@ All three were made on September 29, 2026, in [#33](https://github.com/maxzipper
 - The sealed 2026 sample that confirms S-H1 includes the 2026 World Cup (June–July, in North America). Its matches at `open` grounds count exactly like the calendar-2026 league matches: 65 of its 104 matches under the current labels. The other 39 are at retractable-roof grounds or SoFi Stadium.
 - The owner sealed it with the other calendar-2026 soccer on September 28. This amendment says it is part of the confirmation, not set aside.
 - The confirmation is still one test on the whole sealed S1 sample, not a separate test for each competition, so the variant count stays at 3 of 191.
+
+### Amendment 4: descriptive only, closes only, and the outcomes log
+
+*September 29, 2026 (the evening of September 28, Pacific), in [#38](https://github.com/maxzipperman/value-finder/issues/38), resolving [#35](https://github.com/maxzipperman/value-finder/issues/35). Owner-approved: it carries out the owner's adoption of the plan review on September 28. At this point no soccer or MLB odds had been pulled, and no soccer or MLB outcome or odds had been joined to any weather. The freeze rule of amendment 2 is unchanged.*
+
+**1. Both hypotheses are descriptive. No decision rule, no forward test, no stake.**
+
+- The "Decision rules" block (Confirmed, Promising, Rejected, No decision) is withdrawn for S-H1 and B-H1. Neither can become a paper forward test or a staked rule from this file, and the sealed 2026 games are not a confirmation sample for them (amendment 3's use of the 2026 World Cup lapses with it; the games stay sealed).
+- Why, written down before any data: the plan review (section 3 and appendix A) found 146 qualifying open-park MLB games and about 250–320 qualifying soccer matches in 2024–25, below the 150-game floor for MLB and far below the roughly 540 games a 57.7% win-rate rule needs at p < 0.05, let alone the repo bar. The literature ceilings are about 54% for MLB heat and 51–52% for soccer heat. A win-rate rule at that n with that ceiling had its outcome written the day it was registered, so it is recorded as what it is: a descriptive check on whether the close moves for heat.
+- **What is reported, and nothing else:** for each hypothesis, on the 2024–25 test seasons: the qualifying games; those with a Pinnacle close; the registered side's record at that close (win, loss, push); the excess win rate over the de-vigged close probability with a 95% interval; ROI at the price; the same by league or park as sub-splits. Alongside it, the counts of games without a Pinnacle close and of void games (part 3). No threshold, lead time, book or market other than the registered one is reported, and no result from this file is used to argue for a rule.
+
+**2. Closes only, trigger first.**
+
+- The trigger is computed first from the free day-1 forecast (`markets weather qualifying`), and only the closes of qualifying games are bought: the pulls `HB1` and `HS1` in `config/odds5m.yaml`, limited to the games in `data/weather/heat_qualifying.csv`. The full MLB and soccer daily histories, B1 and S1, are not pulled in October and are not scheduled.
+- Consequence: the "Descriptive only" row above (the observed-weather ERA5 split, 2020–25) is withdrawn too. It needed closes for 2020–23, which no longer exist here. The observed-weather values stay in `game_weather.parquet` for the venue and forecast-error checks.
+- The Price, Statistic and Roofs rows are unchanged: Pinnacle's close as `bulk.close_time` defines it, the registered side at that price, `open` venues only. A game with no Pinnacle close is counted and left out.
+
+**3. Outcomes and the log (resolving #35).**
+
+- **Sources, as amendment 2:** the MLB Stats API schedule with its line score for MLB; ESPN's public scoreboard and match summaries for every soccer competition, with openfootball's full-time score as a cross-check where it exists. Both are free and keyless; `markets weather venues` already caches the schedule endpoints, and the outcomes join reads the same records plus the match summaries. No Odds API `/scores` call is made.
+- **Game status.** A game counts only when its source status is final. The status codes the join accepts as final, postponed, suspended, abandoned or shortened are taken from the cached responses on the Mac before the first join and written into the analysis config; a game whose status code is not in that list is excluded and logged as `unknown_status`, never guessed.
+- **Every excluded game is logged, none is dropped.** The join writes `data/weather/heat_excluded.csv` with one row per excluded game: sport, Odds API event id, kickoff, venue, the hypothesis, and one reason from `postponed`, `suspended`, `abandoned`, `shortened` (MLB, called before official length), `no_close` (no Pinnacle close), `no_result` (no final score matched within 12 hours), `result_conflict` (ESPN and openfootball disagree), `unknown_status`, `push`. The reason counts are reported next to the split. This is the repo's "log, don't drop" rule applied here.
+- The settlement rules of amendment 2 decide each case; nothing in them changes. Postponed, suspended-and-resumed and abandoned games are void, and a same-day delay counts with the forecast for the scheduled kickoff.
+
+**4. Open item, not settled here.** #35 notes that the MLB Stats API may report per-game roof status for retractable parks. That is unverified. If the hub confirms the field on the Mac, letting retractable-roof games in when the roof was open needs its own dated amendment before the first join; it is not done by this one, and the review's warning stands: widening the sample after any odds are joined is not allowed.
+
+**5. Variants.** Still 3 of the plan's count (S-H1, B-H1 and the deferred B-H2). The repo-wide running count is 198 ([`odds-api-credits.md`](../../strategy-research/odds-api-credits.md#data-use-plan)), so the bar is p < 0.00025; it no longer applies to these two, which report no test.

@@ -2,11 +2,18 @@
 
 Stages (`uv run markets odds5m <stage>`; the hub runs them on the Mac, docs/ODDS5M_DAY_ONE.md):
   probe  P0: verify the key (free), sweep historical /events for every sport (1 credit per call,
-         0 when empty) into exact schedules, then four single-call billing probes
+         0 when empty) into exact schedules, then seven single-call billing and coverage probes
   plan   free: calls and upper-bound credits per pull from those schedules, cached vs to fetch
   week   one week per sport for the chosen pulls, to check coverage before the full spend
-  full   the chosen pulls in full, in the plan's value order
+  full   the chosen pulls in full; name them, or a group from the config (day_one, gated, march)
   check  free: what the cache holds for a pull (books, markets, snapshot lag, empty snapshots)
+
+Pulls are grouped in the config (`groups:`) by when the plan lets them run: day_one on Oct 1, gated
+once a written gate has passed, march for the 2027 month. `--pull day_one` names a group; `full`
+refuses `all`, so nothing runs every pull in the config by accident.
+
+A pull with `games_from:` (the heat closes, HB1 and HS1) fetches only the games listed in that CSV,
+which `markets weather qualifying` writes from the pre-registered triggers before any odds are bought.
 
 Safety. Nothing is fetched without --confirm. Each run has a --max-credits budget, checked against
 each call's upper-bound cost before the call, and a --floor on the account's remaining credits
@@ -40,7 +47,7 @@ import yaml
 
 from ..cache import Fetched, RawCache, body_json, cache_key, read_record
 from ..http import RateLimiter, http_get, new_session
-from ..settings import CONFIG_DIR, env, parse_ts, utcnow
+from ..settings import CONFIG_DIR, DATA_DIR, env, parse_ts, utcnow
 from .normalize import outcome_rows
 
 log = logging.getLogger(__name__)
@@ -120,7 +127,9 @@ def close_time(kick: datetime) -> datetime:
 def game_snapshots(kick: datetime, pull: dict) -> list[datetime]:
     """Featured-snapshot request times one game needs under the pull's schedule (always incl. its close)."""
     close, sched = close_time(kick), pull["schedule"]
-    if sched == "daily_close":
+    if sched == "close":
+        pts = []
+    elif sched == "daily_close":
         first = datetime.combine((kick - LOOKBACK).date(), time(DAILY_HOUR), tzinfo=UTC)
         pts = [t for t in (first + timedelta(days=i) for i in range(9)) if kick - LOOKBACK <= t <= close]
     elif sched in ("hourly", "5min"):
@@ -247,12 +256,33 @@ def load_schedules(cfg: dict, raw_dir: Path, sports=None) -> dict[str, list[dict
     return out
 
 
-def pull_games(cfg: dict, pull: dict, sport: str, games: list[dict], now: datetime) -> list[dict]:
+def games_from(pull: dict, sport: str) -> set[str] | None:
+    """The event IDs a `games_from:` pull is limited to for one sport (None when the pull has no list).
+    The CSV has `sport` and `id` columns; `markets weather qualifying` writes it. A relative path is
+    under the data directory. A missing file stops the run: the trigger step has to come first."""
+    if not pull.get("games_from"):
+        return None
+    path = Path(pull["games_from"])
+    if not path.is_absolute():
+        path = DATA_DIR / path
+    if not path.exists():
+        raise SystemExit(f"{pull['id']}: {path} is missing. Run `markets weather qualifying` first: it writes the "
+                         "games whose day-1 forecast meets the pre-registered trigger (docs/HEAT_HYPOTHESES.md).")
+    with path.open(newline="") as f:
+        return {r["id"] for r in csv.DictReader(f) if r.get("sport") == sport}
+
+
+def pull_games(cfg: dict, pull: dict, sport: str, games: list[dict], now: datetime, seasons=None) -> list[dict]:
+    """The games a pull covers for one sport. `seasons` (the CLI's --seasons) narrows a run to those season
+    labels, on top of the pull's own only_seasons/skip_seasons; it is how F3 is pulled one slice at a time."""
     lo = max(cfg["sports"][sport]["history_from"], pull.get("from", date.min))
+    only = games_from(pull, sport)
     return [g for g in games
             if g["season"] is not None and g["commence_time"] <= now - SETTLED and g["commence_time"].date() >= lo
             and (not pull.get("only_seasons") or g["season"] in pull["only_seasons"])
-            and g["season"] not in pull.get("skip_seasons", [])]
+            and g["season"] not in pull.get("skip_seasons", [])
+            and (not seasons or g["season"] in seasons)
+            and (only is None or g["id"] in only)]
 
 
 def week_games(games: list[dict], week_of) -> list[dict]:
@@ -269,7 +299,7 @@ def week_games(games: list[dict], week_of) -> list[dict]:
 
 
 def plan_calls(cfg: dict, pid: str, schedules: dict[str, list[dict]], *, now: datetime | None = None,
-               week_of=None, sports=None) -> list[Call]:
+               week_of=None, sports=None, seasons=None) -> list[Call]:
     """Every call a pull needs, from the saved schedules. Featured snapshots are unioned across games."""
     now, pull = now or utcnow(), cfg["pulls"][pid]
     books = cfg["books"][pull["books"]]
@@ -280,7 +310,7 @@ def plan_calls(cfg: dict, pid: str, schedules: dict[str, list[dict]], *, now: da
     for sport in pull["sports"]:
         if sports and sport not in sports:
             continue
-        games = pull_games(cfg, pull, sport, schedules.get(sport, []), now)
+        games = pull_games(cfg, pull, sport, schedules.get(sport, []), now, seasons)
         if week_of is not None:
             games = week_games(games, week_of)
         cache_sport = cache_as.get("sport", sport)
@@ -479,11 +509,21 @@ def coverage(cfg: dict, calls: list[Call], cache: RawCache) -> dict:
 
 # ---------------------------------------------------------------- stages
 def _pulls(cfg: dict, arg: str) -> list[str]:
-    ids = list(cfg["pulls"]) if arg in (None, "", "all") else [p.strip() for p in arg.split(",")]
+    """Pull IDs from a comma-separated argument; a group name (config `groups:`) expands to its pulls."""
+    groups = cfg.get("groups", {})
+    if arg in (None, "", "all"):
+        return list(cfg["pulls"])
+    ids = []
+    for p in (x.strip() for x in arg.split(",")):
+        ids += groups[p] if p in groups else [p]
     bad = [p for p in ids if p not in cfg["pulls"]]
     if bad:
-        raise SystemExit(f"unknown pull(s) {bad}; the config has {list(cfg['pulls'])}")
-    return ids
+        raise SystemExit(f"unknown pull(s) {bad}; the config has {list(cfg['pulls'])} and groups {list(groups)}")
+    return list(dict.fromkeys(ids))
+
+
+def group_of(cfg: dict, pid: str) -> str:
+    return next((g for g, ids in cfg.get("groups", {}).items() if pid in ids), "-")
 
 
 def summarize(cfg: dict, calls: list[Call], cache: RawCache) -> list[dict]:
@@ -507,13 +547,13 @@ def stage_plan(cfg, cache, args, now=None) -> list[dict]:
         print(f"no schedule yet for {missing}: run `markets odds5m probe --confirm` first")
     total, out = 0, []
     for pid in _pulls(cfg, args.pull):
-        calls = plan_calls(cfg, pid, schedules, now=now, sports=args.sports)
+        calls = plan_calls(cfg, pid, schedules, now=now, sports=args.sports, seasons=args.seasons)
         todo = sum(c.expected for c in calls if cache.lookup(c.cache_sport, c.source, c.key) is None)
         total += todo
         rows = summarize(cfg, calls, cache)
         out += rows
-        print(f"{pid:3} {len(calls):>9,} calls  at most {todo:>11,} credits to fetch  cumulative {total:>11,}  "
-              f"sealed calls {sum(c.sealed for c in calls):,}")
+        print(f"{pid:3} {group_of(cfg, pid):8} {len(calls):>9,} calls  at most {todo:>11,} credits to fetch  "
+              f"cumulative {total:>11,}  sealed calls {sum(c.sealed for c in calls):,}")
     return out
 
 
@@ -534,7 +574,7 @@ def stage_probe(cfg, cache, args, now=None, session=None) -> dict:
     sweeps = {s: sweep_calls(cfg, s, now) for s in sports}
     n = sum(len(v) for v in sweeps.values())
     print(f"P0 /events sweeps: {n:,} calls across {len(sports)} sports (1 credit each, 0 when empty); "
-          f"billing probes: at most 180 more")
+          f"billing and coverage probes: at most 270 more")
     if not args.confirm:
         for s, v in sweeps.items():
             print(f"  {s:36} {len(v):6,}")
@@ -567,8 +607,18 @@ def _probe_row(name: str, client: BulkClient, call: Call, want: str) -> dict:
             **({"billing_rule": f"10 x {len(mk)} markets returned = {10 * len(mk)}"} if call.source == SRC_EVENT_ODDS else {})}
 
 
+# The three coverage probes the plan review asked for (strategy-research/plan-review-2026-09-28.md, section 1):
+# (sport key, season label, book group, what the answer decides). One featured close each, 30 credits at most.
+EXTRA_PROBES = (
+    ("americanfootball_ncaaf", "2020", "us10", "does Pinnacle price NCAAF in the 2020 history? (F1's CFB sharp close)"),
+    ("baseball_mlb", "2024", "us10", "MLB featured history: are totals and Pinnacle there? (HB1)"),
+    ("soccer_usa_mls", "2024", "soccer10", "MLS featured history: are totals and Pinnacle there? (HS1)"),
+)
+
+
 def billing_probes(cfg: dict, client: BulkClient, schedules: dict, now: datetime) -> list[dict]:
-    """Four single calls that test the cost model and coverage before the big spend (~180 credits at most)."""
+    """Seven single calls that test the cost model and coverage before the big spend (~270 credits at most):
+    four on NFL billing, then EXTRA_PROBES, one featured close each, skipped when the schedule has no such game."""
     nfl = [g for g in schedules.get("americanfootball_nfl", []) if g["commence_time"] <= now - SETTLED]
     g24 = next((g for g in nfl if g["season"] == "2024"), None)
     g20 = next((g for g in nfl if g["season"] == "2020"), None)
@@ -581,11 +631,10 @@ def billing_probes(cfg: dict, client: BulkClient, schedules: dict, now: datetime
                                    f"/historical/sports/americanfootball_nfl/events/{g['id']}/odds",
                                    _odds_params(books, props, at), at, 10 * len(props.split(",")) * regions(books),
                                    g["sealed"], g["id"], "americanfootball_nfl")
-    fe = lambda books, g: Call("P0", "americanfootball_nfl", SRC_ODDS,  # noqa: E731
-                               "/historical/sports/americanfootball_nfl/odds",
-                               _odds_params(books, featured, close_time(g["commence_time"])),
-                               close_time(g["commence_time"]), 30 * regions(books), g["sealed"],
-                               cache_sport="americanfootball_nfl")
+    fe = lambda books, g, sport="americanfootball_nfl": Call(  # noqa: E731
+        "P0", sport, SRC_ODDS, f"/historical/sports/{sport}/odds",
+        _odds_params(books, featured, close_time(g["commence_time"])), close_time(g["commence_time"]),
+        30 * regions(books), g["sealed"], cache_sport=sport)
     at = close_time(g24["commence_time"])
     rows = [_probe_row("featured NFL, 10 books, 3 markets", client, fe(us10, g24), "billed 30 (one region)"),
             _probe_row("event odds NFL props, 10 books", client, ev(us10, g24, at),
@@ -595,6 +644,14 @@ def billing_probes(cfg: dict, client: BulkClient, schedules: dict, now: datetime
     if g20:
         rows.append(_probe_row("featured NFL 2020, sharp books", client, fe(cfg["books"]["sharp3"], g20),
                                "is LowVig in the 2020 data?"))
+    for sport, season, books, want in EXTRA_PROBES:
+        g = next((g for g in schedules.get(sport, []) if g["season"] == season and g["commence_time"] <= now - SETTLED),
+                 None)
+        name = f"featured {sport} {season}, {books}"
+        if g is None or books not in cfg["books"]:
+            rows.append({"probe": name, "result": f"skipped: no {sport} {season} game in the schedule"})
+            continue
+        rows.append(_probe_row(name, client, fe(cfg["books"][books], g, sport), want))
     for r in rows:
         print("  " + json.dumps(r, default=str))
     return rows
@@ -604,9 +661,12 @@ def stage_pull(cfg, cache, args, *, week: bool, now=None, session=None) -> list[
     schedules = load_schedules(cfg, cache.raw_dir)
     if not schedules:
         raise SystemExit("no schedules: run `markets odds5m probe --confirm --max-credits N` first")
+    if not week and args.pull in (None, "", "all"):
+        raise SystemExit("full: name the pulls (--pull F1,F2) or a group from config/odds5m.yaml "
+                         f"({', '.join(cfg.get('groups', {}))}); `all` would run every pull in the config")
     ids = _pulls(cfg, args.pull)
     plans = {pid: plan_calls(cfg, pid, schedules, now=now, week_of=args.week_of if week else None,
-                             sports=args.sports) for pid in ids}
+                             sports=args.sports, seasons=args.seasons) for pid in ids}
     if not args.confirm:
         for pid, calls in plans.items():
             todo = [c for c in calls if cache.lookup(c.cache_sport, c.source, c.key) is None]
@@ -629,7 +689,7 @@ def stage_check(cfg, cache, args, now=None) -> list[dict]:
     schedules = load_schedules(cfg, cache.raw_dir)
     out = []
     for pid in _pulls(cfg, args.pull):
-        cov = coverage(cfg, plan_calls(cfg, pid, schedules, now=now, sports=args.sports), cache)
+        cov = coverage(cfg, plan_calls(cfg, pid, schedules, now=now, sports=args.sports, seasons=args.seasons), cache)
         print(f"{pid}: {json.dumps(cov, default=str)}")
         out.append({"pull": pid, **cov})
     return out
@@ -638,6 +698,7 @@ def stage_check(cfg, cache, args, now=None) -> list[dict]:
 def main(args) -> None:
     cfg, cache = load_config(), RawCache()
     args.sports = [s.strip() for s in args.sports.split(",")] if args.sports else None
+    args.seasons = [s.strip() for s in args.seasons.split(",")] if getattr(args, "seasons", None) else None
     if args.stage == "probe":
         stage_probe(cfg, cache, args)
     elif args.stage == "plan":
