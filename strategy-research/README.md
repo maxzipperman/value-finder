@@ -79,6 +79,8 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 **The bar for new analyses is already p < 0.00026 (0.05 / 191).** The 5M data-use plan commits 56 more variants ([`odds-api-credits.md`](odds-api-credits.md#data-use-plan)), 135 + 56 = 191. They count from the moment they were committed, whether or not their analysis has run yet, so anything analysed from here on is judged against 0.05 / 191, and each new variant beyond the plan raises the count further.
 
+**Running count: 192** (September 29, 2026). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The bar is p < 0.05 / 192 = 0.00026.
+
 | Issue | Test | Result | Verdict |
 |---|---|---|---|
 | [#17](https://github.com/maxzipperman/value-finder/issues/17) favorite-longshot bias | NFL closing moneylines 2006–25, ROI backing each band of no-vig probability at the consensus price | Every band loses except short underdogs (35–50%): +1.6% ROI, p = 0.24 (n = 2,575). Longshots under 20%: −15% ROI, bias −1.4 points (se 1.4). Favorites: −3.5% ROI, which is the vig; bias −0.5 (se 0.6). | **No tradeable bias** at the consensus close, in either era. The best-price version comes off the data-use plan. |
@@ -86,6 +88,27 @@ What the evidence says about "proven" betting strategies, how the theses already
 | #6 part 2 pre-check, derivative markets | nflverse play-by-play halftime scores, outdoor 2006–25 | First-half share of points: 0.515 at 15+ mph vs 0.502 calm, per mph p = 0.31. Favorite's margin minus the spread: −0.39 at 15+ mph vs +0.23 calm, per mph p = 0.27. | **Gate not met.** Wind doesn't measurably change how points split between halves or teams, so lines derived from the main total have little to lag. The first-half and team-totals pull (M4) is dropped. |
 | [#16](https://github.com/maxzipperman/value-finder/issues/16) line shopping, CFB | CollegeFootballData lines by sportsbook, 2016–25. About 2.4 books per game, mostly retail. There are no over/under prices, so everything is at −110. | The best book's total beats the consensus close by **0.3 points** on average, and is better in 44–48% of games. Rule HT: 58.2% at consensus vs **58.8% (223–156) at the best book**. CFB Rule B (observed wind): 56.2% vs 57.1%. Rule HT totals rise **+0.83 points** from each book's open to its close (rose in 55% of cases, fell in 29%; p < 0.0001; 450 book-games). | **Shop, and take high totals late.** Shopping is worth about half a point of win rate on these rules. The open-to-close rise supports Rule HT's "bet at the close". |
 | [#4](https://github.com/maxzipperman/value-finder/issues/4) Rule HT by spread size | Run *after* Rule HT was pre-registered; descriptive only | Spread ≥ 14: **61.1% (179–114)**. Spread < 14: 55.0% (194–159). | Fits the garbage-time / running-clock mechanism. Rule HT stays as registered; this is context for its 2027 review. |
+
+### Props: how far the mean sits above the median (added September 29, 2026, [#41](https://github.com/maxzipperman/value-finder/issues/41))
+
+[`props_median_check.py`](props_median_check.py) ([`output/props_median_check.csv`](output/props_median_check.csv), one row per player, market and season). No prop prices exist on disk, so this measures only the skew a line-setter faces. It is descriptive and adds no variant.
+
+- **Data:** each team's QB, RB1 and WR1 from `player_games.parquet`, picked without hindsight, 2023–25. Player-seasons with at least 8 games in the role. Games where the RB1 had no carry or the WR1 no target (83 and 88) are left out, because an inactive player's prop is void.
+- **Result:**
+
+  | Market | Player-seasons (games) | Mean − median, average | As % of the mean | Under rate if the line sat at the season mean |
+  |---|---|---|---|---|
+  | QB passing yards | 99 (1,439) | −0.1 | 0% | 49.7% |
+  | RB1 rushing yards | 93 (1,199) | +2.1 | 3.2% | 53.0% (se 1.4) |
+  | WR1 receiving yards | 59 (605) | +5.5 | 7.6% | 55.0% (se 2.0) |
+  | WR1 receptions | 59 (605) | +0.2 | 2.9% | 49.9% |
+
+  The pattern holds in each season: receiving yards 54–56%, rushing yards 51–54%, passing yards 49–50%.
+- **What it means for [#10](https://github.com/maxzipperman/value-finder/issues/10):**
+  - Only receiving and rushing yards are skewed enough to matter. A line at the mean would give the under about 3–5 points, but a line at the median gives nothing.
+  - Passing yards are symmetric, so the mechanism predicts no edge there.
+  - The question is where posted lines sit, and only F3's lines can answer it.
+- **A caution, not a test.** A line-setter works from past games. Against each player's previous 6–16 games (`player_week.parquet`, every prop-sized player, no role selection), outcomes fall below the trailing median 56–57% of the time for rushing and receiving yards, and below the trailing mean 59–61% of the time. The causes are regression to the mean, injury exits and usage changes. So "the line sits above a trailing median" would be true even of efficient lines, and can't be the test. The draft below grades the under at its de-vigged price instead.
 
 ### What to expect this season (added September 28, 2026)
 
@@ -184,11 +207,30 @@ Ranked by strength of evidence, whether the data comes from an API, and fit with
 - **Week 1 unders:** 54.7% over 27 seasons.
 - **Volume:** About 12–16 bets a year each. Log them in the existing ledger and let a few seasons accumulate.
 
-### 7. Prop structure: the median beats the mean
+### 7. Prop structure: the line against the median
 
-- **Mechanism:** Yardage outcomes are right-skewed, so a line near the mean should go under more than 50% of the time. Unabated argues this, but I found no published hit-rate study. Your data could produce the first clean number.
-- **Data and cost:** Odds API historical props at one pregame snapshot per game for 4 markets. That's 40 credits a game, about 34,000 for 2023–25, which fits the 100K plan.
-- **Scoring and fit:** Join to nflverse player stats and score against the prop close. It also completes step 2 of the weather-props work.
+- **Mechanism (restated September 29, 2026, after the research sweep and [#41](https://github.com/maxzipperman/value-finder/issues/41)):**
+  - A bet that simply wins or loses depends only on where the line sits against the *median* of the outcome. A line at the median hits about 50% by construction.
+  - Yardage outcomes are right-skewed, so the under has an edge only if posted lines sit above the median, towards the mean.
+  - The [pre-check above](#props-how-far-the-mean-sits-above-the-median-added-september-29-2026-41) finds that skew for receiving yards (mean 7.6% above the median) and rushing yards (3.2%), but not for passing yards or receptions.
+  - Unabated argues the mean-line case; no published hit-rate study exists.
+- **Data and cost:** F3 in the 5M plan (NFL props, 10 books, 2023–25, plus 2026 sealed).
+- **Pre-registration draft (1 variant; running count 192).** Written September 29, 2026, before any prop line was pulled or seen. It goes into a pre-registration file, unchanged or by dated amendment, before F3's rows are first joined to outcomes.
+
+  | | |
+  |---|---|
+  | **Hypothesis** | Posted lines sit above the empirical median of the player's outcome, so the under wins more often than its price implies. |
+  | **Sample** | F3, NFL 2023–25 regular season and playoffs. The 2026 season is sealed and opened only to confirm. |
+  | **Markets** | Primary, pooled into one test: `player_reception_yds` and `player_rush_yds`, the two markets where the pre-check finds skew. Controls, reported but not tested: `player_pass_yds` (no skew) and `player_receptions` (little). The mechanism predicts no edge in the controls. |
+  | **Line and price** | Each player's main line and both prices at the close, the last F3 snapshot at least 5 minutes before kickoff (`bulk.close_time`). Pinnacle, if the day-one probe shows it quotes the market in at least 80% of player-games; otherwise DraftKings. Alternate-ladder lines are out. |
+  | **Metric** | Excess under rate: Σ(winᵢ − pᵢ) / n, where pᵢ is the under's probability after removing the vig by the **power method**. The additive and multiplicative methods are reported next to it. One-sided z test, variance Σpᵢ(1 − pᵢ), also with standard errors clustered by game. ROI at the actual under price is reported next to it. |
+  | **Pushes and voids** | Whole-number lines that land exactly, and props voided because the player didn't play, are left out of n and counted. |
+  | **Mechanism readout** | Descriptive, not graded: the line minus the player's same-season median (known only after the season), and the share of lines above it. |
+  | **Decision** | **Act** (a paper forward test on the 2026 sealed season; never staked on this result alone): pooled p < 0.05 / 192, *and* a positive excess with p < 0.01 in each of 2023, 2024 and 2025 and in each primary market ([plan review](plan-review-2026-09-28.md), section 3). **Drop:** the pooled excess is at or below zero, or one market or one season carries it. **Otherwise:** no action; re-read once 2026 is unsealed. |
+  | **Secondary** | The same statistic at T−24h, and the line move from T−24h to the close. Reported, not a second test. |
+
+- **What F3 must contain for this:** the four markets above at **T−24h and the close**, with `point`, `description` (the player) and both prices, at the `us10` books including Pinnacle and DraftKings. F3 as configured already has them. Its T−48h and T−2h snapshots aren't needed for #10.
+- **Fit:** it also completes step 2 of the weather-props work.
 
 ### 8. CFB's changing information environment
 
