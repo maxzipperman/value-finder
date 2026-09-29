@@ -619,6 +619,13 @@ by a dated amendment made before the first outcome it would affect.
   grouped interval keeps a no-edge rule 2.1% and 2.3% of the time. As registered, the NFL keep decision
   still lets a rule with no edge through about 7 to 9% of the time in this model (1.6 to 3.2% in the
   model-free checks), against the intended 2.5%.
+* **Known limit: the grouped interval can be narrower than the plain one.** Its standard error is built
+  from each game day's total, so with few game days, or when each day's CLVs happen to balance around the
+  overall mean, it can come out narrower than the plain interval, even of zero width: 40 bets on 4 game
+  days, 10 a day, whose CLVs add up to the same amount on each day give an interval that is exactly the mean, so the
+  interval is above zero where the plain one includes zero. With real closing-line moves over many game days this
+  is very unlikely, and the rates above count every such case. The registered test uses the grouped
+  interval all the same; the plain one is printed beside it, so a reader can see when the two differ.
 * **The money gate is a separate question.** When real money goes in (`STRATEGY.md`, "Stake") is the
   owner's decision, and the owner has not chosen a gate. Nothing here changes it.
 * **Variants.** This changes how a test is graded, not a betting rule: 0 variants.
@@ -652,16 +659,17 @@ rule it implements, with one change.
   for any incomplete slot, and the run ends cleanly. Until now the script stopped with an error before it
   wrote its state file, so the try was never counted.
 * **Nothing else changes:** the books recorded, the 2 to 20 minute window, at most two calls per slot, the
-  quota floor, the columns of `closes.csv` and the shape of the state file. Every cached real feed (4
-  responses; 62 runs over their kickoff slots, 1,238 rows) and 9 made-up ordinary slot sequences, replayed
-  offline through the script as it was before this amendment and as it is now, give byte-identical
-  `closes.csv`, state file and printout. The one real capture so far (Sep 28, Eagles at Bears) replays to
-  the live `closes.csv` byte for byte.
+  quota floor, the columns of `closes.csv` and the shape of the state file. In the offline replay made for
+  this amendment (scratch scripts, not kept in the repository), every cached real feed (4 responses; 62
+  runs over their kickoff slots, 1,238 rows) and 9 made-up ordinary slot sequences, run through the script
+  as it was before this amendment and as it is now, gave byte-identical `closes.csv`, state file and
+  printout, and the one real capture so far (Sep 28, Eagles at Bears) replayed to the live `closes.csv`
+  byte for byte. A reviewer's separate replay, over other slots, also found the rows byte-identical.
 
 ### 3. Three gaps in the decision record
 
 A review after amendment 6 found three rare cases where the code did not do what section 3 of amendment 6
-says. Each is settled here.
+says. Each is settled here, with its limit and one consequence of reading the copy on every run.
 
 * **A time with no time zone.** A recorded time with no time zone (a spreadsheet can re-save
   `2027-01-10T18:00:00Z` as `2027-01-10T18:00:00`) couldn't be compared with the scorer's times, and it
@@ -682,6 +690,22 @@ says. Each is settled here.
   Until now the copy was read only when the whole file was missing. The scorer still never fetches: the
   hub's daily check-in runs `git fetch` in the live checkout before it runs the scorers, so the copy read
   is the latest one published.
+* **Limit: the copy protects a lost line only until the next nightly copy.** The nightly copy publishes
+  the file as it is (`ops/sync_ledgers.sh`, about 11:45 PM on the Mac). Once it has published a file that
+  has lost a decision, the copy no longer holds that decision either, and the next real run decides it
+  again. So a lost line is restored only when a real run (the hub's morning check-in) comes between the
+  loss and that night's copy; a line lost during the day, after the check-in, is gone from the copy by the
+  next morning. Earlier copies in the branch's history (`git log origin/ledgers --
+  nfl-weather/decisions.csv`) still hold it, but the scorer doesn't read them; the hub can restore the line
+  from there by hand before the next real run.
+* **A copy that can't be read.** Because the copy is now read on every run, amendment 6's rule for a
+  damaged copy applies whether or not the file is there: while the copy can't be read, nothing is
+  recorded, and the scorer says so on every run. Each decision on a line of the copy that can still be
+  read (the same test as for a damaged file) is held: if the file doesn't hold it, it is printed from the
+  copy as recorded, never decided again, and it is not restored from a damaged copy (the hub can restore
+  it by hand). Recording resumes once the copy can be read again, which the nightly copy of a readable file
+  does; when the file is missing, it is first restored by hand from a readable earlier copy in the branch's
+  history, as amendment 6 says, and recording resumes once that restored file has been copied.
 
 ### What this amendment replaces
 
@@ -696,6 +720,10 @@ instead.
   than 2 game days there is none and the result is inconclusive, whatever the mean (section 1).
 * Amendment 4: "keep only if mean CLV > 0 with a 95% CI lower bound above zero" and "drop if mean CLV ≤ 0 or
   the 95% CI upper bound is below +0.25 points". The same (section 1).
+* Amendment 5, section 4: "If the keep test and the drop test are both met, the result is drop. That can
+  only happen when the whole 95% interval sits between 0 and +0.25 points: a real edge, and too small to
+  keep." The 95% interval here is the grouped one, and this still holds; with fewer than 2 game days there
+  is no interval, and the result is inconclusive (section 1).
 * Amendment 5, section 5: "computes the CLV interval over the bets that have a primary close, and says how
   many don't;". The interval is grouped by game day, and the plain one is printed beside it (section 1).
 * Amendment 6, section 11: "If fewer than 20 of the bets in a decision have a primary close, the result is
@@ -714,7 +742,16 @@ instead.
 * Amendment 6, section 3: "When the live record is missing, a real run reads the copy (`origin/ledgers`, as
   this checkout last fetched it; the scorer never fetches), restores the file from it and prints what it
   restored, before it decides anything." A single decision missing from a file that still exists is
-  restored from the copy too (section 3).
+  restored from the copy too, while the copy holds it (section 3).
+* Amendment 6, section 3: "A lost record is restored from that copy; it is never decided again." Only while
+  the copy holds it: once the nightly copy has published a file that lost a decision, the next real run
+  decides it again (section 3).
+* Amendment 6, section 3: "A copy that is there but can't be read (a damaged file was copied before the
+  damage was repaired) stops recording, as a damaged file does, until the file is restored from a readable
+  earlier copy in the branch's history (`git log origin/ledgers -- nfl-weather/decisions.csv`)." This now
+  applies whether or not the file is there; the decisions on the copy's readable lines are printed from it
+  as recorded; and recording resumes once the copy can be read again, after the nightly copy of the
+  restored or repaired file (section 3).
 
 Rule variants under forward test: still **2**. This amendment tests nothing and leaves the running variant
 count unchanged: on the day of registration it is **271**, so the multiple-testing bar is p < 0.000185

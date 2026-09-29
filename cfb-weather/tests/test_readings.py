@@ -1031,3 +1031,95 @@ def test_amendment_5_reading_3_a_decision_missing_from_the_file_is_restored_from
     assert "FINAL: KEEP" in rb(out) and "read from its copy on the ledgers branch (the file is damaged)" in rb(out)
     assert "FINAL: NOT KEPT" not in rb(out) and (fwd / "decisions.csv").read_text() == cut
     assert "is restored from the copy, never decided again" in amendment5_section(3)
+
+
+# ================================================================== the review of pull request 64 (Sep 29)
+def test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_can(tmp_path):
+    """The review of pull request 64 (its rec_probe c3 and c4, on the NFL scorer; the record code is the same
+    here): the copy's first record line could be read and the line after it was cut. With the file present but
+    missing that decision, the next real run decided it again and said nothing about the copy; with the file
+    missing, it printed a fresh FINAL. A damaged copy stops recording (amendment 4, section 3) whether or not the
+    file is there."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    whole = (fwd / "decisions.csv").read_text()
+    head, line = whole.splitlines()
+    (tmp_path / "damaged.csv").write_text(f"{head}\n{line}\n{line[:40]}")    # the copy's last line was cut
+    publish(repo, "cfb-weather", tmp_path / "damaged.csv")
+    season_file(proj, 2026, s, "2026-12-21T16:00")
+    unreadable = "its copy on the ledgers branch (origin/ledgers:cfb-weather/decisions.csv) is unreadable"
+    for name, content, why in (
+            ("the file lost it", head + "\n",
+             "the file is missing it; the copy is damaged, and this line of it can still be read"),
+            ("the file is missing", None,
+             "the file is missing, and the copy is damaged; this line of it can still be read")):
+        if content is None:
+            (fwd / "decisions.csv").unlink()
+        else:
+            (fwd / "decisions.csv").write_text(content)
+        out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+        assert unreadable in out and "1 recorded decision in the copy can still be read (CFB_RULE_B)." in out, name
+        assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out), name
+        assert f"read from its copy on the ledgers branch ({why})" in rb(out), name
+        assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out), name
+        assert "FINAL: NOT KEPT" not in rb(out), name
+        if content is None:
+            assert not (fwd / "decisions.csv").exists(), name               # nothing restored from a damaged copy
+        else:
+            assert (fwd / "decisions.csv").read_text() == content, name
+    # the file is there and holds nothing, and the copy can't be read at all: a final decision is not recorded
+    (fwd / "decisions.csv").write_text(head + "\n")
+    (tmp_path / "empty.csv").write_bytes(b"")
+    publish(repo, "cfb-weather", tmp_path / "empty.csv")
+    out = on_clock(tmp_path, "2026-12-21T18:00", scorer).stdout
+    assert unreadable in out and "No recorded decision in the copy can still be read." in out
+    assert "FINAL: NOT KEPT" in rb(out) and "not recorded: its copy on the ledgers branch is unreadable" in rb(out)
+    assert (fwd / "decisions.csv").read_text() == head + "\n"
+    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # the nightly copy of the file
+    out = on_clock(tmp_path, "2026-12-21T19:00", scorer).stdout
+    assert unreadable not in out and "recorded in decisions.csv on 2026-12-21T19:00:00Z" in rb(out)
+    text = amendment5_section(3)
+    assert "amendment 4's rule for a damaged copy applies whether or not the file is there" in text
+    assert "it is not restored from a damaged copy" in text
+
+
+def test_amendment_5_reading_3_the_copy_protects_a_lost_line_only_until_the_nightly_copy(tmp_path):
+    """The review of pull request 64 (its rec_probe2): a line lost after the morning check-in was gone from the copy
+    once that night's copy published the shortened file (ops/sync_ledgers.sh copies the file as it is), and the next
+    real run decided it again. The scorer doesn't read the branch's earlier copies: this is a stated limit."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # Dec 20, 11:45 PM: the copy holds it
+    (fwd / "decisions.csv").write_text((fwd / "decisions.csv").read_text().splitlines()[0] + "\n")   # lost
+    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # that night: copied as it is
+    season_file(proj, 2026, s, "2026-12-21T16:00")
+    out = rb(on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout)
+    assert "FINAL: NOT KEPT" in out and "recorded in decisions.csv on 2026-12-21T17:00:00Z" in out
+    text = amendment5_section(3)
+    assert "the copy protects a lost line only until the next nightly copy" in text.lower()
+    assert "a line lost during the day, after the check-in, is gone from the copy by the next morning" in text
+    for f in (ROOT.parent / "STATUS.md", ROOT / "README.md"):
+        assert "as long as the copy still holds it" in f.read_text(), f.name
+    replaces = norm(amendment5().split("### What this amendment replaces")[1])
+    assert '"A lost record is restored from that copy; it is never decided again." Only while the copy holds it' in (
+        replaces)
+
+
+def test_amendment_5_states_the_review_s_smaller_points(tmp_path):
+    """The review of pull request 64, minor points: day totals that balance give the grouped interval zero width,
+    now a stated limit; and the replay counts are labelled as a replay made with scratch scripts."""
+    rows, s = [], []
+    kicks = [ts(d) for d in ("2026-10-03T19:00Z", "2026-10-10T19:00Z", "2026-10-17T19:00Z", "2026-10-24T19:00Z")
+             for _ in range(10)]
+    for i, k in enumerate(kicks):
+        c = 5.5 if i % 10 < 2 else -1.0                                     # each day: sum +3.0, mean +0.3
+        rows.append(row(1 + i, k, k - pd.Timedelta(days=2), rule_b="SIGNAL", mkt_total=50.5))
+        rows.append(row(1 + i, k, k - pd.Timedelta(hours=3), mkt_total=50.5 - c))
+        s.append(sched(1 + i, kick=k))
+    out = rb(score(tmp_path, rows, s, "2026-12-20", "--test-record"))
+    nums = json.loads(pd.read_csv(tmp_path / "decisions.csv", dtype=str).numbers[0])
+    assert nums["game_days"] == 4 and np.allclose([nums["ci_low"], nums["ci_high"], nums["mean_clv"]], 0.3,
+                                                  rtol=0, atol=1e-12)
+    assert nums["plain_ci_low"] < 0 < nums["plain_ci_high"]
+    assert "95% CI +0.30 to +0.30, grouped by game day over 4 days; plain, for reference: -0.52 to +1.12" in out
+    one = amendment5_section(1)
+    assert "the grouped interval can be narrower than the plain one" in one and "even of zero width" in one
+    assert "scratch scripts, not kept in the repository" in amendment5_section(2)

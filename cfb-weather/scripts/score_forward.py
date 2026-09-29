@@ -59,7 +59,10 @@ with no time zone) stops recording without stopping the scores.
 Amendment 5, reading 3: in a damaged record, every decision whose line can still be read on its own is
 printed as recorded, never as a fresh FINAL. A decision that a decisions.csv still in place is missing, while
 its copy on the ledgers branch holds it, is restored from the copy by a real run (and read from the copy by
-any other run), never decided again.
+any other run), never decided again. The copy protects a lost line only until the nightly copy publishes the
+shortened file; the scorer doesn't read the branch's earlier copies. A copy that can't be read stops recording
+whether or not the file is there, and each decision on a line of it that can still be read is printed from
+it as recorded; nothing is restored from a damaged copy.
 
     python scripts/score_forward.py [--ledger PATH] [--schedule PATH] [--list-excluded]
 """
@@ -289,19 +292,36 @@ def plural(k, word="decision"):
     return f"{k} recorded {word}{'s' if k != 1 else ''}"
 
 
+def copy_lines(readable):
+    """What a damaged copy still shows, for the line that says it is damaged."""
+    k = len(readable)
+    return (f" {plural(k)} in the copy can still be read ({', '.join(readable.decision_id)})." if k else
+            " No recorded decision in the copy can still be read.")
+
+
 if DECISIONS is not None:
     # A lost live record is restored from its nightly copy before anything is decided, so it is never decided
     # again. Every run on a live ledger reads the copy; only a run that may record restores from it, and any other
     # run prints the copy's decisions as recorded.
     copy = published_copy() if FWD is not None else None
     held, copy_broken = parse_record(copy) if copy is not None else (None, "")
+    if copy_broken:
+        # Amendment 6, section 3: a copy that can't be read stops recording, as a damaged file does, whether or not
+        # the file is there. Amendment 5, reading 3: each decision on a line of it that can still be read is held,
+        # so it is printed from the copy as recorded and never decided again; nothing is restored from a damaged copy.
+        held = readable_records(copy)
     if FWD is not None and not DECISIONS.exists():
         if copy_broken:
+            RECORD, FROM_COPY = held, dict.fromkeys(held.decision_id, "the file is missing, and the copy is damaged; "
+                                                                      "this line of it can still be read")
             print(f"Decision record: data/forward/decisions.csv is missing, and its copy on the ledgers branch "
                   f"({PUBLISHED}) is unreadable ({copy_broken}). Nothing will be recorded until the file is restored "
-                  f"from a readable copy in that branch's history ({HISTORY}); the scores below are printed as usual.")
+                  f"from a readable copy in that branch's history ({HISTORY}) and the copy can be read again (the "
+                  "nightly copy of the restored file does that); the scores below are printed as usual."
+                  + copy_lines(held) + (" They are printed below as recorded." if len(held) else ""))
             NOT_RECORDED = ("the decision record is missing and its copy on the ledgers branch is unreadable; nothing "
-                            f"will be recorded until the file is restored from a readable copy ({HISTORY})")
+                            f"will be recorded until the file is restored from a readable copy ({HISTORY}) and the "
+                            "copy can be read again")
         elif held is not None and len(held):
             if IS_LIVE and not NOT_RECORDED:
                 with record_lock():
@@ -330,6 +350,18 @@ if DECISIONS is not None:
                      if len(RECORD) else "No recorded decision in it can still be read."))
             NOT_RECORDED = ("the decision record is unreadable; nothing will be recorded until it is repaired or "
                             "restored from the ledgers branch")
+        if copy_broken:
+            # Amendment 6, section 3, and amendment 5, reading 3: the file is there, but its copy can't be read, so
+            # nothing is recorded until the copy can be read again, and the copy's readable decisions are held
+            print(f"Decision record: its copy on the ledgers branch ({PUBLISHED}) is unreadable ({copy_broken}). "
+                  "Nothing will be recorded until the copy can be read again: the nightly copy of a readable "
+                  "data/forward/decisions.csv does that. The scorer never restores from a damaged copy; if the file "
+                  f"has lost a decision, restore it by hand from a readable copy in the branch's history ({HISTORY})."
+                  + copy_lines(held))
+            NOT_RECORDED = (("the decision record and its copy on the ledgers branch are unreadable; nothing will be "
+                             "recorded until the file is repaired and the copy can be read again") if DAMAGED else
+                            ("its copy on the ledgers branch is unreadable; nothing will be recorded until the copy can "
+                             "be read again (the nightly copy of a readable file does that)"))
         # Amendment 5, reading 3: a decision the file is missing while its copy holds it is restored from the copy,
         # never decided again. A run that may record appends it to the file; any other run prints it from the copy.
         lost = held[~held.decision_id.isin(RECORD.decision_id)] if held is not None else None
@@ -349,13 +381,20 @@ if DECISIONS is not None:
                       "copy. A lost record is never decided again.")
         if lost is not None and len(lost):          # a run that may not record: print them from the copy
             RECORD = pd.concat([RECORD, lost], ignore_index=True)
-            FROM_COPY = dict.fromkeys(lost.decision_id, "the file is damaged" if DAMAGED else "the file is missing it")
+            FROM_COPY = dict.fromkeys(lost.decision_id, ("the file is damaged" if DAMAGED else "the file is missing it")
+                                      + ("; the copy is damaged, and this line of it can still be read"
+                                         if copy_broken else ""))
             them = "them" if len(lost) != 1 else "it"
             print(f"Decision record: data/forward/decisions.csv {'is damaged and ' if DAMAGED else ''}doesn't hold "
                   f"{plural(len(lost))} that its copy on the ledgers branch ({PUBLISHED}) holds "
                   f"({', '.join(lost.decision_id)}), printed below as recorded. This run doesn't restore {them} "
-                  f"({NOT_RECORDED}); " + (f"{them} will be restored once the file is repaired." if DAMAGED else
-                                           f"the next run that may record restores {them}."))
+                  f"({NOT_RECORDED}); " + (
+                      f"a damaged copy is never restored from: restore {them} by hand, from this copy's readable "
+                      f"line{'s' if len(lost) != 1 else ''} or a readable copy in the branch's history ({HISTORY}), "
+                      f"before the nightly copy replaces the damaged one, after which the copy no longer holds {them}."
+                      if copy_broken else
+                      f"{them} will be restored once the file is repaired." if DAMAGED else
+                      f"the next run that may record restores {them}."))
     if RECORD is not None and args.now:        # a preview shows only the decisions made by its date
         RECORD = RECORD.loc[np.array([pd.Timestamp(t) <= NOW for t in RECORD.decided_utc], dtype=bool)]
 

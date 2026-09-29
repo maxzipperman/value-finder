@@ -1080,3 +1080,114 @@ def test_amendment_7_reading_3_a_decision_missing_from_the_file_is_restored_from
     assert "FINAL: KEEP" in rb and "read from its copy on the ledgers branch (the file is damaged)" in rb
     assert "FINAL: DROP" not in rb and (fwd / "decisions.csv").read_text() == cut
     assert "is restored from the copy, never decided again" in amendment7_section(3)
+
+
+# ================================================================== the review of pull request 64 (Sep 29)
+def test_amendment_7_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_can(tmp_path):
+    """The review of pull request 64 (its rec_probe c3 and c4): the copy's first record line could be read and the
+    line after it was cut. With the file present but missing that decision, the next real run decided it again
+    (DROP after the recorded KEEP) and said nothing about the copy; with the file missing, it printed a fresh DROP.
+    A damaged copy stops recording (amendment 6, section 3) whether or not the file is there."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)                # CLV +1 each: KEEP
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "nfl-weather", good, gg + filler(2026), "2027-01-20T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    games = proj / "data" / "raw" / "games.csv"
+    assert "FINAL: KEEP" in on_clock(tmp_path, "2027-01-20T17:00", scorer).stdout
+    whole = (fwd / "decisions.csv").read_text()
+    head, line = whole.splitlines()
+    (tmp_path / "damaged.csv").write_text(f"{head}\n{line}\n{line[:40]}")    # the copy's last line was cut
+    publish(repo, "nfl-weather", tmp_path / "damaged.csv")
+    pd.DataFrame([dict(x, total_line=46) for x in gg] + filler(2026)).to_csv(games, index=False)   # closes corrected
+    touch(games, "2027-01-22T16:00")
+    unreadable = "its copy on the ledgers branch (origin/ledgers:nfl-weather/decisions.csv) is unreadable"
+    for name, content, why in (
+            ("the file lost it", head + "\n",
+             "the file is missing it; the copy is damaged, and this line of it can still be read"),
+            ("the file is missing", None,
+             "the file is missing, and the copy is damaged; this line of it can still be read")):
+        if content is None:
+            (fwd / "decisions.csv").unlink()
+        else:
+            (fwd / "decisions.csv").write_text(content)
+        out = on_clock(tmp_path, "2027-01-22T17:00", scorer).stdout
+        assert unreadable in out and "1 recorded decision in the copy can still be read (RULE_B:2026)." in out, name
+        rb = part(out, *RB)
+        assert "FINAL: KEEP" in rb and "recorded in decisions.csv on 2027-01-20T17:00:00Z" in rb, name
+        assert f"read from its copy on the ledgers branch ({why})" in rb, name
+        assert "a fresh computation on the same horizon now gives: DROP" in rb and "FINAL: DROP" not in rb, name
+        if content is None:
+            assert not (fwd / "decisions.csv").exists(), name               # nothing restored from a damaged copy
+        else:
+            assert (fwd / "decisions.csv").read_text() == content, name
+    # the file is whole again, the copy still damaged, and the model lean's decision is final: it is not recorded
+    leans, gl = season(2026, list(range(5, 19)), 40, first_id=200, line=43.0, lean="UNDER lean")
+    pd.DataFrame(good + leans).to_csv(fwd / "ledger.csv", index=False)
+    pd.DataFrame([dict(x, total_line=46) for x in gg] + gl + filler(2026)).to_csv(games, index=False)
+    touch(games, "2027-01-22T16:00")
+    (fwd / "decisions.csv").write_text(whole)
+    out = on_clock(tmp_path, "2027-01-22T18:00", scorer).stdout
+    assert unreadable in out and "Nothing will be recorded until the copy can be read again" in out
+    lean = part(out, *LEAN)
+    assert "FINAL: KEEP" in lean and "not recorded: its copy on the ledgers branch is unreadable" in lean
+    assert (fwd / "decisions.csv").read_text() == whole
+    publish(repo, "nfl-weather", fwd / "decisions.csv")                       # the nightly copy of the whole file
+    out = on_clock(tmp_path, "2027-01-22T19:00", scorer).stdout
+    assert unreadable not in out and "recorded in decisions.csv on 2027-01-22T19:00:00Z" in part(out, *LEAN)
+    text = amendment7_section(3)
+    assert "amendment 6's rule for a damaged copy applies whether or not the file is there" in text
+    assert "it is not restored from a damaged copy" in text
+
+
+def test_amendment_7_reading_3_the_copy_protects_a_lost_line_only_until_the_nightly_copy(tmp_path):
+    """The review of pull request 64 (its rec_probe2): a line lost after the morning check-in was gone from the copy
+    once that night's copy published the shortened file (ops/sync_ledgers.sh copies the file as it is), and the next
+    real run decided it again. The scorer doesn't read the branch's earlier copies: this is a stated limit."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "nfl-weather", good, gg + filler(2026), "2027-01-20T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    games = proj / "data" / "raw" / "games.csv"
+    assert "FINAL: KEEP" in on_clock(tmp_path, "2027-01-20T17:00", scorer).stdout
+    publish(repo, "nfl-weather", fwd / "decisions.csv")                       # day 1, 11:45 PM: the copy holds it
+    (fwd / "decisions.csv").write_text((fwd / "decisions.csv").read_text().splitlines()[0] + "\n")   # day 2: lost
+    publish(repo, "nfl-weather", fwd / "decisions.csv")                       # day 2, 11:45 PM: copied as it is
+    pd.DataFrame([dict(x, total_line=46) for x in gg] + filler(2026)).to_csv(games, index=False)
+    touch(games, "2027-01-22T16:00")
+    out = part(on_clock(tmp_path, "2027-01-22T17:00", scorer).stdout, *RB)
+    assert "FINAL: DROP" in out and "recorded in decisions.csv on 2027-01-22T17:00:00Z" in out
+    text = amendment7_section(3)
+    assert "the copy protects a lost line only until the next nightly copy" in text.lower()
+    assert "a line lost during the day, after the check-in, is gone from the copy by the next morning" in text
+    for f in (ROOT.parent / "STATUS.md", ROOT / "README.md"):
+        assert "as long as the copy still holds it" in f.read_text(), f.name
+    replaces = norm(amendment(7).split("### What this amendment replaces")[1])
+    assert '"A lost record is restored from that copy; it is never decided again." Only while the copy holds it' in (
+        replaces)
+
+
+def test_amendment_7_states_the_review_s_smaller_points(tmp_path):
+    """The review of pull request 64, minor points: day totals that balance give the grouped interval zero width
+    (a keep where the plain interval includes zero), which is now a stated limit; amendment 5, section 4's
+    sentence about the whole interval is named; STATUS counts paths, not seasons; and the replay counts are
+    labelled as a replay made with scratch scripts."""
+    bets = [(f"Z{d}{j}", d, "13:00", wk, 42 + (5.5 if j < 2 else -1.0), 42, 40)
+            for d, wk in (("2026-10-11", 5), ("2026-10-25", 7), ("2026-11-29", 12), ("2026-12-20", 15))
+            for j in range(10)]
+    rows, games, clv = keep_case(bets)
+    out = part(score(tmp_path, rows, games, "2027-01-20", "--test-record"), *RB)
+    rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str)
+    nums = json.loads(rec.numbers[0])
+    assert rec.verdict[0] == "KEEP" and np.allclose([nums["ci_low"], nums["ci_high"], nums["mean_clv"]], 0.3,
+                                                    rtol=0, atol=1e-12)
+    assert nums["plain_ci_low"] < 0 < nums["plain_ci_high"]
+    assert "95% CI +0.30 to +0.30, grouped by game day over 4 days; plain, for reference: -0.52 to +1.12" in out
+    one = amendment7_section(1)
+    assert "the grouped interval can be narrower than the plain one" in one and "even of zero width" in one
+    assert ('Amendment 5, section 4: "If the keep test and the drop test are both met, the result is drop. That can '
+            'only happen when the whole 95% interval sits between 0 and +0.25 points') in norm(amendment(7))
+    status = (ROOT.parent / "STATUS.md").read_text()
+    assert "40,000 simulated paths of 40 bets per case" in status and "simulated seasons per case" not in status
+    assert "scratch scripts, not kept in the repository" in amendment7_section(2)
