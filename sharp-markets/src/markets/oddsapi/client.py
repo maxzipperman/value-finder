@@ -5,9 +5,10 @@ the way `markets odds5m` does, from the same code: the free key check before the
 start on an unreadable balance or one below the floor); every answer counted at the larger of what it reports and
 what the documentation charges for what came back, and every attempt with no answer at its upper bound; the run
 budget and the floor checked before every attempt; billing headers that fail closed; the stop on a call billed
-above its upper bound, a retried 5xx included; the alarm on an account that falls further than the run counted; the
-key blanked everywhere; a STOPPED line and a summary on every stop; no 200 that isn't JSON ever cached; and a row per
-answer in data/raw/_manifest/oddsapi_manifest.csv, with pull id N0.
+above its upper bound, a retried 5xx included; the alarm on an account that falls further than the run counted, with
+its margin (--alarm-margin); the key blanked everywhere; a STOPPED line and a summary on every stop, after which the
+client refuses every later call; no 200 that isn't JSON ever cached; and a row per answer in
+data/raw/_manifest/oddsapi_manifest.csv, with pull id N0 (`markets odds5m headers --pull N0` reads them).
 
 What it asks for and where it caches are its own and unchanged: data/raw/{sport}/oddsapi_hist/, keyed on the same
 URL and parameters as before (N1's cache_as calls and the sample week's cached Kalshi data rely on them). Unlike the
@@ -22,7 +23,7 @@ from datetime import datetime
 
 from ..cache import RawCache, body_json
 from ..http import scrub
-from .bulk import BudgetExceeded, BulkClient, Call, CircuitBreaker, Stop, is_sealed, iso, load_config
+from .bulk import BudgetExceeded, BulkClient, Call, CircuitBreaker, Stop, _latched, is_sealed, iso, load_config
 from .schedule import credits_per_snapshot
 
 __all__ = ["BASE_URL", "BudgetExceeded", "OddsApiClient", "OddsApiError", "PULL_ID", "SOURCE", "Stop"]
@@ -40,10 +41,8 @@ class OddsApiError(CircuitBreaker):
 class OddsApiClient(BulkClient):
     cache_statuses = (200,)
 
-    def __init__(self, sport: str, cache: RawCache, *, max_credits: int, rate_per_sec: float = 2, floor: int = 0,
-                 session=None, api_key: str | None = None, max_retries: int = 6):
-        super().__init__(cache, max_credits=max_credits, floor=floor, rate_per_sec=rate_per_sec, session=session,
-                         api_key=api_key, max_retries=max_retries)
+    def __init__(self, sport: str, cache: RawCache, *, max_credits: int, rate_per_sec: float = 2, **kw):
+        super().__init__(cache, max_credits=max_credits, rate_per_sec=rate_per_sec, **kw)
         self.sport = sport
         self._odds5m: dict | None = None
 
@@ -69,6 +68,7 @@ class OddsApiClient(BulkClient):
                     at, credits_per_snapshot(len(markets.split(",")), len(bookmakers)), self._sealed(sport_key, at),
                     cache_sport=self.sport, base=BASE_URL)
 
+    @_latched
     def fetch(self, call: Call, refetch: bool = False) -> dict:
         rec = super().fetch(call, refetch)
         if rec["http_status"] != 200:
