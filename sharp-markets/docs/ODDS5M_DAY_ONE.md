@@ -8,9 +8,9 @@ The pulls are defined in [`config/odds5m.yaml`](../config/odds5m.yaml) and run b
 
 Run every command from `sharp-markets/`.
 
-**Day one buys at most 238,590 credits** (about 210K of it exists on October 1; the rest is 2026 games not yet played):
-the probe, F1, F2, the NBA sample week, and the heat closes. Then it stops. F3, N1 and F4 are gated (below).
-The **hard ceiling for the whole month is 4,440,000 credits**, and day one plus every gate is 2,304,050.
+**Day one buys at most 272,790 credits** (about 244K of it exists on October 1; the rest is 2026 games not yet played):
+the probe, F1, F2, the first slice of F3, the NBA sample week, and the heat closes. Then it stops. F3b, N1 and F4 are
+gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, and day one plus every gate is 2,304,050.
 
 ## How a run protects the credits
 
@@ -71,7 +71,7 @@ The **hard ceiling for the whole month is 4,440,000 credits**, and day one plus 
    ```bash
    uv run markets odds5m plan
    ```
-   It prints calls and the upper-bound credits per pull from the real schedules, with the pull's group and a running total. HB1 and HS1 stop with a message until step 6 has written their game list; that's expected. The estimate for day one is 238,590 (F1 162,210; F2 45,600; the rest small). If F1 or F2 comes out more than about 10% above its estimate, stop and tell the owner before pulling: a schedule window is probably wrong.
+   It prints calls and the upper-bound credits per pull from the real schedules, with the pull's group and a running total. HB1 and HS1 stop with a message until step 7 has written their game list; that's expected. The estimate for day one is 272,790 (F1 162,210; F2 45,600; F3's 2025 slice 34,200; the rest small). If F1, F2 or F3 comes out more than about 10% above its estimate, stop and tell the owner before pulling: a schedule window is probably wrong.
    - **Where 4,440,000 comes from:** 5,000,000 − 531,630 (the `--floor` reserve) − about 10,700 (the probe) − about 9,200 (October's live use on the same key: alerts 248, close capture ~385, trigger poller ~2,600, props log ~2,520, NBA collector from Oct 20 ~3,460) ≈ 4,448,500, rounded down. The floor stops every run at 4.47M spent, so a plan above this line can't finish anyway. Day one plus every gate is 2,304,050, so the ceiling only matters if a gate is misread.
 4. **One week per sport for F1 and F2**, to check coverage before the full spend. Dry run first to see the cost, then set `--max-credits` a little above it:
    ```bash
@@ -85,15 +85,18 @@ The **hard ceiling for the whole month is 4,440,000 credits**, and day one plus 
    - the lag between the requested and returned snapshot, in minutes. It should be about 0–5, or 0–10 before September 2022.
 
    A book missing for a whole sport, or a market that never appears, is a decision for the hub: drop it from the config's book list, or accept it.
-5. **F1, then F2, one at a time.** Set `--max-credits` to the plan figure plus about 5%:
+5. **F1, then F2, then F3's 2025 slice, one at a time.** Set `--max-credits` to the plan figure plus about 5%:
    ```bash
    uv run markets odds5m full --pull F1 --confirm --max-credits 170000
    uv run markets odds5m check --pull F1
    uv run markets odds5m full --pull F2 --confirm --max-credits 48000
    uv run markets odds5m check --pull F2
+   uv run markets odds5m full --pull F3 --seasons 2025 --confirm --max-credits 36000     # F3a: the 2025 season only
+   uv run markets odds5m check --pull F3 --seasons 2025
    ```
-   - At the default 8 requests a second, F1's roughly 5,400 calls take about 12 minutes and F2's 4,600 about 10. `--rate 20` is safe if nothing else is using the key heavily (the API allows 30).
+   - At the default 8 requests a second, F1's roughly 5,400 calls take about 12 minutes, F2's 4,600 about 10, and F3a's 570 about a minute. `--rate 20` is safe if nothing else is using the key heavily (the API allows 30).
    - If a run stops, read the `STOPPED:` line. A budget or floor stop is expected. A circuit-breaker stop means something needs a look before rerunning.
+   - `--seasons 2025` is what keeps F3 to its first slice. Without it, `full --pull F3` would pull all of 2023–26 (136,800); the rest is gated (F3b, below).
 6. **The NBA sample week (N0), 7,540 credits, through the NBA pipeline, not the bulk puller.** PLAN.md §8 step 3 requires it before any full season; the week's Kalshi candles and trades are already cached, and the snapshots land where N1 will look:
    ```bash
    uv run markets odds-plan --start 2026-01-05 --end 2026-01-11                              # free: 754 snapshots, 7,540 credits
@@ -119,13 +122,12 @@ The **hard ceiling for the whole month is 4,440,000 credits**, and day one plus 
 ## Gated pulls: decided by about October 20
 
 Each of these runs only when its gate has been read and passed. The gates are written in
-[`odds-api-credits.md`](../../strategy-research/odds-api-credits.md#gated-inside-the-month-2065460-at-most-decided-by-about-october-20)
+[`odds-api-credits.md`](../../strategy-research/odds-api-credits.md#gated-inside-the-month-2031260-at-most-decided-by-about-october-20)
 and in `strategy-research/odds_5m.py`; the short form:
 
 | Pull | Credits at most | Gate | Command |
 |---|---|---|---|
-| F3a: NFL props 2025 at T−24h and the close | 34,200 | #41's pre-registration is written (line-vs-median hypothesis, distribution model, de-vig method, the free mean-minus-median gaps). Posted lines aren't on disk, so this slice is where the check runs. | `full --pull F3 --seasons 2025 --confirm --max-credits 36000` |
-| F3b: NFL props 2023–24 and the 2026 games played | 102,600 | On 2025, the posted line sits above the empirical median in at least 3 of the 4 yardage markets, and the under's excess win rate over the de-vigged close is positive pooled | `full --pull F3 --confirm --max-credits 108000` (the 2025 slice is cached, so only the rest is fetched) |
+| F3b: NFL props 2023–24 and the 2026 games played | 102,600 | On the 2025 slice, graded as #10's pre-registration draft says (`strategy-research/README.md`, idea 7; it goes into a pre-registration file before the rows are joined to outcomes): the pooled excess under rate over the de-vigged close is positive in the primary markets (receiving and rushing yards), and the posted line sits above the player's same-season median in both | `full --pull F3 --confirm --max-credits 108000` (the 2025 slice is cached, so only the rest is fetched) |
 | N1: NBA 2025-26 at 5 minutes, less the sample week | 486,440 | The sample week shows an H1 edge (net-of-fee flags with fills and positive CLV to Pinnacle's close) or an H2 lag (median catch-up lag ≥ 10 minutes), per PLAN.md | `full --pull N1 --confirm --max-credits 510000` |
 | F4: hourly football, net of F1 | 1,442,220 | H16b on F1's daily grid: fading a move of a point or more earns ≥ 0.25 points of CLV with the interval above zero, in both sports, in 4 of 6 seasons | `full --pull F4 --confirm --max-credits 1520000`; about 48,000 calls, roughly two hours at `--rate 8` |
 

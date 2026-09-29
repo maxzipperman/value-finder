@@ -1,7 +1,7 @@
 """The 5M-credit Odds API month, as the owner decided it on Sep 28, 2026 after the plan review
-(plan-review-2026-09-28.md; issue #38): a small day-one pull, two pulls gated on results inside the month,
-the props pull behind its own pre-registration (#41), and the rest in a March 2027 month. No API calls,
-no downloads.
+(plan-review-2026-09-28.md; issue #38): a small day-one pull, pulls gated on results inside the month
+(the props pull in two slices behind its pre-registration, #41), and the rest in a March 2027 month.
+No API calls, no downloads.
 
 Called by odds_budget.py; run on its own with
     nfl-weather/.venv/bin/python strategy-research/odds_5m.py [--no-save]
@@ -145,21 +145,20 @@ def football_counts():
 
 # The act-or-drop rules (plan review section 3, with the Sep 28 research sweep's two corrections, #41 and #42).
 GATES = {
-    "F3a": ("Only after #41's free pre-registration, before any prop line is seen: #10 rewritten as 'the posted line "
-            "sits above the empirical median of the player's outcome distribution, and the under's price is not "
-            "asymmetric enough to remove the edge'; the distribution model and the de-vig method registered; the "
-            "2023-25 mean-minus-median gap per market computed from player_week.parquet and kicks.parquet. Posted "
-            "lines are not on disk, so the line-vs-median check itself runs on this 2025 slice."),
-    "F3b": ("Only if, on the 2025 slice (F3a), the posted line sits above the empirical median in at least 3 of the "
-            "4 yardage markets and the under's excess win rate over the de-vigged close is positive pooled. If the "
-            "lines sit at the median, F3b moves to March and only the kicking markets (#21) stay in play."),
+    "F3b": ("Only if, on the 2025 slice (F3a), graded exactly as #10's pre-registration draft says (README idea 7, "
+            "Sep 29, #41: the excess under rate over the power-method de-vigged close price, receiving and rushing "
+            "yards pooled, passing yards and receptions as controls), the pooled excess is positive and the posted "
+            "line sits above the player's same-season median in both primary markets. Before that read, the draft "
+            "goes into a pre-registration file. Otherwise F3b moves to March and only the kicking markets (#21) stay "
+            "in play."),
     "N1": ("Only if the sample week shows an H1 edge (net-of-fee edge flags with fills and positive CLV to Pinnacle's "
            "close) or an H2 lag (median catch-up lag of 10 minutes or more), exactly as PLAN.md s8 step 3 and s9 "
            "decision 2 require. Decide by about Oct 20."),
-    "F4": ("Only if H16b passes on F1's daily grid (#42): a move of a point or more on day t reverses by the close, "
-           "graded on CLV; fading it earns at least 0.25 points of CLV with the 95% interval above zero, in both "
-           "sports, in 4 of 6 seasons. Decide by about Oct 20. H16a (fade the move at the close, graded on ROI, must "
-           "beat the vig) is a separate variant with a free SBR pre-check for 2007-21; it does not unlock F4."),
+    "F4": ("Only if H16b passes on F1's daily grid (#42, the gate registered in odds-api-credits.md): Pinnacle's spread "
+           "or total moved 1 point or more since the previous daily snapshot, bet against it, CLV to Pinnacle's close; "
+           "act if mean CLV is at least 0.25 points with the 95% interval (clustered by game) above zero in both "
+           "sports, and the season's interval above zero in at least 4 of the 6 seasons in each sport. Decide by "
+           "about Oct 20. H16a (fade the move at the close) was dropped on Sep 29: no edge on the SBR pre-check."),
     "H1": "March 2027, only if the price engine worked on football (F1's rule) and a data-use line has been written.",
     "N2": "March 2027, only if the price engine worked on football (F1's rule) and a data-use line has been written.",
     "F5": ("March 2027, only if Rule HT's re-grade at Pinnacle's close (F1, 2020-25) keeps its win rate above the "
@@ -198,6 +197,11 @@ def plan():
          "(no T-2h snapshot: no hypothesis; no team totals: the M4 pre-check failed)",
          f"10 x 2 mkts x 2 snaps x {nfl_p:,} games", HIST * 2 * 2 * nfl_p, HIST * 2 * 2 * nfl_26, HIST * 2 * 2 * nfl_oct1, 3,
          "Alternate lines misprice key-number crossings vs recent-era margins"),
+        ("F3a", "day_one", "NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-24h and the close, "
+         "the 2025 season (the first slice of F3; #10's pre-registration draft exists, README idea 7, Sep 29)",
+         f"{f3_snap} x {nfl_25:,} games", f3_snap * nfl_25, 0, 0, 3,
+         "#10 as pre-registered (#41): posted lines sit above the empirical median, receiving and rushing yards pooled; "
+         "kicking-points unders in wind/cold (#21)"),
         ("N0", "day_one", "NBA sample week Jan 5-11, 2026 at schedule A, h2h, 3 sharp books "
          "(`markets odds-pull --schedule A`, PLAN.md s8; the snapshots land in N1's cache)",
          f"10 x {NBA_WEEK_SNAPS} snapshots", HIST * NBA_WEEK_SNAPS, 0, 0, 4,
@@ -212,12 +216,10 @@ def plan():
          f"{PER_SNAP} x <= {HEAT_QUALIFYING['HS1']} qualifying matches, one close slot each (upper bound)",
          PER_SNAP * HEAT_QUALIFYING["HS1"], 0, 0, 2,
          "S-H1, descriptive only (amendment 4): the under's record at Pinnacle's close in hot matches"),
-        ("F3a", "gated", "NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-24h and the close, "
-         "the 2025 season", f"{f3_snap} x {nfl_25:,} games", f3_snap * nfl_25, 0, 0, 3,
-         "#10 as rewritten by #41: the posted line sits above the empirical median; kicking-points unders in wind/cold (#21)"),
-        ("F3b", "gated", "NFL props, the same markets and snapshots, 2023-24 and the 2026 games played",
+        ("F3b", "gated", "NFL props, the same markets and snapshots as F3a, 2023-24 and the 2026 games played",
          f"{f3_snap} x {nfl_p - nfl_25:,} games", f3_snap * (nfl_p - nfl_25), f3_snap * nfl_26, f3_snap * nfl_oct1, 3,
-         "#10 on 2023-25 (act if the under beats the de-vigged close with p < 0.01 in each year and each market)"),
+         "#10 on 2023-25, per the draft: act if the pooled excess clears the bar in force and p < 0.01 in each year and "
+         "each primary market"),
         ("N1", "gated", "NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D), less the sample week",
          f"10 x ({N1_SEASON_SNAPS:,} - {NBA_WEEK_SNAPS}) snapshots", HIST * (N1_SEASON_SNAPS - NBA_WEEK_SNAPS), 0, 0, 2,
          "H1/H2 on the full season (PLAN.md)"),
@@ -305,9 +307,9 @@ def main(save=True):
     print("\n5M month, the reviewed design (owner decisions Sep 28, #38). Credits are upper bounds; football counts a "
           "full 2026 season as 2025's stand-in.")
     print(p[["id", "tier", "value", "credits", "credits_2026", "credits_2026_by_oct1", "cumulative", "pull"]].to_string(index=False))
-    print(f"\nDay one (P0, F1, F2, N0, HB1, HS1): {t['day_one_upper']:,} upper bound; {t['day_one_on_oct1']:,} exists on "
-          f"Oct 1 (cap {DAY_ONE_CAP:,}: {'ok' if t['day_one_upper'] < DAY_ONE_CAP else 'OVER'})")
-    print(f"Gated inside the month (F3a, F3b, N1, F4): {t['gated_upper']:,}; day one plus every gate {t['month_max_upper']:,} "
+    print(f"\nDay one (P0, F1, F2, F3a, N0, HB1, HS1): {t['day_one_upper']:,} upper bound; {t['day_one_on_oct1']:,} exists "
+          f"on Oct 1 (cap {DAY_ONE_CAP:,}: {'ok' if t['day_one_upper'] < DAY_ONE_CAP else 'OVER'})")
+    print(f"Gated inside the month (F3b, N1, F4): {t['gated_upper']:,}; day one plus every gate {t['month_max_upper']:,} "
           f"against the {CEILING:,} ceiling ({'ok' if t['month_max_upper'] <= CEILING else 'OVER'})")
     print(f"Floor {FLOOR:,} ({RESERVE:,} plus X3's {X3_TO_RESERVE:,}); unallocated if every gate passes "
           f"{t['unallocated_if_every_gate_passes']:,}")

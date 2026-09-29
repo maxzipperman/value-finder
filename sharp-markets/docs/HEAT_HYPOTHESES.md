@@ -117,4 +117,4 @@ All three were made on September 29, 2026, in [#33](https://github.com/maxzipper
 
 **4. Open item, not settled here.** #35 notes that the MLB Stats API may report per-game roof status for retractable parks. That is unverified. If the hub confirms the field on the Mac, letting retractable-roof games in when the roof was open needs its own dated amendment before the first join; it is not done by this one, and the review's warning stands: widening the sample after any odds are joined is not allowed.
 
-**5. Variants.** Still 3 of the plan's count (S-H1, B-H1 and the deferred B-H2). The repo-wide count is now 192 ([`odds-api-credits.md`](../../strategy-research/odds-api-credits.md#data-use-plan)), so the bar is p < 0.00026; it no longer applies to these two, which report no test.
+**5. Variants.** Still 3 of the plan's count (S-H1, B-H1 and the deferred B-H2). The repo-wide running count is 198 ([`odds-api-credits.md`](../../strategy-research/odds-api-credits.md#data-use-plan)), so the bar is p < 0.00025; it no longer applies to these two, which report no test.
