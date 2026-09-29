@@ -222,3 +222,14 @@ def test_espn_games_at_an_unknown_ground_say_so(tmp_path):
     assert rows == [] and unresolved[0]["venue_how"] == "ESPN venue not in table: Brand New Ground"
     join.write(rows, unresolved, tmp_path / "out")
     assert "Brand New Ground" in (tmp_path / "out" / "unresolved.csv").read_text().splitlines()[1]
+
+
+def test_roof_labels_are_consistent_for_the_heat_sample():
+    """#33 item 14 (HEAT_HYPOTHESES.md amendment 1): stands-only roofs are `open`, so Euro 2024 contributes
+    games; World Cup 2022 has open-ground matches (Stadium 974), so it is excluded by competition, not by roof."""
+    from collections import Counter
+    vs = V.venues()
+    open_by = Counter((r["sport_key"], r["kickoff_utc"][:4]) for r in V.fixtures() if vs[r["venue_id"]].roof == "open")
+    assert open_by[("soccer_uefa_european_championship", "2024")] == 37
+    assert open_by[("soccer_fifa_world_cup", "2022")] == 7 and open_by[("soccer_fifa_world_cup", "2026")] == 65
+    assert [v.venue_id for v in vs.values() if v.roof == "covered"] == ["sofi_stadium"]

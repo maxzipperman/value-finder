@@ -21,10 +21,10 @@ These tables are used by `markets weather` (`src/markets/weather/`) to place eac
   - After the day-one probe, `markets weather plan` lists every game it couldn't place and why, for example "unknown home team".
   - To fix one, add the Odds API's spelling to `aliases`. Never guess a venue.
 - **Roofs:**
-  - `open`
+  - `open`: the pitch is open to the sky. A roof over the stands only still counts as open, e.g. Hard Rock Stadium, Lumen Field, most J1 grounds and the seven Euro 2024 grounds without a closing roof (relabelled from `covered` on September 29, 2026; [`HEAT_HYPOTHESES.md`](../../docs/HEAT_HYPOTHESES.md) amendment 1)
   - `retractable` (status per game unknown)
   - `dome`
-  - `covered` (a fixed roof over the stands and an open pitch, e.g. SoFi or the Euro 2024 grounds)
+  - `covered`: a fixed roof over the whole bowl, pitch included, with open sides (SoFi Stadium)
   - `cooled` (the World Cup 2022 stadiums)
 
   The heat hypotheses use `open` only.
