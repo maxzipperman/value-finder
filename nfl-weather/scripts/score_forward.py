@@ -42,9 +42,9 @@ g["kick_utc"] = pd.to_datetime(g.gameday + " " + g.gametime).dt.tz_localize("Ame
 L = L.merge(g[["game_id", "total", "close_total", "kick_utc", "result"]], on="game_id", how="left")
 # Amendment 3: the Pinnacle close captured just before kickoff (scripts/capture_close.py), secondary only
 closes = ROOT / "data" / "forward" / "closes.csv"
-cap = (pd.read_csv(closes).dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
-       [["game_id", "close_total"]].rename(columns={"close_total": "cap_close"})
-       if closes.exists() else pd.DataFrame(columns=["game_id", "cap_close"]))
+cap = pd.read_csv(closes) if closes.exists() else pd.DataFrame(columns=["game_id", "book", "close_total"])
+cap = (cap[cap.book.eq("pinnacle")].dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
+       [["game_id", "close_total"]].rename(columns={"close_total": "cap_close"}))
 L = L.merge(cap, on="game_id", how="left")
 # Amendment 2: evaluation starts with Week 5 (Oct 8, 2026); pre-amendment rows are excluded
 L = L[(L.rules_version != "") & (L.kick_utc >= pd.Timestamp("2026-10-08", tz="UTC"))]

@@ -107,8 +107,9 @@ measure or the decision changes.
   of price.
 * **What is recorded.** `scripts/capture_close.py` runs every 15 minutes
   (`ops/capture_closes.sh`, launchd). It makes one Odds API call per kickoff slot,
-  2–20 minutes before kickoff, and records Pinnacle's total and prices for every game
-  in the slot in `data/forward/closes.csv`.
+  2–20 minutes before kickoff, and records the totals and prices of every logged
+  book for every game in the slot in `data/forward/closes.csv`. The secondary CLV
+  uses Pinnacle's.
 * **What is reported.** `score_forward.py` reports, for each rule, CLV against that
   captured close, next to the primary measure. It also reports how many bets have no
   captured close (the Mac was asleep, the quota was low, or Pinnacle had no line).

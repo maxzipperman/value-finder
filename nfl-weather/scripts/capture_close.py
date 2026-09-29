@@ -2,7 +2,8 @@
 
 Runs every 15 minutes (ops/capture_closes.sh, launchd). When NFL games kick off in
 2–20 minutes and that kickoff time hasn't been captured yet, one Odds API call
-(1 credit) records Pinnacle's current total and prices for every game in the slot.
+(1 credit) records the current total and prices of every logged book (LIVE_BOOKS) for
+every game in the slot; the secondary CLV uses Pinnacle's.
 Rows are appended to data/forward/closes.csv. A slot that fails (no key, quota low,
 API down) is retried on the next run while it's still inside the window, and
 otherwise stays missing: score_forward.py reports missing closes and never imputes them.
@@ -56,5 +57,6 @@ FWD.mkdir(parents=True, exist_ok=True)
 rows.to_csv(CLOSES, mode="a", header=not CLOSES.exists(), index=False)
 state["captured"] = sorted(set(state["captured"]) | set(slots))
 STATE.write_text(json.dumps(state))
-print(f"{now:%Y-%m-%d %H:%M}Z close capture: {int(rows.close_total.notna().sum())}/{len(rows)} games priced "
-      f"for {', '.join(slots)}")
+pin_games = rows.loc[rows.book.eq("pinnacle") & rows.close_total.notna(), "game_id"].nunique()
+print(f"{now:%Y-%m-%d %H:%M}Z close capture: Pinnacle close for {pin_games}/{due.game_id.nunique()} games, "
+      f"{rows.book.nunique()} books logged, for {', '.join(slots)}")
