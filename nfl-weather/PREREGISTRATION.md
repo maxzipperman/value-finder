@@ -323,7 +323,8 @@ A review of the scorer, made after amendment 5 was merged (pull request 50), fou
 text left open. Every one is settled here, before any outcome exists. **No trigger, gate, price cap,
 stake or metric changes.** The rules version stays `v3-2026-09-28`, because the board behaves exactly
 as before; only `scripts/score_forward.py` changes. Where this amendment and any earlier text differ,
-this one applies.
+this one applies. The last section lists every earlier sentence it changes. A final review of this
+draft (Sep 29) added sections 9 to 11 and that list.
 
 ### 1. A bet whose game was moved or never played is void
 
@@ -349,27 +350,55 @@ this one applies.
 
 ### 3. A decision is made once, and written down
 
-* The first time a decision is final, the scorer appends it to `data/forward/decisions.csv`: the rule,
-  the horizon, the time it was decided (UTC), the number of bets, every number the decision used, the
-  verdict, and a fingerprint (sha256) of the ledger rows that entered it (the entry rows; the closes
-  come from the schedule).
+* The first time a decision is final, the scorer appends it to `data/forward/decisions.csv`: its
+  decision id, the rule, the horizon, the time it was decided (UTC), the number of bets, every number
+  the decision used, the verdict, the positions in the ledger of the rows that entered it (1 is the
+  first row after the header; they are the entry rows, since the closes come from the schedule), and a
+  fingerprint of those rows.
+* **The decision id is fixed:** `RULE_B:2026` and `MODEL_LEAN:2026` for the decisions after Week 18 of
+  2026, `RULE_B:2026-27` and `MODEL_LEAN:2026-27` for the decisions after the 2027 regular season. The
+  record is looked up by its decision id, never by the wording of its label.
+* **The fingerprint** is the sha256 of the ledger's header line followed by each row that entered the
+  decision, exactly as written in the ledger and in the order of the ledger, each line followed by a
+  newline (`\n`), the whole encoded as UTF-8. (If a row was ever written across several lines, the
+  rows are taken as the scorer reads them instead.) Every later run recomputes the fingerprint from the
+  rows at the recorded positions and, if it differs, prints a warning that the ledger has changed since
+  the decision was recorded. The recorded decision still stands.
 * Every later run prints the recorded decision. If a fresh computation on the same horizon would now
   come out differently (a corrected score, say), the scorer prints both and says the recorded one
-  stands.
+  stands. A preview with `--now` shows a recorded decision only if it was decided at or before the
+  preview's date.
 * **Only a real run writes the record.** That is a run of the scorer on the live ledger
   (`data/forward/ledger.csv`), on the real clock, reading the default schedule (`data/raw/games.csv`)
   when that file was refreshed in the last 2 days. Every alert run refreshes it. The hub's daily
   check-in runs the scorer this way, so the first check-in after a decision becomes final records it.
-  In every other case the scorer prints the decision and says why it wasn't recorded:
-  * a run with `--now` (a preview as of another time, for tests and rehearsals) records nothing;
+  A scorer is live only if its `data/forward` folder, with links resolved, is inside its own project
+  folder. In every other case the scorer prints the decision and says why it wasn't recorded:
+  * a run with `--now` (a preview as of another time, for tests and rehearsals) records nothing, except
+    with `--test-record` beside a test ledger (below);
   * a schedule last refreshed more than 2 days ago records nothing, because played games would look
     unscored and could be voided; refresh it and run the scorer again;
   * a run on another ledger kept in `data/forward/` (the rewrite's backup copy) neither reads nor
     writes the record;
   * a copy of the scorer in another folder (a worker's worktree) run on the live ledger reads the record
-    but never writes it.
+    but never writes it;
+  * a scorer whose `data/forward` folder is a link to a folder outside its own project reads that
+    folder's record but never writes it.
 * A run on a test ledger kept anywhere else (`--ledger`) writes `decisions.csv` beside that ledger,
-  never into `data/forward/`.
+  never into `data/forward/`. `--test-record` exists for tests only: with `--now`, it records decisions
+  beside a test ledger as if they were made at that time, and it is refused on a live ledger or any
+  other ledger in `data/forward/`.
+* **One run at a time.** A run that writes takes a lock on the record and reads it again before it
+  appends, so two runs at once can't record the same decision twice.
+* **A damaged record.** If `decisions.csv` can't be read (a half-written line, a missing header, an
+  empty file), the scorer says so, records nothing until the file is repaired or restored from the
+  ledgers branch, and still prints the scores.
+* **A lost record.** The record is copied to the ledgers branch every night. A lost record is restored
+  from that copy; it is never decided again. When the live record is missing, a real run reads the
+  copy (`origin/ledgers`, as this checkout last fetched it; the scorer never fetches), restores the
+  file from it and prints what it restored, before it decides anything. It records a new decision only
+  when neither the file nor the copy holds one. A copy that can't be read counts as no copy. A record
+  made since the last nightly copy exists only on the Mac until that night.
 
 ### 4. Horizons are dates
 
@@ -388,8 +417,9 @@ this one applies.
   code took the earliest such row with a lean, and it could take one with no posted total and grade it
   as a loss. The live ledger already has such a row: the 7:30 PM run on Sep 28 logged an
   under lean on Rams at Eagles (Week 4, outside the test) with a blank total.
-* Rule B's entry is its earliest `SIGNAL` row before kickoff. The 24-hour rule is the model lean's
-  only; amendment 5, section 3 already gives Rule B's window as about 11 to 82 hours before kickoff.
+* Rule B's entry is its earliest `SIGNAL` row before kickoff (for each listing, section 9). The 24-hour
+  rule is the model lean's only; amendment 5, section 3 already gives Rule B's window as about 11 to 82
+  hours before kickoff.
 
 ### 6. After the 2026 decision
 
@@ -398,6 +428,8 @@ this one applies.
 * An inconclusive result at the 2026 horizon carries the rule into 2027 unchanged, as the original
   file says. It is decided once more after the 2027 regular season, on both seasons pooled, with mean
   CLV positive in each season.
+* That is a second look at overlapping data: the 2026 bets enter both the 2026 decision and the pooled
+  one. It replaces amendment 5, section 4's "The decision is made once." for this case only.
 * A decision recorded after the 2027 regular season, with none recorded for 2026, is the decision. If a
   2026 result lands later and brings 2026 to 40 settled bets, no 2026 decision is made.
 * While 2026 bets are still waiting for results that could bring 2026 to 40, the 2026 decision waits
@@ -421,5 +453,77 @@ off:
 * At −115 the model rejects an under **from 1.5 points below the reference** (reference 42.5, under
   41: −0.6%), not only "3 points below". One point below still passes (+2.3%).
 
-Rule variants under forward test: still **2**. This amendment tests nothing, so the historical count
-stays 200.
+### 9. A postponed game that signals again is two listings
+
+* A game's rows are grouped into **listings** by the kickoff on each row: rows whose kickoffs are
+  within 24 hours of each other are one listing. Precisely: in order of each row's kickoff, a row whose
+  kickoff is more than 24 hours after the first kickoff of the current listing starts a new listing.
+* A listing's entry is its earliest signal: for Rule B its earliest `SIGNAL` row, for the model lean
+  its earliest snapshot that qualifies under section 5.
+* A listing whose entry's kickoff is more than 24 hours from the game's actual kickoff is void
+  (section 1). The listing that matches the actual kickoff is graded like any other bet. If two
+  listings are each within 24 hours of the actual kickoff, the nearer one is graded (the later one if
+  they are equally near) and the other is void.
+* So a game is still graded once, and a game postponed by more than a day that signals again on its
+  new date is graded at its new entry. Before this reading the second signal was dropped as a repeat
+  of the first, which was void, so the game was never a bet.
+
+### 10. "Before kickoff"
+
+* "Before kickoff" means before the earlier of the kickoff on the row and the kickoff in the schedule,
+  in both scorers and for every use: which rows count, the entries, the last quotes and the
+  later-quote closes. Here that covers which rows count, both rules' entries, and the model lean's 24
+  hours. The row's kickoff is its `gameday` and `gametime` (Eastern time).
+* Why: a row carries the kickoff the schedule showed when it was logged. When a game is moved, the
+  row's kickoff and the schedule's differ, and a row logged after the game really started must not
+  count.
+
+### 11. A closing-line decision needs 20 closes
+
+* A closing-line decision needs closing lines. If fewer than 20 of the bets in a decision have a
+  primary close, the result is **inconclusive**, and the scorer says why. This applies to Rule B and to
+  the model lean, at both horizons. An inconclusive 2026 result then goes on to the pooled decision
+  (section 6).
+* Whenever some bets in a decision have no primary close, the scorer prints how many.
+
+### What this amendment replaces
+
+Each earlier sentence below is quoted as registered; the section of this amendment named beside it
+applies instead.
+
+* The original file, "What counts": "using the earliest snapshot taken at least 24 hours before
+  kickoff". Replaced by section 5 (the entry also needs a posted total), section 9 (each listing has
+  its own entry) and section 10 (the 24 hours are counted to the earlier kickoff).
+* The original file, "Decision": "Drop it if mean CLV ≤ 0 or its 95% CI upper bound is below +0.25
+  points." and "Anything else is inconclusive." Amendment 4: "drop if mean CLV ≤ 0 or the 95% CI upper
+  bound is below +0.25 points; anything else is inconclusive and carries forward unchanged".
+  Amendment 5, section 4: "If the keep test and the drop test are both met, the result is drop." With
+  fewer than 20 bets that have a primary close, a decision is inconclusive whatever its numbers
+  (section 11).
+* Amendment 5, section 1: "The value only reaches zero at about −136" and "3 points below, at −115".
+  Corrected by section 8.
+* Amendment 5, section 2: "A game with both kinds of signal counts once, as primary, at its earliest
+  Pinnacle-priced signal." A game postponed by more than a day has one entry per listing, and only the
+  listing that matches the actual kickoff is graded (section 9).
+* Amendment 5, section 3: "The model lean's entry is unchanged: the earliest snapshot at least 24 hours
+  before kickoff." Replaced by sections 5, 9 and 10.
+* Amendment 4: "The keep/drop decision is made once, after the 2027 regular season". Amendment 5,
+  section 4: "The decision is made once." For an inconclusive 2026 result only, section 6 adds a
+  second look, on both seasons pooled, at data that overlaps the first.
+* Amendment 5, section 4: "so a later run of the scorer prints the same result". A later run prints the
+  recorded decision, and a fresh computation beside it when that now differs (section 3).
+* Amendment 5, section 4: "Otherwise the decision is made once, after the 2027 regular season, on every
+  bet that kicked off by then". Void bets are left out (section 1), and the decision waits while any of
+  those bets is pending (section 2).
+* Amendment 5, section 4: "Win rate against the close is counted over the bets that have a primary
+  close." Ties with the close are left out as well (section 7).
+* Amendment 5, section 4: "The regular season is over when every game in the schedule has a result, or
+  kicked off more than a week ago (a cancelled game never gets a result)." Replaced by section 2 (a bet
+  with no result holds its decision open) and section 4 ("after Week 18" is the last regular-season
+  kickoff).
+* Amendment 5, section 5: "logged before kickoff, for games from Oct 8, 2026 through the 2027 season".
+  Before kickoff now means before the earlier of the row's kickoff and the schedule's (section 10).
+
+Rule variants under forward test: still **2**. Nfl-weather amendment 6 and cfb-weather amendment 4
+test nothing and leave the running variant count unchanged. On the day of registration it is **271**,
+so the multiple-testing bar is p < 0.000185 (`strategy-research/README.md`, `STATUS.md`).

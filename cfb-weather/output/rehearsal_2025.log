@@ -17,15 +17,15 @@ RULE_B: 32 signals, 32 settled, 0 pending, 0 void (not graded)
   primary close: 32 from a later logged quote, 0 from the captured close, 0 with none (counted, left out of the CLV); 0 of the later quotes were logged more than 6 hours before kickoff
   secondary (amendment 2): no captured closes for these 32 bets
   decision (Rule B): INTERIM read, decides nothing. The decision comes after 40 signals or the 2026 regular season, whichever is later.
-    as the numbers stand: mean CLV > 0 (met); 95% interval above zero (met); 40 settled signals (not met)
+    as the numbers stand: mean CLV > 0 (met); 95% interval above zero (met); 40 settled signals (not met); at least 20 with a primary close (met)
   game_id         kick_et        away_team         home_team      line_src  mkt_total  mkt_under      close_src  close_total  total  clv_pts    profit
 401757274 Sat 10-03 16:00 New Mexico State        New Mexico cfbfastR open      54.50     -110.0 cfbfastR close        53.50   58.0     1.00 -1.000000
 401760378 Sat 10-03 16:00          Hawai'i         Air Force cfbfastR open      53.75     -110.0 cfbfastR close        52.50   79.0     1.25 -1.000000
 401762873 Sat 10-10 15:30       Miami (OH) Northern Illinois cfbfastR open      39.00     -110.0 cfbfastR close        38.50   39.0     0.50  0.000000
 401752860 Sat 10-10 16:00   Michigan State          Nebraska cfbfastR open      53.50     -110.0 cfbfastR close        48.50   65.0     5.00 -1.000000
 401761623 Sat 10-17 19:00        UL Monroe  Coastal Carolina cfbfastR open      44.00     -110.0 cfbfastR close        46.50   31.0    -2.50  0.909091
-401762488 Sat 10-24 12:00             Army            Tulane cfbfastR open      46.50     -110.0 cfbfastR close        44.50   41.0     2.00  0.909091
 401756925 Sat 10-24 12:00          Arizona           Houston cfbfastR open      46.75     -110.0 cfbfastR close        47.50   59.0    -0.75 -1.000000
+401762488 Sat 10-24 12:00             Army            Tulane cfbfastR open      46.50     -110.0 cfbfastR close        44.50   41.0     2.00  0.909091
 401762839 Sat 10-24 12:00 Central Michigan     Bowling Green cfbfastR open      43.50     -110.0 cfbfastR close        43.50   33.0     0.00  0.909091
 401760392 Sat 10-24 15:30          Wyoming         Air Force cfbfastR open      58.50     -110.0 cfbfastR close        56.50   45.0     2.00  0.909091
 401752952 Sat 10-31 15:30           Toledo  Washington State cfbfastR open      50.75     -110.0 cfbfastR close        44.50   35.0     6.25  0.909091
@@ -34,15 +34,15 @@ RULE_B: 32 signals, 32 settled, 0 pending, 0 void (not graded)
 401754583 Sat 11-07 14:30       Notre Dame    Boston College cfbfastR open      57.50     -110.0 cfbfastR close        55.50   35.0     2.00  0.909091
 401756945 Sat 11-14 12:00              BYU        Texas Tech cfbfastR open      53.50     -110.0 cfbfastR close        50.25   36.0     3.25  0.909091
 401752763 Sat 11-14 15:30        Texas A&M          Missouri cfbfastR open      49.50     -110.0 cfbfastR close        48.50   55.0     1.00 -1.000000
-401762861 Sat 11-21 12:00 Eastern Michigan        Ball State cfbfastR open      50.00     -110.0 cfbfastR close        48.50   33.0     1.50  0.909091
 401756951 Sat 11-21 12:00          Arizona        Cincinnati cfbfastR open      56.50     -110.0 cfbfastR close        56.50   54.0     0.00  0.909091
+401762861 Sat 11-21 12:00 Eastern Michigan        Ball State cfbfastR open      50.00     -110.0 cfbfastR close        48.50   33.0     1.50  0.909091
 401752767 Sat 11-21 13:30   Tennessee Tech          Kentucky cfbfastR open      52.25     -110.0 cfbfastR close        52.50   52.0    -0.25  0.909091
 401752903 Sat 11-21 15:30       Penn State    Michigan State cfbfastR open      49.50     -110.0 cfbfastR close        49.00   38.0     0.50  0.909091
 401756958 Sat 11-28 12:00           Kansas        Iowa State cfbfastR open      55.25     -110.0 cfbfastR close        55.50   52.0    -0.25  0.909091
 401762870 Fri 12-04 12:00             Ohio           Buffalo cfbfastR open      47.50     -110.0 cfbfastR close        44.50   57.0     3.00 -1.000000
+401756962 Sat 12-05 12:00          Houston            Baylor cfbfastR open      61.00     -110.0 cfbfastR close        57.00   55.0     4.00  0.909091
 401756966 Sat 12-05 12:00       Iowa State    Oklahoma State cfbfastR open      49.50     -110.0 cfbfastR close        46.50   33.0     3.00  0.909091
 401762519 Sat 12-05 12:00    East Carolina  Florida Atlantic cfbfastR open      67.00     -110.0 cfbfastR close        66.50   45.0     0.50  0.909091
-401756962 Sat 12-05 12:00          Houston            Baylor cfbfastR open      61.00     -110.0 cfbfastR close        57.00   55.0     4.00  0.909091
 401757314 Sat 12-05 14:00   Louisiana Tech    Missouri State cfbfastR open      51.50     -110.0 cfbfastR close        45.50   72.0     6.00 -1.000000
 401762517 Sat 12-05 15:00              UAB             Tulsa cfbfastR open      60.00     -110.0 cfbfastR close        56.50   55.0     3.50  0.909091
 401752789 Sat 12-05 15:30              LSU          Oklahoma cfbfastR open      38.50     -110.0 cfbfastR close        36.50   30.0     2.00  0.909091
@@ -84,14 +84,14 @@ RULE_HT: 43 signals at the last quote before kickoff, 43 settled, 0 pending, 0 v
 401754590 Sat 11-14 15:30                  Duke              UConn cfbfastR close       63.0     -110.0     62.218106   71.0 -1.000000
 401761648 Sat 11-14 17:00           Texas State          Louisiana cfbfastR close       63.5     -110.0     62.218106   81.0 -1.000000
 401760406 Sat 11-14 18:00             Air Force     San José State cfbfastR close       67.5     -110.0     62.218106   42.0  0.909091
-401762510 Sat 11-21 12:00         South Florida               Navy cfbfastR close       62.5     -110.0     62.218106   79.0 -1.000000
 401757174 Sat 11-21 12:00             Air Force              UConn cfbfastR close       64.5     -110.0     62.218106   42.0  0.909091
+401762510 Sat 11-21 12:00         South Florida               Navy cfbfastR close       62.5     -110.0     62.218106   79.0 -1.000000
 401762506 Sat 11-21 14:00           North Texas                UAB cfbfastR close       69.0     -110.0     62.218106   77.0 -1.000000
 401761654 Sat 11-21 15:30           Texas State      Southern Miss cfbfastR close       65.5     -110.0     62.218106   55.0  0.909091
 401760414 Sat 11-21 19:00            Utah State               UNLV cfbfastR close       68.5     -110.0     62.218106   55.0  0.909091
 401760418 Fri 11-27 22:30               Hawai'i               UNLV cfbfastR close       64.5     -110.0     62.218106   48.0  0.909091
-401762511 Sat 11-28 15:00         South Florida                UAB cfbfastR close       68.5     -110.0     62.218106   66.0  0.909091
 401757175 Sat 11-28 15:00                 UConn   Florida Atlantic cfbfastR close       64.0     -110.0     62.218106   93.0 -1.000000
+401762511 Sat 11-28 15:00         South Florida                UAB cfbfastR close       68.5     -110.0     62.218106   66.0  0.909091
 401762513 Sat 11-28 15:30         East Carolina               UTSA cfbfastR close       62.5     -110.0     62.218106   82.0 -1.000000
 401752788 Fri 12-04 12:00              Ole Miss  Mississippi State cfbfastR close       62.5     -110.0     62.218106   57.0  0.909091
 401762442 Fri 12-04 15:30                Temple        North Texas cfbfastR close       65.5     -110.0     62.218106   77.0 -1.000000

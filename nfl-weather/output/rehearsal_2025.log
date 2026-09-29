@@ -21,8 +21,8 @@ RULE_B (wind under): 17 signals, 17 settled, 0 pending, 0 void (not graded)
 2025_06_DEN_NYJ UNDER pinnacle        43.5         43.5   24.0      0.0  0.892857
  2025_06_LA_BAL UNDER pinnacle        43.5         43.5   20.0      0.0  0.925926
 2025_06_DAL_CAR UNDER pinnacle        47.5         47.5   57.0      0.0 -1.000000
- 2025_07_NO_CHI UNDER pinnacle        43.5         43.5   40.0      0.0  0.909091
 2025_07_MIA_CLE UNDER pinnacle        34.5         34.5   37.0      0.0 -1.000000
+ 2025_07_NO_CHI UNDER pinnacle        43.5         43.5   40.0      0.0  0.909091
 2025_07_CAR_NYJ UNDER pinnacle        39.5         39.5   19.0      0.0  0.980392
 2025_10_NYG_CHI UNDER pinnacle        45.5         45.5   44.0      0.0  0.892857
  2025_11_GB_NYG UNDER pinnacle        41.5         41.5   47.0      0.0 -1.000000
@@ -36,7 +36,8 @@ RULE_B (wind under): 17 signals, 17 settled, 0 pending, 0 void (not graded)
  2025_16_LA_SEA UNDER pinnacle        42.5         42.5   75.0      0.0 -1.000000
 2025_16_MIN_NYG UNDER pinnacle        41.5         41.5   29.0      0.0  0.869565
   decision (Rule B: once, after the 2027 regular season, both seasons pooled): INTERIM read, decides nothing. The decision comes after Week 18 of 2027, or after Week 18 of 2026 with 40 signals in the 2026 regular season.
-    mean CLV +0.00 (95% CI +0.00 to +0.00, n=17); win rate vs the close 64.7% (11 of 17 with a close, 0 ties), ties left out; mean CLV by season: {'2026': 0.0}
+    mean CLV +0.00 (95% CI +0.00 to +0.00, n=17); win rate vs the close 64.7% (11 of the 17 bets that have a primary close and didn't tie it; 0 ties left out); mean CLV by season: {'2026': 0.0}
+    only 17 bets have a primary close; a verdict needs at least 20 (amendment 6, reading 11)
     keep needs: mean CLV > 0 (not met); 95% interval above zero (not met); win rate vs the close at least 52.4% (met); mean CLV positive in both seasons (not met). Drop if mean CLV <= 0 or the interval's upper bound is below +0.25 (met).
 
 RULE_B, secondary price (not part of the decision): 0 signals
@@ -46,7 +47,7 @@ status
 SIGNAL            17
 price_too_high     2
 
-Decision horizons (amendment 5, section 4, and amendment 6), for Rule B and the model lean alike: with 40 in the 2026 regular season, after Week 18 of 2026 (its last regular-season kickoff) on those bets, where a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A decision waits for every bet that kicked off by its horizon to settle or be void, and the first final one is written down.
+Decision horizons (amendment 5, section 4, and amendment 6), for Rule B and the model lean alike: with 40 in the 2026 regular season, after Week 18 of 2026 (its last regular-season kickoff) on those bets, where a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A decision waits for every bet that kicked off by its horizon to settle or be void, needs at least 20 bets with a primary close, and the first final one is written down.
 Decision record: the first final decision is written to decisions.csv beside this test ledger.
 Variants under forward test: 2 (MODEL_LEAN, RULE_B).
 

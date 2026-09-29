@@ -1,8 +1,10 @@
 """Amendment 6: the scorer readings that a review of pull request 50 found open. One test per reading,
 built on the reviewers' own scenarios (their inputs are reused here). Each test fails on the scorer as
 merged in pull request 50 and passes under amendment 6."""
+import fcntl
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -20,7 +22,8 @@ from nflweather.market import ev_under, p_under_at, pricing_cohort  # noqa: E402
 
 RB = ("RULE_B (wind under)", "RULE_B, secondary")
 LEAN = ("MODEL_LEAN", "RULE_B (wind under)")
-COLUMNS = ["rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers", "ledger_rows_sha256"]
+COLUMNS = ["decision_id", "rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers",
+           "ledger_rows", "ledger_rows_sha256"]
 
 
 def wk_day(year, wk):
@@ -126,9 +129,11 @@ def test_reading_3_the_first_final_decision_is_written_down_and_stands(tmp_path)
     rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str)                 # beside the test ledger
     assert list(rec.columns) == COLUMNS and len(rec) == 1
     r = rec.iloc[0]
-    assert (r.rule, r.horizon, r.n_bets, r.verdict) == ("Rule B", "after Week 18 of 2026", "40", "KEEP")
+    assert (r.decision_id, r.rule, r.horizon, r.n_bets, r.verdict) == ("RULE_B:2026", "Rule B", "after Week 18 of 2026",
+                                                                       "40", "KEEP")
     assert r.decided_utc == "2027-02-10T00:00:00Z" and r.horizon_utc == "2027-01-10T18:00:00Z"
-    assert '"mean_clv": 0.6' in r.numbers and '"with_close": 40' in r.numbers
+    assert '"mean_clv": 0.6' in r.numbers and '"vs_close_no_tie": 40' in r.numbers
+    assert r.ledger_rows == " ".join(str(i) for i in range(1, 41))          # the 40 entry rows, by position
     assert r.ledger_rows_sha256 == entry_fingerprint(tmp_path / "ledger.csv", [x["game_id"] for x in good])
 
     # the missing score lands after the decision: a fresh computation now has 41 bets; the record stands
@@ -198,12 +203,15 @@ def test_reading_6_an_inconclusive_2026_result_is_decided_once_more_after_2027(t
 
 # ------------------------------------------------------------------ reading 7: ties with the close
 def test_reading_7_ties_with_the_close_are_left_out_of_the_win_rate(tmp_path):
-    """The reviewers' E: 20 beat the close, 2 tie it, 18 lose to it."""
+    """The reviewers' E: 20 beat the close, 2 tie it, 18 lose to it. The win rate's count names itself, so it can't
+    be read as a second count of bets "with a close" (the final review's m9)."""
     rows, games = season(2026, range(5, 19), 40, line=43.0, close=42)
     for i, g in enumerate(games):
         g["total"] = 40 if i < 20 else (42 if i < 22 else 45)
     out = part(score(tmp_path, rows, games, "2027-01-20"), *RB)
-    assert "win rate vs the close 52.6% (20 of 38 with a close, 2 ties), ties left out" in out
+    assert ("win rate vs the close 52.6% (20 of the 38 bets that have a primary close and didn't tie it; 2 ties left "
+            "out)") in out
+    assert "with a close" not in out
     assert "40 of 40 bets have a primary close" in out and "FINAL: KEEP" in out
 
 
@@ -249,10 +257,10 @@ def test_labels_say_what_they_mean(tmp_path):
 
 
 # ================================================================== the review of this amendment (Sep 29)
-def project(tmp_path):
+def project(tmp_path, name="proj"):
     """A copy of the scorer and its package, so a test can use a data/forward/ folder of its own and never
     touch the real one."""
-    proj = tmp_path / "proj"
+    proj = tmp_path / name
     shutil.copytree(ROOT / "nflweather", proj / "nflweather", ignore=shutil.ignore_patterns("__pycache__"))
     (proj / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "score_forward.py", proj / "scripts" / "score_forward.py")
@@ -396,3 +404,290 @@ def test_amendment_6_says_which_earlier_text_it_replaces():
     assert "amendment 5 differ" not in text
     lean = text.split("### 5.")[1].split("### 6.")[0]
     assert 'replaces the original "What counts"' in lean
+
+
+# ================================================================== the final review of this amendment (Sep 29)
+FAKE_CLOCK = """import os, runpy, sys
+import pandas as pd
+FAKE = pd.Timestamp(os.environ["FAKE_NOW"], tz="UTC")
+pd.Timestamp.now = staticmethod(lambda tz=None: FAKE.tz_convert(tz) if tz is not None else FAKE.tz_localize(None))
+script, sys.argv = sys.argv[1], sys.argv[1:]
+runpy.run_path(script, run_name="__main__")
+"""
+
+
+def on_clock(tmp_path, now, script, *args):
+    """Run a scorer on its real-clock path with the clock set to `now`: pd.Timestamp.now is patched, the scorer
+    itself is unchanged, and no --now is passed."""
+    runner = tmp_path / "fakeclock.py"
+    runner.write_text(FAKE_CLOCK)
+    return subprocess.run([sys.executable, str(runner), str(script), *args], capture_output=True, text=True,
+                          env={**os.environ, "FAKE_NOW": now})
+
+
+def touch(path, when):
+    t = pd.Timestamp(when, tz="UTC").timestamp()
+    os.utime(path, (t, t))
+
+
+def git(repo, *args, stdin=None):
+    who = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+    return subprocess.run(["git", "-C", str(repo), *args], input=stdin, capture_output=True, text=True, check=True,
+                          env={**os.environ, **who}).stdout.strip()
+
+
+def publish(repo, name, record):
+    """A local stand-in for the nightly copy: `record` at <name>/decisions.csv on refs/remotes/origin/ledgers."""
+    blob = git(repo, "hash-object", "-w", str(record))
+    sub = git(repo, "mktree", stdin=f"100644 blob {blob}\tdecisions.csv\n")
+    top = git(repo, "mktree", stdin=f"040000 tree {sub}\t{name}\n")
+    git(repo, "update-ref", "refs/remotes/origin/ledgers", git(repo, "commit-tree", top, "-m", "Ledger snapshot"))
+
+
+def live_project(tmp_path, name, rows, games, refreshed):
+    """A project laid out like the live checkout: its own ledger in data/forward, its default schedule."""
+    proj = project(tmp_path, name)
+    pd.DataFrame(rows).to_csv(proj / "data" / "forward" / "ledger.csv", index=False)
+    (proj / "data" / "raw").mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(games).to_csv(proj / "data" / "raw" / "games.csv", index=False)
+    touch(proj / "data" / "raw" / "games.csv", refreshed)
+    return proj
+
+
+def section(n, amend=6):
+    return " ".join(amendment(amend).split(f"### {n}.")[1].split("\n### ")[0].split())
+
+
+def test_reading_3_a_lost_record_is_restored_from_the_ledgers_branch_never_decided_again(tmp_path):
+    """The final review's M1: the recorded KEEP was moved away and the closes corrected; the next real run
+    decided again, and recorded DROP."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)                # CLV +1 each: a keep
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "nfl-weather", good, gg + filler(2026), "2027-01-20T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    games = proj / "data" / "raw" / "games.csv"
+    first = on_clock(tmp_path, "2027-01-20T17:00", scorer).stdout
+    assert "FINAL: KEEP" in first and "recorded in decisions.csv on 2027-01-20T17:00:00Z" in first
+    publish(repo, "nfl-weather", fwd / "decisions.csv")                       # the nightly copy
+    (fwd / "decisions.csv").unlink()                                          # the record is lost ...
+    pd.DataFrame([dict(x, total_line=46) for x in gg] + filler(2026)).to_csv(games, index=False)   # ... closes corrected
+    touch(games, "2027-01-22T16:00")
+    later = on_clock(tmp_path, "2027-01-22T17:00", scorer).stdout
+    assert "restored 1 recorded decision from its copy on the ledgers branch" in later
+    rb = part(later, *RB)
+    assert "FINAL: KEEP" in rb and "recorded in decisions.csv on 2027-01-20T17:00:00Z" in rb
+    assert "a fresh computation on the same horizon now gives: DROP" in rb and "The recorded decision stands." in rb
+    rec = pd.read_csv(fwd / "decisions.csv")
+    assert len(rec) == 1 and rec.verdict[0] == "KEEP"
+    # only when neither the file nor the copy holds it is a decision recorded anew
+    (fwd / "decisions.csv").unlink()
+    git(repo, "update-ref", "-d", "refs/remotes/origin/ledgers")
+    anew = on_clock(tmp_path, "2027-01-22T18:00", scorer).stdout
+    assert "FINAL: DROP" in anew and "recorded in decisions.csv on 2027-01-22T18:00:00Z" in anew
+    assert ("The record is copied to the ledgers branch every night. A lost record is restored from that copy; it is "
+            "never decided again.") in section(3)
+
+
+def test_reading_10_before_kickoff_is_before_the_earlier_of_the_rows_kickoff_and_the_schedules(tmp_path):
+    """The final review's M2: "before kickoff" was the schedule's kickoff only."""
+    rows = [row("LATE", "2026-10-11", snap="2026-10-11T18:00:00Z"),                  # after the row's 1:00 PM
+            row("EARLY", "2026-10-18", time="16:25", snap="2026-10-18T18:00:00Z"),   # after the schedule's 1:00 PM
+            row("LEAN", "2026-10-25", snap="2026-10-25T00:00:00Z", rule_b="no_trigger", lean="UNDER lean")]
+    games = [game("LATE", "2026-10-11", time="16:25", week=5),        # moved 3 hours later
+             game("EARLY", "2026-10-18", week=6),                      # moved 3 hours earlier
+             game("LEAN", "2026-10-26", time="12:00", week=7)]         # moved 23 hours later: 17 hours out on the row
+    out = score(tmp_path, rows, games + filler(2026, played=False), "2026-11-20")
+    assert "excluded, logged at or after kickoff: 2" in out
+    assert "RULE_B (wind under): 0 signals" in out and "MODEL_LEAN: 0 signals" in out
+    assert "before the earlier of the kickoff on the row" in section(10)
+
+
+def test_reading_3_a_scorer_whose_data_forward_is_a_link_is_not_live(tmp_path):
+    """The final review's m1: a project copy whose data/forward was a link to the live folder, run with default
+    arguments, wrote the live record from its own schedule."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    live = project(tmp_path, "live")
+    pd.DataFrame(good).to_csv(live / "data" / "forward" / "ledger.csv", index=False)
+    worker = live_project(tmp_path, "worker", good, gg + filler(2026), "2027-01-20T16:00")
+    shutil.rmtree(worker / "data" / "forward")
+    (worker / "data" / "forward").symlink_to(live / "data" / "forward")
+    out = on_clock(tmp_path, "2027-01-20T17:00", worker / "scripts" / "score_forward.py").stdout
+    assert "FINAL: KEEP" in out and not (live / "data" / "forward" / "decisions.csv").exists()
+    assert "not recorded: this scorer's data/forward folder is a link to a folder outside its own project" in out
+    assert "with links resolved, is inside its own project folder" in section(3)
+
+
+def test_reading_3_two_runs_at_once_write_one_record(tmp_path):
+    """The final review's m2: four real runs at once wrote the same decision twice in one trial of six. Here run B
+    holds the record while run A reaches it; A must read it again and add nothing."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    score(tmp_path / "b", good, gg + filler(2026), "2027-01-20", "--test-record")           # run B's record
+    a = tmp_path / "a"
+    a.mkdir()
+    pd.DataFrame(good).to_csv(a / "ledger.csv", index=False)
+    pd.DataFrame(gg + filler(2026)).to_csv(a / "games.csv", index=False)
+    b_lines = (tmp_path / "b" / "decisions.csv").read_text().splitlines()
+    with open(a / ".decisions.lock", "a") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        run_a = subprocess.Popen([sys.executable, str(ROOT / "scripts" / "score_forward.py"), "--ledger",
+                                  str(a / "ledger.csv"), "--games", str(a / "games.csv"), "--now", "2027-01-21",
+                                  "--test-record"], stdout=subprocess.PIPE, text=True)
+        seen = ""
+        for line in run_a.stdout:
+            seen += line
+            if "waiting for another run" in line:
+                break
+        if (a / "decisions.csv").exists():                                    # B writes its row
+            with open(a / "decisions.csv", "a") as fh:
+                fh.write(b_lines[1] + "\n")
+        else:
+            (a / "decisions.csv").write_text("\n".join(b_lines) + "\n")
+        fcntl.flock(held, fcntl.LOCK_UN)
+    seen += run_a.stdout.read()
+    run_a.wait()
+    assert "waiting for another run to finish with the decision record" in seen
+    assert "not recorded: this decision was already recorded on 2027-01-20T00:00:00Z (KEEP)" in seen
+    assert len(pd.read_csv(a / "decisions.csv")) == 1
+
+
+def test_reading_3_a_damaged_record_stops_recording_not_the_scores(tmp_path):
+    """The final review's m3: a half-written line, a record cut short, a missing header or an empty file crashed
+    the whole scorer, so the daily report was lost."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    score(tmp_path / "ok", good, gg + filler(2026), "2027-01-20", "--test-record")
+    head, first = (tmp_path / "ok" / "decisions.csv").read_text().splitlines()[:2]
+    damaged = {"half": f'{head}\n{first[:40]}"unclosed\n', "short": head + "\n" + ",".join(first.split(",")[:5]) + "\n",
+               "noheader": first + "\n", "empty": ""}
+    for name, content in damaged.items():
+        d = tmp_path / name
+        d.mkdir()
+        pd.DataFrame(good).to_csv(d / "ledger.csv", index=False)
+        pd.DataFrame(gg + filler(2026)).to_csv(d / "games.csv", index=False)
+        (d / "decisions.csv").write_text(content)
+        r = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(d / "ledger.csv"), "--games", str(d / "games.csv"),
+                "--now", "2027-01-21", "--test-record")
+        assert r.returncode == 0, (name, r.stderr[-400:])
+        assert "Decision record: decisions.csv is unreadable" in r.stdout, name
+        assert "Nothing will be recorded until it is repaired or restored from the ledgers branch" in r.stdout
+        assert "40 signals, 40 settled" in r.stdout and "FINAL: KEEP" in r.stdout
+        assert "not recorded: the decision record is unreadable" in r.stdout
+        assert (d / "decisions.csv").read_text() == content
+
+
+def test_amendment_6_says_test_record_is_for_tests_only():
+    """The final review's m4: section 3 said a run with --now records nothing, but --now --test-record records
+    beside a test ledger."""
+    text = section(3)
+    assert "`--test-record` exists for tests only" in text
+    assert "beside a test ledger" in text and "refused on a live ledger" in text
+
+
+def test_reading_3_a_preview_shows_only_decisions_made_by_its_date(tmp_path):
+    """The final review's m5: a preview dated before a recorded decision printed it as FINAL."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    score(tmp_path, good, gg + filler(2026), "2027-02-10", "--test-record")              # recorded on Feb 10, 2027
+    early = part(score(tmp_path, good, gg + filler(2026), "2026-12-01"), *RB)
+    assert "INTERIM read, decides nothing" in early and "recorded in decisions.csv" not in early
+    late = part(score(tmp_path, good, gg + filler(2026), "2027-03-01"), *RB)
+    assert "FINAL: KEEP" in late and "recorded in decisions.csv on 2027-02-10T00:00:00Z" in late
+    assert "only if it was decided at or before the preview's date" in section(3)
+
+
+def test_reading_3_the_fingerprint_is_rechecked_and_its_recipe_is_stated(tmp_path):
+    """The final review's m6: an entered row edited without changing a number went unnoticed, and the text did
+    not give the recipe."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    score(tmp_path, good, gg + filler(2026), "2027-01-20", "--test-record")
+    again = part(score(tmp_path, good, gg + filler(2026), "2027-01-21", "--test-record"), *RB)
+    assert "FINAL: KEEP" in again and "warning" not in again
+    edited = [dict(r, wx_src="gamebook") if i == 7 else r for i, r in enumerate(good)]
+    later = part(score(tmp_path, edited, gg + filler(2026), "2027-01-22", "--test-record"), *RB)
+    assert ("warning: the ledger's header or the rows behind this recorded decision have changed since it was "
+            "recorded") in later and "The recorded decision still stands." in later
+    assert "FINAL: KEEP" in later and len(pd.read_csv(tmp_path / "decisions.csv")) == 1
+    text = section(3)
+    for words in ("sha256 of the ledger's header line", "exactly as written", "in the order of the ledger",
+                  "newline", "UTF-8", "recomputes"):
+        assert words in text, words
+
+
+def test_reading_3_the_record_is_looked_up_by_its_decision_id(tmp_path):
+    """The final review's m10: the lookup keyed on the label text, so a reworded label orphaned the record and the
+    next real run decided again."""
+    good, gg = season(2026, list(range(5, 19)), 40, line=43.0)
+    score(tmp_path, good, gg + filler(2026), "2027-01-20", "--test-record")
+    d = pd.read_csv(tmp_path / "decisions.csv", dtype=str, keep_default_na=False)
+    assert list(d.decision_id) == ["RULE_B:2026"]
+    d["horizon"] = "after the last regular-season kickoff of 2026"                     # a later rewording
+    d.to_csv(tmp_path / "decisions.csv", index=False)
+    out = part(score(tmp_path, good, gg + filler(2026), "2027-01-21", "--test-record"), *RB)
+    assert "recorded in decisions.csv on 2027-01-20T00:00:00Z" in out
+    assert len(pd.read_csv(tmp_path / "decisions.csv")) == 1
+    assert "`RULE_B:2026`" in section(3) and "never by the wording of its label" in section(3)
+
+
+def test_reading_9_a_postponed_game_that_signals_again_is_two_listings(tmp_path):
+    """The final review's m11: a game postponed two days and signalled again on its new date was never a bet (the
+    first signal was void and the second was dropped as a repeat)."""
+    rows = [row("P", "2026-10-11", snap="2026-10-09T15:00:00Z"),                          # for Sunday ...
+            row("P", "2026-10-13", time="20:15", snap="2026-10-12T15:00:00Z", total_line=41.0)]   # ... then Tuesday
+    out = part(score(tmp_path / "p", rows, [game("P", "2026-10-13", time="20:15", week=5)], "2026-10-20"), *RB)
+    assert "2 signals, 1 settled, 0 pending, 1 void (not graded)" in out
+    assert "void, the game kicked off more than 24 hours from the kickoff on its entry row: 1 (P)" in out
+    assert "record at entry line 1-0-0" in out and " 41.0 " in out
+    # two listings both within 24 hours of the actual kickoff: the nearer one is graded
+    rows = [row("Q", "2026-10-18", snap="2026-10-16T15:00:00Z", total_line=44.0),                # Sunday 1:00 PM
+            row("Q", "2026-10-19", time="16:00", snap="2026-10-17T15:00:00Z", total_line=45.0)]  # 27 hours later
+    out = part(score(tmp_path / "q", rows, [game("Q", "2026-10-19", time="02:00", week=6)], "2026-10-25"), *RB)
+    assert "2 signals, 1 settled, 0 pending, 1 void (not graded)" in out
+    assert "void, another listing of this game is nearer its actual kickoff: 1 (Q)" in out and " 44.0 " in out
+    assert "is two listings" in section(9)
+
+
+def test_reading_11_fewer_than_20_closes_make_a_decision_inconclusive(tmp_path):
+    rows, games = season(2026, list(range(5, 19)), 40)
+    for i, r in enumerate(rows):
+        r["total_line"] = 43.0 if i % 2 == 0 else 42.5
+    for g_ in games[:25]:
+        g_["total_line"] = np.nan                                                        # no primary close
+    out = part(score(tmp_path, rows, games + filler(2026), "2027-01-20"), *RB)
+    assert ("FINAL: INCONCLUSIVE (only 15 of the 40 bets have a primary close, fewer than 20; carried into 2027 "
+            "unchanged)") in out
+    assert "25 of the 40 bets have no primary close" in out
+    assert "fewer than 20 of the bets in a decision have a primary close" in section(11)
+
+
+def norm(text):
+    return " ".join(text.replace("**", "").replace("`", "").split())
+
+
+def test_amendment_6_names_every_earlier_sentence_it_replaces():
+    """The final review's m12: section 6 changed amendment 5's "decided once" without naming it, and four more
+    pairs elsewhere. Every sentence quoted as replaced must be quoted exactly."""
+    whole = (ROOT / "PREREGISTRATION.md").read_text()
+    earlier = norm(whole.split("## Amendment 6 ")[0])
+    replaces = amendment(6).split("### What this amendment replaces")[1]
+    quotes = re.findall(r'"([^"]+)"', replaces)
+    assert len(quotes) >= 8
+    for q in quotes:
+        assert norm(q) in earlier, q
+    six = section(6)
+    assert "second look at overlapping data" in six and 'amendment 5, section 4\'s "The decision is made once."' in six
+
+
+def test_amendment_6_tests_nothing_and_leaves_the_count_unchanged():
+    """The final review's M3: the new text said the count stays 200 (bar p < 0.00025); it was 271 at merge."""
+    text = norm(amendment(6))
+    assert "stays 200" not in text and "0.00025" not in text
+    assert "test nothing and leave the running variant count unchanged" in text
+    assert "271" in text and "p < 0.000185" in text
+    assert "now 200 variants" not in (ROOT / "STRATEGY.md").read_text()
+
+
+def test_the_readme_keeps_its_original_sentence_and_adds_a_dated_note():
+    """The final review: a sentence inside the README's historical section was reworded instead of superseded."""
+    readme = (ROOT / "README.md").read_text()
+    assert ("A decision uses only the bets that kicked off by its horizon, so it can't change later. Before the horizon "
+            "the scorer prints the numbers and no verdict.") in readme
+    assert "*Note, Sep 29 (amendment 6):*" in readme

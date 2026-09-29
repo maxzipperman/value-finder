@@ -12,33 +12,49 @@
 
 What counts (amendment 3): rows written under a registered rules version, logged before kickoff, for
 games from Oct 1, 2026 through the 2027 season's title game (a game dated from Feb 1, 2028 never
-counts, whatever its season label; amendment 4). Rows outside that are counted by reason, never
-silently dropped; --list-excluded prints each one. ROI is units won per bet placed; a push counts
-as a bet. A game is graded only once the schedule marks it completed.
+counts, whatever its season label; amendment 4). "Before kickoff" is before the earlier of the kickoff
+on the row and the kickoff in the schedule (amendment 4, reading 11). Rows outside that are counted by
+reason, never silently dropped; --list-excluded prints each one. ROI is units won per bet placed; a push
+counts as a bet. A game is graded only once the schedule marks it completed.
+
+Listings (amendment 4, reading 10): a game's rows are grouped by the kickoff on each row, so a game that
+is postponed and signals again is two listings. Each listing has its own entry (and, for Rule B, its own
+later-quote close).
 
 Each bet is settled, pending or void (amendment 4). It is void when its game kicked off more than 24
-hours from the kickoff on its entry row, or when the schedule still shows no score 30 days after that
-kickoff; a void bet is listed by reason and not graded. It is pending while it has no score.
+hours from the kickoff on its entry row, when another listing of the same game is the one graded, or
+when the schedule still shows no score 30 days after that kickoff; a void bet is listed by reason and not
+graded. It is pending while it has no score.
 
 The decisions are computed here and labelled. A decision is FINAL once its horizon has passed and no
-bet that kicked off by then is pending. The first FINAL is written down, and every later run prints
-that record; if a fresh computation on the same horizon would now differ, it prints both and the
-recorded one stands. Before that the script prints an interim read, which shows the numbers and
-decides nothing.
+bet that kicked off by then is pending. A Rule B decision with fewer than 20 bets that have a primary
+close is INCONCLUSIVE (amendment 4, reading 12). The first FINAL is written down, and every later run
+prints that record; if a fresh computation on the same horizon would now differ, it prints both and the
+recorded one stands. Before that the script prints an interim read, which shows the numbers and decides
+nothing.
 
 Who writes a decision down (amendment 4, section 3): a run on the live ledger (data/forward/ledger.csv),
-on the real clock, reading the default cfbfastR schedule refreshed in the last 2 days, writes
-data/forward/decisions.csv. A run with --now is a preview and records nothing. A run on another ledger
-kept in data/forward/ (the rewrite's backup copy) neither reads nor writes a record. A copy of this
-scorer in another folder (a worker's worktree) reads the live record but never writes it. A test
-ledger kept anywhere else writes decisions.csv beside itself.
+on the real clock, reading the default cfbfastR schedule whose current-season file was refreshed in the
+last 2 days, writes data/forward/decisions.csv. The scorer is live only when its data/forward folder,
+with links resolved, is inside its own project folder. A run with --now is a preview: it records
+nothing, and shows a recorded decision only if it was made by the preview's date. A run on another
+ledger kept in data/forward/ (the rewrite's backup copy) neither reads nor writes a record. A copy of
+this scorer in another folder (a worker's worktree) reads the live record but never writes it. A test
+ledger kept anywhere else writes decisions.csv beside itself (a --now run on it only with --test-record,
+which exists for tests). A lost live record is restored from its copy on the ledgers branch, never
+decided again. One run at a time
+writes, under a file lock, and a damaged record stops recording without stopping the scores.
 
     python scripts/score_forward.py [--ledger PATH] [--schedule PATH] [--list-excluded]
 """
 import argparse
+import fcntl
 import hashlib
+import io
 import json
+import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -54,17 +70,25 @@ FIRST_KICK = pd.Timestamp("2026-10-01", tz="UTC")
 REG_END_2026 = pd.Timestamp("2026-12-13T08:00:00Z")   # the 2026 regular season ends with Army-Navy, Dec 12
 TEST_END = pd.Timestamp("2028-02-01T00:00:00Z")       # after the 2027 season's title game (January 2028)
 ENOUGH = 40
+MIN_CLOSES = 20                                       # amendment 4, reading 12: a CLV decision needs 20 closes
 MOVED = pd.Timedelta(hours=24)                        # amendment 4: void if it kicked off further than this ...
 NO_RESULT = pd.Timedelta(days=30)                     # ... or had no score this long after the entry's kickoff
 VOID_MOVED = "the game kicked off more than 24 hours from the kickoff on its entry row"
+VOID_OTHER = "another listing of this game is the one graded"
 VOID_NO_RESULT = "the schedule shows no result 30 days after that kickoff"
 RB_HORIZON = "after 40 signals or the 2026 regular season, whichever is later"
 HT_HORIZON = "once, after the 2027 season's title game"
 NOT_KEPT = ("NOT KEPT (no money goes on the rule; it stays on paper for 2027 only by a dated amendment before "
             "2027 Week 0)")
-RECORD_COLS = ["rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers", "ledger_rows_sha256"]
+# Amendment 4, reading 3: every decision has a fixed id, stored in its own column, and the record is looked up
+# by that id, never by label text. No decisions.csv has been written yet (no decision has been recorded), so a
+# file without the decision_id column can't exist and nothing needs migrating.
+RB_ID, HT_ID = "CFB_RULE_B", "CFB_RULE_HT"
+RECORD_COLS = ["decision_id", "rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers",
+               "ledger_rows", "ledger_rows_sha256"]
 LIVE = ROOT / "data" / "forward"                      # the live folder: the alert jobs' ledger and its record
 FRESH = pd.Timedelta(days=2)                          # a decision is recorded only from a schedule this fresh
+PUBLISHED = f"origin/ledgers:{ROOT.name}/decisions.csv"   # the nightly copy of the record (ops/sync_ledgers.sh)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ledger", default=str(LIVE / "ledger.csv"))
@@ -83,9 +107,12 @@ path = Path(args.ledger)
 if not path.exists():
     sys.exit("no ledger yet: run scripts/alerts.py")
 # Amendment 4, section 3: who writes a decision down, and where. A ledger inside a data/forward/ folder
-# (this checkout's or another's) is a live ledger or a copy of one, never a test ledger.
+# (this checkout's or another's) is a live ledger or a copy of one, never a test ledger. This scorer is live
+# only when its own data/forward folder, with links resolved, is inside its own project folder.
 FWD = next((q for q in path.resolve().parents if q.name == "forward" and q.parent.name == "data"), None)
-IS_LIVE = path.resolve() == (LIVE / "ledger.csv").resolve()             # this checkout's live ledger
+LIVE_INSIDE = LIVE.resolve().is_relative_to(ROOT.resolve())
+ON_LIVE = path.resolve() == (LIVE / "ledger.csv").resolve()
+IS_LIVE = LIVE_INSIDE and ON_LIVE                                       # this checkout's live ledger
 if args.test_record and (not args.now or FWD is not None):
     sys.exit("--test-record needs --now and a test ledger outside data/forward/")
 if FWD is None:
@@ -94,22 +121,117 @@ elif path.name == "ledger.csv" and path.resolve().parent == FWD:
     DECISIONS = FWD / "decisions.csv"                                   # a live ledger's record
 else:
     DECISIONS = None                                                    # a copy, such as the rewrite's backup
-schedule_files = [Path(args.schedule)] if args.schedule else sorted((RAW / "cfbfastr").glob("schedules_*.parquet"))
-refreshed = max((pd.Timestamp(p.stat().st_mtime, unit="s", tz="UTC") for p in schedule_files),
-                default=pd.Timestamp(0, tz="UTC"))
+# Freshness: only the current season's schedule file counts (every alert run refreshes that one)
+CURRENT = RAW / "cfbfastr" / f"schedules_{season_of(CLOCK)}.parquet"
+fresh_file = Path(args.schedule) if args.schedule else CURRENT
+refreshed = (pd.Timestamp(fresh_file.stat().st_mtime, unit="s", tz="UTC") if fresh_file.exists()
+             else pd.Timestamp(0, tz="UTC"))
 if DECISIONS is None:
     NOT_RECORDED = "this ledger is kept in data/forward/ but is not the live ledger, so no record is read or written"
+elif ON_LIVE and not LIVE_INSIDE:
+    NOT_RECORDED = ("this scorer's data/forward folder is a link to a folder outside its own project, so only the "
+                    "scorer in that folder writes its record")
 elif not IS_LIVE and FWD is not None:
     NOT_RECORDED = "this is another folder's live ledger, and only the scorer in that folder writes its record"
 elif args.now and not args.test_record:
     NOT_RECORDED = "a run with --now is a preview"
 elif IS_LIVE and args.schedule:
     NOT_RECORDED = "the live record is written only from the default schedule (cfbfastR)"
+elif not fresh_file.exists():
+    NOT_RECORDED = (f"the current season's schedule, {fresh_file.name}, is missing; refresh it (every alert run does, "
+                    "or scripts/fetch_data.py) and run the scorer again")
 elif CLOCK - refreshed > FRESH:
-    NOT_RECORDED = (f"the schedule was last refreshed {refreshed:%Y-%m-%d %H:%M} UTC, more than 2 days ago; refresh "
-                    "it (every alert run does, or scripts/fetch_data.py) and run the scorer again")
+    what = "the schedule" if args.schedule else f"the current season's schedule, {fresh_file.name},"
+    NOT_RECORDED = (f"{what} was last refreshed {refreshed:%Y-%m-%d %H:%M} UTC, more than 2 days ago; refresh it "
+                    "(every alert run does, or scripts/fetch_data.py) and run the scorer again")
 else:
     NOT_RECORDED = ""
+
+
+# ---------------------------------------------------------------- the decision record (amendment 4, reading 3)
+def parse_record(data):
+    """The decision record from a file's bytes: (rows, "") or (None, why it can't be read). A half-written line,
+    a missing header or column, an empty file or a damaged number makes it unreadable."""
+    def when(x):
+        t = pd.Timestamp(x)
+        if pd.isna(t):
+            raise ValueError(f"a blank time ({x!r})")
+        return t
+    try:
+        d = pd.read_csv(io.BytesIO(data), dtype=str, keep_default_na=False)
+        missing = [c for c in RECORD_COLS if c not in d.columns]
+        if missing:
+            raise ValueError("no column " + ", ".join(missing))
+        for r in d.itertuples():
+            if not r.decision_id:
+                raise ValueError("a row with no decision id")
+            json.loads(r.numbers)
+            when(r.horizon_utc), when(r.decided_utc)
+            [int(p) for p in r.ledger_rows.split()]
+    except Exception as e:                                              # noqa: BLE001 (any damage: report it)
+        return None, f"{type(e).__name__}: {(str(e).splitlines() or [''])[0]}"
+    return d, ""
+
+
+def published_copy():
+    """The record as ops/sync_ledgers.sh last copied it to the ledgers branch: read-only, without a fetch. A
+    failure to read it counts as no copy."""
+    try:
+        r = subprocess.run(["git", "-C", str(ROOT), "show", PUBLISHED], capture_output=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout if r.returncode == 0 and r.stdout.strip() else None
+
+
+@contextmanager
+def record_lock():
+    """One run at a time reads the record for writing and appends to it."""
+    with open(DECISIONS.parent / ".decisions.lock", "a") as fh:
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("    waiting for another run to finish with the decision record", flush=True)
+            fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+RECORD, RESTORED = None, False
+if DECISIONS is not None:
+    # A lost live record is restored from its nightly copy before anything is decided, so it is never decided again.
+    if IS_LIVE and not NOT_RECORDED and not DECISIONS.exists():
+        copy = published_copy()
+        held = parse_record(copy)[0] if copy is not None else None
+        if held is not None and len(held):
+            with record_lock():
+                if not DECISIONS.exists():
+                    DECISIONS.write_bytes(copy)
+                    RESTORED = True
+            if RESTORED:
+                print(f"Decision record: data/forward/decisions.csv was missing; restored {len(held)} recorded "
+                      f"decision{'s' if len(held) != 1 else ''} from its copy on the ledgers branch ({PUBLISHED}). "
+                      "A lost record is never decided again.")
+    if DECISIONS.exists():
+        RECORD, broken = parse_record(DECISIONS.read_bytes())
+        if broken:
+            print(f"Decision record: {DECISIONS.name} is unreadable ({broken}). Nothing will be recorded until it is "
+                  "repaired or restored from the ledgers branch; the scores below are printed as usual.")
+            NOT_RECORDED = ("the decision record is unreadable; nothing will be recorded until it is repaired or "
+                            "restored from the ledgers branch")
+        elif args.now:        # a preview shows only the decisions made by its date
+            RECORD = RECORD.loc[np.array([pd.Timestamp(t) <= NOW for t in RECORD.decided_utc], dtype=bool)]
+
+
+def recorded(did):
+    """The decision already written down under this id, or None."""
+    if RECORD is None:
+        return None
+    d = RECORD[RECORD.decision_id.eq(did)]
+    return None if d.empty else d.iloc[0]
+
+
 L = pd.read_csv(path)
 text = path.read_text().splitlines()
 # the rows as written, for each decision's fingerprint
@@ -140,10 +262,14 @@ if "completed" in S:        # the feed scores a game that was never played 0-0: 
     print(f"schedule rows with a score but not marked completed (not graded): "
           f"{int((~played & s.total.notna()).sum())}")
     s.loc[~played.values, "total"] = np.nan
+s = s.drop_duplicates("game_id")
+L = L.merge(s[["game_id", "sched_kick"]], on="game_id", how="left")
+# Amendment 4, reading 11: "before kickoff" is before the earlier of the row's kickoff and the schedule's
+L["kick_first"] = L[["start_utc", "sched_kick"]].min(axis=1)
 
 # What counts. Every excluded row is counted by its first failing reason.
 why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.start_utc.isna(), L.start_utc < FIRST_KICK,
-                 ~L.season.isin(TEST_SEASONS) | (L.start_utc >= TEST_END), L.snapshot_utc >= L.start_utc],
+                 ~L.season.isin(TEST_SEASONS) | (L.start_utc >= TEST_END), L.snapshot_utc >= L.kick_first],
                 ["unregistered rules version", "no kickoff time in the row", "before Oct 1, 2026",
                  "after the 2027 season", "logged at or after kickoff"], "")
 print(f"ledger rows: {len(L)}; in the test: {int((why == '').sum())}")
@@ -153,6 +279,24 @@ if args.list_excluded and (why != "").any():
     print(L.assign(excluded=why)[why != ""][["snapshot_utc", "game_id", "rules_version", "rule_b", "excluded"]]
           .to_string(index=False))
 L = L[why == ""]
+
+
+def listings(rows):
+    """Amendment 4, reading 10: a game's rows grouped by the kickoff on each row. In order of that kickoff, a row
+    more than 24 hours after the first kickoff of the current listing starts a new one, so the kickoffs of one
+    listing are all within 24 hours of each other. A postponed game that signals again is two listings."""
+    rows = rows.sort_values(["game_id", "start_utc", "snapshot_utc"], kind="stable")
+    ids, prev, first, n = [], object(), None, 0
+    for gid, k in zip(rows.game_id, rows.start_utc):
+        if gid != prev:
+            prev, first, n = gid, k, 0
+        elif k - first > MOVED:
+            first, n = k, n + 1
+        ids.append(n)
+    return rows.assign(listing=ids)
+
+
+L = listings(L)
 
 
 def interim(name, when, tests):
@@ -184,11 +328,17 @@ def is_price(odds):
 
 
 def settle(bets):
-    """Amendment 4: void (moved more than a day, or no score 30 days on), pending (no score yet), or settled."""
-    bets = bets.merge(s[["game_id", "total", "sched_kick"]], on="game_id", how="left")
+    """Amendment 4: void (moved more than a day, another listing of the game is the one graded, or no score 30
+    days on), pending (no score yet), or settled. One listing per game is graded: the one whose kickoff is nearest
+    the game's actual kickoff, the later listing on a tie, and the latest listing when the schedule has no
+    kickoff for the game."""
+    bets = bets.merge(s[["game_id", "total"]], on="game_id", how="left")
     moved = (bets.sched_kick - bets.start_utc).abs() > MOVED
+    dist = (bets.sched_kick - bets.start_utc).abs().fillna(pd.Timedelta(0))
+    chosen = bets.assign(_d=dist).sort_values(["_d", "listing"], ascending=[True, False]).drop_duplicates("game_id")
+    other = ~bets.index.isin(chosen.index)
     stale = bets.total.isna() & (NOW >= bets.start_utc + NO_RESULT)
-    void = np.select([moved, stale], [VOID_MOVED, VOID_NO_RESULT], "")
+    void = np.select([moved, other, stale], [VOID_MOVED, VOID_OTHER, VOID_NO_RESULT], "")
     return bets.assign(void=void, status=np.where(void != "", "void",
                                                   np.where(bets.total.notna(), "settled", "pending")))
 
@@ -201,40 +351,66 @@ def header(bets):
         print(f"  void, {reason}: {len(v)} ({', '.join(v.game_id.astype(str))})")
 
 
-def recorded(rule):
-    """The decision already written down for this rule (amendment 4, section 3), or None."""
-    if DECISIONS is None or not DECISIONS.exists():
+def fingerprint(positions):
+    """Amendment 4, reading 3: sha256 of the ledger's header line and then each row that entered the decision,
+    exactly as written, in ledger order, each followed by a newline. None when a row is missing."""
+    if any(p < 1 or p > len(LINES) for p in positions):
         return None
-    d = pd.read_csv(DECISIONS, dtype=str, keep_default_na=False)
-    d = d[d.rule.eq(rule)]
-    return None if d.empty else d.iloc[0]
+    return hashlib.sha256(("\n".join([HEADER] + [LINES[p - 1] for p in positions]) + "\n").encode()).hexdigest()
 
 
-def write_down(rule, horizon, horizon_utc, verdict, nums, rows):
-    """Append a decision the first time it is FINAL, with a sha256 of the ledger's header and the rows
-    that entered it, exactly as written: the entry rows, and for Rule B the later quotes used as closes.
-    A run that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/)
-    says why instead."""
+def check_fingerprint(rec):
+    """Recompute a recorded decision's fingerprint from the rows it lists; warn if they changed since."""
+    now = fingerprint([int(p) for p in rec.ledger_rows.split()])
+    if now != rec.ledger_rows_sha256:
+        print("    warning: the ledger's header or the rows behind this recorded decision have changed since it was "
+              f"recorded (their fingerprint is now {now[:16] if now else 'incomplete: rows are missing'}). The "
+              "recorded decision still stands.")
+
+
+def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
+    """Append a decision the first time it is FINAL, with the positions of the ledger rows that entered it (1 is
+    the first row after the header: the entry rows, and for Rule B the later quotes used as closes) and their
+    fingerprint. Under the file lock the record is read again first, so two runs at once write one row. A run
+    that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/, an unreadable
+    record) says why instead."""
     if NOT_RECORDED:
         print(f"    not recorded: {NOT_RECORDED}.")
         return
-    lines = [HEADER] + [LINES[i] for i in sorted(set(int(r) for r in rows))]
-    rec = dict(rule=rule, horizon=horizon, horizon_utc=f"{horizon_utc:%Y-%m-%dT%H:%M:%SZ}",
+    positions = sorted({int(r) + 1 for r in rows})
+    rec = dict(decision_id=did, rule=rule, horizon=horizon, horizon_utc=f"{horizon_utc:%Y-%m-%dT%H:%M:%SZ}",
                decided_utc=f"{NOW:%Y-%m-%dT%H:%M:%SZ}", n_bets=nums["n_bets"], verdict=verdict,
-               numbers=json.dumps(nums),
-               ledger_rows_sha256=hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest())
-    pd.DataFrame([rec], columns=RECORD_COLS).to_csv(DECISIONS, mode="a", header=not DECISIONS.exists(), index=False)
+               numbers=json.dumps(nums), ledger_rows=" ".join(map(str, positions)),
+               ledger_rows_sha256=fingerprint(positions))
+    with record_lock():
+        now_held, broken = parse_record(DECISIONS.read_bytes()) if DECISIONS.exists() else (None, "")
+        if broken:
+            print(f"    not recorded: the decision record is unreadable ({broken}); nothing will be recorded until it "
+                  "is repaired or restored from the ledgers branch.")
+            return
+        if now_held is not None and now_held.decision_id.eq(did).any():
+            first = now_held[now_held.decision_id.eq(did)].iloc[0]
+            print(f"    not recorded: this decision was already recorded on {first.decided_utc} ({first.verdict}), "
+                  "and that record stands.")
+            return
+        pd.DataFrame([rec], columns=RECORD_COLS).to_csv(DECISIONS, mode="a", header=not DECISIONS.exists(),
+                                                        index=False)
     print(f"    recorded in decisions.csv on {rec['decided_utc']}, horizon {rec['horizon_utc']}; "
           f"ledger rows sha256 {rec['ledger_rows_sha256'][:16]}")
 
 
-def reprint(rec, show, fresh_verdict, fresh_nums, n_fresh):
+def reprint(rec, show, fresh_verdict, fresh_nums, n_fresh, fresh_text=None):
     """A decision already recorded: print it, and a fresh computation beside it when that now differs."""
     show(rec.verdict, json.loads(rec.numbers))
     print(f"    recorded in decisions.csv on {rec.decided_utc}, horizon {rec.horizon_utc}; "
-          f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}")
+          f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}" + ("; restored from the ledgers branch" if RESTORED
+                                                                   else ""))
+    check_fingerprint(rec)
     if not n_fresh:
         print("    a fresh computation on the same horizon now has no settled bets. The recorded decision stands.")
+    elif fresh_text is not None:           # a record with no numbers but a count: say what the count is now
+        if json.dumps(fresh_nums) != json.dumps(json.loads(rec.numbers)):
+            print(f"    {fresh_text} The recorded decision stands.")
     elif fresh_verdict != rec.verdict or json.dumps(fresh_nums) != json.dumps(json.loads(rec.numbers)):
         print(f"    a fresh computation on the same horizon now gives: {fresh_verdict}, on {n_fresh} bets:")
         show(fresh_verdict, fresh_nums, fresh=True)
@@ -247,7 +423,7 @@ def f(v):
 
 last = L.dropna(subset=["mkt_total"])
 quotes = last[is_price(last.mkt_under)]                             # amendment 4: a total with a valid under price
-last = quotes.sort_values("snapshot_utc").drop_duplicates("game_id", keep="last")
+last = quotes.sort_values("snapshot_utc", kind="stable").drop_duplicates(["game_id", "listing"], keep="last")
 # Amendment 2: the close captured 2-20 minutes before kickoff (scripts/capture_close.py). Secondary and
 # descriptive, and Rule B's primary close when no later quote was logged (amendment 4).
 cap_path = path.parent / "closes.csv"
@@ -268,13 +444,17 @@ def secondary(df, label):
 
 
 # ---------------------------------------------------------------- Rule B
-bets = L[L.rule_b == "SIGNAL"].sort_values("snapshot_utc").drop_duplicates("game_id")
-# Amendment 4: the primary close is the last quote logged after the entry row, else the captured close
-later = quotes.merge(bets[["game_id", "snapshot_utc"]].rename(columns={"snapshot_utc": "entry_utc"}), on="game_id")
-later = later[later.snapshot_utc > later.entry_utc].sort_values("snapshot_utc").drop_duplicates("game_id", keep="last")
-bets = bets.merge(later[["game_id", "mkt_total", "snapshot_utc", "line_src", "_row"]].rename(
+bets = (L[L.rule_b == "SIGNAL"].sort_values("snapshot_utc", kind="stable")
+        .drop_duplicates(["game_id", "listing"]))                   # each listing's earliest signal
+# Amendment 4: the primary close is the last quote of the same listing logged after the entry row, else the
+# captured close
+later = quotes.merge(bets[["game_id", "listing", "snapshot_utc"]].rename(columns={"snapshot_utc": "entry_utc"}),
+                     on=["game_id", "listing"])
+later = (later[later.snapshot_utc > later.entry_utc].sort_values("snapshot_utc", kind="stable")
+         .drop_duplicates(["game_id", "listing"], keep="last"))
+bets = bets.merge(later[["game_id", "listing", "mkt_total", "snapshot_utc", "line_src", "_row"]].rename(
     columns={"mkt_total": "close_total", "snapshot_utc": "close_utc", "line_src": "close_src", "_row": "close_row"}),
-    on="game_id", how="left")
+    on=["game_id", "listing"], how="left")
 use_cap = bets.close_total.isna() & bets.game_id.map(cap).notna()
 bets["close_from"] = np.where(bets.close_total.notna(), "later quote", np.where(use_cap, "captured close", "none"))
 bets.loc[use_cap, "close_total"] = bets.game_id.map(cap)[use_cap]
@@ -303,9 +483,12 @@ if len(done):
 # The decision (amendment 3, section 4, and amendment 4): after 40 signals or the end of the 2026
 # regular season, whichever is later, on the signals that kicked off by then. Later signals never enter it.
 def rb_numbers(dec):
+    """KEEP or NOT KEPT on the registered test; INCONCLUSIVE with fewer than 20 primary closes (reading 12)."""
     m, lo, hi, n = mean_ci(dec.clv_pts)
-    return ("KEEP" if (m > 0 and lo > 0) else NOT_KEPT), dict(n_bets=len(dec), mean_clv=f(m), ci_low=f(lo),
-                                                             ci_high=f(hi), n_clv=int(n))
+    nums = dict(n_bets=len(dec), mean_clv=f(m), ci_low=f(lo), ci_high=f(hi), n_clv=int(n))
+    if n < MIN_CLOSES:
+        return f"INCONCLUSIVE (only {n} of the {len(dec)} signals have a primary close, fewer than {MIN_CLOSES})", nums
+    return ("KEEP" if (m > 0 and lo > 0) else NOT_KEPT), nums
 
 
 def rb_show(verdict, nums, fresh=False):
@@ -316,8 +499,12 @@ def rb_show(verdict, nums, fresh=False):
     m, lo, hi = (np.nan if nums[k] is None else nums[k] for k in ("mean_clv", "ci_low", "ci_high"))
     lead = ("    " if fresh else
             "  decision (Rule B: after 40 signals or the 2026 regular season, whichever is later), FINAL: ")
+    ci = f"95% CI {lo:+.2f} to {hi:+.2f}" if nums["n_clv"] > 1 else "no interval"
     print(f"{lead}{verdict}, on the {nums['n_bets']} signals that kicked off by {nums['horizon']}: "
-          f"mean CLV {m:+.2f} (95% CI {lo:+.2f} to {hi:+.2f}, n={nums['n_clv']})")
+          f"mean CLV {m:+.2f} ({ci}, n={nums['n_clv']})")
+    if nums["n_bets"] > nums["n_clv"]:
+        print(f"    {nums['n_bets'] - nums['n_clv']} of the {nums['n_bets']} signals have no primary close (left out of "
+              "the CLV)")
 
 
 def label(h):
@@ -330,7 +517,7 @@ def entered(dec):
     return list(dec._row) + list(dec.close_row.dropna().astype(int))
 
 
-rec = recorded("Rule B")
+rec = recorded(RB_ID)
 if len(done) or rec is not None:           # a recorded decision prints even when nothing is settled now
     by_kick = done.sort_values("start_utc")
     pending = bets[bets.status.eq("pending")]
@@ -339,25 +526,34 @@ if len(done) or rec is not None:           # a recorded decision prints even whe
         h = pd.Timestamp(rec.horizon_utc)
         dec = by_kick[by_kick.start_utc <= h]
         verdict, nums = rb_numbers(dec)
-        nums = (nums | {"horizon": label(h)}) if "horizon" in json.loads(rec.numbers) else {"n_bets": len(dec)}
-        verdict = verdict if "horizon" in nums else "INCONCLUSIVE"
-        reprint(rec, rb_show, verdict, nums, len(dec))
+        if "horizon" in json.loads(rec.numbers):
+            reprint(rec, rb_show, verdict, nums | {"horizon": label(h)}, len(dec))
+        else:                              # recorded at the end of the test with fewer than 40: a fresh count
+            reprint(rec, rb_show, rec.verdict, {"n_bets": len(dec)}, len(dec),
+                    fresh_text=f"a fresh count on the same horizon now finds {len(dec)} settled signals, not "
+                               f"{json.loads(rec.numbers)['n_bets']}.")
     elif horizon is not None and NOW > horizon and not (pending.start_utc <= horizon).any():
         dec = by_kick[by_kick.start_utc <= horizon]
         verdict, nums = rb_numbers(dec)
         nums["horizon"] = label(horizon)
         rb_show(verdict, nums)
-        write_down("Rule B", RB_HORIZON, horizon, verdict, nums, entered(dec))
+        if nums["n_clv"] < MIN_CLOSES:
+            print(f"    only {nums['n_clv']} signals have a primary close; a verdict needs at least {MIN_CLOSES} "
+                  "(amendment 4, reading 12)")
+        write_down(RB_ID, "Rule B", RB_HORIZON, horizon, verdict, nums, entered(dec))
     elif horizon is None and NOW >= TEST_END and not (pending.start_utc < TEST_END).any():
         rb_show("INCONCLUSIVE", {"n_bets": len(done)})
-        write_down("Rule B", RB_HORIZON, TEST_END, "INCONCLUSIVE", {"n_bets": len(done)}, entered(done))
+        write_down(RB_ID, "Rule B", RB_HORIZON, TEST_END, "INCONCLUSIVE", {"n_bets": len(done)}, entered(done))
     else:
         waiting = int((pending.start_utc <= horizon).sum()) if horizon is not None else len(pending)
         when = (f"Its horizon has passed: {label(horizon)}. The decision waits for {waiting} pending "
                 f"signal{'s' if waiting != 1 else ''}." if horizon is not None and NOW > horizon
                 else "The decision comes after 40 signals or the 2026 regular season, whichever is later.")
         interim("Rule B", when, {"mean CLV > 0": m > 0, "95% interval above zero": lo > 0,
-                                 f"{ENOUGH} settled signals": len(done) >= ENOUGH})
+                                 f"{ENOUGH} settled signals": len(done) >= ENOUGH,
+                                 f"at least {MIN_CLOSES} with a primary close": n >= MIN_CLOSES})
+        if len(done) > n:
+            print(f"    {len(done) - n} of the {len(done)} settled signals have no primary close (left out of the CLV)")
 if len(done):
     print(done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under", "close_src",
                 "close_total", "total", "clv_pts", "profit"]].to_string(index=False))
@@ -409,7 +605,7 @@ if len(ht_done):
     secondary(ht_done, "bets")
 # The decision (amendments 1, 3 and 4): once, after the 2027 season's title game. "At or below
 # break-even" is read at the prices taken: the bets, together, won nothing.
-rec = recorded("Rule HT")
+rec = recorded(HT_ID)
 if len(ht_done) or rec is not None:        # a recorded decision prints even when nothing is settled now
     ht_pending = ht[ht.status.eq("pending")]
     if rec is not None:
@@ -417,7 +613,7 @@ if len(ht_done) or rec is not None:        # a recorded decision prints even whe
         reprint(rec, ht_show, fresh, fresh_nums, fresh_nums["n_bets"])
     elif NOW >= TEST_END and not (ht_pending.start_utc < TEST_END).any():
         ht_show(verdict, nums)
-        write_down("Rule HT", HT_HORIZON, TEST_END, verdict, nums, ht_done._row)
+        write_down(HT_ID, "Rule HT", HT_HORIZON, TEST_END, verdict, nums, ht_done._row)
     else:
         waiting = int((ht_pending.start_utc < TEST_END).sum())
         when = (f"The title game has passed; the decision waits for {waiting} pending signal"
@@ -440,6 +636,7 @@ if fills_path.exists():
     for rule, e in (("rule_b", bets), ("rule_ht", ht)):
         if not len(e):
             continue
+        e = e.assign(v=e.status.eq("void")).sort_values("v", kind="stable").drop_duplicates("game_id")  # graded listing
         entries = e[["game_id", "mkt_total", "mkt_under"]].rename(
             columns={"mkt_total": "entry_line", "mkt_under": "entry_price"}).assign(rule=rule)
         wc = cost_of_waiting(entries, fills)

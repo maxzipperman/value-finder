@@ -1,8 +1,10 @@
 """Amendment 4: the scorer readings that a review of pull request 50 found open. One test per reading,
 built on the reviewers' own scenarios (their inputs are reused here). Each test fails on the scorer as
-merged in pull request 50 and passes under amendment 4."""
+merged in pull request 50 and passes under amendment 4. Readings are numbered as amendment 4's sections."""
+import fcntl
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -18,7 +20,8 @@ sys.path.insert(0, str(ROOT))
 from cfbweather import board  # noqa: E402
 from cfbweather.market import ev_under, p_under_at, pricing_cohort  # noqa: E402
 
-COLUMNS = ["rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers", "ledger_rows_sha256"]
+COLUMNS = ["decision_id", "rule", "horizon", "horizon_utc", "decided_utc", "n_bets", "verdict", "numbers",
+           "ledger_rows", "ledger_rows_sha256"]
 
 
 def ts(x):
@@ -121,12 +124,13 @@ def test_reading_3_the_first_final_decision_is_written_down_and_stands(tmp_path)
     rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str)
     assert list(rec.columns) == COLUMNS and len(rec) == 1
     r = rec.iloc[0]
-    assert (r.rule, r.n_bets, r.verdict, r.decided_utc) == ("Rule B", "40", "KEEP", "2027-01-12T00:00:00Z")
+    assert (r.decision_id, r.rule, r.n_bets, r.verdict, r.decided_utc) == ("CFB_RULE_B", "Rule B", "40", "KEEP",
+                                                                           "2027-01-12T00:00:00Z")
     assert r.horizon == "after 40 signals or the 2026 regular season, whichever is later"
     # the rows that entered it: each entry and each later quote used as its close (the review's minor 6)
     lines = (tmp_path / "ledger.csv").read_text().splitlines()
     entered = [lines[0]] + [ln for ln in lines[1:] if int(ln.split(",")[1]) <= 40]
-    assert len(entered) == 81
+    assert len(entered) == 81 and r.ledger_rows == " ".join(str(i) for i in range(1, 81))
     assert r.ledger_rows_sha256 == hashlib.sha256(("\n".join(entered) + "\n").encode()).hexdigest()
 
     later = rb(score(tmp_path, g + b, sg + sb, "2027-01-20", "--test-record"))   # the scores land
@@ -158,8 +162,8 @@ def test_reading_4_a_game_after_the_title_game_never_counts_and_dec_12_is_named(
     assert "FINAL: KEEP, on the 40 signals that kicked off by 2026-12-12, the end of the regular season" in out
 
 
-# ------------------------------------------------------------------ reading 9: a quote, and Rule HT's entry
-def test_reading_9_rule_ht_enters_at_the_last_quote_with_a_price(tmp_path):
+# ------------------------------------------------------------------ reading 5: a quote, and Rule HT's entry
+def test_reading_5_rule_ht_enters_at_the_last_quote_with_a_price(tmp_path):
     """The reviewers' H1: a last row with a total and no under price made game 3's bet vanish."""
     k = "2026-10-10T23:00Z"
     rows = [ht_bet(1, k, total=65.5, snap_h=11.5), row(1, k, ts(k) - pd.Timedelta(hours=3.5), mkt_total=62.5),
@@ -174,8 +178,8 @@ def test_reading_9_rule_ht_enters_at_the_last_quote_with_a_price(tmp_path):
     assert "pushes are left out of the exact test and count in ROI" in out
 
 
-# ------------------------------------------------------------------ reading 10: Rule B's primary close
-def test_reading_10_rule_b_closes_at_a_later_quote_else_the_captured_close_else_none(tmp_path):
+# ------------------------------------------------------------------ reading 6: Rule B's primary close
+def test_reading_6_rule_b_closes_at_a_later_quote_else_the_captured_close_else_none(tmp_path):
     """The reviewers' J (Pinnacle entry, DraftKings close), plus a signal whose only quote is its own row."""
     rows = [row(1, "2026-10-10T19:30Z", "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5),
             row(1, "2026-10-10T19:30Z", "2026-10-10T18:30Z", mkt_total=48.5, line_src="draftkings"),
@@ -192,24 +196,24 @@ def test_reading_10_rule_b_closes_at_a_later_quote_else_the_captured_close_else_
     assert "close from: {'draftkings': 1, 'captured close (pinnacle)': 1, 'none': 1}" in out
 
 
-# ------------------------------------------------------------------ reading 11: not kept
-def test_reading_11_not_kept_means_no_money_goes_on_the_rule(tmp_path):
+# ------------------------------------------------------------------ reading 7: not kept
+def test_reading_7_not_kept_means_no_money_goes_on_the_rule(tmp_path):
     rows, s = rb_signals(40, close=51.5)                                     # every signal lost a point
     out = rb(score(tmp_path, rows, s, "2026-12-20"))
     assert ("FINAL: NOT KEPT (no money goes on the rule; it stays on paper for 2027 only by a dated amendment "
             "before 2027 Week 0)") in out
 
 
-# ------------------------------------------------------------------ reading 12: Rule HT by price source
-def test_reading_12_rule_ht_is_reported_by_price_source(tmp_path):
+# ------------------------------------------------------------------ reading 8: Rule HT by price source
+def test_reading_8_rule_ht_is_reported_by_price_source(tmp_path):
     rows = [ht_bet(1, "2026-10-10T23:00Z"), ht_bet(2, "2026-10-17T23:00Z"),
             ht_bet(3, "2026-10-24T23:00Z", line_src="draftkings", under=-105)]
     out = ht(score(tmp_path, rows, [sched(1), sched(2, 40, 40), sched(3)], "2026-11-01"))
     assert "by price source: pinnacle 2 (1-1-0, units -0.09); draftkings 1 (1-0-0, units +0.95)" in out
 
 
-# ------------------------------------------------------------------ reading 13: amendment 3's numbers
-def test_reading_13_amendment_4_quotes_the_models_own_numbers():
+# ------------------------------------------------------------------ reading 9: amendment 3's numbers
+def test_reading_9_amendment_4_quotes_the_models_own_numbers():
     text = (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 4 ")[1].split("\n## ")[0]
     resid = pricing_cohort(board.PRICING_COHORT_SHA256)
     for line in (42.5, 43.0):                                               # where the value at x = 0 reaches zero
@@ -224,10 +228,10 @@ def test_reading_13_amendment_4_quotes_the_models_own_numbers():
 
 
 # ================================================================== the review of this amendment (Sep 29)
-def project(tmp_path):
+def project(tmp_path, name="proj"):
     """A copy of the scorer and its package, so a test can use a data/forward/ folder of its own and never
     touch the real one."""
-    proj = tmp_path / "proj"
+    proj = tmp_path / name
     shutil.copytree(ROOT / "cfbweather", proj / "cfbweather", ignore=shutil.ignore_patterns("__pycache__"))
     (proj / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "score_forward.py", proj / "scripts" / "score_forward.py")
@@ -295,7 +299,8 @@ def test_reading_3_only_the_live_ledger_writes_the_live_record(tmp_path):
     assert ("Decision record: none written by this run: the live record is written only from the default "
             "schedule (cfbfastR).") in out
     (proj / "data" / "raw" / "cfbfastr").mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(sa).assign(start_time_tbd=False).to_parquet(proj / "data" / "raw" / "cfbfastr" / "schedules_2026.parquet")
+    current = f"schedules_{board.season_of(pd.Timestamp.now(tz='UTC'))}.parquet"          # the current season's file
+    pd.DataFrame(sa).assign(start_time_tbd=False).to_parquet(proj / "data" / "raw" / "cfbfastr" / current)
     out = run(scorer).stdout
     assert "Decision record: the first final decision is written to data/forward/decisions.csv (the live record)." in out
 
@@ -365,3 +370,317 @@ def test_amendment_4_says_which_earlier_text_it_replaces():
     assert "amendment 3 differ" not in text
     close = text.split("### 6.")[1].split("### 7.")[0]
     assert "This replaces amendment 2's \"What it can't change\" for Rule B's primary close" in close
+
+
+# ================================================================== the final review of this amendment (Sep 29)
+FAKE_CLOCK = """import os, runpy, sys
+import pandas as pd
+FAKE = pd.Timestamp(os.environ["FAKE_NOW"], tz="UTC")
+pd.Timestamp.now = staticmethod(lambda tz=None: FAKE.tz_convert(tz) if tz is not None else FAKE.tz_localize(None))
+script, sys.argv = sys.argv[1], sys.argv[1:]
+runpy.run_path(script, run_name="__main__")
+"""
+
+
+def amendment4():
+    return (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 4 ")[1].split("\n## ")[0]
+
+
+def section(n):
+    return " ".join(amendment4().split(f"### {n}.")[1].split("\n### ")[0].split())
+
+
+def on_clock(tmp_path, now, script, *args):
+    """Run a scorer on its real-clock path with the clock set to `now`: pd.Timestamp.now is patched, the scorer
+    itself is unchanged, and no --now is passed."""
+    runner = tmp_path / "fakeclock.py"
+    runner.write_text(FAKE_CLOCK)
+    return subprocess.run([sys.executable, str(runner), str(script), *args], capture_output=True, text=True,
+                          env={**os.environ, "FAKE_NOW": now})
+
+
+def touch(path, when):
+    t = pd.Timestamp(when, tz="UTC").timestamp()
+    os.utime(path, (t, t))
+
+
+def git(repo, *args, stdin=None):
+    who = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+    return subprocess.run(["git", "-C", str(repo), *args], input=stdin, capture_output=True, text=True, check=True,
+                          env={**os.environ, **who}).stdout.strip()
+
+
+def publish(repo, name, record):
+    """A local stand-in for the nightly copy: `record` at <name>/decisions.csv on refs/remotes/origin/ledgers."""
+    blob = git(repo, "hash-object", "-w", str(record))
+    sub = git(repo, "mktree", stdin=f"100644 blob {blob}\tdecisions.csv\n")
+    top = git(repo, "mktree", stdin=f"040000 tree {sub}\t{name}\n")
+    git(repo, "update-ref", "refs/remotes/origin/ledgers", git(repo, "commit-tree", top, "-m", "Ledger snapshot"))
+
+
+def season_file(proj, season, schedule, refreshed):
+    path = proj / "data" / "raw" / "cfbfastr" / f"schedules_{season}.parquet"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(schedule).assign(start_time_tbd=False).to_parquet(path)
+    touch(path, refreshed)
+    return path
+
+
+def live_project(tmp_path, name, rows, schedule, refreshed, season=2026):
+    """A project laid out like the live checkout: its own ledger in data/forward, its cfbfastR schedule."""
+    proj = project(tmp_path, name)
+    pd.DataFrame(rows).to_csv(proj / "data" / "forward" / "ledger.csv", index=False)
+    season_file(proj, season, schedule, refreshed)
+    return proj
+
+
+def test_reading_3_a_lost_record_is_restored_from_the_ledgers_branch_never_decided_again(tmp_path):
+    """The final review's M1 (its 1e): a recorded KEEP was lost, and the next real run recorded NOT KEPT."""
+    a, sa = rb_signals(40)
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "cfb-weather", a, sa, "2026-12-20T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    first = on_clock(tmp_path, "2026-12-20T17:00", scorer).stdout
+    assert "FINAL: KEEP" in first and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in first
+    publish(repo, "cfb-weather", fwd / "decisions.csv")                        # the nightly copy
+    (fwd / "decisions.csv").unlink()                                           # the record is lost ...
+    b, sb = rb_signals(3, first="2026-12-12T17:00Z", every_days=0, first_id=900, close=56.5)   # ... late Dec 12 rows
+    pd.DataFrame(a + b).to_csv(fwd / "ledger.csv", index=False)
+    season_file(proj, 2026, sa + sb, "2026-12-21T16:00")
+    later = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+    assert "restored 1 recorded decision from its copy on the ledgers branch" in later
+    assert "FINAL: KEEP" in rb(later) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(later)
+    assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(later)
+    assert len(pd.read_csv(fwd / "decisions.csv")) == 1
+    (fwd / "decisions.csv").unlink()                                           # neither the file nor the copy
+    git(repo, "update-ref", "-d", "refs/remotes/origin/ledgers")
+    anew = on_clock(tmp_path, "2026-12-21T18:00", scorer).stdout
+    assert "FINAL: NOT KEPT" in rb(anew) and "recorded in decisions.csv on 2026-12-21T18:00:00Z" in rb(anew)
+    assert ("The record is copied to the ledgers branch every night. A lost record is restored from that copy; it is "
+            "never decided again.") in section(3)
+
+
+def test_reading_11_before_kickoff_is_before_the_earlier_of_the_rows_kickoff_and_the_schedules(tmp_path):
+    """The final review's M2: a game moved 7.5 hours earlier, before cfbfastR showed it; rows logged 2.5 hours
+    after the real kickoff were graded (Rule B's close, Rule HT's entry)."""
+    k_row, k_sched = "2026-10-10T23:30Z", "2026-10-10T16:00Z"
+    rows = [row(5, k_row, "2026-10-08T23:30Z", rule_b="SIGNAL", mkt_total=50.5),
+            row(5, k_row, "2026-10-10T18:30Z", mkt_total=44.5),                   # in play
+            ht_bet(6, k_row, total=65.5, snap_h=11.5),                           # 12:00Z, before the real kickoff
+            ht_bet(6, k_row, total=58.5, snap_h=5)]                              # 18:30Z, in play
+    out = score(tmp_path, rows, [sched(5, kick=k_sched), sched(6, 31, 31, kick=k_sched)], "2026-10-20")
+    assert "excluded, logged at or after kickoff: 2" in out
+    assert "0 of 1 bets have a primary close" in rb(out)
+    assert "record 1-0-0" in ht(out)                                              # under 65.5, not under 58.5
+    assert "before the earlier of the kickoff on the row" in section(11)
+
+
+def test_reading_3_a_scorer_whose_data_forward_is_a_link_is_not_live(tmp_path):
+    """The final review's m1, for CFB: a copy whose data/forward was a link to the live folder wrote its record."""
+    a, sa = rb_signals(40)
+    live = project(tmp_path, "live")
+    pd.DataFrame(a).to_csv(live / "data" / "forward" / "ledger.csv", index=False)
+    worker = live_project(tmp_path, "worker", a, sa, "2026-12-20T16:00")
+    shutil.rmtree(worker / "data" / "forward")
+    (worker / "data" / "forward").symlink_to(live / "data" / "forward")
+    out = on_clock(tmp_path, "2026-12-20T17:00", worker / "scripts" / "score_forward.py").stdout
+    assert "FINAL: KEEP" in out and not (live / "data" / "forward" / "decisions.csv").exists()
+    assert "not recorded: this scorer's data/forward folder is a link to a folder outside its own project" in out
+    assert "with links resolved, is inside its own project folder" in section(3)
+
+
+def test_reading_3_two_runs_at_once_write_one_record(tmp_path):
+    """The final review's m2: run B holds the record while run A reaches it; A must read it again and add nothing."""
+    a_rows, sa = rb_signals(40)
+    score(tmp_path / "b", a_rows, sa, "2026-12-20", "--test-record")                    # run B's record
+    a = tmp_path / "a"
+    a.mkdir()
+    pd.DataFrame(a_rows).to_csv(a / "ledger.csv", index=False)
+    pd.DataFrame(sa).to_csv(a / "sched.csv", index=False)
+    b_lines = (tmp_path / "b" / "decisions.csv").read_text().splitlines()
+    with open(a / ".decisions.lock", "a") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        run_a = subprocess.Popen([sys.executable, str(ROOT / "scripts" / "score_forward.py"), "--ledger",
+                                  str(a / "ledger.csv"), "--schedule", str(a / "sched.csv"), "--now", "2026-12-21",
+                                  "--test-record"], stdout=subprocess.PIPE, text=True)
+        seen = ""
+        for line in run_a.stdout:
+            seen += line
+            if "waiting for another run" in line:
+                break
+        if (a / "decisions.csv").exists():
+            with open(a / "decisions.csv", "a") as fh:
+                fh.write(b_lines[1] + "\n")
+        else:
+            (a / "decisions.csv").write_text("\n".join(b_lines) + "\n")
+        fcntl.flock(held, fcntl.LOCK_UN)
+    seen += run_a.stdout.read()
+    run_a.wait()
+    assert "waiting for another run to finish with the decision record" in seen
+    assert "not recorded: this decision was already recorded on 2026-12-20T00:00:00Z (KEEP)" in seen
+    assert len(pd.read_csv(a / "decisions.csv")) == 1
+
+
+def test_reading_3_a_damaged_record_stops_recording_not_the_scores(tmp_path):
+    """The final review's m3: a damaged decisions.csv crashed the whole scorer."""
+    a_rows, sa = rb_signals(40)
+    score(tmp_path / "ok", a_rows, sa, "2026-12-20", "--test-record")
+    head, first = (tmp_path / "ok" / "decisions.csv").read_text().splitlines()[:2]
+    damaged = {"half": f'{head}\n{first[:40]}"unclosed\n', "short": head + "\n" + ",".join(first.split(",")[:5]) + "\n",
+               "noheader": first + "\n", "empty": ""}
+    for name, content in damaged.items():
+        d = tmp_path / name
+        d.mkdir()
+        pd.DataFrame(a_rows).to_csv(d / "ledger.csv", index=False)
+        pd.DataFrame(sa).to_csv(d / "sched.csv", index=False)
+        (d / "decisions.csv").write_text(content)
+        r = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(d / "ledger.csv"), "--schedule",
+                str(d / "sched.csv"), "--now", "2026-12-21", "--test-record")
+        assert r.returncode == 0, (name, r.stderr[-400:])
+        assert "Decision record: decisions.csv is unreadable" in r.stdout, name
+        assert "Nothing will be recorded until it is repaired or restored from the ledgers branch" in r.stdout
+        assert "40 signals, 40 settled" in r.stdout and "FINAL: KEEP" in r.stdout
+        assert "not recorded: the decision record is unreadable" in r.stdout
+        assert (d / "decisions.csv").read_text() == content
+
+
+def test_amendment_4_says_test_record_is_for_tests_only():
+    """The final review's m4: section 3 said a run with --now records nothing, but --now --test-record records
+    beside a test ledger."""
+    text = section(3)
+    assert "`--test-record` exists for tests only" in text
+    assert "beside a test ledger" in text and "refused on a live ledger" in text
+
+
+def test_reading_3_a_preview_shows_only_decisions_made_by_its_date(tmp_path):
+    """The final review's m5: a preview dated before a recorded decision printed it as FINAL."""
+    a, sa = rb_signals(40)
+    score(tmp_path, a, sa, "2027-01-10", "--test-record")                               # recorded on Jan 10, 2027
+    early = rb(score(tmp_path, a, sa, "2026-11-20"))
+    assert "INTERIM read, decides nothing" in early and "recorded in decisions.csv" not in early
+    late = rb(score(tmp_path, a, sa, "2027-02-01"))
+    assert "FINAL: KEEP" in late and "recorded in decisions.csv on 2027-01-10T00:00:00Z" in late
+    assert "only if it was decided at or before the preview's date" in section(3)
+
+
+def test_reading_3_the_fingerprint_is_rechecked_and_its_recipe_is_stated(tmp_path):
+    """The final review's m6 (its 1d): an entered row was edited, no number changed, and nothing was said."""
+    a, sa = rb_signals(40)
+    score(tmp_path, a, sa, "2026-12-20", "--test-record")
+    again = rb(score(tmp_path, a, sa, "2026-12-21", "--test-record"))
+    assert "FINAL: KEEP" in again and "warning" not in again
+    edited = [dict(r, venue="Other") if i == 1 else r for i, r in enumerate(a)]         # a later quote used as a close
+    later = rb(score(tmp_path, edited, sa, "2026-12-22", "--test-record"))
+    assert ("warning: the ledger's header or the rows behind this recorded decision have changed since it was "
+            "recorded") in later and "The recorded decision still stands." in later
+    assert len(pd.read_csv(tmp_path / "decisions.csv")) == 1
+    text = section(3)
+    for words in ("sha256 of the ledger's header line", "exactly as written", "in the order of the ledger",
+                  "newline", "UTF-8", "recomputes", "later quotes used as closes"):
+        assert words in text, words
+
+
+def test_reading_3_freshness_is_the_current_seasons_schedule_file(tmp_path):
+    """The final review's m7 (its 1g): the current season's file was 2 days and 1 minute old, an older season's
+    file was fresh, and the run recorded."""
+    a, sa = rb_signals(40)
+    proj = live_project(tmp_path, "live", a, sa, "2026-12-18T16:59")
+    season_file(proj, 2025, [sched(999999, kick="2025-10-04T19:00Z")], "2026-12-20T16:00")
+    scorer = proj / "scripts" / "score_forward.py"
+    out = on_clock(tmp_path, "2026-12-20T17:00", scorer).stdout
+    assert "FINAL: KEEP" in out and not (proj / "data" / "forward" / "decisions.csv").exists()
+    assert ("not recorded: the current season's schedule, schedules_2026.parquet, was last refreshed 2026-12-18 16:59 "
+            "UTC, more than 2 days ago") in out
+    touch(proj / "data" / "raw" / "cfbfastr" / "schedules_2026.parquet", "2026-12-18T17:01")
+    out = on_clock(tmp_path, "2026-12-20T17:00", scorer).stdout
+    assert "recorded in decisions.csv on 2026-12-20T17:00:00Z" in out
+    assert "current season's schedule file" in section(3)
+
+
+def test_reading_3_a_record_made_at_the_end_of_the_test_reprints_without_contradiction(tmp_path):
+    """The final review's m8: after two late scores the reprint said "The test ended with 40 settled signals,
+    fewer than 40.\""""
+    rows, s = rb_signals(40, every_days=7)
+    unscored = [dict(x, home_points=np.nan, away_points=np.nan, completed=False) if i < 2 else x for i, x in enumerate(s)]
+    first = rb(score(tmp_path, rows, unscored, "2028-02-05", "--test-record"))
+    assert "FINAL: INCONCLUSIVE. The test ended with 38 settled signals, fewer than 40." in first
+    later = rb(score(tmp_path, rows, s, "2028-02-06", "--test-record"))
+    assert "40 settled, 0 pending, 0 void" in later
+    assert "The test ended with 38 settled signals, fewer than 40." in later
+    assert "The test ended with 40 settled signals" not in later
+    assert "a fresh count on the same horizon now finds 40 settled signals, not 38. The recorded decision stands." in later
+
+
+def test_reading_3_the_record_is_looked_up_by_its_decision_id(tmp_path):
+    """The final review's m10: the record is found by its fixed id, whatever its label says."""
+    a, sa = rb_signals(40)
+    score(tmp_path, a, sa, "2026-12-20", "--test-record")
+    d = pd.read_csv(tmp_path / "decisions.csv", dtype=str, keep_default_na=False)
+    assert list(d.decision_id) == ["CFB_RULE_B"]
+    d["rule"], d["horizon"] = "Rule B (wind)", "after 40 signals or Army-Navy"             # a later rewording
+    d.to_csv(tmp_path / "decisions.csv", index=False)
+    out = rb(score(tmp_path, a, sa, "2026-12-21", "--test-record"))
+    assert "recorded in decisions.csv on 2026-12-20T00:00:00Z" in out
+    assert len(pd.read_csv(tmp_path / "decisions.csv")) == 1
+    assert "`CFB_RULE_B`" in section(3) and "never by the wording of its label" in section(3)
+
+
+def test_reading_10_a_postponed_game_that_signals_again_is_two_listings(tmp_path):
+    """The final review's m11 (its misc.py): the postponed game signalled again on its new date was never a bet."""
+    rows = [row(77, "2026-10-10T19:30Z", "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5),
+            row(77, "2026-10-31T19:30Z", "2026-10-29T14:30Z", rule_b="SIGNAL", mkt_total=48.5),
+            row(77, "2026-10-31T19:30Z", "2026-10-31T16:30Z", mkt_total=47.5)]          # the new listing's later quote
+    out = rb(score(tmp_path, rows, [sched(77, 20, 20, kick="2026-10-31T19:30Z")], "2026-11-10"))
+    assert "2 signals, 1 settled, 0 pending, 1 void (not graded)" in out
+    assert "void, the game kicked off more than 24 hours from the kickoff on its entry row: 1 (77)" in out
+    assert "record 1-0-0" in out and "mean CLV +1.00" in out
+    assert "is two listings" in section(10)
+
+
+def test_reading_12_fewer_than_20_closes_make_rule_b_inconclusive(tmp_path):
+    a, sa = rb_signals(15)                                                               # each with a later quote
+    b, sb = rb_signals(25, first="2026-10-18T19:00Z", first_id=100, close=None)          # no close at all
+    out = rb(score(tmp_path, a + b, sa + sb, "2026-12-20"))
+    assert "FINAL: INCONCLUSIVE (only 15 of the 40 signals have a primary close, fewer than 20)" in out
+    assert "25 of the 40 signals have no primary close" in out
+    assert "fewer than 20 of the bets in a decision have a primary close" in section(12)
+    assert "does not apply to Rule HT" in section(12)
+
+
+def norm(text):
+    return " ".join(text.replace("**", "").replace("`", "").split())
+
+
+def test_amendment_4_names_every_earlier_sentence_it_replaces():
+    """The final review's m12 and its list of pairs: every sentence quoted as replaced is quoted exactly."""
+    whole = (ROOT / "PREREGISTRATION.md").read_text()
+    earlier = norm(whole.split("## Amendment 4 ")[0])
+    replaces = amendment4().split("### What this amendment replaces")[1]
+    quotes = re.findall(r'"([^"]+)"', replaces)
+    assert len(quotes) >= 8
+    for q in quotes:
+        assert norm(q) in earlier, q
+    for pair in ("The primary CLV compares the entry with the last alert quote before kickoff.",
+                 "Later signals never enter it, so a later run of the scorer prints the same result.",
+                 "40th signal's kickoff"):
+        assert pair in norm(replaces), pair
+
+
+def test_amendment_4_tests_nothing_and_leaves_the_count_unchanged():
+    """The final review's M3: the new text said the count stays 200 (bar p < 0.00025); it was 271 at merge."""
+    text = norm(amendment4())
+    assert "stays 200" not in text and "0.00025" not in text
+    assert "test nothing and leave the running variant count unchanged" in text
+    assert "271" in text and "p < 0.000185" in text
+    assert "now 200 variants" not in (ROOT / "STRATEGY.md").read_text()
+
+
+def test_the_readme_keeps_its_original_sentence_and_adds_a_dated_note():
+    """The final review: a sentence inside the README's historical section was reworded instead of superseded."""
+    readme = (ROOT / "README.md").read_text()
+    assert ("- **Decisions are made on dates, once.** Rule B: after 40 signals or Army–Navy (Dec 12, 2026), whichever "
+            "is later, on the signals that kicked off by then. Rule HT: after the 2027 season's title game. A cancelled "
+            "game can't hold a decision open, and a game is graded only once the schedule marks it completed. Before "
+            "the horizon the scorer prints the numbers and no verdict.") in readme
+    assert "*Note, Sep 29 (amendment 4):*" in readme
