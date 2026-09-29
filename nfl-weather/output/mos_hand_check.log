@@ -152,39 +152,42 @@ Runs from the kickoff date itself are never used. The wind is read at the kickof
   lead 3 (runs of 2004-12-22): none; run ends before the window
   replay row (data/processed/mos_replay.parquet): lead 1 1.15, lead 2 1.73, lead 3 none; signal False
 
-2009_06_KC_WAS KC at WAS, 2009 week 6 (third-nearest station: College Park has no runs, Andrews not downloaded; fires)
-  station KDCA, rank 2 of KCGS 9.3 km, KADW 9.8 km, KDCA 15.7 km
+2009_06_KC_WAS KC at WAS, 2009 week 6 (next-nearest station: College Park has no runs before 2010, so Andrews)
+  station KADW, rank 1 of KCGS 9.3 km, KADW 9.8 km, KDCA 15.7 km
   nearer station KCGS: no runs (KCGS_GFS_2009090900_2009112718.csv)
-  nearer station KADW: not downloaded (no file)
   kickoff 2009-10-18 17:00 UTC = Sun 2009-10-18 13:00 Eastern; Eastern date 2009-10-18
   runs cached for 2009-10-15 (lead 3): 00Z 06Z 12Z 18Z
   runs cached for 2009-10-16 (lead 2): 00Z 06Z 12Z 18Z
   runs cached for 2009-10-17 (lead 1): 00Z 06Z 12Z 18Z
   runs cached for 2009-10-18 (kickoff date: never used): 00Z 06Z 12Z 18Z
   lead 1 (runs of 2009-10-17): run 2009-10-17 18Z, published by 2009-10-17 23:00 UTC; last alert run that day 2009-10-18 02:30 UTC; kickoff 2009-10-18 17:00 UTC
-    10-18 17:00Z: steps 10-18 15Z 17 kt, 10-18 18Z 17 kt -> 17.000 kt
-    mean 17.000 kt x 1.150779 = 19.56 mph  (>= 15: fires)
+    10-18 17:00Z: steps 10-18 15Z 15 kt, 10-18 18Z 15 kt -> 15.000 kt
+    mean 15.000 kt x 1.150779 = 17.26 mph  (>= 15: fires)
   lead 2 (runs of 2009-10-16): run 2009-10-16 18Z, published by 2009-10-16 23:00 UTC; last alert run that day 2009-10-17 02:30 UTC; kickoff 2009-10-18 17:00 UTC
-    10-18 17:00Z: steps 10-18 15Z 13 kt, 10-18 18Z 14 kt -> 13.667 kt
-    mean 13.667 kt x 1.150779 = 15.73 mph  (>= 15: fires)
+    10-18 17:00Z: steps 10-18 15Z 12 kt, 10-18 18Z 14 kt -> 13.333 kt
+    mean 13.333 kt x 1.150779 = 15.34 mph  (>= 15: fires)
   lead 3 (runs of 2009-10-15): run 2009-10-15 18Z, published by 2009-10-15 23:00 UTC; last alert run that day 2009-10-16 02:30 UTC; kickoff 2009-10-18 17:00 UTC
-    10-18 17:00Z: steps 10-18 12Z 8 kt, 10-18 18Z 15 kt -> 13.833 kt
-    mean 13.833 kt x 1.150779 = 15.92 mph  (>= 15: fires)
-  replay row (data/processed/mos_replay.parquet): lead 1 19.56, lead 2 15.73, lead 3 15.92; signal True
+    10-18 17:00Z: steps 10-18 12Z 8 kt, 10-18 18Z 14 kt -> 13.000 kt
+    mean 13.000 kt x 1.150779 = 14.96 mph
+  replay row (data/processed/mos_replay.parquet): lead 1 17.26, lead 2 15.34, lead 3 14.96; signal True
 
-2024_02_LV_BAL LV at BAL, 2024 week 2 (Baltimore Inner Harbor: runs, but no wind forecast; every lead missing)
-  station KDMH, rank 0 of KDMH 1.1 km, KBWI 11.6 km, KMTN 18.4 km
-  station KDMH: no wind (KDMH_GFS_2024091200_2025011018.csv)
-  station KBWI: not downloaded (no file)
-  station KMTN: not downloaded (no file)
+2024_02_LV_BAL LV at BAL, 2024 week 2 (next-nearest station: Baltimore Inner Harbor has runs but no wind forecast, so BWI)
+  station KBWI, rank 1 of KDMH 1.1 km, KBWI 11.6 km, KMTN 18.4 km
+  nearer station KDMH: no wind (KDMH_GFS_2024091200_2025011018.csv); lead 1: gap or no wind, lead 2: gap or no wind, lead 3: gap or no wind
   kickoff 2024-09-15 17:00 UTC = Sun 2024-09-15 13:00 Eastern; Eastern date 2024-09-15
   runs cached for 2024-09-12 (lead 3): 00Z 06Z 12Z 18Z
   runs cached for 2024-09-13 (lead 2): 00Z 06Z 12Z 18Z
   runs cached for 2024-09-14 (lead 1): 00Z 06Z 12Z 18Z
   runs cached for 2024-09-15 (kickoff date: never used): 00Z 06Z 12Z 18Z
-  lead 1 (runs of 2024-09-14): none; gap or no wind
-  lead 2 (runs of 2024-09-13): none; gap or no wind
-  lead 3 (runs of 2024-09-12): none; gap or no wind
-  replay row (data/processed/mos_replay.parquet): lead 1 none, lead 2 none, lead 3 none; signal False
+  lead 1 (runs of 2024-09-14): run 2024-09-14 18Z, published by 2024-09-14 23:00 UTC; last alert run that day 2024-09-15 02:30 UTC; kickoff 2024-09-15 17:00 UTC
+    09-15 17:00Z: steps 09-15 15Z 10 kt, 09-15 18Z 12 kt -> 11.333 kt
+    mean 11.333 kt x 1.150779 = 13.04 mph
+  lead 2 (runs of 2024-09-13): run 2024-09-13 18Z, published by 2024-09-13 23:00 UTC; last alert run that day 2024-09-14 02:30 UTC; kickoff 2024-09-15 17:00 UTC
+    09-15 17:00Z: steps 09-15 15Z 8 kt, 09-15 18Z 10 kt -> 9.333 kt
+    mean 9.333 kt x 1.150779 = 10.74 mph
+  lead 3 (runs of 2024-09-12): run 2024-09-12 18Z, published by 2024-09-12 23:00 UTC; last alert run that day 2024-09-13 02:30 UTC; kickoff 2024-09-15 17:00 UTC
+    09-15 17:00Z: steps 09-15 12Z 4 kt, 09-15 18Z 9 kt -> 8.167 kt
+    mean 8.167 kt x 1.150779 = 9.40 mph
+  replay row (data/processed/mos_replay.parquet): lead 1 13.04, lead 2 10.74, lead 3 9.40; signal False
 
-11 games; fixture rows: 1179 (tests/fixtures/mos_hand_checked_runs.csv)
+11 games; fixture rows: 1285 (tests/fixtures/mos_hand_checked_runs.csv)

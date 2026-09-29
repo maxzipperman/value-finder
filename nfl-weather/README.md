@@ -141,43 +141,44 @@ What differs from the college version:
 
 ## Forecast replay on NWS MOS, the full run: 2004–25 (issue #40, Sep 29)
 
-Count at merge (Sep 29, 2026): 272; bar p < 0.000184.
+Count at merge (Sep 29, 2026): 272; bar p < 0.000184. It is 273 (bar p < 0.000183) if the hub counts the after-the-fact cut described under "What it means".
 
-The replay described above, unchanged, on 22 seasons. **Provisional: 221 games still lack a forecast.** Those are all 187 Baltimore home games and 34 Washington games from 2004–09. Their next-nearest station was never downloaded (Step 1 says why). 28 more requests would fetch it. The result below may move a little when they are added.
+**The headline changed after review: with the last 28 downloads fetched, the rule went 337–261–9 (56.4%) on 607 signals, p = 0.028; the first draft had 323–253–8 (56.1%) on 584, p = 0.041.** The 221 games that had no forecast (every Baltimore home game, and Washington's 2004–09 games) now have one. 23 of them are signals, and those went 14–8–1. The review had pointed out that these games leaned toward the under on observed wind (the 22 of them with 15+ mph went 17–4–1), so a rise was the likelier direction.
+
+The replay described above, unchanged, on 22 seasons. Every game at a stadium with a MOS station now has a forecast.
 
 **Short answer**
 
-- **On the forecasts as they were issued, NFL Rule B went 323–253–8 (56.1%) on 584 signals.** That is 4,030 games over 22 seasons.
-- **At an assumed −110 the ROI is +7.1%.** The 95% interval runs from 52.0% to 60.1% for the win rate, or −0.7% to +14.7% for the ROI.
+- **On the forecasts as they were issued, NFL Rule B went 337–261–9 (56.4%) on 607 signals.** That is out of 4,251 games over 22 seasons.
+- **At an assumed −110 the ROI is +7.6%.** The 95% interval runs from 52.4% to 60.3% for the win rate, or −0.1% to +15.1% for the ROI.
 - **It is consistent with the observed-wind evidence** the rule rests on (57.2% on 682 games since 1999).
-- **It is only weakly distinguishable from break-even**: one-sided p = 0.041, and 0.034 with standard errors grouped by game day.
+- **It is only weakly distinguishable from break-even**: one-sided p = 0.028, and 0.021 with standard errors grouped by game day.
 - **It is far from this project's bar** (p < 0.000184, 272 variants).
+- **In the 15 seasons with a second source of lines (2007–21), the rule is indistinguishable from break-even**: 214–181–5 (54.2%, 400 signals, p = 0.25) at the nflverse close, and 214–181–2 (54.2%, 397, p = 0.25) at SBR's own close.
 - **The declared eras** (descriptive, no variant):
-  - 2004–14: 158–129–4 (55.1%, 291 signals, p = 0.20);
-  - 2015–25: 165–124–4 (57.1%, 293, p = 0.061);
-  - 2021–25: 86–56–2 (60.6%, 144, p = 0.030).
-- **Where SBR lines exist (2007–21, 386 signals) the rule is weaker**:
-  - 217–162–7 (57.3%) at the SBR opener;
-  - 205–179–2 (53.4%) at the SBR close;
-  - 203–178–5 (53.3%) at the nflverse close on the same games.
-  - The two closes agree, so those seasons are simply weaker. The pooled 56.1% owes most to 2004–06 and 2021–23.
-- **The forecast rule fires about 27 times a season** (19–37), about 23 of them on or after Oct 1.
+  - 2004–14: 164–133–4 (55.2%, 301 signals, p = 0.18);
+  - 2015–25: 173–128–5 (57.5%, 306, p = 0.043);
+  - 2021–25: 91–59–3 (60.7%, 153, p = 0.025).
+- **The forecast rule fires about 28 times a season** (19–39), about 24 of them on or after Oct 1.
 
 | | **2004–25, all** | 2004–14 | 2015–25 | 2021–25 |
 |---|---|---|---|---|
-| Games with a forecast | **4,030** | 2,042 | 1,988 | 884 |
-| Signals (forecast ≥ 15 mph at kickoff, 1–3 days out) | **584** | 291 | 293 | 144 |
-| Under at the close (nflverse), −110 | **323–253–8 (56.1%)** | 158–129–4 (55.1%) | 165–124–4 (57.1%) | 86–56–2 (60.6%) |
-| 95% interval for the win rate | **52.0–60.1%** | 49.3–60.7% | 51.3–62.7% | 52.3–68.2% |
-| The same, grouped by game day | 52.1–60.0% | 49.8–60.3% | 51.2–63.0% | 52.0–69.1% |
-| ROI at −110 | **+7.1%** (−0.7% to +14.7%) | +5.1% | +9.0% | +15.6% |
-| One-sided p against 52.4% (grouped by game day) | **0.041** (0.034) | 0.20 (0.16) | 0.061 (0.060) | 0.030 (0.031) |
-| At the SBR opener, 2007–21 | 217–162–7 (57.3%), 386 | 111–92–2 (54.7%), 205 | 106–70–5 (60.2%), 181 | 23–9–1 (71.9%), 33 |
-| At the SBR close, 2007–21 | 205–179–2 (53.4%), 386 | 105–99–1 (51.5%), 205 | 100–80–1 (55.6%), 181 | 22–11 (66.7%), 33 |
-| The same games on *observed* (game-book) wind | 283–221–7 (56.2%), 511 | 159–126–5 (55.8%), 290 | 124–95–2 (56.6%), 221 | 58–34–1 (63.0%), 93 |
+| Games with a forecast | **4,251** | 2,167 | 2,084 | 930 |
+| Signals (forecast ≥ 15 mph at kickoff, 1–3 days out) | **607** | 301 | 306 | 153 |
+| Under at the close (nflverse), −110 | **337–261–9 (56.4%)** | 164–133–4 (55.2%) | 173–128–5 (57.5%) | 91–59–3 (60.7%) |
+| 95% interval for the win rate | **52.4–60.3%** | 49.5–60.8% | 51.8–62.9% | 52.7–68.1% |
+| The same, grouped by game day | 52.5–60.2% | 50.2–60.2% | 51.7–63.3% | 52.4–68.9% |
+| ROI at −110 | **+7.6%** (−0.1% to +15.1%) | +5.4% | +9.7% | +15.8% |
+| One-sided p against 52.4% (grouped by game day) | **0.028** (0.021) | 0.18 (0.13) | 0.043 (0.043) | 0.025 (0.024) |
+| At the SBR opener, 2007–21 | 227–163–7 (58.2%), 397 | 117–92–2 (56.0%), 211 | 110–71–5 (60.8%), 186 | 24–9–1 (72.7%), 34 |
+| At the nflverse close, on those same games | 212–180–5 (54.1%) | 109–100–2 (52.2%) | 103–80–3 (56.3%) | 22–11–1 (66.7%) |
+| At the SBR close, 2007–21 | 214–181–2 (54.2%), 397 | 110–100–1 (52.4%), 211 | 104–81–1 (56.2%), 186 | 23–11 (67.6%), 34 |
+| *Observed* (game-book) wind ≥ 15 mph, same pool of games, at the close | 300–225–8 (57.1%), 533 | 169–127–5 (57.1%), 301 | 131–98–3 (57.2%), 232 | 62–37–2 (62.6%), 101 |
+| …of which also forecast signals | 333 | 173 | 160 | 77 |
 
-- **At nflverse's own under price**, where it is −115 or better (the board's cap), the rule went 266–225–7 on 498 signals, +5.6% at the prices quoted.
-- **By season**, from 10–18–1 (35.7%, 2010) to 18–6–1 (75.0%, 2023). 8 of the 22 seasons finished below break-even, which is normal at 27 signals a season. The per-season table is [`output/tables/mos_replay_seasons.csv`](output/tables/mos_replay_seasons.csv), and every number is in [`output/mos_replay.log`](output/mos_replay.log).
+- **The observed-wind row is not the forecast signals graded on the observed wind.** It is every game, among the games with a forecast, whose game-book wind reached 15 mph: the observed-wind version of the rule on the same pool of games. 333 of the 607 forecast signals are in it. (The first draft called it "the same games on observed wind", which was wrong.)
+- **At nflverse's own under price**, where it is −115 or better (the board's cap), the rule went 279–230–8 on 517 signals, +6.9% at the prices quoted.
+- **By season**, from 10–18–1 (35.7%, 2010) to 18–7–2 (72.0%, 2023). 7 of the 22 seasons finished below break-even, which is normal at 28 signals a season. The per-season table is [`output/tables/mos_replay_seasons.csv`](output/tables/mos_replay_seasons.csv), and every number is in [`output/mos_replay.log`](output/mos_replay.log).
 
 **Step 1: what the download returned.** The NFL asked the nearest MOS station for 487 station-seasons.
 - 459 came back with forecasts. None was unreadable.
@@ -186,77 +187,75 @@ The replay described above, unchanged, on 22 seasons. **Provisional: 221 games s
   - That missing column is what crashed the end of the download (`read_file` expected it). One request to IEM's JSON API confirmed it: every step of a KDMH run has a temperature and no wind.
   - The fix (both copies of `mos.py`, with tests) reads such an answer as a missing forecast. The download scripts now treat it as empty, so the next-nearest station is tried, as PR 61 specified.
 - **6 came back with no runs**: College Park (KCGS), Washington's nearest station, has no runs before the 2010 season.
-- **The next-nearest stations for those 28 station-seasons were never asked for**, because the crash came just before that step: Baltimore-Washington International (KBWI) for 2004–25 and Andrews (KADW) for 2004–09.
-  - That is 28 requests, about four minutes at the site's pace, and more than the handful of re-fetches this run was allowed. So those games are counted as missing, and listed.
-  - `scripts/mos_fetch.py --report` lists every station-season and what it returned ([`output/mos_cache_report.log`](output/mos_cache_report.log)).
+- **The next-nearest stations for those 28 station-seasons** are Baltimore–Washington International (KBWI) for 2004–25 and Andrews (KADW) for 2004–09. The crash came just before the download reached them. They were fetched later on Sep 29: 28 requests, one every 8 seconds, with the project's user agent. **All 28 came back with forecasts.**
+- `scripts/mos_fetch.py --report` lists every station-season and what it returned ([`output/mos_cache_report.log`](output/mos_cache_report.log)).
+- **The whole cache** (shared with college football) now has 2,637 files: 2,602 with forecasts, 13 with no runs (KCGS, KIGX), 22 with no wind (KDMH), none unreadable.
+- **One oddity that costs nothing:** Denver's station (Broomfield, KBJC) has no wind value in 30.5% of the rows of its 2004 answer, but every 2004 Denver game still has a forecast at leads 1 and 2.
 
 **Step 2: coverage.** 4,300 outdoor games in 2004–25 have a closing total and a score.
 
 | Why a game has no forecast at any lead | Games |
 |---|---|
 | No MOS station within 40 km (the international games) | 49 |
-| Baltimore: KDMH has no wind; KBWI and KMTN not downloaded | 187 |
-| Washington 2004–09: KCGS has no runs; KADW and KDCA not downloaded for those dates | 34 |
-| **With a forecast** | **4,030** |
+| **With a forecast at leads 1 and 2** | **4,251** |
 
 - **The station behind each forecast.**
-  - 4,016 of the 4,030 games use the nearest station.
-  - 14 Washington games from 2006–09 use Reagan National (KDCA, 15.7 km, the third-nearest). College Park had no runs, Andrews wasn't downloaded, and Reagan National's runs happened to be on disk from the college football download. One of the 14 is a signal (Kansas City at Washington, Oct 18, 2009; the under won).
-  - Once Andrews is fetched, those 14 games move to it, as PR 61's nearest-first rule says.
-- **Leads.** Lead 1 has a forecast for 4,028 games and lead 2 for 4,030.
-  - Lead 1 is missing for 2 Washington games whose borrowed college download window ends a day early.
-  - Lead 3 covers 2,080 games. A run from three days out reaches 72 hours, which covers a 1 PM Eastern Sunday kickoff but not a later one (1,950 games).
-- **Per season.** Every season has 168–197 games with a forecast, and 8–16 without, other than the international games. See [`output/tables/mos_coverage.csv`](output/tables/mos_coverage.csv); each game without a forecast is in [`output/tables/mos_no_forecast.csv`](output/tables/mos_no_forecast.csv).
+  - 4,016 games use the nearest station.
+  - 235 use the next-nearest: all 187 Baltimore home games use BWI (Inner Harbor has no wind), and 48 Washington games from 2004–09 use Andrews (College Park has no runs before 2010).
+  - The first draft had 14 of those Washington games on Reagan National (the third-nearest), because Andrews hadn't been downloaded. They now use Andrews, as PR 61's nearest-first rule says. One of them is a signal either way: Kansas City at Washington, Oct 18, 2009, 19.6 mph at lead 1 on Reagan National and 17.3 mph on Andrews; the under won.
+- **Leads.** Leads 1 and 2 have a forecast for all 4,251 games. Lead 3 covers 2,224. A run from three days out reaches 72 hours, which covers a 1 PM Eastern Sunday kickoff but not a later one (2,027 games).
+- **Per season.** Every season has 176–213 games with a forecast; the only games without one are the international games (0–5 a season). See [`output/tables/mos_coverage.csv`](output/tables/mos_coverage.csv); each game without a forecast is in [`output/tables/mos_no_forecast.csv`](output/tables/mos_no_forecast.csv).
 
 **Step 3: how good the forecast is.** MOS at the kickoff instant against the game book's wind at kickoff (calibrated ERA5 where the game book has none), on every game with both:
 
-| | Lead 1 (4,028 games) | Lead 2 (4,030) | Lead 3 (2,080) |
+| | Lead 1 (4,251 games) | Lead 2 (4,251) | Lead 3 (2,224) |
 |---|---|---|---|
-| MOS minus game book, average | +0.87 mph | +0.93 mph | +0.97 mph |
-| Typical miss (mean absolute error) | 2.89 mph | 2.99 mph | 3.08 mph |
+| MOS minus game book, average | +0.86 mph | +0.92 mph | +0.99 mph |
+| Typical miss (mean absolute error) | 2.88 mph | 2.98 mph | 3.05 mph |
 | Correlation | 0.69 | 0.68 | 0.70 |
-| Games where MOS reaches 15 mph | 11.1% | 11.0% | 12.9% |
-| Games where the game book reaches 15 mph | 12.7% | 12.7% | 15.3% |
+| Games where MOS reaches 15 mph | 10.9% | 10.9% | 12.6% |
+| Games where the game book reaches 15 mph | 12.5% | 12.5% | 14.7% |
 | Game-book wind reached as often as MOS reaches 15 | 15 mph | 15 mph | 15 mph |
 
 - **The two measures differ.** MOS forecasts the airport; the game book records the stadium, in whole miles per hour. On average MOS runs about 0.9 mph higher.
 - **But the game book's readings spread wider, so MOS reaches 15 mph slightly less often.** By frequency, 15 mph on MOS corresponds to 15 mph in the game book at each lead.
-  - The rule fires if any of its three leads reaches 15. Taken together that is 14.5% of games, as often as the game book reaches 14 mph.
-- **The gap has grown lately.** At lead 1 it ran from −0.06 mph (2010) to +1.98 mph (2025), and 2023–25 are the three largest (+1.09, +1.82, +1.98).
-  - In 2023–25 the game book reached 15 mph on only 5.8–10.3% of games, against 12–20% in 2004–08.
+  - The rule fires if any of its three leads reaches 15. Taken together that is 14.3% of games, as often as the game book reaches 14 mph.
+- **The gap has grown lately.** At lead 1 it ran from −0.03 mph (2010) to +2.03 mph (2025). 2024 and 2025 are the two largest (+1.82, +2.03); 2023 is +1.14.
+  - In 2023–25 the game book reached 15 mph on only 7.1–10.4% of games, against 11.5–20.1% in 2004–08.
   - Whether that is the weather or a change in how the wind is recorded isn't known.
 - **Details.** The season-by-season table is [`output/tables/mos_bias_by_season.csv`](output/tables/mos_bias_by_season.csv).
-- **Against the live board's forecast** (Open-Meteo on the frozen calibration), on the 360 games of 2023–25 with both:
+- **Against the live board's forecast** (Open-Meteo on the frozen calibration), on the 380 games of 2023–25 with both:
   - MOS runs about 1 mph higher.
-  - MOS misses the game-book wind by more: 2.84 against 2.34 mph at lead 1.
-  - MOS fired on 59 of those games (30–29), Open-Meteo on 41 (21–20), and 34 were both.
+  - MOS misses the game-book wind by more: 2.84 against 2.33 mph at lead 1.
+  - MOS fired on 63 of those games (31–31–1), Open-Meteo on 42 (22–20), and 35 were both.
 
 **Step 4: where the result sits** (descriptive; it uses the observed wind, which no one knows at bet time):
 
 | Group | Games | Record |
 |---|---|---|
-| Forecast and game-book wind both reached 15 | 319 | 180–135–4 (57.1%) |
-| Forecast only | 265 | 143–118–4 (54.8%) |
-| Game book only (the forecast missed it) | 192 | 103–86–3 (54.5%) |
+| Forecast and game-book wind both reached 15 | 333 | 189–139–5 (57.6%) |
+| Forecast only | 274 | 148–122–4 (54.8%) |
+| Game book only (the forecast missed it) | 200 | 111–86–3 (56.3%) |
 
-- **The first two groups don't differ** beyond chance (Fisher exact test, p = 0.61).
-- **When each signal first appeared.** 269 of the 584 signals first appeared three days out, 235 two days out and 80 only the day before.
+- **The first two groups don't differ** beyond chance (Fisher exact test, p = 0.51).
+- **When each signal first appeared.** 281 of the 607 signals first appeared three days out, 244 two days out and 82 only the day before.
 
 **What it means**
 
-- **Consistent with the observed-wind history?** Yes. 56.1% on 584 forecast signals against 57.2% on 682 observed-wind games; the interval (52.0–60.1%) contains 57.2%.
-- **Distinguishable from break-even?** Barely, by ordinary standards.
-  - One-sided p is 0.041, 0.034 grouped by game day (321 game days, 1.8 signals a day), and 0.048 if same-day results correlated at 0.1.
+- **Consistent with the observed-wind history?** Yes. 56.4% on 607 forecast signals against 57.2% on 682 observed-wind games; the interval (52.4–60.3%) contains 57.2%.
+- **Distinguishable from break-even?** Weakly, by ordinary standards.
+  - One-sided p is 0.028, 0.021 grouped by game day (327 game days, 1.8 signals a day), and 0.034 if same-day results correlated at 0.1.
   - By this project's bar, no.
-  - The seasons where a second source of lines exists (2007–21) are close to break-even at the close.
-- **The NFL signal count** is about 27 a season, about 23 of them from Oct 1 on.
+- **In the 15 seasons with a second source of lines, it is indistinguishable from break-even.** Across 2007–21 the rule went 214–181–5 (54.2%, 400 signals, p = 0.25) at the nflverse close, and 214–181–2 (54.2%, 397, p = 0.25) at SBR's own close. The two closes agree. It did better at the SBR opener (58.2%), which, as in college football, is posted before the forecast that fires.
+- **A look taken after the results, not a test.** The first draft read the per-season table and wrote that the pooled result "owes most to 2004–06 and 2021–23" and that 2007–21 "are simply weaker". Both sentences were written after seeing the results. The worker who drafted them also computed one cut in scratch: the seasons outside 2007–21 (2004–06 and 2022–25) went 123–80–4 (60.6%, 207 signals, p = 0.011; it was 118–74–3 before the 28 downloads). Because that cut was chosen after looking, its p-value means little. Whether it counts as a variant is the hub's decision; if it does, the running count is 273 (bar p < 0.000183). Nothing in this write-up rests on it.
+- **The NFL signal count** is about 28 a season (19–39), about 24 of them from Oct 1 on (15–31).
 - **What it does not show.**
-  - The 221 games still missing: 187 Baltimore home games and 34 Washington games.
-  - The price actually available 1–3 days early.
+  - The price actually available 1–3 days early, or the board's expected-value gate.
   - The stadium's own wind at kickoff: MOS forecasts the airport.
-  - Independence from the observed-wind evidence: 319 of the 584 signals are games that evidence counts.
+  - Independence from the observed-wind evidence: 333 of the 607 signals are games that evidence counts. The 274 only the forecast flagged went 148–122–4 (54.8%, p = 0.23).
+  - That it describes the board's own signals: on the 380 games of 2023–25 with both, MOS fired 63 times and Open-Meteo 42, with 35 in both.
 
-**Variants.** 1 for the NFL. With the college football replay already counted in main's 271, the total is **272**, bar p < 0.000184. The era cuts, the SBR opener and close grades, the bias tables and the split above describe the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 270`).
+**Variants.** 1 for the NFL. With the college football replay already counted in main's 271, the total is **272**, bar p < 0.000184 (273 and p < 0.000183 if the hub counts the scratch cut above). The era cuts, the SBR opener and close grades, the opener comparison, the bias tables and the split above describe the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 270`).
 
 **No lookahead, checked by hand.** [`scripts/mos_hand_check.py`](scripts/mos_hand_check.py) prints the run selection for 11 real games, with every run, publication time and interpolation ([`output/mos_hand_check.log`](output/mos_hand_check.log)):
 - a 1 PM Sunday kickoff that lead 3 reaches, and a 4:25 PM one it doesn't;
@@ -264,16 +263,9 @@ The replay described above, unchanged, on 22 seasons. **Provisional: 221 games s
 - Christmas 2004 and 2021, and New Year's Day 2017;
 - the Sunday summer time ended in 2019;
 - 13 kt = 14.96 mph (no signal);
-- the Washington game on the third-nearest station;
-- a Baltimore game with runs but no wind.
+- both next-nearest fallbacks: Washington 2009 on Andrews, because College Park has no runs, and Baltimore 2024 on BWI, because Inner Harbor has runs but no wind (its rows are kept in the fixture to show why it is skipped).
 
 Every value was worked by hand, and `tests/test_mos.py` pins them using the MOS rows in `tests/fixtures/`.
-
-**What's left.**
-1. Fetch the 28 next-nearest station-seasons. From `nfl-weather`, with `data/raw/mos` linked, run `.venv/bin/python scripts/mos_fetch.py`. It is cache-first, asks only for the 28 missing windows, and takes about four minutes.
-2. Rerun `scripts/mos_replay.py` and `scripts/mos_hand_check.py`.
-3. Update the two hand-checked games the new stations change in `tests/test_mos.py`: the Baltimore game will then have a forecast, and the Washington 2009 game moves to Andrews.
-4. Replace the numbers above.
 
 ```bash
 .venv/bin/python scripts/mos_fetch.py --report      # step 1: what every station-season returned

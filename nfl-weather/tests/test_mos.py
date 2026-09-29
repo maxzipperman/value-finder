@@ -70,10 +70,14 @@ HAND_CHECKED = {
     "2016_17_NE_MIA": {1: ("2016-12-31 18:00", 13.0, 14.96), 2: ("2016-12-30 18:00", 13.0, 14.96),
                        3: ("2016-12-29 18:00", 15.0, 17.26)},
     "2004_16_DEN_TEN": {1: ("2004-12-24 18:00", 1.0, 1.15), 2: ("2004-12-23 18:00", 1.5, 1.73), 3: None},
-    "2009_06_KC_WAS": {1: ("2009-10-17 18:00", 17.0, 19.56), 2: ("2009-10-16 18:00", 41 / 3, 15.73),
-                       3: ("2009-10-15 18:00", 83 / 6, 15.92)},
-    "2024_02_LV_BAL": {1: None, 2: None, 3: None},          # Baltimore Inner Harbor has no wind forecast
+    # Andrews (KADW): College Park has no runs before 2010. Lead 3 is 13 kt = 14.96 mph, no; leads 1-2 fire.
+    "2009_06_KC_WAS": {1: ("2009-10-17 18:00", 15.0, 17.26), 2: ("2009-10-16 18:00", 40 / 3, 15.34),
+                       3: ("2009-10-15 18:00", 13.0, 14.96)},
+    # BWI (KBWI): Baltimore Inner Harbor (KDMH) has runs but no wind forecast
+    "2024_02_LV_BAL": {1: ("2024-09-14 18:00", 34 / 3, 13.04), 2: ("2024-09-13 18:00", 28 / 3, 10.74),
+                       3: ("2024-09-12 18:00", 49 / 6, 9.40)},
 }
+STATION = {"2009_06_KC_WAS": "KADW", "2024_02_LV_BAL": "KBWI"}      # the next-nearest station each falls back to
 FIRES = {"2025_01_CIN_CLE", "2019_06_NYG_NE", "2019_09_WAS_BUF", "2016_17_NE_MIA", "2009_06_KC_WAS"}
 
 
@@ -84,12 +88,23 @@ def _hand_checked():
     return runs, games.set_index("game_id")
 
 
+def _used(runs, games, gid):
+    """The fixture rows of the station the replay used for this game (a nearer station's rows are kept too)."""
+    return runs[(runs.game_id == gid) & (runs.station == games.station[gid])]
+
+
 def test_at_least_ten_hand_checked_games_with_game_day_runs_on_hand():
     runs, games = _hand_checked()
     assert len(HAND_CHECKED) >= 10 and set(games.index) == set(HAND_CHECKED)
-    on_game_day = sum(any(rt.date() == mos.kick_date(games.start_utc[g]) for rt in runs[runs.game_id == g].runtime)
+    on_game_day = sum(any(rt.date() == mos.kick_date(games.start_utc[g]) for rt in _used(runs, games, g).runtime)
                       for g in games.index)
     assert on_game_day >= 10          # the game day's own runs were there to be (wrongly) used, and weren't
+
+
+def test_hand_checked_fallback_stations():
+    _, games = _hand_checked()
+    for gid, icao in STATION.items():
+        assert games.station[gid] == icao
 
 
 @pytest.mark.parametrize("gid", sorted(HAND_CHECKED))
@@ -97,7 +112,7 @@ def test_run_selection_matches_the_hand_check(gid):
     from datetime import timedelta
     runs, games = _hand_checked()
     kick = games.start_utc[gid]
-    sel = mos.select_runs(runs[runs.game_id == gid], kick, how=games.how[gid])
+    sel = mos.select_runs(_used(runs, games, gid), kick, how=games.how[gid])
     for n, want in HAND_CHECKED[gid].items():
         if want is None:
             assert sel[n] is None
@@ -113,12 +128,15 @@ def test_run_selection_matches_the_hand_check(gid):
     assert fired == (gid in FIRES)
 
 
-def test_baltimore_runs_are_there_but_windless():
+def test_baltimore_inner_harbor_runs_are_there_but_windless_so_bwi_is_used():
     runs, _ = _hand_checked()
-    b = runs[runs.game_id == "2024_02_LV_BAL"]
+    b = runs[(runs.game_id == "2024_02_LV_BAL") & (runs.station == "KDMH")]
     assert len(b) > 50 and b.wsp.isna().all()
     kick = pd.Timestamp("2024-09-15T17:00:00Z")
     assert [mos.lead_status(b, kick, n, how="kickoff") for n in mos.LEADS] == ["gap or no wind"] * 3
+    assert all(v is None for v in mos.select_runs(b, kick, how="kickoff").values())    # so the replay moves on
+    bwi = runs[(runs.game_id == "2024_02_LV_BAL") & (runs.station == "KBWI")]
+    assert all(v is not None for v in mos.select_runs(bwi, kick, how="kickoff").values())
 
 
 @pytest.mark.skipif(not (ROOT / "data" / "processed" / "mos_replay.parquet").exists(), reason="run scripts/mos_replay.py")

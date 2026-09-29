@@ -4,12 +4,13 @@ The NFL half of cfb-weather/scripts/mos_hand_check.py. The NFL rule reads its fo
 kickoff instant, so each lead is one interpolated value. The games cover a 1 PM Sunday kickoff
 that lead 3's run reaches, late-afternoon, Sunday-night, Monday-night and Thursday-night
 kickoffs, Christmas, New Year's Day, the Sunday summer time ends, 13 kt (14.96 mph, no signal),
-the third-nearest station Washington falls back to, and a Baltimore game: Baltimore Inner
-Harbor (KDMH) has runs but no wind forecast, so every lead is missing. The numbers were checked
-by hand against this log, and tests/test_mos.py pins them.
+and both next-nearest fallbacks: Washington 2004-09, where College Park (KCGS) has no runs, falls
+back to Andrews (KADW); Baltimore, where Inner Harbor (KDMH) has runs but no wind forecast, falls
+back to BWI (KBWI). The numbers were checked by hand against this log, and tests/test_mos.py pins them.
 
-It also writes the MOS rows behind each game to tests/fixtures/, so the test runs without the cache.
-Reads data/processed/mos_replay.parquet and the MOS cache; fetches nothing.
+It also writes the MOS rows behind each game to tests/fixtures/ (the station used, and a nearer
+station that has runs but no wind, each marked in the `station` column), so the test runs without
+the cache. Reads data/processed/mos_replay.parquet and the MOS cache; fetches nothing.
 
     python scripts/mos_hand_check.py
 """
@@ -38,8 +39,8 @@ GAMES = [
     ("2019_09_WAS_BUF", "the Sunday summer time ends; lead 3's last step is kickoff itself; fires"),
     ("2016_17_NE_MIA", "New Year's Day: 13 kt = 14.96 mph at leads 1 and 2 (no); fires at lead 3"),
     ("2004_16_DEN_TEN", "Christmas night 2004, the first season"),
-    ("2009_06_KC_WAS", "third-nearest station: College Park has no runs, Andrews not downloaded; fires"),
-    ("2024_02_LV_BAL", "Baltimore Inner Harbor: runs, but no wind forecast; every lead missing"),
+    ("2009_06_KC_WAS", "next-nearest station: College Park has no runs before 2010, so Andrews"),
+    ("2024_02_LV_BAL", "next-nearest station: Baltimore Inner Harbor has runs but no wind forecast, so BWI"),
 ]
 
 
@@ -68,7 +69,8 @@ def main():
         station = r.mos_station or ranks.icao.iloc[0]
         rank = int(r.mos_rank) if r.mos_station else 0
         runs = trim(mos.load_station(station), r.start_utc)
-        rows.append(runs.assign(game_id=gid)[["game_id", "runtime", "ftime", "wsp"]])
+        cols = ["game_id", "station", "runtime", "ftime", "wsp"]
+        rows.append(runs.assign(game_id=gid, station=station)[cols])
         games.append(dict(game_id=gid, station=station, start_utc=r.start_utc, how=HOW))
         lines.append(f"{gid} {r.away_team} at {r.home_team}, {r.season} week {r.week} ({why})")
         lines.append(f"  station {station}, rank {rank} of " + ", ".join(f"{x.icao} {x.km:.1f} km" for x in ranks.itertuples()))
@@ -78,8 +80,13 @@ def main():
                 break
             p = mos.cached_cover(x.icao, pd.Timestamp(kd - timedelta(days=3)),
                                  pd.Timestamp(kd - timedelta(days=1)) + pd.Timedelta(hours=18))
-            lines.append(f"  {'nearer station' if r.mos_station else 'station'} {x.icao}: "
-                         f"{mos.file_status(p) if p else 'not downloaded'} ({p.name if p else 'no file'})")
+            line = (f"  {'nearer station' if r.mos_station else 'station'} {x.icao}: "
+                    f"{mos.file_status(p) if p else 'not downloaded'} ({p.name if p else 'no file'})")
+            near = trim(mos.load_station(x.icao), r.start_utc) if p else mos.load_station(x.icao).iloc[0:0]
+            if len(near):         # runs but no forecast for this game: kept in the fixture, to show why it was skipped
+                rows.append(near.assign(game_id=gid, station=x.icao)[cols])
+                line += "; " + ", ".join(f"lead {n}: {mos.lead_status(near, r.start_utc, n, HOW)}" for n in mos.LEADS)
+            lines.append(line)
         lines += mos.explain_selection(runs, r.start_utc, how=HOW)
         rep = ", ".join(f"lead {n} {r[f'mos{n}_mph']:.2f}" if pd.notna(r[f"mos{n}_mph"]) else f"lead {n} none"
                         for n in mos.LEADS)

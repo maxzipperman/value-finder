@@ -151,6 +151,8 @@ Outputs: per-game rows in `data/processed/mos_replay*.parquet`, tables in `outpu
 
 Count at merge (Sep 29, 2026): 272; bar p < 0.000184.
 
+*Revised after review, Sep 29: no college football number changed. The bottom line is reworded to claim less, the observed-wind row is relabeled (it was never the same games as the signals), and the opener is now compared with the close on the same games.*
+
 The same replay as the section above, unchanged, on all 20 seasons once the download finished. It asks one question: if you had bet Rule B on the forecasts that existed 1–2 days before each game (not on the wind measured afterwards), how would you have done?
 
 **Short answer**
@@ -160,7 +162,8 @@ The same replay as the section above, unchanged, on all 20 seasons once the down
 - **It beats break-even (52.4%) by ordinary standards**: one-sided p = 0.003. That is still 0.004 when games on the same day are treated as related (standard errors grouped by game day), and 0.013 if same-day results were as correlated as same-day line moves (about 0.1, from the paper-to-money study).
 - **It does not clear this project's bar**, p < 0.000184, which splits 0.05 over 272 tested variants. Nor is it an independent test:
   - 602 of the 1,284 signals are games the observed-wind evidence already counts.
-  - The 682 games only the forecast flagged went 365–311–6 (54.0%), p = 0.21.
+  - The 682 games only the forecast flagged went 365–311–6 (54.0%), p = 0.21. As independent evidence, that is weak.
+- **It is not the forecast the live board reads.** The board reads Open-Meteo. On the 1,670 games of 2024–25 both cover, MOS fired 135 times and Open-Meteo 110, and only 65 games were flagged by both.
 - **It holds across the eras declared before the run**: 57.1% in 2006–15 (586 signals), 55.7% in 2016–25 (698), 57.3% in 2021–25 (335).
 - **Single seasons swing widely**, from 44.2% (2018, 78 signals) to 64.3% (2008, 28 signals). 5 of the 20 seasons finished below break-even.
 - **The forecast rule fires about 64 times a season**: 67 in 2021–25, of which about 47 kick off on or after Oct 1.
@@ -178,13 +181,17 @@ The same replay as the section above, unchanged, on all 20 seasons once the down
 | One-sided p against 52.4% | 0.13 | **0.0028** | 0.013 | 0.046 | 0.042 |
 | The same, grouped | – | 0.0039 | 0.022 | 0.043 | 0.033 |
 | Under at the opener, where one exists | 113–83 (57.7%), 196 | 566–380–5 (59.8%), 951 | 188–116–2 (61.8%), 306 | 378–264–3 (58.9%), 645 | 197–129–2 (60.4%), 328 |
-| The same games on *observed* wind | 56–47–1 (54.4%), 104 | 469–364–11 (56.3%), 844 | 210–170–4 (55.3%), 384 | 259–194–7 (57.2%), 460 | 109–86–5 (55.9%), 200 |
+| Under at the close, on those same games | 109–85–2 (56.2%) | 534–406–11 (56.8%) | 177–126–3 (58.4%) | 357–280–8 (56.0%) | 186–137–5 (57.6%) |
+| *Observed* wind ≥ 15 mph, same pool of games, at the close | 56–47–1 (54.4%), 104 | 469–364–11 (56.3%), 844 | 210–170–4 (55.3%), 384 | 259–194–7 (57.2%), 460 | 109–86–5 (55.9%), 200 |
+| …of which also forecast signals | 76 | 602 | 287 | 315 | 131 |
 
 The three cuts to the right were declared in the brief before the run. They are descriptions of the one replayed rule and add no variant; no other cut was made.
 
+The observed-wind row is **not** the forecast signals graded on the observed wind. It is every game, among the games with a forecast, whose observed wind reached 15 mph: the observed-wind version of the rule on the same pool of games. The two sets overlap on 602 of the 1,284 forecast signals and 602 of the 844 observed-wind games. (The first draft of this section called it "the same games on observed wind", which was wrong.)
+
 **By season** (at the close, −110; the opener column is blank where no opener exists):
 
-| Season | Games with a forecast | Signals | Under at the close | 95% interval | ROI | One-sided p | At the opener | Same games, observed wind |
+| Season | Games with a forecast | Signals | Under at the close | 95% interval | ROI | One-sided p | At the opener | Observed ≥ 15, same pool |
 |---|---|---|---|---|---|---|---|---|
 | 2006 | 286 | 32 | 20–12 (62.5%) | 45–77% | +19.3% | 0.17 | – | 17–12 (58.6%) |
 | 2007 | 463 | 37 | 22–14–1 (61.1%) | 45–75% | +16.7% | 0.19 | 1–0 | 16–16 (50.0%) |
@@ -218,12 +225,18 @@ The three cuts to the right were declared in the brief before the run. They are 
 **The crash at the end of the download** was an NFL problem, but the code that crashed is shared, so it is fixed in both copies of `mos.py`.
 - **The cause.** IEM leaves out any column that is empty in the whole answer. Baltimore Inner Harbor (KDMH), the NFL's station for the Ravens' stadium, has every MOS variable except wind in all 22 of its seasons. So its answers have no wind column, and the reader expected one.
   - One request to IEM's JSON API confirmed it: all 21 steps of KDMH's 18Z run on Oct 12, 2024 have a temperature, and none has a wind speed or direction.
-- **The fix.** Such an answer now reads as a missing forecast instead of crashing. The download scripts treat it as empty, so the next-nearest station is tried, as PR 61 specified.
+- **The fix.** Such an answer now reads as a missing forecast instead of crashing. The download scripts treat it as empty, so the next-nearest station is tried, as PR 61 specified. For the NFL that meant 28 more requests (Baltimore–Washington International for Baltimore, Andrews for Washington 2004–09), fetched later on Sep 29 at one request every 8 seconds; all 28 came back with forecasts.
 - **Tests** in [`tests/test_mos.py`](tests/test_mos.py) cover answers with no runs, with no wind column, with a missing value, a zero-byte file and an HTML error page.
-- **Across the whole cache** (2,609 files, shared with the NFL): 2,574 have forecasts, 13 have no runs (KCGS, KIGX) and 22 have runs but no wind (KDMH, NFL only).
-- **No college game used KDMH, so none of this changes a college number.** The 2023–25 replay reruns byte-identical on the full cache with the fixed code.
+- **Across the whole cache** (2,637 files, shared with the NFL): 2,602 have forecasts, 13 have no runs (KCGS, KIGX) and 22 have runs but no wind (KDMH, NFL only). None is unreadable.
+- **No college game used KDMH, BWI or Andrews, so none of this changes a college number.** Rerun on the full cache with the fixed code, the 2023–25 results are identical: the per-game file and the bias table match PR 61's byte for byte, and every number in the season table is the same. The rerun's log and season table gain the new sections and columns, so they are not byte-identical; PR 61's 2023–25 files are left as committed.
 
-**Step 2: coverage.** 12,823 games are eligible in 2006–25: FBS-involved, outdoor, with a closing total and a score.
+**Step 2: coverage.** 12,823 games are eligible in 2006–25: FBS-involved, outdoor, with venue coordinates, a known kickoff time, a closing total and a score.
+- **The venue-coordinates requirement leaves out 1,284 more FBS games that have a closing total and a score** (by coincidence the same number as the signals). Coordinates come only from the venue each team lists as its home today, so what is left out is:
+  - neutral-site games (399, such as Texas–Oklahoma in Dallas every year) and postseason games (61);
+  - stadiums a team has since left (Northwestern's old Ryan Field, San Diego State's Qualcomm Stadium, UNLV's Sam Boyd Stadium and Baylor's Floyd Casey Stadium, among others);
+  - 209 games with no venue at all.
+  - Whether they were played outdoors isn't known either; some were in domes.
+  - The filter doesn't depend on the weather or the result, so it shouldn't bias the record. But the replay says nothing about these games, about 64 a season.
 - **322 have no MOS station within 40 km**: Ole Miss, Ohio and Louisiana Tech, 10 to 21 games a season. They are listed in [`output/tables/mos_no_forecast.csv`](output/tables/mos_no_forecast.csv).
 - **Every one of the other 12,501 games has a forecast at lead 1 and at lead 2, in every season.** No game lacks a run.
 - **The replay read the 18Z run for 12,491 games at lead 1 and 12,469 at lead 2.** The rest took the same day's 12Z run, because the 18Z run is missing from the archive (10 and 32 games).
@@ -266,6 +279,7 @@ Per season and lead, with the reason for every missing forecast: [`output/tables
   - cfbfastR has openers for 2012–19 and 2021–25.
   - So 951 of the 1,284 signals have an opener, and 2006–11 and 2020 have almost none.
   - The opener result (59.8%) flatters the rule. The opener is posted before the forecast that fires, and on these games the total fell 1.34 points on average between the opener and the close.
+  - Like for like, on the same 951 games, the close went 534–406–11 (56.8%). So the opener adds about 3 points of win rate: 61.8% against 58.4% in 2006–15 (306 games), and 58.9% against 56.0% in 2016–25 (645).
 - **Where the wins fell** (descriptive; it uses the observed wind, which no one knows at bet time):
 
   | Group | Games | Record |
@@ -277,6 +291,9 @@ Per season and lead, with the reason for every missing forecast: [`output/tables
   The gap between 58.9% and 54.0% is not significant (Fisher exact test, p = 0.079).
 - **How the signals fired.** Lead 1 alone fires on 1,059 games. Lead 2 adds 225 that lead 1 didn't flag. Lead 3 adds none.
 - **Details.** The full log is [`output/mos_replay.log`](output/mos_replay.log), with the checks in [`output/mos_replay_checks.log`](output/mos_replay_checks.log).
+- **Data notes.** Found in review; the replay uses the data as it stands, and no number above was changed for them.
+  - **One kickoff time looks wrong.** Air Force at Army, Nov 3, 2018 (game 401013373), is listed at 12:00 UTC, which is 8 AM Eastern; it was probably a noon kickoff. It is the only game in the replay listed before 11 AM Eastern. At the listed time MOS forecast 12.7 mph (no signal). At noon Eastern it would have forecast 26.5 mph and fired, and the under won (31 points against a close of 41.5). Correcting it would make the record 716–555–14; it is left as listed, because the rule was fixed before the data was looked at.
+  - **69 of the 1,284 signals are graded against a consensus close that no book offered**, such as 43.75 (the median of the books' lines). None of the 69 finished within half a point of that number, so no result would change at a book's own line.
 
 **Step 5: stability over time** (declared before the run). The table's three right-hand columns are the answer.
 - **Neither half of the period is far from the pooled 56.3%.**
@@ -298,16 +315,17 @@ Per season and lead, with the reason for every missing forecast: [`output/tables
   - From Oct 1 on, the part of a season still ahead on Oct 1, it is 49 (range 26–86), and 47 in 2021–25.
   - The money-gate study assumed 25 to 55 a season. The rest of a season from Oct 1 falls inside that range; a full season is above it.
   - The live board reads Open-Meteo, not MOS. On the same 2024–25 games Open-Meteo fired 110 times against MOS's 135. So the board is likely to produce fewer signals than this replay: roughly 40 from Oct 1 on, if that ratio holds.
-- **What one season looks like, even if the edge is real.** At a true 56.3%, a season of 50 bets still finishes below break-even about 1 time in 3 (32%, binomial). In this replay 5 of 20 seasons did. A losing October and November would not by itself mean the edge is gone, and a winning one would not prove it.
+- **What one season looks like, if the rule as bet really wins about 56%.** This replay does not establish that for the board's own forecast and prices (see below), so this is a conditional, not a forecast: at a true 56%, a season of 50 bets still finishes below break-even about 1 time in 3 (32% at 56.3%, binomial). In this replay 5 of 20 seasons did. A losing October and November would not by itself mean the edge is gone, and a winning one would not prove it.
 - **What the evidence does not show.**
-  - **That it is an independent test.** Almost half of the signals (602 of 1,284) are games the observed-wind evidence already counts, and 2023–25 had already been seen. The part that is new, the 682 games only the forecast flagged, went 54.0% (p = 0.21): positive, not significant.
-  - **The price you would get.** Every entry is the consensus close at an assumed −110. The rule bets 1–3 days early, at one book's price, with the board's −115 cap and its expected-value gate, none of which is applied here. The real entry sits between the opener (59.8%, which flatters it) and the close (56.3%).
+  - **That it is an independent test.** Almost half of the signals (602 of 1,284) are games the observed-wind evidence already counts, and 2023–25 had already been seen. The part that is new, the 682 games only the forecast flagged, went 365–311–6 (54.0%, p = 0.21): positive, not significant. As independent evidence, that is weak.
+  - **That it describes the board's own signals.** The live board reads Open-Meteo, not MOS. On the 1,670 games of 2024–25 that both replays cover, MOS fired 135 times (73–60–2, 54.9%) and Open-Meteo 110 times (61–46–3, 57.0%), and only 65 games were flagged by both. The two forecasts mostly pick different games, so 20 seasons of MOS are indirect evidence for the signals the board will send. There is no Open-Meteo archive before 2024 to check them directly.
+  - **The price you would get.** Every entry is the consensus close at an assumed −110. The rule bets 1–3 days early, at one book's price, with the board's −115 cap and its expected-value gate, none of which is applied here. On the 951 signals with an opener, the real entry sits between the opener (59.8%, which flatters it) and the close on those same games (56.8%).
   - **Lead 3.** MOS reaches lead 3 for 17 of 12,501 games; the live rule's forecast does reach it. In the Open-Meteo replay 19 of 110 signals fired only at lead 3, and went 9–10.
   - **Stadium wind.** Both the forecast and the observation are for the nearest airport.
   - **That the market hasn't adapted.** The last five seasons (57.3%) show no fade, but five seasons can't rule one out.
-- **Bottom line.** The forecast version of Rule B has now been replayed on 20 seasons, not 3. It wins at the same rate as the observed-wind version, about 56%. The historical case for the rule as it is actually bet is now as strong as the case for the observed-wind version, which is to say supportive but not conclusive. It does not settle whether to bet real money this season; the paper-to-money gate and the forward test still decide that.
+- **Bottom line.** The forecast version of Rule B has now been replayed on 20 seasons, not 3. On NWS MOS forecasts graded at the consensus close, it wins at the same rate as the observed-wind history, about 56%. The games it adds to that history went 54.0% (p = 0.21), so it is weak independent evidence. It is also not a record of the rule as the board bets it: a different forecast (Open-Meteo, which flagged mostly different games in 2024–25), one book's price 1–3 days early, a −115 cap and an expected-value gate. It supports the rule; it does not prove it. It does not settle whether to bet real money this season; the paper-to-money gate and the forward test still decide that.
 
-**Variants.** 1 for college football, already counted in main's 271 when PR 61 merged. The NFL replay adds 1, for **272**, bar p < 0.05 / 272 = 0.000184. The era cuts, the bias tables, the coverage counts and the both/forecast-only split are descriptions of the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 270`).
+**Variants.** 1 for college football, already counted in main's 271 when PR 61 merged. The NFL replay adds 1, for **272**, bar p < 0.05 / 272 = 0.000184. The era cuts, the bias tables, the coverage counts, the opener comparison and the both/forecast-only split are descriptions of the one rule and add none. `scripts/mos_replay.py` prints this count (`VARIANTS_BEFORE = 270`). One NFL cut taken after seeing the results is disclosed in `nfl-weather/README.md`; if the hub counts it, the total is 273 (bar p < 0.000183). No college number is near either bar.
 
 **No lookahead, checked by hand.** [`scripts/mos_hand_check.py`](scripts/mos_hand_check.py) prints the run selection for 12 real games that cover the edge cases:
 - a noon kickoff, and an 11:59 PM Eastern kickoff that is the next day in UTC;

@@ -158,9 +158,13 @@ def season_table(d: pd.DataFrame) -> pd.DataFrame:
                    price_roi_pct=round(100 * pr.profit_at_price.sum() / max(w + l, 1), 1) if len(pr) else np.nan)
         op = sig[sig.total_open.notna()]
         row.update(grade(op, "opener_win", "opener_push", prefix="open_"))
+        row.update(grade(op, prefix="closeop_"))        # the nflverse close on the same games as the SBR opener
         row["open_move_mean"] = round(op.opener_move.mean(), 2) if len(op) else np.nan
         row.update(grade(sig[sig.sbr_total_close.notna()], "sbr_close_win", "sbr_close_push", prefix="sbrclose_"))
-        row.update(grade(m[m.obs_signal], prefix="obs_"))
+        # every game whose OBSERVED wind reached 15, among all games with a forecast: not the forecast signals
+        obs = m[m.obs_signal]
+        row.update(grade(obs, prefix="obs_"))
+        row["obs_also_signal"] = int(obs.mos_signal.sum())
         b = m[m.mos1_mph.notna() & m.wx_wind.notna()]
         row.update(l1_bias=round((b.mos1_mph - b.wx_wind).mean(), 2) if len(b) else np.nan,
                    l1_mos15_pct=round(100 * (b.mos1_mph >= WIND).mean(), 1) if len(b) else np.nan,
@@ -265,19 +269,32 @@ def grouped(d: pd.DataFrame, win="under_win", push="push") -> dict:
 
 
 def era_table(d: pd.DataFrame, eras=ERAS) -> pd.DataFrame:
-    """The pooled result and the declared era cuts: close, grouped by game day, SBR opener and close, observed wind."""
+    """The pooled result and the declared era cuts: close, grouped by game day, SBR opener (with the nflverse
+    close on the same games) and SBR close, and observed wind >= 15 in the same pool of games.
+
+    Each era is clipped to the seasons in `d` (a --seasons run); an era with none of them is left out,
+    and a clipped one says so in its label, so a partial run never prints an era it didn't cover."""
     m = d[d.has_mos]
     first, last = int(d.season.min()), int(d.season.max())
     out = []
     for label, a, b in (("pooled", first, last),) + tuple(eras):
-        s = m[m.season.between(a, b)]
+        a2, b2 = max(a, first), min(b, last)
+        if a2 > b2:
+            continue
+        if (a2, b2) != (a, b):
+            label = f"{label}, only {a2}-{b2} run"
+        s = m[m.season.between(a2, b2)]
         sig = s[s.mos_signal]
-        row = dict(sample=label, seasons=f"{a}-{b}", games=len(s), per_season=round(len(sig) / (b - a + 1), 1))
+        row = dict(sample=label, seasons=f"{a2}-{b2}", games=len(s), per_season=round(len(sig) / (b2 - a2 + 1), 1))
         row.update(grade(sig, prefix="close_"))
         row.update(grouped(sig))
-        row.update(grade(sig[sig.total_open.notna()], "opener_win", "opener_push", prefix="open_"))
+        op = sig[sig.total_open.notna()]
+        row.update(grade(op, "opener_win", "opener_push", prefix="open_"))
+        row.update(grade(op, prefix="closeop_"))
         row.update(grade(sig[sig.sbr_total_close.notna()], "sbr_close_win", "sbr_close_push", prefix="sbrclose_"))
-        row.update(grade(s[s.obs_signal & s.wx_wind.notna()], prefix="obs_"))
+        obs = s[s.obs_signal & s.wx_wind.notna()]
+        row.update(grade(obs, prefix="obs_"))
+        row["obs_also_signal"] = int(obs.mos_signal.sum())
         out.append(row)
     return pd.DataFrame(out)
 
@@ -426,8 +443,8 @@ def main():
     cols1 = ["sample", "games", "with_mos", "lead1", "lead2", "lead3", "close_n", "close_record", "close_win_pct",
              "close_win_ci", "close_roi_pct", "close_roi_ci", "close_p_one_sided"]
     cols2 = ["sample", "price_n", "price_record", "price_roi_pct", "open_n", "open_record", "open_win_pct",
-             "open_move_mean", "sbrclose_n", "sbrclose_record", "sbrclose_win_pct", "obs_n", "obs_record", "obs_win_pct",
-             "obs_win_ci"]
+             "open_move_mean", "closeop_record", "closeop_win_pct", "sbrclose_n", "sbrclose_record", "sbrclose_win_pct",
+             "obs_n", "obs_also_signal", "obs_record", "obs_win_pct", "obs_win_ci"]
     anyl = ctab[ctab.lead == "any"].drop(columns="lead")
     wide = ctab[ctab.lead != "any"].pivot(index="season", columns="lead", values="forecast").add_prefix("lead")
     cov_view = anyl.set_index("season").join(wide).reset_index()
@@ -436,8 +453,9 @@ def main():
     cov_view = cov_view.set_index("season").loc[[s for s in cov_view.season if s != "all"] + ["all"]].reset_index()
     ecols = ["sample", "seasons", "per_season", "close_n", "close_record", "close_win_pct", "close_win_ci", "close_roi_pct",
              "close_p_one_sided", "days", "grouped_ci", "grouped_p", "deff"]
-    ecols2 = ["sample", "open_n", "open_record", "open_win_pct", "open_win_ci", "sbrclose_n", "sbrclose_record",
-              "sbrclose_win_pct", "obs_n", "obs_record", "obs_win_pct", "obs_win_ci"]
+    ecols2 = ["sample", "open_n", "open_record", "open_win_pct", "open_win_ci", "closeop_record", "closeop_win_pct",
+              "sbrclose_n", "sbrclose_record", "sbrclose_win_pct", "obs_n", "obs_also_signal", "obs_record",
+              "obs_win_pct", "obs_win_ci"]
     with pd.option_context("display.width", 250, "display.max_columns", 40):
         lines += ["Coverage (step 2): eligible games per season with a MOS forecast at lead 1, 2, 3 and at any lead; "
                   "games with none at any lead, by why (their lead-1 reason):",
@@ -447,8 +465,11 @@ def main():
                   "Games with no forecast at any lead, by what each station within 40 km held:",
                   nf.groupby(["why", "detail"]).size().rename("games").reset_index().to_string(index=False), "",
                   "At the close (the primary):", tab[cols1].to_string(index=False), "",
-                  "At nflverse's under price where it is -115 or better; at the SBR opener and the SBR close (2007-21); "
-                  "and the same games on OBSERVED (game-book) wind at the close:", tab[cols2].to_string(index=False), "",
+                  "At nflverse's under price where it is -115 or better; at the SBR opener, with the nflverse close on "
+                  "those same games (closeop_), and at the SBR close (2007-21); and, at the close, every game whose "
+                  "OBSERVED (game-book) wind reached 15 in the same pool of games with a forecast (obs_: not the "
+                  "forecast signals; obs_also_signal of them are also forecast signals):",
+                  tab[cols2].to_string(index=False), "",
                   "Pooled and the declared era cuts (descriptive, 0 variants), with the interval and p-value also "
                   "computed with standard errors grouped by game day (the kickoff's Eastern date):",
                   eras[ecols].to_string(index=False), "",

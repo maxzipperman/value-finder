@@ -12,6 +12,6 @@ Windows with no usable forecast (7):
   rank 0 KIGX 2024: no runs, 13 games, KIGX_GFS_2024082700_2024112918.csv
   rank 0 KIGX 2025: no runs, 12 games, KIGX_GFS_2025082500_2025112818.csv
 
-The whole cache (~/.cache/value-finder/mos, shared with nfl-weather): 2609 files: no runs 13, no wind 22, ok 2574
+The whole cache (~/.cache/value-finder/mos, shared with nfl-weather): 2637 files: no runs 13, no wind 22, ok 2602
   no runs: 13 files, stations KCGS, KIGX
   no wind: 22 files, stations KDMH
