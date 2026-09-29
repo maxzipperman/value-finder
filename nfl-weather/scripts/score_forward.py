@@ -37,8 +37,12 @@ decision only if it was made by the preview's date. A run on another ledger kept
 rewrite's backup copy) neither reads nor writes a record. A copy of this scorer in another folder (a
 worker's worktree) reads the live record but never writes it. A test ledger kept anywhere else writes
 decisions.csv beside itself (a --now run on it only with --test-record, which exists for tests). A lost
-live record is restored from its copy on the ledgers branch, never decided again. One run at a time writes, under a file lock, and a
-damaged record stops recording without stopping the scores.
+live record is restored from its copy on the ledgers branch, never decided again: while the file is
+missing, every run on the live ledger reads the copy, a real run restores the file from it, and any other
+run prints the copy's decisions as recorded. A copy that is there but damaged stops recording, as a
+damaged file does. One run at a time writes, under a file lock, and a damaged record (a half-written
+line, a line without its 10 fields, numbers a later run can't print) stops recording without stopping the
+scores.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
@@ -50,10 +54,12 @@ outside the horizon) are counted, so coverage gaps can't quietly select winners.
     python scripts/score_forward.py [--list-excluded]
 """
 import argparse
+import csv
 import fcntl
 import hashlib
 import io
 import json
+import re
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -142,38 +148,76 @@ else:
 
 
 # ---------------------------------------------------------------- the decision record (amendment 6, reading 3)
+# What a recorded decision must hold for a later run to print it: its counts, its numbers (null when there is
+# none, as for an interval on one bet) and how its bets were split.
+COUNTS = ("n_bets", "n_clv", "beat_close", "vs_close_no_tie", "ties")
+NUMBERS = ("mean_clv", "ci_low", "ci_high", "win_rate_vs_close")
+
+
+def is_number(v, none_ok=False):
+    return (v is None and none_ok) or (isinstance(v, (int, float)) and not isinstance(v, bool))
+
+
+def check_row(r):
+    """One recorded decision, or ValueError saying what is damaged in it."""
+    if r.decision_id not in DECISION_ID.values():
+        raise ValueError(f"an unknown decision id {r.decision_id!r}")
+    for t in (r.horizon_utc, r.decided_utc):
+        if pd.isna(pd.Timestamp(t)):
+            raise ValueError(f"a blank time ({t!r})")
+    int(r.n_bets)
+    if not (r.verdict in ("KEEP", "DROP") or r.verdict.startswith("INCONCLUSIVE")):
+        raise ValueError(f"an unknown verdict {r.verdict!r}")
+    nums = json.loads(r.numbers)
+    if not isinstance(nums, dict):
+        raise ValueError(f"{r.decision_id}'s numbers are not a set of named numbers")
+    missing = [k for k in COUNTS + NUMBERS + ("split", "by_part") if k not in nums]
+    if missing:
+        raise ValueError(f"{r.decision_id}'s numbers have no {', '.join(missing)}")
+    bad = ([k for k in COUNTS if not is_number(nums[k])] + [k for k in NUMBERS if not is_number(nums[k], True)]
+           + ([] if nums["split"] in ("half", "season") else ["split"])
+           + ([] if isinstance(nums["by_part"], dict) and all(map(is_number, nums["by_part"].values()))
+              else ["by_part"]))
+    if bad:
+        raise ValueError(f"{r.decision_id}'s numbers have a damaged {', '.join(bad)}")
+    [int(p) for p in r.ledger_rows.split()]
+    if not re.fullmatch(r"[0-9a-f]{64}", r.ledger_rows_sha256):
+        raise ValueError(f"{r.decision_id}'s fingerprint is not 64 hexadecimal characters")
+
+
 def parse_record(data):
-    """The decision record from a file's bytes: (rows, "") or (None, why it can't be read). A half-written line,
-    a missing header or column, an empty file or a damaged number makes it unreadable."""
-    def when(x):
-        t = pd.Timestamp(x)
-        if pd.isna(t):
-            raise ValueError(f"a blank time ({x!r})")
-        return t
+    """The decision record from a file's bytes: (rows, "") or (None, why it can't be read). The file must end with
+    a complete line, its first line must be the record's header, every line must have exactly its 10 fields, and
+    each row must be one of this scorer's decisions, with valid times, the numbers a later run prints, row
+    positions and a full fingerprint. A half-written line (wherever it was cut), a missing header or column, an
+    empty file or a damaged number makes it unreadable."""
     try:
-        d = pd.read_csv(io.BytesIO(data), dtype=str, keep_default_na=False)
-        missing = [c for c in RECORD_COLS if c not in d.columns]
-        if missing:
-            raise ValueError("no column " + ", ".join(missing))
+        text = data.decode("utf-8")
+        if not text.endswith("\n"):             # a cut last line, or an empty file: never append to it
+            raise ValueError("the file is empty" if not text else "its last line is not complete (no line break)")
+        lines = [f for f in csv.reader(io.StringIO(text, newline=""), strict=True) if f]
+        if not lines or lines[0] != RECORD_COLS:
+            raise ValueError("its first line is not the record's header")
+        for i, fields in enumerate(lines[1:], start=1):
+            if len(fields) != len(RECORD_COLS):
+                raise ValueError(f"record {i} has {len(fields)} fields, not {len(RECORD_COLS)}")
+        d = pd.DataFrame(lines[1:], columns=RECORD_COLS)
         for r in d.itertuples():
-            if not r.decision_id:
-                raise ValueError("a row with no decision id")
-            json.loads(r.numbers)
-            when(r.horizon_utc), when(r.decided_utc)
-            [int(p) for p in r.ledger_rows.split()]
+            check_row(r)
     except Exception as e:                                              # noqa: BLE001 (any damage: report it)
         return None, f"{type(e).__name__}: {(str(e).splitlines() or [''])[0]}"
     return d, ""
 
 
 def published_copy():
-    """The record as ops/sync_ledgers.sh last copied it to the ledgers branch: read-only, without a fetch. A
-    failure to read it counts as no copy."""
+    """The record as ops/sync_ledgers.sh last copied it to the ledgers branch: read-only, without a fetch. None
+    when git can't show it (no ledgers branch, or no file in it): that is no copy. A copy that git shows is
+    returned as it is, even empty, so that a damaged copy is seen as damaged."""
     try:
         r = subprocess.run(["git", "-C", str(ROOT), "show", PUBLISHED], capture_output=True, timeout=60)
     except (OSError, subprocess.SubprocessError):
         return None
-    return r.stdout if r.returncode == 0 and r.stdout.strip() else None
+    return r.stdout if r.returncode == 0 else None
 
 
 @contextmanager
@@ -191,30 +235,46 @@ def record_lock():
             fcntl.flock(fh, fcntl.LOCK_UN)
 
 
-RECORD, RESTORED = None, False
+RECORD, RESTORED, FROM_COPY = None, False, False
+HISTORY = f"git log origin/ledgers -- {ROOT.name}/decisions.csv"   # where a readable earlier copy can be found
 if DECISIONS is not None:
-    # A lost live record is restored from its nightly copy before anything is decided, so it is never decided again.
-    if IS_LIVE and not NOT_RECORDED and not DECISIONS.exists():
+    # A lost live record is restored from its nightly copy before anything is decided, so it is never decided
+    # again. Every run on a live ledger whose record is missing reads the copy; only a run that may record restores
+    # the file, and any other run prints the copy's decisions as recorded.
+    if FWD is not None and not DECISIONS.exists():
         copy = published_copy()
-        held = parse_record(copy)[0] if copy is not None else None
-        if held is not None and len(held):
-            with record_lock():
-                if not DECISIONS.exists():
-                    DECISIONS.write_bytes(copy)
-                    RESTORED = True
-            if RESTORED:
-                print(f"Decision record: data/forward/decisions.csv was missing; restored {len(held)} recorded "
-                      f"decision{'s' if len(held) != 1 else ''} from its copy on the ledgers branch ({PUBLISHED}). "
-                      "A lost record is never decided again.")
-    if DECISIONS.exists():
+        held, broken = parse_record(copy) if copy is not None else (None, "")
+        if broken:
+            print(f"Decision record: data/forward/decisions.csv is missing, and its copy on the ledgers branch "
+                  f"({PUBLISHED}) is unreadable ({broken}). Nothing will be recorded until the file is restored from "
+                  f"a readable copy in that branch's history ({HISTORY}); the scores below are printed as usual.")
+            NOT_RECORDED = ("the decision record is missing and its copy on the ledgers branch is unreadable; nothing "
+                            f"will be recorded until the file is restored from a readable copy ({HISTORY})")
+        elif held is not None and len(held):
+            if IS_LIVE and not NOT_RECORDED:
+                with record_lock():
+                    if not DECISIONS.exists():
+                        DECISIONS.write_bytes(copy)
+                        RESTORED = True
+                if RESTORED:
+                    print(f"Decision record: data/forward/decisions.csv was missing; restored {len(held)} recorded "
+                          f"decision{'s' if len(held) != 1 else ''} from its copy on the ledgers branch ({PUBLISHED}). "
+                          "A lost record is never decided again.")
+            else:
+                RECORD, FROM_COPY = held, True
+                print(f"Decision record: data/forward/decisions.csv is missing; its copy on the ledgers branch "
+                      f"({PUBLISHED}) holds {len(held)} recorded decision{'s' if len(held) != 1 else ''}, printed below "
+                      f"as recorded. This run doesn't restore the file ({NOT_RECORDED}); the next run that may record "
+                      "restores it.")
+    if DECISIONS.exists() and not FROM_COPY:
         RECORD, broken = parse_record(DECISIONS.read_bytes())
         if broken:
             print(f"Decision record: {DECISIONS.name} is unreadable ({broken}). Nothing will be recorded until it is "
                   "repaired or restored from the ledgers branch; the scores below are printed as usual.")
             NOT_RECORDED = ("the decision record is unreadable; nothing will be recorded until it is repaired or "
                             "restored from the ledgers branch")
-        elif args.now:        # a preview shows only the decisions made by its date
-            RECORD = RECORD.loc[np.array([pd.Timestamp(t) <= NOW for t in RECORD.decided_utc], dtype=bool)]
+    if RECORD is not None and args.now:        # a preview shows only the decisions made by its date
+        RECORD = RECORD.loc[np.array([pd.Timestamp(t) <= NOW for t in RECORD.decided_utc], dtype=bool)]
 
 
 def recorded(did):
@@ -495,8 +555,9 @@ def decision(did, rule, horizon, name, h_utc, bets_by, split_by, split_name, pen
         print(f"  decision ({name}), FINAL: {rec.verdict}")
         show(json.loads(rec.numbers))
         print(f"    recorded in decisions.csv on {rec.decided_utc}, horizon {rec.horizon_utc}; "
-              f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}" + ("; restored from the ledgers branch" if RESTORED
-                                                                       else ""))
+              f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}" + (
+                  "; restored from the ledgers branch" if RESTORED else
+                  "; read from its copy on the ledgers branch (the file is missing)" if FROM_COPY else ""))
         check_fingerprint(rec)
         if not len(bets):
             print("    a fresh computation on the same horizon now has no settled bets. The recorded decision stands.")

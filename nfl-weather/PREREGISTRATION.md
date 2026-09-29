@@ -390,15 +390,24 @@ draft (Sep 29) added sections 9 to 11 and that list.
   other ledger in `data/forward/`.
 * **One run at a time.** A run that writes takes a lock on the record and reads it again before it
   appends, so two runs at once can't record the same decision twice.
-* **A damaged record.** If `decisions.csv` can't be read (a half-written line, a missing header, an
-  empty file), the scorer says so, records nothing until the file is repaired or restored from the
-  ledgers branch, and still prints the scores.
+* **A damaged record.** If `decisions.csv` can't be read (a half-written line, wherever it was cut; a
+  line without exactly its 10 fields; a missing header; an empty file; a decision id, verdict or
+  numbers the scorer doesn't know or can't print), the scorer says so, records nothing until the file
+  is repaired or restored from the ledgers branch, and still prints the scores. It never adds a line
+  to a damaged file.
 * **A lost record.** The record is copied to the ledgers branch every night. A lost record is restored
   from that copy; it is never decided again. When the live record is missing, a real run reads the
   copy (`origin/ledgers`, as this checkout last fetched it; the scorer never fetches), restores the
-  file from it and prints what it restored, before it decides anything. It records a new decision only
-  when neither the file nor the copy holds one. A copy that can't be read counts as no copy. A record
-  made since the last nightly copy exists only on the Mac until that night.
+  file from it and prints what it restored, before it decides anything. Any other run on the live
+  ledger (a preview, a run on a stale schedule, a worker's copy of the scorer) reads the copy too,
+  prints its decisions as recorded, and leaves the file alone. It records a new decision only when
+  neither the file nor the copy holds one. If git can't show a copy (there is no ledgers branch, or no
+  record in it), there is no copy. A copy that is there but can't be read (a damaged file was copied
+  before the damage was repaired) stops recording, as a damaged file does, until the file is restored
+  from a readable earlier copy in the branch's history (`git log origin/ledgers --
+  nfl-weather/decisions.csv`). A record made since the last nightly copy exists only on the Mac until
+  that night: if it is lost before then, neither the file nor a copy holds it, and the next real run
+  decides it again.
 
 ### 4. Horizons are dates
 
@@ -494,9 +503,10 @@ applies instead.
 * The original file, "What counts": "using the earliest snapshot taken at least 24 hours before
   kickoff". Replaced by section 5 (the entry also needs a posted total), section 9 (each listing has
   its own entry) and section 10 (the 24 hours are counted to the earlier kickoff).
-* The original file, "Decision": "Drop it if mean CLV ≤ 0 or its 95% CI upper bound is below +0.25
-  points." and "Anything else is inconclusive." Amendment 4: "drop if mean CLV ≤ 0 or the 95% CI upper
-  bound is below +0.25 points; anything else is inconclusive and carries forward unchanged".
+* The original file, "Decision": "Keep using it only if all of these hold:", "Drop it if mean CLV ≤ 0 or
+  its 95% CI upper bound is below +0.25 points." and "Anything else is inconclusive." Amendment 4: "drop
+  if mean CLV ≤ 0 or the 95% CI upper bound is below +0.25 points; anything else is inconclusive and
+  carries forward unchanged".
   Amendment 5, section 4: "If the keep test and the drop test are both met, the result is drop." With
   fewer than 20 bets that have a primary close, a decision is inconclusive whatever its numbers
   (section 11).
@@ -510,6 +520,14 @@ applies instead.
 * Amendment 4: "The keep/drop decision is made once, after the 2027 regular season". Amendment 5,
   section 4: "The decision is made once." For an inconclusive 2026 result only, section 6 adds a
   second look, on both seasons pooled, at data that overlaps the first.
+* Amendment 5, section 4: "If 40 Rule B signals settle in the 2026 regular season, the decision is made
+  after Week 18 of 2026 on those bets." and, for the model lean, "with 40 leans in the 2026 regular
+  season it is decided after Week 18 of 2026 on those leans, by half". A void bet doesn't settle and
+  doesn't count toward 40 (section 1). And once a decision after the 2027 regular season is recorded
+  with none recorded for 2026, a 2026 result that lands later and brings 2026 to 40 makes no 2026
+  decision (section 6).
+* Amendment 5, section 4: "It uses the bets that kicked off by its horizon." Void bets among them are
+  left out (section 1), and the decision waits while any of them is pending (section 2).
 * Amendment 5, section 4: "so a later run of the scorer prints the same result". A later run prints the
   recorded decision, and a fresh computation beside it when that now differs (section 3).
 * Amendment 5, section 4: "Otherwise the decision is made once, after the 2027 regular season, on every

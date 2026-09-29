@@ -144,7 +144,7 @@ Before the forward tests start, two free exercises. Neither is evidence for any 
 |---|---|---|---|
 | NFL Rule B | Archived 1- and 3-day forecasts; nflverse closes, so CLV is 0 | 17 in Weeks 5–18, 0 to 5 a week, clustered in windy weeks. 2 more were blocked by price. | 11–6 at the close |
 | CFB Rule B | Observed wind as a *perfect* forecast; cfbfastR open then close, at −110 | 32 from Week 5, 1 to 8 a week | 21–10–1; open-to-close CLV +1.81 (95% CI +1.09 to +2.54). Optimistic. |
-| CFB Rule HT | Last quote, the close | 43 from Week 6, about 3 to 6 a week (rerun Sep 29; was 34) | 24–19 (55.8%), +2.82 units (was 19–15, 55.9%) |
+| CFB Rule HT | Last quote, the close | 43 from Week 6, about 3 to 6 a week (rerun Sep 29; was 34, about 3 to 5 a week) | 24–19 (55.8%), +2.82 units (was 19–15, 55.9%) |
 
 Everything ran end to end: statuses, ledger rows, the 53-week date shift into the 2026 windows, and both scorers.
 

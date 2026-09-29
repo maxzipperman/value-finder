@@ -3,6 +3,7 @@ built on the reviewers' own scenarios (their inputs are reused here). Each test 
 merged in pull request 50 and passes under amendment 4. Readings are numbered as amendment 4's sections."""
 import fcntl
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -684,3 +685,139 @@ def test_the_readme_keeps_its_original_sentence_and_adds_a_dated_note():
             "game can't hold a decision open, and a game is graded only once the schedule marks it completed. Before "
             "the horizon the scorer prints the numbers and no verdict.") in readme
     assert "*Note, Sep 29 (amendment 4):*" in readme
+
+
+# ================================================================== the second review of this amendment (Sep 29)
+def rb_and_ht():
+    """40 Rule B signals that keep, and 12 Rule HT bets that promote, with their schedule."""
+    rows, s = rb_signals(40)
+    for i in range(12):
+        k = ts("2026-10-10T23:00Z") + pd.Timedelta(days=7 * i)
+        rows.append(ht_bet(500 + i, k))
+        s.append(sched(500 + i, kick=k))
+    return rows, s
+
+
+def test_reading_3_a_record_cut_inside_its_last_field_is_damaged_and_never_added_to(tmp_path):
+    """The second review's major finding (its probe_c5): Rule B's record was cut inside its fingerprint; Rule HT's
+    decision was glued onto it, and the next run recorded Rule B a second time, 14 months late."""
+    rows, s = rb_and_ht()
+    score(tmp_path / "ok", rows, s, "2026-12-20", "--test-record")
+    whole = (tmp_path / "ok" / "decisions.csv").read_text()
+    head, line = whole.splitlines()
+    cut = {"cut": whole[:-20],                                                  # no line break, fingerprint cut
+           "short": f"{head}\n{line[:-20]}\n",                                  # a line break, fingerprint cut
+           "nine": f"{head}\n{line.rsplit(',', 1)[0]}\n"}                       # the last field gone
+    for name, content in cut.items():
+        d = tmp_path / name
+        d.mkdir()
+        (d / "decisions.csv").write_text(content)
+        out = score(d, rows, s, "2028-02-02", "--test-record")
+        assert "Decision record: decisions.csv is unreadable" in out, name
+        assert "decision (Rule HT: once, after the 2027 season), FINAL: PROMOTE" in out, name
+        assert out.count("not recorded: the decision record is unreadable") == 2, name
+        assert "recorded in decisions.csv on" not in out, name
+        assert (d / "decisions.csv").read_text() == content, name
+    assert "a line without exactly its 10 fields" in section(3) and "It never adds a line" in section(3)
+
+
+def lost_record_project(tmp_path):
+    """A live project whose Rule B KEEP was recorded on Dec 20 and copied to the ledgers branch; three late Dec 12
+    signals then turn a fresh computation to NOT KEPT."""
+    a, sa = rb_signals(40)
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "cfb-weather", a, sa, "2026-12-20T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    assert "FINAL: KEEP" in on_clock(tmp_path, "2026-12-20T17:00", scorer).stdout
+    b, sb = rb_signals(3, first="2026-12-12T17:00Z", every_days=0, first_id=900, close=56.5)
+    pd.DataFrame(a + b).to_csv(fwd / "ledger.csv", index=False)
+    return repo, proj, fwd, scorer, sa + sb
+
+
+def test_reading_3_a_damaged_copy_on_the_ledgers_branch_stops_recording(tmp_path):
+    """The second review: the local record was damaged, the nightly copy took the damage, the damaged file was
+    removed, and the next real run decided again."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    data = (fwd / "decisions.csv").read_bytes()
+    for name, damaged in (("cut", data[: len(data) // 2 + 60]), ("empty", b"")):
+        (tmp_path / name).write_bytes(damaged)
+        publish(repo, "cfb-weather", tmp_path / name)                        # the nightly copy took the damage
+        if (fwd / "decisions.csv").exists():
+            (fwd / "decisions.csv").unlink()                                  # the damaged file is removed
+        season_file(proj, 2026, s, "2026-12-21T16:00")
+        out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+        assert "its copy on the ledgers branch (origin/ledgers:cfb-weather/decisions.csv) is unreadable" in out, name
+        assert "git log origin/ledgers -- cfb-weather/decisions.csv" in out, name
+        assert "FINAL: NOT KEPT" in rb(out) and "not recorded: the decision record is missing and its copy" in rb(out)
+        assert not (fwd / "decisions.csv").exists(), name
+    assert "A copy that is there but can't be read" in section(3) and "counts as no copy" not in section(3)
+
+
+def test_reading_3_while_the_record_is_missing_every_run_on_the_live_ledger_prints_its_copy(tmp_path):
+    """The second review: with the record lost and the schedule 3 days old, the daily run printed a fresh FINAL
+    against the recorded one and never mentioned the copy; so did a worker's scorer on the live ledger."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    publish(repo, "cfb-weather", fwd / "decisions.csv")
+    (fwd / "decisions.csv").unlink()
+    season_file(proj, 2026, s, "2026-12-18T16:00")                            # 3 days old at the next run
+    pd.DataFrame(s).to_csv(tmp_path / "sched.csv", index=False)
+    worker = project(repo / "worker", "cfb-weather")                          # a worker's copy of the scorer
+    for script, args in ((scorer, ()), (worker / "scripts" / "score_forward.py",
+                                        ("--ledger", str(fwd / "ledger.csv"), "--schedule", str(tmp_path / "sched.csv")))):
+        out = on_clock(tmp_path, "2026-12-21T17:00", script, *args).stdout
+        assert "its copy on the ledgers branch (origin/ledgers:cfb-weather/decisions.csv) holds 1 recorded decision" in out
+        assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out)
+        assert "read from its copy on the ledgers branch (the file is missing)" in rb(out)
+        assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out)
+        assert "FINAL: NOT KEPT" not in rb(out)
+        assert not (fwd / "decisions.csv").exists()                           # only a real run restores it
+    season_file(proj, 2026, s, "2026-12-21T16:00")
+    out = on_clock(tmp_path, "2026-12-21T18:00", scorer).stdout
+    assert "restored 1 recorded decision from its copy on the ledgers branch" in out
+    assert len(pd.read_csv(fwd / "decisions.csv")) == 1
+    assert "prints its decisions as recorded, and leaves the file alone" in section(3)
+
+
+def test_reading_3_a_record_whose_numbers_a_later_run_cant_print_is_damaged(tmp_path):
+    """The second review: a record whose numbers were valid JSON without a key the scorer prints crashed the
+    whole run, so the day's report was lost. An id the scorer doesn't know is damage too."""
+    a, sa = rb_signals(40)
+    score(tmp_path / "ok", a, sa, "2026-12-20", "--test-record")
+    rec = pd.read_csv(tmp_path / "ok" / "decisions.csv", dtype=str, keep_default_na=False)
+    nums = json.loads(rec.numbers[0])
+    nums["n_close"] = nums.pop("n_clv")                                       # another name for the key
+    for name, edited, why in (("key", rec.assign(numbers=json.dumps(nums)), "numbers have no n_clv"),
+                              ("id", rec.assign(decision_id="CFB_RULE_B "), "an unknown decision id")):
+        d = tmp_path / name
+        d.mkdir()
+        edited.to_csv(d / "decisions.csv", index=False)
+        pd.DataFrame(a).to_csv(d / "ledger.csv", index=False)
+        pd.DataFrame(sa).to_csv(d / "sched.csv", index=False)
+        r = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(d / "ledger.csv"), "--schedule",
+                str(d / "sched.csv"), "--now", "2026-12-21", "--test-record")
+        assert r.returncode == 0, (name, r.stderr[-400:])
+        assert "Decision record: decisions.csv is unreadable" in r.stdout and why in r.stdout, name
+        assert "RULE_HT:" in r.stdout and "Variants under forward test" in r.stdout, name
+        assert len(pd.read_csv(d / "decisions.csv")) == 1, name
+
+
+def test_amendment_4_names_the_amendment_3_sentence_section_1_changes():
+    """The second review found amendment 6's list left out amendment 5's "It uses the bets that kicked off by its
+    horizon."; amendment 3 has the same sentence for Rule B, which section 1 changes (void signals are left out)."""
+    replaces = norm(amendment4().split("### What this amendment replaces")[1])
+    assert '"The decision uses the signals that kicked off by that horizon"' in replaces
+
+
+def test_the_summaries_say_a_record_lost_before_its_copy_can_be_decided_again():
+    """The second review: STATUS, both STRATEGY rows and the README promised "never decided again" without the
+    amendment's limit; and the strategy-research rehearsal row lost its old "3 to 5 a week"."""
+    caveat = "never decided again unless it is lost before that night's copy is made"
+    assert (ROOT / "STRATEGY.md").read_text().count(caveat) == 2
+    assert caveat in (ROOT / "README.md").read_text()
+    assert "never decided again, unless it is lost before that night's copy is made" in (
+        ROOT.parent / "STATUS.md").read_text()
+    assert ("if it is lost before then, neither the file nor a copy holds it, and the next real run decides it "
+            "again") in section(3)
+    assert "about 3 to 6 a week (rerun Sep 29; was 34, about 3 to 5 a week)" in (
+        ROOT.parent / "strategy-research" / "README.md").read_text()
