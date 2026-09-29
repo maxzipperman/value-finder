@@ -11,7 +11,6 @@ books:
   us10: [pinnacle, lowvig, betonlineag, draftkings, fanduel, betmgm, williamhill_us, fanatics, betrivers, espnbet]
   soccer10: [pinnacle, betonlineag, draftkings, fanduel, betmgm, williamhill_us, bovada, unibet_eu, marathonbet, betfair_ex_eu]
   sharp3: [pinnacle, lowvig, betonlineag]
-  exchanges: [kalshi, polymarket, novig, prophetx, betopenly]
 
 featured: h2h,spreads,totals
 

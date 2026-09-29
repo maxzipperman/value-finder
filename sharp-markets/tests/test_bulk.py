@@ -2,7 +2,7 @@
 import csv
 import json
 from argparse import Namespace
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -287,6 +287,38 @@ def test_real_config_matches_the_owners_decisions():
             assert labels == want[s], s
     assert "X3" not in real["pulls"] and list(real["pulls"])[-1] == "F6"
     assert real["pulls"]["N1"]["only_seasons"] == ["2025-26"]
+    assert set(real["books"]) == {"us10", "soccer10", "sharp3"}                  # X3's exchange group is gone
+    assert {p["books"] for p in real["pulls"].values()} <= set(real["books"])
+
+
+# The first 2026 date each sealed window has to cover (published 2026 schedules): season openers for the
+# calendar sports, and the start of the 2026-27 NBA and NHL preseason window.
+FIRST_2026 = {"baseball_mlb": date(2026, 3, 25), "soccer_usa_mls": date(2026, 2, 21),
+              "soccer_mexico_ligamx": date(2026, 1, 9), "soccer_brazil_campeonato": date(2026, 1, 28),
+              "soccer_japan_j_league": date(2026, 2, 6), "soccer_korea_kleague1": date(2026, 2, 28),
+              "soccer_fifa_world_cup": date(2026, 6, 11), "americanfootball_nfl": date(2026, 9, 10),
+              "americanfootball_ncaaf": date(2026, 8, 29)}
+
+
+def test_sealed_windows_have_the_right_date_boundaries():
+    """#33 item 18: the holdout by dates, not just labels. For the calendar sports (MLB, soccer), no unsealed
+    window reaches into 2026 and every sealed window lies in 2026 and starts by the first 2026 game; the
+    2026-27 NBA and NHL windows start by October 1, 2026, after the unsealed 2025-26 ones end."""
+    real = bulk.load_config()
+    for s, sc in real["sports"].items():
+        open_w = [w for w in sc["windows"] if not w["sealed"]]
+        sealed = [w for w in sc["windows"] if w["sealed"]]
+        if s == "baseball_mlb" or s.startswith("soccer_"):
+            assert all(w["to"] <= date(2025, 12, 31) for w in open_w), s
+            assert all(w["from"] >= date(2026, 1, 1) and w["to"] <= date(2026, 12, 31) for w in sealed), s
+            assert all(w["from"] <= FIRST_2026[s] for w in sealed), s
+        elif s in ("basketball_nba", "icehockey_nhl"):
+            (w,) = sealed
+            assert w["label"] == "2026-27" and w["from"] <= date(2026, 10, 1)
+            assert all(o["to"] < w["from"] for o in open_w), s
+        else:                                                        # NFL, CFB: the 2026 season
+            (w,) = sealed
+            assert w["from"] <= FIRST_2026[s] and all(o["to"] < w["from"] for o in open_w), s
 
 
 def test_normalizer_keeps_point_and_description():
