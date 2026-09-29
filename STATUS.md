@@ -38,6 +38,7 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
      - the B1 timestamp and budget fixes.
    - **Next purchase (owner decision, Sep 28):** one 5M month ($119), bought **Thu Oct 1**. The hub runs the day-one checklist on the Mac that day. It replaces the 20K pilot and the March month.
      - **The plan:** 4.18M credits of history across NFL, CFB, MLB, NBA, NHL and the soccer heat leagues, plus a 531,630 reserve (300K plus the dropped exchange group's 231,630). The data-use plan is in [`odds-api-credits.md`](strategy-research/odds-api-credits.md#the-5m-month-owner-decision-september-28-2026).
+     - **Review (Sep 28, evening):** [`plan-review-2026-09-28.md`](strategy-research/plan-review-2026-09-28.md) recommends a day-one pull under 400K credits (F1; F2 without team totals; F3 at two snapshots; the NBA sample week; heat close-only), gating N1 and F4 on results inside the month, and leaving the rest for a March 2027 month that the 2026 holdout needs anyway. It also asks for an NFL Rule B horizon amendment before Oct 8. **Owner decision pending.**
      - **Owner answers (Sep 28):**
        - the recommended holdout;
        - keep the hourly football pull (F4), with the 5-minute windows (X2) deferred;

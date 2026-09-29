@@ -1,0 +1,84 @@
+
+=== 2024 regular season: 2,469 schedule rows ===
+status counts: {'Final': 2428, 'Postponed': 36, 'Completed Early': 4, 'Cancelled': 1}
+played (codedGameState=F): 2,432
+venue names not in config/venues/mlb_parks.csv: {'Journey Bank Ballpark': 1}
+games by roof: {'dome': 83, 'open': 1781, 'retractable': 567, 'unknown': 1}
+
+park                             roof           n  >=85  >=90  >=95 HI>=90 miss
+Chase Field                      retractable   81    68    61    54     53    0
+Globe Life Field                 retractable   81    45    30    15     41    0
+Daikin Park                      retractable   81    30    12     0     37    0
+Busch Stadium                    open          81    17     7     0     14    0
+Citizens Bank Park               open          80    20     7     2     13    0
+Dodger Stadium                   open          80    10     6     2      4    0
+Nationals Park                   open          81    16     6     2     13    0
+Coors Field                      open          79    18     5     1      0    0
+Great American Ball Park         open          81    15     5     1     11    0
+Kauffman Stadium                 open          81    14     5     1     10    0
+Truist Park                      open          81    17     5     0     16    0
+Rate Field                       open          82     8     3     0      9    0
+Wrigley Field                    open          81     4     2     0      4    0
+Yankee Stadium                   open          81     7     2     1      5    0
+American Family Field            retractable   81     5     1     0      2    0
+Comerica Park                    open          80     5     1     0      2    0
+Oriole Park at Camden Yards      open          81    16     1     0      9    0
+Petco Park                       open          80     2     1     0      1    0
+PNC Park                         open          81    11     1     0      5    0
+Angel Stadium                    open          81     3     0     0      0    0
+Citi Field                       open          80     4     0     0      2    0
+Estadio Alfredo Harp Helú        open           2     1     0     0      0    0
+Fenway Park                      open          82     3     0     0      1    0
+loanDepot Park                   retractable   81    26     0     0     44    0
+London Stadium                   open           2     0     0     0      0    0
+Oakland Coliseum                 open          81     1     0     0      0    0
+Oracle Park                      open          81     0     0     0      0    0
+Progressive Field                open          80     1     0     0      2    0
+Rickwood Field                   open           1     1     0     0      0    0
+Rogers Centre                    retractable   81     1     0     0      1    0
+T-Mobile Park                    retractable   81     0     0     0      0    0
+Target Field                     open          81     3     0     0      3    0
+TOTAL open parks                             1781   197    57    10    124    0
+7 hot-city roofed parks (excluded)              567   175   104    69
+
+=== 2025 regular season: 2,464 schedule rows ===
+status counts: {'Final': 2429, 'Postponed': 30, 'Completed Early': 5}
+played (codedGameState=F): 2,434
+venue names not in config/venues/mlb_parks.csv: {'Journey Bank Ballpark': 1}
+games by roof: {'dome': 2, 'open': 1864, 'retractable': 567, 'unknown': 1}
+
+park                             roof           n  >=85  >=90  >=95 HI>=90 miss
+Chase Field                      retractable   81    65    61    52     54    0
+Globe Life Field                 retractable   81    41    30    14     37    0
+Coors Field                      open          81    22    14     4      2    0
+Busch Stadium                    open          81    25    12     2     21    0
+Sutter Health Park               open          81    31    11     5      5    0
+Oriole Park at Camden Yards      open          81    17    10     3     15    0
+Daikin Park                      retractable   81    32     9     3     35    0
+Kauffman Stadium                 open          81    16     8     0     18    0
+George M. Steinbrenner Field     open          81    37     6     0     26    0
+Great American Ball Park         open          81    19     6     0     16    0
+Citi Field                       open          80     6     4     2      4    0
+loanDepot Park                   retractable   81    30     4     0     33    0
+Angel Stadium                    open          81     6     3     0      0    0
+Truist Park                      open          81    10     3     0      5    0
+Yankee Stadium                   open          81    11     3     1      5    0
+Comerica Park                    open          81    11     2     0      7    0
+Dodger Stadium                   open          81     8     2     0      1    0
+Rate Field                       open          81     9     2     0      8    0
+American Family Field            retractable   81     5     1     0      5    0
+Nationals Park                   open          81     7     1     0      5    0
+Rogers Centre                    retractable   81     3     1     0      2    0
+Target Field                     open          82     9     1     0      6    0
+Wrigley Field                    open          79     5     1     0      5    0
+Bristol Motor Speedway           open           2     0     0     0      0    0
+Citizens Bank Park               open          81     5     0     0      3    0
+Fenway Park                      open          82     3     0     0      3    0
+Oracle Park                      open          81     0     0     0      0    0
+Petco Park                       open          81     0     0     0      0    0
+PNC Park                         open          81     7     0     0      2    0
+Progressive Field                open          81     2     0     0      2    0
+T-Mobile Park                    retractable   81     0     0     0      0    0
+TOTAL open parks                             1864   266    89    17    159    0
+7 hot-city roofed parks (excluded)              567   176   106    69
+exit 0

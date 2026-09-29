@@ -1,0 +1,154 @@
+=== odds_5m.plan() reproduced ===
+id  credits  value  dropped  in_plan
+F1   162210      4    False     True
+F2   102600      3    False     True
+F3   273600      3    False     True
+B1   358470      3    False     True
+S1   491970      3    False     True
+F4  1604430      3    False     True
+H1   163860      2    False     True
+N2   170460      2    False     True
+F5   221880      2    False     True
+N1   478530      2    False     True
+F6   147920      1    False     True
+X3   231630      1     True    False
+X2   705580      1    False    False
+in-plan total 4,175,930   (doc says 4,175,930)
+counts: {'daily_fb': 5407, 'hourly_fb': 53481, 'nfl_p': 1140, 'cfb_p': 3698}
+NFL daily {2020: 273, 2021: 284, 2022: 289, 2023: 293, 2024: 295, 2025: 296, 2026: 296} 
+    hourly {2020: 3700, 2021: 3871, 2022: 3875, 2023: 3876, 2024: 3873, 2025: 3870, 2026: 3870} 
+    games {2020: 269, 2021: 285, 2022: 284, 2023: 285, 2024: 285, 2025: 285, 2026: 285}
+CFB daily {2020: 430, 2021: 470, 2022: 474, 2023: 454, 2024: 509, 2025: 522, 2026: 522} 
+    hourly {2020: 3837, 2021: 3813, 2022: 3811, 2023: 3540, 2024: 3843, 2025: 3851, 2026: 3851} 
+    games {2020: 588, 2021: 895, 2022: 900, 2023: 910, 2024: 920, 2025: 934, 2026: 934}
+
+=== daily-subset-of-hourly check (F1 vs F4 double count) ===
+  daily snapshots that the hourly grid already contains: 5,155 of 5,407
+  F4 gross 1,604,430; net of F1's cached snapshots 1,449,780
+
+=== F3 trims (NFL props, 2023-26 games = 1140 ) ===
+  F3 as planned: 6 mkts x 4 snaps                                273,600
+  F3 at 2 snaps (T-24h, close): 6 x 2                            136,800
+  F3 close only: 6 x 1                                            68,400
+    of which yardage 4 mkts close only (= M3)                     45,600
+    of which kicking 2 mkts close only, all games (= M6)          22,800
+  outdoor games 2023-25: 568 of 855
+  observed wx_wind>=15 or wx_temp<=32, outdoor, by season: {2023: 20, 2024: 31, 2025: 38} total 89
+  forecast (calibrated fc_wind>=15 or fc1_temp<=32), outdoor, by season: {2023: 2, 2024: 33, 2025: 44} total 79 | fc_wind non-null: 385 fc1_temp non-null: 385
+  wind-only (>=15 obs): 50  cold-only (<=32 obs): 46
+  kicking 2 mkts, close only, observed windy/cold 2023-25 (89 games): 1,780 credits
+  kicking 2 mkts, close only, forecast windy/cold 2023-25 (79 games): 1,580 credits
+
+=== F5/F6 (CFB 2023-26 games = 3698 ) ===
+  F5 as planned 3 mkts x 2 snaps: 221,880
+  F5 team_totals only, close only: 36,980
+  F6 as planned 4 mkts x close: 147,920
+
+=== F2 breakdown ===
+  F2 as planned 3 mkts x 3 snaps: 102,600
+  team_totals share (1 mkt x 3 snaps): 34,200
+  alternates at 2 snaps (= M2): 45,600
+
+=== F4 variants ===
+  variant                                                    snaps    gross cr  snaps net of F1      net cr
+  F4 as planned: hourly 7d, both sports, 2020-26            53,481   1,604,430           48,074   1,442,220
+  hourly 7d, NFL only, 2020-26                              26,935     808,050           24,909     747,270
+  hourly, final 48h only, both sports, 2020-26              36,906   1,107,180           32,222     966,660
+  hourly, final 48h only, NFL only, 2020-26                 18,684     560,520           17,018     510,540
+  hourly 7d, both sports, 2023-25 only                      22,853     685,590           20,484     614,520
+  hourly 7d, NFL only, 2023-25 only                         11,619     348,570           10,735     322,050
+  hourly, final 48h, NFL only, 2023-25 only                  8,170     245,100            7,433     222,990
+  per-season hourly 7d NFL: {2020: 3700, 2021: 3871, 2022: 3875, 2023: 3876, 2024: 3873, 2025: 3870, 2026: 3870}
+  per-season hourly 7d CFB: {2020: 3837, 2021: 3813, 2022: 3811, 2023: 3540, 2024: 3843, 2025: 3851, 2026: 3851}
+  per-season hourly 48h NFL: {2020: 2470, 2021: 2651, 2022: 2662, 2023: 2698, 2024: 2741, 2025: 2731, 2026: 2731}
+  per-season hourly 48h CFB: {2020: 2482, 2021: 2554, 2022: 2526, 2023: 2487, 2024: 2747, 2025: 2713, 2026: 2713}
+
+=== B1 (MLB) variants, from odds_5m.SPORTS estimates ===
+        games  days  slots  snapshots  sealed
+season                                       
+2020      951   104    643        747   False
+2021     2473   222   1645       1867   False
+2022     2473   222   1645       1867   False
+2023     2473   222   1645       1867   False
+2024     2473   222   1645       1867   False
+2025     2473   222   1645       1867   False
+2026     2473   222   1645       1867    True
+  B1 as planned (2020-26 daily+close): 358,470
+  B1 2024-25 daily+close: 112,020
+  B1 2024-25 close only: 98,700
+  B1 2024-26 close only (test sample + sealed confirm): 148,050
+  B1 2024-26 daily+close: 168,030
+  B1 2026 close only alone: 49,350
+
+=== S1 (soccer) variants ===
+                     games  snapshots  slots
+sport                                       
+MLS                   3361       3501   1592
+Liga MX               2225       3793   1614
+Brasileirao           2660       3192   1463
+J1 League             2238       2747   1008
+K League 1            1530       2554    765
+World Cups             168        234    152
+Euro 2024               51         84     46
+Copa America 2024       32         61     29
+Club World Cup 2025     63         94     57
+Gold Cup 2025           31         58     28
+Leagues Cup 2025        45         81     40
+  S1 as planned (all, all seasons, daily+close)                   16,399 snaps ->   491,970 credits  [Brasileirao, Club World Cup 2025, Copa America 2024, Euro 2024, Gold Cup 2025, J1 League, K League 1, Leagues Cup 2025, Liga MX, MLS, World Cups]
+  S1 all leagues+tournaments, 2024-25, daily+close                 5,228 snaps ->   156,840 credits  [Brasileirao, Club World Cup 2025, Copa America 2024, Euro 2024, Gold Cup 2025, J1 League, K League 1, Leagues Cup 2025, Liga MX, MLS]
+  S1 all leagues+tournaments, 2024-25, close only                  2,190 snaps ->    65,700 credits  [Brasileirao, Club World Cup 2025, Copa America 2024, Euro 2024, Gold Cup 2025, J1 League, K League 1, Leagues Cup 2025, Liga MX, MLS]
+  S1 MLS+LigaMX+Bras, 2024-25, daily+close                         3,172 snaps ->    95,160 credits  [Brasileirao, Liga MX, MLS]
+  S1 MLS+LigaMX+Bras, 2024-25, close only                          1,420 snaps ->    42,600 credits  [Brasileirao, Liga MX, MLS]
+  S1 MLS+LigaMX+Bras, 2024-26, close only (incl. sealed 2026)      2,134 snaps ->    64,020 credits  [Brasileirao, Liga MX, MLS]
+  S1 World Cup 2026 only, close only (sealed)                         94 snaps ->     2,820 credits  [World Cups]
+  S1 all, 2024-26, close only                                      3,193 snaps ->    95,790 credits  [Brasileirao, Club World Cup 2025, Copa America 2024, Euro 2024, Gold Cup 2025, J1 League, K League 1, Leagues Cup 2025, Liga MX, MLS, World Cups]
+  S1 all, 2024-26, daily+close                                     7,567 snaps ->   227,010 credits  [Brasileirao, Club World Cup 2025, Copa America 2024, Euro 2024, Gold Cup 2025, J1 League, K League 1, Leagues Cup 2025, Liga MX, MLS, World Cups]
+
+=== N1 ===
+  N1 as planned: 10 x (49,398 - 754 - 791) = 478,530
+  N1 schedule D with nothing cached (5M month replaced the pilot; M5 not in plan): 493,980
+  sample week, schedule A: 10 x 754 = 7,540
+  full 2025-26 at schedule A: 10 x 16,990 = 169,900 (sample week's 754 snaps are inside it; extra after the week = 162,360)
+
+=== 2026 season: how much exists to pull during an Oct 1-31, 2026 month ===
+  NFL 2026 kickoffs before 2026-10-04: 49 games (plan assumed 285); daily+close snaps 48 (plan 296); hourly snaps 712 (plan 3870)
+  NFL 2026 kickoffs before 2026-11-01: 108 games (plan assumed 285); daily+close snaps 104 (plan 296); hourly snaps 1408 (plan 3870)
+  NFL 2026 rows with a kickoff time: 272 of 272
+  CFB 2026 kickoffs before 2026-10-04: 383 games (plan assumed 934); daily+close snaps 168 (plan 522); hourly snaps 1076 (plan 3851)
+  CFB 2026 kickoffs before 2026-11-01: 620 games (plan assumed 934); daily+close snaps 260 (plan 522); hourly snaps 1774 (plan 3851)
+  CFB 2026 rows with a kickoff time: 888 of 888
+
+=== plan totals ===
+
+  LEAN (2024-25 test sample only): history 482,050
+     F1 as is                                               162,210
+     F2 as is                                               102,600
+     F3 close only (6 mkts)                                  68,400
+     N1 -> sample week A                                      7,540
+     B1 2024-25 close only                                   98,700
+     S1 MLS+LigaMX+Bras 2024-25 close only                   42,600
+     + reserve 300,000 = 782,050; unallocated of 5M = 4,217,950; vs 4.18M plan saves 3,693,880
+     + reserve 531,630 = 1,013,680; unallocated of 5M = 3,986,320; vs 4.18M plan saves 3,693,880
+
+  LEAN + sealed 2026 close-only: history 555,640
+     F1 as is                                               162,210
+     F2 as is                                               102,600
+     F3 close only (6 mkts)                                  68,400
+     N1 -> sample week A                                      7,540
+     B1 2024-25 close only                                  148,050
+     S1 MLS+LigaMX+Bras 2024-25 close only                   64,020
+     S1 World Cup 2026 close only                             2,820
+     + reserve 300,000 = 855,640; unallocated of 5M = 4,144,360; vs 4.18M plan saves 3,620,290
+     + reserve 531,630 = 1,087,270; unallocated of 5M = 3,912,730; vs 4.18M plan saves 3,620,290
+
+  MEDIUM: history 1,750,800
+     F1 as is                                               162,210
+     F2 as is                                               102,600
+     F3 at 2 snaps                                          136,800
+     F5 team_totals close only                               36,980
+     N1 -> sample week + full 2025-26 at schedule A         169,900
+     B1 2024-26 daily+close                                 168,030
+     S1 all leagues 2024-26 daily+close                     227,010
+     F4 hourly NFL only 2020-26 (net of F1 cache)           747,270
+     + reserve 300,000 = 2,050,800; unallocated of 5M = 2,949,200; vs 4.18M plan saves 2,425,130
+     + reserve 531,630 = 2,282,430; unallocated of 5M = 2,717,570; vs 4.18M plan saves 2,425,130

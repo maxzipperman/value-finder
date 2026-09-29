@@ -1,0 +1,39 @@
+p0 (break-even at -110) = 0.52381; z_0.80 = 0.8416
+z_{1-alpha}: {0.05: 1.6449, 0.01: 2.3263, 0.0035: 2.6968, 0.00037: 3.3743, 0.00026: 3.4702}
+
+=== n needed for 80% power, one-sided z test vs 52.38% ===
+ true_win_rate  n_alpha_0.05  n_alpha_0.01  n_alpha_0.0035  n_alpha_0.00037  n_alpha_0.00026
+         0.540          5875          9540           11903            16900            17678
+         0.550          2243          3642            4545             6454             6751
+         0.560          1173          1906            2378             3377             3533
+         0.577           542           880            1099             1561             1633
+
+=== power at alpha = 0.05 (one-sided z) ===
+ true_win_rate  power_n110  power_n150  power_n300  power_n650  power_n1000
+         0.540       0.096       0.106       0.139       0.206        0.267
+         0.550       0.136       0.157       0.230       0.379        0.505
+         0.560       0.187       0.223       0.347       0.581        0.742
+         0.577       0.297       0.365       0.580       0.860        0.959
+--- exact binomial cross-check at alpha = 0.05: power and critical wins k* ---
+ true_win_rate  exact_n110  crit_n110  exact_n150  crit_n150  exact_n300  crit_n300  exact_n650  crit_n650  exact_n1000  crit_n1000
+         0.540       0.087         67       0.081         90       0.135        172       0.204        362        0.253         551
+         0.550       0.125         67       0.125         90       0.226        172       0.377        362        0.488         551
+         0.560       0.173         67       0.183         90       0.343        172       0.579        362        0.728         551
+         0.577       0.281         67       0.314         90       0.575        172       0.859        362        0.955         551
+
+=== power at alpha = 0.00026 (one-sided z) ===
+ true_win_rate  power_n110  power_n150  power_n300  power_n650  power_n1000
+         0.540       0.001       0.001       0.002       0.004        0.007
+         0.550       0.002       0.002       0.005       0.016        0.034
+         0.560       0.003       0.005       0.013       0.051        0.118
+         0.577       0.009       0.014       0.050       0.223        0.459
+--- exact binomial cross-check at alpha = 0.00026: power and critical wins k* ---
+ true_win_rate  exact_n110  crit_n110  exact_n150  crit_n150  exact_n300  crit_n300  exact_n650  crit_n650  exact_n1000  crit_n1000
+         0.540       0.000         77       0.001        101       0.001        188       0.003        386        0.007         579
+         0.550       0.001         77       0.001        101       0.004        188       0.013        386        0.035         579
+         0.560       0.002         77       0.003        101       0.011        188       0.044        386        0.119         579
+         0.577       0.005         77       0.010        101       0.046        188       0.204        386        0.462         579
+
+Rule HT check: n=105 -> critical wins k*=64 (61.0%); power at 57.7% = 0.284 (STRATEGY.md says ~62% to pass, 22-27% chance)
+
+CLV formula constant (z_0.95 + z_0.80)^2 = 6.1826; n = 6.1826 * (sd / delta)^2

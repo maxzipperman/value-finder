@@ -1,0 +1,102 @@
+{
+ "soccer_usa_mls|2024": {
+  "teams": 29,
+  "home_matches": 493,
+  "open_home_matches": 459.0,
+  "exp_matches_hi19_90": 36.25999999999999,
+  "exp_matches_hi19_85": 63.30000000000001,
+  "exp_matches_himax_90": 71.12,
+  "exp_matches_hi16_90": 59.150000000000006,
+  "unresolved_team_days": 0
+ },
+ "soccer_usa_mls|2025": {
+  "teams": 30,
+  "home_matches": 510,
+  "open_home_matches": 476.0,
+  "exp_matches_hi19_90": 35.61999999999999,
+  "exp_matches_hi19_85": 66.40000000000002,
+  "exp_matches_himax_90": 70.33999999999999,
+  "exp_matches_hi16_90": 56.790000000000006,
+  "unresolved_team_days": 0
+ },
+ "soccer_mexico_ligamx|2024": {
+  "teams": 18,
+  "home_matches": 306,
+  "open_home_matches": 306.0,
+  "exp_matches_hi19_90": 12.649999999999999,
+  "exp_matches_hi19_85": 29.25,
+  "exp_matches_himax_90": 34.26,
+  "exp_matches_hi16_90": 30.559999999999995,
+  "unresolved_team_days": 0
+ },
+ "soccer_mexico_ligamx|2025": {
+  "teams": 18,
+  "home_matches": 306,
+  "open_home_matches": 297.43013698630136,
+  "exp_matches_hi19_90": 7.790000000000001,
+  "exp_matches_hi19_85": 21.24,
+  "exp_matches_himax_90": 23.759999999999998,
+  "exp_matches_hi16_90": 20.12,
+  "unresolved_team_days": 184
+ },
+ "soccer_brazil_campeonato|2024": {
+  "teams": 20,
+  "home_matches": 380,
+  "open_home_matches": 361.0,
+  "exp_matches_hi19_90": 3.64,
+  "exp_matches_hi19_85": 17.299999999999997,
+  "exp_matches_himax_90": 61.58,
+  "exp_matches_hi16_90": 28.72,
+  "unresolved_team_days": 0
+ },
+ "soccer_brazil_campeonato|2025": {
+  "teams": 20,
+  "home_matches": 380,
+  "open_home_matches": 380.0,
+  "exp_matches_hi19_90": 0.21000000000000002,
+  "exp_matches_hi19_85": 13.320000000000002,
+  "exp_matches_himax_90": 54.519999999999996,
+  "exp_matches_hi16_90": 15.59,
+  "unresolved_team_days": 0
+ },
+ "soccer_japan_j_league|2024": {
+  "teams": 20,
+  "home_matches": 380,
+  "open_home_matches": 323.0,
+  "exp_matches_hi19_90": 35.09,
+  "exp_matches_hi19_85": 60.59,
+  "exp_matches_himax_90": 83.58000000000001,
+  "exp_matches_hi16_90": 72.16999999999999,
+  "unresolved_team_days": 0
+ },
+ "soccer_japan_j_league|2025": {
+  "teams": 20,
+  "home_matches": 380,
+  "open_home_matches": 342.0,
+  "exp_matches_hi19_90": 45.99999999999999,
+  "exp_matches_hi19_85": 70.01,
+  "exp_matches_himax_90": 96.06,
+  "exp_matches_hi16_90": 77.99000000000001,
+  "unresolved_team_days": 0
+ },
+ "soccer_korea_kleague1|2024": {
+  "teams": 12,
+  "home_matches": 228,
+  "open_home_matches": 228.0,
+  "exp_matches_hi19_90": 23.97,
+  "exp_matches_hi19_85": 41.849999999999994,
+  "exp_matches_himax_90": 56.010000000000005,
+  "exp_matches_hi16_90": 48.67999999999999,
+  "unresolved_team_days": 0
+ },
+ "soccer_korea_kleague1|2025": {
+  "teams": 12,
+  "home_matches": 228,
+  "open_home_matches": 228.0,
+  "exp_matches_hi19_90": 24.07,
+  "exp_matches_hi19_85": 38.92999999999999,
+  "exp_matches_himax_90": 49.06,
+  "exp_matches_hi16_90": 42.62,
+  "unresolved_team_days": 0
+ }
+}
