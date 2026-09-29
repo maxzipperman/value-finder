@@ -283,11 +283,17 @@ def test_the_highest_number_is_named_only_when_it_is_worth_more(tmp_path, monkey
     assert len(sent) == 1 and "Best number" not in sent[0][1]
 
 
+def failed(error):
+    """A failed run exits with status 1 after printing the error with any key blanked (it no longer
+    re-raises the original exception, whose text could hold a key)."""
+    return isinstance(error, SystemExit) and error.code == 1
+
+
 def test_a_run_that_fails_while_saving_is_recorded_and_notified(tmp_path, monkeypatch):
     def full(up):
         raise OSError(28, "No space left on device")
     sent, runs, error = run_alerts(tmp_path, monkeypatch, pd.DataFrame([BOARD]), save=full)
-    assert isinstance(error, OSError)
+    assert failed(error)
     assert runs.status.tolist() == ["failed"] and runs.games.tolist() == [1]
     assert runs.error[0].startswith("while saving the ledger: OSError")
     assert [t for t, _ in sent] == ["NFL weather alerts: run failed"]
@@ -297,7 +303,7 @@ def test_a_failed_download_is_recorded_without_the_key(tmp_path, monkeypatch):
     def down(**k):
         raise ConnectionError("GET https://api.the-odds-api.com/v4/odds?apiKey=SECRETKEY123 failed")
     sent, runs, error = run_alerts(tmp_path, monkeypatch, down)
-    assert isinstance(error, ConnectionError) and runs.status.tolist() == ["failed"]
+    assert failed(error) and runs.status.tolist() == ["failed"]
     assert runs.error[0].startswith("while building the board: ConnectionError")
     assert "SECRETKEY123" not in runs.error[0] and "SECRETKEY123" not in sent[0][1]
 
@@ -306,7 +312,7 @@ def test_one_games_alert_cannot_cost_the_others_theirs(tmp_path, monkeypatch):
     bad = dict(BOARD, game_id="2026_06_MIA_NYJ", home_team="NYJ", away_team="MIA", wx_precip="not a number")
     sent, runs, error = run_alerts(tmp_path, monkeypatch, pd.DataFrame([bad, BOARD]))
     assert [t for t, _ in sent][0].startswith("RULE B WIND UNDER 44.5 at -108: NE @ BUF")
-    assert isinstance(error, RuntimeError) and runs.status.tolist() == ["failed"]
+    assert failed(error) and runs.status.tolist() == ["failed"]
     assert runs.error[0].startswith("while building the alerts: RuntimeError: 1 game(s) raised: MIA @ NYJ")
     assert sent[-1][0] == "NFL weather alerts: run failed"
 

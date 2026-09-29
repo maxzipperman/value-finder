@@ -94,11 +94,18 @@ def price(up, resid):
     return up
 
 
+def under_quotes(totals: pd.DataFrame) -> pd.DataFrame:
+    """The feed's complete under quotes: a total and a price that is valid American odds (market.valid_odds).
+    A number between -100 and +100 is not a price, so it can't be anyone's best under (as in cfb-weather)."""
+    ok = totals.dropna(subset=["total", "under_price"])
+    return ok[valid_odds(ok.under_price)]
+
+
 def best_line(totals: pd.DataFrame, min_odds=MIN_UNDER_ODDS) -> pd.DataFrame:
     """Per event, the highest total any logged book offers the under at, at `min_odds` or better
     (ties go to the better price), with its price and book. Logging only: a higher number than the
     rule book's is where line shopping pays, and the board prices it against the rule book's total."""
-    ok = totals.dropna(subset=["total", "under_price"])
+    ok = under_quotes(totals)
     ok = ok[ok.under_price >= min_odds]
     best = ok.sort_values(["total", "under_price"], ascending=False).drop_duplicates("event_id")
     return best[["event_id", "total", "under_price", "book"]].rename(
@@ -107,12 +114,25 @@ def best_line(totals: pd.DataFrame, min_odds=MIN_UNDER_ODDS) -> pd.DataFrame:
 
 def best_under(totals: pd.DataFrame, rule_book="pinnacle") -> pd.DataFrame:
     """Per event, the best under price any logged book offers at the rule book's total, and
-    which book. Logging only (line shopping); Rule B still prices at the rule book."""
-    rule = totals[totals.book == rule_book][["event_id", "total"]]
-    same = totals.dropna(subset=["total", "under_price"]).merge(rule, on=["event_id", "total"])
+    which book. Logging only (line shopping); Rule B still prices at the rule book. The rule book's
+    total counts only when it comes with a valid under price, as in use_pinnacle."""
+    ok = under_quotes(totals)
+    rule = ok[ok.book == rule_book][["event_id", "total"]]
+    same = ok.merge(rule, on=["event_id", "total"])
     best = same.sort_values("under_price", ascending=False).drop_duplicates("event_id")
     return best[["event_id", "under_price", "book"]].rename(columns={"under_price": "best_under",
                                                                     "book": "best_under_book"})
+
+
+def one_row_per_game(pin: pd.DataFrame) -> pd.DataFrame:
+    """One feed row per game (home, away, gameday). The feed can list the same game twice (a relisted
+    event); both would join the same schedule row and the board would carry the game twice. Keep the
+    event with a complete rule-book quote (a total and a valid under price, as use_pinnacle requires),
+    else the first listed."""
+    quoted = pin.total.notna() & pin.under_price.map(valid_odds)
+    keep = (pin.assign(_quoted=quoted).sort_values("_quoted", ascending=False, kind="stable")
+            .drop_duplicates(["home", "away", "gameday"]).index)
+    return pin.loc[sorted(keep)]
 
 
 def _pinnacle_live():
@@ -130,7 +150,8 @@ def _pinnacle_live():
                                for n, code in ((hn, h), (an, a)) if pd.isna(code)})
     if LAST_UNMAPPED:
         print(f"  odds feed team names with no match (their games arrive unpriced): {LAST_UNMAPPED}")
-    # one row per event, whether or not Pinnacle quotes it, so the best line is logged for every game
+    # one row per event (then one per game, below), whether or not Pinnacle quotes it, so the best line is
+    # logged for every game
     ev = df.dropna(subset=["home", "away"]).drop_duplicates("event_id")[
         ["event_id", "home", "away", "commence_utc", "snapshot_utc"]]
     rule = df[df.book == oddsapi.RULE_BOOK].drop_duplicates("event_id")[
@@ -139,6 +160,7 @@ def _pinnacle_live():
            .merge(best_line(df), on="event_id", how="left"))
     pin["gameday"] = pd.to_datetime(pin.commence_utc, utc=True).dt.tz_convert("America/New_York").dt.strftime("%Y-%m-%d")
     pin["snapshot_utc"] = pd.to_datetime(pin.snapshot_utc, utc=True).dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    pin = one_row_per_game(pin)
     return pin.rename(columns={"home": "home_team", "away": "away_team", "total": "pin_total",
                                "over_price": "pin_over", "under_price": "pin_under", "snapshot_utc": "quote_utc",
                                "book_update": "quote_update"})[
