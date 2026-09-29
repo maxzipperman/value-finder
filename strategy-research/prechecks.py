@@ -8,6 +8,10 @@
        and team totals derived from the main line have nothing to lag, and there's nothing to buy.
   #4   Rule HT split by spread size. Descriptive only: run after Rule HT was pre-registered, so it
        can't change the rule.
+  #16  Line shopping in college football, from CollegeFootballData's lines by sportsbook (2016-25):
+       Rule HT and CFB Rule B (observed 15+ mph wind) graded at the best total any book posted vs the
+       consensus close, and whether high totals rise from open to close (the "bet at the close" advice).
+       CFBD has no over/under prices, so every book is priced at -110: this is points, not price.
 
 Every test counts toward the running variant total, which starts at the screen's 109 (screen.py).
 Seasons stop at 2025, so 2026 stays clean for forward tests.
@@ -15,6 +19,7 @@ Seasons stop at 2025, so 2026 stays clean for forward tests.
 Inputs (read-only)
   nfl-weather/data/processed/games.parquet, team_games.parquet     lines, results, weather
   cfb-weather/data/processed/games.parquet                          cfbfastR consensus lines
+  cfb-weather/data/processed/cfbd_lines.parquet                     CFBD lines by sportsbook (pulled on the Mac)
   nflverse play-by-play (GitHub), read from nfl-weather/data/raw/pbp/ when cached there, otherwise
   downloaded one season at a time and summarized into strategy-research/data/ (gitignored)
   stadium headings (GitHub), cached in strategy-research/data/
@@ -182,6 +187,30 @@ for lab, d in {"spread >= 14": hi[hi.home_spread.abs() >= 14], "spread < 14": hi
     wins = int((dd.total < dd.close_total).sum())
     record("#4", f"Rule HT under vs the close, {lab}", "CFB 2016-2025", len(dd), wins / len(dd),
            p=stats.binomtest(wins, len(dd), 110 / 210, alternative="greater").pvalue, note=f"{wins}-{len(dd) - wins}")
+
+# ---------------------------------------------------------------- #16 line shopping, CFB (CFBD lines by book)
+AGGREGATORS = {"consensus", "numberfire", "teamrankings"}          # not bettable books
+bk = pd.read_parquet(ROOT / "cfb-weather/data/processed/cfbd_lines.parquet")
+bk = bk[~bk.provider.isin(AGGREGATORS) & bk.total.notna()]
+best = bk.groupby("game_id").agg(best_total=("total", "max"), books=("provider", "nunique")).reset_index()
+cc = c.merge(best, on="game_id", how="inner")                        # c: the screen's CFB set, 2006-25
+cc = cc[cc.season.between(2016, 2025) & (cc.books >= 2)]
+sets = {"Rule HT (total >= prior-season mean + 10)": cc[cc.close_total >= cc.season.map(prev) + 10],
+        "CFB Rule B (observed wind >= 15, outdoor)": cc[(cc.wx_src == "station") & (cc.wx_wind >= 15)]}
+for lab, d in sets.items():
+    for line, col in (("consensus close", "close_total"), ("best book", "best_total")):
+        dd = d[d.total != d[col]]
+        wins = int((dd.total < dd[col]).sum())
+        record("#16", f"{lab}: under at the {line}", "CFB 2016-2025, games with 2+ books", len(dd), wins / len(dd),
+               p=stats.binomtest(wins, len(dd), 110 / 210, alternative="greater").pvalue,
+               note=f"{wins}-{len(dd) - wins}; best book beats consensus by {(d.best_total - d.close_total).mean():+.2f} "
+                    f"pts on average ({(d.best_total > d.close_total).mean():.0%} of games), mean {d.books.mean():.1f} books"
+               if line == "best book" else f"{wins}-{len(dd) - wins}")
+op = bk[bk.total_open.notna()].merge(sets["Rule HT (total >= prior-season mean + 10)"][["game_id"]], on="game_id")
+mv = op.total - op.total_open
+record("#16", "Rule HT: total move from the book's open to its close", "CFB 2016-2025, books with an opener", len(op),
+       mv.mean(), mv.std(ddof=1) / np.sqrt(len(op)), stats.ttest_1samp(mv, 0).pvalue,
+       f"rose in {(mv > 0).mean():.0%}, fell in {(mv < 0).mean():.0%}; providers {sorted(op.provider.unique())}")
 
 # ---------------------------------------------------------------- output
 res = pd.DataFrame(rows)
