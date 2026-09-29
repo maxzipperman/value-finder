@@ -26,6 +26,7 @@ for p in nfl-weather cfb-weather; do
   cp "$ROOT/$p/data/forward/ledger.csv" "$p/ledger.csv"
   cp "$ROOT/$p/data/forward/alerts.log" "$p/alerts.log" 2>/dev/null || true
   cp "$ROOT/$p/data/forward/closes.csv" "$p/closes.csv" 2>/dev/null || true
+  cp "$ROOT/$p/data/forward/decisions.csv" "$p/decisions.csv" 2>/dev/null || true
   cp "$ROOT/$p/data/forward/runs.csv" "$p/runs.csv" 2>/dev/null || true
   cp "$ROOT/$p/data/forward/fills.csv" "$p/fills.csv" 2>/dev/null || true
 done

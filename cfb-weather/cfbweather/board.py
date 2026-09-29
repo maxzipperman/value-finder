@@ -150,6 +150,16 @@ def odds_team_names():
     return names
 
 
+def one_row_per_game(oa: pd.DataFrame) -> pd.DataFrame:
+    """One Odds API row per game (home, away, UTC day). The feed can list the same game twice (a relisted
+    event); both would join the same schedule row and the board would carry the game twice. Keep the
+    event priced at a rule book, Pinnacle before DraftKings as in fetch.RULE_BOOKS, else the first listed."""
+    rank = oa.line_src.map({b: i for i, b in enumerate(fetch.RULE_BOOKS)}).fillna(len(fetch.RULE_BOOKS))
+    keep = (oa.assign(_rank=rank).sort_values("_rank", kind="stable")
+            .drop_duplicates(["home_team", "away_team", "day"]).index)
+    return oa.loc[sorted(keep)]
+
+
 def compute(days=8, refresh=True, prices=True):
     """`prices`: price at The Odds API when a key is set (1 credit); False (dry runs) uses ESPN only."""
     if refresh:
@@ -197,6 +207,7 @@ def compute(days=8, refresh=True, prices=True):
     oa = oa.dropna(subset=["home_team", "away_team"])
     if len(oa):
         oa["day"] = pd.to_datetime(oa.commence_utc, utc=True).dt.strftime("%Y-%m-%d")
+        oa = one_row_per_game(oa)
         up["day"] = up.start_utc.dt.strftime("%Y-%m-%d")
         up = up.merge(oa.drop(columns="commence_utc"), on=["home_team", "away_team", "day"], how="left")
     else:

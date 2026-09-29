@@ -1,0 +1,25 @@
+side,spread,teased_to,totals,table_win,table_push,table_win_ex_push,table2015_win_ex_push,legs_2015_2025,won,pushed,lost,actual_win_ex_push,source,variant,legs,actual_win_rate,table_predicted,residual_predicted
+favorite,7.5,1.5,all totals,0.6993,0.0,0.6993,0.7043,166.0,122,0,44,0.7349,full-data table and raw record 2015-2025,,,,,
+favorite,7.5,1.5,closing total <= 49,0.6993,0.0,0.6993,0.7043,131.0,97,0,34,0.7405,full-data table and raw record 2015-2025,,,,,
+favorite,7.5,1.5,closing total > 49,0.6993,0.0,0.6993,0.7043,35.0,25,0,10,0.7143,full-data table and raw record 2015-2025,,,,,
+favorite,8.0,2.0,all totals,0.6911,0.0233,0.7076,0.7131,41.0,30,0,11,0.7317,full-data table and raw record 2015-2025,,,,,
+favorite,8.0,2.0,closing total <= 49,0.6911,0.0233,0.7076,0.7131,32.0,22,0,10,0.6875,full-data table and raw record 2015-2025,,,,,
+favorite,8.0,2.0,closing total > 49,0.6911,0.0233,0.7076,0.7131,9.0,8,0,1,0.8889,full-data table and raw record 2015-2025,,,,,
+favorite,8.5,2.5,all totals,0.7062,0.0,0.7062,0.7117,49.0,36,0,13,0.7347,full-data table and raw record 2015-2025,,,,,
+favorite,8.5,2.5,closing total <= 49,0.7062,0.0,0.7062,0.7117,39.0,30,0,9,0.7692,full-data table and raw record 2015-2025,,,,,
+favorite,8.5,2.5,closing total > 49,0.7062,0.0,0.7062,0.7117,10.0,6,0,4,0.6,full-data table and raw record 2015-2025,,,,,
+underdog,1.5,7.5,all totals,0.7194,0.0,0.7194,0.7328,102.0,82,0,20,0.8039,full-data table and raw record 2015-2025,,,,,
+underdog,1.5,7.5,closing total <= 49,0.7194,0.0,0.7194,0.7328,85.0,68,0,17,0.8,full-data table and raw record 2015-2025,,,,,
+underdog,1.5,7.5,closing total > 49,0.7194,0.0,0.7194,0.7328,17.0,14,0,3,0.8235,full-data table and raw record 2015-2025,,,,,
+underdog,2.0,8.0,all totals,0.7082,0.022,0.7242,0.7379,80.0,59,2,19,0.7564,full-data table and raw record 2015-2025,,,,,
+underdog,2.0,8.0,closing total <= 49,0.7082,0.022,0.7242,0.7379,65.0,50,2,13,0.7937,full-data table and raw record 2015-2025,,,,,
+underdog,2.0,8.0,closing total > 49,0.7082,0.022,0.7242,0.7379,15.0,9,0,6,0.6,full-data table and raw record 2015-2025,,,,,
+underdog,2.5,8.5,all totals,0.7194,0.0,0.7194,0.7331,311.0,240,0,71,0.7717,full-data table and raw record 2015-2025,,,,,
+underdog,2.5,8.5,closing total <= 49,0.7194,0.0,0.7194,0.7331,263.0,206,0,57,0.7833,full-data table and raw record 2015-2025,,,,,
+underdog,2.5,8.5,closing total > 49,0.7194,0.0,0.7194,0.7331,48.0,34,0,14,0.7083,full-data table and raw record 2015-2025,,,,,
+favorite,,,,,,,,,188,0,68,,held-out seasons 2015-2025,primary,256.0,0.734375,0.7015772051047283,0.6801402503089745
+underdog,,,,,,,,,381,2,110,,held-out seasons 2015-2025,primary,493.0,0.7759674134419552,0.7195828245691592,0.6975643950310307
+favorite,,,,,,,,,188,0,68,,held-out seasons 2015-2025,pure 2015 (added after the first run),256.0,0.734375,0.7070305923247999,0.6801402503089745
+underdog,,,,,,,,,381,2,110,,held-out seasons 2015-2025,pure 2015 (added after the first run),493.0,0.7759674134419552,0.7339131856275871,0.6975643950310307
+both,,,,,,,,,569,2,178,,held-out seasons 2015-2025,primary,749.0,0.7617135207496654,0.7134287009604886,0.6916090131233588
+both,,,,,,,,,569,2,178,,held-out seasons 2015-2025,pure 2015 (added after the first run),749.0,0.7617135207496654,0.7247250095454596,0.6916090131233588

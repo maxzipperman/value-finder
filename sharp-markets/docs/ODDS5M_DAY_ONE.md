@@ -123,6 +123,10 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
      - **Floor stop** (`... the floor is 531,630`): on day one this is an alarm, not a routine stop. The account starts near 5,000,000, so reaching the floor means about 4.47 million credits are gone. Stop and tell the owner; run `balance --confirm` to read the balance.
      - **Anything else** (the circuit breaker, a billing or balance that couldn't be read, a network failure, a full disk, an unexpected error): something needs a look. Tell the hub before rerunning.
    - F3 always needs exactly one slice: `--seasons 2025` is F3a, the day-one slice (34,200 at most); F3b (`--seasons 2023,2024,2026`) is gated (below). The puller refuses anything else, dry run included. Without the guard, `full --pull F3` would have pulled all of 2023–26 (136,800).
+   - **The price-engine backtest (#8, #53), free, once F1 is in.**
+     - The rules are registered: [`PRICE_ENGINE_PREREGISTRATION.md`](PRICE_ENGINE_PREREGISTRATION.md), September 29, 2026 (PR #56), before F1 existed; the run must come after it. At registration `PRIOR_COUNT` in `price_engine/engine.py` and the file's section 8 were set to STATUS.md's running count that day, 233 (so 271 with its 38 variants, bar p < 0.000185). The tests fail if the two disagree.
+     - Then run `uv run markets price-engine`. It needs no credits, and it writes `reports/price_engine/report.md` and `results.csv`.
+     - Report its eight primary verdicts to the hub.
 6. **The NBA sample week (N0), 7,540 credits, through the NBA pipeline, not the bulk puller.** PLAN.md §8 step 3 requires it before any full season; the week's Kalshi candles and trades are already cached, and the snapshots land where N1 will look:
    ```bash
    uv run markets odds-plan --start 2026-01-05 --end 2026-01-11                              # free: 754 snapshots, 7,540 credits

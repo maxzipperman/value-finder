@@ -1,0 +1,50 @@
+CFB Rule B replay on GFS MOS forecasts as issued, 2023-2025 (trigger: MOS wind >= 15 mph at lead 1-3; entry at the close, -110)
+  eligible games 2541; at a venue with a MOS station within 40 km 2483; with a MOS forecast at some lead 2483 (none: 0)
+  games by lead available: lead 1 2483, lead 2 2483, lead 3 1
+  forecast station: nearest 2444, next-nearest 39; same airport as the observed wind 2105
+
+At the close (the primary):
+sample  games  with_mos  lead1  lead2  lead3  close_n close_record  close_win_pct close_win_ci  close_roi_pct   close_roi_ci  close_p_one_sided
+  2023    813       813    813    813      1       65      39-26-0           60.0    47.9-71.0           14.5  -8.6 to +35.6             0.1343
+  2024    815       815    815    815      0       69      32-35-2           47.8    36.3-59.5           -8.8 -30.8 to +13.6             0.8105
+  2025    855       855    855    855      0       66      41-25-0           62.1    50.1-72.9           18.6  -4.4 to +39.1             0.0714
+pooled   2483      2483   2483   2483      1      200     112-86-2           56.6    49.6-63.3            8.0  -5.3 to +20.8             0.1339
+
+At the opener (where one exists), and the same games on OBSERVED wind at the close:
+sample  open_n open_record  open_win_pct open_win_ci  open_roi_pct  open_move_mean  obs_n obs_record  obs_win_pct obs_win_ci  obs_roi_pct
+  2023      62     36-26-0          58.1   45.7-69.5          10.9           -2.28     32    17-15-0         53.1  36.4-69.1          1.4
+  2024      68     35-33-0          51.5   39.8-62.9          -1.7           -1.08     37    16-20-1         44.4  29.5-60.4        -15.2
+  2025      66     42-24-0          63.6   51.6-74.2          21.5           -1.41     35    23-12-0         65.7  49.2-79.2         25.5
+pooled     196    113-83-0          57.7   50.7-64.4          10.1           -1.57    104    56-47-1         54.4  44.8-63.7          3.8
+
+MOS minus observed station wind, mph (observed = the 4-hour kickoff mean the backtests use):
+ lead          stations    n  mean_error  mae  rmse  corr  mos_ge15_pct  obs_ge15_pct  mos_mean  obs_mean
+    1               all 2480        1.05 2.16  3.25 0.754          6.53          4.19      7.90      6.85
+    1      same airport 2105        1.00 2.04  3.12 0.775          6.37          4.51      7.90      6.90
+    1 different airport  375        1.32 2.83  3.90 0.631          7.47          2.40      7.88      6.57
+    2               all 2480        1.13 2.28  3.38 0.735          7.10          4.19      7.98      6.85
+    2      same airport 2105        1.10 2.19  3.29 0.751          7.22          4.51      8.00      6.90
+    2 different airport  375        1.31 2.79  3.86 0.634          6.40          2.40      7.87      6.57
+
+Does 15 mph on MOS mean what 15 mph observed means? By season, lead 1: mean MOS minus observed (l1_bias), share of games at 15+ on MOS and observed, and the share of MOS signals whose observed wind reached 15:
+sample  l1_bias  l1_mos15_pct  obs15_pct  sig_obs15_pct
+  2023     1.03           6.6        3.9           36.9
+  2024     1.08           7.2        4.5           37.7
+  2025     1.04           5.7        4.1           39.4
+pooled     1.05           6.5        4.2           38.0
+
+Where the result sits (descriptive; these splits are not rules):
+  MOS and observed both >= 15: 76 games, 46-29-1 (61.3%)
+  MOS only (the wind didn't arrive): 124 games, 66-57-1 (53.7%)
+  observed only (MOS missed it): 28 games, 10-18-0 (35.7%)
+  MOS signals by first lead: {1.0: 24, 2.0: 176}
+
+Against Open-Meteo, 2024-25 (step 3 of the issue):
+  games in both replays (2024-25): 1670
+  lead 1 (n=1670): MOS minus Open-Meteo (station scale) +0.46 mph, corr 0.66; vs observed: MOS MAE 2.15, Open-Meteo MAE 2.34
+  lead 2 (n=1670): MOS minus Open-Meteo (station scale) +0.01 mph, corr 0.69; vs observed: MOS MAE 2.29, Open-Meteo MAE 2.57
+  lead 3: no games with both
+  signals on the same 1670 games: MOS 135 (73-60-2), Open-Meteo 110 (61-46-3), both 65
+  Open-Meteo signals that fired only at lead 3 (which GFS MOS rarely reaches): 19 of 110
+
+Multiple testing: 1 variant for CFB (running total 200 + this + the NFL replay = 202); Bonferroni bar p < 0.00025. Pooled one-sided p = 0.1339.

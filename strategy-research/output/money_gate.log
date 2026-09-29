@@ -1,0 +1,606 @@
+Paper-to-money gate (issue #51): 40,000 simulated CLV paths per cell; 0 variants
+
+How much the historical open-to-close moves of windy games move together
+CFB Rule B: 426 windy games on 143 days (62 days with one game). Spread of the move: 10.88 (variance) on one-game days, 6.51 on days with 2+ games.
+  same-day correlation: ANOVA +0.172 (95% +0.07 to +0.28, permutation p = 0.000); ANOVA on days with 2+ games +0.089; pairs of games +0.086 (95% +0.02 to +0.16, p = 0.004); REML 0.113
+  nested REML: season share 0.000, day-within-season share 0.110 (same-day total 0.110); whole days permuted across seasons: p = 0.689
+  simulated: realistic day 0.11 + season 0.00; stress day 0.17 + season 0.00
+NFL Rule B: 371 windy games on 202 days (113 days with one game). Spread of the move: 4.12 (variance) on one-game days, 5.69 on days with 2+ games.
+  same-day correlation: ANOVA +0.012 (95% -0.23 to +0.23, permutation p = 0.452); ANOVA on days with 2+ games +0.094; pairs of games +0.223 (95% -0.04 to +0.51, p = 0.001); REML 0.122
+  nested REML: season share 0.056, day-within-season share 0.069 (same-day total 0.125); whole days permuted across seasons: p = 0.004
+  simulated: realistic day 0.07 + season 0.06; stress day 0.16 + season 0.06
+
+Thresholds this section calibrates (sequential: the t statistic after each settled signal, 10th to 40th, must exceed c, or c * sqrt(40 / n) for OBF). Needed under no edge, worst over the three zero shares:
+sport                                     CFB Rule B                                                     NFL Rule B                              
+dependence                      realistic dependence             stress dependence             realistic dependence       stress dependence      
+volume                                          25.0  40.0  55.0              25.0  40.0  55.0                 17.0  25.0              17.0  25.0
+gate                    signals                                                                                                                  
+sequential constant 5%  10-40                   2.91  3.01  3.08              3.12  3.26  3.36                 3.16  3.32              3.31  3.51
+sequential constant 10% 10-40                   2.41  2.48  2.55              2.57  2.67  2.77                 2.62  2.74              2.75  2.89
+sequential OBF 5%       10-40                   2.32  2.40  2.48              2.49  2.59  2.72                 2.60  2.82              2.72  2.95
+sequential OBF 10%      10-40                   1.90  1.96  2.03              2.03  2.12  2.21                 2.13  2.30              2.22  2.41
+t > calibrated 5%       20                      1.96  2.11  2.12              2.09  2.29  2.33                 2.33  2.54              2.43  2.66
+                        30                      1.98  2.04  2.18              2.13  2.21  2.42                 2.30  2.55              2.39  2.67
+                        40                      1.98  2.04  2.12              2.14  2.22  2.33                 2.30  2.53              2.39  2.63
+Used (strictest case, rounded up); without the stress case (realistic bar); independent signals alone:
+  CFB Rule B, sequential OBF 10% at 10-40: 2.22 (realistic bar 2.03; independent alone 1.65)
+  CFB Rule B, sequential OBF 5% at 10-40: 2.72 (realistic bar 2.48; independent alone 1.99)
+  CFB Rule B, sequential constant 10% at 10-40: 2.77 (realistic bar 2.55; independent alone 2.10)
+  CFB Rule B, sequential constant 5% at 10-40: 3.37 (realistic bar 3.09; independent alone 2.52)
+  CFB Rule B, t > calibrated 5% at 20: 2.33 (realistic bar 2.13; independent alone 1.72)
+  CFB Rule B, t > calibrated 5% at 30: 2.42 (realistic bar 2.19; independent alone 1.69)
+  CFB Rule B, t > calibrated 5% at 40: 2.34 (realistic bar 2.13; independent alone 1.67)
+  NFL Rule B, sequential OBF 10% at 10-40: 2.42 (realistic bar 2.31; independent alone 1.51)
+  NFL Rule B, sequential OBF 5% at 10-40: 2.96 (realistic bar 2.83; independent alone 1.81)
+  NFL Rule B, sequential constant 10% at 10-40: 2.89 (realistic bar 2.75; independent alone 1.89)
+  NFL Rule B, sequential constant 5% at 10-40: 3.52 (realistic bar 3.32; independent alone 2.24)
+  NFL Rule B, t > calibrated 5% at 20: 2.66 (realistic bar 2.54; independent alone 1.57)
+  NFL Rule B, t > calibrated 5% at 30: 2.67 (realistic bar 2.56; independent alone 1.58)
+  NFL Rule B, t > calibrated 5% at 40: 2.64 (realistic bar 2.53; independent alone 1.58)
+
+No-edge false pass of each calibrated gate on the main draws (not the calibration draws), worst case over the zero shares and volumes, by dependence case
+sport                                                  CFB Rule B                                         NFL Rule B                                       
+dependence                                            independent realistic dependence stress dependence independent realistic dependence stress dependence
+gate                                          signals                                                                                                      
+t > calibrated 5%                             20           0.0140               0.0366            0.0492      0.0029               0.0430            0.0493
+                                              30           0.0096               0.0343            0.0489      0.0026               0.0420            0.0486
+                                              40           0.0107               0.0342            0.0497      0.0028               0.0419            0.0484
+sequential constant 5%                        10-40        0.0105               0.0332            0.0492      0.0023               0.0394            0.0482
+sequential constant 10%                       10-40        0.0316               0.0751            0.1000      0.0114               0.0834            0.0976
+sequential OBF 5%                             10-40        0.0078               0.0330            0.0502      0.0018               0.0400            0.0488
+sequential OBF 10%                            10-40        0.0284               0.0741            0.0986      0.0098               0.0836            0.0973
+sequential OBF 5%, realistic bar              10-40        0.0148               0.0489            0.0696      0.0026               0.0486            0.0577
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40        0.0072               0.0312            0.0485      0.0223               0.1189            0.1332
+
+Pass rate by 40 signals, independent signals (the issue's set-up), no zero-CLV signals, no floor
+sport                                                 CFB Rule B                         NFL Rule B                        
+scenario                                                 no edge half the move full move    no edge half the move full move
+gate                                          signals                                                                      
+mean CLV > 0 (today's gate)                   20           0.503         0.901     0.994      0.485         0.833     0.976
+t > 1.65                                      20           0.055         0.363     0.810      0.041         0.234     0.622
+                                              30           0.053         0.468     0.922      0.044         0.310     0.783
+                                              40           0.051         0.559     0.972      0.044         0.381     0.880
+bootstrap 90% lower bound > 0                 20           0.115         0.520     0.899      0.096         0.389     0.776
+                                              30           0.107         0.619     0.965      0.094         0.473     0.886
+                                              40           0.105         0.702     0.989      0.100         0.542     0.945
+bootstrap 95% lower bound > 0                 20           0.062         0.385     0.823      0.049         0.267     0.658
+                                              30           0.058         0.485     0.927      0.049         0.337     0.803
+                                              40           0.055         0.571     0.974      0.051         0.403     0.893
+t > calibrated 5%                             20           0.014         0.166     0.587      0.003         0.038     0.226
+                                              30           0.010         0.207     0.746      0.003         0.059     0.377
+                                              40           0.011         0.298     0.886      0.003         0.089     0.542
+sequential constant 5%                        10-40        0.011         0.157     0.695      0.002         0.037     0.295
+sequential constant 10%                       10-40        0.032         0.315     0.861      0.011         0.120     0.556
+sequential OBF 5%                             10-40        0.008         0.233     0.830      0.002         0.061     0.448
+sequential OBF 10%                            10-40        0.028         0.413     0.931      0.010         0.165     0.679
+sequential OBF 5%, realistic bar              10-40        0.015         0.314     0.885      0.003         0.078     0.502
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40        0.007         0.224     0.823      0.022         0.255     0.783
+registered keep test (reference)              40           0.027         0.436     0.945      0.022         0.264     0.802
+
+Pass rate by 40 signals with realistic and stress dependence by season volume (no zeros, no floor)
+sport                                                           CFB Rule B                                                                                                                                                                                                             NFL Rule B                                                                                                                                  
+dependence                                            realistic dependence                                                                                         stress dependence                                                                                         realistic dependence                                                         stress dependence                                                        
+volume                                                                25.0                            40.0                            55.0                                      25.0                            40.0                            55.0                                         17.0                            25.0                                      17.0                            25.0                        
+scenario                                                           no edge half the move full move no edge half the move full move no edge half the move full move           no edge half the move full move no edge half the move full move no edge half the move full move              no edge half the move full move no edge half the move full move           no edge half the move full move no edge half the move full move
+gate                                          signals                                                                                                                                                                                                                                                                                                                                                                              
+mean CLV > 0 (today's gate)                   20                     0.503         0.868     0.986   0.504         0.856     0.982   0.503         0.853     0.981             0.503         0.854     0.980   0.503         0.838     0.974   0.503         0.832     0.971                0.493         0.753     0.918   0.495         0.734     0.900             0.494         0.746     0.911   0.495         0.728     0.893
+t > 1.65                                      20                     0.083         0.380     0.783   0.094         0.389     0.775   0.096         0.391     0.773             0.095         0.388     0.774   0.114         0.400     0.763   0.116         0.401     0.759                0.118         0.320     0.600   0.139         0.337     0.594             0.127         0.329     0.597   0.151         0.344     0.592
+                                              30                     0.083         0.474     0.891   0.087         0.477     0.886   0.103         0.479     0.873             0.098         0.478     0.877   0.105         0.481     0.871   0.126         0.484     0.854                0.117         0.378     0.709   0.142         0.389     0.694             0.127         0.384     0.702   0.153         0.395     0.688
+                                              40                     0.083         0.550     0.948   0.088         0.554     0.943   0.097         0.551     0.938             0.100         0.550     0.935   0.106         0.553     0.929   0.118         0.550     0.921                0.118         0.426     0.792   0.141         0.436     0.772             0.127         0.431     0.783   0.152         0.439     0.764
+bootstrap 90% lower bound > 0                 20                     0.144         0.516     0.870   0.159         0.519     0.860   0.160         0.518     0.857             0.158         0.517     0.858   0.179         0.520     0.844   0.179         0.520     0.841                0.188         0.430     0.705   0.209         0.437     0.692             0.197         0.435     0.700   0.219         0.443     0.687
+                                              30                     0.147         0.603     0.941   0.152         0.606     0.937   0.167         0.600     0.924             0.163         0.598     0.928   0.171         0.600     0.924   0.190         0.593     0.908                0.187         0.488     0.799   0.212         0.492     0.778             0.196         0.489     0.791   0.219         0.494     0.770
+                                              40                     0.146         0.676     0.974   0.150         0.675     0.971   0.162         0.667     0.967             0.162         0.666     0.965   0.170         0.664     0.960   0.183         0.655     0.954                0.185         0.538     0.861   0.208         0.539     0.840             0.193         0.537     0.853   0.217         0.537     0.831
+bootstrap 95% lower bound > 0                 20                     0.090         0.400     0.795   0.102         0.406     0.787   0.103         0.408     0.786             0.102         0.404     0.786   0.121         0.415     0.774   0.124         0.416     0.771                0.131         0.341     0.620   0.152         0.355     0.614             0.139         0.347     0.617   0.162         0.362     0.611
+                                              30                     0.089         0.486     0.897   0.093         0.490     0.892   0.109         0.491     0.879             0.103         0.489     0.883   0.111         0.492     0.877   0.132         0.494     0.860                0.127         0.394     0.724   0.152         0.404     0.708             0.135         0.399     0.715   0.162         0.408     0.701
+                                              40                     0.088         0.561     0.950   0.093         0.564     0.945   0.102         0.562     0.940             0.104         0.559     0.938   0.111         0.561     0.932   0.123         0.558     0.924                0.127         0.441     0.802   0.148         0.449     0.781             0.134         0.444     0.792   0.159         0.451     0.773
+t > calibrated 5%                             20                     0.028         0.196     0.582   0.034         0.211     0.582   0.037         0.211     0.581             0.036         0.209     0.583   0.047         0.229     0.581   0.049         0.230     0.581                0.031         0.118     0.319   0.043         0.140     0.338             0.036         0.129     0.330   0.049         0.153     0.347
+                                              30                     0.023         0.242     0.719   0.026         0.248     0.720   0.034         0.263     0.711             0.031         0.256     0.710   0.036         0.264     0.711   0.049         0.283     0.700                0.028         0.147     0.432   0.042         0.175     0.442             0.032         0.158     0.437   0.049         0.185     0.447
+                                              40                     0.026         0.329     0.849   0.029         0.333     0.845   0.034         0.344     0.837             0.036         0.342     0.834   0.040         0.347     0.830   0.050         0.361     0.819                0.029         0.184     0.541   0.042         0.211     0.542             0.035         0.195     0.542   0.048         0.221     0.541
+sequential constant 5%                        10-40                  0.025         0.210     0.693   0.030         0.218     0.696   0.033         0.229     0.691             0.036         0.235     0.695   0.042         0.247     0.697   0.049         0.262     0.694                0.030         0.137     0.412   0.039         0.155     0.421             0.038         0.156     0.428   0.048         0.175     0.438
+sequential constant 10%                       10-40                  0.062         0.369     0.842   0.068         0.377     0.840   0.075         0.389     0.833             0.079         0.390     0.835   0.090         0.401     0.833   0.100         0.417     0.824                0.069         0.255     0.589   0.083         0.271     0.581             0.083         0.275     0.599   0.098         0.292     0.592
+sequential OBF 5%                             10-40                  0.023         0.281     0.802   0.027         0.287     0.803   0.033         0.300     0.791             0.034         0.300     0.792   0.040         0.309     0.793   0.050         0.325     0.778                0.027         0.164     0.492   0.040         0.190     0.500             0.034         0.177     0.500   0.049         0.205     0.507
+sequential OBF 10%                            10-40                  0.059         0.442     0.901   0.065         0.449     0.898   0.074         0.454     0.890             0.077         0.455     0.890   0.086         0.463     0.886   0.099         0.470     0.875                0.064         0.282     0.649   0.084         0.304     0.641             0.076         0.296     0.651   0.097         0.319     0.644
+sequential OBF 5%, realistic bar              10-40                  0.037         0.353     0.854   0.042         0.360     0.854   0.049         0.371     0.843             0.050         0.370     0.845   0.059         0.380     0.843   0.070         0.392     0.827                0.033         0.188     0.532   0.049         0.215     0.533             0.041         0.200     0.537   0.058         0.230     0.541
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40                  0.022         0.272     0.795   0.026         0.279     0.795   0.031         0.292     0.784             0.032         0.292     0.785   0.039         0.301     0.786   0.048         0.317     0.772                0.098         0.358     0.725   0.119         0.375     0.710             0.111         0.370     0.723   0.133         0.388     0.708
+registered keep test (reference)              40                     0.050         0.448     0.913   0.055         0.451     0.909   0.063         0.455     0.901             0.064         0.452     0.898   0.070         0.457     0.892   0.082         0.463     0.882                0.079         0.342     0.723   0.100         0.356     0.707             0.088         0.348     0.717   0.109         0.364     0.700
+
+Model-free check: no-edge pass rate on paths of real centred moves, resampled as whole days or whole seasons
+sport                                                   CFB Rule B           NFL Rule B                        
+dependence                                    resampled whole days resampled whole days resampled whole seasons
+gate                                                                                                           
+mean CLV > 0 (today's gate), 20                             0.4784               0.4580                  0.4693
+t > 1.65, 20                                                0.0827               0.0670                  0.1334
+registered keep test (reference), 40                        0.0470               0.0378                  0.0535
+sequential constant 5%                                      0.0204               0.0087                  0.0000
+sequential OBF 5%                                           0.0196               0.0065                  0.0050
+sequential OBF 5%, realistic bar                            0.0330               0.0094                  0.0097
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL               0.0182               0.0435                  0.0449
+
+Sequential gates: signals to pass (mean, when it passes) and the chance of no pass by 40
+gate                                                                       sequential constant 5%  sequential constant 10%  sequential OBF 5%  sequential OBF 10%  sequential OBF 5%, realistic bar  sequential OBF, fixed bar 2.75 CFB / 2.14 NFL
+                     sport      dependence           volume scenario                                                                                                                                                                              
+mean_signals_to_pass CFB Rule B realistic dependence 25.0   no edge                         16.84                    17.07              28.96               27.59                             28.67                                          29.09
+                                                            half the move                   21.07                    20.21              29.45               27.19                             28.45                                          29.59
+                                                            full move                       20.63                    18.16              25.99               22.71                             24.48                                          26.16
+                                                     40.0   no edge                         16.40                    17.15              28.76               27.03                             28.03                                          28.82
+                                                            half the move                   20.64                    19.95              29.20               26.97                             28.20                                          29.34
+                                                            full move                       20.50                    18.08              25.78               22.53                             24.28                                          25.95
+                                                     55.0   no edge                         18.04                    17.78              28.48               27.03                             27.82                                          28.53
+                                                            half the move                   20.81                    20.00              28.91               26.67                             27.94                                          29.01
+                                                            full move                       20.21                    17.89              25.58               22.49                             24.17                                          25.75
+                     NFL Rule B realistic dependence 17.0   no edge                         17.91                    18.11              29.48               27.76                             29.22                                          26.89
+                                                            half the move                   20.93                    20.13              29.89               27.80                             29.47                                          26.36
+                                                            full move                       21.47                    19.72              28.40               25.76                             27.85                                          24.14
+                                                     25.0   no edge                         19.17                    18.76              28.96               27.33                             28.69                                          26.34
+                                                            half the move                   20.99                    20.05              29.26               27.08                             28.79                                          25.81
+                                                            full move                       21.31                    19.40              27.79               25.29                             27.21                                          23.72
+p_no_pass_by_40      CFB Rule B realistic dependence 25.0   no edge                          0.97                     0.94               0.98                0.94                              0.96                                           0.98
+                                                            half the move                    0.79                     0.63               0.72                0.56                              0.65                                           0.73
+                                                            full move                        0.31                     0.16               0.20                0.10                              0.15                                           0.21
+                                                     40.0   no edge                          0.97                     0.93               0.97                0.94                              0.96                                           0.97
+                                                            half the move                    0.78                     0.62               0.71                0.55                              0.64                                           0.72
+                                                            full move                        0.30                     0.16               0.20                0.10                              0.15                                           0.20
+                                                     55.0   no edge                          0.97                     0.92               0.97                0.93                              0.95                                           0.97
+                                                            half the move                    0.77                     0.61               0.70                0.55                              0.63                                           0.71
+                                                            full move                        0.31                     0.17               0.21                0.11                              0.16                                           0.22
+                     NFL Rule B realistic dependence 17.0   no edge                          0.97                     0.93               0.97                0.94                              0.97                                           0.90
+                                                            half the move                    0.86                     0.75               0.84                0.72                              0.81                                           0.64
+                                                            full move                        0.59                     0.41               0.51                0.35                              0.47                                           0.28
+                                                     25.0   no edge                          0.96                     0.92               0.96                0.92                              0.95                                           0.88
+                                                            half the move                    0.84                     0.73               0.81                0.70                              0.79                                           0.63
+                                                            full move                        0.58                     0.42               0.50                0.36                              0.47                                           0.29
+
+Minimum mean CLV floors (0, 0.25, 0.5 points), independent, no zeros
+sport                                                       CFB Rule B                         NFL Rule B                        
+scenario                                                       no edge half the move full move    no edge half the move full move
+gate                                          signals floor                                                                      
+mean CLV > 0 (today's gate)                   20      0.00       0.503         0.901     0.994      0.485         0.833     0.976
+                                                      0.25       0.342         0.804     0.983      0.303         0.675     0.932
+                                                      0.50       0.204         0.667     0.956      0.161         0.485     0.833
+t > 1.65                                      20      0.00       0.055         0.363     0.810      0.041         0.234     0.622
+                                                      0.25       0.055         0.363     0.810      0.041         0.234     0.622
+                                                      0.50       0.055         0.363     0.810      0.041         0.234     0.622
+                                              30      0.00       0.053         0.468     0.922      0.044         0.310     0.783
+                                                      0.25       0.053         0.468     0.922      0.044         0.310     0.783
+                                                      0.50       0.053         0.468     0.922      0.043         0.309     0.783
+                                              40      0.00       0.051         0.559     0.972      0.044         0.381     0.880
+                                                      0.25       0.051         0.559     0.972      0.044         0.381     0.880
+                                                      0.50       0.051         0.559     0.972      0.044         0.377     0.877
+bootstrap 90% lower bound > 0                 20      0.00       0.115         0.520     0.899      0.096         0.389     0.776
+                                                      0.25       0.115         0.520     0.899      0.096         0.389     0.776
+                                                      0.50       0.114         0.519     0.899      0.094         0.383     0.770
+                                              30      0.00       0.107         0.619     0.965      0.094         0.473     0.886
+                                                      0.25       0.107         0.619     0.965      0.094         0.473     0.886
+                                                      0.50       0.105         0.617     0.964      0.089         0.448     0.869
+                                              40      0.00       0.105         0.702     0.989      0.100         0.542     0.945
+                                                      0.25       0.105         0.702     0.989      0.100         0.542     0.945
+                                                      0.50       0.097         0.690     0.989      0.083         0.476     0.915
+bootstrap 95% lower bound > 0                 20      0.00       0.062         0.385     0.823      0.049         0.267     0.658
+                                                      0.25       0.062         0.385     0.823      0.049         0.267     0.658
+                                                      0.50       0.062         0.385     0.823      0.049         0.266     0.658
+                                              30      0.00       0.058         0.485     0.927      0.049         0.337     0.803
+                                                      0.25       0.058         0.485     0.927      0.049         0.337     0.803
+                                                      0.50       0.058         0.485     0.927      0.049         0.335     0.801
+                                              40      0.00       0.055         0.571     0.974      0.051         0.403     0.893
+                                                      0.25       0.055         0.571     0.974      0.051         0.403     0.893
+                                                      0.50       0.055         0.571     0.974      0.050         0.396     0.888
+t > calibrated 5%                             20      0.00       0.014         0.166     0.587      0.003         0.038     0.226
+                                                      0.25       0.014         0.166     0.587      0.003         0.038     0.226
+                                                      0.50       0.014         0.166     0.587      0.003         0.038     0.226
+                                              30      0.00       0.010         0.207     0.746      0.003         0.059     0.377
+                                                      0.25       0.010         0.207     0.746      0.003         0.059     0.377
+                                                      0.50       0.010         0.207     0.746      0.003         0.059     0.377
+                                              40      0.00       0.011         0.298     0.886      0.003         0.089     0.542
+                                                      0.25       0.011         0.298     0.886      0.003         0.089     0.542
+                                                      0.50       0.011         0.298     0.886      0.003         0.089     0.542
+sequential constant 5%                        10-40   0.00       0.011         0.157     0.695      0.002         0.037     0.295
+                                                      0.25       0.011         0.157     0.695      0.002         0.037     0.295
+                                                      0.50       0.011         0.157     0.695      0.002         0.037     0.295
+sequential constant 10%                       10-40   0.00       0.032         0.315     0.861      0.011         0.120     0.556
+                                                      0.25       0.032         0.315     0.861      0.011         0.120     0.556
+                                                      0.50       0.032         0.315     0.861      0.011         0.120     0.556
+sequential OBF 5%                             10-40   0.00       0.008         0.233     0.830      0.002         0.061     0.448
+                                                      0.25       0.008         0.233     0.830      0.002         0.061     0.448
+                                                      0.50       0.008         0.233     0.830      0.002         0.061     0.448
+sequential OBF 10%                            10-40   0.00       0.028         0.413     0.931      0.010         0.165     0.679
+                                                      0.25       0.028         0.413     0.931      0.010         0.165     0.679
+                                                      0.50       0.028         0.413     0.931      0.010         0.165     0.679
+sequential OBF 5%, realistic bar              10-40   0.00       0.015         0.314     0.885      0.003         0.078     0.502
+                                                      0.25       0.015         0.314     0.885      0.003         0.078     0.502
+                                                      0.50       0.015         0.314     0.885      0.003         0.078     0.502
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40   0.00       0.007         0.224     0.823      0.022         0.255     0.783
+                                                      0.25       0.007         0.224     0.823      0.022         0.255     0.783
+                                                      0.50       0.007         0.224     0.823      0.022         0.255     0.783
+registered keep test (reference)              40      0.00       0.027         0.436     0.945      0.022         0.264     0.802
+
+Share of signals with CLV exactly 0 (0, 20%, 40%), independent, no floor
+sport                                                            CFB Rule B                         NFL Rule B                        
+scenario                                                            no edge half the move full move    no edge half the move full move
+gate                                          signals zero_share                                                                      
+mean CLV > 0 (today's gate)                   20      0.0             0.503         0.901     0.994      0.485         0.833     0.976
+                                                      0.2             0.505         0.874     0.987      0.487         0.804     0.960
+                                                      0.4             0.504         0.838     0.971      0.487         0.771     0.931
+t > 1.65                                      20      0.0             0.055         0.363     0.810      0.041         0.234     0.622
+                                                      0.2             0.055         0.315     0.725      0.040         0.198     0.530
+                                                      0.4             0.056         0.260     0.606      0.038         0.157     0.418
+                                              30      0.0             0.053         0.468     0.922      0.044         0.310     0.783
+                                                      0.2             0.053         0.402     0.861      0.042         0.261     0.690
+                                                      0.4             0.055         0.330     0.758      0.040         0.206     0.565
+                                              40      0.0             0.051         0.559     0.972      0.044         0.381     0.880
+                                                      0.2             0.051         0.482     0.934      0.043         0.321     0.801
+                                                      0.4             0.052         0.396     0.856      0.041         0.256     0.684
+bootstrap 90% lower bound > 0                 20      0.0             0.115         0.520     0.899      0.096         0.389     0.776
+                                                      0.2             0.119         0.471     0.844      0.097         0.352     0.703
+                                                      0.4             0.122         0.416     0.762      0.100         0.314     0.616
+                                              30      0.0             0.107         0.619     0.965      0.094         0.473     0.886
+                                                      0.2             0.111         0.562     0.929      0.097         0.423     0.823
+                                                      0.4             0.116         0.491     0.867      0.097         0.370     0.735
+                                              40      0.0             0.105         0.702     0.989      0.100         0.542     0.945
+                                                      0.2             0.108         0.637     0.972      0.098         0.485     0.900
+                                                      0.4             0.110         0.555     0.930      0.095         0.424     0.823
+bootstrap 95% lower bound > 0                 20      0.0             0.062         0.385     0.823      0.049         0.267     0.658
+                                                      0.2             0.065         0.345     0.747      0.051         0.234     0.576
+                                                      0.4             0.071         0.296     0.647      0.055         0.203     0.480
+                                              30      0.0             0.058         0.485     0.927      0.049         0.337     0.803
+                                                      0.2             0.059         0.425     0.870      0.049         0.292     0.717
+                                                      0.4             0.065         0.359     0.779      0.050         0.245     0.608
+                                              40      0.0             0.055         0.571     0.974      0.051         0.403     0.893
+                                                      0.2             0.056         0.501     0.939      0.050         0.349     0.822
+                                                      0.4             0.059         0.419     0.869      0.049         0.289     0.716
+t > calibrated 5%                             20      0.0             0.014         0.166     0.587      0.003         0.038     0.226
+                                                      0.2             0.013         0.129     0.465      0.002         0.025     0.144
+                                                      0.4             0.012         0.090     0.324      0.002         0.014     0.074
+                                              30      0.0             0.010         0.207     0.746      0.003         0.059     0.377
+                                                      0.2             0.009         0.159     0.618      0.002         0.040     0.257
+                                                      0.4             0.009         0.110     0.449      0.002         0.023     0.143
+                                              40      0.0             0.011         0.298     0.886      0.003         0.089     0.542
+                                                      0.2             0.010         0.232     0.787      0.003         0.061     0.400
+                                                      0.4             0.010         0.164     0.623      0.002         0.037     0.244
+sequential constant 5%                        10-40   0.0             0.011         0.157     0.695      0.002         0.037     0.295
+                                                      0.2             0.007         0.102     0.518      0.001         0.018     0.167
+                                                      0.4             0.004         0.053     0.298      0.001         0.007     0.065
+sequential constant 10%                       10-40   0.0             0.032         0.315     0.861      0.011         0.120     0.556
+                                                      0.2             0.027         0.243     0.745      0.009         0.082     0.404
+                                                      0.4             0.020         0.162     0.560      0.006         0.046     0.234
+sequential OBF 5%                             10-40   0.0             0.008         0.233     0.830      0.002         0.061     0.448
+                                                      0.2             0.007         0.170     0.698      0.001         0.037     0.300
+                                                      0.4             0.006         0.109     0.503      0.001         0.019     0.156
+sequential OBF 10%                            10-40   0.0             0.028         0.413     0.931      0.010         0.165     0.679
+                                                      0.2             0.027         0.333     0.854      0.009         0.122     0.540
+                                                      0.4             0.024         0.245     0.719      0.007         0.079     0.374
+sequential OBF 5%, realistic bar              10-40   0.0             0.015         0.314     0.885      0.003         0.078     0.502
+                                                      0.2             0.014         0.239     0.782      0.002         0.051     0.355
+                                                      0.4             0.012         0.167     0.611      0.002         0.028     0.200
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40   0.0             0.007         0.224     0.823      0.022         0.255     0.783
+                                                      0.2             0.006         0.162     0.687      0.019         0.200     0.667
+                                                      0.4             0.006         0.103     0.490      0.018         0.140     0.509
+registered keep test (reference)              40      0.0             0.027         0.436     0.945      0.022         0.264     0.802
+                                                      0.2             0.026         0.361     0.881      0.020         0.212     0.696
+                                                      0.4             0.026         0.280     0.769      0.019         0.155     0.549
+
+Share of signals with CLV exactly 0, with realistic dependence, CFB 40 and NFL 17 a season
+sport                                                            CFB Rule B                         NFL Rule B                        
+scenario                                                            no edge half the move full move    no edge half the move full move
+gate                                          signals zero_share                                                                      
+mean CLV > 0 (today's gate)                   20      0.0             0.504         0.856     0.982      0.493         0.753     0.918
+                                                      0.2             0.505         0.836     0.971      0.492         0.737     0.905
+                                                      0.4             0.506         0.808     0.956      0.489         0.719     0.884
+t > 1.65                                      20      0.0             0.094         0.389     0.775      0.118         0.320     0.600
+                                                      0.2             0.087         0.344     0.702      0.104         0.280     0.533
+                                                      0.4             0.080         0.286     0.602      0.088         0.230     0.447
+                                              30      0.0             0.087         0.477     0.886      0.117         0.378     0.709
+                                                      0.2             0.083         0.421     0.830      0.104         0.331     0.648
+                                                      0.4             0.076         0.350     0.741      0.088         0.275     0.558
+                                              40      0.0             0.088         0.554     0.943      0.118         0.426     0.792
+                                                      0.2             0.082         0.489     0.904      0.107         0.376     0.735
+                                                      0.4             0.076         0.407     0.832      0.091         0.314     0.648
+bootstrap 90% lower bound > 0                 20      0.0             0.159         0.519     0.860      0.188         0.430     0.705
+                                                      0.2             0.153         0.477     0.812      0.176         0.395     0.662
+                                                      0.4             0.148         0.426     0.742      0.164         0.355     0.597
+                                              30      0.0             0.152         0.606     0.937      0.187         0.488     0.799
+                                                      0.2             0.147         0.554     0.900      0.173         0.449     0.754
+                                                      0.4             0.142         0.493     0.844      0.161         0.399     0.693
+                                              40      0.0             0.150         0.675     0.971      0.185         0.538     0.861
+                                                      0.2             0.144         0.617     0.949      0.174         0.496     0.824
+                                                      0.4             0.139         0.552     0.906      0.158         0.442     0.763
+bootstrap 95% lower bound > 0                 20      0.0             0.102         0.406     0.787      0.131         0.341     0.620
+                                                      0.2             0.097         0.366     0.721      0.118         0.305     0.565
+                                                      0.4             0.095         0.318     0.640      0.105         0.264     0.493
+                                              30      0.0             0.093         0.490     0.892      0.127         0.394     0.724
+                                                      0.2             0.090         0.437     0.840      0.115         0.352     0.669
+                                                      0.4             0.087         0.375     0.761      0.102         0.303     0.592
+                                              40      0.0             0.093         0.564     0.945      0.127         0.441     0.802
+                                                      0.2             0.087         0.502     0.909      0.115         0.395     0.751
+                                                      0.4             0.084         0.427     0.844      0.101         0.341     0.673
+t > calibrated 5%                             20      0.0             0.034         0.211     0.582      0.031         0.118     0.319
+                                                      0.2             0.028         0.165     0.477      0.021         0.082     0.234
+                                                      0.4             0.022         0.115     0.342      0.013         0.046     0.137
+                                              30      0.0             0.026         0.248     0.720      0.028         0.147     0.432
+                                                      0.2             0.021         0.191     0.608      0.020         0.106     0.334
+                                                      0.4             0.017         0.136     0.458      0.013         0.063     0.216
+                                              40      0.0             0.029         0.333     0.845      0.029         0.184     0.541
+                                                      0.2             0.025         0.266     0.757      0.021         0.139     0.438
+                                                      0.4             0.019         0.195     0.620      0.014         0.089     0.307
+sequential constant 5%                        10-40   0.0             0.030         0.218     0.696      0.030         0.137     0.412
+                                                      0.2             0.019         0.148     0.541      0.016         0.082     0.281
+                                                      0.4             0.009         0.074     0.329      0.007         0.034     0.137
+sequential constant 10%                       10-40   0.0             0.068         0.377     0.840      0.069         0.255     0.589
+                                                      0.2             0.053         0.295     0.738      0.049         0.188     0.478
+                                                      0.4             0.034         0.201     0.572      0.028         0.113     0.323
+sequential OBF 5%                             10-40   0.0             0.027         0.287     0.803      0.027         0.164     0.492
+                                                      0.2             0.019         0.214     0.687      0.017         0.111     0.375
+                                                      0.4             0.012         0.141     0.512      0.009         0.061     0.234
+sequential OBF 10%                            10-40   0.0             0.065         0.449     0.898      0.064         0.282     0.649
+                                                      0.2             0.053         0.368     0.830      0.048         0.221     0.555
+                                                      0.4             0.042         0.280     0.710      0.033         0.152     0.421
+sequential OBF 5%, realistic bar              10-40   0.0             0.042         0.360     0.854      0.033         0.188     0.532
+                                                      0.2             0.033         0.282     0.762      0.023         0.133     0.416
+                                                      0.4             0.023         0.200     0.612      0.013         0.078     0.274
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40   0.0             0.026         0.279     0.795      0.098         0.358     0.725
+                                                      0.2             0.018         0.206     0.677      0.078         0.296     0.644
+                                                      0.4             0.012         0.134     0.500      0.057         0.224     0.528
+registered keep test (reference)              40      0.0             0.055         0.451     0.909      0.079         0.342     0.723
+                                                      0.2             0.049         0.382     0.848      0.067         0.289     0.651
+                                                      0.4             0.042         0.304     0.748      0.055         0.226     0.545
+
+Passes, then fails the registered keep test at 40 (realistic dependence, CFB 40 and NFL 17 a season, no zeros)
+sport                                                 CFB Rule B                         NFL Rule B                        
+scenario                                                 no edge half the move full move    no edge half the move full move
+gate                                          signals                                                                      
+mean CLV > 0 (today's gate)                   20           0.450         0.410     0.078      0.416         0.418     0.205
+t > 1.65                                      20           0.063         0.096     0.022      0.071         0.094     0.056
+                                              30           0.046         0.096     0.026      0.052         0.083     0.052
+                                              40           0.033         0.103     0.034      0.039         0.084     0.069
+bootstrap 90% lower bound > 0                 20           0.119         0.160     0.035      0.129         0.158     0.088
+                                              30           0.102         0.179     0.044      0.112         0.162     0.098
+                                              40           0.096         0.224     0.062      0.105         0.196     0.138
+bootstrap 95% lower bound > 0                 20           0.069         0.104     0.023      0.081         0.106     0.062
+                                              30           0.050         0.104     0.028      0.060         0.093     0.058
+                                              40           0.039         0.113     0.036      0.047         0.099     0.079
+t > calibrated 5%                             20           0.018         0.032     0.008      0.012         0.017     0.011
+                                              30           0.007         0.017     0.006      0.003         0.006     0.004
+                                              40           0.000         0.000     0.000      0.000         0.000     0.000
+sequential constant 5%                        10-40        0.015         0.024     0.006      0.011         0.015     0.009
+sequential constant 10%                       10-40        0.038         0.058     0.015      0.029         0.040     0.024
+sequential OBF 5%                             10-40        0.005         0.011     0.003      0.002         0.004     0.002
+sequential OBF 10%                            10-40        0.021         0.044     0.012      0.011         0.018     0.011
+sequential OBF 5%, realistic bar              10-40        0.010         0.021     0.006      0.003         0.005     0.004
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40        0.005         0.010     0.003      0.027         0.041     0.027
+registered keep test (reference)              40           0.000         0.000     0.000      0.000         0.000     0.000
+
+Calendar, realistic dependence, no zeros: chance the gate has decided by the season end; chance real money goes in (a signal logged after the pass: kickoff more than 3 days after the passing signal's) by the regular-season end and by the season end; real-money bets this season; median pass date and first real-money date
+
+CFB Rule B, 25 signals a season (wind cut-off about 16.6 mph; 24.9 a season in 2016-25)
+                                                      p_decided_by_season_end                         p_pass_by_season_end                         p_money_by_reg_end                         p_money_this_season                         mean_money_bets_this_season                        
+scenario                                                              no edge half the move full move              no edge half the move full move            no edge half the move full move             no edge half the move full move                     no edge half the move full move
+gate                                          signals                                                                                                                                                                                                                                        
+mean CLV > 0 (today's gate)                   20                        0.600         0.600     0.600                0.302         0.516     0.590              0.202         0.340     0.392               0.252         0.430     0.493                       1.141         1.927     2.236
+t > 1.65                                      20                        0.600         0.600     0.600                0.055         0.232     0.466              0.041         0.157     0.307               0.048         0.195     0.388                       0.248         0.897     1.741
+                                              30                        0.335         0.335     0.335                0.035         0.159     0.293              0.031         0.144     0.264               0.031         0.144     0.264                       0.094         0.431     0.792
+                                              40                        0.034         0.034     0.034                0.004         0.019     0.031              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+bootstrap 90% lower bound > 0                 20                        0.600         0.600     0.600                0.093         0.310     0.518              0.067         0.207     0.342               0.080         0.258     0.431                       0.390         1.175     1.940
+                                              30                        0.335         0.335     0.335                0.057         0.198     0.311              0.051         0.179     0.280               0.051         0.179     0.280                       0.154         0.536     0.840
+                                              40                        0.034         0.034     0.034                0.006         0.022     0.032              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+bootstrap 95% lower bound > 0                 20                        0.600         0.600     0.600                0.060         0.243     0.473              0.044         0.164     0.312               0.052         0.204     0.394                       0.265         0.937     1.767
+                                              30                        0.335         0.335     0.335                0.037         0.163     0.295              0.033         0.147     0.267               0.033         0.147     0.267                       0.100         0.441     0.799
+                                              40                        0.034         0.034     0.034                0.004         0.019     0.031              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+t > calibrated 5%                             20                        0.600         0.600     0.600                0.020         0.124     0.349              0.016         0.087     0.232               0.018         0.106     0.291                       0.100         0.508     1.319
+                                              30                        0.335         0.335     0.335                0.011         0.089     0.237              0.010         0.080     0.214               0.010         0.080     0.214                       0.028         0.240     0.642
+                                              40                        0.034         0.034     0.034                0.001         0.012     0.027              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+sequential constant 5%                        10-40                     0.055         0.168     0.461                0.022         0.141     0.451              0.020         0.120     0.378               0.021         0.135     0.429                       0.275         1.427     4.425
+sequential constant 10%                       10-40                     0.082         0.273     0.625                0.051         0.252     0.619              0.046         0.215     0.526               0.049         0.242     0.594                       0.605         2.577     6.454
+sequential OBF 5%                             10-40                     0.045         0.133     0.373                0.012         0.110     0.366              0.010         0.083     0.278               0.011         0.098     0.334                       0.075         0.606     2.357
+sequential OBF 10%                            10-40                     0.062         0.213     0.515                0.030         0.195     0.510              0.024         0.150     0.388               0.028         0.178     0.472                       0.210         1.283     3.954
+sequential OBF 5%, realistic bar              10-40                     0.051         0.166     0.438                0.019         0.145     0.432              0.015         0.112     0.327               0.017         0.133     0.396                       0.124         0.876     3.032
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40                     0.044         0.129     0.365                0.011         0.106     0.357              0.009         0.080     0.272               0.011         0.095     0.327                       0.070         0.580     2.278
+registered keep test (reference)              40                        0.034         0.034     0.034                0.002         0.016     0.030              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+                                                      median_pass_date             median_first_money_date            
+scenario                                                 half the move   full move           half the move   full move
+gate                                          signals                                                                 
+mean CLV > 0 (today's gate)                   20            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+t > 1.65                                      20            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              30            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              40            2026-12-19  2026-12-19                    None        None
+bootstrap 90% lower bound > 0                 20            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              30            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              40            2026-12-19  2026-12-19                    None        None
+bootstrap 95% lower bound > 0                 20            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              30            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              40            2026-12-19  2026-12-19                    None        None
+t > calibrated 5%                             20            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              30            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+                                              40            2026-12-19  2026-12-19                    None        None
+sequential constant 5%                        10-40         2026-11-14  2026-11-14              2026-11-18  2026-11-18
+sequential constant 10%                       10-40         2026-11-14  2026-11-07              2026-11-14  2026-11-14
+sequential OBF 5%                             10-40         2026-11-21  2026-11-21              2026-11-27  2026-11-27
+sequential OBF 10%                            10-40         2026-11-21  2026-11-20              2026-11-27  2026-11-21
+sequential OBF 5%, realistic bar              10-40         2026-11-21  2026-11-21              2026-11-27  2026-11-27
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40         2026-11-21  2026-11-21              2026-11-27  2026-11-27
+registered keep test (reference)              40            2026-12-19  2026-12-19                    None        None
+
+CFB Rule B, 40 signals a season (wind cut-off about 15.0 mph; 40.1 a season in 2016-25)
+                                                      p_decided_by_season_end                         p_pass_by_season_end                         p_money_by_reg_end                         p_money_this_season                         mean_money_bets_this_season                        
+scenario                                                              no edge half the move full move              no edge half the move full move            no edge half the move full move             no edge half the move full move                     no edge half the move full move
+gate                                          signals                                                                                                                                                                                                                                        
+mean CLV > 0 (today's gate)                   20                        1.000         1.000     1.000                0.504         0.856     0.982              0.454         0.767     0.883               0.504         0.856     0.982                       9.184        15.409    17.827
+t > 1.65                                      20                        1.000         1.000     1.000                0.094         0.389     0.775              0.087         0.352     0.695               0.094         0.389     0.775                       1.872         7.192    13.985
+                                              30                        0.734         0.734     0.734                0.069         0.352     0.646              0.059         0.290     0.527               0.066         0.336     0.615                       0.814         3.968     7.188
+                                              40                        0.534         0.534     0.534                0.053         0.296     0.498              0.051         0.277     0.465               0.053         0.296     0.498                       0.254         1.379     2.316
+bootstrap 90% lower bound > 0                 20                        1.000         1.000     1.000                0.159         0.519     0.860              0.146         0.468     0.772               0.159         0.519     0.860                       3.085         9.471    15.521
+                                              30                        0.734         0.734     0.734                0.117         0.444     0.684              0.098         0.363     0.559               0.112         0.422     0.652                       1.365         4.958     7.639
+                                              40                        0.534         0.534     0.534                0.088         0.358     0.515              0.083         0.335     0.481               0.088         0.358     0.515                       0.416         1.665     2.400
+bootstrap 95% lower bound > 0                 20                        1.000         1.000     1.000                0.102         0.406     0.787              0.094         0.367     0.706               0.102         0.406     0.787                       2.020         7.494    14.199
+                                              30                        0.734         0.734     0.734                0.073         0.361     0.650              0.062         0.297     0.531               0.070         0.344     0.619                       0.867         4.065     7.243
+                                              40                        0.534         0.534     0.534                0.057         0.301     0.499              0.054         0.282     0.467               0.057         0.301     0.499                       0.271         1.401     2.324
+t > calibrated 5%                             20                        1.000         1.000     1.000                0.034         0.211     0.582              0.033         0.193     0.524               0.034         0.211     0.582                       0.731         4.054    10.618
+                                              30                        0.734         0.734     0.734                0.021         0.187     0.526              0.018         0.156     0.430               0.020         0.180     0.501                       0.253         2.153     5.881
+                                              40                        0.534         0.534     0.534                0.019         0.184     0.444              0.019         0.173     0.415               0.019         0.184     0.444                       0.095         0.866     2.068
+sequential constant 5%                        10-40                     0.543         0.606     0.790                0.029         0.198     0.626              0.028         0.182     0.566               0.029         0.195     0.616                       0.708         3.936    12.045
+sequential constant 10%                       10-40                     0.557         0.667     0.874                0.065         0.342     0.785              0.063         0.314     0.725               0.065         0.337     0.775                       1.521         6.895    16.286
+sequential OBF 5%                             10-40                     0.539         0.595     0.784                0.023         0.223     0.674              0.021         0.188     0.560               0.023         0.216     0.654                       0.331         2.866     9.829
+sequential OBF 10%                            10-40                     0.548         0.653     0.869                0.055         0.365     0.808              0.049         0.309     0.696               0.054         0.355     0.790                       0.858         5.256    13.667
+sequential OBF 5%, realistic bar              10-40                     0.542         0.619     0.826                0.036         0.285     0.742              0.032         0.240     0.626               0.035         0.277     0.723                       0.519         3.879    11.608
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40                     0.538         0.592     0.780                0.022         0.216     0.666              0.020         0.183     0.552               0.022         0.210     0.645                       0.312         2.773     9.617
+registered keep test (reference)              40                        0.534         0.534     0.534                0.035         0.245     0.479              0.033         0.229     0.447               0.035         0.245     0.479                       0.168         1.142     2.226
+                                                      median_pass_date             median_first_money_date            
+scenario                                                 half the move   full move           half the move   full move
+gate                                          signals                                                                 
+mean CLV > 0 (today's gate)                   20            2026-11-07  2026-11-07              2026-11-12  2026-11-12
+t > 1.65                                      20            2026-10-31  2026-11-07              2026-11-07  2026-11-12
+                                              30            2026-11-14  2026-11-14              2026-11-20  2026-11-20
+                                              40            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+bootstrap 90% lower bound > 0                 20            2026-10-31  2026-11-07              2026-11-07  2026-11-12
+                                              30            2026-11-14  2026-11-14              2026-11-20  2026-11-20
+                                              40            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+bootstrap 95% lower bound > 0                 20            2026-10-31  2026-11-07              2026-11-07  2026-11-12
+                                              30            2026-11-14  2026-11-14              2026-11-20  2026-11-20
+                                              40            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+t > calibrated 5%                             20            2026-10-31  2026-10-31              2026-11-07  2026-11-07
+                                              30            2026-11-14  2026-11-14              2026-11-20  2026-11-20
+                                              40            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+sequential constant 5%                        10-40         2026-10-29  2026-10-31              2026-11-07  2026-11-07
+sequential constant 10%                       10-40         2026-10-24  2026-10-24              2026-11-05  2026-11-05
+sequential OBF 5%                             10-40         2026-11-14  2026-11-14              2026-11-21  2026-11-18
+sequential OBF 10%                            10-40         2026-11-14  2026-11-07              2026-11-18  2026-11-14
+sequential OBF 5%, realistic bar              10-40         2026-11-14  2026-11-07              2026-11-20  2026-11-14
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40         2026-11-14  2026-11-14              2026-11-21  2026-11-18
+registered keep test (reference)              40            2026-11-21  2026-11-21              2026-11-28  2026-11-28
+
+CFB Rule B, 55 signals a season (wind cut-off about 13.8 mph; 55.1 a season in 2016-25)
+                                                      p_decided_by_season_end                         p_pass_by_season_end                         p_money_by_reg_end                         p_money_this_season                         mean_money_bets_this_season                        
+scenario                                                              no edge half the move full move              no edge half the move full move            no edge half the move full move             no edge half the move full move                     no edge half the move full move
+gate                                          signals                                                                                                                                                                                                                                        
+mean CLV > 0 (today's gate)                   20                        1.000         1.000     1.000                0.503         0.853     0.981              0.503         0.853     0.981               0.503         0.853     0.981                      15.188        25.558    29.543
+t > 1.65                                      20                        1.000         1.000     1.000                0.096         0.391     0.773              0.096         0.391     0.773               0.096         0.391     0.773                       3.096        11.918    23.188
+                                              30                        1.000         1.000     1.000                0.103         0.479     0.873              0.087         0.383     0.696               0.103         0.479     0.873                       2.494        10.575    18.942
+                                              40                        0.730         0.730     0.730                0.075         0.402     0.681              0.066         0.329     0.555               0.068         0.348     0.587                       1.618         8.035    13.491
+bootstrap 90% lower bound > 0                 20                        1.000         1.000     1.000                0.160         0.518     0.857              0.160         0.518     0.857               0.160         0.518     0.857                       5.039        15.642    25.735
+                                              30                        1.000         1.000     1.000                0.167         0.600     0.924              0.138         0.478     0.736               0.167         0.600     0.924                       3.913        13.089    20.076
+                                              40                        0.730         0.730     0.730                0.123         0.484     0.703              0.105         0.394     0.574               0.110         0.417     0.607                       2.580         9.597    13.966
+bootstrap 95% lower bound > 0                 20                        1.000         1.000     1.000                0.103         0.408     0.786              0.103         0.408     0.786               0.103         0.408     0.786                       3.315        12.427    23.571
+                                              30                        1.000         1.000     1.000                0.109         0.491     0.879              0.092         0.393     0.700               0.109         0.491     0.879                       2.636        10.826    19.077
+                                              40                        0.730         0.730     0.730                0.080         0.410     0.682              0.069         0.336     0.556               0.072         0.355     0.589                       1.708         8.195    13.522
+t > calibrated 5%                             20                        1.000         1.000     1.000                0.037         0.211     0.581              0.037         0.211     0.581               0.037         0.211     0.581                       1.223         6.585    17.509
+                                              30                        1.000         1.000     1.000                0.034         0.263     0.711              0.030         0.214     0.566               0.034         0.263     0.711                       0.902         6.001    15.471
+                                              40                        0.730         0.730     0.730                0.028         0.254     0.606              0.025         0.211     0.493               0.026         0.222     0.523                       0.633         5.176    12.001
+sequential constant 5%                        10-40                     0.736         0.781     0.909                0.033         0.226     0.683              0.032         0.207     0.624               0.033         0.223     0.674                       1.243         7.377    21.570
+sequential constant 10%                       10-40                     0.745         0.825     0.951                0.075         0.384     0.826              0.072         0.353     0.778               0.074         0.380     0.819                       2.751        12.535    27.790
+sequential OBF 5%                             10-40                     0.735         0.795     0.932                0.032         0.288     0.776              0.028         0.233     0.664               0.032         0.278     0.761                       0.924         7.173    20.368
+sequential OBF 10%                            10-40                     0.743         0.838     0.964                0.072         0.441     0.881              0.063         0.370     0.798               0.070         0.430     0.870                       2.081        11.530    25.489
+sequential OBF 5%, realistic bar              10-40                     0.738         0.815     0.948                0.048         0.358     0.830              0.042         0.294     0.732               0.047         0.348     0.817                       1.388         9.092    22.788
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40                     0.735         0.793     0.930                0.030         0.281     0.768              0.027         0.227     0.655               0.030         0.270     0.753                       0.872         6.972    20.061
+registered keep test (reference)              40                        0.730         0.730     0.730                0.051         0.333     0.654              0.045         0.275     0.532               0.046         0.290     0.563                       1.099         6.726    12.935
+                                                      median_pass_date             median_first_money_date            
+scenario                                                 half the move   full move           half the move   full move
+gate                                          signals                                                                 
+mean CLV > 0 (today's gate)                   20            2026-10-24  2026-10-24              2026-11-05  2026-11-05
+t > 1.65                                      20            2026-10-24  2026-10-24              2026-10-31  2026-11-05
+                                              30            2026-10-31  2026-11-05              2026-11-07  2026-11-14
+                                              40            2026-11-14  2026-11-14              2026-11-18  2026-11-18
+bootstrap 90% lower bound > 0                 20            2026-10-24  2026-10-24              2026-10-31  2026-11-05
+                                              30            2026-11-05  2026-11-05              2026-11-14  2026-11-14
+                                              40            2026-11-14  2026-11-14              2026-11-18  2026-11-18
+bootstrap 95% lower bound > 0                 20            2026-10-24  2026-10-24              2026-10-31  2026-11-05
+                                              30            2026-10-31  2026-11-05              2026-11-07  2026-11-14
+                                              40            2026-11-14  2026-11-14              2026-11-18  2026-11-18
+t > calibrated 5%                             20            2026-10-24  2026-10-24              2026-10-31  2026-10-31
+                                              30            2026-10-31  2026-11-05              2026-11-07  2026-11-14
+                                              40            2026-11-14  2026-11-14              2026-11-18  2026-11-18
+sequential constant 5%                        10-40         2026-10-24  2026-10-24              2026-10-31  2026-10-31
+sequential constant 10%                       10-40         2026-10-24  2026-10-24              2026-10-31  2026-10-31
+sequential OBF 5%                             10-40         2026-11-05  2026-10-31              2026-11-13  2026-11-07
+sequential OBF 10%                            10-40         2026-10-31  2026-10-24              2026-11-07  2026-11-04
+sequential OBF 5%, realistic bar              10-40         2026-10-31  2026-10-29              2026-11-12  2026-11-05
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40         2026-11-05  2026-10-31              2026-11-14  2026-11-07
+registered keep test (reference)              40            2026-11-14  2026-11-14              2026-11-18  2026-11-18
+
+NFL Rule B, 17 signals a season (wind cut-off about 15.3 mph; 16.8 a season in 2016-25)
+                                                      p_decided_by_season_end                         p_pass_by_season_end                         p_money_by_reg_end                         p_money_this_season                         mean_money_bets_this_season                        
+scenario                                                              no edge half the move full move              no edge half the move full move            no edge half the move full move             no edge half the move full move                     no edge half the move full move
+gate                                          signals                                                                                                                                                                                                                                        
+mean CLV > 0 (today's gate)                   20                        0.201         0.201     0.201                0.100         0.148     0.180              0.048         0.072     0.088               0.048         0.072     0.088                       0.096         0.143     0.176
+t > 1.65                                      20                        0.201         0.201     0.201                0.030         0.070     0.119              0.014         0.034     0.058               0.014         0.034     0.058                       0.028         0.067     0.116
+                                              30                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+bootstrap 90% lower bound > 0                 20                        0.201         0.201     0.201                0.045         0.088     0.139              0.022         0.042     0.068               0.022         0.042     0.068                       0.043         0.085     0.135
+                                              30                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+bootstrap 95% lower bound > 0                 20                        0.201         0.201     0.201                0.033         0.073     0.123              0.016         0.035     0.060               0.016         0.035     0.060                       0.031         0.071     0.120
+                                              30                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+t > calibrated 5%                             20                        0.201         0.201     0.201                0.010         0.030     0.070              0.004         0.015     0.034               0.004         0.015     0.034                       0.009         0.029     0.069
+                                              30                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+sequential constant 5%                        10-40                     0.019         0.066     0.178                0.019         0.066     0.178              0.016         0.054     0.144               0.016         0.054     0.144                       0.093         0.302     0.825
+sequential constant 10%                       10-40                     0.043         0.130     0.297                0.043         0.130     0.297              0.035         0.105     0.245               0.035         0.105     0.245                       0.205         0.615     1.460
+sequential OBF 5%                             10-40                     0.004         0.017     0.061                0.004         0.017     0.061              0.003         0.011     0.040               0.003         0.011     0.040                       0.013         0.046     0.162
+sequential OBF 10%                            10-40                     0.011         0.046     0.133                0.011         0.046     0.133              0.008         0.032     0.093               0.008         0.032     0.093                       0.035         0.135     0.407
+sequential OBF 5%, realistic bar              10-40                     0.005         0.022     0.073                0.005         0.022     0.073              0.003         0.014     0.049               0.003         0.014     0.049                       0.015         0.060     0.205
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40                     0.021         0.074     0.195                0.021         0.074     0.195              0.014         0.053     0.140               0.014         0.053     0.140                       0.066         0.234     0.649
+registered keep test (reference)              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+                                                      median_pass_date             median_first_money_date            
+scenario                                                 half the move   full move           half the move   full move
+gate                                          signals                                                                 
+mean CLV > 0 (today's gate)                   20            2027-01-03  2027-01-03              2026-12-19  2026-12-19
+t > 1.65                                      20            2027-01-03  2027-01-03              2026-12-19  2026-12-19
+bootstrap 90% lower bound > 0                 20            2027-01-03  2027-01-03              2026-12-19  2026-12-19
+bootstrap 95% lower bound > 0                 20            2027-01-03  2027-01-03              2026-12-19  2026-12-19
+t > calibrated 5%                             20            2027-01-03  2027-01-03              2026-12-19  2026-12-19
+sequential constant 5%                        10-40         2026-12-06  2026-12-06              2026-12-13  2026-12-13
+sequential constant 10%                       10-40         2026-11-30  2026-11-29              2026-12-06  2026-12-06
+sequential OBF 5%                             10-40         2026-12-14  2026-12-19              2026-12-19  2026-12-19
+sequential OBF 10%                            10-40         2026-12-13  2026-12-13              2026-12-19  2026-12-19
+sequential OBF 5%, realistic bar              10-40         2026-12-19  2026-12-14              2026-12-19  2026-12-19
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40         2026-12-13  2026-12-13              2026-12-19  2026-12-19
+
+NFL Rule B, 25 signals a season (wind cut-off about 13.1 mph; 24.5 a season in 2016-25)
+                                                      p_decided_by_season_end                         p_pass_by_season_end                         p_money_by_reg_end                         p_money_this_season                         mean_money_bets_this_season                        
+scenario                                                              no edge half the move full move              no edge half the move full move            no edge half the move full move             no edge half the move full move                     no edge half the move full move
+gate                                          signals                                                                                                                                                                                                                                        
+mean CLV > 0 (today's gate)                   20                        0.899         0.899     0.899                0.446         0.659     0.809              0.350         0.517     0.632               0.350         0.517     0.632                       1.940         2.875     3.516
+t > 1.65                                      20                        0.899         0.899     0.899                0.128         0.305     0.534              0.101         0.239     0.418               0.101         0.239     0.418                       0.563         1.327     2.324
+                                              30                        0.101         0.101     0.101                0.017         0.040     0.068              0.017         0.040     0.068               0.017         0.040     0.068                       0.017         0.040     0.068
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+bootstrap 90% lower bound > 0                 20                        0.899         0.899     0.899                0.191         0.395     0.622              0.150         0.310     0.487               0.150         0.310     0.487                       0.834         1.719     2.710
+                                              30                        0.101         0.101     0.101                0.024         0.050     0.076              0.024         0.050     0.076               0.024         0.050     0.076                       0.024         0.050     0.076
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+bootstrap 95% lower bound > 0                 20                        0.899         0.899     0.899                0.139         0.322     0.552              0.110         0.252     0.433               0.110         0.252     0.433                       0.614         1.401     2.405
+                                              30                        0.101         0.101     0.101                0.018         0.042     0.070              0.018         0.042     0.070               0.018         0.042     0.070                       0.018         0.042     0.070
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+t > calibrated 5%                             20                        0.899         0.899     0.899                0.040         0.129     0.306              0.032         0.102     0.240               0.032         0.102     0.240                       0.177         0.566     1.333
+                                              30                        0.101         0.101     0.101                0.006         0.021     0.046              0.006         0.021     0.046               0.006         0.021     0.046                       0.006         0.021     0.046
+                                              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+sequential constant 5%                        10-40                     0.031         0.107     0.272                0.031         0.107     0.272              0.028         0.096     0.246               0.028         0.096     0.246                       0.263         0.903     2.366
+sequential constant 10%                       10-40                     0.065         0.192     0.414                0.065         0.192     0.414              0.060         0.175     0.383               0.060         0.175     0.383                       0.590         1.726     3.939
+sequential OBF 5%                             10-40                     0.016         0.066     0.193                0.016         0.066     0.193              0.012         0.052     0.156               0.012         0.052     0.156                       0.063         0.289     0.944
+sequential OBF 10%                            10-40                     0.038         0.132     0.318                0.038         0.132     0.318              0.031         0.109     0.266               0.031         0.109     0.266                       0.185         0.697     1.877
+sequential OBF 5%, realistic bar              10-40                     0.020         0.079     0.219                0.020         0.079     0.219              0.016         0.063     0.179               0.016         0.063     0.179                       0.081         0.357     1.121
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40                     0.059         0.181     0.399                0.059         0.181     0.399              0.048         0.152     0.342               0.048         0.152     0.342                       0.316         1.063     2.637
+registered keep test (reference)              40                        0.000         0.000     0.000                0.000         0.000     0.000              0.000         0.000     0.000               0.000         0.000     0.000                       0.000         0.000     0.000
+                                                      median_pass_date             median_first_money_date            
+scenario                                                 half the move   full move           half the move   full move
+gate                                          signals                                                                 
+mean CLV > 0 (today's gate)                   20            2026-12-20  2026-12-20              2026-12-20  2026-12-20
+t > 1.65                                      20            2026-12-20  2026-12-20              2026-12-20  2026-12-20
+                                              30            2026-12-27  2026-12-27              2027-01-03  2027-01-03
+bootstrap 90% lower bound > 0                 20            2026-12-20  2026-12-20              2026-12-20  2026-12-20
+                                              30            2026-12-27  2026-12-27              2027-01-03  2027-01-03
+bootstrap 95% lower bound > 0                 20            2026-12-20  2026-12-20              2026-12-20  2026-12-20
+                                              30            2026-12-27  2026-12-27              2027-01-03  2027-01-03
+t > calibrated 5%                             20            2026-12-20  2026-12-20              2026-12-20  2026-12-20
+                                              30            2026-12-27  2026-12-27              2027-01-03  2027-01-03
+sequential constant 5%                        10-40         2026-11-29  2026-11-29              2026-12-06  2026-12-06
+sequential constant 10%                       10-40         2026-11-29  2026-11-22              2026-12-06  2026-12-04
+sequential OBF 5%                             10-40         2026-12-20  2026-12-20              2026-12-20  2026-12-20
+sequential OBF 10%                            10-40         2026-12-14  2026-12-13              2026-12-20  2026-12-14
+sequential OBF 5%, realistic bar              10-40         2026-12-20  2026-12-20              2026-12-20  2026-12-20
+sequential OBF, fixed bar 2.75 CFB / 2.14 NFL 10-40         2026-12-13  2026-12-13              2026-12-19  2026-12-13
+
+Betting from the first signal: bankroll change (1 unit = 0.5% of bankroll)
+ bets                                          scenario  mean_units  p5_units  p95_units  p_behind  mean_pct_bankroll  p5_pct_bankroll  p95_pct_bankroll
+   20                            no edge, 50.0% at -110       -0.91     -8.55       6.73      0.59              -0.45            -4.27              3.36
+   20                      half the edge, 53.3% at -110        0.35     -6.64       6.73      0.47               0.18            -3.32              3.36
+   20 historical edge (CFB windy unders), 56.6% at -110        1.61     -4.73       8.64      0.35               0.81            -2.36              4.32
+   40                            no edge, 50.0% at -110       -1.82    -11.36       7.73      0.56              -0.91            -5.68              3.86
+   40                      half the edge, 53.3% at -110        0.70     -9.45       9.64      0.40               0.35            -4.73              4.82
+   40 historical edge (CFB windy unders), 56.6% at -110        3.22     -7.55      13.45      0.25               1.61            -3.77              6.73
