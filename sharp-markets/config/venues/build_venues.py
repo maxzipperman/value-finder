@@ -54,12 +54,17 @@ def build_mlb(SRC, OUT):
             "Milwaukee Brewers": "Milwaukee", "Pittsburgh Pirates": "Pittsburgh", "St. Louis Cardinals": "St. Louis",
             "Arizona Diamondbacks": "Phoenix", "Colorado Rockies": "Denver", "Los Angeles Dodgers": "Los Angeles",
             "San Diego Padres": "San Diego", "San Francisco Giants": "San Francisco"}
+    # GeoJSON-Ballparks places these two parks off the field (Truist Park ~7 km, TD Ballpark ~12 km; still so
+    # upstream on Sep 29, 2026). Corrected by hand (#33); at join time the MLB Stats API's coordinates win anyway.
+    FIX = {"Truist Park": (33.8908, -84.4678), "TD Ballpark": (28.0034, -82.7866)}
     rows = []
     def vid(name):
         import re, unicodedata
         s = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
         return re.sub(r"[^a-z0-9]+", "_", s).strip("_")
     def add(name, city, country, lat, lon, roof, src, note=""):
+        if name in FIX:
+            (lat, lon), src = FIX[name], "manual (verify on the Mac); GeoJSON-Ballparks point was off the field"
         rows.append(dict(venue_id=vid(name), name=name, aliases=ALIAS.get(name, ""), city=city, country=country,
                          lat=round(float(lat), 5), lon=round(float(lon), 5), roof=roof, source=src, notes=note))
     for x in f:
@@ -264,17 +269,20 @@ def build_soccer(SRC, OUT):
         ("Jeju World Cup Stadium", "", "Seogwipo", "KR", 33.2460, 126.5090, "open", "K League 1"),
         ("Daejeon World Cup Stadium", "", "Daejeon", "KR", 36.3650, 127.3250, "open", "K League 1 2023-"),
         ("Anyang Sports Complex", "", "Anyang", "KR", 37.4000, 126.9500, "open", "K League 1 2025- (city-level location)"),
-        # ---- Euro 2024 (openfootball has no stadium file for it)
-        ("Olympiastadion Berlin", "Berlin", "Berlin", "DE", 52.5147, 13.2395, "covered", "Euro 2024"),
-        ("Allianz Arena", "München;Munich", "Munich", "DE", 48.2188, 11.6247, "covered", "Euro 2024"),
-        ("Signal Iduna Park", "Dortmund", "Dortmund", "DE", 51.4926, 7.4519, "covered", "Euro 2024"),
-        ("MHPArena", "Stuttgart", "Stuttgart", "DE", 48.7923, 9.2320, "covered", "Euro 2024"),
-        ("Volksparkstadion", "Hamburg", "Hamburg", "DE", 53.5872, 9.8986, "covered", "Euro 2024"),
+        # ---- Euro 2024 (openfootball has no stadium file for it). A roof over the stands with the pitch
+        # open to the sky is "open", as for Hard Rock, Lumen Field or the J1 grounds (relabelled from
+        # "covered" on Sep 29, 2026, #33 and HEAT_HYPOTHESES.md amendment 1); the three with a roof that
+        # closes over the pitch are "retractable".
+        ("Olympiastadion Berlin", "Berlin", "Berlin", "DE", 52.5147, 13.2395, "open", "Euro 2024"),
+        ("Allianz Arena", "München;Munich", "Munich", "DE", 48.2188, 11.6247, "open", "Euro 2024"),
+        ("Signal Iduna Park", "Dortmund", "Dortmund", "DE", 51.4926, 7.4519, "open", "Euro 2024"),
+        ("MHPArena", "Stuttgart", "Stuttgart", "DE", 48.7923, 9.2320, "open", "Euro 2024"),
+        ("Volksparkstadion", "Hamburg", "Hamburg", "DE", 53.5872, 9.8986, "open", "Euro 2024"),
         ("Merkur Spiel-Arena", "Düsseldorf", "Düsseldorf", "DE", 51.2616, 6.7331, "retractable", "Euro 2024"),
         ("Veltins-Arena", "Gelsenkirchen", "Gelsenkirchen", "DE", 51.5546, 7.0676, "retractable", "Euro 2024"),
         ("Deutsche Bank Park", "Frankfurt", "Frankfurt", "DE", 50.0686, 8.6455, "retractable", "Euro 2024"),
-        ("RheinEnergieStadion", "Köln;Cologne", "Cologne", "DE", 50.9336, 6.8752, "covered", "Euro 2024"),
-        ("Red Bull Arena Leipzig", "Leipzig", "Leipzig", "DE", 51.3458, 12.3483, "covered", "Euro 2024"),
+        ("RheinEnergieStadion", "Köln;Cologne", "Cologne", "DE", 50.9336, 6.8752, "open", "Euro 2024"),
+        ("Red Bull Arena Leipzig", "Leipzig", "Leipzig", "DE", 51.3458, 12.3483, "open", "Euro 2024"),
     ]
 
 

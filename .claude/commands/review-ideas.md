@@ -60,6 +60,7 @@ Paper-only sports-betting research. Each thesis becomes a pre-registered forward
 **`strategy-research/`**
 - `screen.py` screens candidate theses on data already in the repo (109 variants).
 - `prechecks.py` runs free pre-checks for backlog issues (#17 longshot bias, #6 crosswind and halftime split, #4 by spread size). It also covers #16 line shopping in CFB. It adds 25 variants, for a running total of 134. The CFB Rule B forecast replay (`cfb-weather/scripts/forecast_replay.py`) adds 1, for 135.
+- The 5M data-use plan (`strategy-research/odds-api-credits.md`, "Data-use plan") commits 56 more, for 191. They count now, before their analyses run, so any new analysis already uses the bar 0.05 / 191 = 0.00026, and each idea proposed here adds to 191.
 - `odds-api-credits.md`: which Odds API plan to buy and when, the credit cost and research value of every use, and the cost rules. `odds_budget.py` recomputes its numbers (no API calls).
 - `output/*.csv` holds the results: screens, key numbers, line moves, the Kalshi ladder, calibration slopes, and the Odds API budget (`odds_api_*.csv`).
 

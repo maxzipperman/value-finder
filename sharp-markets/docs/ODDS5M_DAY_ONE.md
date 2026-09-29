@@ -39,8 +39,9 @@ Run every command from `sharp-markets/`.
 
 ## Day one
 
-1. **New key.** Put the new key in `sharp-markets/.env` as `ODDS_API_KEY=...`.
-   - The alert jobs read `nfl-weather/.env` and `cfb-weather/.env`. Switching those keys is a separate change to the alert setup, and the owner or hub decides it (PR C covers the paid-tier quota setting).
+1. **New key, in all three `.env` files.** Put the paid key in `sharp-markets/.env`, `nfl-weather/.env` and `cfb-weather/.env` as `ODDS_API_KEY=...`, the same key in each.
+   - The three projects share one quota file (`~/.cache/value-finder/odds_quota.json`). Each record carries a fingerprint of the key that made the call, and a project ignores records made with a different key. With one key everywhere, the alerts, close capture and live uses all see the paid plan's real balance.
+   - `ops/install_live_uses.sh` refuses to install the live uses unless the three keys match.
 2. **Probe (P0), about 10,600 credits at most:**
    ```bash
    uv run markets odds5m probe --confirm --max-credits 11000
@@ -61,7 +62,8 @@ Run every command from `sharp-markets/`.
    ```bash
    uv run markets odds5m plan
    ```
-   It prints calls and the upper-bound credits per pull from the real schedules, in value order, with a running total. The PR A estimate was 4.18M for F1 through F6 (X3 was dropped by the owner). If the running total passes 4.5M, drop pulls from the bottom of the list (F6 first, then N1) rather than trimming seasons, and tell the owner. Never go below the 531,630-credit reserve: that's 300K plus X3's credits, which the owner assigned to the reserve.
+   It prints calls and the upper-bound credits per pull from the real schedules, in value order, with a running total. The PR A estimate was 4.18M for F1 through F6 (X3 was dropped by the owner). If the running total passes **4,440,000**, drop pulls from the bottom of the list (F6 first, then N1) rather than trimming seasons, and tell the owner. Never go below the 531,630-credit reserve: that's 300K plus X3's credits, which the owner assigned to the reserve.
+   - Where 4,440,000 comes from: 5,000,000 − 531,630 (the `--floor` reserve) − about 10,600 (the probe) − about 9,200 (October's live use on the same key: alerts 248, close capture ~385, trigger poller ~2,600, props log ~2,520, NBA collector from Oct 20 ~3,460) ≈ 4,448,600, rounded down. The floor stops every run at 4.47M spent, so a plan above this line can't finish anyway.
 4. **One week per sport**, to check coverage before the big spend. Dry run first to see the cost, then set `--max-credits` a little above it:
    ```bash
    uv run markets odds5m week                                 # prints the upper bound per pull
@@ -100,11 +102,12 @@ uv run markets weather venues --confirm           # game-level venues: MLB Stats
                                                   # about 60 + 30 calls; --leagues-too adds ESPN for the leagues (~350)
 uv run markets weather plan                       # games placed, games unplaced (with why), Open-Meteo requests
 uv run markets weather fetch --confirm --max-calls 9000   # one request per venue-month; rerun the next day for the rest
+                                                  # (--max-calls is in weighted calls: a month counts as 2-3)
 uv run markets weather join                       # -> data/weather/game_weather.parquet + unresolved.csv
 ```
 
 - **Unplaced games.** `plan` lists them by reason. For "unknown home team", add the Odds API's spelling to `aliases` in `config/venues/soccer_homes.csv` or `mlb_homes.csv`, then rerun. Never guess a venue.
-- **Rough size.** About 2,000 requests for MLB and 8,000–11,000 for soccer, archive and previous-run together. That's two days on Open-Meteo's free tier of 10,000 calls a day.
+- **Rough size.** About 2,000 requests for MLB and 8,000–11,000 for soccer, archive and previous-run together. Open-Meteo counts a month-long request as 3 calls (one per 14 days), so that's about 30,000–39,000 weighted calls: four or five daily runs at `--max-calls 9000`, under the free tier's 10,000 a day. A run paces itself at 1.25 weighted calls a second (under the 5,000-an-hour limit), so each takes about two hours. `plan` prints the weighted total.
 - **Report to the hub:**
   - the `plan` counts (placed, unplaced by reason);
   - how many games have a day-1 forecast;

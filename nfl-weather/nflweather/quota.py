@@ -17,10 +17,18 @@ sees what the other spent.
 Paid-tier setting: the plan size is read from the last response (used + remaining), so a
 paid key switches the tier by itself. ODDS_API_TIER=free|paid overrides that, and
 ODDS_BACKGROUND_FLOOR overrides the background floor. Alert, close-capture and manual
-runs behave exactly as before on every plan.
+runs behave exactly as before on every plan. Background launchd jobs get both from their plists
+(ops/install_live_uses.sh passes them through), because the weather projects don't load .env into the
+environment.
+
+Key identity: sharp-markets writes the same file with its own key. Every record carries a fingerprint
+of the key that made the call (sha256, first 12 hex digits; never the key itself), and read() ignores a
+record made with a different key than this project's, so one key's plan never decides another's tier or
+floor. A record without a fingerprint (written before September 29, 2026) is still read.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -28,6 +36,7 @@ from pathlib import Path
 import pandas as pd
 
 STATE = Path(os.environ.get("ODDS_QUOTA_FILE", Path.home() / ".cache" / "value-finder" / "odds_quota.json"))
+ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 MANUAL_FLOOR = 60
 FREE_PLAN = 500
 BACKGROUND_MIN_FLOOR = 2_000      # background loggers leave at least this many credits,
@@ -38,11 +47,30 @@ def scheduled() -> bool:
     return os.environ.get("XPC_SERVICE_NAME", "").endswith(".alerts")
 
 
+def fingerprint(key: str | None) -> str | None:
+    """A key's identity in the shared file: sha256, first 12 hex digits (the key itself is never stored)."""
+    return hashlib.sha256(key.encode()).hexdigest()[:12] if key else None
+
+
+def current_key() -> str | None:
+    """This project's ODDS_API_KEY: the environment first, then .env in the project root."""
+    key = os.environ.get("ODDS_API_KEY")
+    if not key and ENV_FILE.exists():
+        for line in ENV_FILE.read_text().splitlines():
+            if line.strip().startswith("ODDS_API_KEY="):
+                key = line.split("=", 1)[1].strip().strip('"').strip("'")
+    return key or None
+
+
 def read() -> dict | None:
-    """The last reported quota, or None when unknown or from an earlier month (it has reset since)."""
+    """The last reported quota, or None when unknown, from an earlier month (it has reset since), or
+    recorded with a different key than this project's."""
     try:
         s = json.loads(STATE.read_text())
     except (OSError, ValueError):
+        return None
+    mine = fingerprint(current_key())
+    if s.get("key") and mine and s["key"] != mine:
         return None
     now = pd.Timestamp.now(tz="UTC")
     seen = pd.Timestamp(s.get("utc", "1970-01-01"), tz="UTC") if "utc" in s else None
@@ -99,7 +127,7 @@ def check() -> str | None:
 
 
 def record(response, project: str) -> dict:
-    """Store the quota headers from any Odds API response and return them."""
+    """Store the quota headers from any Odds API response, with this project's key fingerprint, and return them."""
     h = response.headers
 
     def num(name):
@@ -111,7 +139,7 @@ def record(response, project: str) -> dict:
 
     s = dict(utc=pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"), project=project,
              status=response.status_code, last=num("x-requests-last"), used=num("x-requests-used"),
-             remaining=num("x-requests-remaining"))
+             remaining=num("x-requests-remaining"), key=fingerprint(current_key()))
     if s["remaining"] is None and s["used"] is None:
         return s                    # no quota headers (a network-level error page): keep the last known quota
     try:

@@ -41,6 +41,24 @@ def test_background_kind_is_paid_only_and_floored(monkeypatch):
     assert quota.check() is None                     # alerts and manual runs: unchanged
 
 
+def test_a_record_from_another_key_is_ignored(monkeypatch):
+    """#33 item 2: sharp-markets writes the shared file with its own key; a different key's plan never
+    sets this project's tier or floor. Records carry a fingerprint, never the key."""
+    monkeypatch.setenv("ODDS_QUOTA_KIND", "background")
+    monkeypatch.setenv("ODDS_API_KEY", "paid-key")
+
+    class R:
+        status_code, headers = 200, {"x-requests-remaining": "4000000", "x-requests-used": "1000000"}
+    quota.record(R(), "sharp-markets")
+    s = json.loads(quota.STATE.read_text())
+    assert s["key"] == quota.fingerprint("paid-key") and "paid-key" not in quota.STATE.read_text()
+    assert quota.tier() == "paid" and quota.check() is None
+    monkeypatch.setenv("ODDS_API_KEY", "free-key")                  # this project still has the free key
+    assert quota.read() is None and quota.tier() == "free" and "paid plan" in quota.check()
+    seen(4_000_000, 1_000_000)                                       # a record from before fingerprints: still read
+    assert quota.tier() == "paid"
+
+
 def test_free_plan_poller_makes_no_call(monkeypatch):
     monkeypatch.setenv("ODDS_QUOTA_KIND", "background")
     seen(450, 50)
@@ -88,3 +106,16 @@ def test_paid_poll_is_cached_first(monkeypatch):
     out = live.live_totals(NAMES)
     assert out.empty and quota.read()["remaining"] == 3_999_999
     assert list((fetch.RAW / "oddsapi" / "live").glob("*_poll.json"))
+
+
+def test_trigger_rows_from_the_2026_season_are_marked_sealed():
+    """#33 item 19: the trigger-poll log is holdout data for 2026-season games."""
+    assert live.sealed("2026-10-10T19:00:00Z") and live.sealed("2027-01-19T00:30:00Z")
+    assert not live.sealed("2026-01-19T00:30:00Z") and not live.sealed("2027-08-29T16:00:00Z")
+    quotes = live.book_rows([{"home_team": "Wyoming Cowboys", "away_team": "Air Force Falcons",
+                              "commence_time": "2026-10-10T19:00:00Z", "bookmakers": [{"key": "pinnacle", "markets": [
+                                  {"key": "totals", "last_update": "x", "outcomes": [
+                                      {"name": "Over", "price": -110, "point": 40.5},
+                                      {"name": "Under", "price": -110, "point": 40.5}]}]}]}], NAMES, "s")
+    rows = live.trigger_rows(live.active_triggers(ledger(), NOW), quotes, "p")
+    assert len(rows) == 1 and rows.sealed.tolist() == [True]

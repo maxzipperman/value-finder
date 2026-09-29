@@ -9,6 +9,10 @@ Every 10 minutes (scripts/poll_triggers.py), for games whose latest ledger row h
 trigger (board.rule_b_status past "no_trigger") and a kickoff within POLL_HORIZON, one live totals
 call (1 credit, fetch.LIVE_BOOKS) logs every book's total and prices to data/forward/trigger_polls.csv.
 The raw response goes to data/raw/oddsapi/live/ first, as the alerts' calls do.
+
+The log is holdout data. The 2026 CFB season is sealed (owner decision, Sep 28; the window in
+sharp-markets/config/odds5m.yaml), so every row for a 2026-season game carries sealed=True, and nothing
+analyses those rows until a hypothesis about them is pre-registered.
 """
 from __future__ import annotations
 
@@ -17,9 +21,17 @@ import json
 import pandas as pd
 import requests
 
+SEALED_SEASON = (pd.Timestamp("2026-08-20", tz="UTC"), pd.Timestamp("2027-01-26", tz="UTC"))  # odds5m.yaml CFB "2026"
 TRIGGERED = {"outside_horizon", "no_price", "price_too_high", "negative_ev", "SIGNAL"}
 POLL_HORIZON = pd.Timedelta(days=4)
 MATCH_TOLERANCE = pd.Timedelta(hours=12)
+
+
+def sealed(kick_utc) -> bool:
+    """True for a game in the sealed 2026 season (holdout data)."""
+    k = pd.Timestamp(kick_utc)
+    k = k.tz_localize("UTC") if k.tzinfo is None else k.tz_convert("UTC")
+    return bool(SEALED_SEASON[0] <= k < SEALED_SEASON[1])
 
 
 def active_triggers(ledger: pd.DataFrame, now: pd.Timestamp) -> pd.DataFrame:
@@ -82,13 +94,13 @@ def live_totals(team_names: dict) -> pd.DataFrame | str:
 
 def trigger_rows(active: pd.DataFrame, quotes: pd.DataFrame, poll_utc: str) -> pd.DataFrame:
     cols = ["poll_utc", "game_id", "kick_utc", "ledger_snapshot_utc", "rule_b", "wx_wind", "lead_days", "book",
-            "total", "under_price", "over_price", "book_update", "quote_utc"]
+            "total", "under_price", "over_price", "book_update", "quote_utc", "sealed"]
     if active.empty or quotes.empty:
         return pd.DataFrame(columns=cols)
     q = quotes.dropna(subset=["home_team", "away_team"]).copy()
     q["commence"] = pd.to_datetime(q.commence_utc, utc=True)
     m = active.merge(q, on=["home_team", "away_team"], how="inner")
     m = m[(m.commence - m.kick_utc).abs() <= MATCH_TOLERANCE]
-    m = m.assign(poll_utc=poll_utc, ledger_snapshot_utc=m.snapshot_utc,
+    m = m.assign(poll_utc=poll_utc, ledger_snapshot_utc=m.snapshot_utc, sealed=m.kick_utc.map(sealed),
                  kick_utc=m.kick_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
     return m[cols].reset_index(drop=True)

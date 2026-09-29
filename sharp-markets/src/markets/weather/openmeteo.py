@@ -6,14 +6,19 @@ Two sources, both cache-first under data/raw/_weather/:
   prev      what the forecast said one day earlier (previous-runs-api.open-meteo.com, `*_previous_day1`),
             available from 2024. This is the exposure the heat hypotheses bet on (docs/HEAT_HYPOTHESES.md).
 
-One request per venue per calendar month with games (the whole month, so cache keys are stable), so a
-season costs roughly venues x months. Open-Meteo's free tier allows 600 calls a minute and 10,000 a
-day; `fetch` defaults to 5 a second and stops at --max-calls.
+One request per venue per calendar month with games, so a season costs roughly venues x months. A
+request always covers the whole month (so its cache key is stable), which means a month is fetched only
+once it ended at least five days ago; games in the current or last month wait for a later run.
+
+Open-Meteo's free tier allows 600 calls a minute, 5,000 an hour and 10,000 a day, and a request for more
+than 14 days or more than 10 variables counts as several calls. So every budget here is in weighted
+calls (Request.weight: a 31-day month is 3): `fetch` paces itself at RATE_PER_SEC weighted calls a
+second (under the hourly limit) and stops before --max-calls weighted calls.
 """
 from __future__ import annotations
 
 import json
-from collections import defaultdict
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
@@ -27,6 +32,9 @@ ARCHIVE_VARS = ("temperature_2m", "relative_humidity_2m", "dew_point_2m", "wind_
 PREV_VARS = tuple(f"{v}_previous_day1" for v in ("temperature_2m", "relative_humidity_2m", "wind_speed_10m",
                                                  "wind_direction_10m", "precipitation"))
 PREV_FROM = date(2024, 1, 1)
+DAYS_PER_CALL, VARS_PER_CALL = 14, 10      # Open-Meteo bills longer or wider requests as several calls
+RATE_PER_SEC = 1.25                        # weighted calls a second: 4,500 an hour, under the 5,000 limit
+ARCHIVE_LAG_DAYS = 5
 SPORT = "_weather"
 SOURCES = {"archive": "openmeteo_archive", "prev": "openmeteo_prev"}
 
@@ -55,26 +63,38 @@ class Request:
     def key(self) -> str:
         return cache_key(SOURCES[self.kind], self.url, self.params)
 
+    @property
+    def weight(self) -> int:
+        """How many calls Open-Meteo counts this request as: one per 14 days and per 10 variables, rounded up."""
+        days = (self.end - self.start).days + 1
+        nvars = len(ARCHIVE_VARS if self.kind == "archive" else PREV_VARS)
+        return math.ceil(days / DAYS_PER_CALL) * math.ceil(nvars / VARS_PER_CALL)
+
+
+def month_end(year: int, month: int) -> date:
+    return (date(year, month, 1).replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+
+
+def month_ready(year: int, month: int, today: date | None = None) -> bool:
+    """A month is fetched only once it ended at least ARCHIVE_LAG_DAYS ago (the archive lags about five days)."""
+    today = today or datetime.now(timezone.utc).date()
+    return month_end(year, month) <= today - timedelta(days=ARCHIVE_LAG_DAYS)
+
 
 def plan_requests(venue_days: set[tuple[str, date]], venues: dict, today: date | None = None) -> list[Request]:
-    """Archive and previous-run requests for (venue_id, UTC day) pairs, one per venue per month.
-    The archive lags about five days, so days within five days of today are left for a later run."""
-    today = today or datetime.now(timezone.utc).date()
-    months: dict[tuple[str, int, int], list[date]] = defaultdict(list)
-    for vid, day in venue_days:
-        if day <= today - timedelta(days=5):
-            months[(vid, day.year, day.month)].append(day)
+    """Archive and previous-run requests for (venue_id, UTC day) pairs, one per venue per whole month.
+    Months that ended less than five days ago are left for a later run, so a request always covers the
+    whole month and its cache key never changes with the day it was planned."""
+    months = {(vid, day.year, day.month) for vid, day in venue_days if month_ready(day.year, day.month, today)}
     out = []
     for (vid, y, m) in sorted(months):
-        out += month_requests(vid, venues[vid], y, m, today)
+        out += month_requests(vid, venues[vid], y, m)
     return out
 
 
-def month_requests(vid: str, v, year: int, month: int, today: date | None = None) -> list[Request]:
-    """Whole calendar months (clipped to five days ago), so cache keys don't move as games are added."""
-    today = today or datetime.now(timezone.utc).date()
-    lo = date(year, month, 1)
-    hi = min((lo.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1), today - timedelta(days=5))
+def month_requests(vid: str, v, year: int, month: int) -> list[Request]:
+    """Whole calendar months, so cache keys don't move as games are added or as days pass."""
+    lo, hi = date(year, month, 1), month_end(year, month)
     out = [Request("archive", vid, v.lat, v.lon, lo, hi)]
     if hi >= PREV_FROM:
         out.append(Request("prev", vid, v.lat, v.lon, max(lo, PREV_FROM), hi))
@@ -82,7 +102,8 @@ def month_requests(vid: str, v, year: int, month: int, today: date | None = None
 
 
 class OpenMeteo:
-    def __init__(self, cache: RawCache, *, rate_per_sec: float = 5, session=None):
+    def __init__(self, cache: RawCache, *, rate_per_sec: float = RATE_PER_SEC, session=None):
+        """rate_per_sec is in weighted calls (Request.weight)."""
         self.cache = cache
         self.session = session or new_session()
         self.limiter = RateLimiter(rate_per_sec)
@@ -101,17 +122,24 @@ class OpenMeteo:
 
     def fetch(self, req: Request) -> dict:
         def fetch() -> Fetched:
+            for _ in range(req.weight - 1):             # http_get takes one slot; book the rest of the weight
+                self.limiter.wait()
             r = http_get(self.session, req.url, req.params, self.limiter, max_retries=4)
             return Fetched(r.status_code, dict(r.headers), r.text)
         return self.cache.get_or_fetch(sport=SPORT, source=SOURCES[req.kind], data_date=req.start.isoformat(),
                                        url=req.url, params=req.params, fetch=fetch, cache_statuses=(200,))
 
     def run(self, reqs: list[Request], *, max_calls: int) -> dict:
+        """Fetch what isn't cached, stopping before max_calls weighted calls (as Open-Meteo counts them)."""
         todo = [r for r in reqs if not self.is_cached(r)]
-        done = errors = 0
-        for r in todo[:max_calls]:
+        done = errors = calls = 0
+        for r in todo:
+            if calls + r.weight > max_calls:
+                print(f"  stopping: the next request would pass --max-calls {max_calls:,} weighted calls")
+                break
             rec = self.fetch(r)
             done += 1
+            calls += r.weight
             if rec["http_status"] != 200:
                 errors += 1
                 print(f"  {r.kind} {r.venue_id} {r.start}..{r.end}: HTTP {rec['http_status']} {(rec['body'] or '')[:160]}")
@@ -120,8 +148,9 @@ class OpenMeteo:
                     break
             if done % 250 == 0:
                 print(f"  {done}/{len(todo)}", flush=True)
-        return {"requests": len(reqs), "todo": len(todo), "fetched": done, "errors": errors,
-                "left": max(0, len(todo) - done)}
+        return {"requests": len(reqs), "todo": len(todo), "fetched": done, "weighted_calls": calls,
+                "errors": errors, "left": max(0, len(todo) - done),
+                "left_weighted": sum(r.weight for r in todo[done:])}
 
 
 def at_hour(body: dict | None, when: datetime) -> dict:

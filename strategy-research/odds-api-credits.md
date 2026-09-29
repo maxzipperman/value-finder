@@ -30,7 +30,7 @@ The owner answered all five questions, via the hub. The purchase is set for **Th
    - The terms don't say whether billing cycles follow the calendar month (see C6 below).
 
    So compact derived tables may go into this private repo, and raw responses stay out of git. That resolves open question 4.
-5. **After October: the owner decides around October 25, from real usage.** The estimates to decide with are in [below](#after-the-month-live-uses): the 20K plan ($30) covers the low case (about 9,400 credits a month). The high case (about 19,700, with the NBA collector polling all day) needs the 100K plan ($59), or the collector cut to game windows.
+5. **After October: the owner decides around October 25, from real usage.** The estimates to decide with are in [below](#after-the-month-live-uses): the 20K plan ($30) covers the low case (about 14,100 credits a month, with the NBA collector as shipped). The high case (about 20,000, with the collector's one-minute final-2h ticks turned on) needs the 100K plan ($59), or the collector's 56-hour window cut to game windows.
 
 ### The pulls, ranked by research value
 
@@ -98,10 +98,12 @@ These are live calls, so they cost 1 credit per market per book group per call, 
 | Close capture, one call per kickoff slot | ~137 |
 | Trigger poller: every 10 minutes while a Rule B wind trigger is active | ~2,600 |
 | NFL props, alternates and team totals log (9 markets at 4 snapshots a game) | ~2,520 |
-| NBA collector from PLAN.md §7, from the Oct 20 opener | 3,900–14,200 |
-| **Total** | **about 9,400–19,700** |
+| NBA collector from PLAN.md §7, from the Oct 20 opener | 8,640–14,460 |
+| **Total** | **about 14,100–20,000** |
 
-**The owner decides around October 25, from real usage** (decision 5). The low case fits the 20K plan ($30 a month) with room to spare. The high case is at the 20K plan's limit, so either trim the NBA collector to game windows or take the 100K plan ($59) during the NBA season.
+The NBA collector as shipped acts every 5 minutes while any game is inside its 56-hour window before tip (`sharp-markets/config/sports/nba.yaml`). In season some game always is, so it acts all day: 288 credits a day, or 8,640–8,928 a month. One-minute ticks in the final 2 hours, if turned on, add up to about 205 per game day (about 5,500 a month). The earlier figure of 3,888 assumed ticks only on game days' windows (corrected September 29, 2026, [#33](https://github.com/maxzipperman/value-finder/issues/33)).
+
+**The owner decides around October 25, from real usage** (decision 5). The low case (about 14,100) fits the 20K plan ($30 a month) with about 5,900 to spare. The high case (about 20,000) is just over the 20K plan, so either leave the one-minute ticks off, cut the collector's window to game windows, or take the 100K plan ($59) during the NBA season.
 
 ---
 

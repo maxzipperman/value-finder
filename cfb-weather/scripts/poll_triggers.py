@@ -6,6 +6,8 @@ Costs 1 credit per run with an active trigger and nothing otherwise. A backgroun
 only on a paid plan and stops at the background floor (quota.py).
 
     python scripts/poll_triggers.py [--now 2026-10-10T18:00:00Z]
+
+--now is a dry run: it lists the games that would be polled then, and calls and writes nothing.
 """
 import argparse
 import os
@@ -24,7 +26,7 @@ FWD = ROOT / "data" / "forward"
 LEDGER, OUT = FWD / "ledger.csv", FWD / "trigger_polls.csv"
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--now", help="pretend it's this UTC time when picking games (testing)")
+ap.add_argument("--now", help="pretend it's this UTC time when picking games (testing; a dry run)")
 args = ap.parse_args()
 now = pd.Timestamp(args.now) if args.now else pd.Timestamp.now(tz="UTC")
 
@@ -33,6 +35,9 @@ if not LEDGER.exists():
 active = live.active_triggers(pd.read_csv(LEDGER), now)
 if active.empty:
     sys.exit()
+if args.now:
+    sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z trigger poll (dry run): would poll {len(active)} triggered games: "
+                   + ", ".join(map(str, active.game_id))))
 quotes = live.live_totals(board.odds_team_names())
 if isinstance(quotes, str):
     sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z trigger poll: no prices for {len(active)} triggered games ({quotes})"))

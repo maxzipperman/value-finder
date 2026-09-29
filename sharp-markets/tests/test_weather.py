@@ -87,6 +87,22 @@ def test_open_meteo_plan_is_monthly_and_stable():
     assert recent == []                                      # the archive lags; left for a later run
 
 
+def test_recent_months_wait_until_whole_so_the_join_finds_them():
+    """#33 item 1: a month is planned only once it ended 5+ days ago, and always whole, so the key
+    `plan` fetched under is the key `kickoff_weather` reads, whatever day each ran."""
+    vs = V.venues()
+    day = {("coors_field", date(2026, 8, 20))}
+    assert om.plan_requests(day, vs, today=date(2026, 8, 30)) == []           # the month isn't over
+    assert om.plan_requests(day, vs, today=date(2026, 9, 3)) == []            # over, but only 3 days ago
+    reqs = om.plan_requests(day, vs, today=date(2026, 9, 5))
+    assert [(r.kind, r.start, r.end) for r in reqs] == [("archive", date(2026, 8, 1), date(2026, 8, 31)),
+                                                        ("prev", date(2026, 8, 1), date(2026, 8, 31))]
+    later = om.plan_requests(day, vs, today=date(2027, 1, 1))
+    assert [r.key for r in later] == [r.key for r in reqs]
+    v = vs["coors_field"]
+    assert [r.key for r in om.month_requests("coors_field", v, 2026, 8)] == [r.key for r in reqs]
+
+
 def hourly_body(start, hours, temp, rh, prev=False):
     sfx = "_previous_day1" if prev else ""
     times = [(start.replace(tzinfo=None) + (i * (t("2020-01-01T01:00:00Z") - t("2020-01-01T00:00:00Z"))))
@@ -138,7 +154,9 @@ def test_join_places_games_and_reads_cached_weather(tmp_path):
     body_a = hourly_body(t("2024-07-01T00:00:00Z"), 31 * 24, 97.0, 40.0)
     body_p = hourly_body(t("2024-07-01T00:00:00Z"), 31 * 24, 95.0, 45.0, prev=True)
     meteo = om.OpenMeteo(cache, session=Session([("archive-api", body_a), ("previous-runs", body_p)]), rate_per_sec=1e6)
-    assert meteo.run(reqs, max_calls=10)["fetched"] == 2
+    assert [r.weight for r in reqs] == [3, 3]                     # 31 days: Open-Meteo counts 3 calls each
+    assert meteo.run(reqs, max_calls=5)["fetched"] == 1           # a weighted budget: the second would pass 5
+    assert meteo.run(reqs, max_calls=10)["fetched"] == 1          # the first is cached
     rows, _ = join.build(cfg, cache, sports=["soccer_usa_mls"], weather=True, gv=gv, meteo=meteo)
     s1 = next(r for r in rows if r["id"] == "s1")
     assert s1["obs_temp_f"] == 97.0 and s1["fc1_temp_f"] == 95.0
@@ -150,3 +168,68 @@ def test_join_places_games_and_reads_cached_weather(tmp_path):
 def test_kick_hour_crosses_the_month_boundary():
     assert join.kick_hour(t("2024-07-31T23:40:00Z")) == t("2024-08-01T00:00:00Z")
     assert join.kick_hour(t("2024-07-31T23:20:00Z")) == t("2024-07-31T23:00:00Z")
+
+
+def test_open_meteo_weights_requests_as_it_bills_them():
+    """#33 item 10: more than 14 days counts as several calls, so the budget and pacing are weighted."""
+    v = V.venues()["coors_field"]
+    feb, jul = om.month_requests("coors_field", v, 2023, 2), om.month_requests("coors_field", v, 2024, 7)
+    assert [r.weight for r in feb] == [2] and [r.weight for r in jul] == [3, 3]
+    assert om.Request("archive", "x", 0, 0, date(2024, 1, 1), date(2024, 1, 14)).weight == 1
+
+
+def test_statsapi_coordinates_win_and_far_table_rows_are_flagged(tmp_path):
+    """#33 item 11: prefer the MLB Stats API's park coordinates when cached; flag table rows > 2 km away."""
+    cfg, cache = bulk.load_config(), RawCache(tmp_path)
+    games = [{"id": "c1", "sport": "baseball_mlb", "commence_time": t("2024-07-04T00:40:00Z"), "home_team": "Colorado Rockies",
+              "away_team": "Chicago Cubs"},
+             {"id": "c2", "sport": "baseball_mlb", "commence_time": t("2024-07-05T00:40:00Z"), "home_team": "Colorado Rockies",
+              "away_team": "Chicago Cubs"},                       # not in the Stats API cache: same park, same coordinates
+             {"id": "a1", "sport": "baseball_mlb", "commence_time": t("2024-07-04T23:20:00Z"), "home_team": "Atlanta Braves",
+              "away_team": "San Francisco Giants"}]
+    bulk.save_schedule(tmp_path, "baseball_mlb", [{**g, "first_seen": None} for g in games])
+
+    def g(pk, when, home, away, venue, lat, lon):
+        return {"gamePk": pk, "gameDate": when, "teams": {"home": {"team": {"name": home}}, "away": {"team": {"name": away}}},
+                "venue": {"name": venue, "location": {"defaultCoordinates": {"latitude": lat, "longitude": lon}}}}
+    statsapi = {"dates": [{"games": [g(1, "2024-07-04T00:40:00Z", "Colorado Rockies", "Chicago Cubs", "Coors Field", 39.9, -104.99),
+                                     g(2, "2024-07-04T23:20:00Z", "Atlanta Braves", "San Francisco Giants", "Truist Park",
+                                       33.8907, -84.4677)]}]}
+    gv = gamevenues.GameVenues(cache, session=Session([("statsapi", statsapi)]), rate_per_sec=1e6)
+    gv.mlb(date(2024, 7, 1), date(2024, 7, 31), fetch=True)
+    rows, unresolved = join.build(cfg, cache, sports=["baseball_mlb"], weather=False, gv=gv)
+    by = {r["id"]: r for r in rows}
+    assert not unresolved and (by["c1"]["lat"], by["c2"]["lat"]) == (39.9, 39.9)
+    assert by["c1"]["coord_source"] == "statsapi" and 15 < by["c1"]["coord_gap_km"] < 17
+    assert by["a1"]["coord_gap_km"] < 0.1                        # the corrected Truist Park row
+    assert list(join.coord_flags(rows)) == ["coors_field"]
+    assert V.distance_km(33.95389, -84.45472, 33.8908, -84.4678) > 6    # the old GeoJSON point was ~7 km off
+
+
+def test_espn_games_at_an_unknown_ground_say_so(tmp_path):
+    """#33 item 13: an ESPN-sourced game whose ground isn't in the table names it, in unresolved.csv too."""
+    cfg, cache = bulk.load_config(), RawCache(tmp_path)
+    game = {"id": "ca1", "sport": "soccer_conmebol_copa_america", "commence_time": t("2024-06-21T00:00:00Z"),
+            "home_team": "Argentina", "away_team": "Canada"}
+    bulk.save_schedule(tmp_path, "soccer_conmebol_copa_america", [{**game, "first_seen": None}])
+    espn = {"events": [{"date": "2024-06-21T00:00Z", "competitions": [{
+        "competitors": [{"homeAway": "home", "team": {"displayName": "Argentina"}},
+                        {"homeAway": "away", "team": {"displayName": "Canada"}}],
+        "venue": {"fullName": "Brand New Ground", "address": {"city": "Somewhere"}}}]}]}
+    gv = gamevenues.GameVenues(cache, session=Session([("espn", espn)]), rate_per_sec=1e6)
+    gv.espn("soccer_conmebol_copa_america", date(2024, 6, 1), date(2024, 6, 30), fetch=True)
+    rows, unresolved = join.build(cfg, cache, sports=["soccer_conmebol_copa_america"], weather=False, gv=gv)
+    assert rows == [] and unresolved[0]["venue_how"] == "ESPN venue not in table: Brand New Ground"
+    join.write(rows, unresolved, tmp_path / "out")
+    assert "Brand New Ground" in (tmp_path / "out" / "unresolved.csv").read_text().splitlines()[1]
+
+
+def test_roof_labels_are_consistent_for_the_heat_sample():
+    """#33 item 14 (HEAT_HYPOTHESES.md amendment 1): stands-only roofs are `open`, so Euro 2024 contributes
+    games; World Cup 2022 has open-ground matches (Stadium 974), so it is excluded by competition, not by roof."""
+    from collections import Counter
+    vs = V.venues()
+    open_by = Counter((r["sport_key"], r["kickoff_utc"][:4]) for r in V.fixtures() if vs[r["venue_id"]].roof == "open")
+    assert open_by[("soccer_uefa_european_championship", "2024")] == 37
+    assert open_by[("soccer_fifa_world_cup", "2022")] == 7 and open_by[("soccer_fifa_world_cup", "2026")] == 65
+    assert [v.venue_id for v in vs.values() if v.roof == "covered"] == ["sofi_stadium"]

@@ -3,6 +3,10 @@
 Every HTTP response is persisted (one row per file, body kept verbatim) *before* it is used.
 Lookups ignore the date directory, so a rerun on any day finds the cached file and never re-fetches.
 Secrets (e.g. apiKey) are stripped from the stored params and the cache key.
+
+Dated sources (`dated_sources`) are the exception: their requests are keyed to one date (the forward
+collector's tick), so get_or_fetch looks only in that date's directory. That keeps a once-a-minute
+process from listing a source's whole, ever-growing history on every run.
 """
 from __future__ import annotations
 
@@ -57,19 +61,21 @@ def cache_key(source: str, url: str, params: dict) -> str:
 
 
 class RawCache:
-    def __init__(self, raw_dir: Path = RAW_DIR, offline: bool = False):
+    def __init__(self, raw_dir: Path = RAW_DIR, offline: bool = False, dated_sources: frozenset[str] = frozenset()):
         self.raw_dir = Path(raw_dir)
         self.offline = offline
+        self.dated_sources = frozenset(dated_sources)
         self.stats: Counter = Counter()
-        self._index: dict[tuple[str, str], dict[str, Path]] = {}
+        self._index: dict[tuple, dict[str, Path]] = {}
 
-    def _source_index(self, sport: str, source: str) -> dict[str, Path]:
-        key = (sport, source)
+    def _source_index(self, sport: str, source: str, data_date: str | None = None) -> dict[str, Path]:
+        """key -> path for a source: every date directory, or just `data_date`'s when given."""
+        key = (sport, source) if data_date is None else (sport, source, data_date)
         if key not in self._index:
             idx: dict[str, Path] = {}
             base = self.raw_dir / sport / source
             if base.exists():
-                for p in base.glob("*/*.parquet"):
+                for p in base.glob("*/*.parquet" if data_date is None else f"{data_date}/*.parquet"):
                     idx[p.stem] = p
             self._index[key] = idx
         return self._index[key]
@@ -87,7 +93,8 @@ class RawCache:
         """
         params = {**params, **(key_extra or {})}
         key = cache_key(source, url, params)
-        hit = self.lookup(sport, source, key)
+        dated = data_date if source in self.dated_sources else None
+        hit = self._source_index(sport, source, dated).get(key)
         if hit is not None:
             self.stats[f"hit:{source}"] += 1
             return read_record(hit)
@@ -110,7 +117,7 @@ class RawCache:
         if res.status in cache_statuses:
             path = self.raw_dir / sport / source / data_date / f"{key}.parquet"
             write_record(path, record)
-            self._source_index(sport, source)[key] = path
+            self._source_index(sport, source, dated)[key] = path
         return record
 
     @property

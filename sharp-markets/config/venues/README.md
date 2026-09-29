@@ -15,15 +15,16 @@ These tables are used by `markets weather` (`src/markets/weather/`) to place eac
 - **Coordinates.**
   - Hand-made rows say `manual (verify on the Mac)`.
   - Rows marked "city-level location" in `used_by`/`notes` are placed at the city, not the stadium. That's within one Open-Meteo grid cell of the ground, which is fine for heat, but not for wind at a specific park.
-  - On the Mac, `markets weather venues --confirm` pulls the MLB Stats API's own park coordinates and places every MLB game exactly.
+  - On the Mac, `markets weather venues --confirm` pulls the MLB Stats API's own park coordinates and places every MLB game exactly. Once cached, the join uses the Stats API's coordinates for every game at that park, and `markets weather plan` lists any park whose row here is more than 2 km away, so the row can be corrected.
+  - GeoJSON-Ballparks puts Truist Park about 7 km and TD Ballpark about 12 km from the field. Both rows were corrected by hand (September 29, 2026), and `build_venues.py` keeps the corrections.
 - **Team names.** Names are matched after normalizing: no accents, no case, and no "FC"/"SC"/"Club".
   - After the day-one probe, `markets weather plan` lists every game it couldn't place and why, for example "unknown home team".
   - To fix one, add the Odds API's spelling to `aliases`. Never guess a venue.
 - **Roofs:**
-  - `open`
+  - `open`: the pitch is open to the sky. A roof over the stands only still counts as open, e.g. Hard Rock Stadium, Lumen Field, most J1 grounds and the seven Euro 2024 grounds without a closing roof (relabelled from `covered` on September 29, 2026; [`HEAT_HYPOTHESES.md`](../../docs/HEAT_HYPOTHESES.md) amendment 1)
   - `retractable` (status per game unknown)
   - `dome`
-  - `covered` (a fixed roof over the stands and an open pitch, e.g. SoFi or the Euro 2024 grounds)
+  - `covered`: a fixed roof over the whole bowl, pitch included, with open sides (SoFi Stadium)
   - `cooled` (the World Cup 2022 stadiums)
 
   The heat hypotheses use `open` only.

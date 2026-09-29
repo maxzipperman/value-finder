@@ -121,7 +121,14 @@ def cmd_collect(args) -> None:
 
     from .collector import Collector
     from .settings import parse_ts
-    row = Collector(args.sport).tick(parse_ts(args.now) if args.now else None)
+    if not args.now:
+        row = Collector(args.sport).tick()
+    else:                                   # a pretend time never touches the live state, cache or credits
+        import tempfile
+        from pathlib import Path
+        scratch = Path(tempfile.mkdtemp(prefix="collector-now-"))
+        print(f"--now: dry run in {scratch} (no Odds API credits; live state untouched)")
+        row = Collector(args.sport, data_dir=scratch, dry_run=True).tick(parse_ts(args.now))
     if row:
         print(json.dumps(row, default=str))
 
@@ -179,14 +186,16 @@ def main(argv: list[str] | None = None) -> None:
     h.set_defaults(fn=cmd_h4a, sport="nfl")
 
     col = sub.add_parser("collect", help="one forward-collector tick (PLAN.md section 7; launchd runs it every minute)")
-    col.add_argument("--now", help="pretend it's this UTC time (testing)")
+    col.add_argument("--now", help="pretend it's this UTC time (testing: a dry run in a scratch dir, no credits)")
     col.set_defaults(fn=cmd_collect)
 
     w = sub.add_parser("weather", help="venue and weather joins for MLB and soccer (docs/HEAT_HYPOTHESES.md)")
     w.add_argument("stage", choices=["check", "venues", "plan", "fetch", "join"])
     w.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
     w.add_argument("--confirm", action="store_true", help="venues/fetch: actually call the free APIs")
-    w.add_argument("--max-calls", type=int, default=9000, help="fetch: Open-Meteo calls this run (free tier: 10,000 a day)")
+    w.add_argument("--max-calls", type=int, default=9000,
+                   help="fetch: weighted Open-Meteo calls this run, as Open-Meteo counts them (a 31-day request is 3; "
+                        "free tier: 10,000 a day)")
     w.add_argument("--leagues-too", action="store_true", help="venues: ESPN match venues for the leagues too")
     w.set_defaults(fn=cmd_weather)
 
