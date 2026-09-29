@@ -50,27 +50,26 @@ game list exists, `balance` without `--confirm`) prints why and exits with statu
 
 The probe's last line after a stop says which of two things comes next. After a budget stop, a network failure, a full
 disk, Ctrl-C, a rejected key, a rate limit (429), an answer that wasn't data, `the account balance is unknown`, or sweeps
-that didn't finish, it says
-``Rerun the same command until it prints `P0 done` ...``. After a billing alarm (a call billed above its most possible
-cost, billing that can't be read or trusted, a balance that can't be read, the account charged more than reported),
-the floor, repeated error answers or a bug, it says `Tell the hub before rerunning ...`: then don't rerun. A rerun
-would buy more of the same, and the answers behind the alarm are saved, so the rerun wouldn't stop on them again and
-could end `P0 done` with the alarm gone from the screen.
+that didn't finish, it says ``Rerun the same command until it prints `P0 done` ...`` (and, if it stops the same way
+twice, to tell the hub). After a billing alarm (a call billed above its most possible cost, billing that can't be read
+or trusted, a balance that can't be read, the account charged more than reported), the floor, repeated error answers or
+a bug, it says `Tell the hub before rerunning ...`: then don't rerun. A rerun would buy more of the same, and the
+answers behind the alarm are saved, so the rerun wouldn't stop on them again and could end `P0 done` with the alarm
+gone from the screen.
 
 **What can still be lost beyond `--max-credits`.** When every answer reports what it was charged, nothing. But the API
 charges for a call before its answer arrives, so our side can only count afterwards, from what the answer and the
-balance say, and can't stop a charge it hasn't seen yet. So a run can still end past its budget or its floor by: the
-one call billed above its most possible cost (30 credits for F1, 20 for F2, 60 for F3, 1 for a probe sweep, 10 for the
-NBA week), after which it stops; when the API charges more than it reports, the last call's extra plus one call's charge
-for each answer the balance arrives late, and one call's charge more if the balance goes up during the run (a top-up or
-the monthly renewal) (in simulations of calls charged twice what they report: 0, 60 and 120 credits past a 3,000 budget
-for F1, and 0, 120 and 240 for F3, with the balance live, one answer late and two late, and 60 more for F1, 120 for F3,
-when the balance went up mid-run); a call or two per run when two runs share the key near the floor (20, 50 and 80
-credits below it with F1's calls, 60, 120 and 170 with F3's, with the balance live, one and two answers late); and the
-call that was out at a Ctrl-C, which a rerun may buy again. Any answer that reports less than it was charged while the
-balance never moves has no limit, because then nothing our side can read shows the charge: for example an empty answer
-charged although it reports 0, a featured snapshot charged for markets that didn't come back, or an answer charged ten
-times what it reports. Only the account page on the Odds API site would show it.
+balance say. So a run can still end past its budget or its floor by: one call billed above its most possible cost (30
+credits for F1, 20 for F2, 60 for F3, 1 for a probe sweep, 10 for the NBA week), after which it stops; when the API
+charges more than it reports, the last call's extra plus one call's charge for each answer the balance is late, and one
+call's charge more if the balance goes up mid-run (a top-up or the monthly renewal) (simulated with calls charged twice
+what they report: 0, 60 and 120 credits past a 3,000 budget for F1 and 0, 120 and 240 for F3, with the balance live,
+one and two answers late); a call or two per run when two runs share the key near the floor (20, 50 and 80 credits below
+it for F1, 60, 120 and 170 for F3, the same three cases); and the call that was out at a Ctrl-C, which a rerun may buy
+again. Any answer that reports less than it was charged while the balance never moves has no limit, because then
+nothing our side can read shows the charge (an empty answer charged although it reports 0, a snapshot charged for
+markets that didn't come back, a call charged ten times its report); only the account page on the Odds API site would
+show it.
 
 The run counts a featured snapshot with some of the markets asked for missing at 10 × the markets that came back,
 because it isn't yet known whether the API bills the markets asked for (as its documentation says) or the ones
