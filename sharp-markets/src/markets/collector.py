@@ -42,7 +42,7 @@ from pathlib import Path
 import yaml
 
 from .cache import Fetched, RawCache, body_json
-from .http import RateLimiter, http_get, new_session
+from .http import RateLimiter, http_get, new_session, scrub
 from .kalshi.client import KalshiClient, KalshiHTTPError
 from .settings import CONFIG_DIR, DATA_DIR, env, parse_ts, utcnow
 
@@ -153,7 +153,7 @@ class Collector:
                 return s["events"]
         status, headers, text = self._odds_get(f"/sports/{self.c['sport_key']}/events", {"dateFormat": "iso"})
         if status != 200:
-            raise RuntimeError(f"Odds API /events -> HTTP {status}: {text[:200]}")
+            raise RuntimeError(f"Odds API /events -> HTTP {status}: {scrub(text)[:200]}")   # the body may echo the key
         if not self.dry_run:
             quota_record(status, headers, now, self.key)
         events = json.loads(text)
@@ -238,7 +238,7 @@ class Collector:
             try:
                 n, final = self.windows(self.schedule(now), now)
             except Exception as e:          # noqa: BLE001 - a failed schedule read is logged, never fatal
-                return self._heartbeat({"action": "error", "note": f"schedule: {e}"[:300]}, state, now)
+                return self._heartbeat({"action": "error", "note": scrub(f"schedule: {e}")[:300]}, state, now)
             step = self.c.get("final_every_min") if (final and self.c.get("final_every_min")) else self.c["every_min"]
             last = parse_ts(state.get("last_tick"))
             if last and last <= now and now - last < timedelta(minutes=step) - timedelta(seconds=30):
@@ -251,7 +251,7 @@ class Collector:
                 try:
                     row.update(part())
                 except Exception as e:      # noqa: BLE001 - one source failing must not lose the other
-                    row.update({f"{name}_status": "error", "note": f"{name}: {type(e).__name__}: {e}"[:300]})
+                    row.update({f"{name}_status": "error", "note": scrub(f"{name}: {type(e).__name__}: {e}")[:300]})
             return self._heartbeat(row, state, now)
         finally:
             lock.unlink(missing_ok=True)

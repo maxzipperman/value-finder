@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 
 from ..cache import Fetched, RawCache, body_json, cache_key
-from ..http import RateLimiter, http_get, new_session
+from ..http import RateLimiter, http_get, new_session, scrub
 from ..settings import env
 from .schedule import credits_per_snapshot
 
@@ -44,31 +44,42 @@ class OddsApiClient:
                                      f"{self.credits_spent}/{self.max_credits} already spent this run")
         def fetch() -> Fetched:   # the key is only needed on a cache miss
             r = http_get(self.session, url, {**params, "apiKey": env("ODDS_API_KEY")}, self.limiter)
-            return Fetched(r.status_code, dict(r.headers), r.text)
+            return Fetched(r.status_code, {k.lower(): v for k, v in r.headers.items()}, r.text)
 
         rec = self.cache.get_or_fetch(sport=self.sport, source=source, data_date=data_date, url=url,
                                       params=params, fetch=fetch, cache_statuses=(200,))
         headers = body_json({"body": rec["headers_json"]}) or {}
         if rec["http_status"] != 200:
-            raise OddsApiError(f"Odds API {path} -> HTTP {rec['http_status']}: {(rec['body'] or '')[:300]}")
+            # the body is printed only with any key blanked, in case a server or proxy echoes the request
+            raise OddsApiError(f"Odds API {path} -> HTTP {rec['http_status']}: {scrub(rec['body'] or '')[:300]}")
         return {"record": rec, "headers": headers, "body": body_json(rec)}
 
-    def _account(self, before_http: int, headers: dict, source: str) -> None:
+    def _account(self, before_http: int, headers: dict, source: str, expected_cost: int) -> None:
+        """Count a real request's cost. The billing fails closed, as in the bulk puller (bulk._cost): a cost that
+        is missing or not a number counts the call's upper bound and stops the pull (OddsApiError; the snapshot
+        is already cached), and a fraction of a credit counts as a whole one."""
         if self.cache.stats.get(f"http:{source}", 0) > before_http:     # a real request happened
-            last = headers.get("x-requests-last")
-            self.credits_spent += int(float(last)) if last is not None else 0
-            if headers.get("x-requests-remaining") is not None:
-                self.remaining = int(float(headers["x-requests-remaining"]))
+            from .bulk import _balance, _cost
+            raw = headers.get("x-requests-last")
+            last = _cost(raw)
+            self.credits_spent += expected_cost if last is None else last
+            left = _balance(headers.get("x-requests-remaining"))
+            if left is not None:
+                self.remaining = left
+            if last is None:
+                raise OddsApiError(f"the billing could not be read (x-requests-last {raw!r}), so the call's upper "
+                                   f"bound, {expected_cost}, was counted as spent. The snapshot is cached. Check the "
+                                   "billing before going on.")
 
     def historical_odds(self, *, sport_key: str, at: datetime, bookmakers: tuple[str, ...], markets: str = "h2h") -> dict:
         params = {"bookmakers": ",".join(bookmakers), "markets": markets, "oddsFormat": "decimal",
                   "dateFormat": "iso", "date": at.strftime("%Y-%m-%dT%H:%M:%SZ")}
         source = "oddsapi_hist"
         before = self.cache.stats.get(f"http:{source}", 0)
+        expected = credits_per_snapshot(len(markets.split(",")), len(bookmakers))
         res = self._request(f"/historical/sports/{sport_key}/odds", params, source=source,
-                            data_date=at.date().isoformat(),
-                            expected_cost=credits_per_snapshot(len(markets.split(",")), len(bookmakers)))
-        self._account(before, res["headers"], source)
+                            data_date=at.date().isoformat(), expected_cost=expected)
+        self._account(before, res["headers"], source, expected)
         return res["body"]
 
     def is_cached_historical(self, *, sport_key: str, at: datetime, bookmakers: tuple[str, ...], markets: str = "h2h") -> bool:
