@@ -59,17 +59,19 @@ def _b2b(games: list[Game]) -> dict[tuple[str, str], bool]:
             for g in games if g.game_date_et for t in (g.away_code, g.home_code)}
 
 
-def sharp_odds_rows(con, sport: str, teams, *, include_sealed: bool = False) -> tuple[list[dict], Counter, Counter, int]:
+def sharp_odds_rows(con, sport: str, teams, *,
+                    include_sealed: bool = False) -> tuple[list[dict], Counter, Counter, int, int]:
     """Snapshot rows from data/raw/{sport}/oddsapi_hist (`odds-pull`, and N1 through cache_as), the team-name
-    misses, the rows left out by sealed season label, and the rows left out because their game time can't be
-    read. A row whose game falls in a sealed season of config/odds5m.yaml is left out unless
-    include_sealed=True (only a pre-registered test may pass it), the same rule as bulk.load_rows. A row with no
-    readable commence_time is always left out (and counted): its season can't be told, and no game can be
-    matched to it."""
-    rows_out, unknown_names, sealed_out, no_kick = [], Counter(), Counter(), 0
+    misses, the rows left out by sealed season label, the rows left out because their game time can't be
+    read, and the cached responses skipped because their body can't be read. A row whose game falls in a sealed
+    season of config/odds5m.yaml is left out unless include_sealed=True (only a pre-registered test may pass
+    it), the same rule as bulk.load_rows. A row with no readable commence_time is always left out (and
+    counted): its season can't be told, and no game can be matched to it. A cached body that isn't the JSON
+    snapshot it should be (a web page cached by an older odds-pull, say) is skipped and counted, never a crash."""
+    rows_out, unknown_names, sealed_out, no_kick, unreadable = [], Counter(), Counter(), 0, 0
     glob = _raw_glob(sport, "oddsapi_hist")
     if not glob:
-        return rows_out, unknown_names, sealed_out, no_kick
+        return rows_out, unknown_names, sealed_out, no_kick, unreadable
     from ..oddsapi.bulk import game_time, load_config, window_for
     odds5m = load_config()
     key = ODDS5M_SPORT_KEY.get(sport)
@@ -78,7 +80,11 @@ def sharp_odds_rows(con, sport: str, teams, *, include_sealed: bool = False) -> 
                          "config/odds5m.yaml knows, so its sealed seasons can't be left out. Add it before building.")
     for params_json, body in con.execute(
             f"SELECT params_json, body FROM read_parquet('{glob}') WHERE http_status = 200").fetchall():
-        rows, unknown = snapshot_rows(json.loads(body), json.loads(params_json)["date"], teams)
+        try:
+            rows, unknown = snapshot_rows(json.loads(body), json.loads(params_json)["date"], teams)
+        except (ValueError, TypeError, KeyError, AttributeError):
+            unreadable += 1
+            continue
         for r in rows:
             k = game_time(r["commence_time"])
             if k is None:
@@ -90,7 +96,7 @@ def sharp_odds_rows(con, sport: str, teams, *, include_sealed: bool = False) -> 
                 continue
             rows_out.append({**r, "sport": sport})
         unknown_names.update(unknown)
-    return rows_out, unknown_names, sealed_out, no_kick
+    return rows_out, unknown_names, sealed_out, no_kick, unreadable
 
 
 def build(ctx: Context, *, include_sealed: bool = False) -> dict:
@@ -108,9 +114,11 @@ def build(ctx: Context, *, include_sealed: bool = False) -> dict:
         con.execute(sql.YES_TAKER_1M)
 
     # -- Sharp odds (Python: team-name resolution; sealed seasons left out) -------------------------
-    odds_rows, unknown_names, sealed_out, no_kick = sharp_odds_rows(con, sport, teams, include_sealed=include_sealed)
+    odds_rows, unknown_names, sealed_out, no_kick, unreadable = sharp_odds_rows(con, sport, teams,
+                                                                                include_sealed=include_sealed)
     summary["sealed_odds_rows_left_out"] = dict(sealed_out)
     summary["odds_rows_without_commence_time"] = no_kick
+    summary["odds_bodies_unreadable"] = unreadable
     odds_schema = pa.schema([(c, pa.string()) for c in (
         "sport", "snapshot_ts", "requested_ts", "odds_event_id", "commence_time", "home_team", "away_team",
         "home_code", "away_code", "bookmaker", "book_last_update", "market_key", "market_last_update",
@@ -214,6 +222,10 @@ def build(ctx: Context, *, include_sealed: bool = False) -> dict:
                           "market_ticker": None, "ts": None,
                           "detail": f"{no_kick} odds rows with no readable commence_time left out of sharp_odds "
                                     "(their season, sealed or not, can't be told)"})
+    if unreadable:
+        anom_rows.append({"sport": sport, "kind": "odds_body_unreadable", "game_id": None, "market_ticker": None,
+                          "ts": None, "detail": f"{unreadable} cached odds responses in data/raw/{sport}/oddsapi_hist "
+                                                "could not be read as a snapshot and were skipped"})
 
     s = pa.string()
     _load(con, "stg_games", game_rows, pa.schema([(k, s) for k in game_rows[0]] if game_rows else []))

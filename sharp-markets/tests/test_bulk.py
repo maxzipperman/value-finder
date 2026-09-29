@@ -3,7 +3,7 @@ import csv
 import json
 import logging
 from argparse import Namespace
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -527,7 +527,8 @@ def _saved_nfl(cfg, raw):
 def test_full_refuses_f3_without_seasons_even_in_the_dry_run(tmp_path, capsys):
     """Finding 4: `full --pull F3` without --seasons would buy all of 2023-26 (136,800) instead of the day-one
     slice (34,200). The real config marks F3 require_seasons; `full` refuses, dry run included, and names the
-    day-one command. With --seasons the dry run goes ahead as before; `week`, `plan` and `check` are unchanged."""
+    day-one command. With --seasons the dry run goes ahead as before. Since the Sep 29 follow-up `week` applies
+    the same slice rule (final review, finding 12); `plan` and `check` are unchanged."""
     real = bulk.load_config()
     assert real["pulls"]["F3"]["require_seasons"] == {"F3a": "2025", "F3b": "2023,2024,2026"}
     assert [p for p, v in real["pulls"].items() if v.get("require_seasons")] == ["F3"]
@@ -549,7 +550,8 @@ def test_full_refuses_f3_without_seasons_even_in_the_dry_run(tmp_path, capsys):
     assert bulk.stage_pull(real, RawCache(tmp_path), args(pull="F3", seasons=["2025"], confirm=False), week=False,
                            now=now) == []
     assert "F3  2 calls, 2 to fetch, at most 120 credits" in capsys.readouterr().out    # one 2025 game, T-24h + close
-    assert bulk.stage_pull(real, RawCache(tmp_path), args(pull="F3", confirm=False), week=True, now=now) == []
+    with pytest.raises(SystemExit, match="`week --pull F3` needs --seasons"):
+        bulk.stage_pull(real, RawCache(tmp_path), args(pull="F3", confirm=False), week=True, now=now)
 
 
 def test_a_cache_as_pull_never_plans_a_sealed_call(cfg):
@@ -595,10 +597,10 @@ def test_markets_build_leaves_sealed_games_out(tmp_path, monkeypatch):
                                                                      ev("sealed", "2026-10-21T23:30:00Z")]})   # 2026-27
     put("nba", "k3", {"timestamp": "2026-10-21T23:00:00Z", "data": [no_kick, ev("garbled", "not a time")]})
     con, teams = duckdb.connect(), load_teams("nba")
-    rows, unknown, left_out, no_time = run.sharp_odds_rows(con, "nba", teams)
+    rows, unknown, left_out, no_time, _ = run.sharp_odds_rows(con, "nba", teams)
     assert {r["odds_event_id"] for r in rows} == {"open"} and dict(left_out) == {"2026-27": 2} and not unknown
     assert no_time == 4                   # audit 2 review: a row whose season can't be told is never kept
-    rows, _, left_out, no_time = run.sharp_odds_rows(con, "nba", teams, include_sealed=True)
+    rows, _, left_out, no_time, _ = run.sharp_odds_rows(con, "nba", teams, include_sealed=True)
     assert {r["odds_event_id"] for r in rows} == {"open", "sealed"} and not left_out and no_time == 4
     for sport, key in run.ODDS5M_SPORT_KEY.items():                                     # the explicit map agrees
         assert load_sport(sport).odds_sport_key == key and key in bulk.load_config()["sports"]
@@ -690,10 +692,13 @@ def test_many_billed_retries_stop_before_the_budget_or_the_floor(cfg, tmp_path, 
 
 
 def test_a_zero_or_fractional_cost_never_undercounts(cfg, tmp_path, monkeypatch):
-    """Review minors: x-requests-last "0" while the balance drops counts the drop; "19.5" counts 20, not 19."""
+    """Review minors: x-requests-last "0" while the balance drops counts the drop; "19.5" counts 20, not 19. Since
+    the Sep 29 follow-up, a response with data that reports 0 also counts its documented cost and stops the run at
+    once (final review, finding 1)."""
     api = Billed(bad=0, last="0")
     res = bulk.run_calls(_retrying_client(tmp_path, api, monkeypatch, max_credits=100), _nfl_calls(cfg))
-    assert api.billed <= 100 and res["spent"] >= api.billed and "run budget" in res["stopped"]
+    assert api.billed <= 100 and res["spent"] >= api.billed and "billing cannot be trusted" in res["stopped"]
+    assert res["fetched"] == 1
     assert bulk._cost("19.5") == 20 and bulk._cost("20") == 20 and bulk._balance("4999.9") == 4999
 
 
@@ -827,8 +832,9 @@ def test_full_takes_seasons_only_as_one_declared_slice(tmp_path, capsys):
     assert bulk.stage_pull(real, RawCache(tmp_path), args(pull="F3", seasons=["2026", "2023", "2024"], confirm=False),
                            week=False, now=now) == []                                  # F3b, in any order
     capsys.readouterr()
-    bulk.stage_pull(real, RawCache(tmp_path), args(pull="F3", seasons=["2099"], confirm=False), week=True, now=now)
-    assert "warning: F3: no game in the saved schedules is in season 2099" in capsys.readouterr().out
+    # `week` lets --seasons pick the week of a pull bought whole (F3 needs a slice there too, since Sep 29)
+    bulk.stage_pull(real, RawCache(tmp_path), args(pull="F1", seasons=["2099"], confirm=False), week=True, now=now)
+    assert "warning: F1: no game in the saved schedules is in season 2099" in capsys.readouterr().out
 
 
 def test_balance_reads_the_credits_left_and_spends_nothing(tmp_path, capsys, monkeypatch):
@@ -858,6 +864,8 @@ def test_odds_pull_billing_fails_closed(tmp_path, monkeypatch, bad):
 
     class Api:
         def get(self, url, params=None, timeout=None):
+            if url.endswith("/sports"):                  # the free key check (since the Sep 29 follow-up)
+                return Resp(200, [], {"x-requests-remaining": "4000", "x-requests-last": "0"})
             sent.append(url)
             h = {"x-requests-remaining": "4000"} | ({} if bad is None else {"x-requests-last": bad})
             return Resp(200, {"timestamp": params["date"], "data": []}, h)
@@ -873,3 +881,543 @@ def test_odds_pull_billing_fails_closed(tmp_path, monkeypatch, bad):
     else:
         assert len(sent) == 1 and res["fetched"] == 1 and res["credits_spent"] == 10
         assert "billing could not be read" in res["stopped"]
+
+
+# ---------------------------------------------------------------- final review of PR 57 (Sep 29): the follow-up
+def _events_call(at="2024-09-03T06:00:00Z"):
+    return bulk.Call("P0", "americanfootball_nfl", bulk.SRC_EVENTS, "/historical/sports/americanfootball_nfl/events",
+                     (("date", at), ("dateFormat", "iso")), t(at), 1, False, cache_sport="americanfootball_nfl")
+
+
+def _f1_calls(cfg, kicks=("2024-09-06T00:20:00Z",)):
+    sched = {"americanfootball_nfl": [game(cfg, f"g{i}", k) for i, k in enumerate(kicks)]}
+    return bulk.plan_calls(cfg, "F1", sched, now=NOW)
+
+
+class Stale(FakeOddsApi):
+    """Reports `last` as the cost of every paid call, and a balance that never moves after the key check."""
+
+    def __init__(self, last="0", **kw):
+        super().__init__(**kw)
+        self.last, self.billed, self.frozen = last, 0, None
+
+    def _r(self, status, body, cost):
+        self.billed += cost
+        r = super()._r(status, body, cost)
+        self.frozen = self.frozen or r.headers["X-Requests-Remaining"]          # the key check's balance
+        r.headers["X-Requests-Remaining"] = self.frozen
+        if cost:
+            r.headers["X-Requests-Last"] = self.last
+        return r
+
+
+def test_documented_cost_is_worked_out_from_the_call_and_the_body(cfg):
+    """Item 1a: 10 x markets returned x regions for odds (featured and event), 1 for /events with data, 0 for an
+    empty result, a 404 or a body that isn't JSON. Regions come from the call's books (one per 10)."""
+    def body(markets, n_events=1):
+        ev = {"id": "e", "bookmakers": [{"key": "pinnacle", "markets": [{"key": m} for m in markets]},
+                                        {"key": "draftkings", "markets": [{"key": markets[0]}] if markets else []}]}
+        return json.dumps({"timestamp": "x", "data": [ev] * n_events})
+
+    (f1,) = _f1_calls(cfg)[-1:]
+    assert f1.expected == 30
+    assert bulk.documented_cost(f1, 200, body(["h2h", "spreads", "totals"])) == 30
+    assert bulk.documented_cost(f1, 200, body(["h2h"])) == 10           # a market nobody quoted is not counted
+    assert bulk.documented_cost(f1, 200, body(["h2h", "h2h_lay"])) == 10   # an exchange's lay prices: billed with h2h
+    assert bulk.documented_cost(f1, 200, json.dumps({"data": []})) == 0
+    assert bulk.documented_cost(f1, 404, body(["h2h"])) == 0 and bulk.documented_cost(f1, 200, "<html>") == 0
+    eleven = bulk.Call("X", "americanfootball_nfl", bulk.SRC_ODDS, f1.path,
+                       bulk._odds_params(cfg["books"]["us10"] + ["bovada"], "h2h,spreads", f1.at), f1.at, 40, False)
+    assert bulk.documented_cost(eleven, 200, body(["h2h", "spreads"])) == 40      # 11 books = 2 regions
+    props = _one_call(cfg)[0]
+    one_event = json.dumps({"data": json.loads(body(["player_pass_yds", "player_rush_yds"]))["data"][0]})
+    assert bulk.documented_cost(props, 200, one_event) == 20
+    ev = _events_call()
+    assert bulk.documented_cost(ev, 200, json.dumps({"data": [{"id": "a"}]})) == 1
+    assert bulk.documented_cost(ev, 200, json.dumps({"data": []})) == 0
+
+
+@pytest.mark.parametrize("last", ["0", "10"])
+def test_a_response_with_data_never_counts_less_than_its_documented_cost(cfg, tmp_path, capsys, last):
+    """Item 1a (final review, finding 1): x-requests-last "0" on a 200 with data, and a balance that never moves,
+    counted nothing, so no budget and no floor could stop the run (60,000 billed on a 3,000 budget). Now a response
+    with data counts at least its documented cost, and a report below that cost stops the run at once."""
+    for calls, doc in ((_f1_calls(cfg), 30), (_one_call(cfg), 20)):     # featured 3 markets; props 2 returned
+        api = Stale(last=last)
+        c = client(tmp_path / f"{doc}{last}", api, max_credits=3_000, floor=0)
+        c.account()
+        res = bulk.run_calls(c, calls)
+        assert res["fetched"] == 1 and res["spent"] == doc == api.billed, res
+        assert "billing cannot be trusted" in res["stopped"] and f"reported {last} credits" in res["stopped"]
+    assert "STOPPED: the billing cannot be trusted" in capsys.readouterr().out
+
+
+def test_an_empty_result_reported_as_free_goes_on(cfg, tmp_path):
+    """The docs don't bill an empty result, so a 0 for one is not a billing problem."""
+    class Empty(Stale):
+        def get(self, url, params=None, timeout=None):
+            r = super().get(url, params, timeout)
+            if not url.endswith("/sports"):
+                r.text = json.dumps({"timestamp": params["date"], "data": []})
+            return r
+    res = bulk.run_calls(client(tmp_path, Empty(last="0"), floor=0), _f1_calls(cfg))
+    assert res["stopped"] is None and res["fetched"] == len(_f1_calls(cfg)) and res["spent"] == 0
+
+
+class Late(Billed):
+    """Billed (each call's first `bad` attempts billed, then timed out), with x-requests-remaining one answered
+    response late; the key check reads the true balance."""
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.shown = None
+
+    def get(self, url, params=None, timeout=None):
+        r = super().get(url, params, timeout)
+        true = r.headers["X-Requests-Remaining"]
+        if not url.endswith("/sports"):
+            r.headers["X-Requests-Remaining"] = self.shown
+        self.shown = true
+        return r
+
+
+def test_a_late_balance_and_billed_retries_pass_the_budget_or_floor_by_at_most_one_call(cfg, tmp_path, monkeypatch):
+    """Item 1b (final review, finding 2): a balance one response late, plus attempts billed and then timed out, used
+    to clear the count of those attempts at the next reading, so runs went over the budget and under the floor by
+    several calls. Now that count is cleared only by as much as the balance explains, or at the second reading after
+    the retry: the run ends at most one call's upper bound (30 here) past the budget or the floor. (Before, one to
+    three billed attempts per call took it 60 to 120 past.)"""
+    calls = _f1_calls(cfg, ("2024-09-02T00:20:00Z", "2024-09-05T17:00:00Z", "2024-09-08T17:00:00Z"))   # 17, 30 each
+    start = 5_000_000
+    for bad in (1, 2, 3):
+        for m in range(60, 600, 10):
+            api = Late(bad=bad)
+            res = bulk.run_calls(_retrying_client(tmp_path / f"b{bad}-{m}", api, monkeypatch, max_credits=m), calls)
+            assert res["stopped"] and api.billed <= m + 30, (bad, m, api.billed, res)
+            api = Late(bad=bad)
+            res = bulk.run_calls(_retrying_client(tmp_path / f"f{bad}-{m}", api, monkeypatch, floor=start - m), calls)
+            assert res["stopped"] and api.remaining >= start - m - 30, (bad, m, api.remaining, res)
+
+
+def test_an_attempt_with_no_answer_stays_counted_until_the_balance_explains_it(cfg, tmp_path, monkeypatch):
+    """Item 1b: a timed-out attempt that the balance shows was billed is cleared at once; one the balance doesn't
+    show stays counted through the retry's own reading and is cleared at the second reading after it."""
+    import requests
+
+    class Unbilled(FakeOddsApi):
+        seen = set()
+
+        def get(self, url, params=None, timeout=None):
+            if not url.endswith("/sports") and (url, params["date"]) not in self.seen:
+                self.seen.add((url, params["date"]))
+                raise requests.ReadTimeout("read timed out")          # before any billing
+            return super().get(url, params, timeout)
+
+    calls = _nfl_calls(cfg, 2)
+    api = Billed(bad=1)                                           # billed 20 of its upper bound of 60, then timed out
+    c = _retrying_client(tmp_path / "billed", api, monkeypatch)
+    c.fetch(calls[0])
+    assert c.unanswered == 60 - 20 and c.counted == 40 + 40 and api.billed == 40   # the 20 the balance showed is cleared
+    api = Unbilled()
+    c = _retrying_client(tmp_path / "unbilled", api, monkeypatch)
+    c.fetch(calls[0])
+    assert c.unanswered == 60 and c.counted == 20 + 60           # the retry's reading doesn't explain it: kept
+    c.max_retries = 0
+    Unbilled.seen.add((calls[1].url, dict(calls[1].params)["date"]))
+    c.fetch(calls[1])
+    assert c.unanswered == 0 and c.counted == 40                  # the second reading: cleared
+
+
+class Overcharges(FakeOddsApi):
+    """Charges `extra` more than it reports on every paid call; `others` is another user's spend before each."""
+
+    def __init__(self, extra=0, others=0, **kw):
+        super().__init__(**kw)
+        self.extra, self.others, self.billed = extra, others, 0
+
+    def _r(self, status, body, cost):
+        if cost:
+            self.remaining -= self.extra + self.others
+            self.billed += cost + self.extra
+        return super()._r(status, body, cost)
+
+
+def test_overbilling_that_shows_only_in_the_balance_stops_after_three_calls(cfg, tmp_path, capsys):
+    """Item 1c (final review, finding 3): an API that charges more than it reports only printed a warning, so the
+    whole budget bought a fraction of the data. Now three calls in a row whose balance fall exceeds the reported cost
+    by more than the call's upper bound stop the run; smaller excesses, and other users of the key, don't."""
+    calls = _nfl_calls(cfg, 8)                                    # upper bound 60, reported 20
+    api = Overcharges(extra=100)
+    c = client(tmp_path / "a", api, max_credits=100_000)
+    c.account()
+    res = bulk.run_calls(c, calls)
+    assert res["fetched"] == 3 and "the account is being charged more than the API reports" in res["stopped"]
+    assert res["spent"] >= api.billed == 3 * 120
+    assert "STOPPED: the account is being charged more than the API reports" in capsys.readouterr().out
+    for kw in ({"extra": 40}, {"others": 3}, {"others": 60}):     # never more than the upper bound over
+        api = Overcharges(**kw)
+        c = client(tmp_path / str(kw), api, max_credits=100_000)
+        c.account()
+        res = bulk.run_calls(c, calls)
+        assert res["stopped"] is None and res["spent"] >= api.billed, kw
+
+
+def test_ctrl_c_ends_the_run_with_stopped_interrupted_and_the_summary(cfg, tmp_path, capsys):
+    """Item 2 (final review, finding 4): Ctrl-C ended in a traceback with no summary. Now it ends with
+    `STOPPED: interrupted`, the summary line, and the call that was out counted at its upper bound."""
+    class CtrlC(FakeOddsApi):
+        n = 0
+
+        def get(self, url, params=None, timeout=None):
+            if not url.endswith("/sports"):
+                self.n += 1
+                if self.n == 2:
+                    raise KeyboardInterrupt
+            return super().get(url, params, timeout)
+
+    c = client(tmp_path, CtrlC())
+    c.account()
+    try:
+        res = bulk.run_calls(c, _nfl_calls(cfg))
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl-C escaped run_calls: a traceback with no summary line")
+    out = capsys.readouterr().out
+    assert res["stopped"].startswith("interrupted") and res["interrupted"]
+    assert "STOPPED: interrupted" in out and "stopped: 1 fetched" in out and "rerun resumes" in out
+    assert res["spent"] == 20 + 60                                # the call that was out, at its upper bound
+
+
+def _saved_test_nfl(cfg, raw):
+    """Two 2024 NFL games inside the test config's windows: F1 plans 9 featured calls for them."""
+    bulk.save_schedule(raw, "americanfootball_nfl", [
+        {**game(cfg, g, k), "home_team": "H", "away_team": "A", "first_seen": None}
+        for g, k in (("ev1", "2024-09-06T00:20:00Z"), ("ev2", "2024-09-08T17:00:00Z"))])
+
+
+def _main(cfg, tmp_path, monkeypatch, api, **kw):
+    """bulk.main (what `markets odds5m` runs) against a fake API, a scratch cache and the test config."""
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    monkeypatch.setattr(bulk, "load_config", lambda: cfg)
+    monkeypatch.setattr(bulk, "RawCache", lambda: RawCache(tmp_path))
+    monkeypatch.setattr(bulk, "new_session", lambda: api)
+    monkeypatch.setattr(bulk, "utcnow", lambda: NOW)
+    base = dict(stage="full", pull="F1", sports=None, seasons=None, week_of="auto", confirm=True, max_credits=100_000,
+                floor=0, rate=1e6)
+    return bulk.main(Namespace(**{**base, **kw}))
+
+
+def test_every_stop_exits_with_status_1_and_done_with_0(cfg, tmp_path, monkeypatch, capsys):
+    """Item 3: a STOPPED run exited with status 0. Now every stop (budget, floor, circuit breaker, Ctrl-C) exits 1;
+    a finished run and a dry run exit 0."""
+    class CtrlC(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            if not url.endswith("/sports"):
+                raise KeyboardInterrupt
+            return super().get(url, params, timeout)
+
+    _saved_test_nfl(cfg, tmp_path / "dry")
+    assert _main(cfg, tmp_path / "dry", monkeypatch, FakeOddsApi(), confirm=False) == 0
+    _saved_test_nfl(cfg, tmp_path / "done")
+    assert _main(cfg, tmp_path / "done", monkeypatch, FakeOddsApi()) == 0
+    for name, api, kw, why in (("budget", FakeOddsApi(), {"max_credits": 40}, "run budget"),
+                               ("floor", FakeOddsApi(), {"floor": 5_000_000 - 40}, "the floor is"),
+                               ("breaker", FakeOddsApi(overbill=50), {}, "should cost at most"),
+                               ("ctrl-c", CtrlC(), {}, "STOPPED: interrupted")):
+        _saved_test_nfl(cfg, tmp_path / name)
+        capsys.readouterr()
+        assert _main(cfg, tmp_path / name, monkeypatch, api, **kw) == 1, name
+        out = capsys.readouterr().out
+        assert why in out and "stopped: " in out, name
+
+
+def test_the_cli_returns_the_exit_status(cfg, tmp_path, monkeypatch):
+    """`markets` is a console script (sys.exit(main())), so cli.main's return value is the exit status."""
+    from markets import cli
+    _saved_test_nfl(cfg, tmp_path)
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    monkeypatch.setattr(bulk, "load_config", lambda: cfg)
+    monkeypatch.setattr(bulk, "RawCache", lambda: RawCache(tmp_path))
+    monkeypatch.setattr(bulk, "new_session", lambda: FakeOddsApi())
+    monkeypatch.setattr(bulk, "utcnow", lambda: NOW)
+    argv = ["odds5m", "full", "--pull", "F1", "--floor", "0", "--rate", "1000000"]
+    assert cli.main(argv) == 0                                     # a dry run
+    assert cli.main(argv + ["--confirm", "--max-credits", "40"]) == 1
+    assert cli.main(argv + ["--confirm", "--max-credits", "100000"]) == 0
+
+
+def test_a_full_disk_at_the_key_check_or_anywhere_else_ends_with_a_stopped_line(cfg, tmp_path, monkeypatch, capsys):
+    """Item 2 (final review, finding 5): a full disk at the key check ended in a traceback. Now it, and a full disk
+    anywhere else in a stage (here the probe's schedule files), ends with a STOPPED line and exit status 1."""
+    import errno
+    from pathlib import Path
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+
+    def no_space(*a, **k):
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    orig = Path.open
+    monkeypatch.setattr(Path, "open", lambda self, *a, **k: no_space() if self.name == "oddsapi_manifest.csv"
+                        else orig(self, *a, **k))
+    api = FakeOddsApi()
+    with pytest.raises(SystemExit) as ei:
+        bulk._client(RawCache(tmp_path / "k"), args(max_credits=100), session=api)
+    assert "STOPPED before the first paid call" in str(ei.value) and "is the disk full?" in str(ei.value)
+    assert [u for u, _ in api.calls] == [bulk.BASE_URL + "/sports"]
+    monkeypatch.setattr(Path, "open", orig)
+    monkeypatch.setattr(bulk, "save_schedule", no_space)
+    capsys.readouterr()
+    assert _main(cfg, tmp_path / "p", monkeypatch, FakeOddsApi(), stage="probe", sports="americanfootball_nfl") == 1
+    out = capsys.readouterr().out
+    assert "STOPPED: a file could not be read or written (No space left on device): is the disk full?" in out
+
+
+def test_a_probe_that_stops_keeps_the_earlier_schedules_and_names_the_incomplete_sports(cfg, tmp_path, monkeypatch,
+                                                                                        capsys):
+    """Item 5 (final review, finding 10): a probe that stopped on its budget overwrote the NFL schedule with a partial
+    one, and the next `week --pull F3` found 0 calls. Now a sport's schedule is saved only when its sweep finished;
+    the probe names the incomplete sports, and a rerun buys only what is missing and prints `P0 done`."""
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    earlier = [{**game(cfg, "old", "2024-09-06T00:20:00Z"), "home_team": "H", "away_team": "A", "first_seen": None}]
+    bulk.save_schedule(tmp_path, "americanfootball_nfl", earlier)
+    path = bulk.schedule_path(tmp_path, "americanfootball_nfl")
+    before = path.read_bytes()
+    api = FakeOddsApi()
+    out = bulk.stage_probe(cfg, RawCache(tmp_path), args(sports=["americanfootball_nfl"], max_credits=2), now=NOW,
+                           session=api)
+    printed = capsys.readouterr().out
+    assert out["stopped"] and out["incomplete"] == ["americanfootball_nfl"] and path.read_bytes() == before
+    assert "incomplete, schedule not saved (any earlier schedule file is kept): americanfootball_nfl" in printed
+    assert "P0 stopped" in printed and "until it prints `P0 done`" in printed and not out["probes"]
+    n_first = len(api.calls)
+    out = bulk.stage_probe(cfg, RawCache(tmp_path), args(sports=["americanfootball_nfl"]), now=NOW, session=api)
+    assert out["stopped"] is None and "P0 done" in capsys.readouterr().out and path.read_bytes() != before
+    sweeps = len(bulk.sweep_calls(cfg, "americanfootball_nfl", NOW))
+    assert sum(u.endswith("/events") for u, _ in api.calls[n_first:]) == sweeps - (n_first - 1)   # only what's missing
+
+
+def test_plan_lists_every_pull_and_says_which_wait_for_the_qualifying_games(tmp_path, monkeypatch, capsys):
+    """Item 6 (final review, finding 7): `plan` stopped at HB1 without the qualifying file and never listed N1, F4 or
+    the March pulls. Now it lists every pull in group order; HB1 and HS1 get a line saying they wait for `markets
+    weather qualifying` and count as 0 calls; it exits 0."""
+    real = bulk.load_config()
+    monkeypatch.setattr(bulk, "DATA_DIR", tmp_path)
+    assert _main(real, tmp_path / "raw", monkeypatch, FakeOddsApi(), stage="plan", pull="all", confirm=False) == 0
+    lines = capsys.readouterr().out.splitlines()
+    rows = [line for line in lines if line.split()[:1] and line.split()[0] in real["pulls"]]
+    assert [r.split()[0] for r in rows] == list(real["pulls"])
+    for r in rows:
+        waits = r.split()[0] in ("HB1", "HS1")
+        assert ("waits for `markets weather qualifying`" in r) == waits and (" 0 calls" in r), r
+        assert (str(tmp_path / "weather" / "heat_qualifying.csv") in r) == waits
+
+
+def test_week_applies_the_slice_rule_and_drops_blank_seasons(tmp_path, monkeypatch, capsys):
+    """Item 7 (final review, findings 12 and 13): `week --pull F3 --seasons 2023 --week-of 2023-09-07` planned gated
+    F3b data and passed the guard; `--seasons 2025,` was refused with a confusing message. Now `week` applies the
+    slice rule before anything is called, and blank entries in --seasons are dropped before the check."""
+    real = bulk.load_config()
+    _saved_nfl(real, tmp_path)
+    now = datetime(2026, 10, 1, 12, tzinfo=UTC)
+    api = FakeOddsApi()
+    for seasons, why in ((["2023"], "is not one of its slices"), (None, "`week --pull F3` needs --seasons")):
+        for confirm in (False, True):
+            with pytest.raises(SystemExit, match=why) as ei:
+                bulk.stage_pull(real, RawCache(tmp_path), args(pull="F3", seasons=seasons, week_of="2023-09-07",
+                                                               confirm=confirm, max_credits=1), week=True, now=now,
+                                session=api)
+            assert "week --pull F3 --seasons 2025 --confirm" in str(ei.value)
+    assert api.calls == []
+    assert bulk._list_arg("2025,") == ["2025"] and bulk._list_arg(" ,2025,, ") == ["2025"]
+    assert bulk._list_arg(",") is None and bulk._list_arg("") is None and bulk._list_arg(None) is None
+    assert bulk._list_arg("2023, 2024 ,2026,") == ["2023", "2024", "2026"]
+    assert _main(real, tmp_path, monkeypatch, api, pull="F3", seasons="2025,", confirm=False) == 0
+    assert "F3  2 calls, 2 to fetch" in capsys.readouterr().out
+
+
+def test_each_pull_summary_line_prints_its_own_counts(cfg, tmp_path, monkeypatch, capsys):
+    """Item 7 (final review, finding 14): in `week --pull F1,F2` F2's summary line printed the run's fetched count."""
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    sched = [{**game(cfg, "ev1", "2024-09-06T00:20:00Z"), "home_team": "H", "away_team": "A", "first_seen": None}]
+    bulk.save_schedule(tmp_path, "americanfootball_nfl", sched)
+    out = bulk.stage_pull(cfg, RawCache(tmp_path), args(pull="F1,F3", sports=["americanfootball_nfl"]), week=True,
+                          now=NOW, session=FakeOddsApi())
+    f1, f3 = out
+    assert f3["fetched"] == f3["todo"] == 2 and f3["spent"] == 40 and f3["run_fetched"] == f1["fetched"] + 2
+    printed = capsys.readouterr().out
+    assert f"done: 2 fetched, credits 40 (this run {f1['spent'] + 40:,})" in printed
+
+
+# ---------------------------------------------------------------- odds-pull (item 4)
+NBA_KEY_SAMPLE = "06dae82fbad834f70cb0"     # main's (e83c7f8) cache key for the 2026-01-05T23:00Z sample-week snapshot
+
+
+def _oddspull(tmp_path, api, *, n=3, floor=0, max_credits=1_000):
+    from types import SimpleNamespace
+
+    from markets.oddsapi.client import OddsApiClient
+    oc = OddsApiClient("nba", RawCache(tmp_path), max_credits=max_credits, rate_per_sec=1e6, floor=floor, session=api,
+                       api_key=KEY)
+    ctx = SimpleNamespace(cfg=SimpleNamespace(odds_sport_key="basketball_nba", bookmakers=("pinnacle", "lowvig",
+                                                                                           "betonlineag"),
+                                              odds_markets="h2h"))
+    plan = {"est_credits": 10 * n, "todo": [t("2026-01-05T23:00:00Z") + (i * bulk.FIVE) for i in range(n)]}
+    return oc, ctx, plan
+
+
+def test_odds_pull_keeps_its_cache_location_and_keys(tmp_path):
+    """Item 4: odds-pull now runs through the bulk puller's client, but asks for the same snapshots and caches them
+    in the same place under the same keys as before (the sample week's Kalshi data and N1 rely on them)."""
+    from markets.oddsapi.ingest import pull_snapshots
+    oc, ctx, plan = _oddspull(tmp_path, FakeOddsApi(), n=1)
+    call = oc.call_for(sport_key="basketball_nba", at=plan["todo"][0], bookmakers=ctx.cfg.bookmakers, markets="h2h")
+    assert call.key == NBA_KEY_SAMPLE and call.cache_sport == "nba" and call.source == "oddsapi_hist"
+    assert pull_snapshots(ctx, plan, 1_000, client=oc)["stopped"] is None
+    assert [p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*.parquet")] == [
+        f"nba/oddsapi_hist/2026-01-05/{NBA_KEY_SAMPLE}.parquet"]
+
+
+def test_odds_pull_has_the_key_check_floor_and_manifest(tmp_path, monkeypatch, capsys):
+    """Item 4: odds-pull had no key check, no floor, no balance tracking and no manifest. Now it checks the key for
+    free first and refuses to start below the floor or on an unreadable balance, and logs each paid request."""
+    from markets.oddsapi.ingest import pull_snapshots
+    api = FakeOddsApi(remaining=500_000)
+    oc, ctx, plan = _oddspull(tmp_path / "low", api, floor=531_630)
+    res = pull_snapshots(ctx, plan, 1_000, client=oc)
+    assert "already below the floor of 531,630" in res["stopped"] and [u for u, _ in api.calls] == [
+        bulk.BASE_URL + "/sports"]
+    assert "STOPPED before the first paid call, nothing spent" in capsys.readouterr().out
+    api = Mangled(sports={})
+    oc, ctx, plan = _oddspull(tmp_path / "nobal", api, floor=531_630)
+    assert "readable balance" in pull_snapshots(ctx, plan, 1_000, client=oc)["stopped"] and len(api.calls) == 1
+    api = FakeOddsApi()
+    oc, ctx, plan = _oddspull(tmp_path / "ok", api, floor=531_630)
+    res = pull_snapshots(ctx, plan, 1_000, client=oc)
+    assert res["stopped"] is None and res["fetched"] == 3 and res["credits_spent"] == 30
+    assert api.calls[0][0].endswith("/sports")
+    rows = list(csv.DictReader((tmp_path / "ok/_manifest/oddsapi_manifest.csv").open()))
+    assert [r["pull"] for r in rows] == ["account", "N0", "N0", "N0"] and {r["credits_last"] for r in rows[1:]} == {"10"}
+    assert rows[1]["sealed"] == "False" and rows[1]["source"] == "oddsapi_hist"
+    assert KEY not in (tmp_path / "ok/_manifest/oddsapi_manifest.csv").read_text()
+
+
+def test_odds_pull_counts_retries_the_balance_and_the_documented_cost(tmp_path, monkeypatch):
+    """Item 4: a retried call billed twice counted once in odds-pull, and a 0 on a response with data counted 0."""
+    from markets.oddsapi.ingest import pull_snapshots
+    monkeypatch.setattr(__import__("markets.http", fromlist=["time"]).time, "sleep", lambda s: None)
+    api = Billed(bad=1)
+    oc, ctx, plan = _oddspull(tmp_path / "retry", api)
+    res = pull_snapshots(ctx, plan, 1_000, client=oc)
+    assert res["stopped"] is None and res["credits_spent"] == api.billed == 60
+    api = Stale(last="0")
+    oc, ctx, plan = _oddspull(tmp_path / "zero", api)
+    res = pull_snapshots(ctx, plan, 1_000, client=oc)
+    assert "billing cannot be trusted" in res["stopped"] and res["credits_spent"] == 10 and res["fetched"] == 1
+    api = FakeOddsApi()                                 # the budget is checked before each call, not only up front
+    oc, ctx, plan = _oddspull(tmp_path / "budget", api, max_credits=15)
+    plan["est_credits"] = 10
+    res = pull_snapshots(ctx, plan, 15, client=oc)
+    assert "run budget" in res["stopped"] and res["fetched"] == 1
+
+
+def test_odds_pull_never_caches_a_200_that_is_not_json(tmp_path, capsys):
+    """Item 4 (final review, finding 6): odds-pull cached an HTML 200 and crashed on it on every rerun. Now it isn't
+    cached, the pull stops with a STOPPED line and the summary, and a rerun asks again."""
+    from markets.oddsapi.ingest import pull_snapshots
+
+    class Html(FakeOddsApi):
+        def _r(self, status, body, cost):
+            r = super()._r(status, body, cost)
+            if cost:
+                r.text = "<html>busy</html>"
+            return r
+
+    for _ in range(2):
+        api = Html()
+        oc, ctx, plan = _oddspull(tmp_path, api)
+        res = pull_snapshots(ctx, plan, 1_000, client=oc)
+        assert "body that is not JSON" in res["stopped"] and res["fetched"] == 1
+        assert sum("/odds" in u for u, _ in api.calls) == 1
+        out = capsys.readouterr().out
+        assert "STOPPED: " in out and "stopped: 1 fetched" in out
+    assert not list(tmp_path.rglob("*.parquet"))
+
+
+def test_the_odds_pull_command_exits_1_when_it_stops(tmp_path, monkeypatch):
+    """Item 3 for odds-pull: `markets odds-pull` exits 1 when the pull stopped, 0 when it is done or a dry run."""
+    from types import SimpleNamespace
+
+    from markets import cli
+    from markets.oddsapi import ingest
+    ctx = SimpleNamespace(games=[], sport="nba", cache=RawCache(tmp_path))
+    monkeypatch.setattr(cli, "Context", lambda sport, as_of: ctx)
+    monkeypatch.setattr(ingest, "snapshot_plan", lambda ctx, games, schedule: {
+        "summary": "", "tiers": {}, "bookmakers": ("pinnacle",), "credits_per_snapshot": 10, "cached": 0, "todo": [1],
+        "est_credits": 10})
+    seen = {}
+    for stopped, status in (("the run budget", 1), (None, 0)):
+        monkeypatch.setattr(ingest, "pull_snapshots", lambda c, p, m, floor: seen.update(floor=floor) or {
+            "stopped": stopped})
+        argv = ["odds-pull", "--start", "2026-01-05", "--end", "2026-01-11", "--max-credits", "8000"]
+        assert cli.main(argv + ["--confirm"]) == status
+        assert cli.main(argv) == 0
+    assert seen["floor"] == 531_630
+
+
+def test_markets_build_skips_and_counts_a_cached_body_it_cannot_read(tmp_path, monkeypatch):
+    """Item 4 (final review, finding 6): `markets build` crashed on a cached odds body that isn't JSON. Now it skips
+    it, counts it, and reports it."""
+    import duckdb
+
+    from markets.build import run
+    from markets.cache import write_record
+    from markets.sport import load_teams
+    monkeypatch.setattr(run, "RAW_DIR", tmp_path)
+    good = {"timestamp": "2026-01-05T23:00:00Z", "data": [{"id": "g", "commence_time": "2026-01-06T00:30:00Z",
+            "home_team": "Boston Celtics", "away_team": "New York Knicks", "bookmakers": [{"key": "pinnacle",
+            "markets": [{"key": "h2h", "outcomes": [{"name": "Boston Celtics", "price": 1.5},
+                                                    {"name": "New York Knicks", "price": 2.6}]}]}]}]}
+    for name, body in (("good", json.dumps(good)), ("html", "<html>busy</html>"), ("list", "[1, 2]")):
+        write_record(tmp_path / "nba" / "oddsapi_hist" / "2026-01-05" / f"{name}.parquet", {
+            "cache_key": name, "sport": "nba", "source": "oddsapi_hist", "data_date": "2026-01-05", "url": "u",
+            "params_json": json.dumps({"date": "2026-01-05T23:00:00Z"}), "fetched_at": NOW, "http_status": 200,
+            "headers_json": "{}", "body": body})
+    rows, unknown, sealed_out, no_kick, unreadable = run.sharp_odds_rows(duckdb.connect(), "nba", load_teams("nba"))
+    assert {r["odds_event_id"] for r in rows} == {"g"} and unreadable == 2
+
+
+# ---------------------------------------------------------------- sealed windows in UTC (item 8)
+# The first and last game each sealed season is meant to hold, as UTC kickoffs, with the source (config/odds5m.yaml
+# gives each in a comment). A window must start at least a day before the first and end at least a day after the last.
+SEALED_GAMES = {
+    "americanfootball_nfl": ("2026-09-10T00:20:00Z", "2027-02-14T23:30:00Z"),     # NE at SEA; Super Bowl LXI
+    "americanfootball_ncaaf": ("2026-08-29T16:00:00Z", "2027-01-26T00:30:00Z"),   # TCU-UNC, Dublin; CFP title game
+    "basketball_nba": ("2026-10-20T23:30:00Z", "2027-06-21T01:00:00Z"),           # opening night; Finals Game 7
+    "icehockey_nhl": ("2026-09-29T21:00:00Z", "2027-06-27T00:00:00Z"),            # opening night; Final (as late as 2022)
+    "baseball_mlb": ("2026-03-26T00:05:00Z", "2026-11-01T00:00:00Z"),             # Opening Night; World Series Game 7
+    "soccer_usa_mls": ("2026-02-21T17:00:00Z", "2026-12-19T01:00:00Z"),           # matchday 1; MLS Cup (Fri Dec 18)
+    "soccer_mexico_ligamx": ("2026-01-10T01:00:00Z", "2026-12-28T03:00:00Z"),     # Clausura J1; Apertura final (late)
+    "soccer_brazil_campeonato": ("2026-01-28T22:00:00Z", "2026-12-03T00:30:00Z"),  # round 1; round 38
+    "soccer_japan_j_league": ("2026-02-06T10:00:00Z", "2026-12-20T10:00:00Z"),    # special league; before the break
+    "soccer_korea_kleague1": ("2026-02-28T05:00:00Z", "2026-12-13T05:00:00Z"),    # round 1; promotion play-off leg 2
+    "soccer_fifa_world_cup": ("2026-06-11T19:00:00Z", "2026-07-19T19:00:00Z"),    # opener; final
+}
+NOT_YET = {("icehockey_nhl", "first"): "NHL 2026-27 opens Sep 29 (84 games); the window starts Oct 1. Moving it adds "
+                                        "three probe sweeps, so it is left for the hub (Sep 29 follow-up)."}
+
+
+@pytest.mark.parametrize("sport,which", [(s, w) for s in SEALED_GAMES for w in ("first", "last")])
+def test_every_sealed_window_holds_its_first_and_last_game_in_utc(sport, which, request):
+    """Item 8 (final review, finding 11): the NCAAF 2026 window ended 2027-01-25, but the CFP title game kicks off
+    at 2027-01-26T00:30Z, so it came out of load_rows as unsealed. Every sealed window must start at least a day
+    before its season's first game and end at least a day after its last, in UTC."""
+    if (sport, which) in NOT_YET:
+        request.applymarker(pytest.mark.xfail(strict=True, reason=NOT_YET[(sport, which)]))
+    real = bulk.load_config()
+    (w,) = [w for w in real["sports"][sport]["windows"] if w["sealed"]]
+    kick = t(SEALED_GAMES[sport][0 if which == "first" else 1])
+    assert bulk.window_for(real, sport, kick) == w and bulk.is_sealed(real, sport, kick)
+    if which == "first":
+        assert w["from"] <= (kick - timedelta(days=1)).date(), (w["from"], kick)
+    else:
+        assert w["to"] >= (kick + timedelta(days=1)).date(), (w["to"], kick)
+    assert set(SEALED_GAMES) == {s for s, sc in real["sports"].items() if any(x["sealed"] for x in sc["windows"])}

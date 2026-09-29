@@ -59,7 +59,8 @@ def cmd_cup_calendar(args) -> None:
         print("PROBLEM:", p)
 
 
-def cmd_odds_plan(args, *, pull: bool = False) -> None:
+def cmd_odds_plan(args, *, pull: bool = False) -> int:
+    """odds-plan, and odds-pull (exit status 1 when the pull stopped, 0 when it is done or a dry run)."""
     from .oddsapi.ingest import pull_snapshots, snapshot_plan
     ctx = Context(args.sport, args.as_of)
     start, end = _dates(args)
@@ -70,15 +71,12 @@ def cmd_odds_plan(args, *, pull: bool = False) -> None:
           f"credits/snapshot={plan['credits_per_snapshot']}")
     print(f"  cached={plan['cached']}  to fetch={len(plan['todo'])}  estimated credits={plan['est_credits']:,}")
     if not pull:
-        return
+        return 0
     if not args.confirm:
         print("dry run: add --confirm to spend credits")
-        return
-    res = pull_snapshots(ctx, plan, args.max_credits)
-    if res["stopped"]:
-        print(f"STOPPED: {res['stopped']}")
-    print(f"{'stopped' if res['stopped'] else 'done'}: fetched {res['fetched']} snapshots; credits spent this "
-          f"run={res['credits_spent']}; remaining on plan={res['remaining']}")
+        return 0
+    res = pull_snapshots(ctx, plan, args.max_credits, floor=args.floor)
+    return 1 if res["stopped"] else 0
 
 
 def cmd_build(args) -> None:
@@ -94,6 +92,9 @@ def cmd_build(args) -> None:
           sealed or "")
     if s["odds_rows_without_commence_time"]:
         print(f"odds rows left out with no readable game time: {s['odds_rows_without_commence_time']:,}")
+    if s["odds_bodies_unreadable"]:
+        print(f"cached odds responses that could not be read, skipped: {s['odds_bodies_unreadable']:,} (recorded as "
+              "an odds_body_unreadable anomaly; tell the hub)")
     print(f"http requests this run: {ctx.cache.http_requests}")
 
 
@@ -145,9 +146,9 @@ def cmd_weather(args) -> None:
     join.main(args)
 
 
-def cmd_odds5m(args) -> None:
+def cmd_odds5m(args) -> int:
     from .oddsapi import bulk
-    bulk.main(args)
+    return bulk.main(args)
 
 
 def cmd_price_engine(args) -> None:
@@ -183,6 +184,8 @@ def main(argv: list[str] | None = None) -> None:
         if pull:
             o.add_argument("--confirm", action="store_true", help="actually spend credits")
             o.add_argument("--max-credits", type=int, required=True)
+            o.add_argument("--floor", type=int, default=531_630,
+                           help="stop when the account would drop below this (the same reserve as odds5m)")
         o.set_defaults(fn=lambda a, _pull=pull: cmd_odds_plan(a, pull=_pull))
 
     sub.add_parser("build", help="rebuild DuckDB tables from the raw cache").set_defaults(fn=cmd_build)
@@ -238,7 +241,11 @@ def main(argv: list[str] | None = None) -> None:
     pe.set_defaults(fn=cmd_price_engine)
 
     args = p.parse_args(argv)
-    args.fn(args)
+    try:
+        return args.fn(args) or 0       # the exit status: 1 when a paid run stopped (odds5m, odds-pull)
+    except KeyboardInterrupt:           # Ctrl-C outside a paid run's own handler: a plain line, never a traceback
+        print("STOPPED: interrupted (Ctrl-C)", flush=True)
+        return 1
 
 
 if __name__ == "__main__":
