@@ -57,6 +57,39 @@ Every earlier CFB Rule B number used the wind *observed* at the nearest airport.
 
 This adds **1 variant**, for a running total of 135.
 
+## Consensus home spread (issue #36, Sep 28)
+
+`build.home_spreads()` used to drop any (game, book) whose spread rows it couldn't pair up, and it didn't count them. A third of them were dropped:
+
+| Why a (game, book) was dropped | Pairs |
+|---|---|
+| No team ids on the line rows (2014, 2022–25) | 2,710 |
+| Not exactly two rows, mostly byte-identical duplicates (2013–19) | 23,068 |
+| Neither row matched a team name: sportsbook codes such as NIL, OHI, BGN | 27,661 |
+| **Total, of 163,075 pairs for scheduled games** | **53,439 (32.8%)** |
+
+**The fix.** Team ids now come from the schedule. Each row is matched to its team on its own, so duplicates, one-sided pairs and stray rows no longer matter. 117 sportsbook codes were added in [`cfbweather/spread_aliases.csv`](cfbweather/spread_aliases.csv), built by [`scripts/spread_aliases.py`](scripts/spread_aliases.py) from which games each code appears in. Every build prints the remaining drops by reason and season. What's left is 419 pairs whose rows disagree, and 287 of those 291 games still get a spread from other books.
+
+**Checked against CFBD** ([`scripts/spread_audit.py`](scripts/spread_audit.py), log in [`output/spread_audit.log`](output/spread_audit.log)). The comparison covers played games from 2014 to 2025 that have a closing total and a CFBD spread.
+
+| | Before | After |
+|---|---|---|
+| Games with a consensus home spread | 7,821 of 12,053 (64.9%) | 12,051 (99.98%) |
+| Within 1 point of CFBD | 97.7% | 97.2% |
+| Within 3 points | 99.5% | 99.3% |
+| Opposite favorites, 1+ point each | 12 | 12, all pick'em games (both spreads within 2.5) |
+
+**`data/processed/games.parquet` still holds the old column.** A rebuild adds 5,491 spreads, changes 40, and touches no other column. It also moves Rule HT's 2016–25 history, the record that `STRATEGY.md` cites:
+
+| Rule HT, 2016–25 | Record |
+|---|---|
+| Before (the cited evidence) | 373–273 (57.7%) |
+| After, all games | 502–393 (56.1%) |
+| After, FBS-involved games only (the forward test's population) | 434–326 (57.1%) |
+| Only the games the old code dropped, old thresholds | 113–99 (53.3%) |
+
+Rule HT and its frozen 2026 threshold of 62.6 don't change. On rebuilt data the threshold recomputes to 62.53, so `tests/test_rules.py` would need a decision. The rebuild waits for the hub; see [`STATUS.md`](../STATUS.md).
+
 ## Data
 
 | Source | What |
