@@ -65,13 +65,19 @@ underdogs later. After you bet, log what you actually got, e.g.
 **Close capture** (amendment 3). Every 15 minutes `ops/capture_closes.sh` runs `scripts/capture_close.py`.
 When games kick off in 2–20 minutes, it makes one Odds API call and adds each logged book's total and prices
 for every game in that kickoff slot to `data/forward/closes.csv`; the scorer uses Pinnacle's row. If some game
-in the slot has no Pinnacle total, the slot is tried once more on the next run, for a second credit. Since
-Sep 29 each game takes at most one feed listing: one with its two teams that starts within 6 hours of its
-scheduled kickoff, preferring a listing Pinnacle prices (as the board does), then the one nearest the kickoff.
-Before, it matched on the teams alone, so when the feed listed the same teams twice with Pinnacle prices on
-both, it wrote both and the scorer took whichever the feed gave last. A tie between two equally good listings,
-or no listing within 6 hours, leaves the game's close missing, and the log says why. Tests:
-`tests/test_close_capture.py`.
+in the slot has no Pinnacle total, the slot is tried once more on the next run, for a second credit. A feed
+event is one event in the odds feed: a game as the feed lists it, with its own event id. Since Sep 29 each game
+takes at most one feed event: one with its two teams that starts within 6 hours of its scheduled kickoff,
+preferring a feed event Pinnacle prices (as the board does), then the one nearest the kickoff. Before, it matched
+on the teams alone, so when the feed listed the same teams twice with Pinnacle prices on both, it wrote both and
+the scorer took whichever the feed gave last. A tie between two equally good feed events, or no feed event within
+6 hours, leaves the game's close missing, and the log says why. Tests: `tests/test_close_capture.py`.
+*Note, Sep 29 (amendment 7):* this rule is now registered, with one change. Two feed events equally near the
+kickoff that carry the same Pinnacle quote (the same total and prices) are the same game listed twice, so the
+first in the feed is taken; a tie between different quotes still leaves the close missing. A feed with no usable
+event (no events at all, or events that no logged book prices) is recorded as a slot with no feed events (each
+due game with its book columns blank) and counted as a try, and the log says which of the two it was; it used to
+stop the script with an error before the try was counted.
 
 For iPhone pushes: install the free ntfy app, subscribe to the topic in
 `NTFY_TOPIC` (pick something long and random; anyone who knows it can read it),
@@ -115,6 +121,12 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **"Before kickoff"** is before the earlier of the kickoff on the row and the kickoff in the schedule, for every use.
 - **20 closes.** A decision in which fewer than 20 bets have a primary close is inconclusive, and the scorer says why and how many bets have no close.
 - **What it replaces.** The amendment ends with a list of every earlier sentence it changes, quoted. It tests nothing; the running variant count stays 271 (p < 0.000185).
+
+**Amendment 7 (Sep 29)** follows up the money-gate study and the last review of amendment 6. No trigger, gate, price cap or stake changes. Tests in `tests/test_readings.py` and `tests/test_close_capture.py`:
+
+- **The keep test's interval is the wider of two.** Closing-line moves of windy games on the same day move together, so the plain interval kept a rule with no edge about 8 to 10% of the time instead of 2.5%. Grouping by game day alone can come out narrower than the plain interval, even of zero width, so the registered interval is the wider of the two: the plain half-width, with Student's t on one less than the number of bets (a little wider than the 1.96 the scorer used), and the grouped one, with the bets grouped by the Eastern date of their game's kickoff and Student's t on one less than the number of game days. With fewer than 2 game days there is no interval and the decision is inconclusive. The scorer prints the registered interval, says which of the two it is, and prints both; the record keeps the interval, both half-widths and the number of game days. In simulation ([`../strategy-research/keep_test_check.py`](../strategy-research/keep_test_check.py), 40,000 paths per case) it keeps a no-edge rule 5.8 to 7.4% of the time in the realistic case (the grouped interval alone 6.4 to 8.1%), and the two looks together 6.5 to 8.4%; with independent signals 1.4%. That is better, not fixed: NFL seasons swing as a whole, and grouping by day can't correct that.
+- **Close capture's feed-event rule is registered** (above).
+- **Three record gaps, and a copy that never loses a line.** A recorded time with no time zone is a damaged record, not a crash; a damaged record still prints each decision in it that can be read, as recorded; and a decision missing from a record file that still exists is restored from the ledgers-branch copy, never decided again, by appending the copy's own line. The nightly copy (`../ops/sync_ledgers.sh`) now never publishes a `decisions.csv` that has lost or changed a line of the published copy (or is missing, empty, cut or has the wrong header): it keeps the published copy, says so in one line, and syncs everything else. The first copy is checked the same way, and a published copy that is itself damaged is named as the damaged one. So a decision that was ever published is never decided again. The one case left is a decision recorded since the last nightly copy that published the file and lost before the next one: normally the same day, but while the nightly copy holds the file back because a published line in it has changed, every decision recorded until that line is put back. A copy that can't be read stops recording even when the file is there, and the decisions still readable in it are printed as recorded; the hub replaces a damaged published copy by hand with a commit to the ledgers branch, and recording resumes once the copy can be read. A blank line, or a line of only spaces, in the file or the copy is skipped: it is not damage, and it is never counted, copied or published. Tests of the nightly copy: `tests/test_sync_ledgers.py`.
 
 ## Forecast replay on NWS MOS, 2004–25 (issue #40, Sep 29)
 

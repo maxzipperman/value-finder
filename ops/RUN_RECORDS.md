@@ -4,7 +4,9 @@ The NFL and CFB alert jobs run four times a day on the Mac (7:30 AM, 11:30 AM, 3
 its records in its own `data/forward/` folder (`nfl-weather/data/forward/`, `cfb-weather/data/forward/`).
 Every night at 23:45 `ops/sync_ledgers.sh` copies the ledger, `runs.csv`, `alerts.log`, `closes.csv`,
 `fills.csv` and `decisions.csv` (each one that exists) to the `ledgers` branch on GitHub, so there is a dated
-copy outside the Mac.
+copy outside the Mac. The published `decisions.csv` never loses a line (nfl-weather amendment 7, cfb-weather
+amendment 5, section 3); the hub replaces a damaged published copy by hand with a commit to the `ledgers` branch,
+and recording resumes once the copy can be read.
 
 ## The four files
 

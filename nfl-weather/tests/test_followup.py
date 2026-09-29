@@ -284,7 +284,11 @@ def test_the_nightly_sync_publishes_decisions_csv(tmp_path):
     ledgers = {f"{p}/data/forward/ledger.csv": "snapshot_utc\n2026-09-29T14:30:05Z\n" for p in ("nfl-weather", "cfb-weather")}
     code, files = sync_ledgers(tmp_path, ledgers)
     assert code == 0 and files == ["cfb-weather/ledger.csv", "nfl-weather/ledger.csv"]     # no decisions.csv: as before
-    code, files = sync_ledgers(tmp_path, {"nfl-weather/data/forward/decisions.csv": "game_id,decision\ng1,bet\n"})
+    # a record that starts with the scorers' header: since pull request 64, section 3 of nfl-weather amendment 7, the
+    # first copy is not published unless it does (tests/test_sync_ledgers.py)
+    record = ("decision_id,rule,horizon,horizon_utc,decided_utc,n_bets,verdict,numbers,ledger_rows,ledger_rows_sha256\n"
+              'RULE_B:2026,Rule B,after Week 18 of 2026,2027-01-10T18:00:00Z,2027-01-20T17:00:00Z,40,KEEP,"{}",1,aa\n')
+    code, files = sync_ledgers(tmp_path, {"nfl-weather/data/forward/decisions.csv": record})
     assert code == 0 and files == ["cfb-weather/ledger.csv", "nfl-weather/decisions.csv", "nfl-weather/ledger.csv"]
 
 

@@ -26,13 +26,17 @@ reports how much waiting gained or cost against the alert-time quote.
 **Close capture** (amendment 2). Every 15 minutes `ops/capture_closes.sh` runs `scripts/capture_close.py`.
 When FBS games kick off in 2–20 minutes, it makes one Odds API call and adds one row per game in that kickoff
 slot to `data/forward/closes.csv`: Pinnacle's total and prices, else DraftKings'. If some game in the slot has
-neither, the slot is tried once more on the next run, for a second credit. Since Sep 29 each game takes at most
-one feed listing: one with its two teams that starts within 6 hours of its scheduled kickoff, preferring
-Pinnacle, then DraftKings (as the board does), then the one nearest the kickoff. Before, it matched on the teams
-alone, so a relisted event, or a rematch such as a conference title game in the same feed, added a second row,
-and when both rows had a price the scorer took whichever the feed gave last. A tie between two equally good
-listings, or no listing within 6 hours, leaves the game's close missing, and the log says why. Tests:
-`tests/test_close_capture.py`.
+neither, the slot is tried once more on the next run, for a second credit. A feed event is one event in the
+odds feed: a game as the feed lists it. Since Sep 29 each game takes at most one feed event: one with its two
+teams that starts within 6 hours of its scheduled kickoff, preferring Pinnacle, then DraftKings (as the board
+does), then the one nearest the kickoff. Before, it matched on the teams alone, so a relisted event, or a rematch
+such as a conference title game in the same feed, added a second row, and when both rows had a price the scorer
+took whichever the feed gave last. A tie between two equally good feed events, or no feed event within 6 hours,
+leaves the game's close missing, and the log says why. Tests: `tests/test_close_capture.py`.
+*Note, Sep 29 (amendment 5):* this rule is now registered, with one change. Two feed events equally near the
+kickoff that are priced at the same book with the same quote (the same total and prices) are the same game
+listed twice, so the first in the feed is taken; a tie between different quotes, or between feed events priced
+at neither book, still leaves the close missing.
 
 ## Forecast replay (2024–25)
 
@@ -419,6 +423,12 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **"Before kickoff"** is before the earlier of the kickoff on the row and the kickoff in the schedule, for every use, so an in-play quote can't become Rule HT's entry or Rule B's close.
 - **20 closes.** A Rule B decision in which fewer than 20 signals have a primary close is inconclusive, and the scorer says why and how many have no close. Rule HT is graded on results, so the limit doesn't apply to it.
 - **What it replaces.** The amendment ends with a list of every earlier sentence it changes, quoted. It tests nothing; the running variant count stays 271 (p < 0.000185).
+
+**Amendment 5 (Sep 29)** follows up the money-gate study and the last review of amendment 4. No trigger, gate, price cap or stake changes. Tests in `tests/test_readings.py` and `tests/test_close_capture.py`:
+
+- **Rule B's keep interval is the wider of two.** Closing-line moves of windy games on the same day move together, so the plain interval kept a rule with no edge about 5 to 6% of the time instead of 2.5%. Grouping by game day alone can come out narrower than the plain interval, even of zero width, and with independent signals it kept a no-edge rule slightly more often than the plain one, so the registered interval is the wider of the two: the plain half-width, with Student's t on one less than the number of signals (a little wider than the 1.96 the scorer used), and the grouped one, with the signals grouped by the Eastern date of their game's kickoff and Student's t on one less than the number of game days. With fewer than 2 game days there is no interval and the decision is inconclusive. The scorer prints the registered interval, says which of the two it is, and prints both; the record keeps the interval, both half-widths and the number of game days. In simulation ([`../strategy-research/keep_test_check.py`](../strategy-research/keep_test_check.py), 40,000 paths per case) it keeps a no-edge rule 2.8 to 3.0% of the time in the realistic case (the grouped interval alone 3.6 to 4.0%), up to 3.8% in the stress case, and 1.7 to 1.9% with independent signals. Rule HT is graded on results and doesn't change.
+- **Close capture's feed-event rule is registered** (above).
+- **Three record gaps, and a copy that never loses a line.** A recorded time with no time zone is a damaged record, not a crash; a damaged record still prints each decision in it that can be read, as recorded; and a decision missing from a record file that still exists is restored from the ledgers-branch copy, never decided again, by appending the copy's own line. The nightly copy (`../ops/sync_ledgers.sh`) now never publishes a `decisions.csv` that has lost or changed a line of the published copy (or is missing, empty, cut or has the wrong header): it keeps the published copy, says so in one line, and syncs everything else. The first copy is checked the same way, and a published copy that is itself damaged is named as the damaged one. So a decision that was ever published is never decided again. The one case left is a decision recorded since the last nightly copy that published the file and lost before the next one: normally the same day, but while the nightly copy holds the file back because a published line in it has changed, every decision recorded until that line is put back. A copy that can't be read stops recording even when the file is there, and the decisions still readable in it are printed as recorded; the hub replaces a damaged published copy by hand with a commit to the ledgers branch, and recording resumes once the copy can be read. A blank line, or a line of only spaces, in the file or the copy is skipped: it is not damage, and it is never counted, copied or published. Tests of the nightly copy: `../nfl-weather/tests/test_sync_ledgers.py`.
 
 ## Data
 
