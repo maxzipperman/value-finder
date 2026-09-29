@@ -6,14 +6,14 @@ Two sources, both cache-first under data/raw/_weather/:
   prev      what the forecast said one day earlier (previous-runs-api.open-meteo.com, `*_previous_day1`),
             available from 2024. This is the exposure the heat hypotheses bet on (docs/HEAT_HYPOTHESES.md).
 
-One request per venue per calendar month with games (the whole month, so cache keys are stable), so a
-season costs roughly venues x months. Open-Meteo's free tier allows 600 calls a minute and 10,000 a
+One request per venue per calendar month with games, so a season costs roughly venues x months. A
+request always covers the whole month (so its cache key is stable), which means a month is fetched only
+once it ended at least five days ago; games in the current or last month wait for a later run. Open-Meteo's free tier allows 600 calls a minute and 10,000 a
 day; `fetch` defaults to 5 a second and stops at --max-calls.
 """
 from __future__ import annotations
 
 import json
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
@@ -27,6 +27,7 @@ ARCHIVE_VARS = ("temperature_2m", "relative_humidity_2m", "dew_point_2m", "wind_
 PREV_VARS = tuple(f"{v}_previous_day1" for v in ("temperature_2m", "relative_humidity_2m", "wind_speed_10m",
                                                  "wind_direction_10m", "precipitation"))
 PREV_FROM = date(2024, 1, 1)
+ARCHIVE_LAG_DAYS = 5
 SPORT = "_weather"
 SOURCES = {"archive": "openmeteo_archive", "prev": "openmeteo_prev"}
 
@@ -56,25 +57,30 @@ class Request:
         return cache_key(SOURCES[self.kind], self.url, self.params)
 
 
-def plan_requests(venue_days: set[tuple[str, date]], venues: dict, today: date | None = None) -> list[Request]:
-    """Archive and previous-run requests for (venue_id, UTC day) pairs, one per venue per month.
-    The archive lags about five days, so days within five days of today are left for a later run."""
+def month_end(year: int, month: int) -> date:
+    return (date(year, month, 1).replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+
+
+def month_ready(year: int, month: int, today: date | None = None) -> bool:
+    """A month is fetched only once it ended at least ARCHIVE_LAG_DAYS ago (the archive lags about five days)."""
     today = today or datetime.now(timezone.utc).date()
-    months: dict[tuple[str, int, int], list[date]] = defaultdict(list)
-    for vid, day in venue_days:
-        if day <= today - timedelta(days=5):
-            months[(vid, day.year, day.month)].append(day)
+    return month_end(year, month) <= today - timedelta(days=ARCHIVE_LAG_DAYS)
+
+
+def plan_requests(venue_days: set[tuple[str, date]], venues: dict, today: date | None = None) -> list[Request]:
+    """Archive and previous-run requests for (venue_id, UTC day) pairs, one per venue per whole month.
+    Months that ended less than five days ago are left for a later run, so a request always covers the
+    whole month and its cache key never changes with the day it was planned."""
+    months = {(vid, day.year, day.month) for vid, day in venue_days if month_ready(day.year, day.month, today)}
     out = []
     for (vid, y, m) in sorted(months):
-        out += month_requests(vid, venues[vid], y, m, today)
+        out += month_requests(vid, venues[vid], y, m)
     return out
 
 
-def month_requests(vid: str, v, year: int, month: int, today: date | None = None) -> list[Request]:
-    """Whole calendar months (clipped to five days ago), so cache keys don't move as games are added."""
-    today = today or datetime.now(timezone.utc).date()
-    lo = date(year, month, 1)
-    hi = min((lo.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1), today - timedelta(days=5))
+def month_requests(vid: str, v, year: int, month: int) -> list[Request]:
+    """Whole calendar months, so cache keys don't move as games are added or as days pass."""
+    lo, hi = date(year, month, 1), month_end(year, month)
     out = [Request("archive", vid, v.lat, v.lon, lo, hi)]
     if hi >= PREV_FROM:
         out.append(Request("prev", vid, v.lat, v.lon, max(lo, PREV_FROM), hi))

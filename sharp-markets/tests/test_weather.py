@@ -87,6 +87,22 @@ def test_open_meteo_plan_is_monthly_and_stable():
     assert recent == []                                      # the archive lags; left for a later run
 
 
+def test_recent_months_wait_until_whole_so_the_join_finds_them():
+    """#33 item 1: a month is planned only once it ended 5+ days ago, and always whole, so the key
+    `plan` fetched under is the key `kickoff_weather` reads, whatever day each ran."""
+    vs = V.venues()
+    day = {("coors_field", date(2026, 8, 20))}
+    assert om.plan_requests(day, vs, today=date(2026, 8, 30)) == []           # the month isn't over
+    assert om.plan_requests(day, vs, today=date(2026, 9, 3)) == []            # over, but only 3 days ago
+    reqs = om.plan_requests(day, vs, today=date(2026, 9, 5))
+    assert [(r.kind, r.start, r.end) for r in reqs] == [("archive", date(2026, 8, 1), date(2026, 8, 31)),
+                                                        ("prev", date(2026, 8, 1), date(2026, 8, 31))]
+    later = om.plan_requests(day, vs, today=date(2027, 1, 1))
+    assert [r.key for r in later] == [r.key for r in reqs]
+    v = vs["coors_field"]
+    assert [r.key for r in om.month_requests("coors_field", v, 2026, 8)] == [r.key for r in reqs]
+
+
 def hourly_body(start, hours, temp, rh, prev=False):
     sfx = "_previous_day1" if prev else ""
     times = [(start.replace(tzinfo=None) + (i * (t("2020-01-01T01:00:00Z") - t("2020-01-01T00:00:00Z"))))
