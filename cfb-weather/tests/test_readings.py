@@ -1,8 +1,10 @@
 """Amendment 4: the scorer readings that a review of pull request 50 found open. One test per reading,
 built on the reviewers' own scenarios (their inputs are reused here). Each test fails on the scorer as
 merged in pull request 50 and passes under amendment 4. Readings are numbered as amendment 4's sections."""
+import csv
 import fcntl
 import hashlib
+import io
 import json
 import os
 import re
@@ -14,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -542,7 +545,11 @@ def test_reading_3_a_damaged_record_stops_recording_not_the_scores(tmp_path):
         assert "Decision record: decisions.csv is unreadable" in r.stdout, name
         assert "Nothing will be recorded until it is repaired or restored from the ledgers branch" in r.stdout
         assert "40 signals, 40 settled" in r.stdout and "FINAL: KEEP" in r.stdout
-        assert "not recorded: the decision record is unreadable" in r.stdout
+        if name == "noheader":      # amendment 5, reading 3: a record that can still be read is printed as recorded
+            assert "recorded in decisions.csv on 2026-12-20T00:00:00Z" in r.stdout
+            assert "the file is damaged, and this record can still be read" in r.stdout
+        else:
+            assert "not recorded: the decision record is unreadable" in r.stdout
         assert (d / "decisions.csv").read_text() == content
 
 
@@ -821,3 +828,530 @@ def test_the_summaries_say_a_record_lost_before_its_copy_can_be_decided_again():
             "again") in section(3)
     assert "about 3 to 6 a week (rerun Sep 29; was 34, about 3 to 5 a week)" in (
         ROOT.parent / "strategy-research" / "README.md").read_text()
+
+
+# ================================================================== amendment 5 (Sep 29): the keep test and the record
+def amendment5():
+    return (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 5 ")[1].split("\n## ")[0]
+
+
+def amendment5_section(n):
+    return " ".join(amendment5().split(f"### {n}.")[1].split("\n### ")[0].split())
+
+
+REGISTERED_BY_HUB = ("Registered by the hub on the owner's standing instruction of September 29, 2026 (the hub decides "
+                     "questions of how the tests are graded and reports them; money, and any rule's trigger, gate or "
+                     "price cap, stay the owner's). The registering commit is the merge of pull request 64. The owner "
+                     "can change any reading here by a dated amendment made before the first outcome it would affect.")
+
+
+def test_amendment_5_is_registered_as_the_hub_was_told_and_names_what_it_replaces():
+    text = norm(amendment5())
+    assert REGISTERED_BY_HUB in text
+    assert "No trigger, gate, price cap or stake changes." in text and "The rules version stays cfb-v3-2026-09-28" in text
+    assert "on the day of registration it is 273, so the multiple-testing bar is p < 0.000183" in text
+    whole = (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 5 ")[0]
+    strategy = (ROOT / "STRATEGY.md").read_text()
+    bullets = amendment5().split("### What this amendment replaces")[1].split("\n* ")[1:]
+    assert len(bullets) >= 7
+    for bullet in bullets:
+        label, rest = bullet.split(': "', 1)
+        if label.startswith("`STRATEGY.md`"):
+            src = strategy
+        else:
+            m = re.match(r"Amendment (\d+)(?:, section (\d+))?", label)
+            src = whole.split(f"## Amendment {m[1]} ")[1].split("\n## ")[0]
+            src = src.split(f"### {m[2]}.")[1].split("\n### ")[0] if m[2] else src
+        quotes = re.findall(r'"([^"]+)"', '"' + rest)
+        assert quotes, label
+        for q in quotes:
+            assert norm(q) in norm(src), (label, q)
+    one = amendment5_section(1)
+    for words in ("2.8%, 2.9% and 3.0% of the time (plain 5.2%, 5.8% and 6.3%; grouped 3.6%, 3.7% and 4.0%)",
+                  "1.9%, 1.7% and 1.7% (plain 2.8%, 2.7% and 2.7%; grouped 3.3%, 3.1% and 3.4%)",
+                  "40,000 simulated paths per case", "the owner has not chosen a gate", "Rule HT is graded on results",
+                  "It does not fix the NFL", "0 variants",
+                  "Until now the scorer computed the plain interval as m plus or minus 1.96 x s / sqrt(n)"):
+        assert words in one, words
+    two = amendment5_section(2)
+    assert "the first in the feed is taken" in two and "none is taken" in two and "within 6 hours" in two
+    assert "Pinnacle comes first, then one priced at DraftKings" in two and "byte-identical" in two
+    # "listing" is amendment 4's word for a group of ledger rows; a thing in the odds feed is a feed event
+    assert "A **feed event** is one event in the odds feed" in amendment5() and two.count("listing") == 1
+    assert "It is not a listing in the sense of amendment 4, section 10" in two
+
+
+def test_the_summaries_name_amendment_5():
+    strategy = (ROOT / "STRATEGY.md").read_text()
+    assert ("*Amendment 5 (Sep 29):* the 95% interval is the wider of the plain interval and one grouped by game day"
+            in strategy)
+    # amendment 4's dated note is left as written, and a new dated note after it says the copy never loses a line
+    old = "never decided again unless it is lost before that night's copy is made (3)"
+    new = ("never decided again unless it is lost before any nightly copy has published it. Normally that means "
+           "recorded and lost on the same day; while the nightly copy holds the record back because a published "
+           "line in it has changed, it means any decision recorded until the hub puts that line back (section 3)")
+    assert old in strategy and new in strategy and strategy.index(old) < strategy.index(new)
+    readme = (ROOT / "README.md").read_text()
+    assert "feed listing" not in readme and "one feed event" in readme
+    assert "the copy protects a lost line only until" not in readme.lower()
+    status = (ROOT.parent / "STATUS.md").read_text()
+    assert "the college football one until Thu Oct 1, 5:00 PM Pacific" in status
+    assert "The registered primary CLV and the decision rules are unchanged" not in status
+    assert "the captured close enters Rule B's primary CLV when no later quote was logged" in status
+    assert ("college football 2.8 to 3.0% with the registered test (5.2 to 6.3% with the plain interval as scored "
+            "before, 3.6 to 4.0% with the grouped one alone)") in status
+
+
+def by_hand(clv, days):
+    """The registered interval computed here from its definition (amendment 5, reading 1), not with the scorer's
+    code: the plain mean m of the n CLVs; the plain half-width t(0.975, n - 1) x sd / sqrt(n); G game days, s_g the
+    sum of (CLV - m) over day g, the grouped half-width t(0.975, G - 1) x sqrt((G / (G - 1)) x sum(s_g^2) / n^2);
+    the interval m plus or minus the larger half-width, none with fewer than 2 game days."""
+    from scipy import stats
+    x, d = np.asarray(clv, float), np.asarray(days, object)
+    x, d = x[~np.isnan(x)], d[~np.isnan(x)]
+    n, m = len(x), x.mean()
+    labels = sorted(set(d))
+    G = len(labels)
+    s = np.array([(x[d == g] - m).sum() for g in labels])
+    plain = stats.t.ppf(0.975, n - 1) * x.std(ddof=1) / np.sqrt(n)
+    grouped = stats.t.ppf(0.975, G - 1) * np.sqrt(G / (G - 1) * (s ** 2).sum() / n ** 2) if G > 1 else np.nan
+    half = max(plain, grouped) if G > 1 else np.nan
+    return dict(mean_clv=m, ci_low=m - half, ci_high=m + half, n_clv=n, game_days=G, plain_half_width=plain,
+                grouped_half_width=grouped)
+
+
+def printed(want):
+    """The line the scorer prints for an interval: the registered one, which of the two it is, and both."""
+    m, g, p, G = want["mean_clv"], want["grouped_half_width"], want["plain_half_width"], want["game_days"]
+    both_g, both_p = f"grouped {m - g:+.2f} to {m + g:+.2f}", f"plain {m - p:+.2f} to {m + p:+.2f}"
+    which = (f"the two are equally wide, over {G} game days ({both_g}; {both_p})" if np.isclose(g, p, rtol=1e-9) else
+             f"the wider is the grouped one, over {G} game days ({both_g}; {both_p})" if g > p else
+             f"the wider is the plain one ({both_p}; {both_g}, over {G} game days)")
+    return f"95% CI {want['ci_low']:+.2f} to {want['ci_high']:+.2f}; {which}"
+
+
+def keep_case(kicks, no_close=()):
+    """One Rule B signal per kickoff (UTC), entry 50.5, and a later quote 3 hours out that gives a varied CLV
+    (none for the signals in `no_close`): ledger rows, schedule, each signal's CLV and its Eastern game day."""
+    rows, s, clv = [], [], []
+    for i, k in enumerate(kicks):
+        c = ((7 * i) % 11 - 3) * 0.5                                             # CLVs from -1.5 to +3.5, repeated
+        rows.append(row(1 + i, k, ts(k) - pd.Timedelta(days=2), rule_b="SIGNAL", mkt_total=50.5))
+        if i not in no_close:
+            rows.append(row(1 + i, k, ts(k) - pd.Timedelta(hours=3), mkt_total=50.5 - c))
+        s.append(sched(1 + i, kick=k))
+        clv.append(np.nan if i in no_close else c)
+    days = [ts(k).tz_convert("America/New_York").strftime("%Y-%m-%d") for k in kicks]
+    return rows, s, clv, days
+
+
+def test_amendment_5_reading_1_the_keep_interval_is_the_wider_of_two(tmp_path):
+    """Recomputed here from the registered definition on 1, 2, 5, 20 and 40 game days, with equal CLVs, signals with
+    no close, and a late Saturday game (10:30 PM Eastern, 02:30 UTC Sunday) that groups with Saturday. The grouped
+    half-width is the wider in some cases and the plain one in others; with one signal per game day they are equally
+    wide."""
+    late = (["2026-10-17T16:00Z"] * 8 + ["2026-10-18T02:30Z"] * 5 + ["2026-10-22T23:30Z"] * 6
+            + ["2026-10-24T00:00Z"] * 6 + ["2026-10-24T19:30Z"] * 8 + ["2026-10-31T19:30Z"] * 7)
+    cases = {
+        "one day": (["2026-10-10T19:00Z"] * 40, ()),
+        "two days": (["2026-10-10T19:00Z"] * 20 + ["2026-10-17T19:00Z"] * 20, (3, 17, 30)),
+        "five days, late Saturday": (late, (0, 9)),
+        "twenty days": ([ts("2026-10-03T19:30Z") + pd.Timedelta(days=3 * (i // 2)) for i in range(40)], (11,)),
+        "forty days, one signal each": ([ts("2026-10-03T19:30Z") + pd.Timedelta(days=i) for i in range(40)], ()),
+    }
+    wider = {}
+    for name, (kicks, none) in cases.items():
+        rows, s, clv, days = keep_case(kicks, none)
+        d = tmp_path / name.replace(" ", "_").replace(",", "")
+        out = rb(score(d, rows, s, "2026-12-20", "--test-record"))
+        nums = json.loads(pd.read_csv(d / "decisions.csv", dtype=str).numbers[0])
+        want = by_hand(clv, days)
+        assert (nums["game_days"], nums["n_clv"]) == (want["game_days"], want["n_clv"]), name
+        for k in ("mean_clv", "plain_half_width"):
+            assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
+        if want["game_days"] < 2:
+            assert nums["ci_low"] is None and nums["ci_high"] is None and nums["grouped_half_width"] is None, name
+            assert ("FINAL: INCONCLUSIVE (the 40 signals that have a primary close kicked off on 1 game day, so there "
+                    "is no interval)") in out, name
+            assert "no interval: the signals with a primary close kicked off on 1 game day" in out, name
+            continue
+        for k in ("ci_low", "ci_high", "grouped_half_width"):
+            assert np.isclose(nums[k], want[k], rtol=1e-12, atol=1e-12), (name, k)
+        assert np.isclose(nums["ci_high"] - nums["mean_clv"], max(nums["plain_half_width"],
+                                                                  nums["grouped_half_width"]), rtol=1e-12), name
+        assert printed(want) in out, (name, printed(want))
+        wider[name] = ("equal" if np.isclose(want["grouped_half_width"], want["plain_half_width"], rtol=1e-9) else
+                       "grouped" if want["grouped_half_width"] > want["plain_half_width"] else "plain")
+    assert set(wider.values()) == {"grouped", "plain", "equal"}, wider
+    assert wider["forty days, one signal each"] == "equal"
+    # the late Saturday game is Sunday in UTC, where it would be a day of its own and change the interval
+    rows, s, clv, days = keep_case(late, (0, 9))
+    utc = [ts(k).strftime("%Y-%m-%d") for k in late]
+    assert days[8] == "2026-10-17" and utc[8] == "2026-10-18" and len(set(days)) == 5
+    assert not np.isclose(by_hand(clv, utc)["grouped_half_width"], by_hand(clv, days)["grouped_half_width"])
+    text = amendment5_section(1)
+    for words in ("THE REGISTERED INTERVAL IS", "the larger of the two half-widths", "(G / (G - 1))",
+                  "Student's t with n - 1 degrees of freedom", "Student's t with G - 1 degrees of freedom",
+                  "fewer than 2 game days, or fewer than 2 signals", "the wider is the grouped one, over G game days"):
+        assert words.lower() in text.lower(), words
+
+
+def test_amendment_5_reading_1_the_interim_read_uses_the_wider_interval(tmp_path):
+    rows, s, clv, days = keep_case([ts("2026-10-03T19:30Z") + pd.Timedelta(days=7 * (i // 3)) for i in range(12)])
+    out = rb(score(tmp_path, rows, s, "2026-11-01"))
+    assert "INTERIM read" in out and printed(by_hand(clv, days)) in out
+
+
+def test_amendment_5_reading_3_a_time_with_no_time_zone_is_damage_not_a_crash(tmp_path):
+    """The second review of amendment 4 (its r2naive): a recorded time re-saved without its 'Z' passed the checks
+    and crashed the whole run with TypeError, so the day's report was lost."""
+    a, sa = rb_signals(40)
+    score(tmp_path, a, sa, "2026-12-20", "--test-record")
+    rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str, keep_default_na=False)
+    for col, naive in (("horizon_utc", "2026-12-13 08:00:00"), ("decided_utc", "2026-12-20T00:00:00")):
+        rec.assign(**{col: naive}).to_csv(tmp_path / "decisions.csv", index=False)
+        before = (tmp_path / "decisions.csv").read_text()
+        r = run(ROOT / "scripts" / "score_forward.py", "--ledger", str(tmp_path / "ledger.csv"), "--schedule",
+                str(tmp_path / "sched.csv"), "--now", "2026-12-21", "--test-record")
+        assert r.returncode == 0, (col, r.stderr[-400:])
+        assert "Decision record: decisions.csv is unreadable (ValueError: a time with no time zone" in r.stdout, col
+        assert "RULE_HT:" in r.stdout and "Variants under forward test" in r.stdout, col
+        assert (tmp_path / "decisions.csv").read_text() == before, col
+    assert "a record whose time cannot be read as a UTC time is a damaged record" in amendment5_section(3)
+
+
+def test_amendment_5_reading_3_a_damaged_record_still_prints_the_decisions_it_can(tmp_path):
+    """The second review of amendment 4 (its r2probe T2): a second record line was cut mid-write; the next run
+    printed a fresh FINAL that contradicted the recorded KEEP and never showed it."""
+    a, sa = rb_signals(40)
+    score(tmp_path, a, sa, "2026-12-20", "--test-record")
+    whole = (tmp_path / "decisions.csv").read_text()
+    (tmp_path / "decisions.csv").write_text(whole + "CFB_RULE_HT,Rule HT,once, after the 2027")
+    before = (tmp_path / "decisions.csv").read_text()
+    worse = [dict(r, mkt_total=56.5) if r["rule_b"] != "SIGNAL" else r for r in a]    # a fresh computation: NOT KEPT
+    out = score(tmp_path, worse, sa, "2026-12-22", "--test-record")
+    assert "Decision record: decisions.csv is unreadable" in out
+    assert "1 recorded decision in it can still be read (CFB_RULE_B) and is printed below as recorded." in out
+    assert "FINAL: KEEP, on the 40 signals" in rb(out) and "recorded in decisions.csv on 2026-12-20T00:00:00Z" in rb(out)
+    assert "the file is damaged, and this record can still be read" in rb(out)
+    assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and "The recorded decision stands." in rb(out)
+    assert (tmp_path / "decisions.csv").read_text() == before                  # nothing is added to a damaged file
+    assert "any decision in it that can still be read is still printed as recorded" in amendment5_section(3)
+
+
+def test_amendment_5_reading_3_a_decision_missing_from_the_file_is_restored_from_the_copy(tmp_path):
+    """The second review of amendment 4 (its r2probe T3): the record was cut back to its header while the file
+    stayed, and the next real run decided NOT KEPT although the copy held KEEP."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # the nightly copy holds KEEP
+    whole = (fwd / "decisions.csv").read_text()
+    head = whole.splitlines()[0] + "\n"
+    (fwd / "decisions.csv").write_text(head)                                  # the file stays; its record is gone
+    season_file(proj, 2026, s, "2026-12-18T16:00")                            # stale: this run may not record
+    out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+    assert ("data/forward/decisions.csv doesn't hold 1 recorded decision that its copy on the ledgers branch "
+            "(origin/ledgers:cfb-weather/decisions.csv) holds (CFB_RULE_B), printed below as recorded") in out
+    assert "FINAL: KEEP" in rb(out) and "read from its copy on the ledgers branch (the file is missing it)" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and (fwd / "decisions.csv").read_text() == head
+    season_file(proj, 2026, s, "2026-12-21T16:00")                            # a real run restores it
+    out = on_clock(tmp_path, "2026-12-21T18:00", scorer).stdout
+    assert ("data/forward/decisions.csv was missing 1 recorded decision that its copy on the ledgers branch "
+            "(origin/ledgers:cfb-weather/decisions.csv) holds (CFB_RULE_B); restored from the copy") in out
+    assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out)
+    assert "restored from the ledgers branch" in rb(out)
+    assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out)
+    assert (fwd / "decisions.csv").read_text() == whole                        # the copy's line, as it was written
+    cut = head + whole.splitlines()[1][:60] + "\n"                            # damaged, and the copy holds it
+    (fwd / "decisions.csv").write_text(cut)
+    out = on_clock(tmp_path, "2026-12-21T19:00", scorer).stdout
+    assert "No recorded decision in it can still be read." in out
+    assert "FINAL: KEEP" in rb(out) and "read from its copy on the ledgers branch (the file is damaged)" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and (fwd / "decisions.csv").read_text() == cut
+    assert "is restored from the copy, never decided again" in amendment5_section(3)
+
+
+# ================================================================== the review of pull request 64 (Sep 29)
+# The fourth review: the nightly copy keeps a damaged published copy, so the scorer no longer says that the nightly
+# copy repairs it; it says this, as section 3, hub.md and ops/RUN_RECORDS.md do
+HUB_REPLACES = ("the hub replaces a damaged published copy by hand with a commit to the ledgers branch, and recording "
+                "resumes once the copy can be read")
+
+
+def test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_can(tmp_path):
+    """The review of pull request 64 (its rec_probe c3 and c4, on the NFL scorer; the record code is the same
+    here): the copy's first record line could be read and the line after it was cut. With the file present but
+    missing that decision, the next real run decided it again and said nothing about the copy; with the file
+    missing, it printed a fresh FINAL. A damaged copy stops recording (amendment 4, section 3) whether or not the
+    file is there."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    whole = (fwd / "decisions.csv").read_text()
+    head, line = whole.splitlines()
+    (tmp_path / "damaged.csv").write_text(f"{head}\n{line}\n{line[:40]}")    # the copy's last line was cut
+    publish(repo, "cfb-weather", tmp_path / "damaged.csv")
+    season_file(proj, 2026, s, "2026-12-21T16:00")
+    unreadable = "its copy on the ledgers branch (origin/ledgers:cfb-weather/decisions.csv) is unreadable"
+    for name, content, why in (
+            ("the file lost it", head + "\n",
+             "the file is missing it; the copy is damaged, and this line of it can still be read"),
+            ("the file is missing", None,
+             "the file is missing, and the copy is damaged; this line of it can still be read")):
+        if content is None:
+            (fwd / "decisions.csv").unlink()
+        else:
+            (fwd / "decisions.csv").write_text(content)
+        out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+        assert unreadable in out and "1 recorded decision in the copy can still be read (CFB_RULE_B)." in out, name
+        assert HUB_REPLACES in out and "does that" not in out and "before the nightly copy" not in out, name
+        if content is not None:
+            assert "before the hub replaces the damaged copy by hand, after which the copy no longer holds it" in out
+        assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out), name
+        assert f"read from its copy on the ledgers branch ({why})" in rb(out), name
+        assert "a fresh computation on the same horizon now gives: NOT KEPT" in rb(out), name
+        assert "FINAL: NOT KEPT" not in rb(out), name
+        if content is None:
+            assert not (fwd / "decisions.csv").exists(), name               # nothing restored from a damaged copy
+        else:
+            assert (fwd / "decisions.csv").read_text() == content, name
+    # the file is there and holds nothing, and the copy can't be read at all: a final decision is not recorded
+    (fwd / "decisions.csv").write_text(head + "\n")
+    (tmp_path / "empty.csv").write_bytes(b"")
+    publish(repo, "cfb-weather", tmp_path / "empty.csv")
+    out = on_clock(tmp_path, "2026-12-21T18:00", scorer).stdout
+    assert unreadable in out and "No recorded decision in the copy can still be read." in out
+    assert "FINAL: NOT KEPT" in rb(out) and "not recorded: its copy on the ledgers branch is unreadable" in rb(out)
+    assert f"not recorded: its copy on the ledgers branch is unreadable; {HUB_REPLACES}." in rb(out)
+    assert (fwd / "decisions.csv").read_text() == head + "\n"
+    publish(repo, "cfb-weather", fwd / "decisions.csv")                       # the nightly copy of the file
+    out = on_clock(tmp_path, "2026-12-21T19:00", scorer).stdout
+    assert unreadable not in out and "recorded in decisions.csv on 2026-12-21T19:00:00Z" in rb(out)
+    text = amendment5_section(3)
+    assert "amendment 4's rule for a damaged copy applies whether or not the file is there" in text
+    assert "it is not restored from a damaged copy" in text
+
+
+def nightly(tmp_path, repo):
+    """The real nightly copy: ops/sync_ledgers.sh run for `repo`, whose origin is a local bare repository, with HOME
+    (and so the script's own clone) inside tmp_path; then `git fetch`, as the hub's check-in runs before the
+    scorers. Returns the script's printout."""
+    remote = tmp_path / "remote.git"
+    env = dict(os.environ, HOME=str(tmp_path / "home"), GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
+               GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+    if not remote.exists():
+        subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True, env=env)
+        (repo / "ops").mkdir(exist_ok=True)
+        shutil.copy(ROOT.parent / "ops" / "sync_ledgers.sh", repo / "ops")
+        for p in ("nfl-weather", "cfb-weather"):                     # the script copies both projects' ledgers
+            ledger = repo / p / "data" / "forward" / "ledger.csv"
+            if not ledger.exists():
+                ledger.parent.mkdir(parents=True)
+                ledger.write_text("snapshot_utc\n")
+    r = subprocess.run(["bash", str(repo / "ops" / "sync_ledgers.sh")], capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    subprocess.run(["git", "-C", str(repo), "fetch", "-q", "origin"], check=True, env=env)
+    return r.stdout
+
+
+def test_amendment_5_reading_3_a_line_lost_after_the_check_in_survives_the_nightly_copy(tmp_path):
+    """The reviews of pull request 64 (their rec_probe2): a line lost after the morning check-in was published with
+    the shortened file that night, the copy no longer held it, and the next real run decided it again (NOT KEPT
+    after the recorded KEEP). The nightly copy now never publishes a file that has lost a published line, so the next
+    real run restores it from the copy; once the file holds every published line again, the nightly copy publishes
+    it."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    whole = (fwd / "decisions.csv").read_text()
+    assert "not published" not in nightly(tmp_path, repo)                     # Dec 20, 11:45 PM: the copy holds it
+    (fwd / "decisions.csv").write_text(whole.splitlines()[0] + "\n")          # Dec 21, after the check-in: lost
+    out = nightly(tmp_path, repo)                                             # Dec 21, 11:45 PM
+    assert ("cfb-weather: decisions.csv not published (it has lost or changed a line that the published copy "
+            "holds); the published copy is kept as it is") in out
+    assert git(repo, "show", "origin/ledgers:cfb-weather/decisions.csv") + "\n" == whole
+    season_file(proj, 2026, s, "2026-12-22T16:00")
+    out = on_clock(tmp_path, "2026-12-22T17:00", scorer).stdout               # Dec 22: the check-in
+    assert "restored from the copy. A lost record is never decided again." in out
+    assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out)
+    assert "FINAL: NOT KEPT" not in rb(out) and (fwd / "decisions.csv").read_text() == whole
+    assert "not published" not in nightly(tmp_path, repo)                     # Dec 22, 11:45 PM: published again
+    text = amendment5_section(3)
+    assert "the published copy never loses a line" in text.lower()
+    assert "a decision that was ever published is never decided again" in text
+    assert ("The one case left is a decision recorded since the last nightly copy that published the file and "
+            "lost before the next one") in text
+
+
+def test_amendment_5_reading_3_a_restore_appends_the_copy_s_own_line(tmp_path):
+    """A restored line is the copy's line byte for byte, so the file again holds every published line and the next
+    nightly copy publishes it. Before, the scorer wrote the decision out again, and a copy line written another way
+    (every field quoted, say, by a hand repair) came back different: the nightly copy would then never publish."""
+    repo, proj, fwd, scorer, s = lost_record_project(tmp_path)
+    head, line = (fwd / "decisions.csv").read_text().splitlines()
+    quoted = io.StringIO()
+    csv.writer(quoted, quoting=csv.QUOTE_ALL, lineterminator="\n").writerow(next(csv.reader([line])))
+    (tmp_path / "copy.csv").write_text(f"{head}\n{quoted.getvalue()}")
+    assert quoted.getvalue() != line + "\n"
+    publish(repo, "cfb-weather", tmp_path / "copy.csv")
+    (fwd / "decisions.csv").write_text(head + "\n")                           # the file lost it
+    season_file(proj, 2026, s, "2026-12-21T16:00")
+    out = on_clock(tmp_path, "2026-12-21T17:00", scorer).stdout
+    assert "restored from the copy" in out and "FINAL: KEEP" in rb(out)
+    assert (fwd / "decisions.csv").read_text() == (tmp_path / "copy.csv").read_text()
+    assert "appends the copy's own line for it to the file, byte for byte" in amendment5_section(3)
+
+
+def test_amendment_5_states_the_review_s_smaller_points(tmp_path):
+    """The review of pull request 64, minor points, and the hub's answer to the first: day totals that balance give
+    the grouped interval zero width. The draft kept that rule (+0.30 to +0.30); the registered test takes the wider
+    interval, here the plain one, which includes zero, so the rule is not kept. Also: the replay counts are labelled
+    as a replay made with scratch scripts."""
+    rows, s = [], []
+    kicks = [ts(d) for d in ("2026-10-03T19:00Z", "2026-10-10T19:00Z", "2026-10-17T19:00Z", "2026-10-24T19:00Z")
+             for _ in range(10)]
+    for i, k in enumerate(kicks):
+        c = 5.5 if i % 10 < 2 else -1.0                                     # each day: sum +3.0, mean +0.3
+        rows.append(row(1 + i, k, k - pd.Timedelta(days=2), rule_b="SIGNAL", mkt_total=50.5))
+        rows.append(row(1 + i, k, k - pd.Timedelta(hours=3), mkt_total=50.5 - c))
+        s.append(sched(1 + i, kick=k))
+    out = rb(score(tmp_path, rows, s, "2026-12-20", "--test-record"))
+    rec = pd.read_csv(tmp_path / "decisions.csv", dtype=str)
+    nums = json.loads(rec.numbers[0])
+    assert rec.verdict[0].startswith("NOT KEPT") and nums["game_days"] == 4
+    assert np.isclose(nums["grouped_half_width"], 0, atol=1e-12) and np.isclose(nums["mean_clv"], 0.3, atol=1e-12)
+    assert nums["ci_low"] < 0 < nums["ci_high"] and np.isclose(nums["ci_high"] - 0.3, nums["plain_half_width"])
+    assert ("95% CI -0.54 to +1.14; the wider is the plain one (plain -0.54 to +1.14; grouped +0.30 to +0.30, over 4 "
+            "game days)") in out
+    one = amendment5_section(1)
+    assert "even of zero width" not in one.split("Known limit")[-1]                    # the draft's limit is gone
+    assert "-0.54 to +1.14" in one and "not kept" in one
+    assert "scratch scripts, not kept in the repository" in amendment5_section(2)
+
+
+# ================================================================== the third review of pull request 64 (Sep 29)
+def test_amendment_5_states_the_decisions_a_held_back_copy_leaves_on_the_mac_only():
+    """The third review (its e2e_window, run on the NFL scorer; the record code and the nightly copy are the same
+    here, and nfl-weather/tests/test_readings.py replays it end to end): while the nightly copy holds the file back
+    because a published line changed, which the scorer still reads, a decision recorded meanwhile is not published,
+    and if the file is then lost it is decided again. Section 3 said the one case left was a decision recorded and
+    lost on the same day. It now states this case, and names amendment 4's sentence that it changes."""
+    three = amendment5_section(3)
+    assert ("while the nightly copy holds the file back because a published line in it has changed (a hand edit, "
+            "say, or a spreadsheet re-saving the file with other line endings, which the scorer still reads), the "
+            "scorer goes on recording and nothing new is published, so every decision recorded until the hub puts that "
+            "line back exists only on the Mac") in three
+    assert "The first copy is checked the same way" in three
+    assert "the line it prints says that the published copy is damaged, not the file" in three
+    assert "recorded and lost on the same day, before that night's copy" not in norm(amendment5())
+    replaces = norm(amendment5().split("### What this amendment replaces")[1])
+    assert ('Amendment 4, section 3: "A record made since the last nightly copy exists only on the Mac until that '
+            'night: if it is lost before then, neither the file nor a copy holds it, and the next real run decides it '
+            'again."') in replaces
+    scorer = (ROOT / "scripts" / "score_forward.py").read_text()
+    assert "# Amendment 6, section 3" not in scorer                        # the NFL's number for the same section
+    assert "# Amendment 4, section 3: a copy that can't be read stops recording" in scorer
+    assert "# Amendment 4, section 3, and amendment 5, reading 3: the file is there" in scorer
+
+
+# ================================================================== the fourth review of pull request 64 (Sep 29)
+BLANKS = "\n   \n"                                                   # a blank line, and a line of only spaces
+
+
+def with_blanks(text, where):
+    """`text` with a blank line and a line of only spaces at its start, before its last line, or at its end."""
+    lines = text.splitlines(keepends=True)
+    at = {"start": 0, "middle": len(lines) - 1, "end": len(lines)}[where]
+    return "".join(lines[:at]) + BLANKS + "".join(lines[at:])
+
+
+def shown(repo, name):
+    """The published copy exactly as `git show` gives it (git() strips the ends, where a blank line may be)."""
+    return subprocess.run(["git", "-C", str(repo), "show", f"origin/ledgers:{name}"], capture_output=True, text=True,
+                          check=True).stdout
+
+
+def commit_by_hand(tmp_path, repo, name, text):
+    """The hub's hand commit to the ledgers branch, made in the nightly copy's own clone (HOME is inside tmp_path) and
+    pushed to the local bare remote; then `git fetch`, as the check-in runs before the scorers."""
+    env = dict(os.environ, HOME=str(tmp_path / "home"), GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
+               GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+    clone = tmp_path / "home" / "code" / ".value-finder-ledgers"
+    (clone / name).write_bytes(text.encode())
+    for args in (["add", name], ["commit", "-q", "-m", "by hand"], ["push", "-q", "origin", "ledgers"]):
+        subprocess.run(["git", "-C", str(clone), *args], check=True, capture_output=True, env=env)
+    subprocess.run(["git", "-C", str(repo), "fetch", "-q", "origin"], check=True, env=env)
+    assert shown(repo, name) == text
+
+
+@pytest.mark.parametrize("where", ["start", "middle", "end"])
+@pytest.mark.parametrize("side", ["file", "copy", "both"])
+def test_amendment_5_reading_3_a_blank_line_is_skipped_never_damage_never_copied(tmp_path, side, where):
+    """The fourth review of pull request 64 (its e2e_blank_cfb): a hand edit left a blank line in decisions.csv, the
+    nightly copy published it, the file then lost its decision, and the next real run stopped with IndexError while
+    restoring it, so the decision was not restored and the day's report was lost. Now a blank line, or a line of only
+    spaces, anywhere in the file or its published copy is not a record and is not damage: the scorer skips it when it
+    reads, never counts it and never copies it when it restores, and the nightly copy ignores it on both sides and
+    publishes the file without it. Both decisions (Rule B and Rule HT) are recorded on Feb 2, 2028; the blank lines
+    are at `where` in the file, in the copy (put there by a hand commit, as the nightly copy no longer publishes
+    them), or in both; the real nightly copy runs on a throwaway repository whose origin is a local bare
+    repository."""
+    rows, s = rb_and_ht()
+    repo = tmp_path / "repo"
+    proj = live_project(repo, "cfb-weather", rows, s, "2028-02-02T16:00")
+    current = season_file(proj, 2027, [sched(999999, kick="2027-10-02T19:00Z")], "2028-02-02T16:00")
+    git(repo, "init", "-q")
+    fwd, scorer = proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+    rec, name = fwd / "decisions.csv", "cfb-weather/decisions.csv"
+    day1 = "recorded in decisions.csv on 2028-02-02T17:00:00Z"
+    assert on_clock(tmp_path, "2028-02-02T17:00", scorer).stdout.count(day1) == 2         # day 1: both recorded
+    whole = rec.read_text()
+    head, first, second = whole.splitlines(keepends=True)
+    assert "not published" not in nightly(tmp_path, repo) and shown(repo, name) == whole   # night 1
+    copy = whole if side == "file" else with_blanks(whole, where)
+    if side != "file":
+        commit_by_hand(tmp_path, repo, name, copy)                           # a hand repair left blank lines
+    kept = head + second if side == "copy" else with_blanks(head + second, where)
+    rec.write_text(kept)                                                      # day 2: the file loses a decision
+    out = nightly(tmp_path, repo)                                             # night 2: held back, blank lines aside
+    assert ("cfb-weather: decisions.csv not published (it has lost or changed a line that the published copy holds); "
+            "the published copy is kept as it is") in out and shown(repo, name) == copy
+    touch(current, "2028-02-04T16:00")
+    r = on_clock(tmp_path, "2028-02-04T17:00", scorer)                        # day 3: the check-in
+    assert r.returncode == 0, r.stderr
+    lost = first.split(",")[0]
+    assert (f"data/forward/decisions.csv was missing 1 recorded decision that its copy on the ledgers branch "
+            f"(origin/ledgers:{name}) holds ({lost}); restored from the copy") in r.stdout
+    assert "unreadable" not in r.stdout and r.stdout.count(day1) == 2 and "on 2028-02-04T17:00:00Z" not in r.stdout
+    assert rec.read_text() == kept + first                                    # the copy's line only, no blank line
+    if side != "file":                                                        # the whole file lost: no blank lines
+        rec.unlink()
+        r = on_clock(tmp_path, "2028-02-04T18:00", scorer)
+        assert r.returncode == 0, r.stderr
+        assert "restored 2 recorded decisions from its copy on the ledgers branch" in r.stdout
+        assert r.stdout.count(day1) == 2 and rec.read_text() == whole
+    out = nightly(tmp_path, repo)                                             # night 3: published, no blank lines
+    assert "not published" not in out
+    assert shown(repo, name) == (head + second + first if side == "file" else whole)
+    assert ("A blank line, or a line of only spaces, anywhere in `decisions.csv` or in its published copy is not a "
+            "record and is not damage") in amendment5_section(3)
+
+
+def test_amendment_5_reading_3_a_record_of_only_blank_lines_is_unreadable(tmp_path):
+    """Blank lines are skipped, so a file of only blank lines holds no header: it can't be read, as an empty file
+    can't, and nothing is added to it."""
+    rows, s = rb_signals(40)
+    (tmp_path / "decisions.csv").write_text(BLANKS)
+    out = score(tmp_path, rows, s, "2026-12-20", "--test-record")
+    assert "Decision record: decisions.csv is unreadable (ValueError: the file holds only blank lines)" in out
+    assert "FINAL: KEEP" in rb(out) and (tmp_path / "decisions.csv").read_text() == BLANKS
+
+
+def test_amendment_5_section_3_hub_md_and_run_records_say_who_replaces_a_damaged_copy():
+    """The fourth review's minor finding: while the published copy can't be read, the scorer said that the nightly
+    copy of a readable file would repair it, but the nightly copy keeps a damaged published copy (section 3), so
+    recording stayed stopped until the hub worked that out. The scorer's lines (checked in
+    test_amendment_5_reading_3_a_damaged_copy_stops_recording_and_shows_what_it_can), section 3, hub.md and
+    ops/RUN_RECORDS.md now say the same."""
+    assert HUB_REPLACES in amendment5_section(3)
+    assert "Recording resumes once the copy can be read again." not in amendment5_section(3)
+    for doc in (ROOT.parent / ".claude" / "commands" / "hub.md", ROOT.parent / "ops" / "RUN_RECORDS.md"):
+        assert HUB_REPLACES in " ".join(doc.read_text().replace("`", "").split()), doc

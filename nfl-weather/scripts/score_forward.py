@@ -29,6 +29,13 @@ down, and every later run prints that record; if a fresh computation on the same
 differ, it prints both and the recorded one stands. Before that the script prints an interim read,
 which shows the numbers and decides nothing.
 
+The 95% interval of mean CLV (amendment 7, reading 1) is the wider of two, over the n bets with a primary close
+and their plain mean m: the plain half-width t(0.975, n - 1) x sd / sqrt(n), and the grouped half-width
+t(0.975, G - 1) x sqrt((G / (G - 1)) x sum over days of (sum of that day's CLV - m)^2 / n^2), the bets grouped by
+the Eastern calendar date of their game's actual kickoff (G days). The interval is m plus or minus the larger.
+With fewer than 2 game days (or 2 bets) there is no interval and the decision is INCONCLUSIVE. The scorer prints
+which of the two is the wider, and both; the record keeps the interval, both half-widths and G.
+
 Who writes a decision down (amendment 6, section 3): a run on the live ledger (data/forward/ledger.csv),
 on the real clock, reading the default schedule refreshed in the last 2 days, writes
 data/forward/decisions.csv. The scorer is live only when its data/forward folder, with links resolved, is
@@ -41,8 +48,21 @@ live record is restored from its copy on the ledgers branch, never decided again
 missing, every run on the live ledger reads the copy, a real run restores the file from it, and any other
 run prints the copy's decisions as recorded. A copy that is there but damaged stops recording, as a
 damaged file does. One run at a time writes, under a file lock, and a damaged record (a half-written
-line, a line without its 10 fields, numbers a later run can't print) stops recording without stopping the
-scores.
+line, a line without its 10 fields, numbers a later run can't print, a time with no time zone) stops
+recording without stopping the scores.
+
+Amendment 7, reading 3: in a damaged record, every decision whose line can still be read on its own is
+printed as recorded, never as a fresh FINAL. A decision that a decisions.csv still in place is missing, while
+its copy on the ledgers branch holds it, is restored from the copy by a real run (and read from the copy by
+any other run), never decided again; the restore appends the copy's own line, byte for byte. The nightly copy
+(ops/sync_ledgers.sh) never publishes a file that has lost a line of the published copy, so the copy keeps every
+decision it ever held: the one case left is a decision recorded since the last nightly copy that published the
+file and lost before the next one (normally the same day; longer while a changed published line holds the file
+back, until the hub puts it right). A copy that can't be read stops recording whether or not the file is
+there, and each decision on a line of it that can still be read is printed from it as recorded; nothing is
+restored from a damaged copy, and the hub replaces a damaged published copy by hand with a commit to the ledgers
+branch. A blank line, or a line of only spaces, in the file or its copy is not a record and is not damage: it is
+skipped when read and never copied by a restore.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
@@ -69,6 +89,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 from nflweather.board import PRIMARY_SRC, REGISTERED_VERSIONS
 from nflweather.config import RAW, ROOT
@@ -149,9 +170,11 @@ else:
 
 # ---------------------------------------------------------------- the decision record (amendment 6, reading 3)
 # What a recorded decision must hold for a later run to print it: its counts, its numbers (null when there is
-# none, as for an interval on one bet) and how its bets were split.
-COUNTS = ("n_bets", "n_clv", "beat_close", "vs_close_no_tie", "ties")
-NUMBERS = ("mean_clv", "ci_low", "ci_high", "win_rate_vs_close")
+# none, as for an interval on one bet) and how its bets were split. Amendment 7: ci_low and ci_high are the
+# registered interval, the mean plus or minus the wider of plain_half_width and grouped_half_width (the latter over
+# game_days game days). No decision has been recorded yet, so no record without these keys exists.
+COUNTS = ("n_bets", "n_clv", "beat_close", "vs_close_no_tie", "ties", "game_days")
+NUMBERS = ("mean_clv", "ci_low", "ci_high", "plain_half_width", "grouped_half_width", "win_rate_vs_close")
 
 
 def is_number(v, none_ok=False):
@@ -165,6 +188,8 @@ def check_row(r):
     for t in (r.horizon_utc, r.decided_utc):
         if pd.isna(pd.Timestamp(t)):
             raise ValueError(f"a blank time ({t!r})")
+        if pd.Timestamp(t).tzinfo is None:              # amendment 7, reading 3: it can't be read as a UTC time
+            raise ValueError(f"a time with no time zone ({t!r}), which can't be read as a UTC time")
     int(r.n_bets)
     if not (r.verdict in ("KEEP", "DROP") or r.verdict.startswith("INCONCLUSIVE")):
         raise ValueError(f"an unknown verdict {r.verdict!r}")
@@ -185,16 +210,27 @@ def check_row(r):
         raise ValueError(f"{r.decision_id}'s fingerprint is not 64 hexadecimal characters")
 
 
+def record_lines(data):
+    """Amendment 7, reading 3: a record's lines, as bytes without their line breaks, in order. A blank line, or a line
+    of only spaces (before a CRLF line's carriage return), is not a record and is not damage: it is left out here,
+    so it is skipped when the file or its copy is read, never counted as a decision and never copied by a restore.
+    Whatever follows the last line break (nothing, in a file that can be read) is left out too."""
+    return [p for p in data.split(b"\n")[:-1] if not re.fullmatch(rb" *\r?", p)]
+
+
 def parse_record(data):
     """The decision record from a file's bytes: (rows, "") or (None, why it can't be read). The file must end with
     a complete line, its first line must be the record's header, every line must have exactly its 10 fields, and
     each row must be one of this scorer's decisions, with valid times, the numbers a later run prints, row
     positions and a full fingerprint. A half-written line (wherever it was cut), a missing header or column, an
-    empty file or a damaged number makes it unreadable."""
+    empty file or a damaged number makes it unreadable. Blank lines are skipped (record_lines)."""
     try:
         text = data.decode("utf-8")
         if not text.endswith("\n"):             # a cut last line, or an empty file: never append to it
             raise ValueError("the file is empty" if not text else "its last line is not complete (no line break)")
+        text = b"".join(p + b"\n" for p in record_lines(data)).decode("utf-8")
+        if not text:
+            raise ValueError("the file holds only blank lines")
         lines = [f for f in csv.reader(io.StringIO(text, newline=""), strict=True) if f]
         if not lines or lines[0] != RECORD_COLS:
             raise ValueError("its first line is not the record's header")
@@ -207,6 +243,24 @@ def parse_record(data):
     except Exception as e:                                              # noqa: BLE001 (any damage: report it)
         return None, f"{type(e).__name__}: {(str(e).splitlines() or [''])[0]}"
     return d, ""
+
+
+def readable_records(data):
+    """Amendment 7, reading 3: the decisions in a damaged record that can still be read. Each line is taken on
+    its own, and it can be read when it has exactly the record's 10 fields, in the record's order, and passes
+    every check a recorded decision must pass (check_row). The first line holding a decision id is the one kept,
+    as `recorded` reads a whole file."""
+    keep = []
+    for line in re.split(r"\r?\n", data.decode("utf-8", errors="replace")):
+        try:
+            fields = next(csv.reader([line], strict=True), [])
+            if len(fields) != len(RECORD_COLS) or fields == RECORD_COLS:
+                continue
+            check_row(next(pd.DataFrame([fields], columns=RECORD_COLS).itertuples()))
+        except Exception:                                               # noqa: BLE001 (this line can't be read)
+            continue
+        keep.append(fields)
+    return pd.DataFrame(keep, columns=RECORD_COLS).drop_duplicates("decision_id")
 
 
 def published_copy():
@@ -235,46 +289,139 @@ def record_lock():
             fcntl.flock(fh, fcntl.LOCK_UN)
 
 
-RECORD, RESTORED, FROM_COPY = None, False, False
+RECORD, RESTORED, FROM_COPY, DAMAGED = None, set(), {}, False     # FROM_COPY: decision id -> why it came from the copy
 HISTORY = f"git log origin/ledgers -- {ROOT.name}/decisions.csv"   # where a readable earlier copy can be found
+
+
+def plural(k, word="decision"):
+    return f"{k} recorded {word}{'s' if k != 1 else ''}"
+
+
+def copy_lines(readable):
+    """What a damaged copy still shows, for the line that says it is damaged."""
+    k = len(readable)
+    return (f" {plural(k)} in the copy can still be read ({', '.join(readable.decision_id)})." if k else
+            " No recorded decision in the copy can still be read.")
+
+
+def lines_held(data, ids):
+    """Amendment 7, reading 3: a readable copy's own record lines for these decision ids, byte for byte and in the
+    copy's order. A restore appends them as they are, so the file again holds every line of the published copy, and
+    the nightly copy (which never publishes a file that has lost a published line) publishes it again. Blank lines
+    are never copied (record_lines)."""
+    pieces = record_lines(data)[1:]             # after the header, blank lines left out
+    return b"".join(p + b"\n" for p in pieces if (next(csv.reader([p.decode("utf-8")]), None) or [""])[0] in ids)
+
+
 if DECISIONS is not None:
     # A lost live record is restored from its nightly copy before anything is decided, so it is never decided
-    # again. Every run on a live ledger whose record is missing reads the copy; only a run that may record restores
-    # the file, and any other run prints the copy's decisions as recorded.
+    # again. Every run on a live ledger reads the copy; only a run that may record restores from it, and any other
+    # run prints the copy's decisions as recorded.
+    copy = published_copy() if FWD is not None else None
+    held, copy_broken = parse_record(copy) if copy is not None else (None, "")
+    if copy_broken:
+        # Amendment 6, section 3: a copy that can't be read stops recording, as a damaged file does, whether or not
+        # the file is there. Amendment 7, reading 3: each decision on a line of it that can still be read is held,
+        # so it is printed from the copy as recorded and never decided again; nothing is restored from a damaged copy.
+        held = readable_records(copy)
     if FWD is not None and not DECISIONS.exists():
-        copy = published_copy()
-        held, broken = parse_record(copy) if copy is not None else (None, "")
-        if broken:
+        if copy_broken:
+            RECORD, FROM_COPY = held, dict.fromkeys(held.decision_id, "the file is missing, and the copy is damaged; "
+                                                                      "this line of it can still be read")
             print(f"Decision record: data/forward/decisions.csv is missing, and its copy on the ledgers branch "
-                  f"({PUBLISHED}) is unreadable ({broken}). Nothing will be recorded until the file is restored from "
-                  f"a readable copy in that branch's history ({HISTORY}); the scores below are printed as usual.")
+                  f"({PUBLISHED}) is unreadable ({copy_broken}). Nothing will be recorded until the file is restored "
+                  f"from a readable copy in that branch's history ({HISTORY}) and the copy can be read again: the hub "
+                  "replaces a damaged published copy by hand with a commit to the ledgers branch, and recording "
+                  "resumes once the copy can be read. The scores below are printed as usual."
+                  + copy_lines(held) + (" They are printed below as recorded." if len(held) else ""))
             NOT_RECORDED = ("the decision record is missing and its copy on the ledgers branch is unreadable; nothing "
-                            f"will be recorded until the file is restored from a readable copy ({HISTORY})")
+                            f"will be recorded until the file is restored from a readable copy ({HISTORY}) and the "
+                            "copy can be read again")
         elif held is not None and len(held):
             if IS_LIVE and not NOT_RECORDED:
                 with record_lock():
-                    if not DECISIONS.exists():
-                        DECISIONS.write_bytes(copy)
-                        RESTORED = True
+                    if not DECISIONS.exists():            # the copy's own lines, blank lines left out
+                        DECISIONS.write_bytes(b"".join(p + b"\n" for p in record_lines(copy)))
+                        RESTORED = set(held.decision_id)
                 if RESTORED:
-                    print(f"Decision record: data/forward/decisions.csv was missing; restored {len(held)} recorded "
-                          f"decision{'s' if len(held) != 1 else ''} from its copy on the ledgers branch ({PUBLISHED}). "
-                          "A lost record is never decided again.")
+                    print(f"Decision record: data/forward/decisions.csv was missing; restored {plural(len(held))} "
+                          f"from its copy on the ledgers branch ({PUBLISHED}). A lost record is never decided again.")
             else:
-                RECORD, FROM_COPY = held, True
+                RECORD, FROM_COPY = held, dict.fromkeys(held.decision_id, "the file is missing")
                 print(f"Decision record: data/forward/decisions.csv is missing; its copy on the ledgers branch "
-                      f"({PUBLISHED}) holds {len(held)} recorded decision{'s' if len(held) != 1 else ''}, printed below "
-                      f"as recorded. This run doesn't restore the file ({NOT_RECORDED}); the next run that may record "
-                      "restores it.")
+                      f"({PUBLISHED}) holds {plural(len(held))}, printed below as recorded. This run doesn't restore "
+                      f"the file ({NOT_RECORDED}); the next run that may record restores it.")
     if DECISIONS.exists() and not FROM_COPY:
-        RECORD, broken = parse_record(DECISIONS.read_bytes())
+        data = DECISIONS.read_bytes()
+        RECORD, broken = parse_record(data)
         if broken:
+            # Amendment 7, reading 3: the decisions that can still be read are printed as recorded, never as a
+            # fresh FINAL, and nothing is recorded until the file is repaired
+            DAMAGED, RECORD = True, readable_records(data)
             print(f"Decision record: {DECISIONS.name} is unreadable ({broken}). Nothing will be recorded until it is "
-                  "repaired or restored from the ledgers branch; the scores below are printed as usual.")
+                  "repaired or restored from the ledgers branch; the scores below are printed as usual. "
+                  + (f"{plural(len(RECORD))} in it can still be read ({', '.join(RECORD.decision_id)}) and "
+                     f"{'are' if len(RECORD) != 1 else 'is'} printed below as recorded."
+                     if len(RECORD) else "No recorded decision in it can still be read."))
             NOT_RECORDED = ("the decision record is unreadable; nothing will be recorded until it is repaired or "
                             "restored from the ledgers branch")
+        if copy_broken:
+            # Amendment 6, section 3, and amendment 7, reading 3: the file is there, but its copy can't be read, so
+            # nothing is recorded until the copy can be read again, and the copy's readable decisions are held
+            print(f"Decision record: its copy on the ledgers branch ({PUBLISHED}) is unreadable ({copy_broken}). "
+                  "Nothing will be recorded until the copy can be read again: the hub replaces a damaged published "
+                  "copy by hand with a commit to the ledgers branch, and recording resumes once the copy can be "
+                  "read. The scorer never restores from a damaged copy; if the file "
+                  f"has lost a decision, restore it by hand from a readable copy in the branch's history ({HISTORY})."
+                  + copy_lines(held))
+            NOT_RECORDED = (("the decision record and its copy on the ledgers branch are unreadable; nothing will be "
+                             "recorded until the file is repaired and the copy can be read again") if DAMAGED else
+                            ("its copy on the ledgers branch is unreadable; the hub replaces a damaged published copy "
+                             "by hand with a commit to the ledgers branch, and recording resumes once the copy can be "
+                             "read"))
+        # Amendment 7, reading 3: a decision the file is missing while its copy holds it is restored from the copy,
+        # never decided again. A run that may record appends it to the file; any other run prints it from the copy.
+        lost = held[~held.decision_id.isin(RECORD.decision_id)] if held is not None else None
+        if lost is not None and len(lost) and IS_LIVE and not NOT_RECORDED:
+            with record_lock():             # read again under the lock: another run may have written meanwhile
+                now_held, now_broken = parse_record(DECISIONS.read_bytes())
+                if now_broken:
+                    NOT_RECORDED = ("the decision record became unreadable during this run; nothing will be recorded "
+                                    "until it is repaired or restored from the ledgers branch")
+                else:
+                    add = lost[~lost.decision_id.isin(now_held.decision_id)]
+                    with open(DECISIONS, "ab") as fh:         # the copy's own lines, byte for byte
+                        fh.write(lines_held(copy, set(add.decision_id)))
+                    RESTORED, RECORD, lost = set(add.decision_id), pd.concat([now_held, add], ignore_index=True), None
+            if RESTORED:
+                print(f"Decision record: data/forward/decisions.csv was missing {plural(len(RESTORED))} that its copy "
+                      f"on the ledgers branch ({PUBLISHED}) holds ({', '.join(sorted(RESTORED))}); restored from the "
+                      "copy. A lost record is never decided again.")
+        if lost is not None and len(lost):          # a run that may not record: print them from the copy
+            RECORD = pd.concat([RECORD, lost], ignore_index=True)
+            FROM_COPY = dict.fromkeys(lost.decision_id, ("the file is damaged" if DAMAGED else "the file is missing it")
+                                      + ("; the copy is damaged, and this line of it can still be read"
+                                         if copy_broken else ""))
+            them = "them" if len(lost) != 1 else "it"
+            print(f"Decision record: data/forward/decisions.csv {'is damaged and ' if DAMAGED else ''}doesn't hold "
+                  f"{plural(len(lost))} that its copy on the ledgers branch ({PUBLISHED}) holds "
+                  f"({', '.join(lost.decision_id)}), printed below as recorded. This run doesn't restore {them} "
+                  f"({NOT_RECORDED}); " + (
+                      f"a damaged copy is never restored from: restore {them} by hand, from this copy's readable "
+                      f"line{'s' if len(lost) != 1 else ''} or a readable copy in the branch's history ({HISTORY}), "
+                      f"before the hub replaces the damaged copy by hand, after which the copy no longer holds {them}."
+                      if copy_broken else
+                      f"{them} will be restored once the file is repaired." if DAMAGED else
+                      f"the next run that may record restores {them}."))
     if RECORD is not None and args.now:        # a preview shows only the decisions made by its date
         RECORD = RECORD.loc[np.array([pd.Timestamp(t) <= NOW for t in RECORD.decided_utc], dtype=bool)]
+
+
+def origin(did):
+    """Where a recorded decision was read from, for the line that prints it."""
+    return ("; restored from the ledgers branch" if did in RESTORED else
+            f"; read from its copy on the ledgers branch ({FROM_COPY[did]})" if did in FROM_COPY else
+            "; the file is damaged, and this record can still be read" if DAMAGED else "")
 
 
 def recorded(did):
@@ -407,11 +554,59 @@ def grade(bets, side_col):
 
 
 def mean_ci(x):
+    """Mean +/- 1.96 standard errors: the interval of the secondary CLV (amendment 3), which decides nothing. The
+    registered CLV interval is `interval` below."""
     x = pd.Series(x).dropna()
     if not len(x):
         return np.nan, np.nan, np.nan, 0
     se = x.std(ddof=1) / np.sqrt(len(x)) if len(x) > 1 else np.nan
     return x.mean(), x.mean() - 1.96 * se, x.mean() + 1.96 * se, len(x)
+
+
+def game_day(bets):
+    """Amendment 7, reading 1: each bet's game day, the calendar date of its game's actual kickoff (the schedule's)
+    in Eastern time."""
+    kick = bets.kick_utc.fillna(bets.row_kick)
+    return kick.dt.tz_convert("America/New_York").dt.strftime("%Y-%m-%d")
+
+
+def interval(clv, day):
+    """Amendment 7, reading 1: the registered 95% interval of mean CLV, the wider of two. Over the n bets that have a
+    CLV (a primary close), m is their plain mean.
+      plain half-width    t x s / sqrt(n), s their sample standard deviation, t the 97.5th percentile of Student's t
+                          on n - 1 degrees of freedom;
+      grouped half-width  t x the grouped standard error, t on G - 1 degrees of freedom: the bets grouped by game
+                          day, G days, s_g the sum over day g's bets of (CLV - m), the variance of the mean
+                          (G / (G - 1)) x sum(s_g^2) / n^2.
+    The registered interval is m plus or minus the larger of the two. With fewer than 2 game days or fewer than 2 bets
+    there is none (nan bounds). Returns a dict: m, lo, hi, n, G, plain (half-width) and grouped (half-width)."""
+    d = pd.DataFrame({"clv": pd.to_numeric(pd.Series(clv).to_numpy(), errors="coerce"),
+                      "day": pd.Series(day).to_numpy()}).dropna(subset=["clv"])
+    n, G = len(d), int(d.day.nunique(dropna=False))
+    m = d.clv.mean() if n else np.nan
+    iv = dict(m=m, lo=np.nan, hi=np.nan, n=n, G=G, plain=np.nan, grouped=np.nan)
+    if n < 2:
+        return iv
+    iv["plain"] = stats.t.ppf(0.975, n - 1) * d.clv.std(ddof=1) / np.sqrt(n)
+    if G < 2:
+        return iv
+    s = (d.clv - m).groupby(d.day, dropna=False).sum()
+    iv["grouped"] = stats.t.ppf(0.975, G - 1) * np.sqrt(G / (G - 1) * (s ** 2).sum() / n ** 2)
+    half = max(iv["plain"], iv["grouped"])
+    return iv | dict(lo=m - half, hi=m + half)
+
+
+def interval_text(m, lo, hi, n, G, plain, grouped):
+    """The registered interval, which of the two it is, and both."""
+    if n < 2:
+        return "no interval on one bet" if n else "no interval"
+    if G < 2:
+        return "no interval: the bets with a primary close kicked off on 1 game day"
+    g, p = f"grouped {m - grouped:+.2f} to {m + grouped:+.2f}", f"plain {m - plain:+.2f} to {m + plain:+.2f}"
+    which = (f"the two are equally wide, over {G} game days ({g}; {p})" if np.isclose(grouped, plain, rtol=1e-9) else
+             f"the wider is the grouped one, over {G} game days ({g}; {p})" if grouped > plain else
+             f"the wider is the plain one ({p}; {g}, over {G} game days)")
+    return f"95% CI {lo:+.2f} to {hi:+.2f}; {which}"
 
 
 def report(name, bets):
@@ -423,12 +618,12 @@ def report(name, bets):
     if settled.empty:
         return settled
     w, p = int(settled.win.sum()), int(settled.push.sum())
-    m, lo, hi, _ = mean_ci(settled.clv_pts)
+    iv = interval(settled.clv_pts, game_day(settled))
     print(f"  record at entry line {w}-{len(settled) - w - p}-{p}   units {settled.profit.sum():+.2f} "
           f"(ROI {100 * settled.profit.sum() / len(settled):+.1f}% per bet placed; "
           f"{int((~settled.priced).sum())} graded at an assumed -110)")
-    print(f"  mean CLV {m:+.2f} pts  (95% CI {lo:+.2f} to {hi:+.2f}; {int(settled.close_total.notna().sum())} of "
-          f"{len(settled)} bets have a primary close)")
+    print(f"  mean CLV {iv['m']:+.2f} pts; {int(settled.close_total.notna().sum())} of {len(settled)} bets have a "
+          f"primary close; {interval_text(**iv)}")
     cm, clo, chi, cn = mean_ci(settled.clv_cap)
     if cn:
         print(f"  secondary (amendment 3): mean CLV vs captured Pinnacle close {cm:+.2f} pts "
@@ -444,22 +639,28 @@ def report(name, bets):
 def assess(bets, split, split_name, final_label, enough=True):
     """The registered keep/drop test on `bets`, as numbers and a verdict. `split` labels each bet's half
     (or season); CLV must be positive in every part. Keep and drop both met is a DROP. With fewer than 20
-    bets that have a primary close the result is inconclusive (amendment 6, reading 11)."""
-    m, lo, hi, n = mean_ci(bets.clv_pts)
+    bets that have a primary close the result is inconclusive (amendment 6, reading 11). The interval is the wider
+    of the plain one and the one grouped by game day, and with fewer than 2 game days there is none and the result
+    is inconclusive (amendment 7, reading 1); the record keeps both half-widths and the number of game days."""
+    iv = interval(bets.clv_pts, game_day(bets))
+    n, G = iv["n"], iv["G"]
     has = bets.close_total.notna()
     graded = bets[has & ~bets.tie_close]                           # no close, or a tie with it: left out
     rate = graded.beat_close.mean() if len(graded) else np.nan
     parts = bets.assign(part=split).groupby("part").clv_pts.mean()
     f = lambda v: None if pd.isna(v) else float(v)                # noqa: E731
-    nums = dict(n_bets=len(bets), mean_clv=f(m), ci_low=f(lo), ci_high=f(hi), n_clv=int(n), win_rate_vs_close=f(rate),
-                beat_close=int(graded.beat_close.sum()), vs_close_no_tie=len(graded),
+    nums = dict(n_bets=len(bets), mean_clv=f(iv["m"]), ci_low=f(iv["lo"]), ci_high=f(iv["hi"]), n_clv=int(n),
+                win_rate_vs_close=f(rate), beat_close=int(graded.beat_close.sum()), vs_close_no_tie=len(graded),
                 ties=int((has & bets.tie_close).sum()), split=split_name,
-                by_part={str(k): float(v) for k, v in parts.items()})
+                by_part={str(k): float(v) for k, v in parts.items()}, game_days=G,
+                plain_half_width=f(iv["plain"]), grouped_half_width=f(iv["grouped"]))
     keep, drop = criteria(nums)
     head, tail = final_label[0].split(" (", 1)
     verdict = (final_label[1] if not enough else
                f"{head} (only {n} of the {len(bets)} bets have a primary close, fewer than {MIN_CLOSES}; {tail}"
                if n < MIN_CLOSES else
+               f"{head} (the {n} bets that have a primary close kicked off on 1 game day, so there is no interval; "
+               f"{tail}" if G < 2 else
                "DROP" if drop else "KEEP" if all(keep.values()) else final_label[0])
     return verdict, nums
 
@@ -477,18 +678,22 @@ def criteria(nums):
 
 
 def show(nums):
-    m, lo, hi, n, rate = (np.nan if nums[k] is None else nums[k]
-                          for k in ("mean_clv", "ci_low", "ci_high", "n_clv", "win_rate_vs_close"))
+    m, lo, hi, n, rate, ph, gh = (np.nan if nums[k] is None else nums[k] for k in (
+        "mean_clv", "ci_low", "ci_high", "n_clv", "win_rate_vs_close", "plain_half_width", "grouped_half_width"))
     keep, drop = criteria(nums)
-    ci = f"95% CI {lo:+.2f} to {hi:+.2f}" if n > 1 else "no interval on one bet"
-    print(f"    mean CLV {m:+.2f} ({ci}, n={n}); win rate vs the close {100 * rate:.1f}% ({nums['beat_close']} of "
-          f"the {nums['vs_close_no_tie']} bets that have a primary close and didn't tie it; {nums['ties']} ties left "
-          f"out); mean CLV by {nums['split']}: { {k: round(v, 2) for k, v in nums['by_part'].items()} }")
+    ci = interval_text(m, lo, hi, n, nums["game_days"], ph, gh)
+    print(f"    mean CLV {m:+.2f}, n={n}; {ci}")
+    print(f"    win rate vs the close {100 * rate:.1f}% ({nums['beat_close']} of the {nums['vs_close_no_tie']} bets "
+          f"that have a primary close and didn't tie it; {nums['ties']} ties left out); mean CLV by "
+          f"{nums['split']}: { {k: round(v, 2) for k, v in nums['by_part'].items()} }")
     if nums["n_bets"] > n:
         print(f"    {nums['n_bets'] - n} of the {nums['n_bets']} bets have no primary close (left out of the CLV and "
               "the win rate)")
     if n < MIN_CLOSES:
         print(f"    only {n} bets have a primary close; a verdict needs at least {MIN_CLOSES} (amendment 6, reading 11)")
+    elif nums["game_days"] < 2:
+        print("    the bets with a primary close kicked off on 1 game day, so there is no interval; a verdict needs at "
+              "least 2 game days (amendment 7, reading 1)")
     print("    keep needs: " + "; ".join(f"{k} ({'met' if bool(v) else 'not met'})" for k, v in keep.items())
           + f". Drop if mean CLV <= 0 or the interval's upper bound is below +0.25 ({'met' if drop else 'not met'}).")
 
@@ -555,9 +760,7 @@ def decision(did, rule, horizon, name, h_utc, bets_by, split_by, split_name, pen
         print(f"  decision ({name}), FINAL: {rec.verdict}")
         show(json.loads(rec.numbers))
         print(f"    recorded in decisions.csv on {rec.decided_utc}, horizon {rec.horizon_utc}; "
-              f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}" + (
-                  "; restored from the ledgers branch" if RESTORED else
-                  "; read from its copy on the ledgers branch (the file is missing)" if FROM_COPY else ""))
+              f"ledger rows sha256 {rec.ledger_rows_sha256[:16]}" + origin(did))
         check_fingerprint(rec)
         if not len(bets):
             print("    a fresh computation on the same horizon now has no settled bets. The recorded decision stands.")
@@ -687,7 +890,8 @@ print("\nDecision horizons (amendment 5, section 4, and amendment 6), for Rule B
       "a keep or a drop is the decision and an inconclusive result is decided once more after the 2027 regular "
       "season on both seasons pooled; otherwise once, after the 2027 regular season, on both seasons pooled. A "
       "decision waits for every bet that kicked off by its horizon to settle or be void, needs at least 20 bets "
-      "with a primary close, and the first final one is written down.")
+      "with a primary close, and the first final one is written down. Its 95% interval of mean CLV is the wider of "
+      "the plain one and the one grouped by game day, and it needs at least 2 game days (amendment 7).")
 if NOT_RECORDED:
     print(f"Decision record: none written by this run: {NOT_RECORDED}.")
 else:
