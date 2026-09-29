@@ -9,6 +9,8 @@ All three are **logging only and GET-only**. None of them:
 
 The hub installs them on the Mac with `ops/install_live_uses.sh` once the paid key is in the three `.env` files.
 
+**These logs are holdout data.** The 2026 NFL and CFB seasons and the 2026-27 NBA season are sealed (owner decision, Sep 28), so props and trigger-poll rows for 2026-season games carry `sealed=True`, and nothing analyses any of the three logs until a hypothesis about them is pre-registered.
+
 | Job | Every | What it logs | Credits | Output |
 |---|---|---|---|---|
 | `com.valuefinder.triggerpoll` | 10 min | For NFL and CFB games whose latest ledger row has a Rule B wind trigger and a kickoff within 4 days, every book's total and prices. It shows how the price moves between the four daily alert runs. | 1 per sport per run with a trigger; about 2,600 a month | `{nfl,cfb}-weather/data/forward/trigger_polls.csv`; raw responses in `data/raw/oddsapi/live/` |

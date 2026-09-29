@@ -106,3 +106,16 @@ def test_paid_poll_is_cached_first(monkeypatch):
     out = live.live_totals(NAMES)
     assert out.empty and quota.read()["remaining"] == 3_999_999
     assert list((fetch.RAW / "oddsapi" / "live").glob("*_poll.json"))
+
+
+def test_trigger_rows_from_the_2026_season_are_marked_sealed():
+    """#33 item 19: the trigger-poll log is holdout data for 2026-season games."""
+    assert live.sealed("2026-10-10T19:00:00Z") and live.sealed("2027-01-19T00:30:00Z")
+    assert not live.sealed("2026-01-19T00:30:00Z") and not live.sealed("2027-08-29T16:00:00Z")
+    quotes = live.book_rows([{"home_team": "Wyoming Cowboys", "away_team": "Air Force Falcons",
+                              "commence_time": "2026-10-10T19:00:00Z", "bookmakers": [{"key": "pinnacle", "markets": [
+                                  {"key": "totals", "last_update": "x", "outcomes": [
+                                      {"name": "Over", "price": -110, "point": 40.5},
+                                      {"name": "Under", "price": -110, "point": 40.5}]}]}]}], NAMES, "s")
+    rows = live.trigger_rows(live.active_triggers(ledger(), NOW), quotes, "p")
+    assert len(rows) == 1 and rows.sealed.tolist() == [True]

@@ -16,6 +16,10 @@ at PROP_BOOKS at T-48h, T-24h, T-2h and the close (2-20 minutes before kickoff, 
 does). That continues the historical F2/F3 series live, in the same decimal odds. Each call costs
 1 credit per market returned (up to 9). Rows go to data/forward/props_log.csv; raw response text to
 data/raw/oddsapi/props/ (under "body"), written before it is parsed.
+
+Both logs are holdout data. The 2026 NFL season is sealed (owner decision, Sep 28; the window in
+sharp-markets/config/odds5m.yaml), so every row for a 2026-season game carries sealed=True, and nothing
+analyses those rows until a hypothesis about them is pre-registered.
 """
 from __future__ import annotations
 
@@ -25,6 +29,7 @@ from pathlib import Path
 
 import pandas as pd
 
+SEALED_SEASON = (pd.Timestamp("2026-09-01", tz="UTC"), pd.Timestamp("2027-02-21", tz="UTC"))  # odds5m.yaml NFL "2026"
 TRIGGERED = {"outside_horizon", "no_price", "price_too_high", "negative_ev", "SIGNAL"}
 POLL_HORIZON = pd.Timedelta(days=4)
 MATCH_TOLERANCE = pd.Timedelta(hours=12)
@@ -38,6 +43,13 @@ PROP_ODDS_FORMAT = "decimal"                              # as the historical F2
 PROP_OFFSETS_H = (48, 24, 2, 0)
 OFFSET_WINDOW = pd.Timedelta(minutes=30)                  # a slot is due for 30 minutes after its target
 CLOSE_WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
+
+
+def sealed(kick_utc) -> bool:
+    """True for a game in the sealed 2026 season (holdout data)."""
+    k = pd.Timestamp(kick_utc)
+    k = k.tz_localize("UTC") if k.tzinfo is None else k.tz_convert("UTC")
+    return bool(SEALED_SEASON[0] <= k < SEALED_SEASON[1])
 
 
 def ledger_kick_utc(ledger: pd.DataFrame) -> pd.Series:
@@ -58,7 +70,7 @@ def active_triggers(ledger: pd.DataFrame, now: pd.Timestamp) -> pd.DataFrame:
 def trigger_rows(active: pd.DataFrame, lines: pd.DataFrame, poll_utc: str) -> pd.DataFrame:
     """One row per triggered game x book: the book's total and prices at this poll."""
     cols = ["poll_utc", "game_id", "kick_utc", "ledger_snapshot_utc", "rule_b", "wx_wind", "lead_days", "book",
-            "total", "under_price", "over_price", "book_update", "quote_utc"]
+            "total", "under_price", "over_price", "book_update", "quote_utc", "sealed"]
     if active.empty or lines is None or lines.empty:
         return pd.DataFrame(columns=cols)
     tot = lines[lines.market == "totals"].copy()
@@ -66,7 +78,7 @@ def trigger_rows(active: pd.DataFrame, lines: pd.DataFrame, poll_utc: str) -> pd
     m = active.merge(tot, left_on=["home_team", "away_team"], right_on=["home", "away"], how="inner")
     m = m[(m.commence - m.kick_utc).abs() <= MATCH_TOLERANCE]
     m = m.assign(poll_utc=poll_utc, ledger_snapshot_utc=m.snapshot_utc_x, quote_utc=m.snapshot_utc_y,
-                 kick_utc=m.kick_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                 sealed=m.kick_utc.map(sealed), kick_utc=m.kick_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
     return m[cols].reset_index(drop=True)
 
 
@@ -98,7 +110,8 @@ def props_rows(body: dict, snapshot_utc: str, offset_h: int) -> pd.DataFrame:
                                  commence_utc=body.get("commence_time"), home_team=body.get("home_team"),
                                  away_team=body.get("away_team"), book=bk["key"], market=mk["key"],
                                  market_update=mk.get("last_update"), outcome=o.get("name"),
-                                 player=o.get("description"), point=o.get("point"), price=o.get("price")))
+                                 player=o.get("description"), point=o.get("point"), price=o.get("price"),
+                                 sealed=sealed(body["commence_time"]) if body.get("commence_time") else None))
     return pd.DataFrame(rows)
 
 

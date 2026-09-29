@@ -202,3 +202,16 @@ def test_props_log_saves_each_slot_before_the_next_and_asks_for_decimal_odds(tmp
     assert [p for p, _ in calls if p.endswith("/odds")] == ["/sports/americanfootball_nfl/events/e2/odds"]
     log = pd.read_csv(tmp_path / "data" / "forward" / "props_log.csv")
     assert sorted(log.event_id) == ["e1", "e2"] and set(log.price) == {1.91}
+
+
+def test_live_rows_from_the_2026_season_are_marked_sealed():
+    """#33 item 19: the props and trigger-poll logs are holdout data for 2026-season games."""
+    assert live.sealed("2026-10-11T17:00:00Z") and live.sealed("2027-02-08T23:30:00Z")
+    assert not live.sealed("2026-02-08T23:30:00Z") and not live.sealed("2027-09-09T00:20:00Z")
+    body = dict(EV, bookmakers=[{"key": "pinnacle", "markets": [{"key": "team_totals", "outcomes": [
+        {"name": "Over", "description": "Green Bay Packers", "point": 24.5, "price": 1.91}]}]}])
+    assert live.props_rows(body, "2026-10-10T17:00:00Z", 24).sealed.tolist() == [True]
+    lines = pd.DataFrame([dict(snapshot_utc="2026-10-09T16:00Z", event_id="e1", commence_utc="2026-10-11T17:00:00Z",
+                               home="GB", away="CHI", book="pinnacle", market="totals", book_update="x", total=41.5,
+                               under_price=-112, over_price=-105)])
+    assert live.trigger_rows(live.active_triggers(ledger(), NOW), lines, "x").sealed.tolist() == [True]
