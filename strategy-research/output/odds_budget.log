@@ -60,3 +60,48 @@ Live credits by month (2025-26 schedule relabelled as 2026-27):
 2026-12             124               30             124               42     248                320
 2027-01             104               17              72                9     176                202
 2027-02              32                1               0                0      32                 33
+
+5M month: historical pulls ranked by research value (cut line at 4,500,000; reserve 300,000)
+id  value  credits  cumulative  in_plan                                                                                                     pull
+F1      4   162210      162210     True                NFL+CFB featured, 10 books, daily 16:00 UTC for 7 days pre-kickoff + every close, 2020-26
+F2      3   102600      264810     True                      NFL alternate spreads, alternate totals, team totals at T-24h, T-2h, close, 2023-26
+F3      3   273600      538410     True NFL props: pass/rush/rec yds, receptions, kicking points, FGs made at T-48h, T-24h, T-2h, close, 2023-26
+B1      3   358470      896880     True                                 MLB featured (moneyline, run line, totals), daily + every close, 2020-26
+S1      3   491970     1388850     True          Soccer heat leagues and tournaments, featured (h2h 3-way, spreads, totals), daily + every close
+F4      3  1604430     2993280     True                                       NFL+CFB featured, 10 books, HOURLY for 7 days pre-kickoff, 2020-26
+H1      2   163860     3157140     True                                NHL featured (moneyline, puck line, totals), daily + every close, 2020-26
+N2      2   170460     3327600     True                                            NBA featured, daily + every close, seasons other than 2025-26
+F5      2   221880     3549480     True                                          CFB alternate lines and team totals at T-24h and close, 2023-26
+N1      2   478530     4028010     True                                 NBA 2025-26 at 5-min resolution, h2h, 3 sharp books (PLAN.md schedule D)
+F6      1   147920     4175930     True                         CFB props (4 yardage markets) at the close, 2023-26 (upper bound; thin coverage)
+X3      1   231630     4407560     True                                  Exchange book group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025
+X2      1   705580     5113140    False                                              5-min NFL+CFB totals for 72h before windy kickoffs, 2024-25
+
+In plan: 4,407,560 credits of history + 300,000 reserve = 4,707,560 of 5,000,000; below the cut: X2 (705,580)
+
+Season structures (estimates for non-football sports; the probe replaces them):
+                     seasons  games  snapshots  sealed
+sport                                                 
+NBA                        7   7942       6800       0
+NHL                        7   8072       5462       0
+MLB                        7  15789      11949       1
+MLS                        7   3361       3501       1
+Liga MX                    7   2225       3793       1
+Brasileirao                7   2660       3192       1
+J1 League                  7   2238       2747       1
+K League 1                 7   1530       2554       1
+World Cups                 2    168        234       1
+Euro 2024                  1     51         84       0
+Copa America 2024          1     32         61       0
+Club World Cup 2025        1     63         94       0
+Gold Cup 2025              1     31         58       0
+Leagues Cup 2025           1     45         81       0
+
+Live uses per month (1 credit per market per group per call):
+                                                          live use                             arithmetic  credits_per_month
+                               Alerts, NFL + CFB (10 books a call)            4 runs x 31 days x 2 sports                248
+                         Close capture (one call per kickoff slot)                   ~137 NFL + CFB slots                137
+Trigger poller: every 10 min while a Rule B wind trigger is active ~6 polls/h x 72 h x ~6 trigger windows               2600
+               NFL props, alternates, team totals log (event odds)            70 games x 9 mkts x 4 snaps               2520
+     NBA collector, PLAN.md s7 (5-min h2h ticks + 1-min final 2 h)       27 game days x (144-288 + 0-205)              14175
+Total live, high case: 19,680 a month
