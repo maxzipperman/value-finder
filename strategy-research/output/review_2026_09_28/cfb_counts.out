@@ -1,0 +1,191 @@
+season_type values: {'regular': 33970, 'postseason': 279}
+roof values: {'outdoors': 33458, 'dome': 791}
+wx_src values: {'station': 21089, 'missing': 12369, 'indoor': 791}
+home_division values: {'fbs': 17145, 'fcs': 7684, 'iii': 4893, 'ii': 4455, nan: 72}
+wx_wind range: 0.0 44.987260400000004 | wx_wind_kick range: 0.0 43.8687926
+wx_temp range: 8.96 107.96000000000001 | wx_precip range: 0.0 4.208661417322834 | wx_precip NaN count: 0
+seasons with station weather: [2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+seasons with pin_total: [2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+seasons with open_total: [2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+
+=== CFB Rule HT (prior-season mean + 10), screen.py set: result & home_spread notna & home_spread != 0 & close_total notna ===
+        n_games_in_mean_set  mean_close_total  prior_season_mean  ht_threshold  ht_eligible  ht_eligible_regular  ht_eligible_postseason  ht_eligible_week6plus_or_post  ht_eligible_fbs_involved  ht_eligible_outdoor_wind_lt15
+season                                                                                                                                                                                                                          
+2006                    278            47.609              0.000          0.00          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2007                    428            53.640             47.609         57.61          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2008                    233            50.980             53.640         63.64          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2009                    475            52.206             50.980         60.98          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2010                    454            53.329             52.206         62.21          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2011                    527            54.164             53.329         63.33          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2012                    521            55.188             54.164         64.16          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2013                    463            56.486             55.188         65.19          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2014                    589            56.468             56.486         66.49          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2015                     79            55.595             56.468         66.47          0.0                  0.0                     0.0                            0.0                       0.0                            0.0
+2016                    511            57.316             55.595         65.59         85.0                 85.0                     0.0                           61.0                      85.0                           77.0
+2017                    431            56.521             57.316         67.32         42.0                 42.0                     0.0                           16.0                      42.0                           39.0
+2018                    606            56.983             56.521         66.52         80.0                 80.0                     0.0                           46.0                      80.0                           68.0
+2019                    566            55.356             56.983         66.98         48.0                 48.0                     0.0                           30.0                      48.0                           44.0
+2020                    541            56.789             55.356         65.36         77.0                 77.0                     0.0                           58.0                      77.0                           72.0
+2021                    848            55.681             56.789         66.79         61.0                 61.0                     0.0                           41.0                      61.0                           58.0
+2022                    847            54.742             55.681         65.68         81.0                 81.0                     0.0                           50.0                      81.0                           74.0
+2023                    905            52.352             54.742         64.74         52.0                 50.0                     2.0                           31.0                      52.0                           46.0
+2024                    948            52.665             52.352         62.35         72.0                 69.0                     3.0                           47.0                      68.0                           65.0
+2025                    955            52.618             52.665         62.66         55.0                 54.0                     1.0                           35.0                      54.0                           48.0
+2016-2025 ht_eligible total: 653 | 2020-2025: 398
+2016-2025 regular: 647 post: 6 | week6+/post: 415 | fbs-involved: 648
+board.ht_threshold(2026) recompute: 2025 mean=52.617539 over 955 games -> threshold 62.62 (STRATEGY.md says 52.62 / 955 / 62.6)
+
+2016-2025 rows: 24089 | unplayed (home_points NaN): 8 | completed flag False: 12
+
+=== CFB regular + postseason ===
+season                       2016  2017  2018  2019  2020  2021  2022  2023  2024  2025  2016-2025  2020-2025
+a_games                      1502  1505  1511  1577   563  2408  3657  3730  3799  3829      24081      17986
+a_fbs_involved                832   834   845   848   542   849   854   910   919   934       8367       5008
+a_close_total                 782   791   814   810   541   849  1413  1391  1553  1594      10538       7341
+a_fbs_close_total             782   791   814   810   541   849   850   907   903   934       8181       4984
+b_outdoor_notdome            1451  1451  1459  1521   547  2347  3596  3665  3731  3765      23533      17651
+b_fbs_outdoor                 814   816   833   836   527   827   832   888   897   914       8184       4885
+b_fbs_outdoor_station_wx      720   735   747   753   497   778   804   835   847   874       7590       4635
+b_ruleB_eligible_replay_def   699   715   734   736   498   778   800   832   833   876       7501       4617
+c_fbs_out_wind15_mean          63    62    56    52    35    43    54    33    37    35        470        237
+c_fbs_out_wind15_kick          81    61    71    58    30    45    55    38    46    47        532        261
+c_ruleB_elig_wind15_mean       61    61    55    51    35    43    54    32    37    35        464        236
+c_all_out_wind15_mean         110    95   114    79    35    97    99    78    89    68        864        466
+e_fbs_out_temp90               30    25    29    51     2    24    24    35    47    24        291        156
+e_fbs_out_temp85               74   104   103   115    14    72    70    92   117    87        848        452
+f_fbs_out_temp32                5     5    25    12    13     5    22     6    22     9        124         77
+g_fbs_out_rain006              33    38    36    38    20    31    37    42    36    49        360        215
+g_fbs_out_precip_gt0           59    62    67    73    35    78   103    99    81   137        794        533
+g_fbs_out_precip_ge001         59    62    66    70    35    67    82    87    73   109        710        453
+g_fbs_out_rain_code            22    27    58    54    50    16   118   126    90   142        703        542
+g_fbs_out_snow010               2     2     5     0     3     1     8     5     6     8         40         31
+i_pin_total                   691   713   718   710     0     0     0     0     0     0       2832          0
+i_fbs_pin_total               691   713   718   710     0     0     0     0     0     0       2832          0
+open_and_close_total          782   775   814   810     0   841   811   869   863   938       7503       4322
+
+=== CFB regular only ===
+season                       2016  2017  2018  2019  2020  2021  2022  2023  2024  2025  2016-2025  2020-2025
+a_games                      1502  1505  1511  1577   563  2408  3657  3591  3745  3743      23802      17707
+a_fbs_involved                832   834   845   848   542   849   854   868   873   888       8233       4874
+a_close_total                 782   791   814   810   541   849  1413  1345  1503  1544      10392       7195
+a_fbs_close_total             782   791   814   810   541   849   850   865   857   888       8047       4850
+b_outdoor_notdome            1451  1451  1459  1521   547  2347  3596  3534  3680  3681      23267      17385
+b_fbs_outdoor                 814   816   833   836   527   827   832   848   853   870       8056       4757
+b_fbs_outdoor_station_wx      720   735   747   753   497   778   804   815   824   850       7523       4568
+b_ruleB_eligible_replay_def   699   715   734   736   498   778   800   812   810   852       7434       4550
+c_fbs_out_wind15_mean          63    62    56    52    35    43    54    31    36    31        463        230
+c_fbs_out_wind15_kick          81    61    71    58    30    45    55    36    43    43        523        252
+c_ruleB_elig_wind15_mean       61    61    55    51    35    43    54    30    36    31        457        229
+c_all_out_wind15_mean         110    95   114    79    35    97    99    75    87    64        855        457
+e_fbs_out_temp90               30    25    29    51     2    24    24    35    47    24        291        156
+e_fbs_out_temp85               74   104   103   115    14    72    70    92   117    87        848        452
+f_fbs_out_temp32                5     5    25    12    13     5    22     6    19     9        121         74
+g_fbs_out_rain006              33    38    36    38    20    31    37    40    34    47        354        209
+g_fbs_out_precip_gt0           59    62    67    73    35    78   103    96    77   133        783        522
+g_fbs_out_precip_ge001         59    62    66    70    35    67    82    85    70   107        703        446
+g_fbs_out_rain_code            22    27    58    54    50    16   118   122    88   138        693        532
+g_fbs_out_snow010               2     2     5     0     3     1     8     5     6     8         40         31
+i_pin_total                   691   713   718   710     0     0     0     0     0     0       2832          0
+i_fbs_pin_total               691   713   718   710     0     0     0     0     0     0       2832          0
+open_and_close_total          782   775   814   810     0   841   811   826   815   891       7365       4184
+
+=== CFB postseason only ===
+season                       2023  2024  2025  2016-2025  2020-2025
+a_games                       139    54    86        279        279
+a_fbs_involved                 42    46    46        134        134
+a_close_total                  46    50    50        146        146
+a_fbs_close_total              42    46    46        134        134
+b_outdoor_notdome             131    51    84        266        266
+b_fbs_outdoor                  40    44    44        128        128
+b_fbs_outdoor_station_wx       20    23    24         67         67
+b_ruleB_eligible_replay_def    20    23    24         67         67
+c_fbs_out_wind15_mean           2     1     4          7          7
+c_fbs_out_wind15_kick           2     3     4          9          9
+c_ruleB_elig_wind15_mean        2     1     4          7          7
+c_all_out_wind15_mean           3     2     4          9          9
+e_fbs_out_temp90                0     0     0          0          0
+e_fbs_out_temp85                0     0     0          0          0
+f_fbs_out_temp32                0     3     0          3          3
+g_fbs_out_rain006               2     2     2          6          6
+g_fbs_out_precip_gt0            3     4     4         11         11
+g_fbs_out_precip_ge001          2     3     2          7          7
+g_fbs_out_rain_code             4     2     4         10         10
+g_fbs_out_snow010               0     0     0          0          0
+i_pin_total                     0     0     0          0          0
+i_fbs_pin_total                 0     0     0          0          0
+open_and_close_total           43    48    47        138        138
+
+=== CFB per-season line availability, all seasons in file ===
+        games  pin_total  close_total  open_total
+season                                           
+2006      760        362          362           3
+2007      766        575          576           6
+2008      771        304          304           4
+2009      774        589          624          10
+2010      773        588          598           9
+2011      777        647          710          15
+2012      805        669          673         671
+2013      813        662          778         778
+2014     1542        702          784         782
+2015     1491        698          793         793
+2016     1502        691          782         782
+2017     1505        713          791         775
+2018     1511        718          814         814
+2019     1577        710          810         810
+2020      563          0          541           0
+2021     2408          0          849         841
+2022     3657          0         1413         811
+2023     3734          0         1391         869
+2024     3801          0         1553         863
+2025     3831          0         1594         938
+2026      888          0            0           0
+
+=== CFB forecast_replay.parquet (Rule B eligible games 2024-25; fc*_wind = calibrated station scale, fc*_raw = Open-Meteo) ===
+        eligible  no_forecast  fc1_cal15  fc2_cal15  fc3_cal15  any_cal15  any_raw15  fc_trigger  fc_signal_after_price_gates  obs_trigger_wx_wind15
+season                                                                                                                                              
+2024         833            0         21         42         34         57         61          57                           57                     37
+2025         876            0         25         35         37         53         55          53                           53                     35
+weeks/season_type in replay: {'regular': 1662, 'postseason': 47}
+
+=== CFB consensus open->close total move by season (games.parquet, median across books) ===
+          n  sd_total_move  mean_move  mean_abs_move
+season                                              
+2006      3          3.106      0.083          2.417
+2007      6          2.438      0.583          1.750
+2008      4          2.394     -0.625          1.625
+2009     10          2.771     -0.450          1.800
+2010      9          1.741      0.250          1.472
+2011     15          2.449      0.433          1.767
+2012    671          3.139     -0.156          1.859
+2013    778          2.313      0.357          1.561
+2014    782          3.510     -0.118          2.177
+2015    793          3.298     -0.447          2.518
+2016    782          2.627     -0.351          2.004
+2017    775          2.903     -0.048          2.056
+2018    814          2.691      0.035          1.996
+2019    810          2.598     -0.241          2.011
+2021    841          2.024      0.169          1.439
+2022    811          2.384     -0.416          1.819
+2023    869          2.176     -0.711          1.713
+2024    863          1.959     -0.364          1.515
+2025    938          2.127     -0.388          1.622
+2016-2025 all games: n=7503 sd=2.407 mean=-0.263
+2016-2025 FBS-involved: n=7448 sd=2.412
+simulate_decisions proxy (station, wx_wind>=15, 2016-25): n=426 mean(open-close)=+1.495 sd=2.675
+
+line_odds market_type values: {'spread': 456471, 'total': 406928, 'money_line': 320130}
+line_odds books: {'5Dimes & sportbet': 111840, 'JAZZ': 73023, 'bet365': 68677, 'PINNACLE': 66805, 'BetCRIS & BOOKMAKER': 66695, 'JUSTBET': 63448, 'MATCHBOOK': 60818, 'BETOnline & SPORTS BETTING': 59717, 'Sports Interaction': 57577, 'BOVADA & bodog': 55637, 'HERITAGE': 55354, 'intertops': 55212, 'youwager.eu': 53489, 'SBR': 46568, 'WAGERWEB': 39215, 'GT BETS': 36223, 'BetPHOENIX': 35319, 'MY BOOKIE': 29008, 'Bovada': 26919, 'BETMANIA': 18145, 'SKYBOOK': 18109, 'ESPN Bet': 17309, 'DraftKings': 13777, 'William Hill (New Jersey)': 12736, 'nitrogen sports': 12345, 'consensus': 10840, 'teamrankings': 8432, 'CLOUDBET': 4682, 'numberfire': 2716, 'Caesars': 1754, 'Caesars Sportsbook (Colorado)': 440, 'SugarHouse': 376, 'Draft Kings': 256, 'Caesars (Pennsylvania)': 68}
+per-book total rows with open&close: n=43413 sd=3.681; by season:
+season  2006.0  2007.0  2008.0  2009.0  2010.0  2011.0    2012.0    2013.0    2014.0     2015.0    2016.0    2017.0    2018.0    2019.0   2021.0    2022.0    2023.0    2024.0    2025.0
+n        4.000    6.00    5.00   12.00  17.000  15.000  1466.000  2590.000  2642.000  11068.000  2326.000  3076.000  3132.000  3636.000  1758.00  1710.000  2652.000  3544.000  3754.000
+sd       2.614    2.51    2.66    2.84   1.631   2.631     3.076     2.378    10.098      3.495     2.681     2.755     2.721     2.593     2.09     2.481     2.083     2.044     2.267
+per-book spread rows with open&close: n=46726 sd=3.598
+Pinnacle total rows with open&close by season: {}
+
+=== CFB CLV power (n for mean CLV delta, one-sided 95%, 80% power) ===
+all-games consensus total move sd 2016-25  sd=2.407 delta=0.5 -> n=144
+all-games consensus total move sd 2016-25  sd=2.407 delta=1.0 -> n=36
+all-games consensus total move sd 2016-25  sd=2.407 delta=1.5 -> n=16
+windy-cohort proxy sd (repo)               sd=2.675 delta=0.5 -> n=177
+windy-cohort proxy sd (repo)               sd=2.675 delta=1.0 -> n=45
+windy-cohort proxy sd (repo)               sd=2.675 delta=1.5 -> n=20

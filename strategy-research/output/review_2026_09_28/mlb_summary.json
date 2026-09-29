@@ -1,0 +1,487 @@
+{
+ "2024": {
+  "american_family_field": {
+   "name": "American Family Field",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 5,
+   "hi>=90": 2,
+   "t>=90": 1
+  },
+  "angel_stadium": {
+   "name": "Angel Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 3
+  },
+  "busch_stadium": {
+   "name": "Busch Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 17,
+   "t>=90": 7,
+   "hi>=90": 14
+  },
+  "chase_field": {
+   "name": "Chase Field",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 68,
+   "t>=90": 61,
+   "t>=95": 54,
+   "hi>=90": 53
+  },
+  "citi_field": {
+   "name": "Citi Field",
+   "roof": "open",
+   "n": 80,
+   "t>=85": 4,
+   "hi>=90": 2
+  },
+  "citizens_bank_park": {
+   "name": "Citizens Bank Park",
+   "roof": "open",
+   "n": 80,
+   "t>=85": 20,
+   "hi>=90": 13,
+   "t>=90": 7,
+   "t>=95": 2
+  },
+  "comerica_park": {
+   "name": "Comerica Park",
+   "roof": "open",
+   "n": 80,
+   "t>=85": 5,
+   "hi>=90": 2,
+   "t>=90": 1
+  },
+  "coors_field": {
+   "name": "Coors Field",
+   "roof": "open",
+   "n": 79,
+   "t>=85": 18,
+   "t>=90": 5,
+   "t>=95": 1
+  },
+  "daikin_park": {
+   "name": "Daikin Park",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 30,
+   "hi>=90": 37,
+   "t>=90": 12
+  },
+  "dodger_stadium": {
+   "name": "Dodger Stadium",
+   "roof": "open",
+   "n": 80,
+   "t>=85": 10,
+   "t>=90": 6,
+   "hi>=90": 4,
+   "t>=95": 2
+  },
+  "estadio_alfredo_harp_helu": {
+   "name": "Estadio Alfredo Harp Hel\u00fa",
+   "roof": "open",
+   "n": 2,
+   "t>=85": 1
+  },
+  "fenway_park": {
+   "name": "Fenway Park",
+   "roof": "open",
+   "n": 82,
+   "t>=85": 3,
+   "hi>=90": 1
+  },
+  "globe_life_field": {
+   "name": "Globe Life Field",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 45,
+   "hi>=90": 41,
+   "t>=90": 30,
+   "t>=95": 15
+  },
+  "great_american_ball_park": {
+   "name": "Great American Ball Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 15,
+   "t>=90": 5,
+   "hi>=90": 11,
+   "t>=95": 1
+  },
+  "kauffman_stadium": {
+   "name": "Kauffman Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 14,
+   "hi>=90": 10,
+   "t>=90": 5,
+   "t>=95": 1
+  },
+  "loandepot_park": {
+   "name": "loanDepot Park",
+   "roof": "retractable",
+   "n": 81,
+   "hi>=90": 44,
+   "t>=85": 26
+  },
+  "london_stadium": {
+   "name": "London Stadium",
+   "roof": "open",
+   "n": 2
+  },
+  "nationals_park": {
+   "name": "Nationals Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 16,
+   "t>=90": 6,
+   "hi>=90": 13,
+   "t>=95": 2
+  },
+  "oakland_coliseum": {
+   "name": "Oakland Coliseum",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 1
+  },
+  "oracle_park": {
+   "name": "Oracle Park",
+   "roof": "open",
+   "n": 81
+  },
+  "oriole_park_at_camden_yards": {
+   "name": "Oriole Park at Camden Yards",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 16,
+   "hi>=90": 9,
+   "t>=90": 1
+  },
+  "petco_park": {
+   "name": "Petco Park",
+   "roof": "open",
+   "n": 80,
+   "t>=85": 2,
+   "t>=90": 1,
+   "hi>=90": 1
+  },
+  "pnc_park": {
+   "name": "PNC Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 11,
+   "hi>=90": 5,
+   "t>=90": 1
+  },
+  "progressive_field": {
+   "name": "Progressive Field",
+   "roof": "open",
+   "n": 80,
+   "t>=85": 1,
+   "hi>=90": 2
+  },
+  "rate_field": {
+   "name": "Rate Field",
+   "roof": "open",
+   "n": 82,
+   "t>=85": 8,
+   "hi>=90": 9,
+   "t>=90": 3
+  },
+  "rickwood_field": {
+   "name": "Rickwood Field",
+   "roof": "open",
+   "n": 1,
+   "t>=85": 1
+  },
+  "rogers_centre": {
+   "name": "Rogers Centre",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 1,
+   "hi>=90": 1
+  },
+  "t_mobile_park": {
+   "name": "T-Mobile Park",
+   "roof": "retractable",
+   "n": 81
+  },
+  "target_field": {
+   "name": "Target Field",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 3,
+   "hi>=90": 3
+  },
+  "truist_park": {
+   "name": "Truist Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 17,
+   "t>=90": 5,
+   "hi>=90": 16
+  },
+  "wrigley_field": {
+   "name": "Wrigley Field",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 4,
+   "hi>=90": 4,
+   "t>=90": 2
+  },
+  "yankee_stadium": {
+   "name": "Yankee Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 7,
+   "hi>=90": 5,
+   "t>=90": 2,
+   "t>=95": 1
+  }
+ },
+ "2025": {
+  "american_family_field": {
+   "name": "American Family Field",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 5,
+   "hi>=90": 5,
+   "t>=90": 1
+  },
+  "angel_stadium": {
+   "name": "Angel Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 6,
+   "t>=90": 3
+  },
+  "bristol_motor_speedway": {
+   "name": "Bristol Motor Speedway",
+   "roof": "open",
+   "n": 2
+  },
+  "busch_stadium": {
+   "name": "Busch Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 25,
+   "hi>=90": 21,
+   "t>=90": 12,
+   "t>=95": 2
+  },
+  "chase_field": {
+   "name": "Chase Field",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 65,
+   "t>=90": 61,
+   "t>=95": 52,
+   "hi>=90": 54
+  },
+  "citi_field": {
+   "name": "Citi Field",
+   "roof": "open",
+   "n": 80,
+   "t>=85": 6,
+   "t>=90": 4,
+   "hi>=90": 4,
+   "t>=95": 2
+  },
+  "citizens_bank_park": {
+   "name": "Citizens Bank Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 5,
+   "hi>=90": 3
+  },
+  "comerica_park": {
+   "name": "Comerica Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 11,
+   "hi>=90": 7,
+   "t>=90": 2
+  },
+  "coors_field": {
+   "name": "Coors Field",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 22,
+   "t>=90": 14,
+   "t>=95": 4,
+   "hi>=90": 2
+  },
+  "daikin_park": {
+   "name": "Daikin Park",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 32,
+   "hi>=90": 35,
+   "t>=90": 9,
+   "t>=95": 3
+  },
+  "dodger_stadium": {
+   "name": "Dodger Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 8,
+   "t>=90": 2,
+   "hi>=90": 1
+  },
+  "fenway_park": {
+   "name": "Fenway Park",
+   "roof": "open",
+   "n": 82,
+   "hi>=90": 3,
+   "t>=85": 3
+  },
+  "george_m_steinbrenner_field": {
+   "name": "George M. Steinbrenner Field",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 37,
+   "hi>=90": 26,
+   "t>=90": 6
+  },
+  "globe_life_field": {
+   "name": "Globe Life Field",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 41,
+   "t>=90": 30,
+   "t>=95": 14,
+   "hi>=90": 37
+  },
+  "great_american_ball_park": {
+   "name": "Great American Ball Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 19,
+   "t>=90": 6,
+   "hi>=90": 16
+  },
+  "kauffman_stadium": {
+   "name": "Kauffman Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 16,
+   "hi>=90": 18,
+   "t>=90": 8
+  },
+  "loandepot_park": {
+   "name": "loanDepot Park",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 30,
+   "hi>=90": 33,
+   "t>=90": 4
+  },
+  "nationals_park": {
+   "name": "Nationals Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 7,
+   "hi>=90": 5,
+   "t>=90": 1
+  },
+  "oracle_park": {
+   "name": "Oracle Park",
+   "roof": "open",
+   "n": 81
+  },
+  "oriole_park_at_camden_yards": {
+   "name": "Oriole Park at Camden Yards",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 17,
+   "t>=90": 10,
+   "hi>=90": 15,
+   "t>=95": 3
+  },
+  "petco_park": {
+   "name": "Petco Park",
+   "roof": "open",
+   "n": 81
+  },
+  "pnc_park": {
+   "name": "PNC Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 7,
+   "hi>=90": 2
+  },
+  "progressive_field": {
+   "name": "Progressive Field",
+   "roof": "open",
+   "n": 81,
+   "hi>=90": 2,
+   "t>=85": 2
+  },
+  "rate_field": {
+   "name": "Rate Field",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 9,
+   "t>=90": 2,
+   "hi>=90": 8
+  },
+  "rogers_centre": {
+   "name": "Rogers Centre",
+   "roof": "retractable",
+   "n": 81,
+   "t>=85": 3,
+   "t>=90": 1,
+   "hi>=90": 2
+  },
+  "sutter_health_park": {
+   "name": "Sutter Health Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 31,
+   "t>=90": 11,
+   "t>=95": 5,
+   "hi>=90": 5
+  },
+  "t_mobile_park": {
+   "name": "T-Mobile Park",
+   "roof": "retractable",
+   "n": 81
+  },
+  "target_field": {
+   "name": "Target Field",
+   "roof": "open",
+   "n": 82,
+   "t>=85": 9,
+   "hi>=90": 6,
+   "t>=90": 1
+  },
+  "truist_park": {
+   "name": "Truist Park",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 10,
+   "hi>=90": 5,
+   "t>=90": 3
+  },
+  "wrigley_field": {
+   "name": "Wrigley Field",
+   "roof": "open",
+   "n": 79,
+   "t>=85": 5,
+   "hi>=90": 5,
+   "t>=90": 1
+  },
+  "yankee_stadium": {
+   "name": "Yankee Stadium",
+   "roof": "open",
+   "n": 81,
+   "t>=85": 11,
+   "hi>=90": 5,
+   "t>=90": 3,
+   "t>=95": 1
+  }
+ }
+}

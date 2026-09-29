@@ -1,0 +1,123 @@
+game_type values (all seasons): {'REG': 7239, 'WC': 120, 'DIV': 108, 'CON': 54, 'SB': 27}
+roof values (all seasons): {'outdoors': 5510, 'dome': 1246, 'closed': 627, 'open': 130, nan: 35}
+wx_src values (all seasons): {'gamebook': 5235, 'indoor': 1873, 'missing': 182, 'open_roof': 130, 'era5': 128}
+wx_wind range: 0.0 40.0 | wx_temp range: -6.0 109.0
+wx_precip range: 0.0 1.016 | fc1_wind range: 0.5 24.6
+seasons with any fc1_wind: [2023, 2024, 2025, 2026]
+seasons with any total_open (SBR): [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021]
+
+2016-2025 rows: 2761 | unplayed (result NaN): 0
+
+=== NFL REG + POST (all game types) ===
+season               2016  2017  2018  2019  2020  2021  2022  2023  2024  2025  2016-2025  2020-2025
+a_games               267   267   267   267   269   285   284   285   285   285       2761       1693
+a_close_total         267   267   267   267   269   285   284   285   285   285       2761       1693
+b_outdoor_wxsrc       198   200   198   201   176   191   188   188   187   193       1920       1123
+b_roof_outdoors       198   200   198   201   176   191   188   188   187   193       1920       1123
+b_roof_open_retract     2     5     4     5     0    11    10    11     0     0         48         32
+b_indoor               67    62    65    61    93    83    86    86    98    92        793        538
+c_out_wind15           22    20    17    23    26    28    24    14    16    20        210        128
+c_out_wind15_total     22    20    17    23    26    28    24    14    16    20        210        128
+d_has_fc1               0     0     0     0     0     0     0     5   187   193        385        385
+d_out_fc_any_cal15      0     0     0     0     0     0     0     0    18    25         43         43
+d_out_fc1_cal15         0     0     0     0     0     0     0     0     8    16         24         24
+d_out_fc2_cal15         0     0     0     0     0     0     0     0     8    12         20         20
+d_out_fc3_cal15         0     0     0     0     0     0     0     0    11    14         25         25
+d_out_fc_any_raw15      0     0     0     0     0     0     0     0    19    26         45         45
+e_out_temp90            3     3     4     4     1     0     1     2     2     0         20          6
+e_out_temp85           15    13    13    17     7     6     4     7    11    11        104         46
+f_out_temp32           16    19    10     8     4    12    20     8    18    20        135         82
+g_out_precip_known    198   200   198   201   176   191   188   188   187   193       1920       1123
+g_out_rain006          16    15    16    24    17    23    27    21    10    12        181        110
+g_out_precip_gt0       40    45    55    55    45    53    57    56    47    46        499        304
+g_out_precip_ge001     32    31    44    39    35    34    44    41    34    32        366        220
+g_out_snow010           5     3     2     3     4     5     4     2     3     6         37         24
+i_pinnacle_total        0     0     0     0     0     0     0     0     0     0          0          0
+sbr_open_and_close    267   266   267   266   268   283     0     0     0     0       1617        551
+
+=== NFL REG only ===
+season               2016  2017  2018  2019  2020  2021  2022  2023  2024  2025  2016-2025  2020-2025
+a_games               256   256   256   256   256   272   271   272   272   272       2639       1615
+a_close_total         256   256   256   256   256   272   271   272   272   272       2639       1615
+b_outdoor_wxsrc       192   192   192   192   165   182   177   180   178   180       1830       1062
+b_roof_outdoors       192   192   192   192   165   182   177   180   178   180       1830       1062
+b_roof_open_retract     2     5     4     5     0    11    10    11     0     0         48         32
+b_indoor               62    59    60    59    91    79    84    81    94    92        761        521
+c_out_wind15           21    18    17    22    26    27    23    12    15    18        199        121
+c_out_wind15_total     21    18    17    22    26    27    23    12    15    18        199        121
+d_has_fc1               0     0     0     0     0     0     0     0   178   180        358        358
+d_out_fc_any_cal15      0     0     0     0     0     0     0     0    17    22         39         39
+d_out_fc1_cal15         0     0     0     0     0     0     0     0     7    14         21         21
+d_out_fc2_cal15         0     0     0     0     0     0     0     0     8    12         20         20
+d_out_fc3_cal15         0     0     0     0     0     0     0     0    11    13         24         24
+d_out_fc_any_raw15      0     0     0     0     0     0     0     0    18    23         41         41
+e_out_temp90            3     3     4     4     1     0     1     2     2     0         20          6
+e_out_temp85           15    13    13    17     7     6     4     7    11    11        104         46
+f_out_temp32           13    16     7     6     3     8    16     4    13    16        102         60
+g_out_precip_known    192   192   192   192   165   182   177   180   178   180       1830       1062
+g_out_rain006          16    15    15    24    17    23    24    21     9    11        175        105
+g_out_precip_gt0       38    45    53    53    44    51    52    52    45    41        474        285
+g_out_precip_ge001     32    31    42    39    34    34    40    39    32    30        353        209
+g_out_snow010           5     3     1     3     3     5     2     2     1     4         29         17
+i_pinnacle_total        0     0     0     0     0     0     0     0     0     0          0          0
+sbr_open_and_close    256   255   256   255   255   270     0     0     0     0       1547        525
+
+=== NFL POST only (WC/DIV/CON/SB) ===
+season               2016  2017  2018  2019  2020  2021  2022  2023  2024  2025  2016-2025  2020-2025
+a_games                11    11    11    11    13    13    13    13    13    13        122         78
+a_close_total          11    11    11    11    13    13    13    13    13    13        122         78
+b_outdoor_wxsrc         6     8     6     9    11     9    11     8     9    13         90         61
+b_roof_outdoors         6     8     6     9    11     9    11     8     9    13         90         61
+b_roof_open_retract     0     0     0     0     0     0     0     0     0     0          0          0
+b_indoor                5     3     5     2     2     4     2     5     4     0         32         17
+c_out_wind15            1     2     0     1     0     1     1     2     1     2         11          7
+c_out_wind15_total      1     2     0     1     0     1     1     2     1     2         11          7
+d_has_fc1               0     0     0     0     0     0     0     5     9    13         27         27
+d_out_fc_any_cal15      0     0     0     0     0     0     0     0     1     3          4          4
+d_out_fc1_cal15         0     0     0     0     0     0     0     0     1     2          3          3
+d_out_fc2_cal15         0     0     0     0     0     0     0     0     0     0          0          0
+d_out_fc3_cal15         0     0     0     0     0     0     0     0     0     1          1          1
+d_out_fc_any_raw15      0     0     0     0     0     0     0     0     1     3          4          4
+e_out_temp90            0     0     0     0     0     0     0     0     0     0          0          0
+e_out_temp85            0     0     0     0     0     0     0     0     0     0          0          0
+f_out_temp32            3     3     3     2     1     4     4     4     5     4         33         22
+g_out_precip_known      6     8     6     9    11     9    11     8     9    13         90         61
+g_out_rain006           0     0     1     0     0     0     3     0     1     1          6          5
+g_out_precip_gt0        2     0     2     2     1     2     5     4     2     5         25         19
+g_out_precip_ge001      0     0     2     0     1     0     4     2     2     2         13         11
+g_out_snow010           0     0     1     0     1     0     2     0     2     2          8          7
+i_pinnacle_total        0     0     0     0     0     0     0     0     0     0          0          0
+sbr_open_and_close     11    11    11    11    13    13     0     0     0     0         70         26
+
+=== sbr_open_close: seasons 2007 - 2021 rows 4025
+          n  n_total_both  sd_total_move  mean_abs_total_move  n_spread_both  sd_spread_move  mean_abs_spread_move
+season                                                                                                            
+2007    267           265          1.800                1.338            267           1.618                 1.099
+2008    267           267          1.689                1.288            267           1.462                 1.112
+2009    267           267          1.570                1.165            267           1.658                 1.232
+2010    267           267          1.530                1.180            267           1.483                 1.058
+2011    267           267          1.711                1.326            267           1.740                 1.213
+2012    267           267          1.687                1.335            266           1.404                 1.006
+2013    267           267          1.997                1.549            267           2.166                 1.558
+2014    267           267          1.347                1.066            267           1.688                 1.217
+2015    267           267          1.637                1.333            267           1.794                 1.283
+2016    267           267          1.805                1.365            267           1.994                 1.292
+2017    267           266          1.833                1.466            267           1.934                 1.301
+2018    267           267          1.911                1.524            267           2.038                 1.324
+2019    267           266          2.236                1.799            267           2.471                 1.785
+2020    269           268          2.508                1.905            269           2.688                 1.914
+2021    285           283          2.188                1.829            281           2.937                 2.158
+
+ALL 2007-2021: n_total=4018 sd_total_move=1.868 mean_total_move=-0.236 | n_spread=4020 sd_spread_move=1.999 mean_spread_move=-0.178
+2016-2021: n_total=1617 sd_total_move=2.098 | n_spread=1618 sd_spread_move=2.396
+
+simulate_decisions proxy (outdoor, wx_wind>=15, SBR open&close, all seasons): n=371 mean=+0.985 sd=2.285 seasons 2007-2021
+games.parquet merged SBR rows (all games): n=4018 sd(open-close total)=1.868
+
+=== NFL CLV power (n for mean CLV delta, one-sided 95%, 80% power) ===
+all-games SBR total move sd      sd=1.868 delta=0.5 -> n=87
+all-games SBR total move sd      sd=1.868 delta=1.0 -> n=22
+all-games SBR total move sd      sd=1.868 delta=1.5 -> n=10
+windy-cohort proxy sd (repo)     sd=2.285 delta=0.5 -> n=130
+windy-cohort proxy sd (repo)     sd=2.285 delta=1.0 -> n=33
+windy-cohort proxy sd (repo)     sd=2.285 delta=1.5 -> n=15

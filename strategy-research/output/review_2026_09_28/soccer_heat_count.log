@@ -1,0 +1,221 @@
+
+=== venue-level hot days (window days; heat index at 19:00 local >= 85/90/95; daily max >= 90; 16:00 >= 90) ===
+league                     season venue                                  days 19>=85 19>=90 19>=95 max>=90 16>=90
+soccer_brazil_campeonato   2024   Arena Pantanal                          245    110     39      4     192    154
+soccer_brazil_campeonato   2024   Estádio Nilton Santos                   245     10      3      0      69     30
+soccer_brazil_campeonato   2024   São Januário                            245     10      3      0      69     30
+soccer_brazil_campeonato   2024   Maracanã                                245      7      1      0      43     14
+soccer_brazil_campeonato   2024   Arena MRV                               245      1      0      0       2      2
+soccer_brazil_campeonato   2024   Antônio Accioly                         245     10      0      0      34     26
+soccer_brazil_campeonato   2024   Arena Fonte Nova                        245     13      0      0      24      1
+soccer_brazil_campeonato   2024   Neo Química Arena                       245      0      0      0       8      2
+soccer_brazil_campeonato   2024   Heriberto Hülse                         245      0      0      0      23     11
+soccer_brazil_campeonato   2024   Mineirão                                245      2      0      0       5      4
+soccer_brazil_campeonato   2024   Castelão                                245     43      0      0     175     54
+soccer_brazil_campeonato   2024   Arena do Grêmio                         245      3      0      0      26     12
+soccer_brazil_campeonato   2024   Couto Pereira                           245      0      0      0       0      0
+soccer_brazil_campeonato   2024   Beira-Rio                               245      3      0      0      19     10
+soccer_brazil_campeonato   2024   Alfredo Jaconi                          245      0      0      0       0      0
+soccer_brazil_campeonato   2024   Allianz Parque                          245      0      0      0       6      3
+soccer_brazil_campeonato   2024   Nabi Abi Chedid                         245      0      0      0       6      1
+soccer_brazil_campeonato   2024   Morumbi                                 245      0      0      0       6      3
+soccer_brazil_campeonato   2024   Barradão                                245      4      0      0      50      1
+soccer_brazil_campeonato   2025   Maracanã                                261      5      1      0      23      9
+soccer_brazil_campeonato   2025   Arena do Grêmio                         261      3      1      0      12      8
+soccer_brazil_campeonato   2025   Arena MRV                               261      0      0      0       0      0
+soccer_brazil_campeonato   2025   Arena Fonte Nova                        261     27      0      0      34      9
+soccer_brazil_campeonato   2025   Estádio Nilton Santos                   261     11      0      0      30     13
+soccer_brazil_campeonato   2025   Castelão                                261     28      0      0     204     42
+soccer_brazil_campeonato   2025   Neo Química Arena                       261      0      0      0       3      1
+soccer_brazil_campeonato   2025   Mineirão                                261      0      0      0       1      0
+soccer_brazil_campeonato   2025   Beira-Rio                               261      1      0      0      10      8
+soccer_brazil_campeonato   2025   Alfredo Jaconi                          261      0      0      0       0      0
+soccer_brazil_campeonato   2025   Estádio José Maria de Campos Maia       261     15      0      0      57     32
+soccer_brazil_campeonato   2025   Allianz Parque                          261      0      0      0       0      0
+soccer_brazil_campeonato   2025   Nabi Abi Chedid                         261      0      0      0       0      0
+soccer_brazil_campeonato   2025   Vila Belmiro                            261      2      0      0      17      8
+soccer_brazil_campeonato   2025   Morumbi                                 261      0      0      0       0      0
+soccer_brazil_campeonato   2025   Ilha do Retiro                          261     30      0      0      49      4
+soccer_brazil_campeonato   2025   São Januário                            261     11      0      0      30     13
+soccer_brazil_campeonato   2025   Barradão                                261     17      0      0      52     16
+soccer_japan_j_league      2024   Best Denki Stadium                      295     67     60     30      86     73
+soccer_japan_j_league      2024   Yodoko Sakura Stadium                   295     69     57     20      82     75
+soccer_japan_j_league      2024   Ekimae Real Estate Stadium              295     64     50     21      80     74
+soccer_japan_j_league      2024   Lemon Gas Stadium Hiratsuka             295     66     47     19      80     69
+soccer_japan_j_league      2024   Nissan Stadium Yokohama                 295     64     38     15      78     69
+soccer_japan_j_league      2024   Yamaha Stadium                          295     51     35     11      79     67
+soccer_japan_j_league      2024   Saitama Stadium 2002                    295     62     34     17      80     73
+soccer_japan_j_league      2024   Todoroki Athletics Stadium              295     59     34     15      80     69
+soccer_japan_j_league      2024   Edion Peace Wing Hiroshima              295     57     32      7      72     64
+soccer_japan_j_league      2024   Sankyo Frontier Kashiwa Stadium         295     61     27     13      80     71
+soccer_japan_j_league      2024   Ajinomoto Stadium                       295     54     26     13      76     69
+soccer_japan_j_league      2024   Machida GION Stadium                    295     42     20     10      74     63
+soccer_japan_j_league      2024   Panasonic Stadium Suita                 295     51     19      3      75     66
+soccer_japan_j_league      2024   Kashima Soccer Stadium                  295     48     16      7      72     55
+soccer_japan_j_league      2024   Sanga Stadium by Kyocera                295     37     13      3      75     60
+soccer_japan_j_league      2024   Denka Big Swan Stadium                  295     35     11      3      53     35
+soccer_japan_j_league      2025   Yodoko Sakura Stadium                   304     86     66     34      92     84
+soccer_japan_j_league      2025   Best Denki Stadium                      304     70     58     24     100     80
+soccer_japan_j_league      2025   JFE Harenokuni Stadium                  304     75     58     29      97     85
+soccer_japan_j_league      2025   Saitama Stadium 2002                    304     66     48     27      92     72
+soccer_japan_j_league      2025   Lemon Gas Stadium Hiratsuka             304     73     46     14      85     66
+soccer_japan_j_league      2025   Todoroki Athletics Stadium              304     65     44     17      88     73
+soccer_japan_j_league      2025   Ajinomoto Stadium                       304     61     43     14      87     70
+soccer_japan_j_league      2025   Edion Peace Wing Hiroshima              304     63     42      3      75     69
+soccer_japan_j_league      2025   Nissan Stadium Yokohama                 304     67     41     11      82     69
+soccer_japan_j_league      2025   NHK Spring Mitsuzawa Football Stadium   304     67     41     11      82     69
+soccer_japan_j_league      2025   Machida GION Stadium                    304     58     39     15      84     68
+soccer_japan_j_league      2025   Sankyo Frontier Kashiwa Stadium         304     56     36     10      86     64
+soccer_japan_j_league      2025   Panasonic Stadium Suita                 304     62     33      4      89     69
+soccer_japan_j_league      2025   IAI Stadium Nihondaira                  304     57     31      5      89     72
+soccer_japan_j_league      2025   Denka Big Swan Stadium                  304     43     27      8      62     46
+soccer_japan_j_league      2025   Kashima Soccer Stadium                  304     43     20      4      71     53
+soccer_japan_j_league      2025   Sanga Stadium by Kyocera                304     47     20      3      89     69
+soccer_korea_kleague1      2024   Gimcheon Sports Complex                 290     75     47     24      86     76
+soccer_korea_kleague1      2024   DGB Daegu Bank Park                     290     76     46     23      91     81
+soccer_korea_kleague1      2024   Jeonju World Cup Stadium                290     60     41     19      81     74
+soccer_korea_kleague1      2024   Daejeon World Cup Stadium               290     57     33     13      71     65
+soccer_korea_kleague1      2024   Pohang Steel Yard                       290     56     31     19      71     56
+soccer_korea_kleague1      2024   Ulsan Munsu Football Stadium            290     47     28      8      77     63
+soccer_korea_kleague1      2024   Gwangju Football Stadium                290     46     27      6      73     60
+soccer_korea_kleague1      2024   Jeju World Cup Stadium                  290     49     26      7      71     59
+soccer_korea_kleague1      2024   Gangneung Stadium                       290     46     25     13      52     44
+soccer_korea_kleague1      2024   Incheon Football Stadium                290     46     22     10      60     55
+soccer_korea_kleague1      2024   Seoul World Cup Stadium                 290     43     20      8      61     57
+soccer_korea_kleague1      2024   Suwon Sports Complex                    290     38     20      6      61     53
+soccer_korea_kleague1      2025   Yodoko Sakura Stadium                   304     86     66     34      92     84
+soccer_korea_kleague1      2025   Best Denki Stadium                      304     70     58     24     100     80
+soccer_korea_kleague1      2025   JFE Harenokuni Stadium                  304     75     58     29      97     85
+soccer_korea_kleague1      2025   Saitama Stadium 2002                    304     66     48     27      92     72
+soccer_korea_kleague1      2025   DGB Daegu Bank Park                     304     63     47     33      76     66
+soccer_korea_kleague1      2025   Lemon Gas Stadium Hiratsuka             304     73     46     14      85     66
+soccer_korea_kleague1      2025   Gimcheon Sports Complex                 304     58     46     24      74     63
+soccer_korea_kleague1      2025   Pohang Steel Yard                       304     58     45     26      71     61
+soccer_korea_kleague1      2025   Todoroki Athletics Stadium              304     65     44     17      88     73
+soccer_korea_kleague1      2025   Ajinomoto Stadium                       304     61     43     14      87     70
+soccer_korea_kleague1      2025   Edion Peace Wing Hiroshima              304     63     42      3      75     69
+soccer_korea_kleague1      2025   Nissan Stadium Yokohama                 304     67     41     11      82     69
+soccer_korea_kleague1      2025   NHK Spring Mitsuzawa Football Stadium   304     67     41     11      82     69
+soccer_korea_kleague1      2025   Ulsan Munsu Football Stadium            304     56     41     19      73     64
+soccer_korea_kleague1      2025   Jeonju World Cup Stadium                304     56     41     15      69     61
+soccer_korea_kleague1      2025   Gangneung Stadium                       304     48     40     22      53     47
+soccer_korea_kleague1      2025   Machida GION Stadium                    304     58     39     15      84     68
+soccer_korea_kleague1      2025   Sankyo Frontier Kashiwa Stadium         304     56     36     10      86     64
+soccer_korea_kleague1      2025   Panasonic Stadium Suita                 304     62     33      4      89     69
+soccer_korea_kleague1      2025   IAI Stadium Nihondaira                  304     57     31      5      89     72
+soccer_korea_kleague1      2025   Gwangju Football Stadium                304     50     31      9      64     58
+soccer_korea_kleague1      2025   Daejeon World Cup Stadium               304     49     28     11      62     57
+soccer_korea_kleague1      2025   Denka Big Swan Stadium                  304     43     27      8      62     46
+soccer_korea_kleague1      2025   Seoul World Cup Stadium                 304     49     22     11      60     54
+soccer_korea_kleague1      2025   Kashima Soccer Stadium                  304     43     20      4      71     53
+soccer_korea_kleague1      2025   Sanga Stadium by Kyocera                304     47     20      3      89     69
+soccer_korea_kleague1      2025   Suwon Sports Complex                    304     46     19      7      57     50
+soccer_korea_kleague1      2025   Anyang Sports Complex                   304     44     17      8      56     46
+soccer_korea_kleague1      2025   Jeju World Cup Stadium                  304     46      8      0      70     55
+soccer_mexico_ligamx       2024   Estadio El Encanto                      366    126     85     26     160    139
+soccer_mexico_ligamx       2024   Estadio Olímpico Benito Juárez          366    100     52      8      84     81
+soccer_mexico_ligamx       2024   Estadio Corona                          366    118     49      1     112    109
+soccer_mexico_ligamx       2024   Estadio BBVA                            366    109     43     17     135    121
+soccer_mexico_ligamx       2024   Estadio Universitario                   366    109     43     17     135    121
+soccer_mexico_ligamx       2024   Estadio Azteca                          366      0      0      0       0      0
+soccer_mexico_ligamx       2024   Estadio Ciudad de los Deportes          366      0      0      0       0      0
+soccer_mexico_ligamx       2024   Estadio Olímpico Universitario          366      0      0      0       0      0
+soccer_mexico_ligamx       2024   Estadio Akron                           366      7      0      0      17     16
+soccer_mexico_ligamx       2024   Estadio Jalisco                         366     23      0      0      41     37
+soccer_mexico_ligamx       2024   Estadio Nemesio Díez                    366      0      0      0       0      0
+soccer_mexico_ligamx       2024   Estadio Hidalgo                         366      0      0      0       0      0
+soccer_mexico_ligamx       2024   Estadio León                            366     17      0      0      19     16
+soccer_mexico_ligamx       2024   Estadio Victoria                        366     13      0      0       6      1
+soccer_mexico_ligamx       2024   Estadio Caliente                        366      0      0      0       2      0
+soccer_mexico_ligamx       2024   Estadio Cuauhtémoc                      366      0      0      0       0      0
+soccer_mexico_ligamx       2024   Estadio Corregidora                     366      5      0      0      14     10
+soccer_mexico_ligamx       2024   Estadio Alfonso Lastras                 366      3      0      0      13      7
+soccer_mexico_ligamx       2025   Estadio El Encanto                      365    148    102     40     177    147
+soccer_mexico_ligamx       2025   Estadio BBVA                            365    112     48      4     141    115
+soccer_mexico_ligamx       2025   Estadio Universitario                   365    112     48      4     141    115
+soccer_mexico_ligamx       2025   Estadio Olímpico Benito Juárez          365     84     33      3      74     69
+soccer_mexico_ligamx       2025   Estadio Corona                          365    113     26      0     111    102
+soccer_mexico_ligamx       2025   Estadio Ciudad de los Deportes          365      0      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Olímpico Universitario          365      0      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Akron                           365      0      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Jalisco                         365      4      0      0       2      2
+soccer_mexico_ligamx       2025   Estadio Nemesio Díez                    365      0      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Hidalgo                         365      0      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio León                            365      3      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Victoria                        365      2      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Caliente                        365      0      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Cuauhtémoc                      365      0      0      0       0      0
+soccer_mexico_ligamx       2025   Estadio Corregidora                     365      0      0      0       1      1
+soccer_mexico_ligamx       2025   Estadio Alfonso Lastras                 365      1      0      0       0      0
+soccer_usa_mls             2024   Q2 Stadium                              300    119     95     48     127    118
+soccer_usa_mls             2024   Toyota Stadium                          300    112     88     46     113    108
+soccer_usa_mls             2024   Shell Energy Stadium                    300    127     88     50     143    123
+soccer_usa_mls             2024   Chase Stadium                           300    122     68      9     146    109
+soccer_usa_mls             2024   Inter&Co Stadium                        300    102     49      9     144    101
+soccer_usa_mls             2024   Children's Mercy Park                   300     52     34     13      48     45
+soccer_usa_mls             2024   GEODIS Park                             300     51     31      9      55     47
+soccer_usa_mls             2024   Bank of America Stadium                 300     54     27      4      54     45
+soccer_usa_mls             2024   Audi Field                              300     45     24     12      44     38
+soccer_usa_mls             2024   Energizer Park                          300     48     24     10      48     44
+soccer_usa_mls             2024   TQL Stadium                             300     38     21      2      37     28
+soccer_usa_mls             2024   Subaru Park                             300     34     17      6      36     29
+soccer_usa_mls             2024   ScottsMiracle-Gro Field                 300     34     15      1      25     23
+soccer_usa_mls             2024   Red Bull Arena                          300     25     12      1      30     27
+soccer_usa_mls             2024   Soldier Field                           300     18     11      4      21     17
+soccer_usa_mls             2024   America First Field                     300     35     11      0      28     25
+soccer_usa_mls             2024   Yankee Stadium                          300     15      8      3      28     22
+soccer_usa_mls             2024   Allianz Field                           300     14      6      0      14     12
+soccer_usa_mls             2024   Providence Park                         300     15      4      0      15     15
+soccer_usa_mls             2024   Stade Saputo                            300      7      2      0       6      5
+soccer_usa_mls             2024   Gillette Stadium                        300     12      2      0      21     15
+soccer_usa_mls             2024   BMO Field                               300      6      2      0       4      4
+soccer_usa_mls             2024   BMO Stadium                             300      3      1      0      14      6
+soccer_usa_mls             2024   Dick's Sporting Goods Park              300     18      0      0      15     10
+soccer_usa_mls             2024   Dignity Health Sports Park              300      2      0      0      12      5
+soccer_usa_mls             2024   PayPal Park                             300      9      0      0      27     23
+soccer_usa_mls             2024   Lumen Field                             300      0      0      0       0      0
+soccer_usa_mls             2025   Q2 Stadium                              299    133     88     27     126    118
+soccer_usa_mls             2025   Shell Energy Stadium                    299    136     88     31     146    127
+soccer_usa_mls             2025   Toyota Stadium                          299    112     82     44     107     98
+soccer_usa_mls             2025   Chase Stadium                           299    109     56      9     142    105
+soccer_usa_mls             2025   Inter&Co Stadium                        299     88     47     16     135     86
+soccer_usa_mls             2025   Children's Mercy Park                   299     56     36     17      53     45
+soccer_usa_mls             2025   GEODIS Park                             299     57     34     12      65     57
+soccer_usa_mls             2025   Energizer Park                          299     56     34     18      57     51
+soccer_usa_mls             2025   Bank of America Stadium                 299     56     25      7      54     44
+soccer_usa_mls             2025   TQL Stadium                             299     43     21      6      40     34
+soccer_usa_mls             2025   Audi Field                              299     40     20      8      41     33
+soccer_usa_mls             2025   Red Bull Arena                          299     25     15      7      30     23
+soccer_usa_mls             2025   Soldier Field                           299     27     13      4      27     23
+soccer_usa_mls             2025   ScottsMiracle-Gro Field                 299     36     12      4      26     22
+soccer_usa_mls             2025   Subaru Park                             299     29     12      8      36     25
+soccer_usa_mls             2025   Yankee Stadium                          299     25     10      7      32     24
+soccer_usa_mls             2025   Allianz Field                           299     14      9      3      17     15
+soccer_usa_mls             2025   Providence Park                         299     13      8      0      11     10
+soccer_usa_mls             2025   Stade Saputo                            299     15      7      1      10      8
+soccer_usa_mls             2025   Gillette Stadium                        299     13      5      1      15     10
+soccer_usa_mls             2025   BMO Field                               299     17      4      2      11      9
+soccer_usa_mls             2025   America First Field                     299     47      1      0      16     12
+soccer_usa_mls             2025   Dick's Sporting Goods Park              299     20      0      0      15     13
+soccer_usa_mls             2025   Dignity Health Sports Park              299      0      0      0       7      0
+soccer_usa_mls             2025   BMO Stadium                             299      0      0      0       8      0
+soccer_usa_mls             2025   PayPal Park                             299      0      0      0      10      7
+soccer_usa_mls             2025   Lumen Field                             299      1      0      0       0      0
+soccer_usa_mls             2025   Snapdragon Stadium                      299      0      0      0       0      0
+
+=== league-season totals: expected qualifying HOME matches (home matches x share of window days at an open venue x hot-day fraction) ===
+league                     season teams home_m  open_m E[HI19>=90] E[HI19>=85] E[HImax>=90] E[HI16>=90] unres_days
+soccer_brazil_campeonato   2024      20    380   361.0         3.6        17.3         61.6        28.7          0
+soccer_brazil_campeonato   2025      20    380   380.0         0.2        13.3         54.5        15.6          0
+soccer_japan_j_league      2024      20    380   323.0        35.1        60.6         83.6        72.2          0
+soccer_japan_j_league      2025      20    380   342.0        46.0        70.0         96.1        78.0          0
+soccer_korea_kleague1      2024      12    228   228.0        24.0        41.8         56.0        48.7          0
+soccer_korea_kleague1      2025      12    228   228.0        24.1        38.9         49.1        42.6          0
+soccer_mexico_ligamx       2024      18    306   306.0        12.6        29.2         34.3        30.6          0
+soccer_mexico_ligamx       2025      18    306   297.4         7.8        21.2         23.8        20.1        184
+soccer_usa_mls             2024      29    493   459.0        36.3        63.3         71.1        59.2          0
+soccer_usa_mls             2025      30    510   476.0        35.6        66.4         70.3        56.8          0
+TOTAL 2024+2025                           3591  3400.4       225.3       422.2        600.3       452.4
+
+Open-Meteo calls (unique venue x window): 184
+exit 0
