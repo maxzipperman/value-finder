@@ -1,0 +1,14 @@
+Dot: amber
+Number beside the icon: none
+Menu:
+  Something needs a look. No signals.
+  Next alert run at 3:30 PM
+  Credits left: 19,650
+  --------
+  Line one line two line three line four line five.
+  The family 👨‍👩‍👧 stays together; no reversed text.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit

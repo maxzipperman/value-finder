@@ -1,0 +1,14 @@
+Dot: red
+Number beside the icon: 1
+Menu:
+  A scheduled job has a problem. 1 signal is live.
+  Next alert run at 7:30 AM
+  Credits left: 19,650
+  --------
+  The college football alert job's last run failed while building the board.
+  The close-capture job last exited with status 1.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit

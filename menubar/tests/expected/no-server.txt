@@ -1,0 +1,10 @@
+Dot: gray
+Number beside the icon: none
+Menu:
+  The dashboard is not running.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit
+Detail (self-test only): nothing is listening at that address (connection refused)

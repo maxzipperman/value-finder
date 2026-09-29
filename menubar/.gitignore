@@ -1,0 +1,2 @@
+# ops/build_menubar.sh writes the app here; it is re-created by the script.
+build/
