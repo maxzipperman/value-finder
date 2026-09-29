@@ -187,15 +187,18 @@ Ranked by strength of evidence, whether the data comes from an API, and fit with
 
 #### The price-engine backtest, ready before F1 lands (added September 29, 2026, [#8](https://github.com/maxzipperman/value-finder/issues/8), [#53](https://github.com/maxzipperman/value-finder/issues/53))
 
+- **Revised the same day after an independent review.** No headline number changed (still 38 variants, 238, p < 0.00021), and there are still no results. A lookahead hole for kickoffs that moved later is closed, spread bets whose close moved are now graded instead of dropped, and H2 must also beat the lagging book's own close. The draft's first section lists every change.
 - **Written before any F1 price exists.** The backtest of this idea on F1 is written and tested before a single F1 price exists, so its thresholds can't be tuned to the data.
 - **The rules are a draft for you and the hub to register:** [`price-engine-preregistration-draft.md`](price-engine-preregistration-draft.md).
   - Flags at 1%, 2% (primary) or 3% expected value against Pinnacle's no-vig price, for NFL and CFB totals, spreads and moneylines, against Pinnacle alone and against the three-book blend.
-  - Issue #53's soft-book-lag flag: a retail total a point or more off Pinnacle's.
-- **Grading.** Everything is graded on CLV against Pinnacle's close and against the book's own close, plus the result at the price taken.
-- **Variant count.** 38 variants, which takes the running count to 238 (bar p < 0.00021).
-- **Resolution.** The daily grid only finds gaps that last hours.
+  - Issue #53's soft-book-lag flag: a retail total a point or more off Pinnacle's. At exactly 1 point and −115 that bet is about 2% negative EV at Pinnacle's price, which the draft says plainly (owner decision 7).
+- **Grading.** Everything is graded on CLV against Pinnacle's close and against the book's own close, plus the result at the price taken. A close at another number is converted to the bet's number (totals: the registered model; spreads: a margin table from the seasons before 2020), and CLV in points is shown beside it.
+- **What a pass means.** If Pinnacle is right, a 2% flag should show about 1 cent of CLV, and a few hundred bets would pass almost automatically. A pass says Pinnacle wasn't the slow side; it doesn't show Pinnacle's close is right (owner decision 6).
+- **Variant count.** 38 variants, which takes the running count to 238 (bar p < 0.00021). If open PR #55 merges first, 270 (p < 0.000185); the hub sets it at registration.
+- **Resolution.** F1 sees each game at 16:00 UTC daily and, on busy days, at other games' closes, so it mostly misses gaps that last minutes.
 - **Running it.** One command runs it the day F1 lands (`uv run markets price-engine` in `sharp-markets/`). Today it prints that there is nothing to backtest yet.
 - **This season.** The draft's last page covers the live form: a college football paper log with a probability for every game, built from the call the alerts already make, at no extra credits.
+- **Not done.** Issue #53's live-log lag measurement is blocked until the live logs carry PR #50's fields and a forward test is registered (2026 rows are sealed).
 
 ### 2. CFB high-total shrinkage *(new lead from your data)*
 

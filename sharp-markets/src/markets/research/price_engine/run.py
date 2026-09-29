@@ -27,9 +27,10 @@ from . import engine, outcomes
 from .model import LABEL
 from .quotes import f1_calls, load_quotes
 
-DAILY_NOTE = ("F1 has one snapshot a day (16:00 UTC, up to 7 days out) plus the close, so this backtest only finds "
-              "price gaps that last for hours. Gaps that open and close within minutes, the kind Kaunitz et al. "
-              "found with minute data and issue #53 describes, are invisible to it.")
+DAILY_NOTE = ("F1 sees each game at 16:00 UTC on each of the 7 days before kickoff and, on busy days, also at every "
+              "other game's close (each snapshot lists every game). A price gap shows up only if it is open at one "
+              "of those moments, so gaps that last minutes, the kind Kaunitz et al. found with minute data and "
+              "issue #53 describes, are mostly missed, and nothing here says how long any gap lasted.")
 DRAFT = "strategy-research/price-engine-preregistration-draft.md"
 
 
@@ -85,9 +86,11 @@ def _commit() -> str:
         return "unknown"
 
 
-RESULT_COLS = ["variant", "bets", "games", "ev_entry_pct", "clv_pin_cents", "clv_pin_se", "clv_pin_p", "clv_own_cents",
-               "clv_pin_pts", "clv_own_pts", "seasons_positive", "seasons_counted", "top_book", "win_rate", "roi",
-               "roi_lo", "roi_hi", "decision"]
+RESULT_COLS = ["variant", "bets", "clv_pin_n", "games", "ev_entry_pct", "clv_pin_expected", "clv_pin_cents",
+               "clv_pin_se", "clv_pin_p", "clv_pin_pts", "clv_own_cents", "clv_own_pts", "seasons_positive",
+               "seasons_counted", "top_book", "win_rate", "roi", "roi_lo", "roi_hi", "decision"]
+MOVED_COLS = ["variant", "bets", "clv_pin_n", "clv_pin_same_n", "clv_pin_cents_same", "clv_pin_moved_n",
+              "clv_pin_cents_moved", "clv_pin_cents", "clv_pin_pts"]
 
 
 def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
@@ -96,14 +99,26 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
             f"Run {utcnow():%Y-%m-%d %H:%M} UTC from commit {_commit()}. Rules: `{DRAFT}` "
             "(a draft until the hub registers it). Sealed 2026 seasons left out.", "",
             f"**{DAILY_NOTE}**", "",
-            f"Variants tested: **{n}**. Running count with them: {engine.RUNNING_COUNT}; the bar is "
-            f"p < 0.05 / {engine.RUNNING_COUNT} = {engine.ALPHA:.5f} (one-sided, on CLV against Pinnacle's close).", "",
+            f"Variants tested: **{n}**. Running count with them: {engine.PRIOR_COUNT} before + {n} = "
+            f"{engine.RUNNING_COUNT}; the bar is p < 0.05 / {engine.RUNNING_COUNT} = {engine.ALPHA:.6f} (one-sided, "
+            "on CLV against Pinnacle's close).", "",
             "Reading the table: `clv_pin_cents` is the average of (Pinnacle's no-vig closing probability of the bet's "
             "side at the bet's line) minus (the break-even probability of the price taken), in cents; above zero means "
-            "the price beat Pinnacle's close. `clv_own_*` is the same against the entry book's own close. Points are "
-            "for spreads and totals only. ROI is flat one-unit bets at the price taken, pushes left out; its "
-            "interval is 95%. Standard errors are clustered by game.", ""]
-    body = ["## Results, one row per variant", "", table(results, RESULT_COLS)]
+            "the price beat Pinnacle's close. `clv_pin_n` is how many bets had a Pinnacle close to grade against. "
+            "`clv_pin_expected` is what an efficient Pinnacle implies (EV / price, about 1 cent for a 2% flag): a "
+            "cell near it means the flags held their value to the close; well below it, Pinnacle moved toward the "
+            "retail price. `clv_own_*` is the same against the entry book's own close. Points (`*_pts`) are for "
+            "spreads and totals only, and need no conversion between numbers. ROI is flat one-unit bets at the price "
+            "taken, pushes left out; its interval is 95%. Standard errors are clustered by game.", ""]
+    moved = results[results.market.isin(["spreads", "totals"]) & results.primary]
+    body = ["## Results, one row per variant", "", table(results, RESULT_COLS),
+            "## Closes at another number (primary spread and total cells)", "",
+            "When Pinnacle closed at a number other than the bet's, its close was converted to the bet's number "
+            "(totals: the registered model; spreads: the declared margin table, `model.cover_at`). `same` is the "
+            "bets whose Pinnacle close stayed on the bet's number, `moved` the converted ones. If `moved` is well "
+            "below `same`, Pinnacle's later moves went against the flags (the stale-Pinnacle failure), and the "
+            "points column says the same without any conversion.", "",
+            table(moved, MOVED_COLS)]
     if "quotes" in res and not res["quotes"].empty:
         q = res["quotes"]
         cov = q.groupby(["sport", "season"]).agg(games=("event_id", "nunique"), snapshots=("snap", "nunique"),
@@ -125,18 +140,23 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
                                       "clv_own_pts", "roi"]),
                  "## How often a retail total sits a point or more off Pinnacle's (descriptive)", "",
                  "`still_off_next_snapshot`: of those gaps, the share still open at that book's next snapshot of the "
-                 "same game, usually a day later. Daily data can't say how long a gap lasts within the day.", "",
+                 "same game. That is a day later early in the week, but on game days often another game's close, "
+                 "minutes to a few hours later, so it is not a measure of how long gaps last.", "",
                  table(res["lag"], ["sport", "book", "quotes", "share_1pt_off", "still_off_next_snapshot"], 3),
                  "## Is Pinnacle's no-vig close a fair probability? (descriptive, no decision)", "",
                  "Side a is home (moneyline, spread) or over (total). `excess` = actual minus predicted.", "",
                  table(res["calibration"], ["sport", "market", "games", "predicted_side_a", "actual_side_a", "excess",
                                             "excess_se"], 3)]
     body += ["## What this cannot show", "",
-             "- Gaps shorter than a few hours (see above), and how long any gap lasted within a day.",
+             "- Most short-lived gaps (see above), and how long any gap lasted.",
+             "- Exact CLV for a close at another number. Totals go through the registered windy cohort (656 NFL and "
+             "855 CFB games through 2023, 92 and 236 of them from 2020-23, inside the backtest); spreads through a "
+             "margin table from the seasons before 2020. The points columns need neither.",
              "- Whether a posted price was fillable, or for how much: the Odds API shows quotes, not limits.",
              "- Voids and account limits: books void obvious errors and limit accounts that take stale numbers. "
              "`bets_ev_10plus` in results.csv counts the flags most likely to be voided.",
-             "- Spreads and moneylines at a line other than Pinnacle's (left out of the primary analysis).", ""]
+             "- Retail spreads at a number other than Pinnacle's: never flagged (only their closes are converted).",
+             ""]
     return "\n".join(head + body)
 
 
@@ -179,8 +199,8 @@ def main(args) -> int:
         bets.to_parquet(out_dir / "bets.parquet", index=False)
     (out_dir / "report.md").write_text(report(res, results, fixture=bool(args.fixture)))
     with pd.option_context("display.width", 200, "display.max_columns", 20, "display.max_rows", 100):
-        print(results[["variant", "bets", "clv_pin_cents", "clv_pin_p", "clv_own_cents", "roi", "decision"]]
-              .to_string(index=False))
+        print(results[["variant", "bets", "clv_pin_n", "clv_pin_expected", "clv_pin_cents", "clv_pin_p", "clv_pin_pts",
+                       "clv_own_cents", "roi", "decision"]].to_string(index=False))
     print(DAILY_NOTE)
     print(f"variants tested: {len(results)} (rows in results.csv); running count {engine.RUNNING_COUNT}, "
           f"bar p < {engine.ALPHA:.5f}")

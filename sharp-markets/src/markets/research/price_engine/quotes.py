@@ -4,18 +4,27 @@ Input: the rows `bulk.load_rows` returns for F1's cached featured snapshots (h2h
 books). Sealed seasons are left out there by default, and this module never asks for them (include_sealed keeps
 its default); any sealed row that still arrived would be dropped and counted here.
 
-Output columns: sport, season, event_id, kickoff, home, away, snap, book, market, line, dec_a, dec_b, upd.
+Output columns: sport, season, event_id, kickoff, commence, home, away, snap, book, market, line, dec_a, dec_b,
+upd.
   side a / side b: home / away for h2h and spreads, over / under for totals.
   line: the home team's spread for spreads, the total for totals, NaN for h2h.
   snap: the Odds API snapshot timestamp (when the price was known; never last_update, which is only a
         staleness check). upd: the book's market last_update.
+  commence: the kickoff as listed in that same snapshot: what a bettor at `snap` could see.
   kickoff: the event's commence_time as listed in its latest snapshot, in-play snapshots included (kickoffs
-           move; this only ever removes entries, so it can't leak information into one).
+           move). It is known only later, so it may remove a row or an entry but must never admit one: a
+           kickoff that later moved LATER would make an early snapshot look further from kickoff than it was
+           at the time. Every cut here uses both kickoffs, and engine.entries requires both to be more than 60
+           minutes after the snapshot.
 
 No lookahead. A row is kept only if its snapshot is strictly before kickoff (both the latest-listed kickoff and
 the kickoff listed in that same snapshot) and no more than 7 days before it (F1's grid; a featured snapshot also
 lists games further out, which F1 was not designed to cover). Everything dropped is counted by reason; nothing
 is dropped silently.
+
+F1's snapshots are sport-wide: each one lists every game of that sport. So a game is seen at 16:00 UTC on each
+of the 7 days before it and, on busy days, also at every other game's close (on a college Saturday that is every
+half hour to few hours), not only at its own daily snapshot.
 """
 from __future__ import annotations
 
@@ -36,8 +45,8 @@ SHARP = ("pinnacle", "lowvig", "betonlineag")
 RETAIL = ("draftkings", "fanduel", "betmgm", "williamhill_us", "fanatics", "betrivers", "espnbet")   # us10 minus SHARP
 WINDOW = bulk.LOOKBACK                                                                              # 7 days
 COARSE_MARGIN = timedelta(days=2)       # the early cut in quote_rows; kickoffs rarely move by more
-COLUMNS = ["sport", "season", "event_id", "kickoff", "home", "away", "snap", "book", "market", "line", "dec_a",
-           "dec_b", "upd"]
+COLUMNS = ["sport", "season", "event_id", "kickoff", "commence", "home", "away", "snap", "book", "market", "line",
+           "dec_a", "dec_b", "upd"]
 
 
 def f1_calls(cfg: dict, cache, now: datetime | None = None) -> list:

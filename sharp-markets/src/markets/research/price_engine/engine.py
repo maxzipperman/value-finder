@@ -4,20 +4,27 @@
 Fair price at each snapshot (per game and market):
   pinnacle  Pinnacle's Shin no-vig probability for its own line (primary).
   blend     Pinnacle, LowVig and BetOnline, each Shin-de-vigged, where they quote Pinnacle's line, averaged with
-            config/backtest.yaml's weights (0.55 / 0.30 / 0.15) renormalized over the books present; the same
-            arithmetic as markets.devig.blend. Needs Pinnacle's line, like the primary version.
+            the weights pinned below (BLEND_WEIGHTS, 0.55 / 0.30 / 0.15, the values config/backtest.yaml held on
+            Sep 29, 2026) renormalized over the books present; the same arithmetic as markets.devig.blend. Needs
+            Pinnacle's line, like the primary version.
 A retail book's quote is compared with the fair price at the same snapshot:
   h2h       always; spreads only at Pinnacle's own spread (primary analysis); totals at any total, a different
             total converted by the registered model (model.under_at).
 Flags:
   H1  expected value against the fair price >= 1%, 2% (primary) or 3%.
   H2  (issue 53, soft-book lag) a retail total at least 1 point on the good side of Pinnacle's total at the same
-      snapshot, at -115 or better.
+      snapshot, at -115 or better. At exactly 1 point and -115 that bet is about 2% negative EV at Pinnacle's own
+      price under the registered conversion (NFL -1.9%, CFB -2.3%); at -110 it is about even.
 Entry: one bet per game, market and side: the first snapshot where the side is flagged, at the flagged book with
 the best expected value (H2: the biggest gap, then the best price). The snapshot must be more than 60 minutes
-before kickoff, so it is never the close it is graded against (and never at or after kickoff).
+before the kickoff listed in that snapshot AND before the latest-listed kickoff, so it is never the close it is
+graded against, never at or after kickoff, and a kickoff that later moved later can't admit it. Every F1
+snapshot lists every game, so entries come from the 16:00 UTC daily snapshots and from other games' closes.
 Grading: CLV at the price taken against Pinnacle's close and against the entry book's own close, in cents of
 no-vig probability (100 * (p_close - 1/price)) and, for spreads and totals, in points; and the realized result.
+A close at a number other than the bet's is converted to the bet's number: totals by the registered model
+(model.under_at), spreads by the declared margin table (model.cover_at), so a bet whose close moved is graded,
+not dropped.
 A close is a book's quote in its last snapshot before kickoff, and only if that snapshot is within 60 minutes of
 kickoff (F1's close is 5 to 10 minutes before).
 """
@@ -29,19 +36,24 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from ...sport import load_backtest_config
-from .model import CFB, LABEL, NFL, SPORTS, ev, shin, under_at
+from .model import CFB, LABEL, NFL, SPORTS, cover_at, ev, shin, under_at
 from .quotes import RETAIL, SHARP
 
 THRESHOLDS = (0.01, 0.02, 0.03)
 PRIMARY_THRESHOLD = 0.02
 FAIRS = ("pinnacle", "blend")
 H1_MARKETS = ("totals", "spreads", "h2h")
+# Pinned here, not read from config/backtest.yaml at run time: that file is shared with the Kalshi pipeline, and
+# an edit to it must not silently change the blend variants. These are the values it held on Sep 29, 2026.
+BLEND_WEIGHTS = {"pinnacle": 0.55, "lowvig": 0.30, "betonlineag": 0.15}
 LAG_POINTS = 1.0
 LAG_MIN_DEC = 1 + 100 / 115            # -115 American
 CLOSE_WINDOW = pd.Timedelta(minutes=60)
 EV_ERROR = 0.10                        # EV at or above this: the prices a book is most likely to void as errors
-PRIOR_COUNT = 200                      # the repo's running variant count before this pre-registration
+# The repo's running variant count before this pre-registration (STATUS.md, Sep 29: 200). Set at registration to
+# STATUS.md's count that day: open PR #55 adds 32, so if it merges first this becomes 232 (running count 270, bar
+# 0.05 / 270 = 0.000185). The draft states the same numbers, and a test checks the two agree.
+PRIOR_COUNT = 200
 MIN_BETS, MIN_SEASON_BETS = 100, 20
 EPS = 1e-9
 
@@ -72,7 +84,7 @@ ALPHA = 0.05 / RUNNING_COUNT
 
 # ---------------------------------------------------------------- fair prices
 def blend_weights() -> dict[str, float]:
-    return dict(load_backtest_config()["fair"]["blend_weights"])
+    return dict(BLEND_WEIGHTS)
 
 
 def _same_line(a: pd.Series, b: pd.Series) -> np.ndarray:
@@ -154,8 +166,12 @@ def comparable(q: pd.DataFrame, fair: pd.DataFrame) -> dict[str, int]:
 def entries(sides: pd.DataFrame, v: Variant) -> pd.DataFrame:
     """The bets a variant takes: the first flagged snapshot per game, market and side. Only snapshots more than
     CLOSE_WINDOW before kickoff can be entries: the close is what a bet is graded against, and a flag first seen at
-    the close would have a CLV equal to its own EV by construction."""
-    s = sides[(sides.sport == v.sport) & (sides.market == v.market) & (sides.kickoff - sides.snap > CLOSE_WINDOW)]
+    the close would have a CLV equal to its own EV by construction. Both kickoffs count: the one listed in that
+    snapshot (what the bettor saw then) and the latest-listed one (known only later, so it may only remove an
+    entry). With the latest one alone, a kickoff that later moved later would admit a snapshot that was inside
+    the last hour when it was taken."""
+    early = (sides.kickoff - sides.snap > CLOSE_WINDOW) & (sides.commence - sides.snap > CLOSE_WINDOW)
+    s = sides[(sides.sport == v.sport) & (sides.market == v.market) & early]
     if v.hyp == "H1":
         f = s[s[f"ev_{v.fair}"] >= v.threshold - EPS].copy()
         f["rank"] = -f[f"ev_{v.fair}"]
@@ -181,8 +197,10 @@ def closes(q: pd.DataFrame) -> pd.DataFrame:
 
 
 def close_prob(e: pd.DataFrame, c_line, c_a, c_b) -> np.ndarray:
-    """No-vig probability of each bet's side at its entry line, from a close (line, prices). Spreads: only when
-    the close is at the entry line. Totals at another line: the registered conversion."""
+    """No-vig probability of each bet's side at its entry line, from a close (line, prices). A close at another
+    number is converted to the bet's number: totals by the registered model, spreads by the declared margin table
+    (model.cover_at, from the bet side's own spread). Dropping moved spread closes instead would grade only the
+    bets whose close stayed put, which is selecting on what happened after the bet."""
     c_line, c_a, c_b = (np.asarray(x, float) for x in (c_line, c_a, c_b))
     out = np.full(len(e), np.nan)
     is_a = e.side.isin(["home", "over"]).to_numpy()
@@ -195,11 +213,15 @@ def close_prob(e: pd.DataFrame, c_line, c_a, c_b) -> np.ndarray:
         mk = e.market.to_numpy()[m]
         same = (np.isnan(line[m]) & np.isnan(c_line[m])) | np.isclose(line[m], c_line[m])
         p = np.where(is_a[m], qa, 1 - qa)
-        p = np.where((mk == "spreads") & ~same, np.nan, p)
         tot = (mk == "totals") & ~same
         if tot.any():
             pu = under_at(1 - qa[tot], c_line[m][tot], line[m][tot], sp)
             p[tot] = np.where(is_a[m][tot], 1 - pu, pu)
+        spr = (mk == "spreads") & ~same
+        if spr.any():
+            # the side's own spread: the home line for home, its negative for away
+            sign = np.where(is_a[m][spr], 1.0, -1.0)
+            p[spr] = cover_at(p[spr], sign * c_line[m][spr], sign * line[m][spr], sp)
         out[m] = p
     return out
 
@@ -240,6 +262,11 @@ def grade(e: pd.DataFrame, cl: pd.DataFrame, scores: pd.DataFrame) -> pd.DataFra
         p = close_prob(g, g[f"{who}_c_line"], g[f"{who}_c_a"], g[f"{who}_c_b"])
         g[f"clv_{who}_cents"] = 100 * (p - 1 / g.dec.to_numpy(float))
         g[f"clv_{who}_pts"] = clv_points(g, g[f"{who}_c_line"])
+    # Pinnacle closed at a number other than the bet's, so its CLV in cents went through a conversion
+    g["pin_moved"] = (g.market != "h2h").to_numpy() & g.pin_c_line.notna().to_numpy() & ~_same_line(g.line,
+                                                                                                    g.pin_c_line)
+    # what an efficient Pinnacle implies for that CLV: EV at Pinnacle's price / price taken (blend variants too)
+    g["clv_pin_expected"] = np.where(g.clv_pin_cents.notna(), 100 * g.ev_pinnacle / g.dec, np.nan)
     won, push = result(g)
     g["won"], g["push"] = won, push
     g["profit"] = np.where(push == 1, np.nan, np.where(won == 1, g.dec - 1, np.where(np.isnan(won), np.nan, -1.0)))
@@ -248,8 +275,8 @@ def grade(e: pd.DataFrame, cl: pd.DataFrame, scores: pd.DataFrame) -> pd.DataFra
     return g
 
 
-GRADE_COLS = ["clv_pin_cents", "clv_own_cents", "clv_pin_pts", "clv_own_pts", "won", "push", "profit", "pin_stale",
-              "hours_before", "home_score", "away_score"]
+GRADE_COLS = ["clv_pin_cents", "clv_own_cents", "clv_pin_pts", "clv_own_pts", "pin_moved", "clv_pin_expected", "won",
+              "push", "profit", "pin_stale", "hours_before", "home_score", "away_score"]
 
 
 # ---------------------------------------------------------------- statistics
@@ -287,6 +314,15 @@ def summarize(v: Variant, g: pd.DataFrame) -> dict:
     mean, se, n, p = cmean(c, g.event_id) if len(g) else (math.nan, math.nan, 0, math.nan)
     row.update(ev_entry_pct=100 * _mean(g.get("ev_entry", [])), clv_pin_cents=mean, clv_pin_se=se, clv_pin_n=n,
                clv_pin_p=p)
+    # what an efficient Pinnacle implies: a flag at EV e and price d expects CLV e / d against Pinnacle's close
+    # (about 1 cent at 2% and 1.95), so CLV above zero alone is close to automatic when Pinnacle is right
+    row["clv_pin_expected"] = _mean(g.get("clv_pin_expected", []))
+    moved = g.pin_moved.astype(bool) if len(g) else pd.Series(dtype=bool)
+    has = c.notna() if len(g) else pd.Series(dtype=bool)
+    row.update(clv_pin_same_n=int((has & ~moved).sum()) if len(g) else 0,
+               clv_pin_cents_same=_mean(c[~moved]) if len(g) else math.nan,
+               clv_pin_moved_n=int((has & moved).sum()) if len(g) else 0,
+               clv_pin_cents_moved=_mean(c[moved]) if len(g) else math.nan)
     row.update(clv_own_cents=_mean(g.get("clv_own_cents", [])),
                clv_own_n=int(g.clv_own_cents.notna().sum()) if len(g) else 0,
                clv_pin_pts=_mean(g.get("clv_pin_pts", [])), clv_own_pts=_mean(g.get("clv_own_pts", [])),
@@ -332,10 +368,13 @@ def decide(row: dict, blend_clv: float | None = None) -> str:
         kill.append("one season carries it")
     if kill:
         return "kill: " + "; ".join(kill)
-    act = [row["clv_pin_p"] < ALPHA,
-           row["seasons_counted"] >= 3 and row["seasons_positive"] >= row["seasons_counted"] - 1,
-           row["clv_pin_fresh_pin"] > 0, row["clv_pin_ev_below_10"] > 0,
-           row["hypothesis"] == "H2" or (blend_clv is not None and blend_clv > 0)]
+    h2 = row["hypothesis"] == "H2"
+    act = [row["clv_pin_p"] < ALPHA,                                                             # A1
+           row["seasons_counted"] >= 3 and row["seasons_positive"] >= row["seasons_counted"] - 1,  # A2
+           row["clv_pin_fresh_pin"] > 0,                                                         # A3
+           row["clv_pin_ev_below_10"] > 0,                                                       # A4
+           h2 or (blend_clv is not None and blend_clv > 0),                                      # A5 (H1)
+           not h2 or row["clv_own_cents"] > 0]                                                   # A6 (H2, #53)
     return "act: paper forward test" if all(act) else "inconclusive"
 
 
@@ -367,7 +406,9 @@ def by_book(graded: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 def lag_frequency(q: pd.DataFrame) -> pd.DataFrame:
     """Issue 53, descriptive: how often each retail book's total sits a point or more off Pinnacle's at the same
-    snapshot, and how often that gap is still there at the book's next snapshot of the same game."""
+    snapshot, and how often that gap is still there at the book's next snapshot of the same game. That next
+    snapshot is a day later early in the week, but on game days it is often another game's close, minutes to a
+    few hours later, so the share mixes very different gaps in time."""
     key = ["sport", "event_id", "snap"]
     t = q[q.market == "totals"]
     pin = t[t.book == "pinnacle"][key + ["line"]].rename(columns={"line": "pin_line"})

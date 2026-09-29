@@ -52,8 +52,40 @@ def test_no_entry_at_or_after_kickoff(fx):
     assert "c1" not in set(b.event_id)
     # nor is the close an entry: FanDuel's over on n2 pays 2.20 (EV +10%) only at the close
     assert ((q.event_id == "n2") & (q.book == "fanduel") & (q.dec_a == 2.20)).any()
-    assert ((b.kickoff - b.snap) > engine.CLOSE_WINDOW).all()
+    assert ((b.kickoff - b.snap) > engine.CLOSE_WINDOW).all() and ((b.commence - b.snap) > engine.CLOSE_WINDOW).all()
     assert list(res["graded"]["H1-NFL-totals-pinnacle-ev1%"].event_id) == ["n1"]
+
+
+def test_entries_come_from_other_games_closes_too(fx):
+    """Every F1 snapshot lists every game, so another game's close is an entry snapshot too, not only 16:00."""
+    *_, res = fx
+    sides = res["quotes"]
+    snaps = set(sides[(sides.event_id == "c2") & (sides.kickoff - sides.snap > engine.CLOSE_WINDOW)]
+                .snap.dt.strftime("%m-%d %H:%M"))
+    assert {"09-07 15:55", "09-07 16:00"} <= snaps               # c1's close and the daily snapshot, same morning
+
+
+def _moved_later(tmp_path, monkeypatch, moved_to: str | None, listed: str = "2024-09-08T16:30:00Z"):
+    """Pinnacle 44.5 at 1.95 / 1.95 and DraftKings' under at 2.10 (EV +5%) in a 16:00 snapshot that lists kickoff
+    `listed`; optionally a 16:25 snapshot that lists the kickoff moved to `moved_to`."""
+    batch = (rows("e", "2024-09-08T16:00:00Z", listed, book="pinnacle", prices=((44.5, 1.95), (44.5, 1.95)))
+             + rows("e", "2024-09-08T16:00:00Z", listed, book="draftkings", prices=((44.5, 1.80), (44.5, 2.10))))
+    if moved_to:
+        batch += rows("e", "2024-09-08T16:25:00Z", moved_to, book="pinnacle", prices=((44.5, 1.95), (44.5, 1.95)))
+    monkeypatch.setattr(quotes.bulk, "load_rows", lambda cfg, calls, cache: batch)
+    q, _ = quotes.load_quotes(fixture.config(tmp_path), [object()], None)
+    return engine.entries(engine.side_rows(q, engine.fair_table(q)), engine.Variant("H1", NFL, "totals", "pinnacle",
+                                                                                     0.02))
+
+
+def test_a_kickoff_moved_later_never_admits_an_entry(monkeypatch, tmp_path):
+    """At 16:00 the game was listed for 16:30, inside the last hour, so 16:00 was no entry then. A later listing of
+    20:00 must not make it one (the latest-listed kickoff is known only afterwards)."""
+    assert _moved_later(tmp_path, monkeypatch, None).empty
+    assert _moved_later(tmp_path, monkeypatch, "2024-09-08T20:00:00Z").empty
+    # the control: listed for 20:00 at 16:00 already, the same price is an entry
+    e = _moved_later(tmp_path, monkeypatch, None, listed="2024-09-08T20:00:00Z")
+    assert list(zip(e.book, e.side, e.dec)) == [("draftkings", "under", 2.10)]
 
 
 def test_a_kickoff_moved_earlier_drops_the_later_snapshots(monkeypatch, tmp_path):
@@ -102,6 +134,8 @@ def test_devig_sums_to_one():
     assert model.shin([1.91], [1.91])[0] == pytest.approx(0.5)
     assert np.isnan(model.shin([1.0], [1.91])[0])               # an unusable price is no price
     assert np.isnan(model.shin([1.05], [1.30])[0])              # a 72% overround is a broken quote, not a market
+    # the registered bisection's one gap below ~44% overround: exactly 25%, symmetric. NaN, never a wrong number
+    assert np.isnan(model.shin([1.60], [1.60])[0]) and 0.49 < model.shin([1.61], [1.60])[0] < 0.5
 
 
 def test_blend_is_devig_blend_over_the_books_at_pinnacles_line(fx):
@@ -175,7 +209,8 @@ def test_clv_sign_conventions():
     # the close moves toward the under: the under at 45 is worth more than even money, the over less
     p = engine.close_prob(e, close_line, [1.91] * 5, [1.91] * 5)
     assert p[0] > 0.5 > p[1] and p[0] + p[1] == pytest.approx(1)
-    assert np.isnan(p[2]) and np.isnan(p[3])                     # spreads: only at the entry line
+    # spreads: the home side closes at -4, so home -3 is worth more than even and away +3 less (converted, not NaN)
+    assert p[2] > 0.5 > p[3]
     assert p[4] == pytest.approx(0.5)
     # cents: closing no-vig probability minus the break-even of the price taken
     one = pd.DataFrame({"sport": [NFL], "market": ["h2h"], "side": ["away"], "line": [np.nan], "dec": [2.5]})
@@ -193,6 +228,68 @@ def test_graded_clv_in_the_fixture(fx):
     assert lag.clv_pin_pts == pytest.approx(2.0) and lag.clv_own_pts == pytest.approx(2.0)
     mgm = g["H1-NFL-h2h-pinnacle-ev2%"].iloc[0]
     assert mgm.clv_pin_cents == pytest.approx(100 * ((1 - model.shin([1.55], [2.60], NFL)[0]) - 1 / 3.10))
+
+
+def _spread_bets(close_lines: dict[str, float]) -> tuple[pd.DataFrame, dict]:
+    """Home -3 at 2.10 at DraftKings with Pinnacle at -3, 1.95 / 1.95 on entry; Pinnacle closes at each game's line
+    in `close_lines`, 1.95 / 1.95."""
+    k, e, c = (pd.Timestamp(x) for x in ("2024-09-08T17:00Z", "2024-09-07T16:00Z", "2024-09-08T16:55Z"))
+    q = []
+    for eid, cl in close_lines.items():
+        base = dict(sport=NFL, season="2024", event_id=eid, kickoff=k, commence=k, home="H", away="A",
+                    market="spreads", upd=pd.NaT)
+        q += [dict(base, snap=e, book="pinnacle", line=-3.0, dec_a=1.95, dec_b=1.95),
+              dict(base, snap=e, book="draftkings", line=-3.0, dec_a=2.10, dec_b=1.75),
+              dict(base, snap=c, book="pinnacle", line=cl, dec_a=1.95, dec_b=1.95),
+              dict(base, snap=c, book="draftkings", line=cl, dec_a=1.91, dec_b=1.91)]
+    q = pd.DataFrame(q)
+    v = engine.Variant("H1", NFL, "spreads", "pinnacle", 0.02)
+    scores = pd.DataFrame({"sport": NFL, "event_id": list(close_lines), "home_score": 24.0, "away_score": 20.0})
+    g = engine.grade(engine.entries(engine.side_rows(q, engine.fair_table(q)), v), engine.closes(q), scores)
+    g = g.assign(season="2024")
+    return g.set_index("event_id"), engine.summarize(v, g)
+
+
+def test_spread_closes_at_another_number_are_graded_not_dropped():
+    """Grading only the bets whose Pinnacle close stayed on the bet's number would select on what happened after
+    the bet, and drop exactly the stale-Pinnacle case (Pinnacle moving to the retail book's side)."""
+    g, row = _spread_bets({"same": -3.0, "away": -2.5, "toward": -3.5})
+    assert row["bets"] == row["clv_pin_n"] == 3
+    assert (row["clv_pin_same_n"], row["clv_pin_moved_n"]) == (1, 2)
+    assert g.loc["same", "clv_pin_cents"] == pytest.approx(100 * (0.5 - 1 / 2.10))
+    # Pinnacle moved against the bet (toward the retail book's view): the bet lost value, CLV negative
+    assert g.loc["away", "clv_pin_cents"] < 0 and g.loc["away", "clv_pin_pts"] == -0.5
+    assert g.loc["toward", "clv_pin_cents"] > g.loc["same", "clv_pin_cents"] and g.loc["toward", "clv_pin_pts"] == 0.5
+    assert bool(g.loc["away", "pin_moved"]) and not bool(g.loc["same", "pin_moved"])
+    assert row["clv_pin_cents"] == pytest.approx(g.clv_pin_cents.mean())
+    # stale Pinnacle on every bet: the primary CLV sees it
+    _, stale = _spread_bets({"a": -2.5, "b": -2.5, "c": -2.0})
+    assert stale["clv_pin_n"] == 3 and stale["clv_pin_cents"] < 0
+
+
+def test_spread_conversion_moves_only_the_mass_between_the_numbers():
+    for sport in model.SPORTS:
+        assert model.cover_at(0.47, -3.0, -3.0, sport)[0] == pytest.approx(0.47)             # same number
+        # -2.5 -> -3: the side that won on a 3-point margin now pushes: (q - P(3)) / (1 - P(3))
+        m = model._margins_near(sport, -2.5)
+        p3 = float((m == 3).mean())
+        assert model.cover_at(0.5, -2.5, -3.0, sport)[0] == pytest.approx((0.5 - p3) / (1 - p3))
+        ups = model.cover_at(0.5, -3.0, [-4.5, -3.5, -3.0, -2.5, -1.0, 2.0], sport)
+        assert (np.diff(ups) > 0).all()                          # fewer points to give is always better
+        assert np.isnan(model.cover_at(np.nan, -3.0, -2.5, sport)[0])
+    # the NFL's key number: crossing 3 is worth far more than crossing 5
+    nfl = model.cover_at(0.5, -2.5, -3.5, NFL)[0], model.cover_at(0.5, -4.5, -5.5, NFL)[0]
+    assert 0.5 - nfl[0] > 2 * (0.5 - nfl[1])
+
+
+def test_spread_margin_table_is_frozen_before_the_backtest_seasons():
+    built = model.build_spread_cohort()
+    for sport in model.SPORTS:
+        s, m = model.spread_cohort(sport)                        # raises unless the file hashes to the declared value
+        assert built[sport]["sha256"] == model.SPREAD_COHORT_SHA256[sport]   # and it rebuilds from the tables in git
+        assert built[sport]["seasons"][1] < 2020                 # nothing from 2020-25, the backtest seasons
+        assert len(s) == 2 * built[sport]["games"] and (np.sort(s) == np.sort(-s)).all()    # both sides counted
+    assert (built[NFL]["games"], built[CFB]["games"]) == (5583, 9396)
 
 
 def test_results_at_the_price_taken():
@@ -213,10 +310,25 @@ def test_variant_count_printed_equals_rows_in_the_results_table(tmp_path, capsys
     results = pd.read_csv(tmp_path / "out" / "results.csv")
     assert printed == len(results) == len(engine.VARIANTS) == 38
     assert results.variant.is_unique
-    assert engine.RUNNING_COUNT == 238 and engine.ALPHA == pytest.approx(0.05 / 238)
+    assert engine.RUNNING_COUNT == engine.PRIOR_COUNT + 38 and engine.ALPHA == pytest.approx(0.05 / engine.RUNNING_COUNT)
     primary = results[results.primary]
     assert len(primary) == 8 and set(primary.threshold[primary.hypothesis == "H1"]) == {0.02}
-    assert "SYNTHETIC FIXTURE" in (tmp_path / "out" / "report.md").read_text()
+    report = (tmp_path / "out" / "report.md").read_text()
+    assert "SYNTHETIC FIXTURE" in report and "clv_pin_n" in report and "Closes at another number" in report
+
+
+def test_the_draft_states_the_count_and_bar_the_code_enforces():
+    """PRIOR_COUNT is set at registration (open PR #55 also moves the count). Whoever changes it changes the draft
+    in the same commit, or this fails."""
+    draft = (model.REPO / pe_run.DRAFT).read_text()
+    assert f"| Running count before it | {engine.PRIOR_COUNT} |" in draft
+    assert f"**{engine.RUNNING_COUNT}, so the bar is p < 0.05 / {engine.RUNNING_COUNT} = {engine.ALPHA:.5f}**" in draft
+
+
+def test_blend_weights_are_pinned_in_code():
+    """Not read from config/backtest.yaml at run time: that file is shared with the Kalshi pipeline."""
+    assert engine.blend_weights() == {"pinnacle": 0.55, "lowvig": 0.30, "betonlineag": 0.15}
+    assert "load_backtest_config" not in (PKG / "engine.py").read_text()
 
 
 def test_empty_data_prints_the_message_and_stops(tmp_path, capsys, monkeypatch):
@@ -225,7 +337,7 @@ def test_empty_data_prints_the_message_and_stops(tmp_path, capsys, monkeypatch):
     monkeypatch.setattr(pe_run, "RawCache", lambda: RawCache(tmp_path / "raw"))
     assert pe_run.main(Namespace(fixture=False, out=str(tmp_path / "out"))) == 0
     out = capsys.readouterr().out
-    assert "No F1 data yet" in out and "38 variants" in out and "last for hours" in out
+    assert "No F1 data yet" in out and "38 variants" in out and "mostly missed" in out
     assert not (tmp_path / "out").exists()
     # schedules saved by the probe, nothing pulled yet
     bulk.save_schedule(tmp_path / "raw", NFL, [bulk._label(cfg, {"id": "g", "sport": NFL, "home_team": "H",
@@ -239,7 +351,7 @@ def test_empty_data_prints_the_message_and_stops(tmp_path, capsys, monkeypatch):
 def _row(**kw):
     base = dict(primary=True, hypothesis="H1", bets=500, clv_pin_n=500, clv_pin_cents=1.5, clv_pin_p=1e-5, roi_hi=0.05,
                 clv_pin_wo_top_book=1.2, clv_pin_wo_best_season=1.1, seasons_counted=6, seasons_positive=5,
-                clv_pin_fresh_pin=1.0, clv_pin_ev_below_10=1.3)
+                clv_pin_fresh_pin=1.0, clv_pin_ev_below_10=1.3, clv_own_cents=0.4)
     return {**base, **kw}
 
 
@@ -255,6 +367,10 @@ def test_decision_rule():
     assert engine.decide(_row(bets=99), blend_clv=1.0) == "too few bets"
     assert engine.decide(_row(primary=False)) == "reported"
     assert engine.decide(_row(hypothesis="H2")) == "act: paper forward test"        # H2 has no blend version
+    # A6, H2 only (#53): the lagging book's own close must also move toward the bet
+    assert engine.decide(_row(hypothesis="H2", clv_own_cents=-0.1)) == "inconclusive"
+    assert engine.decide(_row(hypothesis="H2", clv_own_cents=math.nan)) == "inconclusive"
+    assert engine.decide(_row(clv_own_cents=-0.1), blend_clv=1.0) == "act: paper forward test"   # H1: reported only
 
 
 def test_clustered_standard_error():
