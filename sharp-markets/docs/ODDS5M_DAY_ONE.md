@@ -102,11 +102,12 @@ uv run markets weather venues --confirm           # game-level venues: MLB Stats
                                                   # about 60 + 30 calls; --leagues-too adds ESPN for the leagues (~350)
 uv run markets weather plan                       # games placed, games unplaced (with why), Open-Meteo requests
 uv run markets weather fetch --confirm --max-calls 9000   # one request per venue-month; rerun the next day for the rest
+                                                  # (--max-calls is in weighted calls: a month counts as 2-3)
 uv run markets weather join                       # -> data/weather/game_weather.parquet + unresolved.csv
 ```
 
 - **Unplaced games.** `plan` lists them by reason. For "unknown home team", add the Odds API's spelling to `aliases` in `config/venues/soccer_homes.csv` or `mlb_homes.csv`, then rerun. Never guess a venue.
-- **Rough size.** About 2,000 requests for MLB and 8,000–11,000 for soccer, archive and previous-run together. That's two days on Open-Meteo's free tier of 10,000 calls a day.
+- **Rough size.** About 2,000 requests for MLB and 8,000–11,000 for soccer, archive and previous-run together. Open-Meteo counts a month-long request as 3 calls (one per 14 days), so that's about 30,000–39,000 weighted calls: four or five daily runs at `--max-calls 9000`, under the free tier's 10,000 a day. A run paces itself at 1.25 weighted calls a second (under the 5,000-an-hour limit), so each takes about two hours. `plan` prints the weighted total.
 - **Report to the hub:**
   - the `plan` counts (placed, unplaced by reason);
   - how many games have a day-1 forecast;

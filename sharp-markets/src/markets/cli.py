@@ -193,7 +193,9 @@ def main(argv: list[str] | None = None) -> None:
     w.add_argument("stage", choices=["check", "venues", "plan", "fetch", "join"])
     w.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
     w.add_argument("--confirm", action="store_true", help="venues/fetch: actually call the free APIs")
-    w.add_argument("--max-calls", type=int, default=9000, help="fetch: Open-Meteo calls this run (free tier: 10,000 a day)")
+    w.add_argument("--max-calls", type=int, default=9000,
+                   help="fetch: weighted Open-Meteo calls this run, as Open-Meteo counts them (a 31-day request is 3; "
+                        "free tier: 10,000 a day)")
     w.add_argument("--leagues-too", action="store_true", help="venues: ESPN match venues for the leagues too")
     w.set_defaults(fn=cmd_weather)
 

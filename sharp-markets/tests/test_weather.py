@@ -154,7 +154,9 @@ def test_join_places_games_and_reads_cached_weather(tmp_path):
     body_a = hourly_body(t("2024-07-01T00:00:00Z"), 31 * 24, 97.0, 40.0)
     body_p = hourly_body(t("2024-07-01T00:00:00Z"), 31 * 24, 95.0, 45.0, prev=True)
     meteo = om.OpenMeteo(cache, session=Session([("archive-api", body_a), ("previous-runs", body_p)]), rate_per_sec=1e6)
-    assert meteo.run(reqs, max_calls=10)["fetched"] == 2
+    assert [r.weight for r in reqs] == [3, 3]                     # 31 days: Open-Meteo counts 3 calls each
+    assert meteo.run(reqs, max_calls=5)["fetched"] == 1           # a weighted budget: the second would pass 5
+    assert meteo.run(reqs, max_calls=10)["fetched"] == 1          # the first is cached
     rows, _ = join.build(cfg, cache, sports=["soccer_usa_mls"], weather=True, gv=gv, meteo=meteo)
     s1 = next(r for r in rows if r["id"] == "s1")
     assert s1["obs_temp_f"] == 97.0 and s1["fc1_temp_f"] == 95.0
@@ -166,3 +168,11 @@ def test_join_places_games_and_reads_cached_weather(tmp_path):
 def test_kick_hour_crosses_the_month_boundary():
     assert join.kick_hour(t("2024-07-31T23:40:00Z")) == t("2024-08-01T00:00:00Z")
     assert join.kick_hour(t("2024-07-31T23:20:00Z")) == t("2024-07-31T23:00:00Z")
+
+
+def test_open_meteo_weights_requests_as_it_bills_them():
+    """#33 item 10: more than 14 days counts as several calls, so the budget and pacing are weighted."""
+    v = V.venues()["coors_field"]
+    feb, jul = om.month_requests("coors_field", v, 2023, 2), om.month_requests("coors_field", v, 2024, 7)
+    assert [r.weight for r in feb] == [2] and [r.weight for r in jul] == [3, 3]
+    assert om.Request("archive", "x", 0, 0, date(2024, 1, 1), date(2024, 1, 14)).weight == 1

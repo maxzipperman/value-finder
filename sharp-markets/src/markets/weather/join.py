@@ -176,7 +176,8 @@ def main(args) -> None:
         meteo = om.OpenMeteo(cache)
         todo = [r for r in reqs if not meteo.is_cached(r)]
         print(f"Open-Meteo: {len(reqs):,} requests ({sum(r.kind == 'archive' for r in reqs):,} archive, "
-              f"{sum(r.kind == 'prev' for r in reqs):,} previous-run), {len(todo):,} not cached")
+              f"{sum(r.kind == 'prev' for r in reqs):,} previous-run), {len(todo):,} not cached, "
+              f"{sum(r.weight for r in todo):,} weighted calls (the free tier allows 10,000 a day)")
         if args.stage == "fetch":
             if not args.confirm:
                 raise SystemExit("dry run: add --confirm (and --max-calls) to call Open-Meteo")
