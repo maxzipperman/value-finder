@@ -2,6 +2,7 @@
 
   RULE_B   wind under: earliest SIGNAL snapshot, graded at its entry line and price; CLV
            against the last logged quote before kickoff (cfbfastR has no 2026 closing lines).
+           Amendment 2 adds a secondary CLV against the close captured just before kickoff.
   RULE_HT  high-total under (amendment 1), from 2026 Week 6: each game's LAST logged quote
            before kickoff, if that quote is a SIGNAL. Graded on win rate and ROI at that
            price; the promotion test is one-sided vs the break-even of the prices taken.
@@ -42,6 +43,25 @@ s = s[["game_id", "home_points", "away_points"]].copy()
 s["game_id"] = pd.to_numeric(s.game_id)
 s["total"] = s.home_points + s.away_points
 close = L[L.snapshot_utc < L.start_utc].dropna(subset=["mkt_total"]).sort_values("snapshot_utc").drop_duplicates("game_id", keep="last")
+# Amendment 2: the close captured 2-20 minutes before kickoff (scripts/capture_close.py). Secondary and
+# descriptive only; missing closes are counted, never imputed.
+cap_path = path.parent / "closes.csv"
+cap = (pd.read_csv(cap_path).dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
+       if cap_path.exists() else pd.DataFrame(columns=["game_id", "close_total"]))
+cap = pd.Series(cap.close_total.values, index=pd.to_numeric(cap.game_id), dtype=float)
+
+
+def secondary(df, label):
+    clv = (df.mkt_total - df.game_id.map(cap)).dropna()
+    if not len(clv):
+        print(f"  secondary (amendment 2): no captured closes for these {len(df)} {label}")
+        return
+    se = clv.std(ddof=1) / np.sqrt(len(clv)) if len(clv) > 1 else np.nan
+    print(f"  secondary (amendment 2): mean CLV vs the captured close {clv.mean():+.2f} "
+          f"(95% CI {clv.mean() - 1.96 * se:+.2f} to {clv.mean() + 1.96 * se:+.2f}); "
+          f"{len(df) - len(clv)} of {len(df)} {label} without a captured close")
+
+
 bets = L[L.rule_b == "SIGNAL"].sort_values("snapshot_utc").drop_duplicates("game_id")
 bets = bets.merge(close[["game_id", "mkt_total"]].rename(columns={"mkt_total": "close_total"}), on="game_id", how="left")
 bets = bets.merge(s[["game_id", "total"]], on="game_id", how="left")
@@ -54,6 +74,7 @@ if len(done):
     se = done.clv_pts.std(ddof=1) / np.sqrt(len(done)) if len(done) > 1 else np.nan
     print(f"  record {int(win.sum())}-{int((~win & ~push).sum())}-{int(push.sum())}, units {done.profit.sum():+.2f}; "
           f"mean CLV {done.clv_pts.mean():+.2f} (95% CI {done.clv_pts.mean() - 1.96 * se:+.2f} to {done.clv_pts.mean() + 1.96 * se:+.2f})")
+    secondary(done, "bets")
     print(done[["game_id", "kick_et", "away_team", "home_team", "mkt_total", "mkt_under", "close_total", "total", "clv_pts", "profit"]].to_string(index=False))
 
 
@@ -70,6 +91,7 @@ if len(ht_done):
     p = stats.binomtest(w, n, be, alternative="greater").pvalue if n else np.nan
     print(f"  record {w}-{n - w}-{int(push.sum())} ({100 * w / max(n, 1):.1f}%), units {ht_done.profit.sum():+.2f}, "
           f"ROI {100 * ht_done.profit.sum() / len(ht_done):+.1f}%; break-even {100 * be:.1f}%, one-sided p {p:.3f}")
+    secondary(ht_done, "bets")
     print(ht_done[["game_id", "kick_et", "away_team", "home_team", "mkt_total", "mkt_under", "ht_threshold", "total",
                    "profit"]].to_string(index=False))
 

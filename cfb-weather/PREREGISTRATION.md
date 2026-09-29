@@ -23,3 +23,25 @@ Written 2026-09-28. It is locked by the commit that merges it, which must land b
 - **Ledger:** from this amendment on, board snapshots carry `rules_version = cfb-v2-2026-09-28` and two new columns, `ht_threshold` and `rule_ht`.
 - **Variants under forward test:** 2.
 - **Also logged, not graded:** the best under price any logged book offers at the rule's number (`best_under`, `best_under_book`; issue #15). Neither rule's entry price changes.
+
+## Amendment 2 (2026-09-28, before the first eligible game on Oct 1; no Rule B or Rule HT signal logged)
+
+**A secondary CLV measure against the close captured at kickoff.** Nothing about
+the primary measure or the decision changes.
+
+* **Why.** The primary CLV compares the entry with the last alert quote before
+  kickoff. The alerts run about every 4 hours, so that quote can be 0.5–4 hours
+  before kickoff.
+* **What is recorded.** `scripts/capture_close.py` runs every 15 minutes
+  (`ops/capture_closes.sh`, launchd). It makes one Odds API call per kickoff slot,
+  2–20 minutes before kickoff, and records the total and prices for every FBS game
+  in the slot in `data/forward/closes.csv`. The source is Pinnacle when it lists the
+  game, else DraftKings, the same as the board.
+* **What is reported.** `score_forward.py` reports CLV against that captured close,
+  next to the primary measure. It also reports how many bets have no captured close.
+  Missing closes are reported, never imputed.
+* **What it can't change.** This measure is descriptive. It doesn't change which bets
+  count, the primary CLV, or the keep/drop decision.
+* **Rule HT (amendment 1)** keeps its entry at the last logged quote before kickoff.
+  The scorer also reports the captured close next to it, as a descriptive reference.
+* Variants under forward test: still **2**.

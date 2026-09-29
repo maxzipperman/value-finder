@@ -4,7 +4,8 @@
   RULE_B      early wind under: earliest snapshot whose board status was "SIGNAL"
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return
-the stake), with closing-line value measured against the final nflverse total.
+the stake), with closing-line value measured against the final nflverse total. Amendment 3 adds
+a secondary CLV against Pinnacle's total captured just before kickoff (data/forward/closes.csv).
 Wind triggers that never became a signal (no price, price too high, outside the
 horizon) are counted, so coverage gaps can't quietly select winners.
 
@@ -39,6 +40,12 @@ g = pd.read_csv(args.games)[["game_id", "total", "total_line", "gameday", "gamet
 g = g.rename(columns={"total_line": "close_total"})
 g["kick_utc"] = pd.to_datetime(g.gameday + " " + g.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
 L = L.merge(g[["game_id", "total", "close_total", "kick_utc", "result"]], on="game_id", how="left")
+# Amendment 3: the Pinnacle close captured just before kickoff (scripts/capture_close.py), secondary only
+closes = ROOT / "data" / "forward" / "closes.csv"
+cap = pd.read_csv(closes) if closes.exists() else pd.DataFrame(columns=["game_id", "book", "close_total"])
+cap = (cap[cap.book.eq("pinnacle")].dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
+       [["game_id", "close_total"]].rename(columns={"close_total": "cap_close"}))
+L = L.merge(cap, on="game_id", how="left")
 # Amendment 2: evaluation starts with Week 5 (Oct 8, 2026); pre-amendment rows are excluded
 L = L[(L.rules_version != "") & (L.kick_utc >= pd.Timestamp("2026-10-08", tz="UTC"))]
 
@@ -53,7 +60,9 @@ def grade(bets, side_col):
     has_price = ~pd.isna(odds)
     profit = np.where(push, 0.0, np.where(win, american_to_profit(np.where(has_price, odds, -110)), -1.0))
     clv = np.where(under, entry - bets.close_total, bets.close_total - entry)
-    return bets.assign(win=win, push=push, profit=profit, clv_pts=clv, priced=has_price)
+    cap = pd.to_numeric(bets.cap_close, errors="coerce")
+    clv_cap = np.where(under, entry - cap, cap - entry)
+    return bets.assign(win=win, push=push, profit=profit, clv_pts=clv, clv_cap=clv_cap, priced=has_price)
 
 
 def report(name, bets):
@@ -68,6 +77,14 @@ def report(name, bets):
     print(f"  record at entry line {w}-{l}-{p}   units {settled.profit.sum():+.2f} "
           f"(ROI {100 * settled.profit.sum() / max(len(settled) - p, 1):+.1f}%; {int((~settled.priced).sum())} graded at an assumed -110)")
     print(f"  mean CLV {m:+.2f} pts  (95% CI {m - 1.96 * se:+.2f} to {m + 1.96 * se:+.2f})")
+    c = settled.clv_cap.dropna()
+    if len(c):
+        cse = c.std(ddof=1) / np.sqrt(len(c)) if len(c) > 1 else np.nan
+        print(f"  secondary (amendment 3): mean CLV vs captured Pinnacle close {c.mean():+.2f} pts "
+              f"(95% CI {c.mean() - 1.96 * cse:+.2f} to {c.mean() + 1.96 * cse:+.2f}); "
+              f"{len(settled) - len(c)} of {len(settled)} without a captured close")
+    else:
+        print(f"  secondary (amendment 3): no captured closes for these {len(settled)} bets")
     print(settled[["game_id", "side", "total_line", "close_total", "total", "clv_pts", "profit"]].to_string(index=False))
 
 

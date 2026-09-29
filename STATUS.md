@@ -38,11 +38,11 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
      - the B1 timestamp and budget fixes.
    - **Next purchase:** the 20K pilot for October ($30), per [`odds-api-credits.md`](strategy-research/odds-api-credits.md).
    - **Later:** one 5M month on March 1, 2027 ($119) for about 293K credits, once a data-use plan is committed. Add $119 only if the NBA sample week shows an edge.
-2. **Close capture: your call, before Oct 1 (CFB) and Oct 8 (NFL).** Both scorers grade CLV against a stale or different close:
-   - CFB uses the last alert quote, which is 0.5–4 hours old.
-   - NFL grades Pinnacle entries against the nflverse consensus.
-
-   One live totals call per kickoff slot (about 137 credits a month) would fix both, and it would sharpen Rule HT's "last quote before kickoff". It changes what the tests measure, so it needs a dated amendment to each pre-registration. That hasn't been made.
+2. **Close capture is live (Sep 28), as a secondary measure.** A launchd job (`com.valuefinder.closecapture`) runs every 15 minutes. It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the close in `*/data/forward/closes.csv`.
+   - Both scorers now also report CLV against that close. The registered primary CLV and the decision rules are unchanged: nfl-weather amendment 3, cfb-weather amendment 2, both dated before any signal.
+   - Rule HT keeps its entry at the last logged quote; the scorer also reports the captured close for it.
+   - Budget: about 385 credits in October, out of 500.
+   - **Keep the Mac awake at kickoff.** A slot missed while it sleeps is reported as missing, never filled in.
 3. **Phone alerts.** Subscribe to the `NTFY_TOPIC` from either `.env` in the ntfy app, if you haven't yet.
 
 ## Backlog
