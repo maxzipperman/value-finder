@@ -13,6 +13,14 @@
 #   ops/install_live_uses.sh                     install / reinstall all three
 #   ops/install_live_uses.sh triggerpoll propslog  install some
 #   ops/install_live_uses.sh --remove            uninstall all three
+#   ODDS_API_TIER=paid ODDS_BACKGROUND_FLOOR=150000 ops/install_live_uses.sh
+#                                                install with the overrides written into each plist
+#
+# ODDS_API_TIER (free|paid) and ODDS_BACKGROUND_FLOOR (credits) are read by quota.py and the collector
+# from the process environment only; the weather projects never load .env into it. So when either is
+# set in the environment that runs this script, it is written into every plist's EnvironmentVariables.
+# Unset, the jobs use the defaults (tier from the plan size; floor max(2,000, 2% of the plan)).
+# Rerun the script to change or drop them.
 #
 # The three projects share one quota file, so installing refuses unless ODDS_API_KEY is the same in
 # nfl-weather/.env, cfb-weather/.env and sharp-markets/.env (the keys are compared, never printed).
@@ -32,6 +40,16 @@ for a in "$@"; do
   if [[ "$a" == "--remove" ]]; then remove=1; else wanted+=("$a"); fi
 done
 (( ${#wanted[@]} )) || wanted=("${ALL[@]}")
+
+envxml="<key>ODDS_QUOTA_KIND</key><string>background</string>"
+if [[ -n "${ODDS_API_TIER:-}" ]]; then
+  [[ "$ODDS_API_TIER" == "free" || "$ODDS_API_TIER" == "paid" ]] || { echo "ODDS_API_TIER must be free or paid"; exit 1; }
+  envxml+="<key>ODDS_API_TIER</key><string>$ODDS_API_TIER</string>"
+fi
+if [[ -n "${ODDS_BACKGROUND_FLOOR:-}" ]]; then
+  [[ "$ODDS_BACKGROUND_FLOOR" =~ ^[0-9]+$ ]] || { echo "ODDS_BACKGROUND_FLOOR must be a whole number of credits"; exit 1; }
+  envxml+="<key>ODDS_BACKGROUND_FLOOR</key><string>$ODDS_BACKGROUND_FLOOR</string>"
+fi
 
 if (( ! remove )); then
   first=""
@@ -69,7 +87,7 @@ for job in "${wanted[@]}"; do
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key><array>$argxml</array>
   <key>WorkingDirectory</key><string>$wd</string>
-  <key>EnvironmentVariables</key><dict><key>ODDS_QUOTA_KIND</key><string>background</string></dict>
+  <key>EnvironmentVariables</key><dict>$envxml</dict>
   <key>StartInterval</key><integer>$interval</integer>
   <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>$LOGS/valuefinder-$job.log</string>
@@ -77,5 +95,5 @@ for job in "${wanted[@]}"; do
 </dict></plist>
 PLIST
   launchctl bootstrap "gui/$(id -u)" "$PLIST"
-  echo "installed $LABEL (every ${interval}s; log: ~/Library/Logs/valuefinder-$job.log)"
+  echo "installed $LABEL (every ${interval}s; env: ODDS_QUOTA_KIND=background${ODDS_API_TIER:+ ODDS_API_TIER=$ODDS_API_TIER}${ODDS_BACKGROUND_FLOOR:+ ODDS_BACKGROUND_FLOOR=$ODDS_BACKGROUND_FLOOR}; log: ~/Library/Logs/valuefinder-$job.log)"
 done

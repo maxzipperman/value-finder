@@ -21,6 +21,8 @@ Each job sets `ODDS_QUOTA_KIND=background`. The shared quota guard (`quota.py` i
 
 - **Paid plan only.** The plan size is read from the last response (used + remaining). On the free 500-credit plan, or before anything has been recorded in a new month, background jobs make no Odds API call at all. `ODDS_API_TIER=paid|free` overrides this.
 - **Background floor.** A background job stops when fewer than max(2,000, 2% of the plan) credits remain: 100,000 on the 5M plan and 2,000 on the 20K plan. The alerts and close capture always keep their credits. `ODDS_BACKGROUND_FLOOR` overrides the floor.
+- **Setting the overrides.** `ODDS_API_TIER` and `ODDS_BACKGROUND_FLOOR` are read from the process environment only; the weather projects never load `.env` into it, so a line in `.env` does nothing. Set them when running the installer, which writes them into each job's plist, for example `ODDS_API_TIER=paid ODDS_BACKGROUND_FLOOR=150000 ops/install_live_uses.sh`. Rerun the installer without them to go back to the defaults.
+- **One key.** The three projects share one quota file, and each record carries a fingerprint of the key that made the call (the first 12 hex digits of its SHA-256; never the key). A project ignores records made with a different key, so one key's plan never sets another's tier or floor. The installer refuses to install unless `ODDS_API_KEY` is the same in all three `.env` files.
 
 The alerts, close capture and manual runs behave exactly as before on every plan.
 
