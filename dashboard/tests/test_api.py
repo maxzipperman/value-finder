@@ -314,6 +314,34 @@ def test_evidence_numbers_are_quoted_from_their_source():
             assert quote in text, (e["id"], quote)
 
 
+def test_every_percentage_p_value_and_bar_is_written_in_the_source():
+    """A guard for the hub's edits: each percentage (or range of them) in an entry's result and note, and each number
+    in its p-value and bar, is written in the file it names, as written there."""
+    import re
+    repo = CONTENT.parents[1]
+    for e in json.loads((CONTENT / "evidence.json").read_text()):
+        text = " ".join((repo / e["source"]).read_text().replace("**", "").split())
+        for field in ("result", "note"):
+            for pct in re.findall(r"\d[\d.]*(?:(?: to |–)\d[\d.]*)?%", e.get(field) or ""):
+                assert pct in text, (e["id"], field, pct)
+        for field in ("p_value", "bar"):
+            for num in re.findall(r"\d[\d.]*", str(e.get(field) or "")):
+                assert re.search(rf"(?<![\d.]){re.escape(num)}(?![\d])", text), (e["id"], field, num)
+
+
+def test_the_keep_test_words_follow_the_amendments():
+    """nfl-weather amendment 7 and cfb-weather amendment 5 (Sep 29) changed how Rule B is kept: the forward tests'
+    words and the evidence list say so once the amendments are in the STRATEGY files."""
+    repo = CONTENT.parents[1]
+    tests = {t["id"]: t for t in json.loads((CONTENT / "forward_tests.json").read_text())}
+    wider = "the wider of the plain interval and one grouped by game day"
+    for tid, project in (("nfl_rule_b", "nfl-weather"), ("cfb_rule_b", "cfb-weather")):
+        if f"95% interval is {wider}" in (repo / project / "STRATEGY.md").read_text():
+            assert wider in tests[tid]["decided_text"], tid
+            assert not any("amendment is to follow" in (e.get("note") or "")
+                           for e in json.loads((CONTENT / "evidence.json").read_text()))
+
+
 def test_sentences_about_files_read_well(root, home):
     """A sentence that starts with a path keeps it as written, and plural names don't take "is"."""
     for path in list(root.rglob("*")) + list(home.rglob("*")):

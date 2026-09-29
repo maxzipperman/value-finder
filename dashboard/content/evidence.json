@@ -257,17 +257,17 @@
   },
   {
     "id": "keep-test-false-pass",
-    "title": "The registered keep test passes too often",
+    "title": "The keep test passes too often",
     "sport": "CFB and NFL",
     "kind": "simulation",
-    "result": "Signals move together, so the registered keep test passes a no-edge rule about 5.5% of the time on CFB instead of 2.7%, and 8–10% on NFL instead of 2%.",
+    "result": "Signals move together, so the keep test as first registered (the plain interval) passes a no-edge rule about 5.5% of the time on CFB instead of 2.7%, and 8–10% on NFL instead of 2%.",
     "record": null,
     "win_rate": null,
     "n": "40,000 simulated runs of 40 signals per case",
     "p_value": null,
     "clears_bar": false,
     "bar": "Not a betting test: it adds no variants",
-    "note": "A separate amendment is to follow (STATUS.md, Waiting on you, item 8).",
+    "note": "nfl-weather amendment 7 and cfb-weather amendment 5 (Sep 29) register the wider of the plain interval and one grouped by game day. In the realistic case it keeps a no-edge rule 2.8 to 3.0% of the time on CFB and 5.8 to 7.4% on NFL, against an intended 2.5%. It is registered for both sports as an improvement, with its remaining error stated in the amendments.",
     "source": "strategy-research/README.md",
     "date": "2026-09-29"
   }

@@ -5,7 +5,7 @@
     "rule": "Bet the under when the forecast wind at an outdoor stadium is 15 mph or more, 1 to 3 days before kickoff, at Pinnacle's price of −115 or better with positive expected value.",
     "starts_utc": "2026-10-08T00:00:00Z",
     "starts_text": "Week 5, Thu Oct 8, 2026",
-    "decided_text": "After Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on both seasons pooled. Kept only if average CLV is above zero with a 95% interval above zero.",
+    "decided_text": "After Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on both seasons pooled. Kept only if average CLV is above zero with a 95% interval above zero; since amendment 7 (Sep 29), that interval is the wider of the plain interval and one grouped by game day.",
     "money_gate": "not chosen",
     "note": "A signal at the backup price (the consensus line) is logged and reported separately; it is not part of the decision.",
     "source": "nfl-weather/STRATEGY.md"
@@ -27,7 +27,7 @@
     "rule": "Bet the under when the forecast wind at an outdoor FBS venue is 15 mph or more, 1 to 3 days before kickoff, at −115 or better with positive expected value.",
     "starts_utc": "2026-10-01T00:00:00Z",
     "starts_text": "Thu Oct 1, 2026",
-    "decided_text": "After 40 signals or the end of the regular season (Dec 12, 2026), whichever is later. Kept only if average CLV is above zero with a 95% interval above zero.",
+    "decided_text": "After 40 signals or the end of the regular season (Dec 12, 2026), whichever is later. Kept only if average CLV is above zero with a 95% interval above zero; since amendment 5 (Sep 29), that interval is the wider of the plain interval and one grouped by game day.",
     "money_gate": "not chosen",
     "note": "",
     "source": "cfb-weather/STRATEGY.md"
