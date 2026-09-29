@@ -36,7 +36,7 @@ Paper-only sports-betting research. Each thesis becomes a pre-registered forward
   - The study pipeline: `replicate.py` → `audit_thesis.py` → `extend.py` → `betting.py` → `model_compare.py`, plus `strategies.py`.
   - The live loop: `this_week.py`, `alerts.py` (launchd, 4×/day), `score_forward.py`.
   - Pinnacle tools: `odds_api.py`, `pinnacle_check.py`.
-  - Other: `props_research.py`, `report_data.py` (renders `report/nfl_weather_report.html`), `run_all.sh`, `install_alerts.sh`.
+  - Other: `props_research.py`, `build_player_week.py` (every player-week, kickers included → `player_week.parquet`), `report_data.py` (renders `report/nfl_weather_report.html`), `run_all.sh`, `install_alerts.sh`.
 - `tests/test_core.py`, `tests/test_rules.py`: pinned facts and the audit's alert and pricing probes.
 - `output/tables/*.csv` and `output/*.log`: every published number should trace to one of these.
 
