@@ -79,7 +79,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 **The bar for new analyses is already p < 0.00026 (0.05 / 191).** The 5M data-use plan commits 56 more variants ([`odds-api-credits.md`](odds-api-credits.md#data-use-plan)), 135 + 56 = 191. They count from the moment they were committed, whether or not their analysis has run yet, so anything analysed from here on is judged against 0.05 / 191, and each new variant beyond the plan raises the count further.
 
-**Running count: 200** (September 28, 2026, evening: 198, plus 2 for the size-of-total check in [`gate_level_check.py`](gate_level_check.py), one per sport; it found no dependence, so the registered pricing model is flat). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 200 = 0.00025.
+**Running count: 200** (September 28, 2026, evening: 198, plus 2 for the size-of-total check in [`gate_level_check.py`](gate_level_check.py), one per sport; it found no dependence, so the registered pricing model is flat). The props pre-registration draft below ([idea 7](#7-prop-structure-the-line-against-the-median)) adds 1. It sharpens one of F3's 8 committed variants rather than adding a new question, but it is counted separately to be safe. The [fade-the-move pre-check](#fade-the-move-at-the-close-h16a-added-september-29-2026-42) adds 6 (3 thresholds × 2 markets). The bar is p < 0.05 / 200 = 0.00025. September 29, 2026: the [landing-mass table](#landing-mass-table-key-numbers-added-september-29-2026-52) ([#52](https://github.com/maxzipperman/value-finder/issues/52)) adds 32, for **232**, so the bar is p < 0.05 / 232 = 0.000216. September 29, 2026: the CFB Rule B forecast replay on NWS MOS ([#40](https://github.com/maxzipperman/value-finder/issues/40), [`../cfb-weather/scripts/mos_replay.py`](../cfb-weather/scripts/mos_replay.py)) adds 1, for **233**, so the bar is p < 0.05 / 233 = 0.000215; its NFL half adds 1 more when it runs.
 
 | Issue | Test | Result | Verdict |
 |---|---|---|---|
@@ -163,6 +163,203 @@ Everything ran end to end: statuses, ledger rows, the 53-week date shift into th
   | 50% (no edge) | 1.5% | 30% | 68% |
 
 - **The stake gate is weak.** "Paper until 20 settled signals show positive average CLV" passes **49–51% of the time with no edge at all**. Its false-pass rate is about 50%, so it isn't a filter. The keep/drop tests have false-pass rates of 2–3%, and they're what earns stakes. Changing the gate would take a dated amendment. The choice not to stake before the full decision is yours to make at any time.
+
+### Landing-mass table: key numbers (added September 29, 2026, [#52](https://github.com/maxzipperman/value-finder/issues/52))
+
+**Revised after an independent review:** three headline claims changed, though no effect size and no declared verdict did: the CFB landing p-value is about 0.0006 by a small-sample test (not 0.00004) and doesn't pass the multiple-testing bar; the NFL landing lead rests on the 2025 season; and the variant count is 32, not 28.
+
+[`landing_mass.py`](landing_mass.py) builds the table and tests it. No downloads, no API calls, seasons through 2025. Outputs in [`output/`](output/):
+- `landing_mass_loso.csv` (the test) and `landing_mass_loso_by_season.csv`;
+- the tables themselves, one row per market line and one column per final total or margin: `landing_mass_table_nfl_totals.csv`, `landing_mass_table_nfl_margins.csv` and `landing_mass_table_cfb_totals.csv`;
+- `landing_mass_prices.csv` (half-point ladders), `landing_mass_teasers.csv`, `landing_mass_calibration.csv`, `landing_mass_multipliers.csv`;
+- the console log, `landing_mass.log`.
+
+**Short answer**
+
+- **The table does not beat the registered pricing method at the closing line.** All 8 comparisons declared before the run show no difference: NFL and CFB, all games and windy games, the under's chance and the push's chance. By the rule written before the run, nothing below claims the table prices better. Its prices are candidates for the alternate-line pull (F2) to test.
+- **What it may predict better is where a game lands next to a half-point line.** That's the number a half-point buy crosses, so it's what alternate lines depend on. This readout was added after the first run, so it's a lead for the 2027 registration, not a result.
+  - **CFB:** its log loss is 1.5% lower out of sample (95% interval 0.7% to 2.1%; better in 15 of 20 seasons). The p-value is 0.0006 by a t-test on the 20 seasons, or 0.003 by flipping each season's result at random. Neither passes the multiple-testing bar (0.05 / 232 = 0.00022). The effect is steady; the evidence isn't strong enough to call it proven.
+  - **NFL:** 1.1% lower (0.2% to 1.9%; 8 of 11 seasons; p = 0.03 by t). But about a quarter of that gain comes from 2025, the season whose line source changed (see the data note below). Without 2025 it's 1.0% lower, better in 7 of 10 seasons, with an interval that just touches zero (−1.9% to 0.0%) and p = 0.08. **So in the NFL it isn't shown.**
+- **CFB final totals cluster strongly.**
+  - Totals of 41, 55, 37, 45, 69 and 51 happen about 40–65% more often than a smooth curve says.
+  - 39, 46, 53, 60, 67 and 74 happen about half as often. Each is 4 more than a multiple of 7.
+  - The registered method values every half-point the same, at about 5 cents. The table says a half-point across 41, 45, 51 or 55 is worth 7–8.5 cents, and one across 39, 46 or 60 about 2.5 cents.
+  - **The 2.5-cent figure isn't supported** when the close sits on the number, which is the case those prices are for. Games that closed on one of the six weak totals landed there 2.0% of the time (17 of 865), not the table's 1.3%. The declared test of exactly this (the push) found no difference. At the six strong totals the table matches: 3.6% (40 of 1,109).
+- **A lead in the NFL.** Since 2015, when the closing total is a whole number, the game lands on it only 1.9% of the time (28 of 1,456).
+  - In 1999–2014 it was 3.5% (78 of 2,251; p = 0.006). SBR's closes, an independent source, show the same drop: 3.4% to 1.8% (p = 0.03). Neither p is near the bar, and this was found after the first run.
+  - One explanation: books post a flat number mainly when a push is unlikely. That predicts more landings next to half-point closes. nflverse shows a small rise (2.6% to 3.2%), but SBR shows a fall (3.2% to 2.6%). So SBR backs only half of the story.
+  - If it holds, a half-point bought off a whole-number NFL total is worth less than either model says.
+- **Spreads.** The margin table prices pushes much better than a flat model: 6.6% lower log loss (interval 2.4% to 10.4%; p = 0.01 by t). This was declared in advance. It holds without 2025 (7.0%, 2.9% to 10.8%). 3 and 7 are real key numbers. But it under-predicts Wong teaser legs out of sample (71% predicted, 76% actual), so it can't price teasers.
+- **This season, nothing changes.** The pricing model is frozen, and the table hasn't earned a pricing claim. Variants: 32. No p-value in this study passes the bar.
+
+**How the table works.** P(final = k | market total T) is a smooth curve around T times a landing multiplier for k.
+- **The curve** is the residual shape the registered model already uses, smoothed by 2 points.
+- **The multiplier** is how often games actually finished on k, divided by how often the smooth curve expected. It's pulled toward 1 when the count is small (empirical Bayes).
+- **Seasons.** NFL multipliers come from 2015 on, after the longer extra point. CFB multipliers come from 2006 on.
+- **Windy tables** use the registered frozen windy cohort as their curve, with the same multipliers. So they're the registered model plus key numbers.
+- **Margins** work the same way from the favorite's side. A favorite and an underdog winning by 3 share one multiplier.
+- **Nothing is copied.** The script imports `p_under_at` and the frozen cohorts from both `market.py` files. The windy cohorts it rebuilds hash to the registered fingerprints (656 NFL games, 855 CFB games).
+
+**The test.** It was declared in the script's docstring and committed (5b5eaa7) before the first run.
+- Each season is predicted by a table and by the registered pricing method, both fitted without that season. The NFL is tested on 2015–2025 and CFB on 2006–2025.
+- **What "registered" means here.** For windy games the comparison is the registered cohort definition (outdoor, observed wind 15+ mph), refit in each fold. For all games it is the registered method (`p_under_at` over a pool of residuals) applied to all games; no all-games cohort is registered. The registered frozen file itself is tested only on 2024–25 (last bullet below).
+- CFB closes on a quarter point (972 games) are left out of both.
+- The measure is log loss: lower is better. The difference is table minus the registered method, as a share of the registered method's loss. The interval comes from resampling seasons.
+- **p-values** (added after review; the verdicts use only the interval). With 10–20 seasons, treating the result as a large sample overstates significance, so each comparison carries two small-sample p-values: a t-test on the seasons, and a sign-flip test (each season's result flipped at random, over every pattern). Both are in `landing_mass_loso.csv`, as `p_t` and `p_signflip`. The column `p_normal` is the old, overstated one.
+
+| Sport | Cohort | Under wins: games | Difference (95% interval) | Push: whole-number closes (pushes) | Difference (95% interval) |
+|---|---|---|---|---|---|
+| NFL | All | 3,028 | +0.01% (−0.04% to +0.06%) | 1,456 (28) | +0.4% (−1.2% to +1.8%) |
+| NFL | Windy | 234 | +0.03% (−0.13% to +0.18%) | 120 (3) | −4.1% (−17.5% to +3.9%) |
+| CFB | All | 15,768 | −0.02% (−0.07% to +0.04%) | 6,781 (173) | −0.8% (−2.0% to +0.4%) |
+| CFB | Windy | 951 | +0.02% (−0.15% to +0.20%) | 413 (11) | −2.5% (−8.0% to +3.1%) |
+
+- **The under's chance** at the closing line is the same under both models, to within 0.1%. Key numbers barely move it.
+- **NFL pushes** were where the table should have won, and it lost slightly. The next part says why.
+- **CFB pushes** lean the table's way (better in 14 of 20 seasons), but the interval includes zero.
+- **Windy games** are too few to tell (3 and 11 pushes).
+- **Sensitivity** (every version is counted):
+  - Smoothing of 1 or 4 points gives the same verdicts.
+  - So does taking NFL multipliers from 1999 on and testing on 1999–2025.
+  - Without the multipliers, the NFL push forecast is slightly worse than the registered method's (+0.3%, interval +0.1% to +0.5%). The CFB windy push forecast is slightly better (−0.8%, −1.6% to −0.3%).
+  - A windy NFL table built only from 2015 on is worse on the under (+0.7%, +0.2% to +1.3%). 234 games are too few for a curve.
+  - None of these passes the bar of 0.05 / 232 by either small-sample test.
+- **The registered frozen file as it stands**, trained through 2023 and tested on 2024–25 windy games (36 NFL, 144 CFB), shows no difference.
+
+**Added after the first run: landing next to a half-point line, and the NFL whole-number drop.** Both are leads, not results, because they were found by looking.
+
+| | NFL, 2015–2025 | NFL without 2025 (added after review) | CFB, 2006–2025 |
+|---|---|---|---|
+| Half-point closes (chances to land on a neighbour) | 1,572 (3,144) | 1,287 (2,574) | 8,987 (17,974) |
+| Landings | 101 | 83 | 433 |
+| Table vs registered method, log loss (95% interval) | −1.1% (−1.9% to −0.2%) | −1.0% (−1.9% to 0.0%) | −1.5% (−2.1% to −0.7%) |
+| Seasons the table was better | 8 of 11 | 7 of 10 | 15 of 20 |
+| p-value: t-test on seasons / sign-flip | 0.03 / 0.04 | 0.08 / 0.09 | 0.0006 / 0.003 |
+| The same table without multipliers | −0.05% | — | −0.01% |
+
+- **The gain comes from the multipliers, not the smoothing.**
+- **CFB: a steady effect that doesn't pass the bar.** The first write-up gave p = 0.00004 and said it would pass the multiple-testing bar. That p treated 20 seasons as a large sample. The small-sample p-values are 0.0006 and 0.003, and the bar is 0.00022 (0.05 / 232). It doesn't pass. The size of the effect and its interval don't depend on this and still hold.
+- **NFL: not shown without 2025.** 2025 supplies 570 of the 3,144 chances, 18 of the 101 landings and about a quarter of the gain. It's also the season whose nflverse line source changed (the data note below). Without it, the interval's upper end sits at zero: −0.01% in this run, +0.01% in the reviewer's, which is resampling noise. The script's rule labels it a narrow "table beats", but with p = 0.08 the fair reading is no clear difference.
+- **Windy games alone** have too few landings to tell (6 NFL, 27 CFB).
+
+| NFL closing totals | Seasons | Whole-number closes | Landed on it | Half-point closes: landed on a neighbour |
+|---|---|---|---|---|
+| nflverse | 1999–2014 | 2,251 | 78 (3.5%) | 105 of 3,994 chances (2.6%) |
+| nflverse | 2015–2025 | 1,456 | 28 (1.9%) | 101 of 3,144 (3.2%) |
+| SBR | 2007–2014 | 1,121 | 38 (3.4%) | 65 of 2,026 (3.2%) |
+| SBR | 2015–2021 | 937 | 17 (1.8%) | 50 of 1,894 (2.6%) |
+
+- **Both models predict about 3%** at whole-number closes (table 3.1%, registered method 2.9%). That was close before 2015.
+- **Since 2015, games land on a whole-number close about half as often.** Fisher test of the change: p = 0.006 in nflverse, 0.03 in SBR. Neither is near the bar of 0.00022. It's a lead.
+- **SBR agrees on the drop but not on the other side.** Next to a half-point close, landings rose in nflverse (2.6% to 3.2%, p = 0.15) but fell in SBR (3.2% to 2.6%, p = 0.30). "Books post a flat number mainly when a push is unlikely" predicts a rise there, so SBR doesn't back that explanation.
+- **On key totals the contrast is sharp:**
+  - 41: 1 landing in 100 games that closed on 41, against 8 in 192 (4.2%) that closed at 40.5 or 41.5.
+  - 44: 4 in 145 (2.8%) against 16 in 311 (5.1%).
+- **CFB doesn't show this overall.** Its closes are a median across books, and games landed on 2.6% of whole-number closes, as both models predict.
+- **A data note.** nflverse's 2025 closing totals are all half-points: none of 285 is a whole number, against 119–166 in each season from 2015 to 2024 (105–168 in 1999–2014). Only 71 of its 2025 spreads are whole numbers, against about 140 before. Its 2025 line source seems to have changed, so the push test covers 2015–2024.
+
+**Prices from the table (step 3).** These are what the table says at a fair (no-vig) price when the market line sits on the key number.
+- They aren't validated as better than the registered method's.
+- They don't include the whole-number effect above.
+- In these tables, "registered" is the registered method fitted on all games (1999–2025 NFL, 2006–2025 CFB). For windy games it is the registered frozen file itself.
+- The full ladders for every total from 30 to 60 (NFL) and 35 to 80 (CFB), and every spread from 1 to 17, are in `landing_mass_prices.csv`.
+
+*NFL totals.* The market total is on K. The half-point is K − 0.5 to K for an under, or K to K + 0.5.
+
+| K | Table: P(final = K) | Registered method | Actual 2015–25, close on K | Actual, close a half-point away | Half-point worth, table | Registered method |
+|---|---|---|---|---|---|---|
+| 37 | 3.8% | 2.9% | 0 of 21 | 2 of 59 (3.4%) | 8 cents | 6 cents |
+| 41 | 3.5% | 2.9% | 1 of 100 (1.0%) | 8 of 192 (4.2%) | 7 | 6 |
+| 44 | 3.7% | 2.9% | 4 of 145 (2.8%) | 16 of 311 (5.1%) | 8 | 6 |
+| 47 | 3.4% | 2.9% | 4 of 118 (3.4%) | 6 of 257 (2.3%) | 7 | 6 |
+| 51 | 4.3% | 2.9% | 2 of 53 (3.8%) | 7 of 95 (7.4%) | 9 | 6 |
+
+For contrast, 42 is the weakest total in the range: 2.0%, worth 4 cents. In windy games the table's half-points are worth 8–13 cents, against 6–8 from the registered model. The windy under's higher win rate stretches every price.
+
+*NFL spreads.* The favorite is −K. The half-point is K + 0.5 to K, or K to K − 0.5.
+
+| K | Table: favorite wins by exactly K | Flat model | Actual 2015–25, close on K | Close a half-point away | Half-point worth, table | Flat model |
+|---|---|---|---|---|---|---|
+| 3 | 8.2% | 4.6% | 44 of 433 (10.2%) | 54 of 619 (8.7%) | 18 cents | 10 cents |
+| 6 | 4.3% | 4.6% | 6 of 142 (4.2%) | 15 of 278 (5.4%) | 9 | 10 |
+| 7 | 5.7% | 4.6% | 11 of 172 (6.4%) | 21 of 302 (7.0%) | 13 | 10 |
+| 10 | 4.1% | 4.6% | 6 of 80 (7.5%) | 3 of 112 (2.7%) | 9 | 10 |
+
+- **The half-points next to a key number are cheaper.** At a spread of 3, those crossing 2 or 4 are worth 6–7.5 cents.
+- **6 and 8 are noisy, as the issue warned.** A close on 6 landed there 3.3% of the time in 1999–2014, 6.2% in 2015–19 and 2.6% in 2020–25.
+
+*Wong teaser legs.* Favorites of 7.5–8.5 teased down 6 points; underdogs of 1.5–2.5 teased up 6.
+
+| | Legs | Win rate, pushes left out |
+|---|---|---|
+| Table, all seasons | — | 69.9–72.4% by spread |
+| Table predicting held-out seasons, 2015–25 | 749 | 71.3% |
+| Actual, 2015–2025 | 569–178, 2 pushes | 76.2% (95% 73.0–79.1%) |
+| … closing total 49 or less | 473–140 | 77.2% |
+| … closing total above 49 | 96–38 | 71.6% |
+
+Break-even per leg:
+- Two-team: −110 72.4%, −120 73.85%, −130 75.2%, −140 76.4%.
+- Three-team: +180 70.9%, +160 72.7%, +150 73.7%, +140 74.7%.
+
+What the teaser numbers mean:
+- **The table can't price teasers.** It's too pessimistic about these legs, mostly the underdog ones: 77.6% actual, 72.0% predicted.
+  - Favorites of 1.5 to 2.5 points finished 1.7 points worse than their spread in 2015–25 (493 games). A table that only knows the spread can't see that.
+  - A 2015-only curve narrows the gap only a little (72.5%).
+- **The raw record isn't significant either.** A −120 two-teamer was profitable in 2015–25, but not significantly (one-sided p = 0.08). The screen found 73.3% in 2022–25, below break-even. At −130 the 2015–25 rate is about break-even; at −140 it's below.
+- **No book's actual teaser prices are in the repo.** Teasers are fixed-payout book rules with no Odds API feed ([`odds-api-credits.md`](odds-api-credits.md)), so they're priced on a grid only.
+
+*CFB totals.* The market total is on K. Model figures are all games / windy games; the actual counts are all games, 2006–2025.
+
+| K | Table: P(final = K) | Registered | Actual, close on K | Actual, close a half-point away | Half-point worth, table | Registered |
+|---|---|---|---|---|---|---|
+| 41 | 4.0% / 4.2% | 2.5% / 2.3% | 6 of 92 (6.5%) | 10 of 185 (5.4%) | 8.5 / 11 cents | 5 / 5.5–7 cents |
+| 55 | 3.9% / 4.0% | 2.5% / 2.3% | 16 of 384 (4.2%) | 34 of 996 (3.4%) | 8.4 / 12 | 5 / 5.5–7 |
+| 37 | 3.6% / 3.7% | 2.5% / 2.3% | 0 of 16 | 1 of 53 (1.9%) | 7.8 / 9 | 5 / 5.5–7 |
+| 45 | 3.5% / 3.6% | 2.5% / 2.3% | 9 of 205 (4.4%) | 21 of 575 (3.7%) | 7.2 / 11 | 5 / 5.5–7 |
+| 51 | 3.3% / 3.4% | 2.5% / 2.3% | 8 of 352 (2.3%) | 38 of 928 (4.1%) | 6.9 / 10 | 5 / 5.5–7 |
+| 46 | 1.2% / 1.2% | 2.5% / 2.3% | 3 of 185 (1.6%) | 4 of 602 (0.7%) | 2.5 / 4 | 5 / 5.5–7 |
+| 60 | 1.2% / 1.2% | 2.5% / 2.3% | 3 of 217 (1.4%) | 3 of 566 (0.5%) | 2.7 / 4 | 5 / 5.5–7 |
+
+Pooled over the six strongest and six weakest totals (added after review):
+
+| Totals | Close on K: landed on K | Table | Registered | Close a half-point away: landed on K |
+|---|---|---|---|---|
+| Strongest: 37, 41, 45, 51, 55, 69 | 40 of 1,109 (3.6%) | 3.6% | 2.5% | 109 of 2,897 (3.8%) |
+| Weakest: 39, 46, 53, 60, 67, 74 | 17 of 865 (2.0%) | 1.3% | 2.5% | 27 of 2,450 (1.1%) |
+
+- **The raw counts back the table when the close is a half-point away.** They back it less when the close sits on the number, and that is the case the half-point prices above are for.
+  - At the strong totals the on-number rate matches the table (3.6%).
+  - At the weak totals it's 2.0%, between the table's 1.3% and the registered method's 2.5%. So **the 2.5-cent figure at 39, 46, 53 or 60 isn't supported** when the close is on the number. The raw rate would put it nearer 4 cents, not far from the registered method's 5.
+  - The declared push test measures exactly this, and it found no difference (−0.8%, −2.0% to +0.4%).
+- **The clustering itself is solid.** Fitted separately on 2006–15 and 2016–25, the landing ratios for totals 35 to 80 have a correlation of 0.91, and every named total repeats: 41 lands 1.61 and 1.72 times as often as the smooth curve says, 39 0.46 and 0.45 times. (The reviewer ran this first; the script now reproduces it.)
+- **For line shopping** (the CFB priority), this is a lead, not guidance. When two books differ by a half-point, the table says it matters more at 41, 45, 51 and 55 than at 39, 46, 53 or 60. But the table fails the declared pricing criterion (it didn't beat the registered method on CFB pushes), so its prices can't be claimed as better.
+- **It's also untested against any market price.** Rule B doesn't change: its pricing model is frozen, and inside the −115 cap its gate can't reject a bet at the rule's own number anyway.
+
+**What F2 (NFL alternates, day one of the 5M month) needs to test these prices.** As configured ([`odds5m.yaml`](../sharp-markets/config/odds5m.yaml)), F2 pulls `alternate_spreads` and `alternate_totals` at the us10 books, at T−24h and the close, for 2023–26. To test the table against the market it needs:
+1. **The main line and both prices, from the same book at the same moment.** A half-point's value depends on where the main line sits. In the NFL it may also depend on whether the line is a whole number (the lead above). F1 carries the main lines, so F2's close has to be the same snapshot as F1's for each event, or F2 records the main line itself.
+2. **The whole ladder, with both sides' prices.** At least every line within 3 points of the main line: that includes the ones crossing 37, 41, 44, 47 and 51, and 3, 6, 7 and 10. Also the alternates 6 points off the main spread, which are the market's own price for a Wong-style leg.
+3. **A sharp alternate price, if one exists.** Whether Pinnacle posts NFL alternates through the API is for the day-one probe to check. Without it, the only fair price is the table's, and the test leans on the table.
+4. **Teaser prices recorded by hand.** No feed has them. To test teasers, write down each book's two- and three-team 6-point prices on a few dates.
+5. **A table frozen before any F2 row meets an outcome.** Build it walk-forward, from 2015 to the season before the one being graded, so 2023 is graded by a table that has never seen 2023. Use the primary spec here. The whole-number effect is a separate adjustment to register for 2027, not something to fold in quietly.
+6. **Grading on results, not disagreement.** F2's act rule is "EV of at least +2% against the table". That measures how much a book disagrees with the table, not who's right. A flagged alternate should also be graded on its realized win rate and ROI at the price taken, and on CLV to the alternate's own close. That's an owner decision, and it has to be made before F2 is joined to outcomes.
+
+The CFB version is F5 (CFB alternates and team totals, March, gated).
+
+**Variants: 32** (28 in the first write-up).
+- **Declared before the first run: 26.** 12 NFL totals (6 versions × 2 cohorts), 10 CFB totals (5 × 2), 1 NFL margins, 2 frozen-file checks and 1 teaser split by total.
+- **Added after it: 3.** The landing readout (read on every model version and judged against the bar, so it counts; the first write-up left it out), the 2015-only margin table and the line-type check.
+- **Added after the independent review: 3.** The NFL readouts without 2025, on totals and on margins (2), and the CFB raw landing checks (1).
+- **Not counted:** the extra p-values (t-test and sign-flip) and the Fisher tests. They re-read comparisons already counted; they don't test anything new.
+- **Running count.** It goes from 200 to 232, so the bar for new analyses becomes p < 0.05 / 232 = 0.00022. The hub updates the count.
+
+**What this doesn't show.**
+- It doesn't show a single mispriced bet: no alternate, teaser or juice price was tested.
+- Books already know about key numbers, and the whole-number drop suggests they act on them.
+- The two strongest results here, the landing readout and the whole-number drop, were found after the first run.
+- Nothing passes the multiple-testing bar. The smallest small-sample p-value in the study is 0.00055, and the bar is 0.00022. With 10 to 20 seasons per comparison, the p-values in the first write-up were too small, because they treated the seasons as a large sample.
+
+Rerun it from the repo root with `nfl-weather/.venv/bin/python strategy-research/landing_mass.py`. It takes about 30 seconds.
 
 ---
 
