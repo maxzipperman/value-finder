@@ -126,6 +126,11 @@ def cmd_collect(args) -> None:
         print(json.dumps(row, default=str))
 
 
+def cmd_weather(args) -> None:
+    from .weather import join
+    join.main(args)
+
+
 def cmd_odds5m(args) -> None:
     from .oddsapi import bulk
     bulk.main(args)
@@ -176,6 +181,14 @@ def main(argv: list[str] | None = None) -> None:
     col = sub.add_parser("collect", help="one forward-collector tick (PLAN.md section 7; launchd runs it every minute)")
     col.add_argument("--now", help="pretend it's this UTC time (testing)")
     col.set_defaults(fn=cmd_collect)
+
+    w = sub.add_parser("weather", help="venue and weather joins for MLB and soccer (docs/HEAT_HYPOTHESES.md)")
+    w.add_argument("stage", choices=["check", "venues", "plan", "fetch", "join"])
+    w.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
+    w.add_argument("--confirm", action="store_true", help="venues/fetch: actually call the free APIs")
+    w.add_argument("--max-calls", type=int, default=9000, help="fetch: Open-Meteo calls this run (free tier: 10,000 a day)")
+    w.add_argument("--leagues-too", action="store_true", help="venues: ESPN match venues for the leagues too")
+    w.set_defaults(fn=cmd_weather)
 
     f = sub.add_parser("odds5m", help="5M-credit month: bulk historical Odds API pulls (docs/ODDS5M_DAY_ONE.md)")
     f.add_argument("stage", choices=["probe", "plan", "week", "full", "check"])

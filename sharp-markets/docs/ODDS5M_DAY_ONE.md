@@ -89,6 +89,29 @@ Run every command from `sharp-markets/`.
    uv run python -c "import duckdb; print(duckdb.sql(\"SELECT pull, count(*) calls, sum(credits_last) billed, sum(expected_credits) upper_bound, max(remaining) FROM 'data/raw/_manifest/oddsapi_manifest.csv' GROUP BY 1 ORDER BY 1\"))"
    ```
 
+## Weather joins, for the heat hypotheses (free; after the probe)
+
+These need the schedules the probe writes. Open-Meteo, the MLB Stats API and ESPN are free and keyless, but they're blocked from the cloud, so all of this runs on the Mac. The hypotheses are pre-registered in [`docs/HEAT_HYPOTHESES.md`](HEAT_HYPOTHESES.md). Nothing here joins odds or scores.
+
+```bash
+uv run markets weather check                      # venue tables: expect 0 problems
+uv run markets weather venues --confirm           # game-level venues: MLB Stats API (every MLB game) and ESPN
+                                                  # (Copa America 2024, Club World Cup 2025, Gold Cup 2025);
+                                                  # about 60 + 30 calls; --leagues-too adds ESPN for the leagues (~350)
+uv run markets weather plan                       # games placed, games unplaced (with why), Open-Meteo requests
+uv run markets weather fetch --confirm --max-calls 9000   # one request per venue-month; rerun the next day for the rest
+uv run markets weather join                       # -> data/weather/game_weather.parquet + unresolved.csv
+```
+
+- **Unplaced games.** `plan` lists them by reason. For "unknown home team", add the Odds API's spelling to `aliases` in `config/venues/soccer_homes.csv` or `mlb_homes.csv`, then rerun. Never guess a venue.
+- **Rough size.** About 2,000 requests for MLB and 8,000–11,000 for soccer, archive and previous-run together. That's two days on Open-Meteo's free tier of 10,000 calls a day.
+- **Report to the hub:**
+  - the `plan` counts (placed, unplaced by reason);
+  - how many games have a day-1 forecast;
+  - how many qualify under each trigger in 2024–25.
+
+  Count the qualifying games before any odds are joined; the pre-registration needs at least 150 per hypothesis.
+
 ## Afterwards
 
 - Raw responses stay on the Mac. `data/` is gitignored, and nothing here commits them.
