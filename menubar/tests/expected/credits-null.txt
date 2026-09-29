@@ -1,0 +1,11 @@
+Dot: green
+Number beside the icon: 1
+Menu:
+  1 signal is live.
+  Next alert run at 12:05 AM
+  Credits left: not known
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit

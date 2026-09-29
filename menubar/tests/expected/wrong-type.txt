@@ -1,0 +1,11 @@
+Dot: gray
+Number beside the icon: none
+Menu:
+  The dashboard cannot be reached.
+  Its answer could not be read.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit
+Detail (self-test only): the field signals_live should be a whole number of 0 or more

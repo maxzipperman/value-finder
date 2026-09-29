@@ -1,0 +1,11 @@
+Dot: gray
+Number beside the icon: none
+Menu:
+  The dashboard cannot be reached.
+  Its answer could not be read.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit
+Detail (self-test only): the field generated_utc should be a UTC time like 2026-09-29T17:31:00Z

@@ -1,0 +1,11 @@
+Dot: gray
+Number beside the icon: none
+Menu:
+  The dashboard cannot be reached.
+  Its answer could not be read.
+  --------
+  Open dashboard
+  Checked at <time>
+  --------
+  Quit
+Detail (self-test only): it answered with HTTP status 500, not 200
