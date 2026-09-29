@@ -10,11 +10,20 @@ from __future__ import annotations
 import csv
 import gzip
 import hashlib
+import re
 from pathlib import Path
 
 import pandas as pd
 
 RUN_COLS = ["run_utc", "job", "rules_version", "status", "games", "signals", "priced", "unmapped", "error"]
+SECRET = re.compile(r"(?i)\b(api_?key|key|token|secret|password)=[^&\s'\")]+")
+
+
+def scrub(text) -> str:
+    """`text` on one line with any key in it blanked. Request URLs carry the Odds API key as
+    `apiKey=...`, and an error message can quote the URL; run records are pushed to GitHub and
+    notifications go through ntfy, so neither may hold a key."""
+    return SECRET.sub(lambda m: f"{m.group(1)}=***", " ".join(str(text).split()))
 
 
 def record_run(path, job, rules_version, status, games=0, signals=0, priced=0, unmapped="", error=""):
@@ -28,7 +37,7 @@ def record_run(path, job, rules_version, status, games=0, signals=0, priced=0, u
         if new:
             w.writerow(RUN_COLS)
         w.writerow([pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"), job, rules_version, status, games,
-                    signals, priced, unmapped, " ".join(str(error).split())[:300]])
+                    signals, priced, unmapped, scrub(error)[:300]])
 
 
 def keep_forecast(src, archive_dir=None):

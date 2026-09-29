@@ -10,8 +10,12 @@ ESPN), and each game's status under the two pre-registered rules (STRATEGY.md):
   closing total + 10, under at -115 or better. Graded at the last quote before kickoff."""
 from __future__ import annotations
 
+import io
 import json
-from datetime import date, timedelta
+import os
+import shutil
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -20,7 +24,7 @@ from . import fetch
 from .build import schedules, venues
 from .config import OUT, PROC, RAW, ROOT
 from .features import add_weather_features
-from .market import MIN_UNDER_ODDS, ev_under, pricing_cohort
+from .market import MIN_UNDER_ODDS, ev_under, pricing_cohort, valid_odds
 from .runlog import keep_forecast
 from .weather import summarize
 
@@ -74,13 +78,25 @@ def season_of(ts):
     return ts.year if ts.month >= 7 else ts.year - 1
 
 
+def local_zone():
+    """The Mac's own time zone, by name, so the run times follow the clock launchd fires on and a
+    daylight-saving change lands on the right hour. Falls back to the current fixed offset."""
+    try:
+        return ZoneInfo(os.path.realpath("/etc/localtime").split("/zoneinfo/", 1)[1])
+    except Exception:       # no zone link on this machine: the offset in force now
+        return datetime.now().astimezone().tzinfo
+
+
 def next_scheduled_run(now_local):
-    """The alert job's next run strictly after `now_local` (a naive or aware local timestamp)."""
+    """The alert job's next run strictly after `now_local` (a naive or aware local timestamp). Each run
+    time is a wall-clock time on its date, so the answer is right across a clock change."""
     now_local = pd.Timestamp(now_local)
-    day = now_local.normalize()
+    tz = now_local.tzinfo
+    day = now_local.tz_localize(None).normalize()
     for d in (day, day + pd.Timedelta(days=1)):
         for h, m in RUN_TIMES:
             t = d + pd.Timedelta(hours=h, minutes=m)
+            t = t.tz_localize(tz) if tz is not None else t
             if t > now_local:
                 return t
     raise AssertionError("unreachable: tomorrow's first run is always later than now")
@@ -89,17 +105,16 @@ def next_scheduled_run(now_local):
 def is_last_run_before(kick_utc, now_utc=None, tz=None):
     """True when no scheduled alert run falls between now and kickoff, so this run's quote is the last
     scheduled one. Rule HT alerts only then, and that row is the entry the scorer grades unless a later
-    manual snapshot is logged (STRATEGY.md)."""
+    manual snapshot is logged (STRATEGY.md). `tz` defaults to the Mac's own zone."""
     now_utc = pd.Timestamp.now(tz="UTC") if now_utc is None else pd.Timestamp(now_utc)
-    local = now_utc.tz_convert(tz) if tz else now_utc.tz_convert(pd.Timestamp.now().astimezone().tzinfo)
-    nxt = next_scheduled_run(local)
+    nxt = next_scheduled_run(now_utc.tz_convert(tz or local_zone()))
     return pd.Timestamp(kick_utc) > now_utc and nxt.tz_convert("UTC") >= pd.Timestamp(kick_utc)
 
 
 def rule_ht_status(r):
     """Rule HT (high-total under). Only "SIGNAL" counts; it is graded at the game's last
     logged quote before kickoff, so earlier SIGNAL rows are provisional."""
-    if pd.isna(r.mkt_total) or pd.isna(r.mkt_under):
+    if pd.isna(r.mkt_total) or not valid_odds(r.mkt_under):
         return "no_price"
     if pd.isna(r.ht_threshold) or r.mkt_total < r.ht_threshold:
         return "below_threshold"
@@ -115,7 +130,7 @@ def rule_b_status(r):
         return "no_trigger"
     if not (RULE_B_LEAD[0] <= r.lead_days <= RULE_B_LEAD[1]):
         return "outside_horizon"
-    if pd.isna(r.mkt_total) or pd.isna(r.mkt_under):
+    if pd.isna(r.mkt_total) or not valid_odds(r.mkt_under):
         return "no_price"
     if r.mkt_under < MIN_UNDER_ODDS:
         return "price_too_high"
@@ -190,7 +205,7 @@ def compute(days=8, refresh=True, prices=True):
                  ("best_line_book", ""), ("quote_utc", ""), ("quote_update", "")):
         up[c] = up[c].fillna(v) if c in up else v
     # The pricing model (amendment 3), from the frozen cohort of outdoor games with 15+ mph wind
-    up = price(up, pricing_cohort())
+    up = price(up, pricing_cohort(PRICING_COHORT_SHA256))
     up["rule_b"] = up.apply(rule_b_status, axis=1)
     up["ht_threshold"] = pd.to_numeric(up.season).astype(int).map(ht_threshold)
     up["rule_ht"] = np.where(up.start_utc >= HT_FIRST_KICK, up.apply(rule_ht_status, axis=1), "before_window")
@@ -214,9 +229,21 @@ def save(up):
     snap.insert(0, "snapshot_utc", pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"))
     snap.insert(1, "rules_version", RULES_VERSION)
     if path.exists():  # a ledger written before new columns were added: rewrite once with the union
-        old = pd.read_csv(path)
-        if list(old.columns) != list(snap.columns):
-            cols = list(snap.columns) + [c for c in old.columns if c not in snap.columns]
-            pd.concat([old, snap], ignore_index=True).reindex(columns=cols).to_csv(path, index=False)
-            return
+        if list(pd.read_csv(path, nrows=0).columns) != list(snap.columns):
+            return widen_ledger(path, snap)
     snap.to_csv(path, mode="a", header=not path.exists(), index=False)
+
+
+def widen_ledger(path, snap):
+    """Rewrite the ledger once with the union of columns. The old rows are read and written back as
+    text, so not one character of them changes; the file before the rewrite is kept beside it, and the
+    new file replaces the old one in a single step."""
+    old = pd.read_csv(path, dtype=str, keep_default_na=False)
+    cols = list(snap.columns) + [c for c in old.columns if c not in snap.columns]
+    new = pd.read_csv(io.StringIO(snap.to_csv(index=False)), dtype=str, keep_default_na=False)
+    backup = path.with_name(f"{path.stem}.before-{RULES_VERSION}{path.suffix}")
+    if not backup.exists():
+        shutil.copy2(path, backup)
+    tmp = path.with_name(path.name + ".tmp")
+    pd.concat([old, new], ignore_index=True).reindex(columns=cols).fillna("").to_csv(tmp, index=False)
+    os.replace(tmp, path)

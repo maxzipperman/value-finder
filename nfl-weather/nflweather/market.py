@@ -17,9 +17,26 @@ BREAKEVEN_110 = 110 / 210
 FRANCHISE = {"OAK": "LV", "SD": "LAC", "STL": "LA"}
 
 
+def _num(v):
+    """`v` as a float array of at least one element; anything that isn't a number is NaN."""
+    flat = np.atleast_1d(np.asarray(v, dtype=object)).ravel()
+    return np.asarray(pd.to_numeric(pd.Series([None if pd.isna(x) else x for x in flat], dtype=object),
+                                    errors="coerce"), dtype=float)
+
+
+def valid_odds(odds):
+    """True for a usable American price: a number at or beyond 100 either side of zero. Nothing
+    between -100 and +100 is a price, so a feed value there is treated as no price."""
+    odds = _num(odds)
+    ok = np.abs(odds) >= 100
+    return bool(ok[0]) if np.ndim(odds) and len(odds) == 1 else ok
+
+
 def american_to_profit(odds):
-    odds = np.asarray(pd.to_numeric(pd.Series(odds), errors="coerce"), dtype=float)
-    return np.where(odds > 0, odds / 100, 100 / np.abs(odds))
+    """Profit per unit staked on a winner. NaN for a missing price or one that isn't valid American odds."""
+    odds = _num(odds)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.where(np.abs(odds) >= 100, np.where(odds > 0, odds / 100, 100 / np.abs(odds)), np.nan)
 
 
 def american_to_prob(odds):
@@ -134,16 +151,23 @@ def cohort_residuals(hist, mask):
     return np.sort((hist.total - hist.total_line)[mask].dropna().to_numpy())
 
 
-def pricing_cohort():
+def pricing_cohort(registered=None):
     """The frozen residuals behind the pricing model: final total minus closing total for outdoor games
     with 15+ mph observed wind, through 2023. They come from a committed file, so rebuilding the games
     table can't move the model (data/processed/pricing_cohort.json, written once by
-    scripts/freeze_pricing_cohort.py; its sha256 is registered in PREREGISTRATION.md)."""
+    scripts/freeze_pricing_cohort.py). With `registered` (the hash in PREREGISTRATION.md), a file whose
+    residuals don't hash to it raises, so a run can't price from a cohort that was never registered."""
     js = json.loads((PROC / "pricing_cohort.json").read_text())
-    return np.sort(np.asarray(js["residuals"], float))
+    resid = np.sort(np.asarray(js["residuals"], float))
+    if registered is not None and cohort_hash(resid) != registered:
+        raise ValueError(f"pricing_cohort.json is not the registered cohort: its residuals hash to "
+                         f"{cohort_hash(resid)[:16]}, PREREGISTRATION.md registers {registered[:16]}")
+    return resid
 
 
 def cohort_hash(resid_sorted) -> str:
+    """The registered fingerprint of a cohort: sha256 over the residuals, sorted, rounded to 4 places,
+    as 64-bit floats. It identifies the numbers the model uses, whatever the file's layout."""
     return hashlib.sha256(np.sort(np.asarray(resid_sorted, float)).round(4).tobytes()).hexdigest()
 
 
@@ -163,27 +187,36 @@ def p_under_at(line, market_total, resid_sorted):
     number. With x = line - reference:
       * a half-point line can't push: P(win) = G(x);
       * a whole-number line wins below it, pushes on it and loses above it:
-        P(win) = G(x - 1/2), P(push) = G(x + 1/2) - G(x - 1/2).
-    The residual does not depend on the size of the total. That was tested on the frozen cohort and the
-    flat model scored best (strategy-research/gate_level_check.py), so the offered number matters only
-    through x and through whole-number versus half-point lines."""
-    line = np.asarray(line, float)
-    x = line - np.asarray(market_total, float)
-    whole = np.isclose(line % 1, 0)
-    lo, mid, hi = _mid(resid_sorted, x - 0.5), _mid(resid_sorted, x), _mid(resid_sorted, x + 0.5)
-    return np.where(whole, lo, mid), np.where(whole, hi - lo, 0.0)
+        P(win) = G(x - 1/2), P(push) = G(x + 1/2) - G(x - 1/2);
+      * a quarter-point line is half a bet at each neighbour (43.75 is half at 43.5 and half at 44),
+        so it is priced as the average of the two.
+    The under's chance at the reference does not depend on the size of the total. That was tested on
+    the frozen cohort and the flat model scored best (strategy-research/gate_level_check.py), so the
+    offered number matters only through x and through whole-number versus half-point lines. The test
+    covered the under rate, not the spread of the residual."""
+    shape = np.broadcast(np.asarray(line, dtype=object), np.asarray(market_total, dtype=object)).shape
+    line = np.round(_num(line) * 4) / 4          # lines sit on the quarter-point grid
+    ref = _num(market_total)
+
+    def at(offered):
+        x = offered - ref
+        whole = np.isclose(offered % 1, 0)
+        lo, mid, hi = _mid(resid_sorted, x - 0.5), _mid(resid_sorted, x), _mid(resid_sorted, x + 0.5)
+        return np.where(whole, lo, mid), np.where(whole, hi - lo, 0.0)
+
+    quarter = ~np.isclose((line * 2) % 1, 0)
+    (w0, p0), (w1, p1) = at(np.where(quarter, line - 0.25, line)), at(np.where(quarter, line + 0.25, line))
+    return ((w0 + w1) / 2).reshape(shape), ((p0 + p1) / 2).reshape(shape)
 
 
 def ev_under(line, odds, market_total, resid_sorted):
     """Expected profit per unit staked on the under at the offered `line` and American `odds`, against
     the reference total `market_total` (pushes return the stake). NaN when the line, the reference or
-    the price is missing."""
-    p_win, p_push = p_under_at(line, market_total, resid_sorted)
+    the price is missing, or when the price isn't valid American odds."""
+    p_win, p_push = (np.atleast_1d(v) for v in p_under_at(line, market_total, resid_sorted))
     profit = american_to_profit(odds)
     ev = p_win * profit - (1 - p_win - p_push)
-    bad = np.zeros(1, bool)
-    for v in (odds, line, market_total):
-        bad = bad | pd.isna(pd.Series(np.atleast_1d(v))).to_numpy()
+    bad = np.isnan(profit) | np.isnan(_num(line)) | np.isnan(_num(market_total))
     return np.where(bad, np.nan, ev)
 
 

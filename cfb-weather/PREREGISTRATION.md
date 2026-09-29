@@ -46,11 +46,13 @@ the primary measure or the decision changes.
   The scorer also reports the captured close next to it, as a descriptive reference.
 * Variants under forward test: still **2**.
 
-## Amendment 3 (2026-09-28, before the first eligible game on Oct 1; no Rule B or Rule HT signal logged)
+## Amendment 3 (2026-09-28 Pacific, before the first eligible game on Oct 1; no Rule B or Rule HT signal logged)
 
 An independent audit ([`reviews/2026-09-29-astra-audit.md`](../reviews/2026-09-29-astra-audit.md)) traced
 each rule from trigger to scored result and found places where this file, `STRATEGY.md` and the code
-disagreed. This amendment settles each one. **Both rules' triggers, price caps and grading are
+disagreed. This amendment settles each one. (The audit file is dated in UTC: it was run at 9:02 PM
+Pacific on Sep 28. This amendment was written that night and merged on Sep 29, after a second review
+of the fixes.) **Both rules' triggers, price caps and grading are
 unchanged, and every game that would have signalled before still signals now.**
 
 ### 1. The pricing model behind Rule B's "positive expected value"
@@ -70,15 +72,26 @@ as nfl-weather's (its amendment 5), on this sport's cohort.
   2006–2023. With *x* = offered line − reference, and *G*(t) = P(residual < t) + ½ P(residual = t):
   a half-point line has P(win) = *G*(x) and can't push; a whole-number line has P(win) = *G*(x − ½)
   and P(push) = *G*(x + ½) − *G*(x − ½).
-* **The cohort is a committed file**, `data/processed/pricing_cohort.json`, with sha256
-  `c49a6649c3f86ac1280ed488f675c14859b23073c1aa8e18aab63060b38bff67` (`board.PRICING_COHORT_SHA256`).
+* **The cohort is a committed file**, `data/processed/pricing_cohort.json`. Changing it needs a dated
+  amendment. Two fingerprints are registered:
+  * the residuals: `c49a6649c3f86ac1280ed488f675c14859b23073c1aa8e18aab63060b38bff67`
+    (`board.PRICING_COHORT_SHA256`), the sha256 of the 855 residuals, sorted, rounded to 4 places, as
+    64-bit floats (`market.cohort_hash`). **Every run checks it**: a file whose residuals hash to
+    anything else stops the run, and the run is recorded as failed.
+  * the file as committed: `shasum -a 256` gives
+    `6f8ad2760f12e1c2bf4830e4f21d0cc6c18baea6de431262274172de85cc5ee2`.
+* **Quarter-point lines** are priced as half a bet at each neighbouring line. **A price must be a
+  price:** a feed value between −100 and +100 is treated as no price.
 * **The reference is the rule's own total.** The entry is priced at *x* = 0: on a half-point line the
   under wins 56.6%, worth +5.8% at −115 and +8.1% at −110. The value reaches zero at about −131, so
   **inside the −115 cap the expected-value gate cannot reject a bet at the rule's own number.** The
   gate stays, because the model does reject an under offered 2 points below the reference.
-* **What the model is for.** Each run logs the highest total any logged book offers the under at, at
-  −115 or better (`best_line`, `best_line_under`, `best_line_book`), and its value against the
-  reference (`ev_best_line`). Logging only.
+* **What the model is for.** For every game the odds feed lists, each run logs the highest total any
+  logged book offers the under at, at −115 or better (`best_line`, `best_line_under`,
+  `best_line_book`), and its value against the reference (`ev_best_line`). A game that neither
+  Pinnacle nor DraftKings quotes has no rule price and no reference; its best line is still logged.
+  Logging only. The alert names the best number only when the model prices it above the rule's own
+  quote, since a half point more at a worse price can be worth less.
 
 ### 2. Definitions the earlier text left open
 
@@ -110,18 +123,31 @@ as nfl-weather's (its amendment 5), on this sport's cohort.
 
 * **Rule B** is decided after 40 signals or the end of the 2026 regular season, whichever is later:
   keep only if mean CLV > 0 with a 95% interval above zero.
-* **Rule HT** is decided once, after the 2027 season, as registered. The test against "the break-even
-  of the prices taken" is exact when prices differ: the chance of at least that many wins when each
-  bet wins with its own break-even probability. With one price for every bet it is the ordinary
-  binomial test. (The code used the average break-even.)
+  * The 2026 regular season ends with Army–Navy on Dec 12, 2026.
+  * The decision uses the signals that kicked off by that horizon (the later of Dec 12, 2026 and the
+    40th signal's kickoff). Later signals never enter it, so a later run of the scorer prints the same
+    result.
+  * If the test ends with fewer than 40 settled signals, the result is inconclusive.
+* **Rule HT** is decided once, after the 2027 season's title game; the scorer treats Feb 1, 2028 as
+  that date. The test against "the break-even of the prices taken" is exact when prices differ: the
+  chance of at least that many wins when each bet wins with its own break-even probability. With one
+  price for every bet it is the ordinary binomial test. (The code used the average break-even.)
+  * **"Drop at or below break-even"** is read at the prices taken: drop when the bets, together, won
+    nothing (ROI of zero or below). Promote and drop then can't contradict the ROI printed beside
+    them.
+* **Before its horizon** each decision prints as an interim read: the numbers and which criteria they
+  meet, and no verdict.
 * **ROI** is units won per bet placed, for both rules. A push counts as a bet.
+* **A game is graded once the schedule marks it completed.** The feed scores a game that was never
+  played 0–0; those rows are counted and not graded. A cancelled game can't hold a decision open.
 
 ### 5. What the scorer now enforces
 
 `scripts/score_forward.py` had no version filter and no end date; the audit got it to count a 2028
 game. It now counts only rows written under a registered version (`cfb-v1-2026-09-28`,
-`cfb-v2-2026-09-28`, `cfb-v3-2026-09-28`), logged before kickoff, inside the test window. It lists
-every excluded row by reason, and it computes each decision and labels it **interim** or **final**.
+`cfb-v2-2026-09-28`, `cfb-v3-2026-09-28`), logged before kickoff, inside the test window. It counts
+every excluded row by its first failing reason and prints each one with `--list-excluded`, and it
+computes each decision and labels it **interim** or **final**.
 
 ### 6. Records
 
@@ -129,8 +155,14 @@ The same as nfl-weather's amendment 5, section 6: `rules_version = cfb-v3-2026-0
 columns `ref_total`, `best_line`, `best_line_under`, `best_line_book`, `ev_best_line`, `quote_utc`,
 `quote_update`, `wx_hash`, `wx_fetched_utc` and `wx_wind_dir` (logged for a later crosswind study; no
 rule uses it); every forecast kept under its content hash; a row in
-`data/forward/runs.csv` for every run, finished or failed; unmatched team names recorded; close
-capture retried when a slot comes back incomplete.
+`data/forward/runs.csv` for every alert run, finished or failed at any stage, with keys blanked from
+any error text; unmatched team names recorded; close capture retried when a slot comes back
+incomplete. The one-time ledger rewrite writes the old rows back character for character and keeps
+the ledger as it stood beside it (`ledger.before-cfb-v3-2026-09-28.csv`).
+
+**Rule HT's alert follows the Mac's own clock.** The last scheduled run before kickoff is worked out
+from the four run times as wall-clock times in the Mac's time zone, so it stays right across a clock
+change.
 
 ### 7. Known limits, stated up front
 

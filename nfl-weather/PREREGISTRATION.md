@@ -144,11 +144,12 @@ trigger, gates, entry, CLV metric or stakes changes.
   results retune thresholds for 2027.
 * Rule variants under forward test: still **2**.
 
-## Amendment 5 (2026-09-28, before any Week 5 game; no Rule B signal logged and no forward outcome observed)
+## Amendment 5 (2026-09-28 Pacific, before any Week 5 game; no Rule B signal logged and no forward outcome observed)
 
 An independent audit ([`reviews/2026-09-29-astra-audit.md`](../reviews/2026-09-29-astra-audit.md)) traced
 each rule from trigger to scored result and found six places where this file and the code disagreed.
-This amendment settles each one. **Rule B's trigger, lead window, price cap, stakes and CLV metric are
+This amendment settles each one. (The audit file is dated in UTC: it was run at 9:02 PM Pacific on
+Sep 28. This amendment was written that night and merged on Sep 29, after a second review of the fixes.) **Rule B's trigger, lead window, price cap, stakes and CLV metric are
 unchanged, and every game that would have signalled before still signals now.**
 
 ### 1. The pricing model (replaces the description in amendment 2, item 1)
@@ -172,9 +173,19 @@ half-point line a chance of pushing.
     P(push) = *G*(x + ½) − *G*(x − ½).
 
   Expected value per unit staked is P(win) × the payout − P(loss).
-* **The cohort is a committed file**, `data/processed/pricing_cohort.json`, with sha256
-  `897a61b6846b077b71c324dc0c2f4b2e28bda963aa69d0cc4a89f181eb039556` (`board.PRICING_COHORT_SHA256`).
-  Rebuilding the games table can't move the model. Changing the file needs a dated amendment.
+* **The cohort is a committed file**, `data/processed/pricing_cohort.json`. Rebuilding the games table
+  can't move the model, and changing the file needs a dated amendment. Two fingerprints are registered:
+  * the residuals: `897a61b6846b077b71c324dc0c2f4b2e28bda963aa69d0cc4a89f181eb039556`
+    (`board.PRICING_COHORT_SHA256`). This is the sha256 of the 656 residuals, sorted, rounded to 4
+    places, as 64-bit floats (`market.cohort_hash`). It identifies the numbers, whatever the file's
+    layout. **Every run checks it**: a file whose residuals hash to anything else stops the run, and
+    the run is recorded as failed.
+  * the file as committed: `shasum -a 256` gives
+    `ba71e29929f2b4f75e29c73601f0b672f45768b6366f70c3a6c0cb9984efb8bc`.
+* **Quarter-point lines.** A line such as 43.75 is half a bet at 43.5 and half at 44, so it is priced
+  as the average of the two. A higher line is never worth less.
+* **A price must be a price.** American odds are at or beyond 100 either side of zero. A feed value
+  between −100 and +100 is treated as no price (`no_price`).
 * **The reference is the rule's own total**, Pinnacle's when it quotes. So the rule's entry is priced
   at *x* = 0: on a half-point line the under wins 57.5%, worth +7.4% at −115 and +9.7% at −110.
 * **What this means for the gate.** The value only reaches zero at about −136, and the price cap is
@@ -183,25 +194,30 @@ half-point line a chance of pushing.
   That is also exactly what the historical evidence measured. The gate stays in the code, and
   `negative_ev` stays a status, because the model does reject an under offered well below the
   reference (3 points below, at −115).
-* **What the model is for.** It prices a better number at another book. Every run logs the highest
-  total any of the 10 logged books offers the under at, at −115 or better (`best_line`,
-  `best_line_under`, `best_line_book`), and its value against the reference (`ev_best_line`). A point
-  of total is worth about 2.4 points of win probability. This is logging only: the rule's entry and
-  its grading don't change.
+* **What the model is for.** It prices a better number at another book. For every game the odds feed
+  lists, whether or not Pinnacle quotes it, every run logs the highest total any of the 10 logged
+  books offers the under at, at −115 or better (`best_line`, `best_line_under`, `best_line_book`), and
+  its value against the reference (`ev_best_line`). A point of total is worth about 2.4 points of win
+  probability. This is logging only: the rule's entry and its grading don't change.
+* **The highest number isn't always the best value.** A half point more at a worse price can be worth
+  less than the rule's own quote. The alert names the best number only when the model prices it above
+  the rule's quote.
 
 ### 2. Primary and secondary prices (owner decision, Sep 28)
 
 * **Primary: Pinnacle.** A signal priced at Pinnacle has the status `SIGNAL`. These are the registered
   test, and the keep/drop decision uses them alone.
-* **Secondary: the backup price.** When Pinnacle has no quote, the nflverse consensus line and prices
-  are used. A game that passes every gate at that price has the status `SIGNAL_SECONDARY`. It is
+* **Secondary: the backup price.** When Pinnacle has no complete quote (a total and an under price),
+  the nflverse consensus line and prices are used. A game that passes every gate at that price has the status `SIGNAL_SECONDARY`. It is
   logged, alerted with the label "secondary price", and reported in its own table. It is not part of
   the decision. A consensus line isn't a price any one book offered.
 * A game with both kinds of signal counts once, as primary, at its earliest Pinnacle-priced signal.
 * This settles the conflict between the original file ("lines come from nflverse") and amendment 3
   ("entry prices come from Pinnacle").
-* The ledger records when the quote was taken (`quote_utc`) and when Pinnacle last updated that
-  market (`quote_update`). Freshness is logged, not gated.
+* The ledger records when the odds feed was read (`quote_utc`) and when Pinnacle last updated its
+  market (`quote_update`). On a secondary-price row `quote_utc` dates the best-line columns, since the
+  consensus line carries no time of its own, and `quote_update` is empty. Freshness is logged, not
+  gated.
 
 ### 3. Definitions the earlier text left open
 
@@ -214,17 +230,38 @@ half-point line a chance of pushing.
 * **Wind** is the Open-Meteo forecast at the kickoff time, interpolated between the two surrounding
   hours, put on the game-book scale with the frozen calibration.
 * **Outdoor** excludes domes, closed roofs, and retractable roofs reported open. An open retractable
-  roof is its own category in training and has no weather terms.
+  roof is its own category in training and has no weather terms. **With no roof state reported,** a
+  game is outdoor unless the stadium has a retractable roof, in which case it is treated as closed.
+  The retractable roofs are Atlanta, Dallas, Houston, Indianapolis, Arizona, and the Bernabéu in
+  Madrid (Bengals at Falcons, Nov 8, 2026).
 
-### 4. The decision horizon (completes amendment 4)
+### 4. The decision horizon (completes amendment 4, and replaces its "or earlier at 40 signals")
 
-* **If 40 Rule B signals arrive during 2026,** the decision is made after Week 18 of 2026 on those
-  bets. "Positive in both seasons" is then read as positive in both halves of the season (Weeks 5–11
-  and 12–18), as in the original file.
-* **Otherwise** the decision is made once, after the 2027 regular season, on both seasons pooled, and
-  mean CLV must be positive in each season.
-* **The model lean keeps its original horizon:** after Week 18 of 2026 and 40 leans, whichever is
-  later. Amendment 4 changed Rule B's horizon only.
+Amendment 4 said the decision comes after the 2027 season "or earlier at 40 signals if that comes
+first". That left open when, on which bets, and with which split. There are now exactly two decision
+times, and the scorer computes both:
+
+* **If 40 Rule B signals settle in the 2026 regular season,** the decision is made after Week 18 of
+  2026 on those bets. "Positive in both seasons" is then read as positive in both halves of the
+  season (Weeks 5–11 and 12–18), as in the original file.
+* **Otherwise** the decision is made once, after the 2027 regular season, on every bet that kicked
+  off by then (2026 Weeks 5+, the 2026 playoffs and the 2027 regular season), and mean CLV must be
+  positive in each season. A 40th signal that arrives during 2027 does not bring the decision
+  forward.
+* **The decision is made once.** It uses the bets that kicked off by its horizon. Bets after the
+  horizon never enter it, so a later run of the scorer prints the same result.
+* **Before the horizon** the scorer prints an interim read: the numbers and which criteria they meet,
+  and no verdict.
+* **The model lean** follows the same two horizons, counted in leans: with 40 leans in the 2026
+  regular season it is decided after Week 18 of 2026 on those leans, by half; otherwise it is carried
+  into 2027 unchanged, as the original file says, and decided after the 2027 regular season on both
+  seasons, by season. With fewer than 40 leans by then, the result is inconclusive.
+* **If the keep test and the drop test are both met, the result is drop.** That can only happen when
+  the whole 95% interval sits between 0 and +0.25 points: a real edge, and too small to keep.
+* **Win rate against the close** is counted over the bets that have a primary close. A bet with no
+  close is not a loss.
+* **The regular season is over** when every game in the schedule has a result, or kicked off more
+  than a week ago (a cancelled game never gets a result).
 * **The test ends with the 2027 season.** Later games don't count.
 
 ### 5. What the scorer now enforces
@@ -233,7 +270,8 @@ half-point line a chance of pushing.
 
 * counts only rows written under a registered version (`v2-2026-09-28`, `v3-2026-09-28`), logged
   before kickoff, for games from Oct 8, 2026 through the 2027 season;
-* lists every excluded row by reason, so nothing is dropped silently;
+* counts every excluded row by its first failing reason, so nothing is dropped silently, and prints
+  each one with `--list-excluded`;
 * computes the keep/drop decision from the criteria above and labels it **interim** or **final**;
 * computes the CLV interval over the bets that have a primary close, and says how many don't;
 * reports ROI as units won per bet placed. A push counts as a bet. (It used to leave pushes out.)
@@ -249,8 +287,14 @@ half-point line a chance of pushing.
   its contents, and the row carries that hash and the time the file was fetched. Before this
   amendment, forecast files were overwritten on every run, so older rows can't be traced to their
   forecast.
-* **Runs.** Every alert run, finished or failed, leaves a row in `data/forward/runs.csv`. A failed run
-  also sends a notification. Before this, one failed forecast download lost the whole run without a
+* **The one-time ledger rewrite.** The first run under this amendment adds the new columns. The old
+  rows are written back as text, character for character, and the ledger as it stood is kept beside
+  it (`ledger.before-v3-2026-09-28.csv`).
+* **Runs.** Every alert run, finished or failed, leaves a row in `data/forward/runs.csv`, written at
+  the end of the run. A run that fails at any stage (building the board, saving the ledger, building
+  or sending the alerts) is recorded as failed with the stage, and sends a notification. One game's
+  alert failing doesn't stop the other games' alerts. Any key in an error message is blanked before
+  it is recorded or sent. Before this, one failed forecast download lost the whole run without a
   record.
 * **Odds-feed names that match no team** are printed and written to the run record.
 * **Close capture** retries a kickoff slot that came back without Pinnacle's total for some game (two

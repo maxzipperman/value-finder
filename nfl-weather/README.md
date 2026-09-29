@@ -81,6 +81,15 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **The scorer enforces the test:** registered versions only, pre-kickoff rows only, inside the test window, with each decision computed and labelled interim or final.
 - **Log, don't drop:** every run leaves a row in `data/forward/runs.csv`; every forecast behind a logged row is kept under its content hash in `data/forward/forecasts/`.
 
+**A second review of those fixes (Sep 29, before they went live)** found one crash and eight places where the new code still fell short of the amendment. All are fixed, each with a test in `tests/test_review.py`:
+
+- **Decisions follow the registered horizons.** Rule B and the model lean are decided after Week 18 of 2026 with 40 bets in the 2026 regular season, and otherwise once, after the 2027 regular season. A decision uses only the bets that kicked off by its horizon, so it can't change later. Before the horizon the scorer prints the numbers and no verdict.
+- **The best line is logged for every game the feed lists**, including the ones Pinnacle doesn't quote. A Pinnacle total with no under price no longer blocks the backup price.
+- **Every run checks the pricing cohort** against its registered hash and stops if it differs.
+- **A run that fails at any stage is recorded and notified**, not only one that fails while building the board. Keys are blanked from error text.
+- **The one-time ledger rewrite keeps old rows character for character** and leaves a copy of the ledger as it stood.
+- **A number that isn't a price is no price** (anything between −100 and +100), and quarter-point lines are priced as half a bet at each neighbour.
+
 ## Where the data comes from
 
 | Source | What | Notes |

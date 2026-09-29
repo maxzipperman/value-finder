@@ -27,6 +27,7 @@ import pandas as pd
 import requests
 
 from .config import FIRST_SEASON, RAW, USER_AGENT
+from .market import valid_odds
 
 CFBFASTR = "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main"
 METEOSTAT = "https://bulk.meteostat.net/v2"
@@ -257,20 +258,22 @@ def parse_odds_api(events, team_names, stamp, min_odds=-115):
                 quotes[b["key"]] = {x["name"].lower(): x for x in mk["outcomes"]}
                 updated[b["key"]] = mk.get("last_update") or b.get("last_update") or ""
         unders = {k: (q["under"]["point"], q["under"]["price"]) for k, q in quotes.items()
-                  if q.get("under", {}).get("point") is not None and q.get("under", {}).get("price") is not None}
-        rule = next((k for k in RULE_BOOKS if k in unders), None)
-        if not rule:
+                  if q.get("under", {}).get("point") is not None and valid_odds(q.get("under", {}).get("price"))}
+        if not unders:
             continue
-        o = quotes[rule]
-        total = o.get("under", {}).get("point")
+        # no rule book quoting: the game has no rule price, and its best line is still logged
+        rule = next((k for k in RULE_BOOKS if k in unders), None)
+        o = quotes.get(rule, {})
+        total = o.get("under", {}).get("point", np.nan)
         same = [(price, k) for k, (point, price) in unders.items() if point == total]
         best = max(same) if same else (np.nan, "")
         lines = [(point, price, k) for k, (point, price) in unders.items() if price >= min_odds]
         top = max(lines) if lines else (np.nan, np.nan, "")
         rows.append(dict(home_team=lookup.get(norm_team(ev["home_team"])),
                          away_team=lookup.get(norm_team(ev["away_team"])),
-                         commence_utc=ev["commence_time"], mkt_total=total, mkt_under=o.get("under", {}).get("price"),
-                         mkt_over=o.get("over", {}).get("price"), line_src=rule, quote_utc=stamp,
+                         commence_utc=ev["commence_time"], mkt_total=total,
+                         mkt_under=o.get("under", {}).get("price", np.nan),
+                         mkt_over=o.get("over", {}).get("price", np.nan), line_src=rule or "", quote_utc=stamp,
                          quote_update=updated.get(rule, ""), best_under=best[0], best_under_book=best[1],
                          best_line=top[0], best_line_under=top[1], best_line_book=top[2]))
     return pd.DataFrame(rows, columns=["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over",

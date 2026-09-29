@@ -8,10 +8,15 @@
            price; the promotion test is one-sided against the break-even of the prices taken.
 
 What counts (amendment 3): rows written under a registered rules version, logged before kickoff, for
-games from Oct 1, 2026 through the 2027 season's title game. Rows outside that are counted and listed
-by reason, never silently dropped. ROI is units won per bet placed; a push counts as a bet.
+games from Oct 1, 2026 through the 2027 season's title game. Rows outside that are counted by reason,
+never silently dropped; --list-excluded prints each one. ROI is units won per bet placed; a push
+counts as a bet. A game is graded only once the schedule marks it completed.
 
-    python scripts/score_forward.py [--ledger PATH] [--schedule PATH]
+The decisions are computed here and labelled. A FINAL decision is made once, on the bets that kicked
+off by its horizon, so a later run prints the same numbers. Before the horizon the script prints an
+interim read, which shows the numbers and decides nothing.
+
+    python scripts/score_forward.py [--ledger PATH] [--schedule PATH] [--list-excluded]
 """
 import argparse
 import sys
@@ -27,12 +32,18 @@ from cfbweather.config import ROOT
 from cfbweather.market import american_to_profit, cost_of_waiting
 
 FIRST_KICK = pd.Timestamp("2026-10-01", tz="UTC")
+REG_END_2026 = pd.Timestamp("2026-12-13T08:00:00Z")   # the 2026 regular season ends with Army-Navy, Dec 12
+TEST_END = pd.Timestamp("2028-02-01T00:00:00Z")       # after the 2027 season's title game (January 2028)
+PENDING = pd.Timedelta(days=7)      # a game with no score a week after its kickoff was not played
 ENOUGH = 40
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ledger", default=str(ROOT / "data" / "forward" / "ledger.csv"))
 ap.add_argument("--schedule", help="CSV with game_id, home_points, away_points (default: cfbfastR schedules)")
+ap.add_argument("--list-excluded", action="store_true", help="print every excluded row with its reason")
+ap.add_argument("--now", help="score as of this UTC time (tests and rehearsals); default: the clock")
 args = ap.parse_args()
+NOW = pd.Timestamp(args.now, tz="UTC") if args.now else pd.Timestamp.now(tz="UTC")
 path = Path(args.ledger)
 if not path.exists():
     sys.exit("no ledger yet: run scripts/alerts.py")
@@ -48,31 +59,29 @@ else:
 s = S[["game_id", "home_points", "away_points"]].copy()
 s["game_id"] = pd.to_numeric(s.game_id)
 s["total"] = s.home_points + s.away_points
+if "completed" in S:        # the feed scores a game that was never played 0-0: grade completed games only
+    played = S.completed.astype(str).str.lower().isin(["true", "1", "1.0"])
+    print(f"schedule rows with a score but not marked completed (not graded): "
+          f"{int((~played & s.total.notna()).sum())}")
+    s.loc[~played.values, "total"] = np.nan
 
 # What counts. Every excluded row is counted by its first failing reason.
-why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.start_utc < FIRST_KICK, ~L.season.isin(TEST_SEASONS),
-                 L.snapshot_utc >= L.start_utc],
-                ["unregistered rules version", "before Oct 1, 2026", "after the 2027 season",
-                 "logged at or after kickoff"], "")
+why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.start_utc.isna(), L.start_utc < FIRST_KICK,
+                 ~L.season.isin(TEST_SEASONS), L.snapshot_utc >= L.start_utc],
+                ["unregistered rules version", "no kickoff time in the row", "before Oct 1, 2026",
+                 "after the 2027 season", "logged at or after kickoff"], "")
 print(f"ledger rows: {len(L)}; in the test: {int((why == '').sum())}")
 for reason, n in pd.Series(why[why != ""]).value_counts().items():
     print(f"  excluded, {reason}: {n}")
+if args.list_excluded and (why != "").any():
+    print(L.assign(excluded=why)[why != ""][["snapshot_utc", "game_id", "rules_version", "rule_b", "excluded"]]
+          .to_string(index=False))
 L = L[why == ""]
 
 
-def regular_season_complete(season):
-    """True once every regular-season game of `season` in the schedule has a score."""
-    if "season" not in S or "season_type" not in S:
-        return False
-    r = S[(pd.to_numeric(S.season, errors="coerce") == season) & (S.season_type.astype(str) == "regular")]
-    return len(r) > 0 and bool(r.home_points.notna().all())
-
-
-def season_complete(season):
-    if "season" not in S:
-        return False
-    r = S[pd.to_numeric(S.season, errors="coerce") == season]
-    return len(r) > 0 and bool(r.home_points.notna().all())
+def interim(name, when, tests):
+    print(f"  decision ({name}): INTERIM read, decides nothing. The decision comes {when}.")
+    print("    as the numbers stand: " + "; ".join(f"{k} ({'met' if bool(v) else 'not met'})" for k, v in tests.items()))
 
 
 def mean_ci(x):
@@ -130,11 +139,24 @@ if len(done):
     print(f"  primary close: {own} of {len(done)} are the entry row itself (CLV 0 by construction); "
           f"{stale} were logged more than 6 hours before kickoff")
     secondary(done, "bets")
-    final = len(done) >= ENOUGH and regular_season_complete(2026)
-    verdict = "KEEP" if (m > 0 and lo > 0) else "DO NOT KEEP"
-    print(f"  decision (Rule B: after 40 signals or the 2026 regular season, whichever is later), "
-          f"{'FINAL' if final else 'INTERIM read, decides nothing'}: {verdict} "
-          f"(needs mean CLV > 0 with the 95% interval above zero)")
+    # The decision (amendment 3, section 4): after 40 signals or the end of the 2026 regular season,
+    # whichever is later, on the signals that kicked off by then. Later signals never enter it.
+    by_kick = done.sort_values("start_utc")
+    horizon = max(by_kick.start_utc.iloc[ENOUGH - 1], REG_END_2026) if len(done) >= ENOUGH else None
+    pending = bets[bets.total.isna() & (bets.start_utc > NOW - PENDING)]      # kicked off, not yet scored
+    if horizon is not None and not (pending.start_utc <= horizon).any() and NOW > horizon:
+        dec = by_kick[by_kick.start_utc <= horizon]
+        m, lo, hi, n = mean_ci(dec.clv_pts)
+        print(f"  decision (Rule B: after 40 signals or the 2026 regular season, whichever is later), FINAL: "
+              f"{'KEEP' if (m > 0 and lo > 0) else 'DO NOT KEEP'}, on the {len(dec)} signals that kicked off by "
+              f"{horizon:%Y-%m-%d}: mean CLV {m:+.2f} (95% CI {lo:+.2f} to {hi:+.2f}, n={n})")
+    elif NOW >= TEST_END:
+        print(f"  decision (Rule B), FINAL: INCONCLUSIVE. The test ended with {len(done)} settled signals, "
+              f"fewer than {ENOUGH}.")
+    else:
+        interim("Rule B", "after 40 signals or the 2026 regular season, whichever is later",
+                {"mean CLV > 0": m > 0, "95% interval above zero": lo > 0,
+                 f"{ENOUGH} settled signals": len(done) >= ENOUGH})
     print(done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under", "close_total",
                 "total", "clv_pts", "profit"]].to_string(index=False))
     print("  by price source:", done.line_src.value_counts().to_dict())
@@ -154,13 +176,19 @@ if len(ht_done):
     p = tail_at_least(w, each) if n else np.nan
     roi = ht_done.profit.sum() / len(ht_done)
     print(f"  record {w}-{n - w}-{int(push.sum())} ({100 * w / max(n, 1):.1f}%), units {ht_done.profit.sum():+.2f}, "
-          f"ROI {100 * roi:+.1f}% per bet placed; break-even {100 * be:.1f}%, one-sided p {p:.3f}")
+          f"ROI {100 * roi:+.1f}% per bet placed; average break-even {100 * be:.1f}%, one-sided p {p:.3f} "
+          f"(exact, against each bet's own break-even)")
     secondary(ht_done, "bets")
-    final = season_complete(2027)
-    verdict = ("PROMOTE" if (p < 0.05 and roi > 0) else "DROP" if w / max(n, 1) <= be else "STAY ON PAPER")
-    print(f"  decision (Rule HT: once, after the 2027 season), "
-          f"{'FINAL' if final else 'INTERIM read, decides nothing'}: {verdict} "
-          f"(promote needs one-sided p < 0.05 and ROI > 0; drop at or below break-even)")
+    # The decision (amendments 1 and 3): once, after the 2027 season's title game. "At or below
+    # break-even" is read at the prices taken: the bets, together, won nothing.
+    promote, drop = bool(p < 0.05 and roi > 0), bool(roi <= 0)
+    if NOW >= TEST_END:
+        print(f"  decision (Rule HT: once, after the 2027 season), FINAL: "
+              f"{'PROMOTE' if promote else 'DROP' if drop else 'STAY ON PAPER'} "
+              f"(promote needs one-sided p < 0.05 and ROI > 0; drop when ROI is zero or below)")
+    else:
+        interim("Rule HT", "once, after the 2027 season's title game (January 2028)",
+                {"one-sided p < 0.05": p < 0.05, "ROI > 0": roi > 0})
     print(ht_done[["game_id", "kick_et", "away_team", "home_team", "mkt_total", "mkt_under", "ht_threshold", "total",
                    "profit"]].to_string(index=False))
 

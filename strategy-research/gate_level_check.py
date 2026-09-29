@@ -12,9 +12,11 @@ For each sport:
     against the flat model (one rate for every total);
   * what each of those gates would have rejected at -115 in 2024-25, and how the kept bets did.
 
-Result (Sep 28, 2026): no dependence in either sport. The flat model has the lowest log loss, the slopes
-are indistinguishable from zero, and no version rejects a single 2024-25 game at -115. The registered
-pricing model is therefore flat in the size of the total (nfl-weather amendment 5, cfb-weather amendment 3).
+Result (Sep 28, 2026): no dependence in either sport. The flat model has the lowest log loss and the
+slopes are indistinguishable from zero. No version rejects an NFL game at -115. In CFB the two
+narrowest kernels reject 17 and 1 of 145 games, and the 17 went 10-7, so they fit noise. The registered
+pricing model is therefore flat in the size of the total (nfl-weather amendment 5, cfb-weather
+amendment 3). This tests the under's rate at the closing number, not the spread of the residual.
 
 Variants: 2 (one model-selection test per sport). No downloads and no API calls.
 

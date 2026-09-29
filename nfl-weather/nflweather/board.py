@@ -4,7 +4,10 @@ P(under), and (when a key is configured) Pinnacle's live total and de-vigged pri
 Shared by scripts/this_week.py and scripts/alerts.py."""
 from __future__ import annotations
 
+import io
 import json
+import os
+import shutil
 from datetime import date, timedelta
 
 import numpy as np
@@ -15,12 +18,14 @@ from .build import load_schedule
 from .config import OUT, PROC, RAW, ROOT
 from .features import BIN_TERMS, LABELS, add_weather_features
 from .market import (MIN_UNDER_ODDS, ev_under, fit_under_model, load_games, market_p_under, predict_under,
-                     pricing_cohort)
+                     pricing_cohort, valid_odds)
 from .models import fit
 from .runlog import keep_forecast
 from .weather import game_weather, resolve_stadium
 
-RETRACTABLE = {"ATL97", "DAL00", "HOU00", "IND00", "PHO00"}
+# Retractable roofs. With no roof state reported, a game in one of these is treated as closed (indoor);
+# a game anywhere else with no roof state is outdoor (amendment 5, section 3). MAD01 is the Bernabeu.
+RETRACTABLE = {"ATL97", "DAL00", "HOU00", "IND00", "PHO00", "MAD01"}
 RULES_VERSION = "v3-2026-09-28"  # PREREGISTRATION.md amendment 5 (the pricing model; primary and secondary prices)
 REGISTERED_VERSIONS = ("v2-2026-09-28", "v3-2026-09-28")   # ledger rows the scorer accepts
 PRIMARY_SRC = "pinnacle"         # Rule B's registered price source; any other source is a secondary price
@@ -43,7 +48,7 @@ def rule_b_status(r):
         return "no_trigger"
     if not (RULE_B_LEAD[0] <= r.lead_days <= RULE_B_LEAD[1]):
         return "outside_horizon"
-    if pd.isna(r.mkt_total) or pd.isna(r.mkt_under):
+    if pd.isna(r.mkt_total) or not valid_odds(r.mkt_under):
         return "no_price"
     if r.mkt_under < MIN_UNDER_ODDS:
         return "price_too_high"
@@ -61,6 +66,22 @@ def wind_components(wind, wind_dir, heading):
     angle = np.radians(np.minimum(d, 180 - d))
     wind = np.asarray(wind, float)
     return wind * np.sin(angle), wind * np.cos(angle)
+
+
+def add_crosswind(up, table=None):
+    """Forecast wind direction, crosswind and along-field wind (logging only). Field headings come from
+    greerreNFL/stadiums, cross-checked against ThompsonJamesBliss/WeatherData
+    (data/processed/stadium_headings.csv; `use` is False where the two disagree). No rule uses these
+    columns, so a missing or damaged table leaves them empty and the run goes on."""
+    up["wx_wind_dir"] = up.om_wind_dir
+    try:
+        heads = pd.read_csv(table or PROC / "stadium_headings.csv")
+        heads = heads[heads.use.eq(True)].drop_duplicates("stadium_id").set_index("stadium_id").heading
+        up["wx_cross"], up["wx_along"] = wind_components(up.wx_wind, up.wx_wind_dir, up.stadium_id.map(heads))
+    except Exception as e:
+        print(f"  stadium headings unavailable ({type(e).__name__}: {e}); crosswind columns left empty")
+        up["wx_cross"], up["wx_along"] = np.nan, np.nan
+    return up
 
 
 def price(up, resid):
@@ -109,14 +130,44 @@ def _pinnacle_live():
                                for n, code in ((hn, h), (an, a)) if pd.isna(code)})
     if LAST_UNMAPPED:
         print(f"  odds feed team names with no match (their games arrive unpriced): {LAST_UNMAPPED}")
-    pin = df[df.book == oddsapi.RULE_BOOK].merge(best_under(df, oddsapi.RULE_BOOK), on="event_id", how="left")
-    pin = pin.merge(best_line(df), on="event_id", how="left")
+    # one row per event, whether or not Pinnacle quotes it, so the best line is logged for every game
+    ev = df.dropna(subset=["home", "away"]).drop_duplicates("event_id")[
+        ["event_id", "home", "away", "commence_utc", "snapshot_utc"]]
+    rule = df[df.book == oddsapi.RULE_BOOK].drop_duplicates("event_id")[
+        ["event_id", "total", "over_price", "under_price", "book_update"]]
+    pin = (ev.merge(rule, on="event_id", how="left").merge(best_under(df, oddsapi.RULE_BOOK), on="event_id", how="left")
+           .merge(best_line(df), on="event_id", how="left"))
     pin["gameday"] = pd.to_datetime(pin.commence_utc, utc=True).dt.tz_convert("America/New_York").dt.strftime("%Y-%m-%d")
+    pin["snapshot_utc"] = pd.to_datetime(pin.snapshot_utc, utc=True).dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     return pin.rename(columns={"home": "home_team", "away": "away_team", "total": "pin_total",
                                "over_price": "pin_over", "under_price": "pin_under", "snapshot_utc": "quote_utc",
                                "book_update": "quote_update"})[
         ["home_team", "away_team", "gameday", "pin_total", "pin_over", "pin_under", "best_under", "best_under_book",
          "best_line", "best_line_under", "best_line_book", "quote_utc", "quote_update"]]
+
+
+SHOP = {"best_under": np.nan, "best_under_book": "", "best_line": np.nan, "best_line_under": np.nan,
+        "best_line_book": "", "quote_utc": "", "quote_update": ""}
+
+
+def use_pinnacle(up, pin):
+    """Price each game at Pinnacle where it has a complete quote (a total and an under price); every
+    other game keeps the backup, the nflverse line and prices. The line-shopping columns are filled for
+    every game the odds feed lists, whether or not Pinnacle quotes it. `quote_utc` is when the feed was
+    read, and `quote_update` is when Pinnacle last updated its market (empty without a Pinnacle quote)."""
+    up["line_src"] = "nflverse"
+    up["mkt_total"], up["mkt_under"], up["mkt_over"] = up.total_line, up.under_odds, up.over_odds
+    if pin is None or not len(pin):
+        for c, v in SHOP.items():
+            up[c] = v
+        return up
+    up = up.merge(pin, on=["home_team", "away_team", "gameday"], how="left")
+    for c in ("best_under_book", "best_line_book", "quote_utc", "quote_update"):
+        up[c] = up[c].fillna("")
+    has = up.pin_total.notna() & up.pin_under.map(valid_odds)   # a total without an under price is no quote
+    up.loc[has, ["mkt_total", "mkt_under", "mkt_over"]] = up.loc[has, ["pin_total", "pin_under", "pin_over"]].values
+    up.loc[has, "line_src"] = PRIMARY_SRC
+    return up
 
 
 def compute(days=8, refresh=True, pinnacle=False):
@@ -147,10 +198,7 @@ def compute(days=8, refresh=True, pinnacle=False):
     up["wx_precip"], up["wx_snow"] = up.om_precip, up.om_snow
     # crosswind and along-field wind (logging only): field headings from greerreNFL/stadiums, cross-checked
     # against ThompsonJamesBliss/WeatherData (data/processed/stadium_headings.csv)
-    up["wx_wind_dir"] = up.om_wind_dir
-    heads = pd.read_csv(PROC / "stadium_headings.csv")
-    heads = heads[heads.use].set_index("stadium_id").heading       # left out where the two sources disagree
-    up["wx_cross"], up["wx_along"] = wind_components(up.wx_wind, up.wx_wind_dir, up.stadium_id.map(heads))
+    up = add_crosswind(up)
     up["indoor"] = closed.astype(int)
     up["roof_open"] = open_roof.astype(int)
     up = add_weather_features(up)
@@ -166,27 +214,13 @@ def compute(days=8, refresh=True, pinnacle=False):
     up["lead_days"] = (up.date - today).dt.days
 
     # market: Pinnacle when available, else the nflverse line and prices
-    up["line_src"] = "nflverse"
-    up["mkt_total"], up["mkt_under"], up["mkt_over"] = up.total_line, up.under_odds, up.over_odds
-    shop = {"best_under": np.nan, "best_under_book": "", "best_line": np.nan, "best_line_under": np.nan,
-            "best_line_book": "", "quote_utc": "", "quote_update": ""}
-    for c, v in shop.items():
-        up[c] = v
     LAST_UNMAPPED[:] = []
-    if pinnacle:
-        pin = _pinnacle_live()
-        if pin is not None and len(pin):
-            up = up.drop(columns=list(shop)).merge(pin, on=["home_team", "away_team", "gameday"], how="left")
-            for c in ("best_under_book", "best_line_book", "quote_utc", "quote_update"):
-                up[c] = up[c].fillna("")
-            has = up.pin_total.notna()
-            up.loc[has, ["mkt_total", "mkt_under", "mkt_over"]] = up.loc[has, ["pin_total", "pin_under", "pin_over"]].values
-            up.loc[has, "line_src"] = "pinnacle"
+    up = use_pinnacle(up, _pinnacle_live() if pinnacle else None)
     up["p_market"] = market_p_under(up.mkt_under, up.mkt_over, "shin")
     up["edge"] = up.p_under - up.p_market
 
     # The pricing model (amendment 5), from the frozen cohort of outdoor games with 15+ mph wind
-    up = price(up, pricing_cohort())
+    up = price(up, pricing_cohort(PRICING_COHORT_SHA256))
     up["rule_b"] = up.apply(rule_b_status, axis=1)
 
     # visitor's climate for the acclimation watch: dome status from its latest team-season,
@@ -240,9 +274,22 @@ def save(up):
     snap = snap.rename(columns={"mkt_total": "total_line", "mkt_under": "under_odds", "mkt_over": "over_odds"})
     snap.insert(0, "snapshot_utc", pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"))
     snap.insert(1, "rules_version", RULES_VERSION)
-    if path.exists():  # older ledgers lack the v2 columns: rewrite once with the union of columns
-        old = pd.read_csv(path)
-        if list(old.columns) != list(snap.columns):
-            pd.concat([old, snap], ignore_index=True)[list(snap.columns)].to_csv(path, index=False)
-            return
+    if path.exists():  # a ledger written before new columns were added: rewrite once with the union
+        if list(pd.read_csv(path, nrows=0).columns) != list(snap.columns):
+            return widen_ledger(path, snap)
     snap.to_csv(path, mode="a", header=not path.exists(), index=False)
+
+
+def widen_ledger(path, snap):
+    """Rewrite the ledger once with the union of columns. The old rows are read and written back as
+    text, so not one character of them changes; the file before the rewrite is kept beside it, and the
+    new file replaces the old one in a single step."""
+    old = pd.read_csv(path, dtype=str, keep_default_na=False)
+    cols = list(snap.columns) + [c for c in old.columns if c not in snap.columns]
+    new = pd.read_csv(io.StringIO(snap.to_csv(index=False)), dtype=str, keep_default_na=False)
+    backup = path.with_name(f"{path.stem}.before-{RULES_VERSION}{path.suffix}")
+    if not backup.exists():
+        shutil.copy2(path, backup)
+    tmp = path.with_name(path.name + ".tmp")
+    pd.concat([old, new], ignore_index=True).reindex(columns=cols).fillna("").to_csv(tmp, index=False)
+    os.replace(tmp, path)

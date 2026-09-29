@@ -27,8 +27,8 @@ Each project has its own virtual environment. Don't share environments or instal
 - **Secrets and data stay local.** API keys go in each project's `.env`, which is gitignored; `.env.example` holds the names only. Anything under `data/`, `.venv/`, parquet and DuckDB files are gitignored and must be re-creatable from scripts.
 - **Paid APIs are cache-first.** Odds API calls need an explicit credit budget. Reruns read the cache.
 - **Shared weather code.** `market.py`, `features.py`, `models.py`, `notify.py`, `quota.py` and `runlog.py` are copied between `nfl-weather` and `cfb-weather`. A change to one copy is made to both. Tests fail if `quota.py`, `runlog.py` or the pricing block of `market.py` differ.
-- **Frozen means a committed file.** The pricing cohorts (`*/data/processed/pricing_cohort.json`) and calibrations have registered hashes. Changing one needs a dated amendment.
-- **Log, don't drop.** Every scheduled run leaves a row in `data/forward/runs.csv`, finished or failed. Scorers list every excluded ledger row by reason.
+- **Frozen means a committed file.** The pricing cohorts (`*/data/processed/pricing_cohort.json`) have registered hashes, and every alert run checks them. Changing one needs a dated amendment.
+- **Log, don't drop.** Every alert run leaves a row in `data/forward/runs.csv`, finished or failed. Scorers count every excluded ledger row by reason and list them with `--list-excluded`. Error text is scrubbed of keys (`runlog.scrub`) before it is recorded or sent.
 
 ## The hub
 

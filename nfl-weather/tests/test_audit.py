@@ -133,11 +133,13 @@ def test_decision_is_interim_until_the_horizon_and_applies_every_criterion(tmp_p
     assert "win rate vs the close" in out and "mean CLV by season" in out
 
 
-def test_forty_signals_make_the_decision_final(tmp_path):
+def test_forty_signals_alone_do_not_make_the_decision_final(tmp_path):
+    """Amendment 5, section 4: the decision waits for the end of the regular season (tests/test_review.py
+    covers both horizons). A schedule that can't show the season is over decides nothing."""
     rows = [dict(ROW, game_id=f"G{i}", total_line=44 + (i % 3)) for i in range(40)]
     games = [dict(GAME, game_id=f"G{i}", total_line=42, week=5 + (i % 12)) for i in range(40)]
     out = score(tmp_path, rows, games)
-    assert "FINAL: KEEP" in out and "mean CLV by half" in out       # one season: both halves must be positive
+    assert "INTERIM read, decides nothing" in out and "FINAL" not in out.split("Decision horizons")[0]
 
 
 # ------------------------------------------------------------------ log, don't drop (D6) and provenance

@@ -100,6 +100,16 @@ An independent audit ([`../reviews/2026-09-29-astra-audit.md`](../reviews/2026-0
 - **The scorer enforces the test:** registered versions only, pre-kickoff rows only, inside the test window, with each decision computed and labelled interim or final.
 - **Log, don't drop:** every run leaves a row in `data/forward/runs.csv`; every forecast behind a logged row is kept under its content hash in `data/forward/forecasts/`.
 
+**A second review of those fixes (Sep 29, before they went live)** found one crash and several places where the new code still fell short of the amendment. All are fixed, each with a test in `tests/test_review.py`:
+
+- **The crash:** the first Rule HT signal on the board would have stopped every CFB alert on that run. The last-run check now reads the Mac's own time zone correctly, and it stays right across a clock change.
+- **Decisions are made on dates, once.** Rule B: after 40 signals or Army–Navy (Dec 12, 2026), whichever is later, on the signals that kicked off by then. Rule HT: after the 2027 season's title game. A cancelled game can't hold a decision open, and a game is graded only once the schedule marks it completed. Before the horizon the scorer prints the numbers and no verdict.
+- **Rule HT drops when it made no money** at the prices taken, so the verdict can't contradict the ROI beside it.
+- **The best line is logged for every game the feed lists**, including games neither Pinnacle nor DraftKings quotes.
+- **Every run checks the pricing cohort** against its registered hash and stops if it differs.
+- **A run that fails at any stage is recorded and notified.** One game's alert failing doesn't stop the others. Keys are blanked from error text.
+- **The one-time ledger rewrite keeps old rows character for character** and leaves a copy of the ledger as it stood.
+
 ## Data
 
 | Source | What |

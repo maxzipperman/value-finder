@@ -28,7 +28,7 @@ import pandas as pd
 
 from cfbweather import board
 from cfbweather.config import OUT, PROC, ROOT
-from cfbweather.market import cohort_residuals, ev_under, load_games
+from cfbweather.market import ev_under, pricing_cohort
 
 SHIFT = pd.Timedelta(weeks=53)
 g = pd.read_parquet(PROC / "games.parquet")
@@ -37,8 +37,7 @@ g = g[(g.season == 2025) & ((g.home_division == "fbs") | (g.away_division == "fb
 g["open_total"] = g.open_total.fillna(g.close_total)
 threshold = board.ht_threshold(2025)
 
-hist = load_games(2006, board.PRICING_LAST_SEASON)
-resid = cohort_residuals(hist, (hist.outdoor == 1) & (hist.wx_wind >= board.RULE_B_WIND))
+resid = pricing_cohort(board.PRICING_COHORT_SHA256)     # the registered cohort, as the live board reads it
 
 rows = []
 for hours, lead, col in ((72, 3, "open_total"), (48, 2, "open_total"), (24, 1, "close_total"), (2, 0, "close_total")):
@@ -62,7 +61,7 @@ led = S.assign(snapshot_utc=(S.snapshot_utc + SHIFT).dt.strftime("%Y-%m-%dT%H:%M
                rules_version=board.RULES_VERSION, venue=S.venue_name,
                kick_et=S.start_s.dt.tz_convert("America/New_York").dt.strftime("%a %m-%d %H:%M"),
                best_under=np.nan, best_under_book="", start_utc=S.start_s.dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
-led = led[["snapshot_utc", "rules_version"] + board.COLS + ["start_utc"]]
+led = led.reindex(columns=["snapshot_utc", "rules_version"] + board.COLS + ["start_utc"])   # newer columns stay blank
 sched = g[["game_id", "home_points", "away_points"]]
 
 with tempfile.TemporaryDirectory() as tmp:
