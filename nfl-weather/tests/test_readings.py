@@ -867,7 +867,7 @@ def test_amendment_7_is_registered_as_the_hub_was_told_and_names_what_it_replace
     text = norm(amendment(7))
     assert REGISTERED_BY_HUB in text
     assert "No trigger, gate, price cap or stake changes." in text and "The rules version stays v3-2026-09-28" in text
-    assert "on the day of registration it is 271, so the multiple-testing bar is p < 0.000185" in text
+    assert "on the day of registration it is 273, so the multiple-testing bar is p < 0.000183" in text
     whole = (ROOT / "PREREGISTRATION.md").read_text()
     earlier = whole.split("## Amendment 7 ")[0]
     sources = replaced_sources(earlier, (ROOT / "STRATEGY.md").read_text(), amendment(7))
@@ -915,7 +915,7 @@ def test_the_summaries_name_amendment_7():
     assert ("| NFL, 17 / 25 | realistic (same day 0.07, same season 0.06) | 8.0 / 10.3% | 6.4 / 8.1% | 5.8 / 7.4% |"
             in readme)
     assert "the running count stays at 200." in readme                     # the study's text is left as written
-    assert "*Note, Sep 29, 2026:* the running count at the top of this file reads **271**" in readme
+    assert "*Note, Sep 29, 2026:* when this study merged, the running count was **271**" in readme
     for f in (ROOT / "README.md", ROOT.parent / "STATUS.md"):
         text = f.read_text()
         assert "feed listing" not in text and "One listing per game" not in text, f.name

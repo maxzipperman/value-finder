@@ -371,7 +371,7 @@ Count at merge (Sep 29, 2026): 271; bar p < 0.000185.
 
 Section 4 of [`simulate_decisions.py`](simulate_decisions.py) ([`output/money_gate.csv`](output/money_gate.csv), [`output/money_gate.log`](output/money_gate.log)). It tests a staking rule, not a betting rule, so it adds **0 variants**; the running count stays at 200.
 
-*Note, Sep 29, 2026:* the running count at the top of this file reads **271** (bar p < 0.000185); this study adds none, so it stays 271.
+*Note, Sep 29, 2026:* when this study merged, the running count was **271** (bar p < 0.000185), not 200; this study adds none.
 
 **The question.** Both `STRATEGY.md` files put real money in once "20 settled signals show positive average CLV". A rule with no edge passes that half the time. What should replace it, and how likely is each candidate to let money in on CFB this season?
 
@@ -619,7 +619,7 @@ When the fixed looks arrive (the share of seasons that reach the count, and the 
 
 ### The keep test: plain, grouped by game day, and the wider of the two (added September 29, 2026)
 
-Count at merge (Sep 29, 2026): 271; bar p < 0.000185. This changes how a test is graded, not a betting rule, so it adds **0 variants**, and the running count stays at 271.
+Count at merge (Sep 29, 2026): 273; bar p < 0.000183. This changes how a test is graded, not a betting rule, so it adds **0 variants**, and the running count stays at 273.
 
 [`keep_test_check.py`](keep_test_check.py) ([`output/keep_test_check.csv`](output/keep_test_check.csv), [`output/keep_test_check.log`](output/keep_test_check.log)) asks how often the registered keep test keeps a Rule B that has no edge, with its interval computed three ways. nfl-weather amendment 7 and cfb-weather amendment 5 register the third, the wider of the other two. The check reuses section 4 of `simulate_decisions.py` (the CLV proxy, the dependence estimates and the calendars above) without rewriting any of that script's outputs. Each case is 40,000 simulated paths of 40 bets, with seed 29; the run takes about a minute.
 

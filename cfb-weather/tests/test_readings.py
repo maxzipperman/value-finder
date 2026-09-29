@@ -848,7 +848,7 @@ def test_amendment_5_is_registered_as_the_hub_was_told_and_names_what_it_replace
     text = norm(amendment5())
     assert REGISTERED_BY_HUB in text
     assert "No trigger, gate, price cap or stake changes." in text and "The rules version stays cfb-v3-2026-09-28" in text
-    assert "on the day of registration it is 271, so the multiple-testing bar is p < 0.000185" in text
+    assert "on the day of registration it is 273, so the multiple-testing bar is p < 0.000183" in text
     whole = (ROOT / "PREREGISTRATION.md").read_text().split("## Amendment 5 ")[0]
     strategy = (ROOT / "STRATEGY.md").read_text()
     bullets = amendment5().split("### What this amendment replaces")[1].split("\n* ")[1:]
@@ -1236,4 +1236,6 @@ def test_amendment_5_states_the_decisions_a_held_back_copy_leaves_on_the_mac_onl
             'night: if it is lost before then, neither the file nor a copy holds it, and the next real run decides it '
             'again."') in replaces
     scorer = (ROOT / "scripts" / "score_forward.py").read_text()
-    assert "# Amendment 6, section 3" not in scorer and scorer.count("# Amendment 4, section 3") == 2
+    assert "# Amendment 6, section 3" not in scorer                        # the NFL's number for the same section
+    assert "# Amendment 4, section 3: a copy that can't be read stops recording" in scorer
+    assert "# Amendment 4, section 3, and amendment 5, reading 3: the file is there" in scorer

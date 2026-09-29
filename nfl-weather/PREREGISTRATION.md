@@ -802,5 +802,5 @@ instead.
   otherwise the hub replaces it by hand (section 3).
 
 Rule variants under forward test: still **2**. This amendment tests nothing and leaves the running variant
-count unchanged: on the day of registration it is **271**, so the multiple-testing bar is p < 0.000185
+count unchanged: on the day of registration it is **273**, so the multiple-testing bar is p < 0.000183
 (`strategy-research/README.md`, `STATUS.md`).
