@@ -1,0 +1,218 @@
+# Price engine: pre-registration draft (issues [#8](https://github.com/maxzipperman/value-finder/issues/8) and [#53](https://github.com/maxzipperman/value-finder/issues/53))
+
+**Status: DRAFT, written September 29, 2026, before any F1 data exists.** Nobody has seen a single F1 price. The owner and the hub register it (copy it into a registered file with a date, amend anything first) before `markets price-engine` first runs on F1. Until then nothing here is binding.
+
+The code that runs it is already written and tested: [`sharp-markets/src/markets/research/price_engine/`](../sharp-markets/src/markets/research/price_engine/). Every threshold below is a constant in `engine.py`, and the tests check the variant count. Changing any of them after F1 lands is an amendment. It is not an edit.
+
+## The short version
+
+- **What gets tested.** When a regular US sportsbook offers a price that beats Pinnacle's no-vig price for the same game at the same moment, is that price worth betting? The price engine flags those prices. This draft fixes, before the data exists, exactly which prices count and how they are graded.
+- **Where the probabilities come from.** The sharp market's own no-vig price. That is the most defensible probability for any game, and it is what a college football signal this season would be built on.
+- **The decision.** It rests on closing-line value (CLV): did the price you took beat Pinnacle's closing price? Profit and loss is reported too, but six seasons are far too few bets for profit to prove anything (section 9). A pass earns a **paper** forward test on the rest of the 2026 season. It does not earn money.
+- **Count.** 38 variants, which takes the running count from 200 to **238**. The bar becomes **p < 0.05 / 238 = 0.00021**.
+- **What it cannot see.** F1 has one snapshot a day plus the close, so it only finds gaps that last for hours. The fast gaps described in #53 are invisible to it.
+
+## 1. The two hypotheses
+
+- **H1, the price engine (#8).** A retail price whose expected value against the sharp no-vig fair price at the same snapshot is at least X beats Pinnacle's close on average.
+- **H2, soft-book lag (#53).** A retail total at least 1 point on the good side of Pinnacle's total at the same snapshot, at −115 or better, beats Pinnacle's close on average. The good side is a higher number for an under and a lower number for an over.
+
+Both are "beat the close" rules: the bet is placed hours or days before kickoff, and the close is a later, sharper price. The repo grades that kind of rule on CLV.
+
+## 2. Data
+
+| | |
+|---|---|
+| Pull | F1 (`sharp-markets/config/odds5m.yaml`): featured markets, one snapshot a day at 16:00 UTC for the 7 days before each kickoff, plus each game's close (the last 5-minute grid point at least 5 minutes before kickoff). |
+| Sports | NFL and college football, **analysed separately**. |
+| Markets | Full-game moneyline (h2h), spread and total. |
+| Seasons | 2020–2025, regular season and postseason. **2026 is sealed**: `bulk.load_rows` leaves it out, the backtest never asks for it, and it never loads 2026 scores (a test checks all three). |
+| Sharp books (the fair price) | Pinnacle; LowVig and BetOnline for the blend. |
+| Retail books (the flags) | DraftKings, FanDuel, BetMGM, Caesars (`williamhill_us`), Fanatics, BetRivers, ESPN BET: F1's ten books minus the three sharp ones. LowVig and BetOnline are never treated as retail. |
+| Window | Snapshots from 7 days before kickoff up to kickoff. Featured snapshots also list games further out; F1 wasn't built to cover them, so those quotes are dropped and counted. |
+| Final scores | The repo's processed game tables (nflverse and cfbfastR), 2020–25 only. A game with no matched score still counts for CLV and is left out of profit and loss, with its reason logged. |
+
+## 3. The fair price
+
+- **Primary: Pinnacle.** At each snapshot, Pinnacle's two prices for a market are de-vigged with the Shin method. That gives a fair probability for each side at **Pinnacle's own line**. The Shin code is the repo's registered one: `devig_shin`, imported from `nfl-weather` and `cfb-weather`, never copied.
+- **Second, pre-declared: the blend.** Pinnacle, LowVig and BetOnline are each de-vigged, wherever they quote Pinnacle's line at that snapshot, and averaged with weights 0.55 / 0.30 / 0.15 (`sharp-markets/config/backtest.yaml`), renormalized over the books present. The blend also needs Pinnacle, so both versions cover the same games.
+- **Comparing a retail quote with the fair price:**
+  - **Moneylines:** always.
+  - **Spreads:** only when the retail book is at Pinnacle's own spread. A different spread is left out of the primary analysis and counted.
+  - **Totals:** at any total. A total different from Pinnacle's is converted with the repo's registered pricing model (`p_under_at` and each sport's frozen residual cohort, checked against its registered hash; imported, not copied). The rule is:
+
+    > P(under wins at L) = q × (1 − P(push at L0)) + [w(L) − w(L0)], and P(push at L) = the model's push chance at L,
+    >
+    > where q is Pinnacle's no-vig under probability at its own total L0, and w(·) is the model's chance the under wins, with the reference total set to L0.
+
+    Only the probability mass the model puts **between** the two lines is used, not its level. The registered cohort is windy games, whose unders win more often than the market expects, and that tilt must not leak into a price engine that treats Pinnacle as the truth. NFL uses the NFL cohort; college football uses the CFB cohort.
+- **Expected value.** Every probability is taken conditional on no push, as a two-way price is. The expected value (EV) of a bet at decimal price d is p × d − 1 per unit staked on bets that are decided. A push returns the stake.
+
+## 4. The flags
+
+| Flag | Rule | Versions |
+|---|---|---|
+| H1 | The retail side's EV against the fair price is **at least 1%, 2% or 3%**. These are the only three thresholds, and **2% is primary**. | Pinnacle (primary) and blend, for totals, spreads and moneylines, for NFL and CFB. |
+| H2 | A retail total **at least 1.0 point** on the good side of Pinnacle's total at the same snapshot, at **−115 or better** (decimal 1.87 or more). | Totals only, NFL and CFB. |
+
+No snapshot at or after kickoff is ever an entry. A snapshot is dropped if it is at or after the kickoff it lists itself, or the kickoff listed in the game's latest snapshot, in-play snapshots included (kickoffs move). A test checks this, including a kickoff that moved earlier.
+
+## 5. Entries: one bet per game, market and side
+
+For each variant, the bet on a game, market and side is the **first snapshot at which that side is flagged**, at the flagged retail book with the best EV. For H2 it goes to the biggest gap, then the best price. The price taken is that book's posted price at that snapshot. Later flags on the same side of the same game are not extra bets.
+
+**Only snapshots more than 60 minutes before kickoff can be entries.** In practice that means the daily ones. The close is what every bet is graded against. A flag first seen at the close would have a CLV equal to its own EV by construction, which is the circularity the plan review warned about, so the close is never an entry.
+
+## 6. Grading
+
+| Measure | Definition |
+|---|---|
+| **CLV against Pinnacle's close, in cents (primary)** | 100 × (Pinnacle's no-vig closing probability of the bet's side **at the bet's line**, minus the break-even probability of the price taken, 1/d). Positive means the price beat Pinnacle's close. Totals at another line use the registered conversion. Spreads count only when Pinnacle closes at the bet's line. |
+| CLV against the entry book's own close, in cents | The same arithmetic against that book's own no-vig closing price. This is #53's check: did the lagging book move to where Pinnacle already was? |
+| CLV in points (spreads and totals) | Against Pinnacle's close and against the book's own close. Positive when the close moved toward the bet: a lower total for an under, a higher total for an over, a bigger number for the side taken on a spread. |
+| Realized result at the price taken | Flat one-unit bets: win rate, ROI (pushes left out) and a 95% interval. |
+| The close | A book's quote in its last snapshot before kickoff, only if that snapshot is within 60 minutes of kickoff. F1's close is 5 to 10 minutes before. A bet whose book, or Pinnacle, has no close is left out of that CLV column and counted. |
+
+Standard errors are clustered by game throughout.
+
+## 7. Decision rules
+
+Each **primary cell** is judged on its own: H1 at the 2% threshold against Pinnacle, for each of NFL and CFB × totals, spreads and moneylines (6 cells), and H2 for each of NFL and CFB (2 cells). The other 30 cells are reported and never decide anything, except that the blend's 2% cell enters condition A5 below. The script computes these verdicts itself (`engine.decide`), and a test checks the rules.
+
+**Too few bets.** Fewer than 100 bets in the cell, or fewer than 100 with a Pinnacle close. The cell is reported, and nothing goes forward from it.
+
+**Kill: the idea is dropped for that cell** if any one of these holds:
+
+- K1. Mean CLV against Pinnacle's close is at or below zero.
+- K2. Realized ROI's 95% interval lies entirely below zero.
+- K3. With the book that has the most bets removed, mean CLV is at or below zero, or no bets are left. One book carries it.
+- K4. With the season that has the highest mean CLV removed, mean CLV is at or below zero, or no bets are left. One season carries it.
+
+**Act: this justifies a pre-registered paper forward test on the 2026 season** only if nothing kills the cell and all of these hold:
+
+- A1. Mean CLV against Pinnacle's close is above zero with **one-sided p < 0.05 / 238 = 0.00021**.
+- A2. At least 3 seasons have 20 or more bets, and CLV is above zero in all of those seasons but at most one.
+- A3. CLV is above zero on the bets where Pinnacle's market was updated at least as recently as the retail book's. Where Pinnacle's quote is older than the book's, the gap may be Pinnacle being stale; either timestamp missing counts as stale.
+- A4. CLV is above zero on the bets with EV below 10%. The fattest prices are the ones a book is likeliest to void as obvious errors.
+- A5. H1 only: the blend version's 2% cell also has CLV above zero.
+
+**Inconclusive: everything else.** Typically CLV is positive but not below the bar. No forward test comes from this backtest. The idea can still be logged on paper descriptively.
+
+**What an "act" does not mean.** It means the price engine's premise held up at daily resolution in 2020–25, and nothing more. The forward test's own registration fixes its metric and horizon before its first eligible game. The suggested version is mean CLV against Pinnacle's close with its 95% interval above zero, after at least 150 bets. That is a separate pre-registration.
+
+**Why CLV against Pinnacle's close is a real test here, and where it stops.** The flag uses Pinnacle's price at a daily snapshot, one to seven days out, and the close is a later, sharper price. If a gap exists because Pinnacle was slow (the retail book moved first on news), Pinnacle's close moves to the retail number and the CLV disappears. That is the main way "beat the sharp line" fails in practice, and this test catches it. What it cannot catch is Pinnacle's close itself being wrong. If Pinnacle's price were always right, a pass would be close to automatic. The plan review raised exactly this point ([`plan-review-2026-09-28.md`](plan-review-2026-09-28.md), section 3). Only results can test the close itself, and section 9 shows they need far more bets than F1 has. So the report adds a descriptive check of how well Pinnacle's no-vig close matched results on every game it priced, and a pass leads to paper, not money.
+
+## 8. Variants and the multiple-testing bar
+
+| Family | Count |
+|---|---|
+| H1: 2 sports × 3 markets × 2 fair versions × 3 thresholds | 36 |
+| H2: 2 sports | 2 |
+| **This draft** | **38** |
+| Running count before it | 200 |
+| **Running count after it** | **238, so the bar is p < 0.05 / 238 = 0.00021** |
+
+- **Not counted: the descriptive tables.** These are the calibration of Pinnacle's close, how often each book sits a point or more off Pinnacle, and the per-book splits. They can't select a rule, so they add no false-positive risk.
+- **Counted in full, conservatively.** The data-use plan already counted 9 price-engine variants (3 thresholds × 3 markets) in the 200. If the hub nets those out, the count is 229 and the bar is 0.00022. The difference doesn't matter; see owner decisions.
+
+## 9. How many bets it takes, and why the decision is on CLV
+
+This is back-of-envelope arithmetic from the repo's own numbers. It is not from F1.
+
+- **CLV.** The plan review measured line moves from an early bet to the close at about 2.3 points (NFL) and 2.7 points (CFB) either side. Near the middle of a total, one point is worth about 2.5 cents of probability. So a bet's CLV varies by roughly ±6 cents.
+  - To detect a true average CLV of **1 cent** at the bar (one-sided z = 3.53, 80% power) takes about **690 bets**.
+  - **2 cents** takes about **170 bets**.
+  - **0.5 cents** takes about **2,700 bets**.
+- **Profit.** One bet's result varies by about ±1 unit.
+  - A true 2% edge needs about **15,000 bets** to show at the ordinary 5% level.
+  - At the bar it needs about **48,000**.
+  - With 1,000 bets, the ROI's 95% interval is about ±6 points wide. A real +2% edge would read as something like "+2% ± 6%".
+- **What this means for the plan's earlier rule.** The data-use plan ([`odds-api-credits.md`](odds-api-credits.md#data-use-plan), row F1) asked for "realized ROI positive with a 95% interval above zero". At 1,000 bets, that rule rejects a true 2% edge about 9 times in 10 and a true 3% edge about 8 times in 10. That is why this draft decides on CLV and keeps ROI as a veto (K2). The change is the owner's to accept (decision 1).
+- **Unknown until F1 lands.** How many flags each cell will have. It could be a few hundred or a few thousand, depending on how often retail prices stray. A cell under 100 bets decides nothing.
+
+## 10. What daily data cannot show
+
+- **Gaps that last minutes.** F1 sees one moment a day (16:00 UTC, late morning in the US) and the close. A soft book that lags Pinnacle by 20 minutes after a wind forecast, which is #53's example, is invisible. The backtest only finds gaps that persist for hours. The output says so on every run.
+- **How long a gap lasted.** The report shows only whether the same book still had the gap at its next snapshot, usually a day later. The 10-minute trigger poller (#53, task 1) is the tool for duration.
+- **Whether a quote was fillable, or for how much.** The Odds API shows posted quotes, not limits. The stake a book would have accepted is unknown for every F1 flag, and the output records it as unknown.
+- **Whether the feed was current.** A book's quote in the feed can itself lag the book. `last_update` is used only for the staleness check (A3), never to time a bet.
+- **One time of day.** A gap that opens in the evening and closes overnight never appears. Late morning may also be when books are at their stalest after overnight moves, which could make gaps look more common than they are at other hours.
+- **Other lines.** Alternate lines, team totals, exchanges and props are outside F1. Alternates are F2's separate question.
+
+## 11. Cautions written into the rule (from #53)
+
+- **Books void obvious errors.** A price far off the market can be cancelled after the fact. A4 requires the result to survive without the flags at 10% EV or more, and `bets_ev_10plus` counts them.
+- **Books limit accounts that take stale numbers.** Kaunitz, Zhong and Kreiner made money betting soft prices against the consensus until the books limited them within months. Even if this works, the real-money ceiling is small and shrinks as it's used.
+- **A posted quote is not always a fillable one.** The stake a book would accept is recorded where it's known (the paper fill log, `scripts/log_fill.py`, when the owner checks a live price) and marked unknown everywhere else.
+- **Paper only.** Nothing in this code places, sizes or routes a bet.
+
+## 12. Decisions for the owner (with recommendations)
+
+1. **Decide on CLV, not ROI.** Replace the data-use plan's "ROI with a 95% interval above zero" with the rules in section 7, keeping ROI as a veto. *Recommend: yes.* The ROI rule would reject a true 2% edge about 9 times in 10 (section 9).
+2. **Variant count: 238 (all 38 added) or 229 (net of the 9 already counted).** *Recommend 238.* It is the conservative choice, and the bars (0.00021 against 0.00022) barely differ.
+3. **A CFB forward test in 2026.** The plan review says both CFB 2026 slots are taken (Rule B and Rule HT). If a CFB cell reaches "act", either run the CFB price-engine paper log as a third registered CFB test this season, or log it descriptively in 2026 and register it for 2027. *Recommend the 2026 test only for a CFB totals cell that reaches "act".* The live log costs no credits and no money, and a CLV test is decidable in a few hundred bets. Otherwise log descriptively.
+4. **Money this season.** *Recommend none from this rule.* A backtest pass earns a paper test, and under the repo's own rules real money waits for that test's decision. The earliest honest path to a real CFB bet is a pass on Oct 1–2, a paper test from mid-October, and a decision when its bet count is reached, which is likely late 2026 at the earliest and more likely 2027.
+5. **Books in the live log that F1 never saw** (Bovada, Hard Rock Bet). *Recommend logging them but leaving them out of any decision.* Bovada is also offshore, which is not one of the venues you named (US regulated books, Kalshi, Pinnacle).
+
+---
+
+## The live form for this season: a CFB price-engine paper log from the call the alerts already make
+
+This section describes what the log would record. It changes no alert code, spends no extra credits, and places no bet. The hub decides whether and where to build it.
+
+**What already arrives, for free.**
+- **The alert runs.** The CFB alert job runs four times a day (07:30, 11:30, 15:30 and 19:30, Mac time). Each run makes **one** Odds API call:
+  - `americanfootball_ncaaf/odds`, `markets=totals`, at 1 credit;
+  - for **10 books**: Pinnacle, LowVig and BetOnline (sharp), and DraftKings, FanDuel, BetMGM, BetRivers, Bovada, ESPN BET and Hard Rock Bet.
+- **Saved first.** The whole response is saved to `cfb-weather/data/raw/oddsapi/live/<time>.json` before it's parsed.
+- **Close capture.** The same kind of call runs 2–20 minutes before each kickoff slot and saves the same kind of file.
+- **The trigger poller.** On a paid plan, it saves a file every 10 minutes for games with a wind trigger (`*_poll.json`).
+- **So a price-engine log needs no new call.** A small script that reads each new saved file after the run has everything. Pinnacle priced 56 of 58 college games in the Sep 28 live check.
+
+**What the log would record, one row per saved file × game × retail book × side:**
+
+| Field | What it holds |
+|---|---|
+| `snapshot_utc`, `source` | The file's time, and whether it came from an alert run, close capture or the poller. |
+| `event_id`, `kickoff_utc`, `home`, `away`, `sealed` | The game. Every 2026 row is `sealed=True`; see below. |
+| `pin_total`, `pin_over`, `pin_under`, `pin_update` | Pinnacle's quote and its `last_update`. |
+| `fair_under_pin`, `fair_under_blend` | Pinnacle's Shin no-vig P(under) at its total, and the three-book blend. These are **the probabilities**: one for every game Pinnacle prices, four times a day. |
+| `book`, `total`, `over`, `under`, `book_update` | The retail quote. |
+| `p_side`, `ev_pin`, `ev_blend` | The fair probability at the book's own total (the registered conversion, same as the backtest) and the EV of each side. |
+| `flag_1`, `flag_2`, `flag_3`, `flag_lag` | The H1 flags at 1/2/3% and the H2 lag flag, exactly as in section 4. |
+| `entry` | True on the first flagged row per game and side, at the best book: the paper bet. |
+
+**Grading.** Each entry is graded, as in the backtest:
+- CLV against Pinnacle's close and against the entry book's own close, both from the close-capture file for that kickoff slot;
+- then the final score.
+
+**What it can't do, stated plainly.**
+- **Totals only.** Spreads and moneylines aren't in the call. Adding them makes each call 3 credits: about +240 a month for the alerts' ~120 calls. That changes the alert call, so it is the hub's decision.
+- **Four snapshots a day.** Like F1, it only sees gaps that last hours. The poller's 10-minute grid covers windy games only.
+- **A different book list from F1.** F1 has Caesars and Fanatics, which the alerts don't. The alerts have Bovada and Hard Rock Bet, which F1 doesn't. Only DraftKings, FanDuel, BetMGM, BetRivers and ESPN BET are in both, and only those five should count toward a decision (owner decision 5).
+- **The sealed season.** Every 2026 CFB row is sealed holdout data. The log may record it from the start, but nothing analyses it until a forward test is registered before its first eligible game (owner decision 3).
+- **Stake limits are unknown.** The row says so. A manual check can go into the fill log.
+
+**The order of events.**
+1. The hub registers this draft.
+2. F1 is pulled on Oct 1, and `uv run markets price-engine` runs the same day.
+3. If a CFB totals cell reaches "act" and you choose the 2026 test (decision 3), the forward test is registered before the next Saturday's first kickoff.
+4. The hub adds the logging script as a separate launchd job, or as a step after each alert run, touching no alert code.
+5. The paper log starts.
+
+If nothing reaches "act", the same log can still run descriptively. It supplies the probabilities, but it produces no signal to act on.
+
+---
+
+## The one-line command
+
+From `sharp-markets/`, after F1 is pulled ([`docs/ODDS5M_DAY_ONE.md`](../sharp-markets/docs/ODDS5M_DAY_ONE.md), step 5):
+
+```bash
+uv run markets price-engine
+```
+
+- **Output.** It writes `reports/price_engine/report.md` and `results.csv` (one row per variant, 38 rows), plus `bets.parquet` and `dropped.csv`.
+- **Before F1 exists,** it prints that there is nothing to backtest and stops.
+- **`--fixture`** runs the whole pipeline on a small synthetic fixture (not data), to check it works.
+- **No API calls.** It reads only what is cached, and it never touches the sealed seasons.

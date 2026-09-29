@@ -97,6 +97,10 @@ gated (below). The **hard ceiling for the whole month is 4,440,000 credits**, an
    - At the default 8 requests a second, F1's roughly 5,400 calls take about 12 minutes, F2's 4,600 about 10, and F3a's 570 about a minute. `--rate 20` is safe if nothing else is using the key heavily (the API allows 30).
    - If a run stops, read the `STOPPED:` line. A budget or floor stop is expected. A circuit-breaker stop means something needs a look before rerunning.
    - `--seasons 2025` is what keeps F3 to its first slice. Without it, `full --pull F3` would pull all of 2023–26 (136,800); the rest is gated (F3b, below).
+   - **The price-engine backtest (#8, #53), free, once F1 is in.**
+     - Register [`strategy-research/price-engine-preregistration-draft.md`](../../strategy-research/price-engine-preregistration-draft.md) first. It is written before F1 exists, and the run must come after it.
+     - Then run `uv run markets price-engine`. It needs no credits, and it writes `reports/price_engine/report.md` and `results.csv`.
+     - Report its eight primary verdicts to the hub.
 6. **The NBA sample week (N0), 7,540 credits, through the NBA pipeline, not the bulk puller.** PLAN.md §8 step 3 requires it before any full season; the week's Kalshi candles and trades are already cached, and the snapshots land where N1 will look:
    ```bash
    uv run markets odds-plan --start 2026-01-05 --end 2026-01-11                              # free: 754 snapshots, 7,540 credits

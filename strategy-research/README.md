@@ -185,6 +185,18 @@ Ranked by strength of evidence, whether the data comes from an API, and fit with
 - **Data:** The Odds API (featured markets back to mid-2020; props, alternate lines and periods back to May 3, 2023), Kalshi and Polymarket public APIs, nflverse margins.
 - **Fit:** `sharp-markets` already has de-vig, the blend, the Kalshi fee model, CLV, GET-only clients and credit budgets. This adds a sportsbook and exchange list and a key-number module. Paper-log every flag with CLV.
 
+#### The price-engine backtest, ready before F1 lands (added September 29, 2026, [#8](https://github.com/maxzipperman/value-finder/issues/8), [#53](https://github.com/maxzipperman/value-finder/issues/53))
+
+- **Written before any F1 price exists.** The backtest of this idea on F1 is written and tested before a single F1 price exists, so its thresholds can't be tuned to the data.
+- **The rules are a draft for you and the hub to register:** [`price-engine-preregistration-draft.md`](price-engine-preregistration-draft.md).
+  - Flags at 1%, 2% (primary) or 3% expected value against Pinnacle's no-vig price, for NFL and CFB totals, spreads and moneylines, against Pinnacle alone and against the three-book blend.
+  - Issue #53's soft-book-lag flag: a retail total a point or more off Pinnacle's.
+- **Grading.** Everything is graded on CLV against Pinnacle's close and against the book's own close, plus the result at the price taken.
+- **Variant count.** 38 variants, which takes the running count to 238 (bar p < 0.00021).
+- **Resolution.** The daily grid only finds gaps that last hours.
+- **Running it.** One command runs it the day F1 lands (`uv run markets price-engine` in `sharp-markets/`). Today it prints that there is nothing to backtest yet.
+- **This season.** The draft's last page covers the live form: a college football paper log with a probability for every game, built from the call the alerts already make, at no extra credits.
+
 ### 2. CFB high-total shrinkage *(new lead from your data)*
 
 - **Rule:** A CFB closing total at least 10 points above the prior season's average closing total → under, at the latest number available.

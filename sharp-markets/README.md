@@ -36,6 +36,29 @@ uv run markets weather qualifying                              # heat triggers -
 | `markets/fees.py`, `markets/devig.py` | Kalshi fee model, de-vig + multi-book blend |
 | `markets/build/` | DuckDB loaders, matching, SQL views |
 | `markets/analysis/` | fills, CLV, H1, H2, lead-lag, reports |
-| `markets/research/` | Kaggle H3 study |
+| `markets/research/` | Kaggle H3 study; H4a (Kalshi NFL totals vs wind); `price_engine/`, the F1 price-engine backtest |
 
 Data lands in `data/` (gitignored); DuckDB at `data/markets.duckdb`.
+
+## Price-engine backtest on F1 (issues #8 and #53, added September 29, 2026)
+
+`uv run markets price-engine` runs the whole backtest in one line once F1 is cached. Before F1 exists it prints that there is nothing to backtest and stops. `--fixture` runs it end to end on a synthetic fixture (not data).
+
+| Module (`markets/research/price_engine/`) | Role |
+|---|---|
+| `quotes.py` | F1 rows from `bulk.load_rows` (sealed seasons out) → one row per game, snapshot, book and market with both sides' prices. It drops, and counts, anything at or after kickoff or more than 7 days out. |
+| `model.py` | Shin de-vig and the registered totals model (`p_under_at` plus the frozen cohorts), **imported** from `nfl-weather` and `cfb-weather`, with the cohort hashes checked. |
+| `engine.py` | Pinnacle and blend fair prices, the flags (H1: EV ≥ 1/2/3%; H2: a retail total ≥ 1 point off Pinnacle's at −115 or better), one entry per game-side, closes, CLV in cents and points, the result, and the draft decision rule. |
+| `outcomes.py` | Final scores from `nfl-weather` and `cfb-weather` processed tables, 2020–25 only. |
+| `run.py` | Writes `reports/price_engine/{report.md, results.csv, dropped.csv, bets.parquet}`. The printed variant count is the number of rows in `results.csv` (38). |
+
+- **Rules and thresholds.** These are in [`strategy-research/price-engine-preregistration-draft.md`](../strategy-research/price-engine-preregistration-draft.md): a draft for the hub to register before the first run on F1.
+- **Tests.** `tests/test_price_engine.py`, all on synthetic rows. It checks:
+  - no entry at or after kickoff, including a kickoff that moved;
+  - sealed rows and 2026 scores never load;
+  - the de-vig sums to 1;
+  - the EV arithmetic of a flag, and the registered conversion for totals;
+  - the sign conventions for CLV;
+  - that the variant count equals the rows in the results table.
+- **New dependencies.** The package imports the weather projects' pricing module, so `sharp-markets` now depends on pandas, scipy and statsmodels. The first `uv run` after pulling installs them.
+- **Daily only.** F1's daily grid only finds price gaps that last for hours, and every run says so.
