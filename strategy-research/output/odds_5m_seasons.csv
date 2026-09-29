@@ -1,0 +1,64 @@
+sport,key,season,games,days,slots,snapshots,sealed,history_from
+NBA,basketball_nba,2019-20 restart,171,81,135,216,False,2020-06-27
+NBA,basketball_nba,2020-21,1171,218,776,994,False,2020-06-27
+NBA,basketball_nba,2021-22,1320,247,871,1118,False,2020-06-27
+NBA,basketball_nba,2022-23,1320,247,871,1118,False,2020-06-27
+NBA,basketball_nba,2023-24,1320,247,871,1118,False,2020-06-27
+NBA,basketball_nba,2024-25,1320,247,871,1118,False,2020-06-27
+NBA,basketball_nba,2025-26,1320,247,871,1118,False,2020-06-27
+NHL,icehockey_nhl,2019-20 restart,130,66,98,164,False,2020-06-29
+NHL,icehockey_nhl,2020-21,952,183,470,653,False,2020-06-29
+NHL,icehockey_nhl,2021-22,1398,257,672,929,False,2020-06-29
+NHL,icehockey_nhl,2022-23,1398,257,672,929,False,2020-06-29
+NHL,icehockey_nhl,2023-24,1398,257,672,929,False,2020-06-29
+NHL,icehockey_nhl,2024-25,1398,257,672,929,False,2020-06-29
+NHL,icehockey_nhl,2025-26,1398,257,672,929,False,2020-06-29
+MLB,baseball_mlb,2020,951,104,643,747,False,2020-06-30
+MLB,baseball_mlb,2021,2473,222,1645,1867,False,2020-06-30
+MLB,baseball_mlb,2022,2473,222,1645,1867,False,2020-06-30
+MLB,baseball_mlb,2023,2473,222,1645,1867,False,2020-06-30
+MLB,baseball_mlb,2024,2473,222,1645,1867,False,2020-06-30
+MLB,baseball_mlb,2025,2473,222,1645,1867,False,2020-06-30
+MLB,baseball_mlb,2026,2473,222,1645,1867,True,2020-06-30
+MLS,soccer_usa_mls,2020,278,157,134,291,False,2020-06-27
+MLS,soccer_usa_mls,2021,472,292,219,511,False,2020-06-27
+MLS,soccer_usa_mls,2022,489,292,227,519,False,2020-06-27
+MLS,soccer_usa_mls,2023,522,292,249,541,False,2020-06-27
+MLS,soccer_usa_mls,2024,522,292,249,541,False,2020-06-27
+MLS,soccer_usa_mls,2025,539,292,257,549,False,2020-06-27
+MLS,soccer_usa_mls,2026,539,292,257,549,True,2020-06-27
+Liga MX,soccer_mexico_ligamx,2020 Apertura,173,157,126,283,False,2020-07-15
+Liga MX,soccer_mexico_ligamx,2021,342,337,248,585,False,2020-07-15
+Liga MX,soccer_mexico_ligamx,2022,342,337,248,585,False,2020-07-15
+Liga MX,soccer_mexico_ligamx,2023,342,337,248,585,False,2020-07-15
+Liga MX,soccer_mexico_ligamx,2024,342,337,248,585,False,2020-07-15
+Liga MX,soccer_mexico_ligamx,2025,342,337,248,585,False,2020-07-15
+Liga MX,soccer_mexico_ligamx,2026,342,337,248,585,True,2020-07-15
+Brasileirao,soccer_brazil_campeonato,2020,380,247,209,456,False,2020-07-28
+Brasileirao,soccer_brazil_campeonato,2021,380,247,209,456,False,2020-07-28
+Brasileirao,soccer_brazil_campeonato,2022,380,247,209,456,False,2020-07-28
+Brasileirao,soccer_brazil_campeonato,2023,380,247,209,456,False,2020-07-28
+Brasileirao,soccer_brazil_campeonato,2024,380,247,209,456,False,2020-07-28
+Brasileirao,soccer_brazil_campeonato,2025,380,247,209,456,False,2020-07-28
+Brasileirao,soccer_brazil_campeonato,2026,380,247,209,456,True,2020-07-28
+J1 League,soccer_japan_j_league,2020,306,177,138,315,False,2020-06-23
+J1 League,soccer_japan_j_league,2021,380,287,171,458,False,2020-06-23
+J1 League,soccer_japan_j_league,2022,306,277,138,415,False,2020-06-23
+J1 League,soccer_japan_j_league,2023,306,277,138,415,False,2020-06-23
+J1 League,soccer_japan_j_league,2024,380,287,171,458,False,2020-06-23
+J1 League,soccer_japan_j_league,2025,380,287,171,458,False,2020-06-23
+J1 League,soccer_japan_j_league,2026 special half-season,180,147,81,228,True,2020-06-23
+K League 1,soccer_korea_kleague1,2020,162,187,81,268,False,2020-06-06
+K League 1,soccer_korea_kleague1,2021,228,267,114,381,False,2020-06-06
+K League 1,soccer_korea_kleague1,2022,228,267,114,381,False,2020-06-06
+K League 1,soccer_korea_kleague1,2023,228,267,114,381,False,2020-06-06
+K League 1,soccer_korea_kleague1,2024,228,267,114,381,False,2020-06-06
+K League 1,soccer_korea_kleague1,2025,228,267,114,381,False,2020-06-06
+K League 1,soccer_korea_kleague1,2026,228,267,114,381,True,2020-06-06
+World Cups,soccer_fifa_world_cup,"2022 Qatar (Nov-Dec, cooled stadiums: a heat control)",64,36,58,94,False,2022-04-03
+World Cups,soccer_fifa_world_cup,2026 North America,104,46,94,140,True,2022-04-03
+Euro 2024,soccer_uefa_european_championship,2024,51,38,46,84,False,2021-05-19
+Copa America 2024,soccer_conmebol_copa_america,2024,32,32,29,61,False,2024-04-10
+Club World Cup 2025,soccer_fifa_club_world_cup,2025,63,37,57,94,False,2025-05-27
+Gold Cup 2025,soccer_concacaf_gold_cup,2025,31,30,28,58,False,2025-06-09
+Leagues Cup 2025,soccer_concacaf_leagues_cup,2025,45,41,40,81,False,2025-07-25

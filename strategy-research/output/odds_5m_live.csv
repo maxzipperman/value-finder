@@ -1,0 +1,6 @@
+live use,arithmetic,credits_per_month
+"Alerts, NFL + CFB (10 books a call)",4 runs x 31 days x 2 sports,248
+Close capture (one call per kickoff slot),~137 NFL + CFB slots,137
+Trigger poller: every 10 min while a Rule B wind trigger is active,~6 polls/h x 72 h x ~6 trigger windows,2600
+"NFL props, alternates, team totals log (event odds)",70 games x 9 mkts x 4 snaps,2520
+"NBA collector, PLAN.md s7 (5-min h2h ticks + 1-min final 2 h)",27 game days x (144-288 + 0-205),14175

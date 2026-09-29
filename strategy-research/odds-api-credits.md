@@ -6,7 +6,93 @@ Which Odds API plan this repo should pay for, month by month, and what each extr
 
 ---
 
-## Recommendation
+## The 5M month (owner decision, September 28, 2026)
+
+The owner will buy **one 5M month ($119) as soon as the pullers pass their tests, around October 1–3, 2026**. That replaces the October pilot and the March month below. The target is about 4.5M credits of history, plus a 300K reserve for probes, the live uses during the month and mistakes. [`odds_5m.py`](odds_5m.py) makes the plan. Its outputs are [`output/odds_5m_plan.csv`](output/odds_5m_plan.csv), [`odds_5m_seasons.csv`](output/odds_5m_seasons.csv) and [`odds_5m_live.csv`](output/odds_5m_live.csv).
+
+### Decisions for the owner
+
+1. **What counts as "the 2026 season" for NBA and NHL.** 2025-26 is the NBA study season in `sharp-markets/docs/PLAN.md` (H1/H2), so it is *not* sealed here; 2026-27 is.
+   - **Recommendation:** seal games played in calendar 2026 for the calendar-year sports (MLB, all soccer, World Cup 2026), the 2026 season for NFL and CFB, and 2026-27 for NBA and NHL.
+2. **Hourly football history (F4, 1.60M credits, a third of the budget).** It's in the plan because the budget allows it and it answers #16 at hourly resolution. If you'd rather spend it on something else, the next candidate is the 5-minute forecast windows (X2, 706K), which sit below the cut.
+3. **The exchange group (X3, 232K) just makes the cut.** Kalshi and Polymarket history is free from their own APIs. It's kept only because it lines up exactly with the sportsbook snapshots; drop it for more headroom.
+4. **The Odds API terms of use weren't reachable from the cloud.** The plan keeps raw paid data out of git and commits only compact derived tables. The hub should check the terms before the first derived table is committed.
+5. **Live uses after the month:** about 5K–20K credits a month, depending on the NBA collector. The 20K plan ($30) covers the low case. The high case (collector polling all day) needs the 100K plan ($59), or cut the collector to game windows. See [below](#after-the-month-live-uses).
+
+### The pulls, ranked by research value
+
+Value is scored 1 to 5. The cut line is 4.5M. Football counts are exact, from our schedules (2026 uses 2025 as a stand-in). Other sports use season-structure **estimates**, set out in `odds_5m.py`. Day one's probe replaces them with the real schedules from the historical `/events` endpoint, at 1 credit per call.
+
+| ID | Value | Pull | Credits | Running total |
+|---|---|---|---|---|
+| F1 | 4 | NFL+CFB featured markets, 10 books, daily for 7 days before kickoff plus every close, 2020–26 | 162,210 | 162,210 |
+| F2 | 3 | NFL alternate spreads, alternate totals and team totals at T−24h, T−2h and the close, 2023–26 | 102,600 | 264,810 |
+| F3 | 3 | NFL props (pass, rush and receiving yards, receptions, kicking points, field goals) at T−48h, T−24h, T−2h and the close, 2023–26 | 273,600 | 538,410 |
+| B1 | 3 | MLB featured markets, daily plus every close, 2020–26 (estimate) | 358,470 | 896,880 |
+| S1 | 3 | Soccer heat leagues and tournaments, featured markets (3-way moneyline, spreads, totals), daily plus every close (estimate) | 491,970 | 1,388,850 |
+| F4 | 3 | NFL+CFB featured markets, 10 books, **hourly** for 7 days before kickoff, 2020–26 | 1,604,430 | 2,993,280 |
+| H1 | 2 | NHL featured markets, daily plus every close, 2020–26 (estimate) | 163,860 | 3,157,140 |
+| N2 | 2 | NBA featured markets, daily plus every close, seasons other than 2025-26 (estimate) | 170,460 | 3,327,600 |
+| F5 | 2 | CFB alternate lines and team totals at T−24h and the close, 2023–26 | 221,880 | 3,549,480 |
+| N1 | 2 | NBA 2025-26 at 5-minute resolution, moneyline, 3 sharp books (PLAN.md schedule D) | 478,530 | 4,028,010 |
+| F6 | 1 | CFB props at the close, 2023–26 (an upper bound; coverage is thin) | 147,920 | 4,175,930 |
+| X3 | 1 | Exchange group (Kalshi, Polymarket, Novig, ProphetX), hourly, 2025 | 231,630 | 4,407,560 |
+| *X2* | *1* | *Below the cut:* 5-minute NFL+CFB totals for 72 hours before windy kickoffs, 2024–25 | *705,580* | — |
+
+**Total:** 4,407,560 credits of history plus the 300,000 reserve comes to 4,707,560 of 5,000,000.
+
+- **Sequencing:** pull the value-4 and value-3 items first, so a mistake can only cost the bottom of the list.
+- **How the soccer leagues were chosen.** They're the summer and heat leagues with Odds API history from mid-2020. (There's no international-friendlies key.)
+
+  | League or tournament | Why it's in |
+  |---|---|
+  | MLS | US summer heat |
+  | Liga MX | Monterrey and Guadalajara heat, with altitude as a contrast |
+  | Brasileirão | Tropical heat for most of the season |
+  | J1 League | Japanese summer heat and humidity |
+  | K League 1 | Korean summer heat and humidity |
+  | Club World Cup 2025 | US summer; widely reported extreme heat |
+  | Copa América 2024, Gold Cup 2025, Leagues Cup 2025 | US summer venues |
+  | Euro 2024 | A cooler European control |
+  | World Cup 2022 | A cooled-stadium control |
+  | World Cup 2026 | The prime heat test; sealed |
+
+### Data-use plan
+
+**Sealed holdout.** Every 2026-season game in every sport is pulled, but it isn't examined until a hypothesis about it is pre-registered. See owner decision 1 for the NBA and NHL definition. All exploration uses 2020–25. The sharp-markets loaders will enforce this with a holdout flag in the manifest (PR B).
+
+| Pull | Primary hypothesis | Metric | Variants |
+|---|---|---|---|
+| F1 | Soft-book prices beyond the sharp fair line earn CLV (#8); re-grade #4 and Rule B at the Pinnacle close; day-to-day moves reverse (#16) | CLV per flag; win rate; CLV of fading the move | 15 |
+| F2 | Alternate lines misprice key-number crossings against recent-era margins | EV at the alternate price | 4 |
+| F3 | Yardage-prop unders beat 50% (#10); kicking-points unders in wind or cold (#21); prop moves across the snapshots | Under rate and ROI at the prop price | 8 |
+| F4 | Hour-to-hour moves reverse before the close (#16) | CLV of fading the move | 2 |
+| S1 | Kickoff heat index at or above the threshold (defined in PR D) → under at the close | Under rate and ROI at the close price | 1 |
+| B1 | Open-air park weather → totals: wind blowing in → under; heat (PR D) → over | Under/over rate and ROI | 2 |
+| N1 | H1/H2 as in PLAN.md | Per PLAN.md | 12 |
+| N2, H1 | Favorite-longshot bias at the best price, by odds band | ROI by band | 4 + 4 |
+| F5, F6 | CFB shrinkage in team totals and alternates; CFB median-vs-mean props | Win rate, ROI | 2 + 2 |
+
+**Variant count:** 56 new variants on top of 135 makes **191**, so the Bonferroni bar is **p < 0.00026**. Nothing without a line in this table gets analysed. X3 is context only (0 variants).
+
+### After the month: live uses
+
+These are live calls, so they cost 1 credit per market per book group per call, not 10.
+
+| Live use | Credits a month |
+|---|---|
+| Alerts, NFL + CFB, with the best under across 10 books (already on `main` since #20) | 248 |
+| Close capture, one call per kickoff slot | ~137 |
+| Trigger poller: every 10 minutes while a Rule B wind trigger is active | ~2,600 |
+| NFL props, alternates and team totals log (9 markets at 4 snapshots a game) | ~2,520 |
+| NBA collector from PLAN.md §7, from the Oct 20 opener | 3,900–14,200 |
+| **Total** | **about 9,400–19,700** |
+
+**Flag for the owner:** the low case fits the 20K plan ($30 a month) with room to spare. The high case is at its limit, so either trim the NBA collector to game windows or take the 100K plan ($59) during the NBA season.
+
+---
+
+## Earlier recommendation (superseded by the 5M month above)
 
 **Pay for two months: a 20K pilot in October ($30), then one 5M month on March 1, 2027 ($119). Run the live alerts on the free tier the rest of the time.** The total is $149, plus $119 more only if the NBA sample week shows an edge.
 

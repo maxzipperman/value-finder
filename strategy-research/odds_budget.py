@@ -21,6 +21,7 @@ The 2026 schedules are incomplete (no postseason, many CFB kickoffs TBD), so 202
 Outputs: output/odds_api_budget.csv (use cases), odds_api_plans.csv (plan fit), odds_api_counts.csv (games and
          snapshots per season), odds_api_live_months.csv (live credits by month), all under output/
 Run from the repo root:  nfl-weather/.venv/bin/python strategy-research/odds_budget.py [--no-save]
+The 5M-month plan across all sports (odds_5m.py) runs at the end and writes output/odds_5m_*.csv.
 """
 import argparse
 import json
@@ -245,6 +246,9 @@ def main():
     print(pl.to_string(index=False), "\n")
     print("Live credits by month (2025-26 schedule relabelled as 2026-27):")
     print(live_months.to_string(index=False))
+
+    import odds_5m                     # the 5M month across every sport (owner decision, Sep 28)
+    odds_5m.main(save)
 
 
 if __name__ == "__main__":

@@ -36,8 +36,11 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
      - the free-tier guard (errors mean "no price" instead of a crash; manual runs stop when fewer than 60 credits are left; dry runs spend nothing);
      - 10-book logging with the best under price on each signal;
      - the B1 timestamp and budget fixes.
-   - **Next purchase:** the 20K pilot for October ($30), per [`odds-api-credits.md`](strategy-research/odds-api-credits.md).
-   - **Later:** one 5M month on March 1, 2027 ($119) for about 293K credits, once a data-use plan is committed. Add $119 only if the NBA sample week shows an edge.
+   - **Next purchase (owner decision, Sep 28):** one 5M month ($119) around Oct 1–3, once the pullers pass their tests. It replaces the 20K pilot and the March month.
+     - **The plan:** about 4.4M credits of history across NFL, CFB, MLB, NBA, NHL and the soccer heat leagues, plus a 300K reserve. The data-use plan is in [`odds-api-credits.md`](strategy-research/odds-api-credits.md#the-5m-month-owner-decision-september-28-2026).
+     - **Sealed holdout:** every 2026-season game in every sport stays unexamined until a hypothesis about it is pre-registered.
+     - **Variants:** they would rise from 135 to 191.
+     - **Decisions waiting on you** (listed at the top of that section): the NBA and NHL holdout definition, whether to keep the hourly football pull (1.6M credits), the exchange group, the terms-of-use check, and the post-month plan. After the month, live uses cost about 9K–20K credits a month, so 20K ($30) or 100K ($59).
 2. **Close capture is live (Sep 28), as a secondary measure.** A launchd job (`com.valuefinder.closecapture`) runs every 15 minutes. It makes one Odds API call per kickoff slot, 2–20 minutes before kickoff, and records the close in `*/data/forward/closes.csv`.
    - Both scorers now also report CLV against that close. The registered primary CLV and the decision rules are unchanged: nfl-weather amendment 3, cfb-weather amendment 2, both dated before any signal.
    - Rule HT keeps its entry at the last logged quote; the scorer also reports the captured close for it.
