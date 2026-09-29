@@ -5,7 +5,7 @@ pipeline on a small synthetic fixture instead (nothing in it is data). Once F1 i
 (docs/ODDS5M_DAY_ONE.md), the same command reads F1 from the cache, sealed seasons left out, and writes:
 
   reports/price_engine/results.csv   one row per variant (the variant count printed is its row count)
-  reports/price_engine/report.md     the write-up: results, decisions under the draft rule, books, lag, calibration
+  reports/price_engine/report.md     the write-up: results, decisions under the registered rule, books, lag, calibration
   reports/price_engine/bets.parquet  every bet with its grading (gitignored)
   reports/price_engine/dropped.csv   what was left out, by reason
 """
@@ -31,7 +31,7 @@ DAILY_NOTE = ("F1 sees each game at 16:00 UTC on each of the 7 days before kicko
               "other game's close (each snapshot lists every game). A price gap shows up only if it is open at one "
               "of those moments, so gaps that last minutes, the kind Kaunitz et al. found with minute data and "
               "issue #53 describes, are mostly missed, and nothing here says how long any gap lasted.")
-DRAFT = "strategy-research/price-engine-preregistration-draft.md"
+PREREG = "sharp-markets/docs/PRICE_ENGINE_PREREGISTRATION.md"
 
 
 def run(cfg: dict, calls: list, cache: RawCache, *, scores: pd.DataFrame | None = None,
@@ -96,8 +96,8 @@ MOVED_COLS = ["variant", "bets", "clv_pin_n", "clv_pin_same_n", "clv_pin_cents_s
 def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
     n = len(results)
     head = ["# Price-engine backtest (F1)" + (" — SYNTHETIC FIXTURE, NOT DATA" if fixture else ""), "",
-            f"Run {utcnow():%Y-%m-%d %H:%M} UTC from commit {_commit()}. Rules: `{DRAFT}` "
-            "(a draft until the hub registers it). Sealed 2026 seasons left out.", "",
+            f"Run {utcnow():%Y-%m-%d %H:%M} UTC from commit {_commit()}. Rules: `{PREREG}` "
+            "(registered September 29, 2026). Sealed 2026 seasons left out.", "",
             f"**{DAILY_NOTE}**", "",
             f"Variants tested: **{n}**. Running count with them: {engine.PRIOR_COUNT} before + {n} = "
             f"{engine.RUNNING_COUNT}; the bar is p < 0.05 / {engine.RUNNING_COUNT} = {engine.ALPHA:.6f} (one-sided, "
@@ -176,7 +176,7 @@ def main(args) -> int:
             print("No F1 data yet: " + ("no NFL or CFB schedule has been saved (`markets odds5m probe` runs first)"
                                         if not calls else f"0 of F1's {len(calls):,} planned snapshots are cached")
                   + ". Nothing to backtest.")
-            print(f"The {len(engine.VARIANTS)} variants and every threshold are fixed in code and in {DRAFT}.")
+            print(f"The {len(engine.VARIANTS)} variants and every threshold are fixed in code and in {PREREG}.")
             print("On data day: `uv run markets odds5m full --pull F1 ...`, then `uv run markets price-engine`.")
             print(DAILY_NOTE)
             return 0
@@ -203,6 +203,6 @@ def main(args) -> int:
                        "clv_own_cents", "roi", "decision"]].to_string(index=False))
     print(DAILY_NOTE)
     print(f"variants tested: {len(results)} (rows in results.csv); running count {engine.RUNNING_COUNT}, "
-          f"bar p < {engine.ALPHA:.5f}")
+          f"bar p < {engine.ALPHA:.6f}")
     print(f"wrote {out_dir}/report.md and results.csv")
     return 0

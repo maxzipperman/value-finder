@@ -52,7 +52,7 @@ Data lands in `data/` (gitignored); DuckDB at `data/markets.duckdb`.
 | `outcomes.py` | Final scores from `nfl-weather` and `cfb-weather` processed tables, 2020–25 only. |
 | `run.py` | Writes `reports/price_engine/{report.md, results.csv, dropped.csv, bets.parquet}`. The printed variant count is the number of rows in `results.csv` (38). |
 
-- **Rules and thresholds.** These are in [`strategy-research/price-engine-preregistration-draft.md`](../strategy-research/price-engine-preregistration-draft.md): a draft for the hub to register before the first run on F1.
+- **Rules and thresholds.** These are in [`docs/PRICE_ENGINE_PREREGISTRATION.md`](docs/PRICE_ENGINE_PREREGISTRATION.md), registered September 29, 2026, before the first run on F1 (it began as a draft in `strategy-research/`).
 - **Tests.** `tests/test_price_engine.py`, all on synthetic rows. It checks:
   - no entry at or after kickoff or inside its last hour, including a kickoff that moved earlier or later;
   - sealed rows and 2026 scores never load;

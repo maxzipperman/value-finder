@@ -6,7 +6,7 @@
   project (`pricing_cohort`, checked against the hash its PREREGISTRATION.md registers). NFL uses the NFL
   cohort, college football the CFB cohort.
 
-The line conversion (pre-declared; strategy-research/price-engine-preregistration-draft.md). The fair price is
+The line conversion (pre-declared; sharp-markets/docs/PRICE_ENGINE_PREREGISTRATION.md). The fair price is
 Pinnacle's no-vig probability q that the under wins at Pinnacle's own total L0. A two-way price ignores pushes,
 so q is the chance of an under given no push. At another total L:
 
@@ -138,7 +138,7 @@ def build_spread_cohort() -> dict:
     """The contents of spread_cohort.json, rebuilt from the processed tables (python -m ...model --write-spreads)."""
     out = {"definition": "(home closing spread, home final margin) for every game with both, seasons before the "
                          "2020-25 backtest; grading conversion for spread closes at another number "
-                         "(strategy-research/price-engine-preregistration-draft.md, section 6)"}
+                         "(sharp-markets/docs/PRICE_ENGINE_PREREGISTRATION.md, section 6)"}
     for sport in SPORTS:
         s, m = spread_pairs_from_tables(sport)
         out[sport] = {"seasons": list(SPREAD_SEASONS[sport]), "games": len(s), "sha256": spread_cohort_hash(s, m),
@@ -214,7 +214,7 @@ if __name__ == "__main__":
 
     ap = argparse.ArgumentParser(description="Rebuild the frozen spread margin table (spread_cohort.json)")
     ap.add_argument("--write-spreads", action="store_true", help="overwrite the file (the hashes in model.py "
-                    "must then be updated, which is an amendment once the draft is registered)")
+                    "must then be updated, which is a dated amendment to the registered pre-registration)")
     a = ap.parse_args()
     built = build_spread_cohort()
     for sp in SPORTS:

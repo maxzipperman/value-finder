@@ -317,12 +317,12 @@ def test_variant_count_printed_equals_rows_in_the_results_table(tmp_path, capsys
     assert "SYNTHETIC FIXTURE" in report and "clv_pin_n" in report and "Closes at another number" in report
 
 
-def test_the_draft_states_the_count_and_bar_the_code_enforces():
-    """PRIOR_COUNT is set at registration (open PR #55 also moves the count). Whoever changes it changes the draft
-    in the same commit, or this fails."""
-    draft = (model.REPO / pe_run.DRAFT).read_text()
-    assert f"| Running count before it | {engine.PRIOR_COUNT} |" in draft
-    assert f"**{engine.RUNNING_COUNT}, so the bar is p < 0.05 / {engine.RUNNING_COUNT} = {engine.ALPHA:.5f}**" in draft
+def test_the_preregistration_states_the_count_and_bar_the_code_enforces():
+    """PRIOR_COUNT was set at registration (Sep 29, 2026: 233). Whoever changes it changes the pre-registration, by
+    dated amendment, in the same commit, or this fails."""
+    prereg = (model.REPO / pe_run.PREREG).read_text()
+    assert f"| Running count before it | {engine.PRIOR_COUNT} |" in prereg
+    assert f"**{engine.RUNNING_COUNT}, so the bar is p < 0.05 / {engine.RUNNING_COUNT} = {engine.ALPHA:.6f}**" in prereg
 
 
 def test_blend_weights_are_pinned_in_code():

@@ -220,7 +220,7 @@ def main(argv: list[str] | None = None) -> None:
     f.set_defaults(fn=cmd_odds5m)
 
     pe = sub.add_parser("price-engine", help="price-engine backtest on F1, issues #8 and #53 "
-                        "(strategy-research/price-engine-preregistration-draft.md); no API calls")
+                        "(docs/PRICE_ENGINE_PREREGISTRATION.md); no API calls")
     pe.add_argument("--fixture", action="store_true", help="run on a synthetic fixture instead (nothing in it is data)")
     pe.add_argument("--out", default=None, help="output folder (default reports/price_engine; a scratch folder with "
                     "--fixture)")

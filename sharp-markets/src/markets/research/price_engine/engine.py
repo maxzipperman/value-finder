@@ -1,5 +1,5 @@
 """Fair prices, flags, entries, closes and grading. Every threshold here is fixed before F1 exists
-(strategy-research/price-engine-preregistration-draft.md); changing one is a dated amendment, not an edit.
+(sharp-markets/docs/PRICE_ENGINE_PREREGISTRATION.md); changing one is a dated amendment, not an edit.
 
 Fair price at each snapshot (per game and market):
   pinnacle  Pinnacle's Shin no-vig probability for its own line (primary).
@@ -50,10 +50,11 @@ LAG_POINTS = 1.0
 LAG_MIN_DEC = 1 + 100 / 115            # -115 American
 CLOSE_WINDOW = pd.Timedelta(minutes=60)
 EV_ERROR = 0.10                        # EV at or above this: the prices a book is most likely to void as errors
-# The repo's running variant count before this pre-registration (STATUS.md, Sep 29: 200). Set at registration to
-# STATUS.md's count that day: open PR #55 adds 32, so if it merges first this becomes 232 (running count 270, bar
-# 0.05 / 270 = 0.000185). The draft states the same numbers, and a test checks the two agree.
-PRIOR_COUNT = 200
+# The repo's running variant count before this pre-registration, set at registration (Sep 29, 2026) to STATUS.md's
+# count that day: 200, plus 32 for the landing-mass table (PR #55) and 1 for the CFB MOS replay (PR #61), = 233.
+# With the 38 here the running count is 271 and the bar 0.05 / 271 = 0.000185. The pre-registration states the same
+# numbers, and a test checks the two agree.
+PRIOR_COUNT = 233
 MIN_BETS, MIN_SEASON_BETS = 100, 20
 EPS = 1e-9
 
@@ -352,7 +353,7 @@ def summarize(v: Variant, g: pd.DataFrame) -> dict:
 
 
 def decide(row: dict, blend_clv: float | None = None) -> str:
-    """The draft decision rule for a primary cell (price-engine-preregistration-draft.md, "Decision rules")."""
+    """The registered decision rule for a primary cell (docs/PRICE_ENGINE_PREREGISTRATION.md, "Decision rules")."""
     if not row["primary"]:
         return "reported"
     if row["bets"] < MIN_BETS or row["clv_pin_n"] < MIN_BETS:
