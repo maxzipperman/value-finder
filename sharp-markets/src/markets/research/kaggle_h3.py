@@ -287,8 +287,8 @@ def parse_games(rows: list[dict], teams) -> tuple[list[dict], dict]:
     """Rows -> games dated on or before the cut-off, plus counts about the whole file. Rows after the cut-off are
     counted and nothing else: their results and splits are never read."""
     info = {"n_rows": len(rows), "bad_date": 0, "after_cutoff": 0, "after_cutoff_by_season": Counter(),
-            "unknown_teams": Counter()}
-    kept = []
+            "unknown_teams": Counter(), "exact_duplicate_rows": 0}
+    kept, seen_rows = [], Counter()
     for r in rows:
         d = _date(r.get(COL_DATE))
         if d is None:
@@ -298,7 +298,13 @@ def parse_games(rows: list[dict], teams) -> tuple[list[dict], dict]:
             info["after_cutoff"] += 1
             info["after_cutoff_by_season"][season_of(d)] += 1
             continue
+        sig = tuple(sorted((str(key), str(val)) for key, val in r.items()))
+        info["exact_duplicate_rows"] += seen_rows[sig] > 0
+        seen_rows[sig] += 1
         kept.append((d, r))
+    columns = list(rows[0].keys()) if rows else []
+    info["constant_columns"] = {c: vals.pop() for c in columns
+                                if len(vals := {str(r.get(c)) for _, r in kept}) == 1} if kept else {}
     share_cols = [_col(m, s, w) for m in MARKETS for s in SIDES[m] for w in ("stake", "wager")]
     shares = [x for _, r in kept for c in share_cols if (x := _num(r.get(c))) is not None]
     info["share_scale"] = 100.0 if shares and max(shares) <= 1.0 else 1.0
@@ -311,7 +317,7 @@ def parse_games(rows: list[dict], teams) -> tuple[list[dict], dict]:
             if code is None:
                 info["unknown_teams"][str(name)] += 1
         g = {"key": r.get(COL_ID), "date": d, "season": season_of(d), "home": home, "away": away,
-             "names": (r.get(COL_HOME), r.get(COL_AWAY)), "m": {}}
+             "names": (r.get(COL_HOME), r.get(COL_AWAY)), "pregame": r.get("pregame_odds"), "m": {}}
         digits = re.sub(r"\D", "", str(r.get(COL_ID) or ""))
         info["id_date_checked"] = info.get("id_date_checked", 0) + bool(digits)
         info["id_date_differs"] = info.get("id_date_differs", 0) + (bool(digits) and
@@ -525,7 +531,21 @@ def file_checks(games: list[dict], info: dict) -> dict:
             per_season[s] = {"rows": len(gs), "games": len({(g["date"], *g["names"]) for g in gs}),
                              "first": min((g["date"] for g in gs), default=None),
                              "last": max((g["date"] for g in gs), default=None),
-                             "after_cutoff": info["after_cutoff_by_season"].get(s, 0)}
+                             "after_cutoff": info["after_cutoff_by_season"].get(s, 0),
+                             "missing_splits": sum(1 for g in gs if any(
+                                 g["m"][m][sd][w] is None for m in MARKETS for sd in SIDES[m]
+                                 for w in ("stake", "wager")))}
+    pregame = Counter()
+    for g in games:                     # does the file's pregame_odds text repeat the row's spread and total?
+        mt = re.match(r"\s*(-?\d+(?:\.\d+)?)?\s*,?\s*O/U\s*(\d+(?:\.\d+)?)", str(g.get("pregame") or ""))
+        if not mt:
+            pregame["unreadable"] += 1
+            continue
+        tot, sp = g["m"]["total"]["over"]["line"], [g["m"]["spread"][s]["line"] for s in ("home", "away")]
+        if tot is not None:
+            pregame["total agrees" if abs(float(mt.group(2)) - tot) < 1e-9 else "total differs"] += 1
+        if mt.group(1) is not None and None not in sp:
+            pregame["spread agrees" if abs(float(mt.group(1)) - min(sp)) < 1e-9 else "spread differs"] += 1
     keys = Counter((g["date"], *g["names"]) for g in games)
     ids = Counter(g["key"] for g in games if g["key"] not in (None, ""))
     markets = {}
@@ -533,9 +553,11 @@ def file_checks(games: list[dict], info: dict) -> dict:
         s1, s2 = SIDES[m]
         c = Counter()
         sums = {"stake": [], "wager": []}
-        margins, decs = [], []
+        margins, decs, off_pairs = [], [], Counter()
         for g in games:
             a, b = g["m"][m][s1], g["m"][m][s2]
+            if m != "money" and a["line"] is not None:
+                c["whole-number line"] += float(a["line"]).is_integer()
             if any(o[w] is None for o in (a, b) for w in ("stake", "wager")):
                 c["missing splits"] += 1
             for w in ("stake", "wager"):
@@ -562,16 +584,19 @@ def file_checks(games: list[dict], info: dict) -> dict:
                 conv = _american_to_decimal(o.get("american"))
                 if conv is not None and o["dec"] is not None:
                     c["prices checked against American odds"] += 1
-                    c["decimal and American differ by more than 0.01"] += abs(conv - o["dec"]) > 0.01
+                    if abs(conv - o["dec"]) > 0.01:
+                        c["decimal and American differ by more than 0.01"] += 1
+                        off_pairs[(o["american"], o["dec"])] += 1
         markets[m] = {"counts": c, "n": len(games),
                       **{f"{w}_sum_within_1": (sum(abs(x - 100) <= 1 for x in v) / len(v)) if v else float("nan")
                          for w, v in sums.items()},
                       **{f"{w}_sum_range": ((min(v), max(v)) if v else (None, None)) for w, v in sums.items()},
                       "margin_median": float(np.median(margins)) if margins else float("nan"),
                       "margin_range": (min(margins), max(margins)) if margins else (None, None),
-                      "dec_range": (min(decs), max(decs)) if decs else (None, None)}
+                      "dec_range": (min(decs), max(decs)) if decs else (None, None),
+                      "off_pairs": off_pairs.most_common(3)}
     return {"per_season": per_season, "dup_games": sum(v - 1 for v in keys.values() if v > 1),
-            "dup_ids": sum(v - 1 for v in ids.values() if v > 1), "markets": markets}
+            "dup_ids": sum(v - 1 for v in ids.values() if v > 1), "markets": markets, "pregame": pregame}
 
 
 # ================================================================ storing the splits
@@ -659,6 +684,10 @@ def _p(x):
     return f"{x:.2e}" if x < 0.001 else f"{x:.3f}"
 
 
+def _colname(c: str) -> str:
+    return f"`{c}`" if c.strip() else "an unnamed first column"
+
+
 def _signs(v: dict) -> str:
     return " ".join({1: "+", -1: "−", None: "·"}[v["signs"][s]] for s in SEASONS)
 
@@ -672,6 +701,21 @@ def _name(v: dict) -> str:
     return f"C: {mk}, tickets ≤ {v['k']}%"
 
 
+def _plain(v: dict) -> str:
+    """One variant's result in words."""
+    mk, x = MARKET_LABEL[v["market"]], abs(v["est"]) * 100
+    more = "more" if v["est"] > 0 else "less"
+    if v["family"] == "A":
+        return (f"backing the {mk} side with at least {v['k']} points more of the money than of the tickets (it won "
+                f"{x:.1f} points {more} often than its fair chance)")
+    if v["family"] == "B":
+        side = "over" if v["market"] == "total" else "home side"
+        return (f"the {mk} regression (the {side} won {x:.1f} points {more} often than its fair chance for every 10 "
+                "points by which its share of money beat its share of tickets)")
+    return (f"fading the public on {mk}s, backing the side with {v['k']}% of the tickets or fewer (it won {x:.1f} "
+            f"points {more} often than its fair chance)")
+
+
 def finding_text(res: dict) -> list[str]:
     vs = res["variants"]
     passed = [v for v in vs if v["passes"]]
@@ -680,20 +724,17 @@ def finding_text(res: dict) -> list[str]:
     below05 = sum(v["p"] < 0.05 for v in ps)
     det = [v["detectable"] for v in vs if v["family"] in "AC" and not math.isnan(v["detectable"])]
     if not passed:
-        s1 = (f"**None of the 14 variants passes the bar** (p < {BAR:.6f} with the same sign in at least 4 of the "
-              f"5 seasons).")
-        per = " per 10 points of divergence" if best and best["family"] == "B" else ""
-        s2 = (f"The smallest p-value is {_p(best['p'])} ({_name(best)}, {_pts(best['est'])} points of win "
-              f"chance{per}), "
-              f"and {below05} of the 14 {'is' if below05 == 1 else 'are'} below an ordinary 0.05 (chance alone would "
-              "give about 0.7 of 14; the variants overlap, so they tend to move together)."
-              if best else "No variant had enough games to test.")
-        s3 = ("At BetMGM's NBA close, 2021-22 to January 2026, the split between tickets and money says nothing "
-              "detectable that BetMGM's own closing price hadn't already priced in"
-              + (f"; the test could only have seen effects of about {min(det) * 100:.1f} to {max(det) * 100:.1f} "
-                 "points of win chance or more." if det else "."))
-        return [s1, s2, s3]
-    names = "; ".join(f"{_name(v)} ({_pts(v['est'])} points, p = {_p(v['p'])})" for v in passed)
+        s1 = (f"**None of the 14 variants passes the bar** (p below {BAR:.6f} and the same sign in at least 4 of the "
+              "5 seasons): at BetMGM's close in the NBA, from 2021-22 to January 2026, the split between tickets and "
+              "money says nothing detectable that BetMGM's own closing price hadn't already priced in.")
+        s2 = (f"The closest was {_plain(best)}, with p = {_p(best['p'])}, about {best['p'] / BAR:,.0f} times too large "
+              f"for the bar; {below05} of the 14 {'was' if below05 == 1 else 'were'} below an ordinary 0.05, where "
+              "chance alone would give about 0.7." if best else "No variant had enough games to test.")
+        s3 = (f"The test could only have detected effects of about {min(det) * 100:.1f} points of win chance or more "
+              "in its biggest variants, and far more in the thin ones, so a small edge of the size that matters in "
+              "betting is not ruled out." if det else "")
+        return [s for s in (s1, s2, s3) if s]
+    names = "; ".join(f"{_plain(v)}, p = {_p(v['p'])}" for v in passed)
     return [f"**{len(passed)} of the 14 variants pass the bar:** {names}.",
             "That is a lead, not a rule: the next steps would be the same test against Pinnacle's close (Odds API "
             "credits, the owner's decision) and a forward test. No rule is registered from it and no money follows."]
@@ -774,8 +815,14 @@ def write_report(res: dict, reports_dir) -> Path:
                  + " |")
     both = [(v, v["both_sides"]) for v in vs if v["both_sides"]]
     L += ["", "Games where both sides met a family A or C rule (left out of that variant): "
-          + ("; ".join(f"{_name(v)}: {n}" for v, n in both) if both else "none") + ".", "",
-          "## What it means", ""]
+          + ("; ".join(f"{_name(v)}: {n}" for v, n in both) if both else "none") + "."]
+    near = sorted((v for v in vs if not math.isnan(v["p"]) and v["p"] < 0.05), key=lambda v: v["p"])
+    L += ["", "### Closest to the bar", "",
+          "Variants with p below an ordinary 0.05, none of which comes near the bar:" if near and not passed else
+          "Variants with p below an ordinary 0.05:" if near else "No variant has p below an ordinary 0.05."]
+    L += [f"- {_name(v)}: {_plain(v)}; p = {_p(v['p'])}, {v['p'] / BAR:,.0f} times the bar; the same sign in "
+          f"{v['same_sign']} of 5 seasons." for v in near]
+    L += ["", "## What it means", ""]
     if passed:
         L += ["**Something passes.** A lead, not a rule. The next steps would be the same test against Pinnacle's "
               "close (that costs credits: the owner's decision) and a forward test. No rule is registered from this "
@@ -786,13 +833,46 @@ def write_report(res: dict, reports_dir) -> Path:
               "before the close.", ""]
     L += ["Either way, no football splits data is bought on the strength of this test alone.", "",
           "## The file itself", "",
-          f"- **Columns ({len(res['fields'])}):** " + ", ".join(f"`{c}`" for c in res["fields"]) + ".",
+          f"- **Columns ({len(res['fields'])}):** " + ", ".join(_colname(c) for c in res["fields"]) + ".",
           f"- **Rows:** {info['n_rows']:,} in all; {info['after_cutoff']:,} dated after {CUTOFF.isoformat()} (counted, "
           f"nothing else read); {info['bad_date']:,} with an unreadable date; {res['n_games']:,} tested.",
           f"- **Shares** were read as {'fractions and multiplied by 100' if info['share_scale'] == 100 else 'percentages'}"
           f"; prices as {'American odds, converted to decimal' if info['american_prices'] else 'decimal odds'}.",
+          "- **Columns with one value on every tested row:** "
+          + (", ".join(f"{_colname(c)} (always \"{v}\")" for c, v in info.get("constant_columns", {}).items())
+             or "none") + ".",
           f"- **Duplicated games** (same date, home and away team): {ch['dup_games']:,}; duplicated game ids: "
-          f"{ch['dup_ids']:,}.",
+          f"{ch['dup_ids']:,}; rows that repeat an earlier row in every column: {info['exact_duplicate_rows']:,}. "
+          "They are counted as the file gives them (so twice)"
+          + ("; that few can't move any result." if info["exact_duplicate_rows"] <= 0.005 * max(res["n_games"], 1)
+             else "."),
+          "- **Opening figures:** none. The `pregame_odds` column repeats the closing spread and total as text: the "
+          f"spread agrees with the line columns in {ch['pregame'].get('spread agrees', 0):,} of "
+          f"{ch['pregame'].get('spread agrees', 0) + ch['pregame'].get('spread differs', 0):,} games and the total in "
+          f"{ch['pregame'].get('total agrees', 0):,} of "
+          f"{ch['pregame'].get('total agrees', 0) + ch['pregame'].get('total differs', 0):,} "
+          f"({ch['pregame'].get('unreadable', 0):,} unreadable). The test never uses the lines themselves.",
+          "- **Pushes:** " + (
+              f"none in spreads or totals. A push can only happen on a whole-number line, and only "
+              f"{ch['markets']['spread']['counts']['whole-number line']:,} spreads and "
+              f"{ch['markets']['total']['counts']['whole-number line']:,} totals closed on one. At the usual NBA rates "
+              "(roughly 3% of whole-number spreads and 2% of whole-number totals land exactly on the number) about "
+              f"{0.03 * ch['markets']['spread']['counts']['whole-number line']:.0f} and "
+              f"{0.02 * ch['markets']['total']['counts']['whole-number line']:.0f} would be expected, so the file most "
+              "likely records those few as a win for one side. Too few to move any result."
+              if not ch["markets"]["spread"]["counts"]["push"] and not ch["markets"]["total"]["counts"]["push"] else
+              f"{ch['markets']['spread']['counts']['push']:,} in spreads and "
+              f"{ch['markets']['total']['counts']['push']:,} in totals, left out as registered."),
+          "- **Prices:** the test uses the file's decimal prices as given. They mostly agree with the file's American "
+          "odds; " + "; ".join(
+              f"{MARKET_LABEL[m]}s: {ch['markets'][m]['counts']['decimal and American differ by more than 0.01']:,} of "
+              f"{ch['markets'][m]['counts']['prices checked against American odds']:,} differ by more than 0.01"
+              for m in MARKETS) + ". "
+          + ("The most common mismatches are " + ", ".join(
+              f"American {a:+.0f} given as decimal {d:.2f} (where {a:+.0f} is {_american_to_decimal(a):.2f}; {n:,} times)"
+              for (a, d), n in ch["markets"]["money"]["off_pairs"])
+             + ". An error of 0.02 in a favourite's price moves its fair chance by a fraction of a point."
+             if ch["markets"]["money"]["off_pairs"] else ""),
           f"- **Dates:** every game id carries a date; it matches the `game_date` column on "
           f"{info.get('id_date_checked', 0) - info.get('id_date_differs', 0):,} of {info.get('id_date_checked', 0):,} "
           "tested rows.",
@@ -803,10 +883,11 @@ def write_report(res: dict, reports_dir) -> Path:
             "`splits` table and can't join to a Kalshi game.",
           f"- **Games that join to a Kalshi game** (same Eastern date, away and home team): "
           f"{res['kalshi_joined_games']:,}. Their closing splits are in the `splits` table of `data/markets.duckdb`.",
-          "", "| Season | Rows tested | Games | First date | Last date | Rows after the cut-off |", "|---|---|---|---|---|---|"]
+          "", "| Season | Rows tested | Games | First date | Last date | Games missing any split | "
+              "Rows after the cut-off |", "|---|---|---|---|---|---|---|"]
     for s, d in ch["per_season"].items():
         L.append(f"| {s} | {d['rows']:,} | {d['games']:,} | {d['first'] or '—'} | {d['last'] or '—'} | "
-                 f"{d['after_cutoff']:,} |")
+                 f"{d['missing_splits']:,} | {d['after_cutoff']:,} |")
     L += ["", "| Market | Games | Missing splits | Tickets add to 100 (±1) | Money adds to 100 (±1) | Ticket sums, min to max"
           " | Money sums, min to max | Missing or impossible price | Margin below 0% | Margin above 20% | Median margin"
           " | Decimal prices, min to max | Missing result | Push | Both won | Lines that don't mirror |",
@@ -820,10 +901,6 @@ def write_report(res: dict, reports_dir) -> Path:
                  f"{k_['missing or impossible price']:,} | {k_['margin below 0%']:,} | {k_['margin above 20%']:,} | "
                  f"{_pct(c['margin_median'], 2)} | {_range(c['dec_range'], 2)} | {k_['missing result']:,} | "
                  f"{k_['push']:,} | {k_['both sides marked won']:,} | {mirror:,} |")
-    L += ["", "Prices: the test uses the file's decimal prices as given. "
-          + "; ".join(f"{MARKET_LABEL[m]}: {ch['markets'][m]['counts']['decimal and American differ by more than 0.01']:,}"
-                      f" of {ch['markets'][m]['counts']['prices checked against American odds']:,} prices differ "
-                      "from the file's American odds by more than 0.01" for m in MARKETS) + "."]
     L += ["", "## Record", "",
           f"- **Registration:** commit `{REGISTRATION['commit']}`, committed {REGISTRATION['committed_utc']} and pushed "
           f"by {REGISTRATION['pushed_utc']} (UTC), before the download.",

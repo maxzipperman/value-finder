@@ -462,6 +462,19 @@ def test_the_bar_needs_both_the_p_value_and_four_seasons():
     assert not k._sign_check(base | {"p": float("nan")})["passes"]
 
 
+def test_file_checks_count_exact_duplicates_and_rows_after_the_cutoff():
+    from markets.sport import load_teams
+    rows, _ = k.load_rows(_zip(_csv_text(GAMES + [GAMES[0]])))
+    games, info = k.parse_games(rows, load_teams("nba"))
+    ch = k.file_checks(games, info)
+    assert info["exact_duplicate_rows"] == 1 and ch["dup_games"] == 1 and ch["dup_ids"] == 1
+    assert info["after_cutoff"] == 1 and info["after_cutoff_by_season"] == {"2025-26": 1}
+    assert ch["per_season"]["2025-26"]["after_cutoff"] == 1 and ch["per_season"]["2024-25"]["missing_splits"] == 1
+    assert ch["markets"]["spread"]["counts"]["push"] == 1 and ch["markets"]["total"]["counts"]["push"] == 1
+    assert ch["markets"]["spread"]["counts"]["whole-number line"] == 0            # every synthetic spread is 3.5
+    assert info["constant_columns"]["spread_home_points"] == "-3.5"
+
+
 def test_a_file_without_the_share_columns_stops(tmp_path):
     drop = tuple(f"{m}_{s}_stake_percentage" for m in k.MARKETS for s in k.SIDES[m])
     with pytest.raises(SystemExit) as e:
