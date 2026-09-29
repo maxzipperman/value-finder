@@ -1,0 +1,188 @@
+# The 5M-credit Odds API month (strategy-research/odds-api-credits.md, "The 5M month").
+# Sport configs for the bulk historical puller (markets.oddsapi.bulk). Not used by the Kalshi pipeline.
+#
+# windows: date ranges (UTC dates) swept with the historical /events endpoint to build exact
+# schedules; clipped to history_from. sealed: true = the season is a sealed holdout (pulled while the
+# credits last, never analysed until a hypothesis about it is pre-registered). Default rule, pending
+# the owner's decision 1: calendar-2026 games for MLB, soccer and the World Cup; the 2026 season for
+# NFL and CFB; 2026-27 for NBA and NHL (2025-26 is the NBA study season in docs/PLAN.md).
+
+books:
+  us10: [pinnacle, lowvig, betonlineag, draftkings, fanduel, betmgm, williamhill_us, fanatics, betrivers, espnbet]
+  soccer10: [pinnacle, betonlineag, draftkings, fanduel, betmgm, williamhill_us, bovada, unibet_eu, marathonbet, betfair_ex_eu]
+  sharp3: [pinnacle, lowvig, betonlineag]
+  exchanges: [kalshi, polymarket, novig, prophetx, betopenly]
+
+featured: h2h,spreads,totals
+
+sports:
+  americanfootball_nfl:
+    history_from: 2020-06-06
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-09-01, to: 2021-02-15}
+      - {label: "2021", from: 2021-09-01, to: 2022-02-20}
+      - {label: "2022", from: 2022-09-01, to: 2023-02-20}
+      - {label: "2023", from: 2023-09-01, to: 2024-02-15}
+      - {label: "2024", from: 2024-09-01, to: 2025-02-15}
+      - {label: "2025", from: 2025-09-01, to: 2026-02-15}
+      - {label: "2026", from: 2026-09-01, to: 2027-02-20, sealed: true}
+  americanfootball_ncaaf:
+    history_from: 2020-06-06
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-08-25, to: 2021-01-15}
+      - {label: "2021", from: 2021-08-20, to: 2022-01-15}
+      - {label: "2022", from: 2022-08-20, to: 2023-01-15}
+      - {label: "2023", from: 2023-08-20, to: 2024-01-15}
+      - {label: "2024", from: 2024-08-20, to: 2025-01-25}
+      - {label: "2025", from: 2025-08-20, to: 2026-01-25}
+      - {label: "2026", from: 2026-08-20, to: 2027-01-25, sealed: true}
+  basketball_nba:
+    history_from: 2020-06-27
+    sweep_every_days: 1
+    windows:
+      - {label: "2019-20 restart", from: 2020-07-25, to: 2020-10-15}
+      - {label: "2020-21", from: 2020-12-15, to: 2021-07-25}
+      - {label: "2021-22", from: 2021-10-15, to: 2022-06-25}
+      - {label: "2022-23", from: 2022-10-15, to: 2023-06-20}
+      - {label: "2023-24", from: 2023-10-20, to: 2024-06-25}
+      - {label: "2024-25", from: 2024-10-18, to: 2025-06-25}
+      - {label: "2025-26", from: 2025-10-01, to: 2026-06-25}
+      - {label: "2026-27", from: 2026-10-01, to: 2027-06-30, sealed: true}
+  icehockey_nhl:
+    history_from: 2020-06-29
+    sweep_every_days: 1
+    windows:
+      - {label: "2019-20 restart", from: 2020-07-28, to: 2020-10-01}
+      - {label: "2020-21", from: 2021-01-10, to: 2021-07-10}
+      - {label: "2021-22", from: 2021-10-10, to: 2022-06-30}
+      - {label: "2022-23", from: 2022-10-05, to: 2023-06-20}
+      - {label: "2023-24", from: 2023-10-08, to: 2024-06-30}
+      - {label: "2024-25", from: 2024-10-02, to: 2025-06-25}
+      - {label: "2025-26", from: 2025-10-05, to: 2026-06-25}
+      - {label: "2026-27", from: 2026-10-01, to: 2027-06-30, sealed: true}
+  baseball_mlb:
+    history_from: 2020-06-30
+    sweep_every_days: 1
+    windows:
+      - {label: "2020", from: 2020-07-20, to: 2020-10-30}
+      - {label: "2021", from: 2021-03-28, to: 2021-11-05}
+      - {label: "2022", from: 2022-04-05, to: 2022-11-08}
+      - {label: "2023", from: 2023-03-28, to: 2023-11-05}
+      - {label: "2024", from: 2024-03-18, to: 2024-11-02}
+      - {label: "2025", from: 2025-03-16, to: 2025-11-05}
+      - {label: "2026", from: 2026-03-20, to: 2026-11-05, sealed: true}
+  soccer_usa_mls:
+    history_from: 2020-06-27
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-07-01, to: 2020-12-15}
+      - {label: "2021", from: 2021-04-10, to: 2021-12-15}
+      - {label: "2022", from: 2022-02-20, to: 2022-11-10}
+      - {label: "2023", from: 2023-02-20, to: 2023-12-15}
+      - {label: "2024", from: 2024-02-15, to: 2024-12-10}
+      - {label: "2025", from: 2025-02-15, to: 2025-12-10}
+      - {label: "2026", from: 2026-02-15, to: 2026-12-10, sealed: true}
+  soccer_mexico_ligamx:
+    history_from: 2020-07-15
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-07-20, to: 2020-12-31}
+      - {label: "2021", from: 2021-01-01, to: 2021-12-31}
+      - {label: "2022", from: 2022-01-01, to: 2022-12-31}
+      - {label: "2023", from: 2023-01-01, to: 2023-12-31}
+      - {label: "2024", from: 2024-01-01, to: 2024-12-31}
+      - {label: "2025", from: 2025-01-01, to: 2025-12-31}
+      - {label: "2026", from: 2026-01-01, to: 2026-12-31, sealed: true}
+  soccer_brazil_campeonato:
+    history_from: 2020-07-28
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-08-05, to: 2021-02-28}
+      - {label: "2021", from: 2021-05-25, to: 2021-12-15}
+      - {label: "2022", from: 2022-04-05, to: 2022-11-15}
+      - {label: "2023", from: 2023-04-10, to: 2023-12-10}
+      - {label: "2024", from: 2024-04-10, to: 2024-12-10}
+      - {label: "2025", from: 2025-03-25, to: 2025-12-10}
+      - {label: "2026", from: 2026-01-20, to: 2026-12-10, sealed: true}
+  soccer_japan_j_league:
+    history_from: 2020-06-23
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-07-01, to: 2020-12-25}
+      - {label: "2021", from: 2021-02-20, to: 2021-12-10}
+      - {label: "2022", from: 2022-02-15, to: 2022-11-10}
+      - {label: "2023", from: 2023-02-15, to: 2023-12-05}
+      - {label: "2024", from: 2024-02-20, to: 2024-12-10}
+      - {label: "2025", from: 2025-02-10, to: 2025-12-10}
+      - {label: "2026", from: 2026-02-01, to: 2026-12-31, sealed: true}
+  soccer_korea_kleague1:
+    history_from: 2020-06-06
+    sweep_every_days: 2
+    windows:
+      - {label: "2020", from: 2020-06-06, to: 2020-11-05}
+      - {label: "2021", from: 2021-02-25, to: 2021-12-10}
+      - {label: "2022", from: 2022-02-15, to: 2022-11-01}
+      - {label: "2023", from: 2023-02-20, to: 2023-12-05}
+      - {label: "2024", from: 2024-02-25, to: 2024-12-10}
+      - {label: "2025", from: 2025-02-10, to: 2025-12-10}
+      - {label: "2026", from: 2026-02-15, to: 2026-12-10, sealed: true}
+  soccer_fifa_world_cup:
+    history_from: 2022-04-03
+    sweep_every_days: 2
+    windows:
+      - {label: "2022 Qatar", from: 2022-11-13, to: 2022-12-19}
+      - {label: "2026 North America", from: 2026-06-04, to: 2026-07-20, sealed: true}
+  soccer_uefa_european_championship:
+    history_from: 2021-05-19
+    sweep_every_days: 2
+    windows: [{label: "2024", from: 2024-06-07, to: 2024-07-15}]
+  soccer_conmebol_copa_america:
+    history_from: 2024-04-10
+    sweep_every_days: 2
+    windows: [{label: "2024", from: 2024-06-13, to: 2024-07-15}]
+  soccer_fifa_club_world_cup:
+    history_from: 2025-05-27
+    sweep_every_days: 2
+    windows: [{label: "2025", from: 2025-06-07, to: 2025-07-14}]
+  soccer_concacaf_gold_cup:
+    history_from: 2025-06-09
+    sweep_every_days: 2
+    windows: [{label: "2025", from: 2025-06-09, to: 2025-07-07}]
+  soccer_concacaf_leagues_cup:
+    history_from: 2025-07-25
+    sweep_every_days: 2
+    windows: [{label: "2025", from: 2025-07-25, to: 2025-09-01}]
+
+# Pulls, in the plan's value order (odds_5m.py IDs). kind: featured = historical /odds (one call
+# covers every game at a snapshot); event = historical event odds (per game per snapshot).
+# schedule: daily_close = 16:00 UTC daily for 7 days before each kickoff + each close;
+# hourly = on the hour for 7 days + each close; 5min = every 5 minutes from lookback_hours before
+# each tip to after_minutes past it (PLAN.md schedule D). The close is the last 5-minute grid point
+# at least 5 minutes before kickoff, so no in-play prices leak in. Event offsets are hours before
+# kickoff (0 = that close). cache_as writes into another pipeline's cache so it can read the data
+# (N1 lands where `markets build --sport nba` looks); its params must match that pipeline's exactly.
+soccer: &soccer [soccer_usa_mls, soccer_mexico_ligamx, soccer_brazil_campeonato, soccer_japan_j_league,
+                 soccer_korea_kleague1, soccer_fifa_world_cup, soccer_uefa_european_championship,
+                 soccer_conmebol_copa_america, soccer_fifa_club_world_cup, soccer_concacaf_gold_cup,
+                 soccer_concacaf_leagues_cup]
+pulls:
+  F1: {kind: featured, sports: [americanfootball_nfl, americanfootball_ncaaf], schedule: daily_close, books: us10}
+  F2: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [24, 2, 0],
+       markets: "alternate_spreads,alternate_totals,team_totals"}
+  F3: {kind: event, sports: [americanfootball_nfl], books: us10, from: 2023-05-03, offsets: [48, 24, 2, 0],
+       markets: "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions,player_kicking_points,player_field_goals"}
+  B1: {kind: featured, sports: [baseball_mlb], schedule: daily_close, books: us10}
+  S1: {kind: featured, sports: *soccer, schedule: daily_close, books: soccer10}
+  F4: {kind: featured, sports: [americanfootball_nfl, americanfootball_ncaaf], schedule: hourly, books: us10}
+  H1: {kind: featured, sports: [icehockey_nhl], schedule: daily_close, books: us10}
+  N2: {kind: featured, sports: [basketball_nba], schedule: daily_close, books: us10, skip_seasons: ["2025-26"]}
+  F5: {kind: event, sports: [americanfootball_ncaaf], books: us10, from: 2023-05-03, offsets: [24, 0],
+       markets: "alternate_spreads,alternate_totals,team_totals"}
+  N1: {kind: featured, sports: [basketball_nba], schedule: 5min, lookback_hours: 56, after_minutes: 15,
+       books: sharp3, markets: h2h, only_seasons: ["2025-26"], cache_as: {sport: nba, source: oddsapi_hist}}
+  F6: {kind: event, sports: [americanfootball_ncaaf], books: us10, from: 2023-05-03, offsets: [0],
+       markets: "player_pass_yds,player_rush_yds,player_reception_yds,player_receptions"}
+  X3: {kind: featured, sports: [americanfootball_nfl, americanfootball_ncaaf], schedule: hourly, books: exchanges,
+       only_seasons: ["2025"]}

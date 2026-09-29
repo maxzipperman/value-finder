@@ -116,6 +116,11 @@ def cmd_h4a(args) -> None:
     print(f"report: {res['report']}")
 
 
+def cmd_odds5m(args) -> None:
+    from .oddsapi import bulk
+    bulk.main(args)
+
+
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     p = argparse.ArgumentParser(prog="markets", description="Paper-only Kalshi vs sharp-book research pipeline")
@@ -157,6 +162,17 @@ def main(argv: list[str] | None = None) -> None:
     h.add_argument("--nfl-dir", required=True, help="path to the nfl-weather study project (read-only)")
     h.add_argument("--season", type=int, default=2025)
     h.set_defaults(fn=cmd_h4a, sport="nfl")
+
+    f = sub.add_parser("odds5m", help="5M-credit month: bulk historical Odds API pulls (docs/ODDS5M_DAY_ONE.md)")
+    f.add_argument("stage", choices=["probe", "plan", "week", "full", "check"])
+    f.add_argument("--pull", default="all", help="pull IDs from config/odds5m.yaml, comma-separated, or all")
+    f.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
+    f.add_argument("--week-of", default="auto", help="week stage: YYYY-MM-DD, or auto (first week of the latest unsealed season)")
+    f.add_argument("--confirm", action="store_true", help="actually spend credits")
+    f.add_argument("--max-credits", type=int, default=0, help="credit budget for this run")
+    f.add_argument("--floor", type=int, default=300_000, help="stop when the account would drop below this")
+    f.add_argument("--rate", type=float, default=8.0, help="requests per second (the API allows 30)")
+    f.set_defaults(fn=cmd_odds5m)
 
     args = p.parse_args(argv)
     args.fn(args)

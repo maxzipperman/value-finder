@@ -1,0 +1,100 @@
+# The 5M month: day-one checklist
+
+For the hub, on the Mac, once the owner has bought the 5M plan. The plan and its ranking are in
+[`strategy-research/odds-api-credits.md`](../../strategy-research/odds-api-credits.md#the-5m-month-owner-decision-september-28-2026).
+The pulls are defined in [`config/odds5m.yaml`](../config/odds5m.yaml) and run by
+`uv run markets odds5m <stage>` (code: `src/markets/oddsapi/bulk.py`). Everything is GET-only.
+
+Run every command from `sharp-markets/`.
+
+## How a run protects the credits
+
+- **Dry run by default.** Without `--confirm`, no stage calls the API. Every stage without `--confirm` prints what it would do and the most it could cost.
+- **Run budget.** `--max-credits N` is checked before each call against that call's upper-bound cost, so a run can never go over N.
+- **Reserve floor.** `--floor` defaults to 300,000. The run stops before the account's remaining credits would drop below it. That keeps the live-use reserve.
+- **Circuit breaker.** The run stops at once:
+  - when a call bills more than its upper bound (`x-requests-last` above 10 × markets × regions, or above 1 for `/events`);
+  - on HTTP 401 (key rejected);
+  - on HTTP 429 after retries (quota used up);
+  - after 5 errors in a row.
+- **Cache first and resumable.** Every response is stored before it is used, under `data/raw/{sport_key}/oddsapi/...`. N1 is the exception: it is stored under `data/raw/nba/oddsapi_hist/`, where `markets build --sport nba` reads it. Rerunning a command skips everything cached, so a stopped or interrupted run resumes for free. Errors aren't cached, so they are retried.
+- **Manifest.** Every real request gets a row in `data/raw/_manifest/oddsapi_manifest.csv`. Each row has:
+  - the requested and returned snapshot times;
+  - credits billed and credits remaining;
+  - the SHA-256 of the body;
+  - the cache key;
+  - the sealed flag.
+- **Sealed holdout.** Sealed seasons are pulled but never read by default:
+  - the 2026 seasons of NFL and CFB;
+  - 2026-27 for NBA and NHL;
+  - calendar 2026 for MLB and soccer, including the 2026 World Cup.
+
+  `bulk.load_rows()` leaves those rows out unless `include_sealed=True`, which only a pre-registered test may pass. The seasons change if the owner decides differently (decision 1). In that case, edit `sealed:` in the config before the pull.
+
+## Before buying
+
+1. `git pull` on main, then `uv run pytest`. Everything passes, including `tests/test_bulk.py`, which covers the puller against mocked responses.
+2. Check free disk space: plan for about 10 GB under `data/raw/`. If the internal disk is short, point `MARKETS_DATA_DIR` at an external one.
+3. Run `uv run markets odds5m probe` (no `--confirm`). It prints the `/events` sweep calls per sport, about 10,400 in all.
+
+## Day one
+
+1. **New key.** Put the new key in `sharp-markets/.env` as `ODDS_API_KEY=...`.
+   - The alert jobs read `nfl-weather/.env` and `cfb-weather/.env`. Switching those keys is a separate change to the alert setup, and the owner or hub decides it (PR C covers the paid-tier quota setting).
+2. **Probe (P0), about 10,600 credits at most:**
+   ```bash
+   uv run markets odds5m probe --confirm --max-credits 11000
+   ```
+   It does four things:
+   - checks the key for free (`/v4/sports`) and prints the credits remaining;
+   - sweeps historical `/events` for all 16 sport keys and writes exact schedules to `data/raw/_schedules/`;
+   - prints the games per season;
+   - runs four billing probes and prints one JSON line each.
+
+   Check:
+   - **Games per season.** Compare them with the estimates in `strategy-research/output/odds_5m_seasons.csv`. A season far below its estimate probably means a window in the config starts or ends too early; widen the window and rerun (cached sweeps cost nothing). Gaps in a league's coverage show up here too.
+   - **Featured NFL, 10 books, 3 markets.** It must bill **30**. If it bills more, stop: the whole plan's cost model is wrong.
+   - **Event-odds props, 10 books.** It must bill **10 × markets returned** (at most 60). This decides the cost of F2, F3, F5 and F6.
+   - **Props, Pinnacle only.** Which prop markets Pinnacle quotes. That decides whether prop CLV can use a sharp fair line.
+   - **Featured NFL 2020, sharp books.** Whether LowVig is in the 2020 data. If it isn't, 2020–21 sharp lines rest on Pinnacle and BetOnline.
+3. **Plan (free):**
+   ```bash
+   uv run markets odds5m plan
+   ```
+   It prints calls and the upper-bound credits per pull from the real schedules, in value order, with a running total. The PR A estimate was 4.41M for F1 through X3. If the running total passes 4.5M, drop pulls from the bottom of the list (X3 first, then F6) rather than trimming seasons.
+4. **One week per sport**, to check coverage before the big spend. Dry run first to see the cost, then set `--max-credits` a little above it:
+   ```bash
+   uv run markets odds5m week                                 # prints the upper bound per pull
+   uv run markets odds5m week --confirm --max-credits 60000
+   ```
+   Each pull covers the first week of its latest unsealed season. Use `--week-of YYYY-MM-DD` to pick another week. After each pull, a `coverage:` line prints:
+   - books returned and `missing_books` (books with no rows at all);
+   - markets returned;
+   - snapshots that came back empty;
+   - the lag between the requested and returned snapshot, in minutes. It should be about 0–5, or 0–10 before September 2022.
+
+   A book missing for a whole sport, or a market that never appears, is a decision for the hub: drop it from the config's book list, or accept it.
+5. **Full pulls, one at a time, in plan order.** For each pull, set `--max-credits` to its plan figure plus about 5%:
+   ```bash
+   uv run markets odds5m full --pull F1 --confirm --max-credits 170000
+   uv run markets odds5m check --pull F1
+   uv run markets odds5m full --pull F2 --confirm --max-credits 110000
+   ...
+   ```
+   The order is F1, F2, F3, B1, S1, F4, H1, N2, F5, N1, F6, X3.
+   - At the default 8 requests a second, the whole plan (about 160,000 calls) takes about 6 hours. The API allows 30 a second, so `--rate 20` is safe if nothing else is using the key heavily.
+   - If a run stops, read the `STOPPED:` line. A budget or floor stop is expected. A circuit-breaker stop means something needs a look before rerunning.
+6. **Reconcile credits** against the manifest:
+   ```bash
+   uv run python -c "import duckdb; print(duckdb.sql(\"SELECT pull, count(*) calls, sum(credits_last) billed, sum(expected_credits) upper_bound, max(remaining) FROM 'data/raw/_manifest/oddsapi_manifest.csv' GROUP BY 1 ORDER BY 1\"))"
+   ```
+
+## Afterwards
+
+- Raw responses stay on the Mac. `data/` is gitignored, and nothing here commits them.
+- Compact derived tables go into git only after the terms-of-use check (owner decision 4 in the plan).
+- Report to the hub:
+  - the probe's JSON lines;
+  - the `plan` totals;
+  - each pull's final `run_calls` line and `coverage:` line;
+  - the reconciliation table.
