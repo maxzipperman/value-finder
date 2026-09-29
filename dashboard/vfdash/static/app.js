@@ -1,0 +1,519 @@
+/* Value Finder dashboard. Reads the local server's JSON and draws it; it sends nothing anywhere else and has
+   no way to change a file. Every piece of text from the server goes in with textContent, never as markup. */
+"use strict";
+(function () {
+  const REFRESH_MS = 60000;
+  const main = document.getElementById("main");
+  const stampEl = document.getElementById("stamp");
+  const bannerEl = document.getElementById("banner");
+  const state = { openWaiting: new Set(), board: { sport: "all", signals: false }, last: null, seq: 0 };
+
+  // ------------------------------------------------------------------ small helpers
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    if (attrs) {
+      for (const [k, v] of Object.entries(attrs)) {
+        if (v === null || v === undefined || v === false) continue;
+        if (k === "class") el.className = v;
+        else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
+        else el.setAttribute(k, v === true ? "" : String(v));
+      }
+    }
+    for (const kid of kids.flat(Infinity)) {
+      if (kid === null || kid === undefined || kid === false || kid === "") continue;
+      el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  }
+  function cols(widths) {
+    return h("colgroup", null, widths.map((w) => { const c = h("col"); c.style.width = w; return c; }));
+  }
+  const fmtInt = (n) => (typeof n === "number" ? n.toLocaleString("en-US") : n);
+  const levelWords = { ok: "Healthy", warn: "Needs a look", fail: "Failed" };
+  function dot(level) {
+    return h("span", { class: "dot " + (level || ""), role: "img", "aria-label": levelWords[level] || "Unknown",
+      title: levelWords[level] || "Unknown" });
+  }
+  function daysWords(d) {
+    if (d === null || d === undefined) return "";
+    if (d <= 0) return "today";
+    if (d === 1) return "tomorrow";
+    return "in " + d + " days";
+  }
+
+  // ------------------------------------------------------------------ routing
+  function parseHash() {
+    const raw = decodeURIComponent((location.hash || "#home").slice(1));
+    const [path, query] = raw.split("?");
+    const parts = path.split("/");
+    const params = new URLSearchParams(query || "");
+    return { screen: parts[0] || "home", arg: parts.slice(1).join("/"), params };
+  }
+
+  const SCREENS = {
+    home: { url: () => "/api/home", draw: drawHome, nav: "home" },
+    board: { url: () => "/api/board", draw: drawBoard, nav: "board" },
+    game: { url: (r) => "/api/game?id=" + encodeURIComponent(r.arg), draw: drawGame, nav: "board" },
+    tests: { url: () => "/api/tests", draw: drawTests, nav: "tests" },
+    jobs: { url: (r) => (r.arg === "records" ? "/api/run-records" : "/api/jobs"),
+      draw: (d, r) => (r.arg === "records" ? drawRecords(d) : drawJobs(d)), nav: "jobs" },
+    pull: { url: () => "/api/pull", draw: drawPull, nav: "pull" },
+    research: { url: () => "/api/research", draw: drawResearch, nav: "research" },
+  };
+
+  async function load(quiet) {
+    const r = parseHash();
+    const screen = SCREENS[r.screen] || SCREENS.home;
+    if (r.screen === "board") {
+      state.board.sport = ["nfl", "cfb"].includes(r.params.get("sport")) ? r.params.get("sport") : "all";
+      state.board.signals = r.params.get("signals") === "1";
+    }
+    for (const a of document.querySelectorAll(".tabs a")) {
+      if (a.dataset.screen === screen.nav) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    }
+    const seq = ++state.seq;
+    if (!quiet) {
+      if (r.screen === "tests") main.replaceChildren(h("p", { class: "muted" }, "Running both scorers as previews; this takes a few seconds the first time."));
+    }
+    let data;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 150000);
+      const res = await fetch(screen.url(r), { cache: "no-store", signal: ctrl.signal });
+      clearTimeout(timer);
+      data = await res.json();
+    } catch (e) {
+      if (seq !== state.seq) return;
+      const when = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      stampEl.replaceChildren(h("span", null, "The dashboard server did not answer at " + when + ". "),
+        h("strong", null, state.last ? "Showing the last read." : "Is it running?"));
+      if (!state.last) main.replaceChildren(h("p", { class: "muted" }, "The dashboard server isn't answering. If it was just installed or the Mac just woke, give it a minute."));
+      return;
+    }
+    if (seq !== state.seq) return;
+    state.last = data;
+    const y = window.scrollY;
+    drawChrome(data);
+    const out = [];
+    if (data.error) out.push(h("div", { class: "notes" }, h("p", null, data.error)));
+    if (data.notes && data.notes.length) {
+      out.push(h("div", { class: "notes", role: "note" }, data.notes.map((n) => h("p", null, n))));
+    }
+    let body = null;
+    if (!data.error || data.header) {
+      try {
+        body = screen.draw(data, r);
+      } catch (e) {
+        body = h("p", { class: "muted" }, "Part of this screen could not be drawn. The data it read is fine; this is a problem in the page itself.");
+      }
+    }
+    main.replaceChildren(...out, body || "");
+    if (quiet) window.scrollTo(0, y);
+    else window.scrollTo(0, 0);
+  }
+
+  function drawChrome(data) {
+    const hd = data.header;
+    if (hd) {
+      stampEl.replaceChildren(h("strong", null, hd.last_written), " · " + hd.read_at);
+      const level = hd.health;
+      if (level === "fail" || level === "warn") {
+        bannerEl.hidden = false;
+        bannerEl.className = "banner " + level;
+        bannerEl.replaceChildren(h("div", { role: "alert" },
+          h("strong", null, level === "fail" ? "Something needs attention" : "Worth a look"),
+          h("ul", null, (hd.problems || []).map((p) => h("li", null, p)))));
+      } else {
+        bannerEl.hidden = true;
+        bannerEl.replaceChildren();
+      }
+    }
+  }
+
+  function panel(title, link, ...body) {
+    return h("section", { class: "panel" },
+      h("header", null, h("h2", null, title), link || ""),
+      h("div", { class: "body" }, ...body));
+  }
+
+  // ------------------------------------------------------------------ home
+  function tile(label, value, sub) {
+    return h("div", { class: "tile" }, h("div", { class: "label" }, label),
+      h("div", { class: "value" }, value), h("div", { class: "sub" }, sub || " "));
+  }
+
+  function drawHome(d) {
+    const n = d.numbers || {};
+    const tiles = h("div", { class: "tiles" },
+      tile("Signals today", fmtInt(n.signals_live), "Games not yet kicked off whose latest row signals"),
+      tile("Games on the board", fmtInt(n.games_on_board), "Not yet kicked off, in the latest runs"),
+      tile("Next run", n.next_run, n.next_run_day ? "Both alert jobs, " + n.next_run_day : ""),
+      tile("Credits left", n.credits === null || n.credits === undefined ? "Not known" : fmtInt(n.credits),
+        n.credits_read ? "As the Odds API reported it at " + n.credits_read : "No reading yet"));
+
+    const tests = panel("Forward tests", h("a", { href: "#tests" }, "Details"),
+      h("ul", { class: "rows" }, (d.tests || []).map((t) => h("li", null,
+        h("div", { class: "row-top" }, h("span", { class: "name" }, t.name), h("span", null, t.progress)),
+        h("div", { class: "faint" }, t.decisions && t.decisions.length ? t.decisions[0].text + " " : "", t.money_gate)))));
+
+    const jobs = panel("Scheduled jobs", h("a", { href: "#jobs" }, "Records"),
+      h("ul", { class: "rows" }, (d.jobs || []).map((j) => h("li", null,
+        h("div", { class: "row-top" }, h("span", { class: "status" }, dot(j.level), h("span", { class: "name" }, j.name)),
+          h("span", null, (j.last_run_label || "Last run") + " " + j.last_run)),
+        h("div", { class: "faint" }, j.result)))));
+
+    const waiting = panel("Waiting on you", null,
+      (d.waiting || []).length ? h("ul", { class: "rows" }, d.waiting.map((w) => {
+        const det = h("details", { class: "item", open: state.openWaiting.has(w.n) },
+          h("summary", null, h("span", { class: "n" }, w.n + "."), h("span", { class: "t" }, w.title),
+            w.due ? h("span", { class: "due status" }, dot(w.due_level), w.due) : ""),
+          h("p", null, w.first_sentence));
+        det.addEventListener("toggle", () => { if (det.open) state.openWaiting.add(w.n); else state.openWaiting.delete(w.n); });
+        return h("li", null, det);
+      })) : h("p", { class: "muted" }, "Nothing is listed under “Waiting on you”."));
+
+    const ev = panel("Evidence", h("a", { href: "#research" }, "All " + (d.evidence_total || 0) + " results"),
+      h("ul", { class: "rows" }, (d.evidence || []).map(evidenceRow)),
+      variantsLine(d.variants, d.bar));
+
+    return h("div", null, tiles, h("div", { class: "grid2" }, tests, jobs, waiting, ev));
+  }
+
+  function variantsLine(n, bar) {
+    if (!n) return h("p", { class: "bar-note" }, "The running count of variants could not be read from STATUS.md.");
+    return h("p", { class: "bar-note" }, fmtInt(n) + " variants tried so far, so a new result must reach p < " + bar +
+      " (0.05 / " + fmtInt(n) + ") to clear the multiple-testing bar.");
+  }
+
+  function evidenceRow(e) {
+    const figs = [];
+    if (e.record) figs.push(h("span", null, "Record " + e.record));
+    if (e.win_rate) figs.push(h("span", null, e.win_rate));
+    figs.push(h("span", null, e.n_words));
+    if (e.p_value) figs.push(h("span", null, e.p_value));
+    return h("li", null,
+      h("div", { class: "name" }, e.title, e.kind ? h("span", { class: "kind" }, e.kind) : ""),
+      h("div", null, e.result),
+      h("div", { class: "ev-figs" }, figs),
+      h("div", { class: "ev-bar" + (e.clears_bar ? " clears" : "") }, e.bar_words + (e.bar ? " in force when measured (" + e.bar + ")." : ".")));
+  }
+
+  // ------------------------------------------------------------------ board
+  function drawBoard(d) {
+    const games = (d.games || []).filter((g) => (state.board.sport === "all" || g.sport_key === state.board.sport)
+      && (!state.board.signals || g.signal));
+    function setFilter(sport, signals) {
+      const p = new URLSearchParams();
+      if (sport !== "all") p.set("sport", sport);
+      if (signals) p.set("signals", "1");
+      const q = p.toString();
+      location.hash = "board" + (q ? "?" + q : "");
+    }
+    const seg = h("div", { class: "seg", role: "group", "aria-label": "Sport" },
+      [["all", "All"], ["nfl", "NFL"], ["cfb", "College football"]].map(([k, label]) =>
+        h("button", { type: "button", "aria-pressed": String(state.board.sport === k),
+          onclick: () => setFilter(k, state.board.signals) }, label)));
+    const box = h("input", { type: "checkbox", checked: state.board.signals,
+      onchange: (ev) => setFilter(state.board.sport, ev.target.checked) });
+    const runs = d.runs || {};
+    const summary = h("span", { class: "muted" }, fmtInt((d.games || []).length) + " games not yet kicked off, " +
+      fmtInt(d.signals || 0) + " signalling. Latest runs: " +
+      Object.values(runs).map((r) => r.sport + " " + r.latest_run).join(", ") + ".");
+    const filters = h("div", { class: "filters" }, seg, h("label", { class: "check" }, box, "Signals only"), summary);
+
+    if (!games.length) {
+      return h("div", null, h("h1", null, "Board"), filters,
+        h("p", { class: "muted" }, state.board.signals ? "No game on the board is signalling." : "No game in the latest runs is still to kick off."));
+    }
+    const table = h("table", null,
+      cols(["14%", "18%", "10%", "14%", "10%", "20%", "14%"]),
+      h("thead", null, h("tr", null, ["Kickoff (ET)", "Matchup", "Forecast", "Total and under", "Model", "Rules", "Best number"].map((t) => h("th", { scope: "col" }, t)))),
+      h("tbody", null, games.map((g) => {
+        const tr = h("tr", { class: "clickable" + (g.signal ? " signal" : "") },
+          h("td", { class: "stack" }, h("div", null, g.kickoff), h("div", { class: "faint" }, daysWords(g.days))),
+          h("td", null, h("span", { class: "tag" }, g.sport), h("a", { href: "#game/" + encodeURIComponent(g.game_id) }, g.matchup)),
+          h("td", null, g.forecast),
+          h("td", { class: "stack" }, g.total ? h("div", null, g.total + (g.under ? ", under " + g.under : "")) : h("div", { class: "faint" }, "No price"),
+            g.source ? h("div", { class: "faint" }, g.source) : ""),
+          h("td", { class: "stack" }, g.model_chance ? h("div", null, g.model_chance + " under") : "",
+            g.ev ? h("div", { class: g.model_chance ? "faint" : "" }, "EV " + g.ev) : "",
+            !g.model_chance && !g.ev ? h("div", { class: "faint" }, "Not logged") : ""),
+          h("td", { class: "stack small" }, g.rules.map((c) => h("div", { class: c.signal ? "sig" : "" }, c.rule + ": " + c.words))),
+          h("td", null, g.best || h("span", { class: "faint" }, "Not logged")));
+        tr.addEventListener("click", (ev) => { if (ev.target.tagName !== "A") location.hash = "game/" + encodeURIComponent(g.game_id); });
+        return tr;
+      })));
+    return h("div", null, h("h1", null, "Board"), filters, h("div", { class: "tablewrap" }, table),
+      h("p", { class: "faint" }, "Signals are listed first. A signal is a paper entry for the forward test, not a proven bet. Kickoffs are Eastern time, as the ledgers give them."));
+  }
+
+  // ------------------------------------------------------------------ game
+  function niceStep(span) {
+    const raw = span / 3;
+    const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    for (const m of [1, 2, 2.5, 5, 10]) if (raw <= m * p) return m * p;
+    return 10 * p;
+  }
+
+  function drawChart(host, title, unit, points, digits) {
+    const wrap = h("div", { class: "panel chart" }, h("header", null, h("h2", null, title)));
+    const body = h("div", { class: "body" });
+    wrap.append(body);
+    host.append(wrap);
+    if (!points.length) {
+      body.append(h("p", { class: "muted" }, "Nothing logged for this yet."));
+      return;
+    }
+    const W = Math.max(280, body.clientWidth || 520), H = 190;
+    const m = { l: 40, r: 60, t: 12, b: 26 };
+    const ts = points.map((p) => Date.parse(p[0]));
+    const vs = points.map((p) => p[1]);
+    let lo = Math.min(...vs), hi = Math.max(...vs);
+    if (hi - lo < 1) { lo -= 1; hi += 1; }
+    const step = niceStep(hi - lo);
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+    const t0 = Math.min(...ts), t1 = Math.max(...ts);
+    const x = (t) => (t1 === t0 ? m.l + (W - m.l - m.r) / 2 : m.l + ((t - t0) / (t1 - t0)) * (W - m.l - m.r));
+    const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+    body.insertAdjacentHTML("beforeend", "<svg></svg>");
+    const svg = body.querySelector("svg");
+    const NS = svg.namespaceURI;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", title + ": " + points.length + " readings, latest " + vs[vs.length - 1].toFixed(digits) + unit);
+    const el = (tag, attrs, text) => {
+      const e = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+      if (text !== undefined) e.textContent = text;
+      svg.append(e);
+      return e;
+    };
+    for (let v = lo; v <= hi + 1e-9; v += step) {
+      el("line", { class: "axis", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) });
+      el("text", { class: "tick", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, (Math.round(v * 10) / 10).toString());
+    }
+    el("text", { class: "tick", x: m.l, y: H - 6, "text-anchor": "start" }, points[0][2]);
+    if (points.length > 1) el("text", { class: "tick", x: W - m.r, y: H - 6, "text-anchor": "end" }, points[points.length - 1][2]);
+    if (points.length > 1) {
+      el("path", { class: "series", d: points.map((p, i) => (i ? "L" : "M") + x(ts[i]).toFixed(1) + "," + y(p[1]).toFixed(1)).join(" ") });
+    }
+    const lx = x(ts[ts.length - 1]), ly = y(vs[vs.length - 1]);
+    el("circle", { class: "end", cx: lx, cy: ly, r: 4 });
+    el("text", { class: "endlabel", x: lx + 8, y: ly + 4 }, vs[vs.length - 1].toFixed(digits) + unit);
+    const cross = el("line", { class: "cross", x1: 0, x2: 0, y1: m.t, y2: H - m.b, visibility: "hidden" });
+    const hot = el("circle", { class: "hot", cx: 0, cy: 0, r: 4, visibility: "hidden" });
+    const tip = h("div", { class: "tip", hidden: true });
+    body.style.position = "relative";
+    body.append(tip);
+    const hit = el("rect", { x: m.l - 10, y: 0, width: W - m.l - m.r + 20, height: H, fill: "transparent" });
+    function show(evt) {
+      const box = svg.getBoundingClientRect();
+      const px = ((evt.clientX - box.left) / box.width) * W;
+      let best = 0;
+      for (let i = 1; i < ts.length; i++) if (Math.abs(x(ts[i]) - px) < Math.abs(x(ts[best]) - px)) best = i;
+      const cx = x(ts[best]), cy = y(vs[best]);
+      cross.setAttribute("x1", cx); cross.setAttribute("x2", cx); cross.setAttribute("visibility", "visible");
+      hot.setAttribute("cx", cx); hot.setAttribute("cy", cy); hot.setAttribute("visibility", "visible");
+      tip.replaceChildren(h("b", null, vs[best].toFixed(digits) + unit), points[best][2]);
+      tip.hidden = false;
+      const left = (cx / W) * box.width;
+      tip.style.left = Math.min(Math.max(0, left - 60), box.width - 150) + "px";
+      tip.style.top = Math.max(0, (cy / H) * box.height - 52) + "px";
+    }
+    function hide() { cross.setAttribute("visibility", "hidden"); hot.setAttribute("visibility", "hidden"); tip.hidden = true; }
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerleave", hide);
+  }
+
+  function drawGame(d) {
+    if (!d.game) return h("div", null, h("a", { class: "back", href: "#board" }, "← Back to the board"));
+    const g = d.game;
+    const out = h("div", null, h("a", { class: "back", href: "#board" }, "← Back to the board"),
+      h("h1", null, g.matchup),
+      h("p", { class: "lede" }, [g.sport, g.kickoff, g.venue].filter(Boolean).join(" · ") + " · game " + g.game_id));
+    const charts = h("div", { class: "charts" });
+    out.append(charts);
+    main.replaceChildren(out);                        // so the charts can measure their width
+    drawChart(charts, "Total over time", "", d.charts.total, 1);
+    drawChart(charts, "Forecast wind over time", " mph", d.charts.wind, 0);
+
+    const closes = d.closes || [];
+    out.append(panel("Closing lines captured", null, closes.length ? h("table", null,
+      h("thead", null, h("tr", null, ["Captured", "Book", "Total", "Under", "Over"].map((t) => h("th", null, t)))),
+      h("tbody", null, closes.map((c) => h("tr", null, h("td", null, c.captured), h("td", null, c.book),
+        h("td", null, c.total), h("td", null, c.under), h("td", null, c.over)))))
+      : h("p", { class: "muted" }, "No closing line has been captured for this game yet. Close capture records it 2 to 20 minutes before kickoff.")));
+
+    const a = d.alerts || {};
+    out.append(panel("What was alerted", null,
+      a.note ? h("p", { class: "muted" }, a.note) : "",
+      (a.sent || []).length ? h("ul", { class: "rows" }, a.sent.map((s) => h("li", null, h("div", { class: "name" }, s.words),
+        s.first_seen ? h("div", { class: "faint" }, s.first_seen) : ""))) : h("p", { class: "muted" }, "No alert has been sent for this game."),
+      (a.log_lines || []).length ? h("div", null, h("h3", null, "The alert log’s lines for this game"),
+        h("p", { class: "faint" }, "The alert log doesn’t stamp each alert with a time. Where the ledger shows when an alert’s condition was first logged, that time is shown above."),
+        h("pre", null, a.log_lines.join("\n"))) : ""));
+
+    if ((d.fills || []).length) {
+      out.append(panel("Paper fills logged", null, h("table", null,
+        h("thead", null, h("tr", null, ["When", "Rule", "Total", "Price", "Book"].map((t) => h("th", null, t)))),
+        h("tbody", null, d.fills.map((f) => h("tr", null, h("td", null, f.when), h("td", null, f.rule), h("td", null, f.line),
+          h("td", null, f.price), h("td", null, f.book)))))));
+    }
+
+    const rows = d.rows || [];
+    out.append(panel("Every logged row, oldest first", null, h("table", null,
+      cols(["16%", "7%", "11%", "14%", "11%", "25%", "16%"]),
+      h("thead", null, h("tr", null, ["Logged", "Days out", "Forecast", "Total and under", "Model", "Rules", "Best number"].map((t) => h("th", null, t)))),
+      h("tbody", null, rows.map((r) => h("tr", { class: r.signal ? "signal" : "" },
+        h("td", null, r.logged), h("td", { class: "num" }, r.lead_days),
+        h("td", null, r.forecast),
+        h("td", { class: "stack" }, h("div", null, r.total ? r.total + (r.under ? ", under " + r.under : "") : "No price"),
+          r.source ? h("div", { class: "faint" }, r.source) : ""),
+        h("td", { class: "stack" }, r.model_chance ? h("div", null, r.model_chance + " under") : "", r.ev ? h("div", { class: "faint" }, "EV " + r.ev) : ""),
+        h("td", { class: "stack small" }, r.rules.map((c) => h("div", { class: c.signal ? "sig" : "" }, c.rule + ": " + c.words))),
+        h("td", null, r.best))))),
+      h("p", { class: "faint" }, fmtInt(rows.length) + " rows. Each row is one scheduled or manual run.")));
+    return out;
+  }
+
+  // ------------------------------------------------------------------ forward tests
+  function drawTests(d) {
+    const out = h("div", null, h("h1", null, "Forward tests"),
+      h("p", { class: "lede" }, "Paper only. The counts below come from the ledgers as logged; the scorers decide what counts. A scorer’s interim read decides nothing, and each decision is written down once, at its horizon."));
+    for (const grp of d.groups || []) {
+      const sec = h("section", { class: "panel" }, h("header", null, h("h2", null, grp.sport)));
+      for (const t of grp.tests) {
+        const c = t.counts || {};
+        const sigBits = (c.signals_by_status || []).map((s) => s.words + " " + fmtInt(s.games)).join(", ");
+        sec.append(h("div", { class: "test" },
+          h("h3", null, t.name),
+          t.rule ? h("p", null, t.rule) : "",
+          h("dl", { class: "facts" },
+            h("dt", null, "Starts"), h("dd", null, t.starts || "Not written"),
+            h("dt", null, "Decided"), h("dd", null, t.decided || "Not written"),
+            h("dt", null, "So far"), h("dd", null, t.progress_detail || t.progress),
+            h("dt", null, "Money gate"), h("dd", null, t.money_gate_value)),
+          (t.decisions || []).map((x) => h("p", { class: "name" }, x.text)),
+          h("div", { class: "counts" },
+            h("span", null, "Games logged with a kickoff since the start: " + fmtInt(c.games_logged ?? 0)),
+            h("span", null, "Games that signalled: " + fmtInt(c.signals ?? 0) + (sigBits ? " (" + sigBits + ")" : ""))),
+          (c.by_latest_status || []).length ? h("div", { class: "counts" }, h("span", null, "Latest status of each game: " +
+            c.by_latest_status.map((s) => s.words + " " + fmtInt(s.games)).join(", ") + ".")) : "",
+          t.note ? h("p", { class: "faint" }, t.note) : ""));
+      }
+      const s = grp.scorer || {};
+      sec.append(h("div", { class: "scorer" },
+        h("h3", null, "The scorer’s read, as printed"),
+        s.words ? h("p", { class: "muted" }, s.words) : "",
+        s.ran ? h("p", { class: "faint" }, "Run as a preview (with --now) at " + s.ran + ". A preview never records a decision.") : "",
+        s.text ? h("pre", null, s.text.replace(/\s+$/, "")) : (s.status === "ok" ? h("p", { class: "muted" }, "It printed nothing.") : ""),
+        s.error ? h("details", null, h("summary", { class: "faint" }, "What it printed as an error"), h("pre", null, s.error)) : ""));
+      out.append(sec);
+    }
+    out.append(variantsLine(d.variants, d.bar));
+    return out;
+  }
+
+  // ------------------------------------------------------------------ jobs and records
+  function drawJobs(d) {
+    const out = h("div", null, h("h1", null, "Jobs and records"),
+      h("p", { class: "lede" }, "The four scheduled jobs, the alert runs’ own records, the credit balance and the closing lines captured. ",
+        h("a", { href: "#jobs/records" }, "How to read these records (ops/RUN_RECORDS.md)"), "."));
+    const jobs = d.jobs || [];
+    out.append(panel("Scheduled jobs", null, d.launchctl_note ? h("p", { class: "muted" }, d.launchctl_note) : "",
+      h("table", null,
+        cols(["20%", "22%", "16%", "14%", "28%"]),
+        h("thead", null, h("tr", null, ["Job", "Schedule", "Last run", "Last exit", "Result"].map((t) => h("th", null, t)))),
+        h("tbody", null, jobs.map((j) => h("tr", null,
+          h("td", null, h("span", { class: "status" }, dot(j.level), h("span", { class: "name" }, j.name)),
+            h("div", { class: "faint" }, j.running ? "Running now" : j.loaded === false ? "Not loaded" : "")),
+          h("td", null, j.schedule),
+          h("td", { class: "stack" }, h("div", null, j.last_run), j.last_run_note ? h("div", { class: "faint" }, j.last_run_note) : ""),
+          h("td", null, j.exit_words),
+          h("td", { class: "stack" }, h("div", null, j.result), j.log_line ? h("div", { class: "faint" }, "Its log’s last line: " + j.log_line) : "")))))));
+
+    const c = d.credits;
+    out.append(panel("Odds API credits", null, c ? h("div", null, h("p", { class: "big-sentence" }, c.text + "."),
+      c.plan_words ? h("p", { class: "muted" }, c.plan_words + ".") : "", c.stale ? h("p", { class: "muted" }, c.stale) : "")
+      : h("p", { class: "muted" }, d.credits_note || "No credit reading yet.")));
+
+    for (const [project, r] of Object.entries(d.runs || {})) {
+      out.append(panel(r.sport + " alert runs", null,
+        r.note ? h("p", { class: "muted" }, r.note) : "",
+        r.rows.length ? h("table", null,
+          cols(["19%", "8%", "8%", "8%", "8%", "10%", "39%"]),
+          h("thead", null, h("tr", null, [["When", ""], ["Result", ""], ["Games", "num"], ["Signals", "num"], ["Priced", "num"],
+            ["At the rule’s book", "num"], ["Note", ""]].map(([t, cl]) => h("th", { class: cl || null }, t)))),
+          h("tbody", null, r.rows.map((x) => h("tr", null, h("td", null, x.when),
+            h("td", null, x.failed ? h("span", { class: "status" }, dot("fail"), "Failed") : x.result),
+            h("td", { class: "num" }, x.games), h("td", { class: "num" }, x.signals), h("td", { class: "num" }, x.priced),
+            h("td", { class: "num" }, x.rule_priced === "" ? "not recorded" : x.rule_priced),
+            h("td", { class: "small" }, [x.error, x.unmapped ? "Unmatched team names: " + x.unmapped : ""].filter(Boolean).join(" · ")))))) : "",
+        h("p", { class: "faint" }, "Showing the last " + fmtInt(r.rows.length) + " of " + fmtInt(r.total) + " runs, newest first. If “at the rule’s book” is 0, the odds service was down or out of credits.")));
+    }
+
+    const closes = d.closes || [];
+    out.append(panel("Closing lines captured in the last 7 days", null, closes.length ? h("table", null,
+      h("thead", null, h("tr", null, ["Game", "Kickoff (ET)", "Captured", "Books", "Closing line"].map((t) => h("th", null, t)))),
+      h("tbody", null, closes.map((x) => h("tr", null, h("td", null, h("span", { class: "tag" }, x.sport), x.matchup),
+        h("td", null, x.kickoff), h("td", null, x.captured), h("td", { class: "num" }, x.books), h("td", null, x.line)))))
+      : h("p", { class: "muted" }, "No closing line was captured in the last 7 days.")));
+    return out;
+  }
+
+  function drawRecords(d) {
+    return h("div", null, h("a", { class: "back", href: "#jobs" }, "← Back to jobs and records"),
+      h("h1", null, "How to read the run records"),
+      h("p", { class: "faint" }, "ops/RUN_RECORDS.md, shown as plain text."),
+      d.text ? h("pre", { class: "plain" }, d.text) : h("p", { class: "muted" }, "The file could not be read."));
+  }
+
+  // ------------------------------------------------------------------ Thursday's pull
+  function drawPull(d) {
+    const out = h("div", null, h("h1", null, "Thursday’s pull"));
+    if (!d.started) {
+      out.append(h("p", { class: "big-sentence" }, d.text));
+      out.append(h("p", { class: "muted" }, "Once it starts, this screen shows each pull’s requests, the credits billed, the upper bound and the lowest balance seen, from the pull’s own request log."));
+      return out;
+    }
+    const t = d.total || {};
+    const row = (p, total) => h("tr", null, h("td", { class: total ? "name" : "" }, total ? "Total" : p.name),
+      h("td", { class: "num" }, fmtInt(p.requests)), h("td", { class: "num" }, fmtInt(p.billed)),
+      h("td", { class: "num" }, fmtInt(p.upper)), h("td", { class: "num" }, p.lowest === null || p.lowest === undefined ? "not read" : fmtInt(p.lowest)));
+    out.append(h("div", { class: "tablewrap" }, h("table", null,
+      h("thead", null, h("tr", null, [["Pull", ""], ["Requests", "num"], ["Credits billed", "num"], ["Upper bound", "num"], ["Lowest balance seen", "num"]]
+        .map(([x, cl]) => h("th", { class: cl || null }, x)))),
+      h("tbody", null, (d.pulls || []).map((p) => row(p, false)), row(t, true)))));
+    if (t.unreadable) {
+      out.append(h("p", { class: "muted" }, fmtInt(t.unreadable) + " request" + (t.unreadable === 1 ? "" : "s") +
+        " came back without a readable bill; each is counted at its upper bound."));
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------------ research
+  function drawResearch(d) {
+    return h("div", null, h("h1", null, "Research"),
+      h("p", { class: "lede" }, "Every result written in the repo’s files, with its sample size and whether it clears the multiple-testing bar in force when it was measured. A result that clears the bar is a candidate for a forward test, not a proven bet."),
+      variantsLine(d.variants, d.bar),
+      (d.entries || []).length ? h("section", { class: "panel" }, h("div", { class: "body" }, h("ul", { class: "rows" }, d.entries.map((e) => {
+        const li = evidenceRow(e);
+        li.append(h("div", { class: "faint" }, [e.sport, e.date, "Source: " + e.source].filter(Boolean).join(" · ")));
+        if (e.note) li.append(h("div", { class: "faint" }, e.note));
+        return li;
+      })))) : h("p", { class: "muted" }, "The evidence list is empty or could not be read."));
+  }
+
+  // ------------------------------------------------------------------ start
+  window.addEventListener("hashchange", () => load(false));
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    if (parseHash().screen !== "game") return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => load(true), 250);
+  });
+  setInterval(() => { if (!document.hidden) load(true); }, REFRESH_MS);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(true); });
+  load(false);
+})();

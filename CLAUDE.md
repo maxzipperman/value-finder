@@ -14,6 +14,7 @@ Paper-only sports-betting research: find prices the market gets wrong, and prove
 | `cfb-weather/` | College football version of nfl-weather | `.venv/bin/python -m pytest -q tests` |
 | `strategy-research/` | 109-variant strategy screen and ranked ideas | `nfl-weather/.venv/bin/python strategy-research/screen.py` from the repo root |
 | `thesis-research/`, `thesis/` | Literature review of the 2014 thesis, and the thesis as text | None |
+| `dashboard/` | Local, read-only dashboard on 127.0.0.1:8787 (standard-library Python; `ops/install_dashboard.sh` runs it at login). Its evidence list is `dashboard/content/evidence.json`. | `uv run --project dashboard pytest -q` from the repo root |
 
 Each project has its own virtual environment. Don't share environments or install one project's dependencies into another's.
 

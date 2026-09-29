@@ -1,0 +1,46 @@
+[
+  {
+    "id": "nfl_rule_b",
+    "name": "NFL wind under (Rule B)",
+    "rule": "Bet the under when the forecast wind at an outdoor stadium is 15 mph or more, 1 to 3 days before kickoff, at Pinnacle's price of −115 or better with positive expected value.",
+    "starts_utc": "2026-10-08T00:00:00Z",
+    "starts_text": "Week 5, Thu Oct 8, 2026",
+    "decided_text": "After Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on both seasons pooled. Kept only if average CLV is above zero with a 95% interval above zero.",
+    "money_gate": "not chosen",
+    "note": "A signal at the backup price (the consensus line) is logged and reported separately; it is not part of the decision.",
+    "source": "nfl-weather/STRATEGY.md"
+  },
+  {
+    "id": "nfl_lean",
+    "name": "NFL model lean",
+    "rule": "Log the model's lean when it gives the under a 55% chance or more (or 45% or less, for the over), at the earliest run at least 24 hours before kickoff that has a posted total. Watch only: log, don't bet.",
+    "starts_utc": "2026-10-08T00:00:00Z",
+    "starts_text": "Week 5, Thu Oct 8, 2026",
+    "decided_text": "Like Rule B: after Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on both seasons pooled.",
+    "money_gate": "not chosen",
+    "note": "",
+    "source": "nfl-weather/STRATEGY.md"
+  },
+  {
+    "id": "cfb_rule_b",
+    "name": "College football wind under (Rule B)",
+    "rule": "Bet the under when the forecast wind at an outdoor FBS venue is 15 mph or more, 1 to 3 days before kickoff, at −115 or better with positive expected value.",
+    "starts_utc": "2026-10-01T00:00:00Z",
+    "starts_text": "Thu Oct 1, 2026",
+    "decided_text": "After 40 signals or the end of the regular season (Dec 12, 2026), whichever is later. Kept only if average CLV is above zero with a 95% interval above zero.",
+    "money_gate": "not chosen",
+    "note": "",
+    "source": "cfb-weather/STRATEGY.md"
+  },
+  {
+    "id": "cfb_rule_ht",
+    "name": "College football high-total under (Rule HT)",
+    "rule": "Bet the under when the posted total is at least 62.6 (last season's average closing total plus 10), at −115 or better, at the last quote before kickoff.",
+    "starts_utc": "2026-10-07T00:00:00Z",
+    "starts_text": "Week 6, Oct 7, 2026 (00:00 UTC)",
+    "decided_text": "Once, after the 2027 season's title game, on 2026 Week 6 onward and 2027 pooled. Promoted only if the win rate beats the break-even of the prices taken (one-sided p < 0.05) and ROI is above zero. About 105 bets are expected.",
+    "money_gate": "not chosen",
+    "note": "Graded at the last quote before kickoff, so an early signal can still fall away. Stays on paper through 2027.",
+    "source": "cfb-weather/STRATEGY.md"
+  }
+]
