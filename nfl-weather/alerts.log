@@ -10,3 +10,13 @@ ALERT  WATCH model under: LA @ PHI 10-04 13:00 ET
   forecasts: 14 stadium-days
 ALERT  WATCH edge +5 pts: PIT @ CLE 10-01 20:15 ET
        10 mph, 76°F; total 38.0 (pinnacle); forecast 3d out. Paper only. Timing: bet now; totals drift down before kickoff.
+  forecasts: 13 stadium-days
+2026-09-29 14:30Z checked 12 outdoor games, nothing new
+  forecasts: 13 stadium-days
+2026-09-29 18:30Z checked 12 outdoor games, nothing new
+  forecasts: 13 stadium-days
+ALERT  WATCH edge +5 pts: NE @ BUF 10-04 13:00 ET
+       10 mph, 68°F; total 48.5 (pinnacle); forecast 5d out. Paper only. Timing: bet now; totals drift down before kickoff.
+  forecasts: 13 stadium-days
+ALERT  WATCH model under: DET @ CAR 10-04 20:20 ET
+       6 mph, 64°F, rain; total 50.5 (pinnacle); forecast 5d out; model P(under) 60% vs market 50%. Paper only (PREREGISTRATION.md). Timing: bet now; totals drift down before kickoff.
