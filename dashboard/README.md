@@ -91,11 +91,12 @@ which results in the evidence list, if any, have cleared the multiple-testing ba
   are prepared by `tools/build_charts.py`, run by hand from the repo root with a weather project's Python (it uses
   pandas). It reads only committed outputs (a source that isn't tracked, or differs from its last commit, stops it)
   and writes one small JSON file per chart to `content/charts/` and nowhere else. Each file names its source files,
-  their git blob hashes and the date each last changed, the write-up it illustrates, and its words: a title that says
-  what was found, one sentence on what the chart shows and one on what it doesn't, and the sample size. `--check`
-  compares what it would write with the committed files and exits 1 on any difference. When research that a chart
-  draws on merges, rerun the tool and commit the files; the tests also fail until then (each file's blob hashes are
-  checked against its sources, and every number is recomputed from them).
+  their git blob hashes, the commit and date each last changed in, the write-up it illustrates, and its words: a title
+  that says what was found, one sentence on what the chart shows and one on what it doesn't, and the sample size.
+  Without pandas it says so in one sentence and exits 1. `--check` compares what it would write with the committed
+  files and exits 1 on any difference. When research that a chart draws on merges, rerun the tool and commit the
+  files; the tests also fail until then (each file's blob hashes are checked against its sources, and every number is
+  recomputed from them).
 - **Drawn as the page loads.** Whether each result clears the project's multiple-testing bar is worked out on every
   load from STATUS.md's "Variants" bullet, as on the other screens. One chart is drawn by the server itself, because
   both of its inputs change when research merges: every entry of `content/evidence.json` that has a p-value, placed
@@ -107,10 +108,16 @@ which results in the evidence list, if any, have cleared the multiple-testing ba
   numbers that opens beneath it.
 - **Missing or damaged files.** A chart file that is missing, empty, cut off, too large or not in the form the tool
   writes is shown as one plain sentence in its place; the rest of the screen is drawn.
-- **Links.** Each source file and write-up is a link to its page on GitHub (the private repo; it opens for the owner,
-  signed in). It is only a link: the page loads nothing from it, or from anywhere but this Mac.
-- **Not charted.** College football's high-total rule season by season: no committed table holds its record by
-  season (only pooled records, which are on the Research screen). The screen says so in that chart's place.
+- **Links.** Each source file is a link to its page on GitHub at the commit the chart was built from, so it shows the
+  file exactly as the chart read it; each write-up is a link to its page on main. (The repo is private: a link opens
+  for the owner, signed in, in his browser, when he clicks it.) The page itself loads nothing from GitHub, or from
+  anywhere but this Mac. The chart drawn as the page loads names its two sources, read from this Mac, without a link.
+- **One rounding.** A table and the hover read-out print a number the same way: half away from zero on the number as
+  the chart file holds it (`fixed` in the tool and in `app.js`), so 2.05 is 2.1 in both.
+- **Not charted.** College football's high-total rule season by season: strategy-research/README.md gives its win
+  rate by season without counts, for a superseded version of the rule, and no committed table holds the registered
+  rule's record by season (only pooled records, which are on the Research screen). The screen says so in that chart's
+  place.
 
 ## What it reads, and the only programs it starts
 

@@ -851,10 +851,18 @@
     if (p < 1e-6) return "below 0.000001";
     return p < 0.1 ? String(Number(p.toPrecision(3))) : p.toFixed(2);
   }
+  // One rounding for every number a chart prints, the same as its table's (build_charts.py, fixed): half away from
+  // zero on the number as the chart file writes it, so 2.05 is 2.1 in both (toFixed gives 2.0, from 2.05's binary
+  // value). `a` is not negative; the caller adds the sign.
+  function fixed(a, d) {
+    const s = String(a);
+    if (/e/i.test(s)) return a.toFixed(d);
+    return Number(Math.round(Number(s + "e" + d)) + "e-" + d).toFixed(d);
+  }
   function fmtV(v, ax, signed) {
     if (v === null || v === undefined || Number.isNaN(v)) return "—";
     if (ax.kind === "p") return pText(v);
-    const s = Math.abs(v).toFixed(ax.digits === undefined ? 1 : ax.digits);
+    const s = fixed(Math.abs(v), ax.digits === undefined ? 1 : ax.digits);
     const zero = Number(s) === 0;
     return (v < 0 && !zero ? "−" : signed && v > 0 && !zero ? "+" : "") + s + (ax.unit || "");
   }
@@ -944,7 +952,7 @@
   function refShort(r, ax) {
     if (r.role === "zero") return "";
     if (ax.kind === "p") return pText(r.value);
-    const v = Number(r.value.toFixed(ax.digits === undefined ? 1 : ax.digits));
+    const v = Math.sign(r.value) * Number(fixed(Math.abs(r.value), ax.digits === undefined ? 1 : ax.digits));
     return (v < 0 ? "−" + Math.abs(v) : String(v)) + (ax.unit === "%" ? "%" : "");
   }
   function refLines(add, refs, ax, from, to, pos, vertical) {
@@ -1149,6 +1157,7 @@
     if (cur) out.push(cur);
     return out;
   }
+  const CHAR_W = 6.6;                   // a generous width for one character of an 11-pixel chart label
   function drawRows(host, pn, title) {
     const W = Math.max(300, host.clientWidth || 600);
     const series = withValues(pn.series), refs = pn.refs || [], ax = pn.x || {}, rows = pn.rows || [];
@@ -1174,10 +1183,17 @@
       ? (v) => x0 + ((ax.reverse ? -Math.log10(v) : Math.log10(v) - dom.dLo) / -dom.dLo) * (x1 - x0)
       : (v) => x0 + ((v - dom.lo) / (dom.hi - dom.lo)) * (x1 - x0);
     const plotBottom = H - m.b;
-    for (const v of dom.ticks) {
-      add("line", { class: "axis", x1: xOf(v), x2: xOf(v), y1: m.t, y2: plotBottom });
-      add("text", { class: "tick", x: xOf(v), y: plotBottom + 16, "text-anchor": "middle" }, tickText(v, ax));
+    // the tick labels, left to right; one that would run into the label before it (a narrow chart, a log scale) is
+    // left out, and its grid line stays
+    let lastRight = -Infinity;
+    for (const [px, v] of dom.ticks.map((v) => [xOf(v), v]).sort((a, b) => a[0] - b[0])) {
+      add("line", { class: "axis", x1: px, x2: px, y1: m.t, y2: plotBottom });
+      const words = tickText(v, ax), half = words.length * CHAR_W / 2;
+      if (px - half < lastRight + 4) continue;
+      add("text", { class: "tick", x: px, y: plotBottom + 16, "text-anchor": "middle" }, words);
+      lastRight = px + half;
     }
+    const refXs = refs.map((r) => xOf(r.value)).filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
     if (ax.label) add("text", { class: "axislabel", x: x1, y: H - 1, "text-anchor": "end" }, ax.label);
     const band = add("rect", { class: "rowhot", x: 0, y: 0, width: W, height: 0, visibility: "hidden" });
     let top = m.t;
@@ -1207,7 +1223,13 @@
           far = Math.max(far, xOf(p[1]));
         }
       });
-      if (notes[r]) add("text", { class: "note", x: Math.min(far + 8, x1 + 4), y: top + hgt / 2 + 4 }, notes[r]);
+      if (notes[r]) {
+        // beside the row's marks, moved past any reference line it would otherwise run into
+        const w = String(notes[r]).length * CHAR_W;
+        let nx = Math.min(far + 8, x1 + 4);
+        for (const rx of refXs) if (rx >= nx - 3 && rx <= nx + w + 3) nx = rx + 5;
+        add("text", { class: "note", x: nx, y: top + hgt / 2 + 4 }, notes[r]);
+      }
       top += hgt;
     });
     refLines(add, refs, ax, m.t, plotBottom, xOf, true);

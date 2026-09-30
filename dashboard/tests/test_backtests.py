@@ -6,8 +6,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import importlib.util
+import itertools
 import json
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -86,6 +88,11 @@ def test_each_file_is_in_shape_and_names_its_sources_as_committed(cid):
         blob = hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
         assert s["blob"] == blob, f"{s['path']} changed since {cid} was built: rerun dashboard/tools/build_charts.py"
         assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", s["changed"]) and s["changed"] <= c["date"]
+        # the commit the source last changed in, which its link opens: the file there is the one the chart read
+        assert re.fullmatch(r"[0-9a-f]{40}", s["commit"])
+        at = subprocess.run(["git", "-C", str(REPO), "rev-parse", f"{s['commit']}:{s['path']}"], capture_output=True,
+                            text=True)
+        assert at.returncode or at.stdout.strip() == s["blob"], (cid, s["path"])
     assert c["date"] == max(s["changed"] for s in c["sources"])
     assert isinstance(c["n"], int) and c["n"] > 0 and c["sample"]
     for w in c["writeups"]:
@@ -113,6 +120,8 @@ def test_wind_and_scoring_numbers():
     assert f"{abs(a):.1f} fewer points against {abs(l):.1f} off the closing total" in c["title"]
     assert c["n"] == int(pick(m, outcome="total", term="wind_15_19", era="All 1999–2025")["n"]) == 7276
     assert c["bar"]["tests"][0]["p"] == float(s["p"]) and f"{float(s['win_pct']) * 100:.1f}%" in c["bar"]["tests"][0]["label"]
+    # scoring against wind, as the brief asked; not presented as what the 2014 thesis measured (passing and rushing)
+    assert c["name"].startswith("Scoring against wind, NFL, 1999–2025") and "thesis" not in c["name"]
 
 
 @pytest.mark.parametrize("sport, proj", [("cfb", "cfb-weather"), ("nfl", "nfl-weather")])
@@ -205,8 +214,16 @@ def test_the_opener_against_the_close_numbers():
     nfl = pick(rows("nfl-weather/output/tables/mos_replay_eras.csv"), sample="pooled")
     d1 = float(cfb["open_win_pct"]) - float(cfb["closeop_win_pct"])
     d2 = float(nfl["open_win_pct"]) - float(nfl["closeop_win_pct"])
-    assert f"won {d1:.1f} points more often at the opener" in c["title"] and f"and {d2:.1f} in the NFL" in c["title"]
+    assert f"won {d1:.1f} percentage points more often at the opener" in c["title"]
+    assert f"and {d2:.1f} in the NFL" in c["title"]
     assert c["bar"]["tests"] == [] and c["bar"]["none"]
+    # the sample names the seasons that have an opener (college football's first is 2007: 2006 has none)
+    for proj, words in (("cfb-weather", "college football signals with an opener"),
+                        ("nfl-weather", "NFL signals with an SBR opener")):
+        years = [int(r["sample"]) for r in rows(f"{proj}/output/tables/mos_replay_seasons.csv")
+                 if r["sample"] != "pooled" and int(r["open_n"]) > 0]
+        assert f"{words} ({min(years)}–{str(max(years))[2:]})" in c["sample"]
+    assert "(2007–25)" in c["sample"] and "2006" not in c["sample"]
 
 
 @pytest.mark.parametrize("sport, proj", [("cfb", "cfb-weather"), ("nfl", "nfl-weather")])
@@ -248,6 +265,12 @@ def test_the_money_gate_numbers():
     half, full = (float(pick(dates, scenario=s_)["p_money_this_season"]) * 100 for s_ in ("half the move", "full move"))
     assert f"lower: {half:.0f}% and {full:.0f}% for the recommended gate" in c["not_shows"]
     assert (round(half), round(full)) == (21, 65)                # as the write-up says
+    # the CSV's reference row is the keep test as scored before the Sep 29 amendments (the plain interval): never
+    # called "the registered keep test", which chart 8 shows as the wider of two intervals
+    assert labels[-1] == ("For reference: the keep test as scored before the Sep 29 amendments (plain interval), at "
+                          "signal 40")
+    assert not [x for x in labels + [r[0] for r in c["table"]["rows"]] if "registered keep test" in x]
+    assert "before the Sep 29 amendments, on the plain interval" in c["table"]["note"]
 
 
 def test_the_keep_test_numbers():
@@ -281,11 +304,12 @@ def test_the_key_number_numbers():
     for panel, sport in ((0, "NFL"), (1, "CFB")):
         mine = [r for r in prices if r["sport"] == sport]
         for sid, model in (("on", "raw, market on K"), ("half", "raw, market a half-point from K")):
-            want = [[int(float(r["key"])), round(float(r["p_push"]) * 100, 4), int(float(r["raw_games"])),
-                     int(float(r["raw_landed"]))] for r in mine if r["model"] == model and float(r["raw_games"]) > 0]
+            want = [[int(float(r["key"])), round(float(r["raw_landed"]) / float(r["raw_games"]) * 100, 4),
+                     int(float(r["raw_games"])), int(float(r["raw_landed"]))]
+                    for r in mine if r["model"] == model and float(r["raw_games"]) > 0]
             assert series(c, sid, panel) == want
-            for p in want:                                   # the share is the count over the games
-                assert close(p[1], round(p[3] / p[2] * 100, 2), 0.01)
+            for p, r in zip(want, [r for r in mine if r["model"] == model and float(r["raw_games"]) > 0]):
+                assert close(p[1], float(r["p_push"]) * 100, 0.00501)      # the row's p_push, to its 4 decimals
         for sid, model in (("table", "table"), ("registered", "residual")):
             want = [[int(float(r["key"])), round(float(r["p_push"]) * 100, 4)] for r in mine
                     if r["model"] == model and float(r["line"]) == float(r["key"])]
@@ -294,7 +318,13 @@ def test_the_key_number_numbers():
     assert len(declared) == 8 and all(r["verdict"] == "no difference shown" for r in declared)
     assert "did not beat the registered pricing model on any of the 8 comparisons declared before the run" in c["title"]
     smallest = min(float(r[k]) for r in loso for k in ("p_t", "p_signflip") if r[k])
-    assert c["bar"]["tests"][0]["p"] == smallest and c["bar"]["tests"][0]["p_words"] == "p = 0.00055"
+    lead = pick(loso, sport="CFB", market="total", cohort="all", variant="primary", metric="neighbour")
+    test = c["bar"]["tests"][0]
+    assert test["p"] == float(lead["p_t"]) and round(test["p"], 4) == 0.0006          # as STATUS.md and the write-up
+    assert test["p_words"] == ("p = 0.0006 by a t-test on the 20 seasons (the smallest p-value in the study, "
+                               f"{smallest:.2g}, is the same comparison with the curve smoothed by 1 point)")
+    low = next(r for r in loso for k in ("p_t", "p_signflip") if r[k] and float(r[k]) == smallest)
+    assert (low["sport"], low["metric"], low["variant"]) == ("CFB", "neighbour", "h = 1")
 
 
 def test_the_line_move_numbers():
@@ -355,7 +385,7 @@ def test_the_screen_answer(store):
     first, second, third = d["intro"]
     assert "drawn from tables committed in the repo" in first
     assert "not a forward result" in second
-    assert third == ("None of the 17 results in the evidence list has cleared the project's multiple-testing bar "
+    assert third == ("None of the 17 results in the evidence list clears the project's multiple-testing bar "
                      "(p < 0.000185, 0.05 / 271 variants).")
     ids = [c["id"] for g in d["groups"] for c in g["charts"]]
     assert ids == [i for _, group in backtests.GROUPS for i in group]
@@ -363,12 +393,23 @@ def test_the_screen_answer(store):
     for cid in file_ids():
         c = by[cid]
         assert c["missing"] == "" and c["title"] and c["sample"] and c["bar_lines"] and c["sources"]
-        assert all(s["url"].startswith("https://github.com/maxzipperman/value-finder/blob/main/") for s in c["sources"])
+        # each source's link opens the file at the commit the chart was built from, not whatever main holds now
+        commits = {s["path"]: s["commit"] for s in chart(cid)["sources"]}
+        assert [s["url"] for s in c["sources"]] == [
+            f"https://github.com/maxzipperman/value-finder/blob/{commits[s['path']]}/{s['path']}" for s in c["sources"]]
+        assert all(w["url"].startswith("https://github.com/maxzipperman/value-finder/blob/main/")
+                   for w in c["writeups"])
+    # the chart drawn as the page loads reads this Mac's files, at no recorded version: named, not linked
+    assert [(s["path"], s["url"]) for s in by["evidence-vs-bar"]["sources"]] == [
+        ("dashboard/content/evidence.json", ""), ("STATUS.md", "")]
     seasons = by["wind-rule-cfb-seasons"]["bar_lines"][0]
     assert seasons == ("All 20 seasons against break-even: one-sided p = 0.0028 (0.0039 grouped by game day). Does not "
                        "clear the multiple-testing bar, p < 0.000185 (0.05 / 271 variants).")
     assert by["money-gate"]["bar_lines"] == ["A simulation of a staking rule, not a betting test: it adds no variants."]
-    assert "not charted: no table committed in the repo holds its record by season" in by["high-total-seasons"]["not_charted"]
+    assert by["high-total-seasons"]["not_charted"] == (
+        "College football's high-total rule (Rule HT), season by season, is not charted: strategy-research/README.md "
+        "gives its win rate by season without counts, for a superseded version of the rule, and no committed table "
+        "holds the registered rule's record by season. Its pooled records are on the Research screen.")
 
 
 def test_the_bar_is_read_from_status_md(root, home):
@@ -388,6 +429,8 @@ def test_the_bar_is_read_from_status_md(root, home):
     by = {c["id"]: c for g in d["groups"] for c in g["charts"]}
     assert "could not be read from STATUS.md" in by["wind-rule-cfb-seasons"]["bar_lines"][0]
     assert by["evidence-vs-bar"]["clears"] is None
+    assert d["intro"][2] == ("The multiple-testing bar could not be read from STATUS.md, so no result in the evidence "
+                             "list is counted as clearing it.")
     assert "The running count of variants could not be read from STATUS.md's “Variants” bullet." in d["notes"]
 
 
@@ -406,13 +449,97 @@ def test_the_evidence_chart_places_each_result_at_its_p_value(store):
 
 
 def test_a_result_that_clears_is_named_in_the_opening_sentences(root, home, tmp_path):
+    """The opening sentences and the chart of every result against the bar use one bar, today's (STATUS.md): an entry
+    whose p-value is below it is named in both; an entry marked as clearing the bar in force when it was measured,
+    but not below today's, is named in neither."""
     content = copy_content(tmp_path / "content")
     ev = json.loads((content / "evidence.json").read_text())
-    ev[0]["clears_bar"] = True
+    ev[0]["p_value"] = "0.00001 (made up for this test)"
+    ev[3]["clears_bar"] = True                              # p = 0.028: it clears no bar today
     (content / "evidence.json").write_text(json.dumps(ev))
     d = api.backtests(make_store(root, home, content=content))
-    assert d["intro"][2] == (f"Of the 17 results in the evidence list, only this one has cleared the project's "
+    assert d["intro"][2] == (f"Of the 17 results in the evidence list, only this one clears the project's "
                              f"multiple-testing bar (p < 0.000185, 0.05 / 271 variants): {ev[0]['title']}.")
+    c = next(c for g in d["groups"] for c in g["charts"] if c["id"] == "evidence-vs-bar")
+    assert c["title"] == "1 of the 8 results with a p-value clears the project's bar of p < 0.000185"
+    assert [r[0] for r in c["table"]["rows"] if r[-1] == "Yes"] == [ev[0]["title"]]
+
+
+def test_the_evidence_chart_names_every_result_it_leaves_out(store):
+    """Every entry of the evidence list without a written p-value is named as not on the chart, whatever it is."""
+    ev = json.loads((CONTENT / "evidence.json").read_text())
+    without = [e["title"] for e in ev if backtests.p_of(e.get("p_value")) is None]
+    c = next(c for g in api.backtests(store)["groups"] for c in g["charts"] if c["id"] == "evidence-vs-bar")
+    assert len(without) == 9 and c["not_shows"] == (
+        "The 9 results in the evidence list with no written p-value are not on it: " + "; ".join(without)
+        + ". A result past the line would still need its forward test.")
+    for title in ("NFL wind under on observed wind, 2024–26", "NFL wind under on 1-day forecasts",
+                  "College football wind under against the opening total",
+                  "Rule HT restated on the corrected spread data (#36)"):
+        assert title in c["not_shows"]
+
+
+def test_the_evidence_charts_rule_ht_entry_is_said_to_predate_its_restatement(root, home, tmp_path, store):
+    """The chart plots the evidence list's Rule HT entry (373–273, p = 0.0035, 646 games), which the screen's log
+    restates on the corrected spread data: the note under the chart gives the log's figures, checked here against the
+    committed log, and goes once the list's entry is the restated one."""
+    log = (REPO / "strategy-research" / "output" / "screen.log").read_text()
+    row = next(ln for ln in log.splitlines() if "PRIOR-season mean + 10 -> under" in ln and "CFB" in ln).split()
+    bets, win, p_be = int(row[-7]), float(row[-6]), float(row[-2])
+    assert (bets, win, p_be) == (895, 56.1, 0.0142)
+    won = round(bets * win / 100)
+    assert backtests.HT_RESTATED == (
+        "The evidence list's Rule HT entry (373–273, p = 0.0035) predates the restatement on the corrected spread "
+        "data (#36): the screen's log, strategy-research/output/screen.log, gives the rule "
+        f"{won}–{bets - won} ({win}% of {bets} bets), p = {p_be} against break-even, which does not clear the bar "
+        "either.")
+    ev = json.loads((CONTENT / "evidence.json").read_text())
+    ht = next(e for e in ev if e["id"] == "cfb-rule-ht-2016-25")
+    assert (ht["record"], ht["n"], ht["p_value"]) == ("373-273", 646, 0.0035)
+    c = next(c for g in api.backtests(store)["groups"] for c in g["charts"] if c["id"] == "evidence-vs-bar")
+    assert c["bar_lines"][-1] == backtests.HT_RESTATED
+    # once the entry is the restated one, the note goes
+    content = copy_content(tmp_path / "content")
+    for e in ev:
+        if e["id"] == "cfb-rule-ht-2016-25":
+            e.update(record="502-393", n=895, p_value=0.0142)
+    (content / "evidence.json").write_text(json.dumps(ev))
+    d = api.backtests(make_store(root, home, content=content))
+    c = next(c for g in d["groups"] for c in g["charts"] if c["id"] == "evidence-vs-bar")
+    assert backtests.HT_RESTATED not in c["bar_lines"]
+
+
+@pytest.mark.skipif(NODE is None, reason="Node is not installed")
+def test_a_table_and_the_hover_round_a_number_the_same_way(store, tmp_path):
+    """Exact halves (50.35%, 2.05%) print alike in the table and in the hover read-out: half away from zero, as the
+    keep-test write-up gives 2.1%."""
+    d = api.backtests(store)
+    by = {c["id"]: c for g in d["groups"] for c in g["charts"]}
+    gate = next(r for r in by["money-gate"]["table"]["rows"] if r[0].startswith("Today's gate"))
+    keep = next(r for r in by["keep-test"]["table"]["rows"] if r[0] == "NFL, 25 signals a season, bets independent")
+    assert gate[1] == "50.4%" and keep[1] == "2.1%"
+    hovers = draw(tmp_path, d, hover=True)["hovers"]
+    assert any(x.startswith("Today's gate") and "No edge: 50.4%" in x for x in hovers)
+    js = (HERE.parent / "vfdash" / "static" / "app.js").read_text()
+    body = js[js.index("  function fixed(a, d) {"):js.index("  function fmtV(")]
+    probe = body + ("console.log(JSON.stringify([[2.05, 1], [50.35, 1], [1.65, 1], [2.55, 1], [0.2355, 2], [4.185, 2], "
+                    "[0.595, 2], [12.5, 0], [0.04, 1], [95, 1]].map(([v, d]) => fixed(v, d))));")
+    got = json.loads(subprocess.run([NODE, "-e", probe], capture_output=True, text=True, check=True).stdout)
+    t = tool()
+    assert got == [t.fixed(v, dg) for v, dg in ((2.05, 1), (50.35, 1), (1.65, 1), (2.55, 1), (0.2355, 2), (4.185, 2),
+                                               (0.595, 2), (12.5, 0), (0.04, 1), (95, 1))]
+    assert got == ["2.1", "50.4", "1.7", "2.6", "0.24", "4.19", "0.60", "13", "0.0", "95.0"]
+
+
+def test_the_build_tool_without_pandas_says_so_plainly():
+    """Run with a Python that has no pandas (this one, the dashboard's): one plain sentence, exit 1, no traceback."""
+    if importlib.util.find_spec("pandas") is not None:
+        pytest.skip("this Python has pandas")
+    r = subprocess.run([sys.executable, str(TOOL), "--check"], cwd=REPO, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 1 and r.stdout == ""
+    assert r.stderr == ("No chart was written or checked: this tool needs pandas, to read the two forecast replays' "
+                        "parquet files, and this Python doesn't have it. Run it with a weather project's Python: "
+                        "nfl-weather/.venv/bin/python dashboard/tools/build_charts.py\n")
 
 
 @pytest.mark.parametrize("damage", ["missing", "empty", "cut", "not a chart", "wrong id", "bad points", "huge", "deep"])
@@ -461,12 +588,12 @@ def test_the_screen_with_no_chart_folder_at_all(root, home, tmp_path):
 
 # ---------------------------------------------------------------- the screen as drawn (Node)
 
-def draw(tmp_path, answer: dict, hover: bool = False) -> dict:
+def draw(tmp_path, answer: dict, hover: bool = False, width: int = 640) -> dict:
     f = tmp_path / "backtests.json"
     f.write_text(json.dumps(answer, ensure_ascii=False))
     out = subprocess.run([NODE, str(HERE / "render_page.mjs"), str(HERE.parent / "vfdash" / "static" / "app.js"),
                           "#backtests", str(f)] + (["hover"] if hover else []), capture_output=True, text=True,
-                         timeout=60, check=True)
+                         timeout=60, check=True, env={**os.environ, "RENDER_WIDTH": str(width)})
     return json.loads(out.stdout)
 
 
@@ -507,7 +634,11 @@ def test_the_screen_as_drawn_has_every_chart(store, tmp_path):
                 assert part in words, (c["id"], part)
             for s in c["sources"]:
                 links = [a for a in find(sec, "a") if text(a) == s["path"]]
-                assert links and links[0]["attrs"]["href"] == s["url"] and links[0]["attrs"]["rel"] == "noreferrer noopener"
+                if s["url"]:
+                    assert links and links[0]["attrs"]["href"] == s["url"]
+                    assert links[0]["attrs"]["rel"] == "noreferrer noopener"
+                else:                                        # read from this Mac: named, not linked
+                    assert not links and s["path"] in words
             tables = list(find(sec, "table"))
             assert len(tables) == 1 and len(list(find(next(find(tables[0], "tbody")), "tr"))) == len(c["table"]["rows"])
             assert "Show the numbers" in words
@@ -537,6 +668,67 @@ def test_win_rate_axes_as_drawn_start_at_40_or_lower_and_show_break_even(store, 
     assert len(bar) == 1 and math.isclose(float(bar[0]["attrs"]["data-value"]), 0.05 / 271)
 
 
+def contrast(a: str, b: str) -> float:
+    """WCAG contrast ratio of two #rrggbb colours."""
+    def lum(h):
+        c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_every_chart_colour_is_at_least_3_to_1_on_the_panel_in_light_and_dark():
+    """The ramp's lightest step (the money gate's "No edge" bars, the forecast chart's third lead) included."""
+    css = (HERE.parent / "vfdash" / "static" / "app.css").read_text()
+    light = css[css.index(":root {"):css.index("@media (prefers-color-scheme: dark)")]
+    dark = css[css.index(":root[data-theme=\"dark\"]"):]
+    dark = dark[:dark.index("}")]
+    for block in (light, dark):
+        tok = dict(re.findall(r"--([a-z0-9-]+):\s*(#[0-9a-f]{6});", block))
+        for k in ("c1", "c2", "o1", "o2", "o3"):
+            ratio = contrast(tok[k], tok["panel"])
+            assert ratio >= 3, (k, tok[k], tok["panel"], round(ratio, 2))
+    media = css[css.index("@media (prefers-color-scheme: dark)"):css.index(":root[data-theme=\"dark\"]")]
+    ramp = re.compile(r"--(o[123]):\s*(#[0-9a-f]{6});")
+    assert dict(ramp.findall(media)) == dict(ramp.findall(dark))           # the two dark-mode blocks agree
+
+
+FONT = {"tick": 11, "note": 11, "reflabel": 11, "axislabel": 11, "rowlabel": 12, "endlabel": 12}   # app.css, px
+
+
+def text_box(t: dict) -> tuple[float, float, float, float]:
+    """A drawn label's box (left, right, top, bottom), generously: every character 0.6 of the font size wide."""
+    fs = FONT.get(t["attrs"].get("class", ""), 11)
+    w = len(text(t)) * fs * 0.6
+    x, y = float(t["attrs"]["x"]), float(t["attrs"]["y"])
+    left = {"middle": x - w / 2, "end": x - w}.get(t["attrs"].get("text-anchor"), x)
+    return left, left + w, y - 0.8 * fs, y + 0.2 * fs
+
+
+@pytest.mark.skipif(NODE is None, reason="Node is not installed")
+@pytest.mark.parametrize("width", [640, 360])
+def test_no_label_is_crossed_by_a_line_or_drawn_over_another(store, tmp_path, width):
+    """At a chart's width in a 700-pixel window (640) and on a phone (360): no reference line (the bar, 0.05,
+    break-even) runs through a row's note ("n = 8,987"), and no two tick labels of an axis overlap."""
+    page = draw(tmp_path, api.backtests(store), width=width)
+    for svg in find(page, "svg"):
+        texts = [t for t in find(svg, "text")]
+        upright = [ln["attrs"] for ln in find(svg, "line") if ln["attrs"].get("class", "").startswith("ref ")
+                   and ln["attrs"]["x1"] == ln["attrs"]["x2"]]
+        for t in texts:
+            if t["attrs"].get("class") != "note":
+                continue
+            left, right, top, bottom = text_box(t)
+            for ln in upright:
+                x, y1, y2 = float(ln["x1"]), float(ln["y1"]), float(ln["y2"])
+                assert not (left - 1 <= x <= right + 1 and top < y2 and bottom > y1), (width, text(t), ln["class"])
+        ticks = sorted((text_box(t), text(t)) for t in texts if t["attrs"].get("class") == "tick")
+        for (a, at), (b, bt) in itertools.combinations(ticks, 2):
+            overlap = a[0] < b[1] + 2 and b[0] < a[1] + 2 and a[2] < b[3] and b[2] < a[3]
+            assert not overlap, (width, at, bt, svg["attrs"].get("aria-label", "")[:60])
+
+
 @pytest.mark.skipif(NODE is None, reason="Node is not installed")
 def test_hovering_reads_out_the_exact_numbers(store, tmp_path):
     d = api.backtests(store)
@@ -553,6 +745,14 @@ def test_hovering_reads_out_the_exact_numbers(store, tmp_path):
     assert cfb2006.startswith("2006Win rate at the close, with its 95% interval: 62.5% (45.3% to 77.1%)")
     assert "15–19 mphPoints scored (both teams): −4.18 points (−5.63 to −2.73)" in joined
     assert "Total 44Closed on K: 2.8% (4 of 145)Closed a half-point from K: 5.1% (16 of 311)" in joined
+
+
+def test_the_footer_says_what_the_page_loads_and_what_a_link_does():
+    """The page loads nothing from outside the Mac; the Backtests screen's links open GitHub only when clicked."""
+    html = (HERE.parent / "vfdash" / "static" / "index.html").read_text()
+    foot = re.search(r'<footer class="foot">(.*?)</footer>', html).group(1)
+    assert foot == ("Read-only. This page changes no file, places no bet, and loads nothing from outside this Mac. The "
+                    "links to files on the Backtests screen open GitHub in your browser only when you click one.")
 
 
 @pytest.mark.skipif(NODE is None, reason="Node is not installed")

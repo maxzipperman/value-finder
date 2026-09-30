@@ -28,11 +28,13 @@
   {
    "path": "nfl-weather/output/tables/mos_replay_seasons.csv",
    "blob": "042a52702843521269619d8ef4ab5283e409fdf3",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   },
   {
    "path": "nfl-weather/output/tables/mos_replay_eras.csv",
    "blob": "8de9db687c2b0e20dd56422198917b6650438081",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   }
  ],

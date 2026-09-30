@@ -32,9 +32,10 @@ GROUPS = [
 LIVE = {"evidence-vs-bar"}
 # Asked for, and not charted: no committed table holds it. Said on the screen, in its place.
 NOT_CHARTED = {
-    "high-total-seasons": ("College football's high-total rule (Rule HT), season by season, is not charted: no table "
-                           "committed in the repo holds its record by season, only its pooled records, which are on "
-                           "the Research screen."),
+    "high-total-seasons": ("College football's high-total rule (Rule HT), season by season, is not charted: "
+                           "strategy-research/README.md gives its win rate by season without counts, for a superseded "
+                           "version of the rule, and no committed table holds the registered rule's record by season. "
+                           "Its pooled records are on the Research screen."),
 }
 # What each chart is, for the sentence shown when its file can't be read.
 NAMES = {
@@ -52,10 +53,18 @@ NAMES = {
 }
 FORMAT = 1
 MAX_BYTES = 5_000_000                   # the largest chart is about 200 KB
-REPO_URL = "https://github.com/maxzipperman/value-finder/blob/main/"
+REPO_URL = "https://github.com/maxzipperman/value-finder/blob/"
 SAFE_PATH = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./-]{0,200}$")
+COMMIT = re.compile(r"^[0-9a-f]{40}$")
 SAFE_ANCHOR = re.compile(r"^[a-z0-9-]{0,120}$")
 P_NUMBER = re.compile(r"(?<![\d.])(\d*\.?\d+(?:[eE]-?\d+)?)")
+# The evidence list's Rule HT entry is the screen's first row, 373–273 on 646 games (p = 0.0035). The screen rerun on
+# the corrected spread data (#36) restates it; while the list still holds the older row, chart 6 says so. The figures
+# are the committed log's (strategy-research/output/screen.log, the "PRIOR-season mean + 10" row), checked by a test.
+HT_ENTRY = ("cfb-rule-ht-2016-25", 646)
+HT_RESTATED = ("The evidence list's Rule HT entry (373–273, p = 0.0035) predates the restatement on the corrected "
+               "spread data (#36): the screen's log, strategy-research/output/screen.log, gives the rule 502–393 "
+               "(56.1% of 895 bets), p = 0.0142 against break-even, which does not clear the bar either.")
 
 
 # ---------------------------------------------------------------- reading a chart file
@@ -162,11 +171,16 @@ def read_chart(folder, cid: str) -> tuple[dict | None, str]:
 
 # ---------------------------------------------------------------- words
 
-def link(path: str, anchor: str = "") -> str:
-    """The file's page on GitHub (the repo is private: it opens for the owner, signed in). Never fetched here."""
+def link(path: str, anchor: str = "", at: str = "main") -> str:
+    """The file's page on GitHub as it is at `at`: a source at the commit the chart was built from (the file as the
+    chart read it), a write-up on main. The repo is private: it opens for the owner, signed in, in his browser, when
+    he clicks it; the page never fetches it."""
     if not isinstance(path, str) or not SAFE_PATH.match(path) or ".." in path:
         return ""
-    return REPO_URL + path + (f"#{anchor}" if isinstance(anchor, str) and anchor and SAFE_ANCHOR.match(anchor) else "")
+    if at != "main" and not (isinstance(at, str) and COMMIT.match(at)):
+        return ""
+    return (REPO_URL + at + "/" + path
+            + (f"#{anchor}" if isinstance(anchor, str) and anchor and SAFE_ANCHOR.match(anchor) else ""))
 
 
 def day_words(iso: str) -> str:
@@ -203,7 +217,7 @@ def chart_payload(doc: dict, group: str, bar: Bar) -> dict:
     return {"id": doc["id"], "group": group, "title": doc["title"], "name": doc["name"], "shows": doc["shows"],
             "not_shows": doc["not_shows"], "sample": doc["sample"], "n": doc.get("n"), "bar_lines": lines,
             "clears": clears, "date": day_words(doc["date"]),
-            "sources": [{"path": s["path"], "url": link(s["path"]), "blob": s["blob"][:10],
+            "sources": [{"path": s["path"], "url": link(s["path"], at=s.get("commit")), "blob": s["blob"][:10],
                          "changed": day_words(s.get("changed", ""))} for s in doc["sources"]],
             "writeups": [{"path": w.get("path", ""), "section": w.get("section", ""),
                           "url": link(w.get("path", ""), w.get("anchor", ""))}
@@ -229,12 +243,13 @@ def p_of(v) -> float | None:
 
 
 def evidence_chart(entries: list, bar: Bar, readable: bool) -> dict:
-    marks = []
+    marks, without = [], []
     for e in entries:
         if not isinstance(e, dict) or not e.get("title"):
             continue
         p = p_of(e.get("p_value"))
         if p is None:
+            without.append(str(e["title"]))
             continue
         n = e.get("n")
         n_words = f"n = {n:,}" if isinstance(n, int) and not isinstance(n, bool) else str(n or "n not given")
@@ -250,8 +265,8 @@ def evidence_chart(entries: list, bar: Bar, readable: bool) -> dict:
             title = (f"None of the {len(marks)} results with a p-value clears the project's bar of p < {bar.text}; "
                      f"the closest is p = {words.p_value(closest)}")
         else:
-            title = (f"{len(clear)} of the {len(marks)} results with a p-value clear the project's bar of "
-                     f"p < {bar.text}")
+            verb = "clears" if len(clear) == 1 else "clear"
+            title = f"{len(clear)} of the {len(marks)} results with a p-value {verb} the project's bar of p < {bar.text}"
         lines = [(f"{'None' if not clear else len(clear)} of {'them' if marks else 'the results'} "
                   f"{'clears' if not clear or len(clear) == 1 else 'clear'} the multiple-testing bar in force now, "
                   f"p < {bar.text} (0.05 / {bar.variants:,} variants).")]
@@ -261,6 +276,9 @@ def evidence_chart(entries: list, bar: Bar, readable: bool) -> dict:
                  "be read from STATUS.md")
         lines = ["The multiple-testing bar could not be read from STATUS.md's “Variants” bullet, so no result is "
                  "counted as clearing it."]
+    if any(isinstance(e, dict) and (e.get("id"), e.get("n")) == HT_ENTRY and p_of(e.get("p_value")) is not None
+           for e in entries):
+        lines.append(HT_RESTATED)
     rows = [m["title"] for m in marks]
     refs = [{"value": 0.05, "label": "0.05, the ordinary standard", "role": "line"}]
     if bar.value is not None:
@@ -272,17 +290,18 @@ def evidence_chart(entries: list, bar: Bar, readable: bool) -> dict:
         "name": "Every result in the evidence list that has a p-value, against the project's bar",
         "shows": ("Each dot is one result from the evidence list, placed at its p-value on a scale where each step "
                   "to the right is ten times smaller; a result must reach past the bar's line to clear it."),
-        "not_shows": ("Results with no written p-value (the observed-wind history in college football, the "
-                      "simulations, the key-number table's declared test) are not on it, and a result past the line "
-                      "would still need its forward test."),
+        "not_shows": ((f"The {len(without)} result{'s' if len(without) != 1 else ''} in the evidence list with no "
+                       f"written p-value {'are' if len(without) != 1 else 'is'} not on it: " + "; ".join(without) + ". "
+                       if without else "") + "A result past the line would still need its forward test."),
         "sample": (f"{len(marks)} results with a p-value, of {total} in the evidence list" if readable else
                    "The evidence list could not be read"),
         "n": len(marks), "bar_lines": lines, "clears": bool(clear) if bar.value is not None else None,
         "date": "Read as the page loads",
-        "sources": [{"path": "dashboard/content/evidence.json", "url": link("dashboard/content/evidence.json"),
-                     "blob": "", "changed": "read as the page loads"},
-                    {"path": "STATUS.md", "url": link("STATUS.md"), "blob": "",
-                     "changed": "its “Variants” bullet, read as the page loads"}],
+        # read from this Mac as the page loads, at no recorded version: named, not linked
+        "sources": [{"path": "dashboard/content/evidence.json", "url": "", "blob": "",
+                     "changed": "read from this Mac as the page loads"},
+                    {"path": "STATUS.md", "url": "", "blob": "",
+                     "changed": "its “Variants” bullet, read from this Mac as the page loads"}],
         "writeups": [], "missing": "",
         "plot": {"layout": "rows", "panels": [{
             "name": "", "rows": rows,
@@ -310,14 +329,19 @@ def intro(entries: list | None, bar: Bar) -> list[str]:
         return [first, second, "The evidence list could not be read, so this screen can't say which results have "
                                "cleared the project's multiple-testing bar."]
     listed = [e for e in entries if isinstance(e, dict) and e.get("title")]
-    cleared = [str(e["title"]) for e in listed if e.get("clears_bar") is True]
-    where = f" (p < {bar.text}, 0.05 / {bar.variants:,} variants)" if bar.value is not None else ""
+    # judged as the chart of every result against the bar judges it: each written p-value against today's bar
+    if bar.value is None:
+        return [first, second, "The multiple-testing bar could not be read from STATUS.md, so no result in the "
+                               "evidence list is counted as clearing it."]
+    cleared = [str(e["title"]) for e in listed if (p := p_of(e.get("p_value"))) is not None and p < bar.value]
+    where = f" (p < {bar.text}, 0.05 / {bar.variants:,} variants)"
     if not cleared:
-        third = (f"None of the {len(listed)} results in the evidence list has cleared the project's multiple-testing "
+        third = (f"None of the {len(listed)} results in the evidence list clears the project's multiple-testing "
                  f"bar{where}.")
     else:
-        third = (f"Of the {len(listed)} results in the evidence list, {'only this one has' if len(cleared) == 1 else 'only these have'}"
-                 f" cleared the project's multiple-testing bar{where}: " + "; ".join(cleared) + ".")
+        which = "only this one clears" if len(cleared) == 1 else "only these clear"
+        third = (f"Of the {len(listed)} results in the evidence list, {which} the project's multiple-testing "
+                 f"bar{where}: " + "; ".join(cleared) + ".")
     return [first, second, third]
 
 

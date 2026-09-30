@@ -25,11 +25,12 @@
   --signal-text: #6d3fc0;
   --signal-wash: #f4effc;
   /* chart series (Backtests): blue and orange for two kinds of thing; one blue ramp, light to dark, for ordered
-     cases. Never violet (signals), and never green, amber or red (health and deadlines). */
+     cases, its lightest step at least 3:1 against the panel (3.6:1 here, 3.1:1 in dark mode). Never violet
+     (signals), and never green, amber or red (health and deadlines). */
   --c1: #2a78d6;
   --c2: #eb6834;
-  --o1: #86b6ef;
-  --o2: #2a78d6;
+  --o1: #3987e5;
+  --o2: #256abf;
   --o3: #104281;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -53,7 +54,7 @@
     --signal-wash: #2b2340;
     --c1: #3987e5;
     --c2: #d95926;
-    --o1: #1c5cab;
+    --o1: #256abf;
     --o2: #3987e5;
     --o3: #9ec5f4;
   }
@@ -77,7 +78,7 @@
   --signal-wash: #2b2340;
   --c1: #3987e5;
   --c2: #d95926;
-  --o1: #1c5cab;
+  --o1: #256abf;
   --o2: #3987e5;
   --o3: #9ec5f4;
 }

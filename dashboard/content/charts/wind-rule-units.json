@@ -38,31 +38,37 @@
   {
    "path": "cfb-weather/data/processed/mos_replay.parquet",
    "blob": "63c24a2ffe904dc6c40ac51f8d47f39a0ef34869",
+   "commit": "89194c41a4b1e7a8c49530a4c1250a4f2bf9e6b7",
    "changed": "2026-09-29"
   },
   {
    "path": "cfb-weather/output/tables/mos_replay_seasons.csv",
    "blob": "fdab955c9c0c1ebb48292a8e934f3cd616025ae0",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   },
   {
    "path": "cfb-weather/output/tables/mos_replay_eras.csv",
    "blob": "8115990874b9f9e405b8887ea4ae5b7a5dc25f51",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   },
   {
    "path": "nfl-weather/data/processed/mos_replay.parquet",
    "blob": "cfa75028c7d5566f7bd90d8fe1794311d039a7b7",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   },
   {
    "path": "nfl-weather/output/tables/mos_replay_seasons.csv",
    "blob": "042a52702843521269619d8ef4ab5283e409fdf3",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   },
   {
    "path": "nfl-weather/output/tables/mos_replay_eras.csv",
    "blob": "8de9db687c2b0e20dd56422198917b6650438081",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   }
  ],

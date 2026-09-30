@@ -28,11 +28,13 @@
   {
    "path": "cfb-weather/output/tables/mos_replay_seasons.csv",
    "blob": "fdab955c9c0c1ebb48292a8e934f3cd616025ae0",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   },
   {
    "path": "cfb-weather/output/tables/mos_replay_eras.csv",
    "blob": "8115990874b9f9e405b8887ea4ae5b7a5dc25f51",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
    "changed": "2026-09-29"
   }
  ],

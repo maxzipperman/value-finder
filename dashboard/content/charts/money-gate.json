@@ -22,6 +22,7 @@
   {
    "path": "strategy-research/output/money_gate.csv",
    "blob": "e3c89a52a0bcebd918718e5445912d3f41b198ca",
+   "commit": "cd5b354f6e2444383f2559d9d40026e670cce0c6",
    "changed": "2026-09-29"
   }
  ],
@@ -46,7 +47,7 @@
      "Sequential, O'Brien–Fleming bar 2.48 (5%, realistic case), signals 10 to 40",
      "Sequential, constant bar 2.77 (10%), signals 10 to 40",
      "Sequential, O'Brien–Fleming bar 2.22 (10%), signals 10 to 40",
-     "For reference: the registered keep test at signal 40"
+     "For reference: the keep test as scored before the Sep 29 amendments (plain interval), at signal 40"
     ],
     "x": {
      "kind": "chance",
@@ -116,7 +117,7 @@
         6.492
        ],
        [
-        "For reference: the registered keep test at signal 40",
+        "For reference: the keep test as scored before the Sep 29 amendments (plain interval), at signal 40",
         5.468
        ]
       ]
@@ -180,7 +181,7 @@
         44.91
        ],
        [
-        "For reference: the registered keep test at signal 40",
+        "For reference: the keep test as scored before the Sep 29 amendments (plain interval), at signal 40",
         45.11
        ]
       ]
@@ -244,7 +245,7 @@
         89.78
        ],
        [
-        "For reference: the registered keep test at signal 40",
+        "For reference: the keep test as scored before the Sep 29 amendments (plain interval), at signal 40",
         90.9
        ]
       ]
@@ -276,7 +277,7 @@
   "rows": [
    [
     "Today's gate: average closing-line value above 0 at signal 20",
-    "50.3%",
+    "50.4%",
     "85.6%",
     "98.2%"
    ],
@@ -337,7 +338,7 @@
    [
     "Sequential, O'Brien–Fleming bar 2.48 (5%, realistic case), signals 10 to 40",
     "4.2%",
-    "36.0%",
+    "36.1%",
     "85.4%"
    ],
    [
@@ -353,12 +354,12 @@
     "89.8%"
    ],
    [
-    "For reference: the registered keep test at signal 40",
+    "For reference: the keep test as scored before the Sep 29 amendments (plain interval), at signal 40",
     "5.5%",
     "45.1%",
     "90.9%"
    ]
   ],
-  "note": "The t in a gate's name is the average closing-line value divided by its standard error. The CSV's calibrated 2.72 row is left out, as in the write-up's table; it is within a point of the 2.75 row everywhere."
+  "note": "The t in a gate's name is the average closing-line value divided by its standard error. The CSV's calibrated 2.72 row is left out, as in the write-up's table; it is within a point of the 2.75 row everywhere. The last row is the keep test as it was scored before the Sep 29 amendments, on the plain interval; both sports now register the wider of two intervals, which keeps a rule with no edge less often (the keep-test chart)."
  }
 }

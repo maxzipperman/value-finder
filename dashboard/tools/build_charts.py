@@ -24,6 +24,7 @@ import json
 import re
 import subprocess
 import sys
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -94,8 +95,8 @@ class Sources:
             working = git("hash-object", "--", path)
             if working != committed:
                 raise Refused(f"{path} differs from its last commit; commit it (or undo the change) first")
-            changed = git("log", "-1", "--format=%cs", "HEAD", "--", path)
-            self.seen[path] = {"path": path, "blob": committed, "changed": changed}
+            commit, changed = git("log", "-1", "--format=%H %cs", "HEAD", "--", path).split()
+            self.seen[path] = {"path": path, "blob": committed, "commit": commit, "changed": changed}
         return Path(path)
 
     def listing(self, paths: list[str]) -> list[dict]:
@@ -120,8 +121,20 @@ def f(x) -> float:
     return float(x)
 
 
+def fixed(x: float, digits: int = 1) -> str:
+    """x to `digits` decimals, half away from zero on its decimal value as written (2.05 is 2.1; Python's format
+    gives 2.0, from 2.05's binary value). The page rounds the number a chart file holds the same way (app.js, fixed),
+    so a table and the hover read-out of the same number always agree: format the number as the file holds it."""
+    return str(Decimal(repr(float(x))).quantize(Decimal(1).scaleb(-digits), rounding=ROUND_HALF_UP))
+
+
+def pct(x) -> float:
+    """A share (0.5035) as the percentage a chart file holds (50.35), to 4 decimals."""
+    return round(f(x) * 100, 4)
+
+
 def signed(x: float, digits: int = 2) -> str:
-    s = f"{abs(x):.{digits}f}"
+    s = fixed(abs(x), digits)
     return ("+" if x > 0 else MINUS if x < 0 else "") + s if float(s) != 0 else s
 
 
@@ -201,12 +214,12 @@ def wind_and_scoring(src: Sources) -> dict:
         raise Refused("the two regressions don't cover the same games")
     bet = one(s, rule="Wind 15+ mph → under", test="vs close 1999–2025")
     a15, l15 = pts[1][1], line[1][1]
-    title = (f"Wind lowers NFL scoring more than the closing total allows for: at 15–19 mph, {abs(a15):.1f} fewer "
-             f"points against {abs(l15):.1f} off the closing total")
+    title = (f"Wind lowers NFL scoring more than the closing total allows for: at 15–19 mph, {fixed(abs(a15))} fewer "
+             f"points against {fixed(abs(l15))} off the closing total")
     return chart(
         "wind-and-scoring", src=src, title=title,
-        name=("The 2014 thesis's wind effect, seen in points: scoring and the closing total against wind, NFL, "
-              "1999–2025"),
+        name=("Scoring against wind, NFL, 1999–2025: how much each wind band changed the points scored and the "
+              "closing total"),
         shows=("Each dot is how much a wind band changed the points both teams scored, or the closing total, against "
                "a calm, mild, dry outdoor game, with its 95% interval, allowing for each team's season and the week."),
         not_shows=("It uses the wind recorded at kickoff, not the forecast a bet is placed on 1 to 3 days before, so "
@@ -215,7 +228,7 @@ def wind_and_scoring(src: Sources) -> dict:
                 f"15–19 mph: {count(games['15–19 mph'])}, 20+ mph: {count(games['20+ mph'])}"),
         n=n,
         bar={"tests": [{"label": (f"The bet built on it, the under in 15+ mph wind against the close "
-                                  f"({f(bet['win_pct']) * 100:.1f}% of {count(int(bet['bets']))} bets, 1999–2025)"),
+                                  f"({fixed(pct(bet['win_pct']))}% of {count(int(bet['bets']))} bets, 1999–2025)"),
                         "p": f(bet["p"]), "p_words": f"one-sided p = {p_text(f(bet['p']))}"}],
              "note": "The chart itself measures scoring, not a bet."},
         writeups=[NFL_REPORT], sources=[mvr, tbb, strat],
@@ -248,11 +261,13 @@ def replay_seasons(src: Sources, sport: str) -> dict:
         counts.append([r["sample"], int(r["close_n"])])
         tips[r["sample"]] = [f"{record(r['close_record'])}, {int(r['close_n'])} signals",
                              f"Return at −110 {roi(f(r['close_roi_pct']))}"]
-        tab_rows.append([r["sample"], count(int(r["close_n"])), record(r["close_record"]), f"{f(r['close_win_pct']):.1f}%",
-                         f"{lo:.1f}–{hi:.1f}%", roi(f(r["close_roi_pct"])), p_text(f(r["close_p_one_sided"]))])
+        tab_rows.append([r["sample"], count(int(r["close_n"])), record(r["close_record"]),
+                         f"{fixed(r['close_win_pct'])}%", f"{fixed(lo)}–{fixed(hi)}%", roi(f(r["close_roi_pct"])),
+                         p_text(f(r["close_p_one_sided"]))])
     plo, phi = interval(pooled["close_win_ci"])
     tab_rows.append(["All", count(int(pooled["close_n"])), record(pooled["close_record"]),
-                     f"{f(pooled['close_win_pct']):.1f}%", f"{plo:.1f}–{phi:.1f}%", roi(f(pooled["close_roi_pct"])),
+                     f"{fixed(pooled['close_win_pct'])}%", f"{fixed(plo)}–{fixed(phi)}%",
+                     roi(f(pooled["close_roi_pct"])),
                      p_text(f(pooled["close_p_one_sided"]))])
     first, last = seasons[0]["sample"], seasons[-1]["sample"]
     span = f"{first}–{last[2:]}"
@@ -265,7 +280,7 @@ def replay_seasons(src: Sources, sport: str) -> dict:
     how = ("above break-even by ordinary standards" if max(p, pg) < 0.01 else
            "only weakly distinguishable from break-even" if max(p, pg) < 0.05 else
            "not distinguishable from break-even")
-    title = (f"{who} won {rate:.1f}% on forecasts as issued, {span}: {how}, and below it in {below} of "
+    title = (f"{who} won {fixed(rate)}% on forecasts as issued, {span}: {how}, and below it in {below} of "
              f"{len(seasons)} seasons")
     sport_words = "college football" if sport == "cfb" else "NFL"
     return chart(
@@ -287,7 +302,7 @@ def replay_seasons(src: Sources, sport: str) -> dict:
             "series": [{"id": "close", "name": "Win rate at the close, with its 95% interval", "mark": "dot",
                         "color": "c1", "points": pts}],
             "counts": {"name": "Signals", "points": counts},
-            "refs": [BREAK_EVEN_REF, {"value": rate, "label": f"All seasons, {rate:.1f}%", "role": "pooled"}],
+            "refs": [BREAK_EVEN_REF, {"value": rate, "label": f"All seasons, {fixed(rate)}%", "role": "pooled"}],
             "tips": tips}]},
         tab=table(["Season", "Signals", "Record", "Win rate", "95% interval", "Return at −110", "One-sided p"],
                   tab_rows, [False, True, False, True, False, True, True],
@@ -334,7 +349,7 @@ def replay_units(src: Sources) -> dict:
     c, nf = out["cfb"], out["nfl"]
     title = (f"At an assumed −110 both replays end ahead: {signed(c['total'], 1)} units after {c['n']:,} college "
              f"football signals and {signed(nf['total'], 1)} after {nf['n']:,} NFL signals, with losing stretches of "
-             f"up to {abs(c['worst']):.1f} and {abs(nf['worst']):.1f} units")
+             f"up to {fixed(abs(c['worst']))} and {fixed(abs(nf['worst']))} units")
     rows, run = [], {"cfb": 0.0, "nfl": 0.0}
     for season in sorted(per_season):
         row = [str(season)]
@@ -392,14 +407,16 @@ def opener_vs_close(src: Sources) -> dict:
             opener.append([row, f(r["open_win_pct"]), olo, ohi])
             close.append([row, f(r["closeop_win_pct"]), clo, chi])
             notes[row] = f"{record(r['open_record'])} at the opener, {record(r['closeop_record'])} at the close"
-            tab_rows.append([row, record(r["open_record"]), f"{f(r['open_win_pct']):.1f}% ({olo:.1f}–{ohi:.1f}%)",
-                             record(r["closeop_record"]), f"{f(r['closeop_win_pct']):.1f}% ({clo:.1f}–{chi:.1f}%)"])
+            tab_rows.append([row, record(r["open_record"]),
+                             f"{fixed(r['open_win_pct'])}% ({fixed(olo)}–{fixed(ohi)}%)",
+                             record(r["closeop_record"]),
+                             f"{fixed(r['closeop_win_pct'])}% ({fixed(clo)}–{fixed(chi)}%)"])
             if r["sample"] == "pooled":
-                diffs[sport] = (f(r["open_win_pct"]), f(r["closeop_win_pct"]), n)
+                diffs[sport] = (f(r["open_win_pct"]), f(r["closeop_win_pct"]), n, span)
     c, nf = diffs["cfb"], diffs["nfl"]
-    title = (f"On the same games the wind rule won {c[0] - c[1]:.1f} points more often at the opener than at the close "
-             f"in college football and {nf[0] - nf[1]:.1f} in the NFL, but the opener is posted before the forecast "
-             "that fires")
+    title = (f"On the same games the wind rule won {fixed(c[0] - c[1])} percentage points more often at the opener "
+             f"than at the close in college football and {fixed(nf[0] - nf[1])} in the NFL, but the opener is posted "
+             "before the forecast that fires")
     return chart(
         "wind-rule-opener-vs-close", src=src, title=title,
         name="The forecast replays graded at the opener and at the close, on the same games",
@@ -407,8 +424,8 @@ def opener_vs_close(src: Sources) -> dict:
                "with 95% intervals, for all seasons and for the eras declared before the replays ran."),
         not_shows=("It does not show a price the rule could get: the opener is usually posted before the forecast "
                    "that fires, so it flatters the rule, and the live entry, 1 to 3 days early, sits between the two."),
-        sample=(f"{c[2]:,} college football signals with an opener (2006–25) and {nf[2]:,} NFL signals with an SBR "
-                "opener (2007–21)"),
+        sample=(f"{c[2]:,} college football signals with an opener ({c[3]}) and {nf[2]:,} NFL signals with an SBR "
+                f"opener ({nf[3]})"),
         n=c[2] + nf[2],
         bar={"tests": [], "none": ("A comparison of two prices for the same bets, not a separate test: it adds no "
                                    "variant, and the opener's record is not held against the bar because the opener "
@@ -442,24 +459,24 @@ def forecast_error(src: Sources, sport: str) -> dict:
         mae.append({"id": f"lead{lead}", "name": name, "mark": "line", "color": colors[lead], "points": pts_m})
     for r in rows:
         tab_rows.append([r["season"] if r["season"] != "all" else "All", r["lead"], count(int(r["n"])),
-                         signed(f(r["mean_error"])), f"{f(r['mae']):.2f}", f"{f(r['corr']):.2f}",
-                         f"{f(r['mos_ge15_pct']):.1f}%", f"{f(r['obs_ge15_pct']):.1f}%"])
+                         signed(f(r["mean_error"])), fixed(r["mae"], 2), fixed(r["corr"], 2),
+                         f"{fixed(r['mos_ge15_pct'])}%", f"{fixed(r['obs_ge15_pct'])}%"])
     for s in seasons:
         tips[s] = [f"{count(int(r['n']))} games at lead {r['lead']}" for r in rows if r["season"] == s]
     a1 = one(rows, season="all", lead="1")
     l1 = [r for r in rows if r["lead"] == "1" and r["season"] != "all"]
     obs = "the airport later recorded" if sport == "cfb" else "the game book's wind"
     if all(f(r["mean_error"]) > 0 for r in rows if r["season"] != "all"):
-        head = (f"NWS MOS forecasts ran windier than {obs} in every season, by {f(a1['mean_error']):.2f} mph on average a "
-                f"day out")
+        head = (f"NWS MOS forecasts ran windier than {obs} in every season, by {fixed(a1['mean_error'], 2)} mph on "
+                f"average a day out")
     else:
-        head = f"NWS MOS forecasts ran {f(a1['mean_error']):.2f} mph above {obs} on average a day out"
+        head = f"NWS MOS forecasts ran {fixed(a1['mean_error'], 2)} mph above {obs} on average a day out"
     last2 = l1[-2:]
     grown = all(f(r["mean_error"]) >= max(f(x["mean_error"]) for x in l1[:-2]) for r in last2)
     if grown:
         head += (f", and the gap has grown lately ({signed(f(last2[0]['mean_error']))} and "
                  f"{signed(f(last2[1]['mean_error']))} mph in {last2[0]['season']} and {last2[1]['season']})")
-    title = head + f"; the typical miss was {f(a1['mae']):.2f} mph"
+    title = head + f"; the typical miss was {fixed(a1['mae'], 2)} mph"
     n = int(a1["n"])
     by_lead = {r["lead"]: int(r["n"]) for r in rows if r["season"] == "all"}
     same = [k for k, v in by_lead.items() if v == by_lead["1"]]
@@ -510,7 +527,10 @@ GATE_WORDS = {
                                                    "10 to 40",
     ("sequential constant 10%", "10-40"): "Sequential, constant bar {t} (10%), signals 10 to 40",
     ("sequential OBF 10%", "10-40"): "Sequential, O'Brien–Fleming bar {t} (10%), signals 10 to 40",
-    ("registered keep test (reference)", "40"): "For reference: the registered keep test at signal 40",
+    # the CSV's reference row is the keep test as scored before the Sep 29 amendments (nfl-weather 7, cfb-weather 5):
+    # the plain interval, not the wider of two that both sports register now (the keep-test chart)
+    ("registered keep test (reference)", "40"): ("For reference: the keep test as scored before the Sep 29 "
+                                                 "amendments (plain interval), at signal 40"),
 }
 
 
@@ -527,23 +547,23 @@ def money_gate(src: Sources) -> dict:
         vals = {}
         for sc, key, _, _ in scen:
             r = one(case, gate=gate, signals=signals, scenario=sc)
-            vals[key] = f(r["p_pass"]) * 100
+            vals[key] = pct(r["p_pass"])
             thr = r["threshold"]
         label = words.format(t=thr)
         labels.append(label)
         for key in vals:
             series[key].append([label, round(vals[key], 4)])
         got[(gate, signals)] = vals
-        tab_rows.append([label, f"{vals['none']:.1f}%", f"{vals['half']:.1f}%", f"{vals['full']:.1f}%"])
+        tab_rows.append([label, f"{fixed(vals['none'])}%", f"{fixed(vals['half'])}%", f"{fixed(vals['full'])}%"])
     today = got[("mean CLV > 0 (today's gate)", "20")]
     rec = got[("sequential OBF, fixed bar 2.75 CFB / 2.14 NFL", "10-40")]
     dates = [r for r in rows if r["section"] == "dates" and r["sport"] == "CFB Rule B"
              and r["dependence"] == "realistic dependence" and r["volume"] == "40" and r["floor"] == "0"
              and r["zero_share"] == "0" and r["gate"] == "sequential OBF, fixed bar 2.75 CFB / 2.14 NFL"]
-    money = {sc: f(one(dates, scenario=sc)["p_money_this_season"]) * 100 for sc in ("half the move", "full move")}
-    title = (f"Today's gate passes a rule with no edge {today['none']:.0f}% of the time; the recommended sequential "
-             f"gate passes one {rec['none']:.1f}% of the time, and a real edge {rec['half']:.0f}% (half the historical "
-             f"move) to {rec['full']:.0f}% (all of it)")
+    money = {sc: pct(one(dates, scenario=sc)["p_money_this_season"]) for sc in ("half the move", "full move")}
+    title = (f"Today's gate passes a rule with no edge {fixed(today['none'], 0)}% of the time; the recommended "
+             f"sequential gate passes one {fixed(rec['none'])}% of the time, and a real edge {fixed(rec['half'], 0)}% "
+             f"(half the historical move) to {fixed(rec['full'], 0)}% (all of it)")
     return chart(
         "money-gate", src=src, title=title,
         name="The paper-to-money gate: how often each candidate gate passes, college football's wind rule",
@@ -551,7 +571,8 @@ def money_gate(src: Sources) -> dict:
                "half the historical line move and with all of it (college football, 40 signals a season, same-day "
                "correlation 0.11, the write-up's realistic case)."),
         not_shows=("It is no evidence that the wind rule has an edge, and it is not the chance of real money this "
-                   f"season, which is lower: {money['half the move']:.0f}% and {money['full move']:.0f}% for the "
+                   f"season, which is lower: {fixed(money['half the move'], 0)}% and {fixed(money['full move'], 0)}% "
+                   "for the "
                    "recommended gate, since a signal already logged when a gate passes stays on paper."),
         sample="40,000 simulated runs of 40 signals for each gate and each case", n=40000,
         bar={"tests": [], "none": "A simulation of a staking rule, not a betting test: it adds no variants."},
@@ -566,7 +587,9 @@ def money_gate(src: Sources) -> dict:
         tab=table(["Gate", "No edge", "Half the move", "The full move"], tab_rows, [False, True, True, True],
                   note=("The t in a gate's name is the average closing-line value divided by its standard error. "
                         "The CSV's calibrated 2.72 row is left out, as in the write-up's table; it is within a point "
-                        "of the 2.75 row everywhere.")))
+                        "of the 2.75 row everywhere. The last row is the keep test as it was scored before the Sep 29 "
+                        "amendments, on the plain interval; both sports now register the wider of two intervals, "
+                        "which keeps a rule with no edge less often (the keep-test chart).")))
 
 
 def keep_test(src: Sources) -> dict:
@@ -584,16 +607,16 @@ def keep_test(src: Sources) -> dict:
                 r = one(base, sport=sport, case=case, volume=v)
                 label = f"{words}, {v} signals a season, {cwords}"
                 labels.append(label)
-                vals = [f(r["plain"]) * 100, f(r["grouped"]) * 100, f(r["wider"]) * 100]
-                plain.append([label, round(vals[0], 4)])
-                grouped.append([label, round(vals[1], 4)])
-                wider.append([label, round(vals[2], 4)])
-                tab_rows.append([label] + [f"{x:.1f}%" for x in vals])
+                vals = [pct(r["plain"]), pct(r["grouped"]), pct(r["wider"])]
+                plain.append([label, vals[0]])
+                grouped.append([label, vals[1]])
+                wider.append([label, vals[2]])
+                tab_rows.append([label] + [f"{fixed(x)}%" for x in vals])
                 if case == "realistic dependence":
                     realistic[sport].append(vals[2])
     c, nf = realistic["CFB Rule B"], realistic["NFL Rule B"]
-    title = (f"With no edge, the registered interval keeps a rule {min(c):.1f} to {max(c):.1f}% of the time in "
-             f"college football and {min(nf):.1f} to {max(nf):.1f}% in the NFL in the realistic case, against an "
+    title = (f"With no edge, the registered interval keeps a rule {fixed(min(c))} to {fixed(max(c))}% of the time in "
+             f"college football and {fixed(min(nf))} to {fixed(max(nf))}% in the NFL in the realistic case, against an "
              "intended 2.5%")
     return chart(
         "keep-test", src=src, title=title,
@@ -627,7 +650,20 @@ def key_numbers(src: Sources) -> dict:
     if len(declared) != 8:
         raise Refused(f"expected the 8 declared comparisons in {loso}, found {len(declared)}")
     same = sum(r["verdict"] == "no difference shown" for r in declared)
-    smallest = min(f(r[k]) for r in tests for k in ("p_t", "p_signflip") if r[k] != "")
+    # the lead the write-up and STATUS.md quote, p = 0.0006: where college football games land next to a half-point
+    # line, by a t-test on the seasons. The smallest p-value in the study is a variant of the same comparison.
+    lead = one(tests, sport="CFB", market="total", cohort="all", variant="primary", metric="neighbour")
+    lead_p = f(lead["p_t"])
+    smallest, low = min(((f(r[k]), r) for r in tests for k in ("p_t", "p_signflip") if r[k] != ""),
+                        key=lambda x: x[0])
+    h = re.fullmatch(r"h = (\d+)", low["variant"])
+    if low is lead:
+        variant = ""
+    elif h and all(low[k] == lead[k] for k in ("sport", "market", "cohort", "metric")):
+        variant = (f" (the smallest p-value in the study, {p_text(smallest)}, is the same comparison with the curve "
+                   f"smoothed by {h.group(1)} point{'s' if h.group(1) != '1' else ''})")
+    else:
+        raise Refused(f"the smallest p-value in {loso} is not a smoothing variant of the lead: say which it is")
     panels, tab_rows, sums = [], [], {}
     for sport, words, span in (("NFL", "NFL: how often a game finished exactly on each total, closes 2015–25",
                                 "2015–25"),
@@ -646,16 +682,23 @@ def key_numbers(src: Sources) -> dict:
             hf_n, hf_l = int(f(hf["raw_games"])), int(f(hf["raw_landed"]))
             total_on += on_n
             lo_k, hi_k = keys[0], keys[-1]
+            # how often a game landed on K, from the row's own counts (its p_push is the same share, rounded to 4
+            # decimals, and rounding that again would misstate it: 13 of 788 is 1.6497%, not 1.65%)
+            on_s = round(on_l / on_n * 100, 4) if on_n else None
+            hf_s = round(hf_l / hf_n * 100, 4) if hf_n else None
+            for share, row_ in ((on_s, o), (hf_s, hf)):
+                if share is not None and abs(share - f(row_["p_push"]) * 100) > 0.00501:
+                    raise Refused(f"{prices}: K = {ks}, {row_['model']}: p_push is not landed / games")
             if on_n:
-                on.append([k, round(f(o["p_push"]) * 100, 4), on_n, on_l])
+                on.append([k, on_s, on_n, on_l])
             if hf_n:
-                half.append([k, round(f(hf["p_push"]) * 100, 4), hf_n, hf_l])
-            tab_.append([k, round(f(t["p_push"]) * 100, 4)])
-            reg.append([k, round(f(g["p_push"]) * 100, 4)])
+                half.append([k, hf_s, hf_n, hf_l])
+            tab_.append([k, pct(t["p_push"])])
+            reg.append([k, pct(g["p_push"])])
             tab_rows.append(["NFL" if sport == "NFL" else "College football", ks,
-                             f"{on_l} of {on_n}" + (f" ({on_l / on_n * 100:.1f}%)" if on_n else ""),
-                             f"{hf_l} of {hf_n}" + (f" ({hf_l / hf_n * 100:.1f}%)" if hf_n else ""),
-                             f"{f(t['p_push']) * 100:.1f}%", f"{f(g['p_push']) * 100:.1f}%"])
+                             f"{on_l} of {on_n}" + (f" ({fixed(on_s)}%)" if on_n else ""),
+                             f"{hf_l} of {hf_n}" + (f" ({fixed(hf_s)}%)" if hf_n else ""),
+                             f"{fixed(pct(t['p_push']))}%", f"{fixed(pct(g['p_push']))}%"])
         sums[sport] = (total_on, lo_k, hi_k)
         panels.append({
             "name": words, "x": {"kind": "number", "label": "Total", "step": 5},
@@ -686,9 +729,10 @@ def key_numbers(src: Sources) -> dict:
                 f"(2015–25) and {sums['CFB'][0]:,} in college football from {sums['CFB'][1]} to {sums['CFB'][2]} "
                 "(2006–25), with the half-point closes beside them"),
         n=sums["NFL"][0] + sums["CFB"][0],
-        bar={"tests": [{"label": ("The smallest small-sample p-value in the study (landing next to a half-point line, "
-                                  "college football; a lead found after the first run)"),
-                        "p": smallest, "p_words": f"p = {p_text(smallest)}"}],
+        bar={"tests": [{"label": ("Where college football games land next to a half-point line (a lead found after "
+                                  "the first run)"),
+                        "p": lead_p, "p_words": (f"p = {fixed(lead_p, 4)} by a t-test on the {int(lead['seasons'])} "
+                                                 f"seasons{variant}")}],
              "note": (f"The {len(declared)} comparisons declared before the run found no difference."
                       if same == len(declared) else "")},
         writeups=[KEY_NUMBERS], sources=[prices, loso],
@@ -712,34 +756,35 @@ def line_moves(src: Sources) -> dict:
         r = one(buckets, bucket=b)
         m, se, n = f(r["mean_move"]), f(r["move_se"]), int(r["games"])
         outdoor += n
-        pts.append([label, round(m, 4), round(m - 1.96 * se, 4), round(m + 1.96 * se, 4)])
-        tips[label] = [f"{n:,} games", f"Moved down in {f(r['share_moved_down']) * 100:.1f}%"]
-        tab_rows.append(["NFL, " + label, f"{n:,}", signed(m), f"{signed(m - 1.96 * se)} to {signed(m + 1.96 * se)}",
-                         f"{f(r['share_moved_down']) * 100:.1f}%", "", ""])
-    tab_rows.append(["NFL, all games", f"{int(tot['games']):,}", signed(all_move), "",
-                     f"{f(tot['share_down']) * 100:.1f}%", "", ""])
+        m4, lo4, hi4 = round(m, 4), round(m - 1.96 * se, 4), round(m + 1.96 * se, 4)
+        pts.append([label, m4, lo4, hi4])
+        tips[label] = [f"{n:,} games", f"Moved down in {fixed(pct(r['share_moved_down']))}%"]
+        tab_rows.append(["NFL, " + label, f"{n:,}", signed(m4), f"{signed(lo4)} to {signed(hi4)}",
+                         f"{fixed(pct(r['share_moved_down']))}%", "", ""])
+    tab_rows.append(["NFL, all games", f"{int(tot['games']):,}", signed(round(all_move, 4)), "",
+                     f"{fixed(pct(tot['share_down']))}%", "", ""])
     names = {"any Group of 5 / other": "Group of 5 and other games", "both Power 5": "Both teams Power 5"}
     bars, ctips, sizes, cfb_n = [], {}, [], 0
     for r in tiers:
         label = names.get(r["tier"], r["tier"])
-        size, n = f(r["mean_abs_move"]), int(r["games"])
+        size, n = round(f(r["mean_abs_move"]), 4), int(r["games"])
         cfb_n += n
         sizes.append(size)
-        bars.append([label, round(size, 4)])
-        ctips[label] = [f"{n:,} games", f"Moved 3 or more points in {f(r['share_move_3plus']) * 100:.1f}%",
-                        f"Typical miss: opener {f(r['mae_open']):.1f}, close {f(r['mae_close']):.1f} points"]
-        tab_rows.append(["College football, " + label, f"{n:,}", "", "", "", f"{size:.2f}",
-                         f"{f(r['share_move_3plus']) * 100:.1f}%"])
+        bars.append([label, size])
+        ctips[label] = [f"{n:,} games", f"Moved 3 or more points in {fixed(pct(r['share_move_3plus']))}%",
+                        f"Typical miss: opener {fixed(r['mae_open'])}, close {fixed(r['mae_close'])} points"]
+        tab_rows.append(["College football, " + label, f"{n:,}", "", "", "", fixed(size, 2),
+                         f"{fixed(pct(r['share_move_3plus']))}%"])
     b20 = pts[-1][1]
-    title = (f"NFL totals fell {abs(all_move):.2f} points on average from the opener to the close, and further in "
-             f"wind ({signed(b20, 1)} at 20+ mph); college football totals moved {min(sizes):.1f} to {max(sizes):.1f} "
-             "points on average")
+    title = (f"NFL totals fell {fixed(abs(all_move), 2)} points on average from the opener to the close, and further "
+             f"in wind ({signed(b20, 1)} at 20+ mph); college football totals moved {fixed(min(sizes))} to "
+             f"{fixed(max(sizes))} points on average")
     return chart(
         "line-moves", src=src, title=title, name="How totals move from the opener to the close",
         shows=("The top panel is the NFL's average change in the total, opener to close, by wind at kickoff, with 95% "
                "intervals; the lower one is the average size of a college football move, up or down."),
         not_shows=(f"A move is not a bet: moves did not predict the result beyond the close (slope "
-                   f"{signed(f(tot['slope_resid_on_move']))} ± {f(tot['slope_se']):.2f} for NFL totals), so timing "
+                   f"{signed(f(tot['slope_resid_on_move']))} ± {fixed(tot['slope_se'], 2)} for NFL totals), so timing "
                    "gets a better number, not a signal."),
         sample=(f"{int(tot['games']):,} NFL games, 2007–21 ({outdoor:,} outdoor games with an opener by wind band), "
                 f"and {cfb_n:,} college football games"),
@@ -753,7 +798,8 @@ def line_moves(src: Sources) -> dict:
              "series": [{"id": "move", "name": "Average change, with its 95% interval", "mark": "dot", "color": "c1",
                          "points": pts}],
              "refs": [{"value": 0, "label": "No change", "role": "zero"},
-                      {"value": round(all_move, 4), "label": f"All games, {signed(all_move)}", "role": "pooled"}],
+                      {"value": round(all_move, 4), "label": f"All games, {signed(round(all_move, 4))}",
+                       "role": "pooled"}],
              "tips": tips},
             {"name": "College football: average size of the move, up or down (points)",
              "x": {"kind": "category", "labels": [b[0] for b in bars], "label": "Games"},
@@ -809,6 +855,13 @@ def main(argv=None) -> int:
     if not (Path("dashboard") / "content").is_dir() or Path(git("rev-parse", "--show-toplevel")).resolve() != Path.cwd().resolve():
         print("Run this from the repo root: nfl-weather/.venv/bin/python dashboard/tools/build_charts.py", file=sys.stderr)
         return 2
+    try:
+        import pandas  # noqa: F401  (the two forecast replays' parquet files need it)
+    except ImportError:
+        print("No chart was written or checked: this tool needs pandas, to read the two forecast replays' parquet "
+              "files, and this Python doesn't have it. Run it with a weather project's Python: "
+              "nfl-weather/.venv/bin/python dashboard/tools/build_charts.py", file=sys.stderr)
+        return 1
     try:
         files = build_all()
     except Refused as e:

@@ -22,16 +22,19 @@
   {
    "path": "strategy-research/output/line_moves.csv",
    "blob": "fb0997140883913cf4c7356e9d9ea01026daa9b9",
+   "commit": "279a201abf576405a8f87539ccb25adcb499ad0c",
    "changed": "2026-09-30"
   },
   {
    "path": "nfl-weather/output/tables/bet_open_vs_close.csv",
    "blob": "5ee94db4d78fcecb38f57767ae008323b1bed52e",
+   "commit": "cbd87a2083f1e2f9a872e87df46aa364e8689d21",
    "changed": "2026-09-28"
   },
   {
    "path": "strategy-research/output/cfb_open_vs_close.csv",
    "blob": "ed8fde6b75be5420149e13a77003177fb589bf47",
+   "commit": "279a201abf576405a8f87539ccb25adcb499ad0c",
    "changed": "2026-09-30"
   }
  ],
