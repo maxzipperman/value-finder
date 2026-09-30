@@ -532,10 +532,11 @@ class BulkClient:
 
     `counted`, checked against --max-credits before every attempt (first try or retry) and never lowered, counts every
     answer, a 429 or 5xx about to be retried included, at the larger of what it reports (x-requests-last, rounded up)
-    and its documented_cost, or at its upper bound when a billed answer's cost can't be read; and every attempt with no
-    answer (a timeout, a dropped connection, Ctrl-C with a request out) at its upper bound. The run stops on a 200 whose
-    cost can't be read, an answer with data that reports less than its documented cost, any answer that reports more
-    than its upper bound (not retried), and an answer that takes the count past --max-credits.
+    and its documented_cost (its upper bound for a 200 whose body can't be interpreted), or at its upper bound when a
+    billed answer's cost can't be read; and every attempt with no answer (a timeout, a dropped connection, any other
+    error from the session, Ctrl-C with a request out) at its upper bound. The run stops on a 200 whose cost or body
+    can't be read, an answer with data that reports less than its documented cost, any answer that reports more than
+    its upper bound (not retried), and an answer that takes the count past --max-credits.
 
     The balance (x-requests-remaining) never adds to the count. The key check's is the start; `lowest` is the lowest
     since. A reading above the one before it by more than `margin` is credits added or the month renewed (a warning,
