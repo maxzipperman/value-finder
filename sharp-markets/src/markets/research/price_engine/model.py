@@ -122,12 +122,15 @@ def spread_pairs_from_tables(sport: str) -> tuple[np.ndarray, np.ndarray]:
     import pandas as pd
 
     first, last = SPREAD_SEASONS[sport]
+    # amendment 1, item 5: filter on the season as the file is read, so no row after the cohort's seasons (and no
+    # 2026 row) reaches this code; the season check below stays as a second layer
+    seasons = [("season", "in", list(range(first, last + 1)))]
     if sport == NFL:
-        g = pd.read_parquet(REPO / "nfl-weather" / "data" / "processed" / "games.parquet")
+        g = pd.read_parquet(REPO / "nfl-weather" / "data" / "processed" / "games.parquet", filters=seasons)
         g = g[g.season.between(first, last) & g.spread_line.notna() & g.result.notna()]
         spread, margin = -g.spread_line.to_numpy(float), g.result.to_numpy(float)     # spread_line: home favored by
     else:
-        g = pd.read_parquet(REPO / "cfb-weather" / "data" / "processed" / "games.parquet")
+        g = pd.read_parquet(REPO / "cfb-weather" / "data" / "processed" / "games.parquet", filters=seasons)
         g = g[g.season.between(first, last) & g.home_spread.notna() & g.result.notna()]
         spread, margin = g.home_spread.to_numpy(float), g.result.to_numpy(float)
     order = np.lexsort((margin, spread))

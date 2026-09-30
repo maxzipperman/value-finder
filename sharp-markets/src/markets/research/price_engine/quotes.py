@@ -97,8 +97,9 @@ def _ts(value) -> datetime | None:
 
 
 def quote_rows(rows: list[dict], drops: Counter, latest: dict | None = None) -> list[tuple]:
-    """Group one batch of outcome rows into two-sided quotes. Quotes at or after the kickoff the snapshot itself
-    lists, or far outside F1's 7-day grid, are counted and dropped here to keep memory small; load_quotes applies
+    """Group one call's outcome rows into two-sided quotes. Quotes at or after the kickoff the snapshot itself
+    lists, or more than 9 days before it (F1's 7-day grid plus COARSE_MARGIN), are counted and dropped here to keep
+    memory small; load_quotes applies
     the exact rules with the latest-listed kickoff, which `latest` collects from every row, dropped ones too."""
     latest = {} if latest is None else latest
     groups: dict[tuple, list[dict]] = {}
@@ -132,13 +133,40 @@ def quote_rows(rows: list[dict], drops: Counter, latest: dict | None = None) -> 
     return out
 
 
-def load_quotes(cfg: dict, calls: list, cache, *, batch: int = 50) -> tuple[pd.DataFrame, Counter]:
-    """The quote table for F1's cached calls, and the count of everything left out, by reason."""
+def _n_quotes(rows: list[dict]) -> int:
+    """How many quotes quote_rows would count for these rows, kept or dropped: one per row of a market that isn't
+    featured, one per (game, snapshot, book, market) group otherwise."""
+    return (sum(r["market_key"] not in MARKETS for r in rows)
+            + len({(r["sport"], r["odds_event_id"], r["snapshot_ts"], r["bookmaker"], r["market_key"])
+                   for r in rows if r["market_key"] in MARKETS}))
+
+
+def load_quotes(cfg: dict, calls: list, cache) -> tuple[pd.DataFrame, Counter]:
+    """The quote table for F1's cached calls, and the count of everything left out, by reason.
+
+    F1 is read one call at a time (amendment 1, item 2). Before the 2022 switch to 5-minute snapshots the API kept
+    one snapshot every 10 minutes, so two calls can get back the same snapshot. Read together, their rows fell into
+    one group of four outcomes and the whole snapshot was dropped as `*_not_two_outcomes`, depending on where the
+    batch boundary fell. Now the first call that returns a (sport, snapshot) is read, and EVERY quote of a later
+    call that returns the same (sport, snapshot) is counted once, as `duplicate_snapshot`, before any other reason,
+    wherever the calls fall; so no quote is counted twice. Its rows still update the latest-listed kickoff (the
+    same snapshot lists the same kickoffs). `duplicate_snapshot_conflicting_price` is a sub-count of
+    `duplicate_snapshot`, not a further drop: the repeated quotes whose prices differ from the kept copy's."""
     drops: Counter = Counter()
     raw: list[tuple] = []
+    repeats: list[tuple] = []
     latest: dict = {}
-    for i in range(0, len(calls), batch):
-        rows = bulk.load_rows(cfg, calls[i:i + batch], cache)          # sealed seasons are left out here
+    seen: set = set()
+    for c in calls:
+        rows = bulk.load_rows(cfg, [c], cache)          # sealed seasons are left out here
+        snaps = {(r["sport"], r["snapshot_ts"]) for r in rows if r["snapshot_ts"]}
+        again = snaps & seen
+        seen |= snaps
+        if again:
+            rep = [r for r in rows if (r["sport"], r["snapshot_ts"]) in again]
+            rows = [r for r in rows if (r["sport"], r["snapshot_ts"]) not in again]
+            drops["duplicate_snapshot"] += _n_quotes(rep)
+            repeats += quote_rows(rep, Counter(), latest)        # only to compare prices; counted once, above
         raw += quote_rows(rows, drops, latest)
     cols = ["sport", "event_id", "commence", "home", "away", "snap", "book", "market", "line", "dec_a", "dec_b", "upd"]
     q = pd.DataFrame(raw, columns=cols)
@@ -149,11 +177,17 @@ def load_quotes(cfg: dict, calls: list, cache, *, batch: int = 50) -> tuple[pd.D
     n = len(q)
     q = q.dropna(subset=["snap", "commence"])
     drops["no_snapshot_or_kickoff_time"] += n - len(q)             # none expected: quote_rows parsed both
-    # one row per (event, snapshot, book, market): a snapshot two calls both returned is the same data
-    dup = q.duplicated(["sport", "event_id", "snap", "book", "market"], keep="first")
-    conflict = q[dup].merge(q[~dup], on=["sport", "event_id", "snap", "book", "market"], suffixes=("", "_first"))
-    drops["duplicate_snapshot_conflicting_price"] += int(((conflict.dec_a != conflict.dec_a_first)
-                                                          | (conflict.dec_b != conflict.dec_b_first)).sum())
+    key = ["sport", "event_id", "snap", "book", "market"]
+    drops["duplicate_snapshot_conflicting_price"] += 0            # always listed in dropped.csv, as before
+    if repeats:
+        rq = pd.DataFrame(repeats, columns=cols)
+        rq["snap"] = pd.to_datetime(rq.snap, utc=True, errors="coerce")
+        conflict = rq.merge(q, on=key, suffixes=("", "_first"))
+        drops["duplicate_snapshot_conflicting_price"] += int(((conflict.dec_a != conflict.dec_a_first)
+                                                              | (conflict.dec_b != conflict.dec_b_first)).sum())
+    # a second layer: one row per (event, snapshot, book, market). Repeated snapshots never reach here (above), so
+    # this finds none; it would count one only if two different snapshot stamps parsed to the same instant
+    dup = q.duplicated(key, keep="first")
     drops["duplicate_snapshot"] += int(dup.sum())
     q = q[~dup]
     # kickoff: as listed in the event's latest snapshot, in-play ones included
