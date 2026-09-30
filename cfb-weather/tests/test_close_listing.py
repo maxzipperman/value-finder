@@ -180,6 +180,95 @@ def test_rule_ht_s_secondary_close_is_its_listing_s_too(tmp_path):
     assert f"captured close refused for 1 of these 2 bets: {REFUSED}; counted as missing (12)" in h
 
 
+# ------------------------------------------------------------------ a game moved later on game day (review, finding 1)
+ASIDE = "outside the window for the listing, while another inside it is used"
+
+
+def moved_later(tmp_path, later_row, now="2026-11-01", *extra):
+    """Game 21's entry row gives 16:00; the game is moved to 21:00 the same day (under 24 hours: not void). The
+    capture job caught both slots: 52.0 at 15:50 for 16:00, and the true close, 47.0, at 20:50 for 21:00. With
+    `later_row`, the board logged the game again at 15:00 with the new kickoff (no quote on it, so Rule B's primary
+    close is the captured close). Rule HT game 22 is the same, its last quote logged against the kickoff it shows."""
+    rows = [signal(21, "2026-10-10T16:00Z", entry=50.5)]
+    ht_rows = [row(22, "2026-10-10T16:00Z", "2026-10-10T14:00Z", rule_ht="SIGNAL", mkt_total=65.5)]
+    if later_row:
+        rows.append(row(21, "2026-10-10T21:00Z", "2026-10-10T15:00Z", mkt_total=np.nan, mkt_under=np.nan))
+        ht_rows = [row(22, "2026-10-10T21:00Z", "2026-10-10T15:00Z", rule_ht="SIGNAL", mkt_total=65.5)]
+    closes = [cap(21, "2026-10-10T15:50Z", "2026-10-10T16:00Z", 52.0), cap(21, "2026-10-10T20:50Z", "2026-10-10T21:00Z",
+                                                                          47.0),
+              cap(22, "2026-10-10T15:50Z", "2026-10-10T16:00Z", 66.0), cap(22, "2026-10-10T20:50Z", "2026-10-10T21:00Z",
+                                                                          61.0)]
+    s = [sched(21, kick="2026-10-10T21:00Z"), sched(22, kick="2026-10-10T21:00Z")]
+    return score(tmp_path, rows + ht_rows, s, now, *extra, closes=closes)
+
+
+def test_a_game_moved_later_is_graded_on_its_true_close_once_a_row_shows_the_new_kickoff(tmp_path):
+    """The listing's kickoff is the earlier of its last row's and the schedule's: 21:00, so the close captured at
+    20:50 is used (Rule B primary +3.50, Rule HT secondary +4.50, as on main), and the 15:50 capture is set aside,
+    counted and named. On the entry row's kickoff alone (the first draft) the stale 15:50 capture was taken."""
+    out = moved_later(tmp_path, later_row=True)
+    r, h = rb(out), ht(out)
+    assert "1 signals, 1 settled, 0 pending, 0 void" in r
+    assert "mean CLV +3.50; 1 of 1 bets have a primary close" in r and "1 from the captured close, 0 with none" in r
+    assert "secondary (amendment 2): mean CLV vs the captured close +3.50" in r
+    assert f"captures set aside for 1 of these 1 bets: 1 {ASIDE} (21)" in r and "refused" not in r
+    assert "mean CLV vs the captured close +4.50" in h and f"captures set aside for 1 of these 1 bets: 1 {ASIDE} (22)" in h
+    listed = rb(moved_later(tmp_path, True, "2026-11-01", "--list-excluded"))
+    line = next(ln for ln in listed.splitlines() if ln.strip().startswith("21 ") and "set aside" in ln)
+    assert "2026-10-10T15:50:00Z" in line and "2026-10-10 21:00:00+00:00" in line
+
+
+def test_a_game_moved_later_with_no_row_after_the_move_is_the_declared_limit_and_is_reported(tmp_path):
+    """No row logged after the move: the listing's kickoff is still the entry row's 16:00, so the 15:50 capture (a
+    pre-kickoff price for this listing, never in play) is used, and the 20:50 capture is set aside, counted and named."""
+    out = moved_later(tmp_path, later_row=False)
+    r, h = rb(out), ht(out)
+    assert "mean CLV -1.50; 1 of 1 bets have a primary close" in r
+    assert f"captures set aside for 1 of these 1 bets: 1 {ASIDE} (21)" in r
+    assert "mean CLV vs the captured close -0.50" in h and f"captures set aside for 1 of these 1 bets: 1 {ASIDE} (22)" in h
+
+
+def test_a_row_logged_after_the_real_kickoff_never_sets_the_listing_s_kickoff(tmp_path):
+    """Kickoff 19:00 on the entry row and in the schedule. A row logged at 19:30 that shows 23:00 is excluded as logged
+    at or after kickoff (the earlier kickoff bounds it), so the listing's kickoff stays 19:00: a capture at 22:50 (in
+    play) is refused; with the 18:50 capture beside it, the 18:50 one is used and the 22:50 one is set aside."""
+    rows = [signal(31, "2026-10-10T19:00Z"), row(31, "2026-10-10T23:00Z", "2026-10-10T19:30Z", mkt_total=np.nan,
+                                                  mkt_under=np.nan)]
+    s = [sched(31, kick="2026-10-10T19:00Z")]
+    inplay = cap(31, "2026-10-10T22:50Z", "2026-10-10T23:00Z", 30.0)
+    out = score(tmp_path / "a", rows, s, "2026-11-01", closes=[inplay])
+    assert "excluded, logged at or after kickoff: 1" in out
+    r = rb(out)
+    assert "1 with none" in r and f"captured close refused for 1 of these 1 bets: {REFUSED}; counted as missing (31)" in r
+    r = rb(score(tmp_path / "b", rows, s, "2026-11-01", closes=[cap(31, "2026-10-10T18:50Z", "2026-10-10T19:00Z", 49.5),
+                                                                 inplay]))
+    assert "mean CLV +1.00" in r and f"captures set aside for 1 of these 1 bets: 1 {ASIDE} (31)" in r
+
+
+def test_a_postponed_game_s_earlier_capture_is_still_refused_after_rows_on_the_new_date(tmp_path):
+    """Astra's case with the board logging the new listing twice: the Oct 10 capture is still not the Oct 31 listing's
+    close (its kickoff comes from the Oct 31 listing's own rows and the schedule)."""
+    rows = [signal(999, "2026-10-10T19:00Z"), signal(999, "2026-10-31T19:00Z", entry=60.0),
+            row(999, "2026-10-31T19:30Z", "2026-10-31T12:00Z", mkt_total=np.nan, mkt_under=np.nan)]
+    closes = [cap(999, "2026-10-10T18:50Z", "2026-10-10T19:00Z", 40.0)]
+    r = rb(score(tmp_path, rows, [sched(999, kick="2026-10-31T19:30Z")], "2026-11-15", closes=closes))
+    assert "2 signals, 1 settled, 0 pending, 1 void" in r and "1 with none" in r
+    assert f"captured close refused for 1 of these 1 bets: {REFUSED}; counted as missing (999)" in r
+
+
+def test_a_retry_landing_inside_the_last_2_minutes_is_set_aside_and_counted(tmp_path):
+    """Review, finding 2: a slot's capture at 18:50 and a retry whose reply landed at 18:58:30 (last in the file): the
+    retry is outside the window, so the 18:50 capture is used and the retry is set aside, counted and listed."""
+    closes = [cap(41, "2026-10-10T18:50Z", "2026-10-10T19:00Z", 49.5), cap(41, "2026-10-10T18:58:30Z",
+                                                                          "2026-10-10T19:00Z", 45.0)]
+    args = ([signal(41, "2026-10-10T19:00Z")], [sched(41, kick="2026-10-10T19:00Z")], "2026-11-01")
+    r = rb(score(tmp_path, *args, closes=closes))
+    assert "mean CLV +1.00" in r and f"captures set aside for 1 of these 1 bets: 1 {ASIDE} (41)" in r
+    listed = rb(score(tmp_path, *args, "--list-excluded", closes=closes))
+    line = next(ln for ln in listed.splitlines() if ln.strip().startswith("41 ") and "set aside" in ln)
+    assert "2026-10-10T18:58:30Z" in line and "45.0" in line
+
+
 # ------------------------------------------------------------------ the amendment's text
 def norm(text):
     return " ".join(text.replace("**", "").replace("`", "").split())
@@ -193,7 +282,8 @@ def test_amendment_6_is_a_dated_draft_that_repairs_registered_rules_and_quotes_w
     assert "This amendment repairs two registered rules and changes no threshold, gate or decision rule" in t
     assert "0 variants" in t and "on the day it was written it is 288, so the multiple-testing bar is p < 0.000174" in t
     assert "becomes amendment 7 when the hub registers it" in t and "Nfl-weather amendment 8" in t
-    assert "2 to 20 minutes" in t and "both ends included" in t and "earlier of the kickoff on the bet's entry row" in t
+    assert "2 to 20 minutes" in t and "both ends included" in t
+    assert "earlier of the kickoff on the listing's last row logged before kickoff" in t and "set aside" in t
     bullets = text.split("### What this amendment replaces")[1].split("\n* ")[1:]
     assert len(bullets) == 5
     for bullet in bullets:

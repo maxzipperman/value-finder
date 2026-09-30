@@ -676,11 +676,16 @@ owner's). The owner can change any reading here by a dated amendment made before
   (amendment 4, section 6): mean CLV +20.00.
 * **The reading.** A bet's captured close is a row of `closes.csv` for its game whose capture time (`capture_utc`)
   is from 20 minutes to 2 minutes before the kickoff of the listing graded, both ends included. That kickoff is the
-  earlier of the kickoff on the bet's entry row and the kickoff in the schedule: the bound amendment 4, section 11
-  gives "before kickoff". The window is amendment 2's ("2–20 minutes before kickoff"), with both ends included as
-  `scripts/capture_close.py` applies it: it calls the odds feed when a kickoff is from 2 to 20 minutes away, both
-  ends included. Among a game's rows inside the window, the last in the file is taken, as before (a retried slot
-  writes its row again).
+  earlier of the kickoff on the listing's last row logged before kickoff and the kickoff in the schedule: the bound
+  amendment 4, section 11 gives "before kickoff". The listing's last row is the latest-logged ledger row of that
+  listing (amendment 4, section 10) that counts, whatever it shows (a quote, a signal or neither); for a listing
+  the board logged once, it is the entry row. Every row that counts was logged before the earlier of its own
+  kickoff and the schedule's (amendment 4, section 11), so that row was logged before the game's kickoff in the
+  schedule, and the kickoff it sets is never later than the schedule's; a row logged after the real kickoff never
+  counts, so it can't set the listing's kickoff. The window is amendment 2's ("2–20 minutes before kickoff"), with
+  both ends included as `scripts/capture_close.py` applies it: it calls the odds feed when a kickoff is from 2 to
+  20 minutes away, both ends included. Among a game's rows inside the window, the last in the file is taken, as
+  before (a retried slot writes its row again).
 * **Otherwise the bet has no captured close,** and it is counted as missing, never imputed:
   * for Rule B's primary close, when no later quote was logged (amendment 4, section 6), the bet has no primary
     close: it is counted, and left out of the CLV;
@@ -688,20 +693,46 @@ owner's). The owner can change any reading here by a dated amendment made before
   * the scorer prints, for each rule, how many bets had a captured close refused and which games ("close captured
     outside the window for this listing"), and `--list-excluded` prints each refused capture with its capture
     time, the kickoff it was captured for and the kickoff of the listing graded.
+* **A capture outside the window is set aside when another inside it is used.** A game can have several captures:
+  a retry of its slot, a capture for another listing of a postponed game, or one for each kickoff of a game moved
+  on game day. The ones outside the window for the listing graded are set aside, and the one inside it is used.
+  For example, a slot captured at 18:50 for a 19:00 kickoff whose retry's reply landed at 18:58:30 (inside the
+  last 2 minutes): the retry is set aside, even though it is last in the file, and the 18:50 capture is used. When
+  any capture is set aside, the scorer prints, for each rule, how many bets had captures set aside, how many
+  captures, and which games; `--list-excluded` prints each, as for a refused capture. When none is, the report is
+  as it was.
 * **Examples.** For a listing whose kickoff is 19:00 UTC: a close captured at 18:50 is used; one captured at 18:58
   or 18:40 (exactly 2 or 20 minutes before) is used; one captured at 18:39 (21 minutes before) is not; one captured
   at 18:59 or after kickoff is not. A game moved earlier, from 19:00 on the entry row to 16:00 in the schedule: a
-  close captured at 18:50 is not used (the game was in play), and one captured at 15:50 is. The audit's postponed
-  game: the close captured on Oct 10 is not the Oct 31 listing's close, and a close captured Oct 31 at 18:50 is,
-  wherever it sits in the file.
+  close captured at 18:50 is not used (the game was in play), and one captured at 15:50 is. A game moved later on
+  game day, from 16:00 on the entry row to 21:00 in the schedule, with a row logged at 15:00 that shows 21:00: the
+  listing's kickoff is 21:00, so the true close, captured at 20:50, is used, and one captured at 15:50 for the old
+  kickoff is set aside. If instead the schedule gives 16:00 (the game was played then) and the row that shows
+  21:00 was logged at 16:30, that row doesn't count (it was logged after the schedule's kickoff), and a capture at
+  20:50 is not used. The audit's postponed game: the
+  close captured on Oct 10 is not the Oct 31 listing's close, and a close captured Oct 31 at 18:50 is, wherever it
+  sits in the file.
 * **Known limits, stated up front.**
   * The capture time college football records is when the feed's reply arrived, a few seconds after the run's
     clock found the slot due. The runs are 15 minutes apart, so unless the Mac missed a run, a slot's first call is
     more than 5 minutes before kickoff, and only a retry can fall in the last 2 minutes; a call whose reply lands a
-    few seconds inside them is refused, counted and named.
-  * A game moved later, by less than a day, after its entry row was logged: the bound is the entry row's earlier
-    kickoff, so a close captured just before the new kickoff is refused. The later-quote close (amendment 4,
-    section 6) is unaffected. The reading errs toward a missing close rather than an in-play price.
+    few seconds inside them is refused, or set aside when the slot's earlier capture is inside the window, and
+    either way counted and named.
+  * A game moved later, by less than a day, with no row of its listing logged after the move: the listing's
+    kickoff is still the earlier one its rows show, so a close captured for that earlier kickoff is used, and one
+    captured just before the new kickoff is set aside, counted and named. That close is a price from before the
+    kickoff the listing was logged for: never in play (it is at least 2 minutes before the schedule's kickoff too)
+    and never another listing's. It is the last price before a kickoff that was then moved, not the price just
+    before the game was played. The later-quote close (amendment 4, section 6) is unaffected, and once any row of
+    the listing is logged after the move, the true close is used.
+  * An alternative the hub may choose at registration instead: measure the window from the kickoff in the schedule
+    whenever the schedule has one (from the listing's last row only when it has none). That grades a game moved
+    later on its true close even with no row after the move. Its cost on college football: the schedule shows a
+    placeholder kickoff at 00:00 Eastern for a game whose time is not yet set (draft pull request 86), and a
+    placeholder that is still in the schedule would then refuse every genuine close captured for the real kickoff.
+    This draft's reading takes the listing's kickoff from the same "before kickoff" bound that decides which rows
+    count, so however pull request 86, once registered, reads a placeholder for that bound applies to the captured
+    close too. This draft keeps the brief's reading, the earlier of the two.
 * **Nothing else changes:** the entry, the later-quote close, which rows count, void and pending bets, the 20-close
   limit (a refused close is a missing one), the interval, the horizons and the decision record.
 
@@ -730,10 +761,14 @@ owner's). The owner can change any reading here by a dated amendment made before
 * **Tests.** `tests/test_close_listing.py` runs the audit's two cases (each fails on the scorer as it was on `main`
   on Sep 29, commit 30444ec, and passes now), a close captured inside the window (used, at both ends), one 21
   minutes before kickoff and one inside the last 2 minutes (not used), one captured for the earlier listing of a
-  postponed game (not used for the later listing), and the committed 2025 rehearsal ledger
-  (`output/tables/rehearsal_2025.csv`), whose printed report is unchanged byte for byte: with no captured closes, it
-  is the committed `output/rehearsal_2025.log` except its record line (a `--now` run is a preview); with a made-up
-  capture for every game, it changes only where a capture falls outside the window, and every such game is named.
+  postponed game (not used for the later listing, also after rows on the new date), a game moved later on game day
+  (its true close used once a row shows the new kickoff; without one, the declared limit, with the other capture
+  set aside and named), a row logged after the real kickoff (it never sets the listing's kickoff, so an in-play
+  capture is refused), a retry inside the last 2 minutes (set aside, counted and listed), and the committed 2025
+  rehearsal ledger (`output/tables/rehearsal_2025.csv`), whose printed report is unchanged byte for byte: with no
+  captured closes, it is the committed `output/rehearsal_2025.log` except its record line (a `--now` run is a
+  preview); with a made-up capture for every game, it changes only where a capture falls outside the window, and
+  every such game is named.
   All inputs are synthetic or 2025; no 2026 price or result is read.
 * **The note for `STRATEGY.md`** (Rule B's and Rule HT's "Decision" rows, dated on registration): *Amendment 6:* a
   captured close counts only for the listing it was captured for, 2 to 20 minutes before that listing's kickoff,

@@ -8,7 +8,10 @@ to data/forward/closes.csv. A slot that fails (no key, quota low, API down), or 
 comes back without a total for some game, is retried on the next run while it's still
 inside the window (at most MAX_TRIES calls per slot). What is still missing then stays
 missing: score_forward.py reports missing closes and never imputes them. The scorer
-takes each game's last captured row.
+uses a captured row only for the listing it was captured for: one captured 2 to 20
+minutes (both ends included) before that listing's kickoff, the last such row in the
+file; a row outside that window is refused or set aside, counted and named (draft
+amendment 6, section 1).
 
 A feed event is one event in The Odds API's odds feed: a game as the feed lists it, with its own start
 time and books. Each game takes at most one feed event (since Sep 29, 2026). The feed can list the same two

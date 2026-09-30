@@ -146,6 +146,72 @@ def test_the_window_is_before_the_earlier_of_the_rows_kickoff_and_the_schedules(
     assert f"captured Pinnacle close refused for 1 of these 2 bets: {REFUSED}; counted as missing (E1)" in out
 
 
+# ------------------------------------------------------------------ a game moved later on game day (review, finding 1)
+ASIDE = "outside the window for the listing, while another inside it is used"
+
+
+def moved_later(tmp_path, later_row, *extra):
+    """Game MV's entry row gives 1:00 PM Eastern on Oct 11; the game is moved to 4:25 PM (under 24 hours: not void).
+    The capture job caught both slots: 46.0 ten minutes before 1:00, and the true close, 41.0, ten minutes before
+    4:25. With `later_row`, the board logged the game again at noon Eastern with the new kickoff (no signal on it)."""
+    rows = [row("MV", "2026-10-11", total_line=44.0)]
+    if later_row:
+        rows.append(row("MV", "2026-10-11", time="16:25", snap="2026-10-11T16:00:00Z", rule_b="no_trigger"))
+    closes = [cap("MV", "2026-10-11", "13:00", 10, 46.0), cap("MV", "2026-10-11", "16:25", 10, 41.0)]
+    return score(tmp_path, rows, [game("MV", "2026-10-11", time="16:25", week=6)], "2026-11-20", *extra,
+                 closes=closes)
+
+
+def test_a_game_moved_later_is_graded_on_its_true_close_once_a_row_shows_the_new_kickoff(tmp_path):
+    """The listing's kickoff is the earlier of its last row's and the schedule's: 4:25 PM, so the close captured at
+    4:15 is used (secondary CLV +3.00, as on main), and the 12:50 capture is set aside, counted and named. On the entry
+    row's kickoff alone (the first draft) the stale 12:50 capture was taken (-2.00)."""
+    out = part(moved_later(tmp_path, later_row=True), *RB)
+    assert "1 signals, 1 settled, 0 pending, 0 void" in out
+    assert "mean CLV vs captured Pinnacle close +3.00 pts" in out and "refused" not in out
+    assert f"Pinnacle captures set aside for 1 of these 1 bets: 1 {ASIDE} (MV)" in out
+    listed = part(moved_later(tmp_path, True, "--list-excluded"), *RB)
+    line = next(ln for ln in listed.splitlines() if ln.strip().startswith("MV ") and "set aside" in ln)
+    assert "2026-10-11T1650Z" in line and "2026-10-11 20:25:00+00:00" in line
+
+
+def test_a_game_moved_later_with_no_row_after_the_move_is_the_declared_limit_and_is_reported(tmp_path):
+    """No row logged after the move: the listing's kickoff is still the entry row's 1:00 PM, so the 12:50 capture (a
+    pre-kickoff price for this listing, never in play) is used, and the 4:15 capture is set aside, counted and named."""
+    out = part(moved_later(tmp_path, later_row=False), *RB)
+    assert "mean CLV vs captured Pinnacle close -2.00 pts" in out
+    assert f"Pinnacle captures set aside for 1 of these 1 bets: 1 {ASIDE} (MV)" in out
+
+
+def test_a_row_logged_after_the_real_kickoff_never_sets_the_listing_s_kickoff(tmp_path):
+    """Kickoff 1:00 PM on the entry row and in the schedule. A row logged at 1:30 PM that shows 4:25 PM is excluded
+    as logged at or after kickoff, so the listing's kickoff stays 1:00 PM: a capture at 4:15 (in play) is refused;
+    with the 12:50 capture beside it, the 12:50 one is used and the 4:15 one is set aside."""
+    rows = [row("IP", "2026-10-11"), row("IP", "2026-10-11", time="16:25", snap="2026-10-11T17:30:00Z",
+                                         rule_b="no_trigger")]
+    games = [game("IP", "2026-10-11", week=6)]
+    inplay = cap("IP", "2026-10-11", "16:25", 10, 30.0)
+    out = score(tmp_path / "a", rows, games, "2026-11-20", closes=[inplay])
+    assert "excluded, logged at or after kickoff: 1" in out
+    assert f"captured Pinnacle close refused for 1 of these 1 bets: {REFUSED}; counted as missing (IP)" in part(out, *RB)
+    out = part(score(tmp_path / "b", rows, games, "2026-11-20", closes=[cap("IP", "2026-10-11", "13:00", 10, 43.0),
+                                                                          inplay]), *RB)
+    assert "mean CLV vs captured Pinnacle close +1.00 pts" in out
+    assert f"Pinnacle captures set aside for 1 of these 1 bets: 1 {ASIDE} (IP)" in out
+
+
+def test_a_postponed_game_s_earlier_capture_is_still_refused_after_rows_on_the_new_date(tmp_path):
+    """The audit's case with the board logging the new listing twice: the Oct 11 capture is still not the Nov 1
+    listing's close."""
+    rows = [row("PPD", "2026-10-11", total_line=44.0), row("PPD", "2026-11-01", total_line=50.0),
+            row("PPD", "2026-11-01", time="13:30", snap="2026-11-01T15:00:00Z", rule_b="no_trigger")]
+    closes = [cap("PPD", "2026-10-11", "13:00", 10, 40.0)]
+    out = part(score(tmp_path, rows, [game("PPD", "2026-11-01", time="13:30", week=9)], "2026-11-20", closes=closes),
+               *RB)
+    assert "2 signals, 1 settled, 0 pending, 1 void" in out
+    assert f"captured Pinnacle close refused for 1 of these 1 bets: {REFUSED}; counted as missing (PPD)" in out
+
+
 # ------------------------------------------------------------------ the amendment's text
 def norm(text):
     return " ".join(text.replace("**", "").replace("`", "").split())
@@ -159,7 +225,8 @@ def test_amendment_8_is_a_dated_draft_that_repairs_a_registered_rule_and_quotes_
     assert "This amendment repairs a registered rule and changes no threshold, gate or decision rule" in t
     assert "0 variants" in t and "on the day it was written it is 288, so the multiple-testing bar is p < 0.000174" in t
     assert "Cfb-weather amendment 6" in t and "already follows the schedule" in t
-    assert "2 to 20 minutes" in t and "both ends included" in t and "earlier of the kickoff on the bet's entry row" in t
+    assert "2 to 20 minutes" in t and "both ends included" in t
+    assert "earlier of the kickoff on the listing's last row logged before kickoff" in t and "set aside" in t
     bullets = text.split("### What this amendment replaces")[1].split("\n* ")[1:]
     assert len(bullets) == 3
     for bullet in bullets:
