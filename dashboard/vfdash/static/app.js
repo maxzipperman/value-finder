@@ -1168,8 +1168,6 @@
     const chars = Math.max(18, Math.floor((LW - 4) / 6.3));
     const wrapped = rows.map((r) => wrapWords(r, chars));
     const marks = series.length;
-    const rowH = wrapped.map((ls) => Math.max(15 * ls.length + 10, (series.some((s) => s.mark === "bar") ? 9 : 12) * marks + 12));
-    const H = m.t + rowH.reduce((a, b) => a + b, 0) + m.b;
     const vals = [];
     for (const s of series) for (const p of s.points || []) {
       vals.push(p[1]);
@@ -1177,11 +1175,39 @@
     }
     const dom = valueAxis(ax, vals, refs.map((r) => r.value));
     const signed = dom.lo < 0;
-    const { svg, add } = newSvg(W, H, title, ax.kind, dom);
     const x0 = m.l, x1 = W - m.r;
     const xOf = dom.log
       ? (v) => x0 + ((ax.reverse ? -Math.log10(v) : Math.log10(v) - dom.dLo) / -dom.dLo) * (x1 - x0)
       : (v) => x0 + ((v - dom.lo) / (dom.hi - dom.lo)) * (x1 - x0);
+    const refXs = refs.map((r) => xOf(r.value)).filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+    // Each row's note (its sample size) sits right of the row's marks, else left of them, and never across a reference
+    // line from them: on the chart of every result against the bar, a label past the bar would stand in the region of
+    // results that clear it. When neither side has room, it takes a line of its own under the marks, between the same
+    // two lines, and the row grows by that line.
+    const spots = rows.map((r, ri) => {
+      if (!notes[r]) return null;
+      const xs = [];
+      for (const s of series) {
+        const p = (s.points || []).find((q) => q[0] === r);
+        if (!p) continue;
+        if (s.mark === "bar") xs.push(xOf(Math.max(dom.lo, Math.min(0, p[1]))), xOf(Math.max(0, p[1])));
+        else xs.push(xOf(p[1]), ...(typeof p[2] === "number" && typeof p[3] === "number" ? [xOf(p[2]), xOf(p[3])] : []));
+      }
+      const near = xs.length ? Math.min(...xs) : x0, far = xs.length ? Math.max(...xs) : x0;
+      const left = Math.max(-Infinity, ...refXs.filter((x) => x < near).map((x) => x + 4));
+      const hi = Math.min(W - 2, ...refXs.filter((x) => x > far).map((x) => x - 4));
+      const w = String(notes[r]).length * CHAR_W;
+      // beside the marks, clear of the row's own label (12-pixel text) on the left
+      const label = Math.max(0, ...wrapped[ri].map((l) => l.length)) * CHAR_W * 12 / 11 + 6;
+      if (far + 8 + w <= hi) return { x: far + 8, anchor: "start", below: false };
+      if (near - 8 - w >= Math.max(x0, label, left)) return { x: near - 8, anchor: "end", below: false };
+      // under the marks, below the row's label, so it may start left of the plot
+      return { x: Math.max(Math.max(2, left), Math.min((near + far - w) / 2, hi - w)), anchor: "start", below: true };
+    });
+    const baseH = wrapped.map((ls) => Math.max(15 * ls.length + 10, (series.some((s) => s.mark === "bar") ? 9 : 12) * marks + 12));
+    const rowH = baseH.map((h0, i) => h0 + (spots[i] && spots[i].below ? 13 : 0));
+    const H = m.t + rowH.reduce((a, b) => a + b, 0) + m.b;
+    const { svg, add } = newSvg(W, H, title, ax.kind, dom);
     const plotBottom = H - m.b;
     // the tick labels, left to right; one that would run into the label before it (a narrow chart, a log scale) is
     // left out, and its grid line stays
@@ -1193,18 +1219,16 @@
       add("text", { class: "tick", x: px, y: plotBottom + 16, "text-anchor": "middle" }, words);
       lastRight = px + half;
     }
-    const refXs = refs.map((r) => xOf(r.value)).filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
     if (ax.label) add("text", { class: "axislabel", x: x1, y: H - 1, "text-anchor": "end" }, ax.label);
     const band = add("rect", { class: "rowhot", x: 0, y: 0, width: W, height: 0, visibility: "hidden" });
     let top = m.t;
     const bands = [];
     rows.forEach((r, ri) => {
-      const hgt = rowH[ri];
+      const hgt = rowH[ri], h0 = baseH[ri];
       bands.push([top, hgt, r]);
       if (ri) add("line", { class: "rowline", x1: 0, x2: x1, y1: top, y2: top });
       wrapped[ri].forEach((ln, li) => add("text", { class: "rowlabel", x: 0, y: top + 14 + li * 15 }, ln));
-      const step = (hgt - 12) / Math.max(1, marks);
-      let far = x0;
+      const step = (h0 - 12) / Math.max(1, marks);
       series.forEach((s, si) => {
         const p = (s.points || []).find((q) => q[0] === r);
         if (!p) return;
@@ -1213,22 +1237,17 @@
         if (s.mark === "bar") {
           const a = xOf(Math.max(dom.lo, Math.min(0, p[1]))), b = xOf(Math.max(0, p[1]));
           add("rect", { class: "sbar " + cls, x: Math.min(a, b), y: cy - Math.min(4, step / 2 - 1), width: Math.max(1, Math.abs(b - a)), height: Math.max(2, Math.min(8, step - 2)), rx: 2, "data-value": p[1] });
-          far = Math.max(far, b);
         } else {
           if (typeof p[2] === "number" && typeof p[3] === "number") {
             add("line", { class: "whisker " + cls, x1: xOf(p[2]), x2: xOf(p[3]), y1: cy, y2: cy });
-            far = Math.max(far, xOf(p[2]), xOf(p[3]));
           }
           add("circle", { class: "sdot " + cls, cx: xOf(p[1]), cy, r: 4.5, "data-value": p[1] });
-          far = Math.max(far, xOf(p[1]));
         }
       });
-      if (notes[r]) {
-        // beside the row's marks, moved past any reference line it would otherwise run into
-        const w = String(notes[r]).length * CHAR_W;
-        let nx = Math.min(far + 8, x1 + 4);
-        for (const rx of refXs) if (rx >= nx - 3 && rx <= nx + w + 3) nx = rx + 5;
-        add("text", { class: "note", x: nx, y: top + hgt / 2 + 4 }, notes[r]);
+      const spot = spots[ri];
+      if (spot) {
+        add("text", { class: "note", x: spot.x, y: spot.below ? top + h0 + 7 : top + h0 / 2 + 4,
+          "text-anchor": spot.anchor }, notes[r]);
       }
       top += hgt;
     });

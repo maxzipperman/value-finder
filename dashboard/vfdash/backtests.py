@@ -33,9 +33,10 @@ LIVE = {"evidence-vs-bar"}
 # Asked for, and not charted: no committed table holds it. Said on the screen, in its place.
 NOT_CHARTED = {
     "high-total-seasons": ("College football's high-total rule (Rule HT), season by season, is not charted: "
-                           "strategy-research/README.md gives its win rate by season without counts, for a superseded "
-                           "version of the rule, and no committed table holds the registered rule's record by season. "
-                           "Its pooled records are on the Research screen."),
+                           "strategy-research/README.md gives its win rate by season without counts, from a superseded "
+                           "record of the rule (373–273, before #48 rebuilt the college football games table on the "
+                           "#36 spread fix), and no committed table holds its record by season. Its pooled records are "
+                           "on the Research screen."),
 }
 # What each chart is, for the sentence shown when its file can't be read.
 NAMES = {

@@ -115,9 +115,9 @@ which results in the evidence list, if any, have cleared the multiple-testing ba
 - **One rounding.** A table and the hover read-out print a number the same way: half away from zero on the number as
   the chart file holds it (`fixed` in the tool and in `app.js`), so 2.05 is 2.1 in both.
 - **Not charted.** College football's high-total rule season by season: strategy-research/README.md gives its win
-  rate by season without counts, for a superseded version of the rule, and no committed table holds the registered
-  rule's record by season (only pooled records, which are on the Research screen). The screen says so in that chart's
-  place.
+  rate by season without counts, from a superseded record of the rule (373–273, before #48 rebuilt the college
+  football games table on the #36 spread fix), and no committed table holds its record by season (only pooled records,
+  which are on the Research screen). The screen says so in that chart's place.
 
 ## What it reads, and the only programs it starts
 

@@ -406,10 +406,18 @@ def test_the_screen_answer(store):
     assert seasons == ("All 20 seasons against break-even: one-sided p = 0.0028 (0.0039 grouped by game day). Does not "
                        "clear the multiple-testing bar, p < 0.000185 (0.05 / 271 variants).")
     assert by["money-gate"]["bar_lines"] == ["A simulation of a staking rule, not a betting test: it adds no variants."]
+    # the README's per-season rates are the registered rule's (prior-season mean + 10); what is superseded is their
+    # record, 373–273, from before #48 rebuilt the table on the #36 spread fix
     assert by["high-total-seasons"]["not_charted"] == (
         "College football's high-total rule (Rule HT), season by season, is not charted: strategy-research/README.md "
-        "gives its win rate by season without counts, for a superseded version of the rule, and no committed table "
-        "holds the registered rule's record by season. Its pooled records are on the Research screen.")
+        "gives its win rate by season without counts, from a superseded record of the rule (373–273, before #48 "
+        "rebuilt the college football games table on the #36 spread fix), and no committed table holds its record by "
+        "season. Its pooled records are on the Research screen.")
+    readme = (REPO / "strategy-research" / "README.md").read_text()
+    assert "| CFB total ≥ prior-season mean + 10 → under, 2016–25 | 373–273 |" in readme
+    assert "By season: 64, 45" in readme
+    assert "After [#48](https://github.com/maxzipperman/value-finder/pull/48) rebuilt the CFB games table on the #36 " \
+           "spread fix" in readme
 
 
 def test_the_bar_is_read_from_status_md(root, home):
@@ -706,27 +714,72 @@ def text_box(t: dict) -> tuple[float, float, float, float]:
     return left, left + w, y - 0.8 * fs, y + 0.2 * fs
 
 
-@pytest.mark.skipif(NODE is None, reason="Node is not installed")
-@pytest.mark.parametrize("width", [640, 360])
-def test_no_label_is_crossed_by_a_line_or_drawn_over_another(store, tmp_path, width):
-    """At a chart's width in a 700-pixel window (640) and on a phone (360): no reference line (the bar, 0.05,
-    break-even) runs through a row's note ("n = 8,987"), and no two tick labels of an axis overlap."""
-    page = draw(tmp_path, api.backtests(store), width=width)
+def label_problems(page) -> list:
+    """What is wrong with the labels of the rows layout, as drawn: a reference line (the bar, 0.05, break-even) through
+    a row's note ("n = 8,987"); a note on the other side of a reference line from its own marks (a result that doesn't
+    clear the bar must never be labelled in the region past it); a note over another label or a dot; two tick labels
+    of an axis over each other."""
+    out = []
     for svg in find(page, "svg"):
-        texts = [t for t in find(svg, "text")]
-        upright = [ln["attrs"] for ln in find(svg, "line") if ln["attrs"].get("class", "").startswith("ref ")
-                   and ln["attrs"]["x1"] == ln["attrs"]["x2"]]
+        texts = list(find(svg, "text"))
+        upright = [float(ln["attrs"]["x1"]) for ln in find(svg, "line")
+                   if ln["attrs"].get("class", "").startswith("ref ") and ln["attrs"]["x1"] == ln["attrs"]["x2"]]
+        bounds = sorted(float(ln["attrs"]["y1"]) for ln in find(svg, "line") if ln["attrs"].get("class") == "rowline")
+        dots = [(float(c["attrs"]["cx"]), float(c["attrs"]["cy"]), float(c["attrs"]["r"])) for c in find(svg, "circle")
+                if "data-value" in c["attrs"]]
+        band = lambda y: sum(1 for b in bounds if b <= y)                     # noqa: E731  (which row a y is in)
         for t in texts:
             if t["attrs"].get("class") != "note":
                 continue
-            left, right, top, bottom = text_box(t)
-            for ln in upright:
-                x, y1, y2 = float(ln["x1"]), float(ln["y1"]), float(ln["y2"])
-                assert not (left - 1 <= x <= right + 1 and top < y2 and bottom > y1), (width, text(t), ln["class"])
+            left, right, top, bottom = box = text_box(t)
+            own = [x for x, y, _ in dots if band(y) == band((top + bottom) / 2)]
+            if not own:
+                out.append(("a note with no dot in its row", text(t)))
+            for x in upright:
+                if left - 1 <= x <= right + 1:
+                    out.append(("a line through a note", text(t), x))
+                for dx in own:
+                    if (dx < x) != (right < x) or (dx > x) != (left > x):
+                        out.append(("a note across a line from its dot", text(t), x, dx))
+            for o in texts:
+                if o is not t and o["attrs"].get("class") in ("note", "rowlabel", "tick", "reflabel"):
+                    a = text_box(o)
+                    if a[0] < right and left < a[1] and a[2] < bottom and top < a[3]:
+                        out.append(("a note over a label", text(t), text(o)))
+            for x, y, r in dots:
+                if x - r < right and left < x + r and y - r < bottom and top < y + r:
+                    out.append(("a note over a dot", text(t), x))
         ticks = sorted((text_box(t), text(t)) for t in texts if t["attrs"].get("class") == "tick")
         for (a, at), (b, bt) in itertools.combinations(ticks, 2):
-            overlap = a[0] < b[1] + 2 and b[0] < a[1] + 2 and a[2] < b[3] and b[2] < a[3]
-            assert not overlap, (width, at, bt, svg["attrs"].get("aria-label", "")[:60])
+            if a[0] < b[1] + 2 and b[0] < a[1] + 2 and a[2] < b[3] and b[2] < a[3]:
+                out.append(("tick labels over each other", at, bt))
+    return out
+
+
+@pytest.mark.skipif(NODE is None, reason="Node is not installed")
+@pytest.mark.parametrize("width", [640, 360])
+def test_no_label_is_crossed_by_a_line_or_drawn_over_another(store, tmp_path, width):
+    """At a chart's width in a 700-pixel window (640) and on a phone (360): no reference line runs through a row's
+    note, each note stays on its own dot's side of every line, no note sits on another label or a dot, and no two tick
+    labels of an axis overlap."""
+    assert label_problems(draw(tmp_path, api.backtests(store), width=width)) == []
+
+
+@pytest.mark.skipif(NODE is None, reason="Node is not installed")
+@pytest.mark.parametrize("width", [640, 360])
+def test_each_sample_size_stays_on_its_results_side_of_the_bar_on_live_numbers(root, home, tmp_path, width):
+    """The same, with STATUS.md's running count as it stands today (288 variants, p < 0.000174) and a result just
+    short of the bar: each "n = ..." label stays on its dot's side of 0.05 and of the bar."""
+    status = root / "STATUS.md"
+    status.write_text(STATUS_MD.replace("Then **271**, so new analyses use p < 0.000185 (0.05 / 271).",
+                                        "Then **271**. Then **288**, so p < 0.000174."))
+    content = copy_content(tmp_path / "content")
+    ev = json.loads((content / "evidence.json").read_text())
+    ev[1]["p_value"], ev[1]["n"] = "0.0002 (made up for this test)", 99999
+    (content / "evidence.json").write_text(json.dumps(ev))
+    d = api.backtests(make_store(root, home, content=content))
+    assert d["variants"] == 288
+    assert label_problems(draw(tmp_path, d, width=width)) == []
 
 
 @pytest.mark.skipif(NODE is None, reason="Node is not installed")
