@@ -928,12 +928,17 @@ would affect.
   kickoff, and never later than the placeholder + 30 hours. **The one gap**, where main is safer: a game whose
   schedule shows the placeholder after it was played (once in 2021–25, section 4) and that kicked off before a counted
   row's own kickoff could have a row logged after the real kickoff count, as Rule HT's entry or Rule B's close, or have
-  a close captured after the real kickoff used (amendment 6 measures its window from the same bound). Main has no
-  lookahead there, because it drops every row logged after 00:00 Eastern (and refuses every capture but one from the
-  evening before); this reading trades main's common
-  failure (a stale pre-game entry, section 1) for lookahead in this rare case. So the scorer lists every completed
-  game with the placeholder in the schedule by game id (section 2), and the hub checks each one by hand, against when
-  the game really kicked off, before any decision is made.
+  a close captured after the real kickoff used: amendment 6 measures its window from the same bound, so a capture
+  taken in play, 2 to 20 minutes before the kickoff the rows carry, is the listing's close, and the true close,
+  captured for the real kickoff, is only set aside. A real kickoff at 00:00 Eastern without the flag is read as the
+  placeholder too, so the same gap can arise for a game moved earlier to a real 00:00 Eastern kickoff with no row
+  logged after the move (none has kicked off at 00:00 Eastern without the flag since 2014; known limits, below).
+  Main has no lookahead there, because it drops every row logged after 00:00 Eastern (and refuses every capture but
+  one from the evening before); this reading trades main's common failure (a stale pre-game entry, section 1) for
+  lookahead in this rare case. So the scorer lists every completed game with the placeholder in the schedule by game
+  id (section 2), and the hub checks each one by hand before any decision is made: against when the game really
+  kicked off, and by comparing the kickoff each capture in `closes.csv` for the game was taken for (`captured_for`,
+  as `--list-excluded` prints it for a capture refused or set aside) with the listing's kickoff.
 * **Noon Eastern on the game's date** (the other reading the issue named) can. If a game's time is never set, the
   schedule's kickoff stays the placeholder, so nothing tells the scorer when the game really began. A game that
   kicked off before the last scheduled run before noon Eastern (7:30 AM Pacific, 10:30 AM Eastern; an early game
@@ -948,8 +953,12 @@ would affect.
   is chosen among every listing that signalled or would have (section 2), so every bet under it is one the same rows
   would make without it, graded on the same listing. The schedule reading only adds rows that main dropped as logged
   after the placeholder (for Rule HT a later timed quote, which can become the entry; for Rule B a game-day signal or
-  close) and, through amendment 6's window, the game-day captured close it refused, and it voids exactly what the
-  placeholder voided before.
+  close) and, through amendment 6's window, the game-day captured close it refused. The checks that void a bet still
+  read the placeholder (section 2), but a listing it adds can be the one graded (the listing nearest the placeholder,
+  amendment 4, section 10), so another listing of the game that main graded is then void; the number of graded bets
+  per game does not rise. For example, with the placeholder in the schedule, listing X kicks off 14 hours before it,
+  its signal logged the day before, and listing Y 11 hours after it, its only row logged after the placeholder: main
+  drops Y's row and grades X; this reading counts Y, grades Y and voids X.
 * **Known limits.**
   * A game whose flag stays set after it has a real time is not eligible either (its rows carry the flag). The
     committed tables show this once in 2016–25 (Oregon–UCLA, Nov 21, 2020, flagged with a 12:30 PM Pacific kickoff;
@@ -1004,8 +1013,10 @@ late, never set, or unset again, and on a placeholder in the schedule the scorer
 primary close, Rule HT's secondary); one captured 10 minutes before the placeholder, the evening before, is refused
 or set aside; one in the last 2 minutes, at or after the row's kickoff, or 21 minutes before is refused; a postponed
 game's later listing never takes the close captured for the earlier one; and no capture after the placeholder + 30
-hours is used. The captured-close cases fail when the window is measured from the placeholder. All inputs are
-synthetic; no 2026 price or result is read.
+hours is used. The captured-close cases fail when the window is measured from the placeholder. Two more pin the
+cost and the gap in section 3: a listing whose only row was logged after the placeholder is the one graded, and the
+listing main graded is void; and a game that kicked off before the kickoff its rows carry is graded on an in-play
+capture, with the true close only set aside. All inputs are synthetic; no 2026 price or result is read.
 
 ### 5. Notes for `STRATEGY.md`
 

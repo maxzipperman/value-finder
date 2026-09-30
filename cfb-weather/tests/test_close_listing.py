@@ -296,7 +296,7 @@ def test_amendment_6_is_a_dated_draft_that_repairs_registered_rules_and_quotes_w
         for q in quotes:
             assert norm(q) in norm(src), (label, q)
     status = (ROOT.parent / "STATUS.md").read_text()
-    assert status.count("*Amendment 6 (draft, Sep 30, awaiting the hub):*") == 2
+    assert status.count("*Amendment 6 (registered Sep 30, PR 90):*") == 2
 
 
 # ------------------------------------------------------------------ the committed rehearsal ledger

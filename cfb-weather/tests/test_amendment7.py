@@ -611,3 +611,40 @@ def test_a_nearer_untimed_listing_still_voids_a_farther_timed_one(tmp_path):
     assert "1 signals at the last quote before kickoff, 0 settled, 0 pending, 1 void" in out
     assert "void, another listing of this game is the one graded: 1 (1)" in out
     assert f"not a bet, {LAST_UNTIMED}: 1 (1)" in out
+
+
+def test_a_listing_the_schedule_reading_adds_can_be_the_one_graded(tmp_path):
+    """The review's case listing_shift (section 3, "What it costs"). The schedule shows only the placeholder. Listing X
+    kicks off 14 hours before it (Fri 10:00 AM Eastern), its Rule B signal logged the day before; listing Y kicks off
+    11 hours after it (Sat 11:00 AM Eastern), its only row logged after the placeholder. Main drops Y's row as logged
+    after kickoff and grades X (CLV +1.00). This reading counts Y's row, grades Y, the listing nearest the placeholder
+    (CLV +2.00), and voids X as another listing of the game: the graded listing changes, the number of graded bets
+    per game doesn't."""
+    x, y = PLACEHOLDER - pd.Timedelta(hours=14), PLACEHOLDER + pd.Timedelta(hours=11)
+    rows = [row(1, x, "2026-10-08T12:00Z", rule_b="SIGNAL", mkt_total=50.5, rule_ht="below_threshold"),
+            row(1, y, "2026-10-10T06:00Z", rule_b="SIGNAL", mkt_total=47.5, rule_ht="below_threshold")]
+    closes = [capture(1, x - 10 * MIN, x, 49.5), capture(1, y - 10 * MIN, y, 45.5)]
+    out = score_with_closes(tmp_path, rows, [sched(1, 40, kick=PLACEHOLDER, start_time_tbd=True)], closes)
+    assert "logged at or after kickoff" not in out and "ledger rows: 2; in the test: 2" in out
+    assert f"{PH_LINE}, completed: 1 (1)" in out
+    r = out.split("RULE_B:")[1].split("RULE_HT:")[0]
+    assert "2 signals, 1 settled, 0 pending, 1 void" in r
+    assert "void, another listing of this game is the one graded: 1 (1)" in r
+    assert "record 1-0-0" in r and "mean CLV +2.00" in r and "Sat 10-10 11:00" in r and "Fri 10-09 10:00" not in r
+
+
+def test_the_stated_gap_reaches_the_captured_close(tmp_path):
+    """The review's case gap_close_inplay (section 3, the one gap). The rows say 7:30 PM Eastern; the game really
+    kicked off at noon Eastern; the schedule shows only the placeholder. The capture 10 minutes before the rows' kickoff
+    was taken in play, yet it is the listing's close; the true close, captured for noon, is only set aside, and
+    --list-excluded prints the kickoff it was captured for, which the hub compares with the listing's."""
+    true_kick = pd.Timestamp("2026-10-10T16:00:00Z")
+    closes = [capture(1, true_kick - 10 * MIN, true_kick, 48.5), capture(1, REAL_KICK - 10 * MIN, REAL_KICK, 41.5)]
+    out = score_with_closes(tmp_path, [rb_signal(1)], [sched(1, 40, kick=PLACEHOLDER, start_time_tbd=True)], closes,
+                            "--list-excluded")
+    assert f"{PH_LINE}, completed: 1 (1)" in out
+    r = out.split("RULE_B:")[1].split("RULE_HT:")[0]
+    assert "1 from the captured close" in r and "mean CLV +9.00" in r                     # 50.5 against 41.5
+    assert "captures set aside for 1 of these 1 bets: 1 outside the window for the listing" in r
+    line = next(ln for ln in r.splitlines() if ASIDE in ln)
+    assert "2026-10-10T16:00:00Z" in line and "2026-10-10 23:30:00+00:00" in line          # captured_for vs listing

@@ -238,7 +238,7 @@ def test_amendment_8_is_a_dated_draft_that_repairs_a_registered_rule_and_quotes_
         assert quotes, label
         for q in quotes:
             assert norm(q) in norm(src), (label, q)
-    assert "*Amendment 8 (draft, Sep 30, awaiting the hub):*" in (ROOT.parent / "STATUS.md").read_text()
+    assert "*Amendment 8 (registered Sep 30, PR 90):*" in (ROOT.parent / "STATUS.md").read_text()
 
 
 # ------------------------------------------------------------------ the committed rehearsal ledger
