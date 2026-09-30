@@ -1,4 +1,4 @@
-"""The names-only preflight (amendment 1, item 8). It reads NO price and prints NO score.
+"""The names-only preflight (amendment 1, item 8). It reads NO price and NO score, and prints NO score.
 
 The protocol, registered in amendment 1: on Thursday, after `markets odds5m probe` has saved its schedules (team
 names and kickoffs only) and BEFORE any F1 price is opened, the hub runs this. Any further alias comes only from
@@ -10,9 +10,14 @@ Input: the schedules the probe saves from historical /events sweeps, <raw_dir>/_
 hold only id, sport, commence_time, home_team, away_team and first_seen (bulk.SCHEDULE_SCHEMA). Games in a sealed
 season window (2026) or outside every window are dropped as they are read, before anything looks at them.
 
-It runs the engine's own name resolution and its own outcomes.match() on those events, with every final score
-in the score tables replaced by the table's row number, so it predicts which F1 games will get no final score,
-and why, and which score-table game each event lands on, without reading out a score:
+The score tables are read by this module's own schedule readers (nfl_schedule, cfb_schedule), never by the
+engine's score readers: they read the season, the date or kickoff and the two teams, with the same season filter
+applied as the file is read (no 2026 row), but NO score column and no filter on whether a final score exists. So
+nothing here can depend on a result (amendment 1, item 8; Astra's audit 3, finding 3). It runs the engine's own
+name resolution and its own outcomes.match() on those events, with a score column planted on every game before
+matching that holds the table's row number, so it predicts which score-table game each F1 event lands on, and why
+an event lands on none, whether or not that game has a final score (the report prints the share matched to a
+final score after the run):
   names.csv                 every distinct team name, the school or team it resolves to, and how (the alias
                             table, the team files, an exact school name, the prefix rule, or unresolved); prefix
                             and unresolved rows first. A prefix row is right only if the school is the one the
@@ -69,6 +74,30 @@ def load_events(raw_dir: Path, cfg: dict) -> tuple[pd.DataFrame, Counter]:
     return ev, dropped
 
 
+# The score tables' schedule columns, and nothing else: no score, no column derived from one (amendment 1, item 8)
+NFL_SCHEDULE_COLS = ["season", "gameday", "home_team", "away_team"]
+CFB_SCHEDULE_COLS = ["season", "start_utc", "home_team", "away_team"]
+
+
+def nfl_schedule(path: Path | None = None) -> pd.DataFrame:
+    """The NFL score table's schedule, 2020-25: season, game day and the two teams. Unlike outcomes.nfl_games() it
+    reads no score column and keeps a game whether or not it has a final score. The season filter is the same,
+    applied as the file is read (no 2026 row is loaded), and checked again after."""
+    g = pd.read_parquet(path or REPO / "nfl-weather/data/processed/games.parquet", columns=NFL_SCHEDULE_COLS,
+                        filters=o.SEASON_FILTER)
+    g = g[g.season.isin(o.SEASONS)].copy()
+    g["day"] = pd.to_datetime(g.gameday).dt.date
+    return g
+
+
+def cfb_schedule(path: Path | None = None) -> pd.DataFrame:
+    """The college score table's schedule, 2020-25: season, start time and the two schools. No score column, no
+    score-presence filter; the same read-time season filter as outcomes.cfb_games(), checked again after."""
+    g = pd.read_parquet(path or REPO / "cfb-weather/data/processed/games.parquet", columns=CFB_SCHEDULE_COLS,
+                        filters=o.SEASON_FILTER)
+    return g[g.season.isin(o.SEASONS)].copy()
+
+
 def fbs_schools(path: Path | None = None) -> set[str]:
     """Schools listed as FBS in the college score table, 2020-25 (read with the season filter: no 2026 row)."""
     gp = pd.read_parquet(path or REPO / "cfb-weather/data/processed/games.parquet",
@@ -81,8 +110,9 @@ def fbs_schools(path: Path | None = None) -> set[str]:
 
 
 def _planted(t: pd.DataFrame) -> pd.DataFrame:
-    """The score table with both scores replaced by the row number: nothing real can be read out, and two events
-    that land on one game show the same number."""
+    """The schedule with a score column planted on every game before matching, holding the row number (any score
+    column a caller passes in is overwritten): nothing real can be read out, every game can be matched whether or
+    not it has a final score, and two events that land on one game show the same number."""
     t = t.reset_index(drop=True).copy()
     t["home_score"] = t.index.astype(float)
     t["away_score"] = t.index.astype(float)
@@ -103,7 +133,8 @@ def alias_check(schools, cfb_raw: Path | None) -> pd.DataFrame:
 
 def check(ev: pd.DataFrame, nfl: pd.DataFrame, cfb: pd.DataFrame, cfb_raw: Path | None,
           fbs: set[str]) -> dict:
-    """The preflight on events and score tables (scores are planted here, whatever the tables hold)."""
+    """The preflight on events and schedules (row numbers are planted as scores here, before matching, whatever
+    the tables hold)."""
     detail: dict = {}
     scores, why = o.match(ev, nfl=_planted(nfl), cfb=_planted(cfb), cfb_raw=cfb_raw, detail=detail)
     names = detail["names"]
@@ -148,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
     if ev.empty:
         print("No saved schedule events: nothing to check.")
         return 0
-    res = check(ev, o.nfl_games(), o.cfb_games(), cfb_raw, fbs_schools())
+    res = check(ev, nfl_schedule(), cfb_schedule(), cfb_raw, fbs_schools())      # schedules only: no score is read
     for name in ("names", "unmatched", "unreached", "one_game_two_events", "aliases"):
         res[name].to_csv(out / f"{name}.csv", index=False)
     s = res["summary"]

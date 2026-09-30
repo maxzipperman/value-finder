@@ -245,8 +245,8 @@ def test_item8_the_names_preflight_on_a_made_up_schedule(tmp_path, monkeypatch, 
                             away_team=["Cincinnati", "Alabama", "Alabama"],
                             home_score=[77.0, 55.0, 88.0], away_score=[66.0, 44.0, 99.0]))
     monkeypatch.setattr(pf.bulk, "load_config", lambda: cfg)
-    monkeypatch.setattr(pf.o, "nfl_games", lambda: nfl)
-    monkeypatch.setattr(pf.o, "cfb_games", lambda: cfb)
+    monkeypatch.setattr(pf, "nfl_schedule", lambda: nfl)
+    monkeypatch.setattr(pf, "cfb_schedule", lambda: cfb)
     monkeypatch.setattr(pf, "fbs_schools", lambda: {"Miami (OH)", "Georgia", "Alabama", "Cincinnati", "Texas",
                                                     "Ohio State"})
     out = tmp_path / "out"
@@ -476,8 +476,8 @@ def test_item8_the_preflight_prints_what_the_team_files_give_for_each_alias(tmp_
                             away_team=["Cincinnati"], home_score=[7.0], away_score=[3.0]))
     nfl = pd.DataFrame(columns=["season", "day", "home_team", "away_team", "home_score", "away_score"])
     monkeypatch.setattr(pf.bulk, "load_config", lambda: cfg)
-    monkeypatch.setattr(pf.o, "nfl_games", lambda: nfl)
-    monkeypatch.setattr(pf.o, "cfb_games", lambda: cfb.assign(home_team=["Miami (OH)"]))
+    monkeypatch.setattr(pf, "nfl_schedule", lambda: nfl)
+    monkeypatch.setattr(pf, "cfb_schedule", lambda: cfb.assign(home_team=["Miami (OH)"]))
     monkeypatch.setattr(pf, "fbs_schools", lambda: {"Miami (OH)"})
     monkeypatch.setattr(pf, "alias_check", lambda sch, raw, f=pf.alias_check: f(schools, raw))
     out = tmp_path / "out"
@@ -489,3 +489,130 @@ def test_item8_the_preflight_prints_what_the_team_files_give_for_each_alias(tmp_
     assert len(pd.read_csv(out / "aliases.csv")) == len(outcomes.CFB_ALIASES)
     assert pf.main(["--out", str(out), "--raw-dir", str(tmp_path / "raw"), "--cfb-raw", str(tmp_path / "x")]) == 0
     assert f"alias table: {len(outcomes.CFB_ALIASES)} rows, not compared" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------- item 8: the preflight is blind to results
+# Astra's audit 3, finding 3: the preflight read the score tables through the engine's score readers, which ask for
+# the score columns and drop games without a final score, so which events it matched depended on whether a score
+# existed. It now reads the tables through its own schedule readers: no score column, no score-presence filter,
+# the same read-time season filter. Everything below is made up.
+RESULT_COLS = {"home_score", "away_score", "home_points", "away_points", "result", "total", "overtime", "completed",
+               "home_post_win_prob", "away_post_win_prob", "home_postgame_elo", "away_postgame_elo",
+               "excitement_index"}
+
+
+def _game_tables(repo, scores: str) -> None:
+    """Made-up NFL and college score tables at the repo's paths, with a sealed 2026 row in each. `scores`: "present"
+    (every game has a final score), "missing" (every score and result column empty) or "absent" (no such column)."""
+    nfl = pd.DataFrame(dict(season=[2024, 2024, 2024, 2026], game_type="REG",
+                            gameday=["2024-09-08", "2024-09-15", "2024-09-22", "2026-09-13"],
+                            home_team=["KC", "BAL", "KC", "BUF"], away_team=["BAL", "KC", "CIN", "NYJ"],
+                            home_score=[77.0, 66.0, 83.0, 99.0], away_score=[55.0, 44.0, 93.0, 98.0],
+                            result=[7.0, -7.0, 20.0, 1.0], total=[47.0, 41.0, 40.0, 197.0], overtime=[0.0] * 4))
+    cfb = pd.DataFrame(dict(season=[2024, 2024, 2024, 2026], week=[2, 2, 6, 3],
+                            start_utc=pd.to_datetime(["2024-09-07T16:00Z", "2024-09-07T19:30Z", "2024-10-05T19:30Z",
+                                                      "2026-09-12T19:30Z"]),
+                            home_team=["Miami (OH)", "Georgia", "Texas", "Ohio State"],
+                            away_team=["Cincinnati", "Alabama", "Alabama", "Oregon"],
+                            home_division="fbs", away_division="fbs", completed=True,
+                            home_points=[71.0, 62.0, 87.0, 99.0], away_points=[58.0, 67.0, 96.0, 98.0],
+                            excitement_index=[5.0, 6.0, 7.0, 8.0]))
+    if scores == "missing":
+        nfl[["home_score", "away_score", "result", "total", "overtime"]] = np.nan
+        cfb[["home_points", "away_points", "excitement_index"]] = np.nan
+        cfb["completed"] = False
+    elif scores == "absent":
+        nfl = nfl.drop(columns=["home_score", "away_score", "result", "total", "overtime"])
+        cfb = cfb.drop(columns=["home_points", "away_points", "excitement_index", "completed"])
+    for folder, t in (("nfl-weather", nfl), ("cfb-weather", cfb)):
+        (repo / folder / "data/processed").mkdir(parents=True, exist_ok=True)
+        t.to_parquet(repo / folder / "data/processed/games.parquet", index=False)
+
+
+def _preflight_on_made_up_tables(tmp_path, monkeypatch, scores: str) -> tuple[dict, str]:
+    """Runs main() on one made-up schedule against the made-up tables; returns {file: bytes} and what it printed."""
+    run = tmp_path / scores
+    repo = run / "repo"
+    _game_tables(repo, scores)
+    cfg = fixture.config(run)
+    _schedule(run, cfg, NFL, [("n1", "2024-09-08T17:00Z", "Kansas City Chiefs", "Baltimore Ravens"),
+                              ("n2", "2024-09-15T17:00Z", "Baltimore Ravens", "Kansas City Chiefs"),
+                              ("n3", "2024-09-22T17:00Z", "Kansas City Chiefs", "Nowhere Nobodies"),
+                              ("n26", "2026-09-13T17:00Z", "Buffalo Bills", "New York Jets")])
+    _schedule(run, cfg, CFB, [("c1", "2024-09-07T16:00Z", "Miami RedHawks", "Cincinnati Bearcats"),
+                              ("c2", "2024-09-07T19:30Z", "Georgia Bulldogs", "Alabama Crimson Tide"),
+                              ("c2-relisted", "2024-09-07T19:30Z", "Georgia Bulldogs", "Alabama Crimson Tide"),
+                              ("c3", "2024-09-14T19:30Z", "Nowhere Nobodies", "Texas Longhorns"),
+                              ("c4", "2024-09-21T19:30Z", "Georgia Bulldogs", "Texas Longhorns"),
+                              ("c5", "2024-10-05T19:30Z", "Texas Longhorns", "Alabama Crimson Tide"),
+                              ("c26", "2026-09-12T19:30Z", "Ohio State Buckeyes", "Oregon Ducks")])
+    monkeypatch.setattr(pf.bulk, "load_config", lambda path=None, f=_LOAD_CONFIG: cfg if path is None else f(path))
+    monkeypatch.setattr(pf, "REPO", repo)
+    monkeypatch.setattr(outcomes, "REPO", repo)        # so a return to the engine's score readers would read them too
+    out = run / "out"
+    assert pf.main(["--out", str(out), "--raw-dir", str(run / "raw"), "--cfb-raw", str(run / "no-team-files")]) == 0
+    files = {f.name: f.read_bytes() for f in sorted(out.iterdir())}
+    return files, _printed().replace(str(run), "<run>")                  # the folder is the only difference
+
+
+_capture = {}
+_LOAD_CONFIG = bulk.load_config
+
+
+def _printed() -> str:
+    return _capture["capsys"].readouterr().out
+
+
+def test_item8_the_preflight_output_is_the_same_with_scores_present_missing_or_absent(tmp_path, monkeypatch, capsys):
+    _capture["capsys"] = capsys
+    present = _preflight_on_made_up_tables(tmp_path, monkeypatch, "present")
+    assert set(present[0]) == {"names.csv", "unmatched.csv", "unreached.csv", "one_game_two_events.csv",
+                               "aliases.csv"}
+    # every output file byte for byte, and what it printed
+    assert _preflight_on_made_up_tables(tmp_path, monkeypatch, "missing") == present
+    assert _preflight_on_made_up_tables(tmp_path, monkeypatch, "absent") == present
+    # and the run is not trivially empty: 6 of the 9 events in 2020-25 land on a game, with or without a score
+    assert "matched events: 6 of 9 " in present[1]
+    un = pd.read_csv(pd.io.common.BytesIO(present[0]["unmatched.csv"])).set_index("event_id").reason.to_dict()
+    assert un == {"n3": "nfl_team_name_unknown", "c3": "cfb_team_name_unknown", "c4": "cfb_prefix_name_no_game"}
+    for body in present[0].values():                        # no made-up score anywhere
+        assert not any(x in body.decode() for x in ("77", "66", "83", "55", "44", "93", "71", "62", "87", "58", "67", "96", "99", "98"))
+
+
+def test_item8_the_preflight_never_asks_for_a_score_column(tmp_path, monkeypatch, capsys):
+    """A read spy on both parquet readers: every read names its columns, none is a score or result column, every
+    read of a score table passes the season filter, and what it hands over holds no 2026 row. The engine's own
+    score readers are never called."""
+    import pyarrow.parquet as pq
+    _capture["capsys"] = capsys
+    reads, real_pd, real_pq = [], pd.read_parquet, pq.read_table
+
+    def spy_pd(path, *a, **k):
+        got = real_pd(path, *a, **k)
+        reads.append(("pandas", str(path), k.get("columns"), k.get("filters"),
+                      set(got.season) if "season" in got else None))
+        return got
+
+    def spy_pq(source, *a, **k):
+        got = real_pq(source, *a, **k)
+        reads.append(("pyarrow", str(getattr(source, "name", source)), k.get("columns"), k.get("filters"),
+                      set(got.column("season").to_pylist()) if "season" in got.column_names else None))
+        return got
+
+    def engine_reader(*a, **k):
+        raise AssertionError("the preflight called the engine's score reader")
+    monkeypatch.setattr(pd, "read_parquet", spy_pd)
+    monkeypatch.setattr(pq, "read_table", spy_pq)
+    monkeypatch.setattr(outcomes, "nfl_games", engine_reader)
+    monkeypatch.setattr(outcomes, "cfb_games", engine_reader)
+    _preflight_on_made_up_tables(tmp_path, monkeypatch, "present")
+    tables = [r for r in reads if r[1].endswith("games.parquet")]
+    assert {r[1].split("/")[-4] for r in tables} == {"nfl-weather", "cfb-weather"}
+    assert reads and all(r[2] is not None and not set(r[2]) & RESULT_COLS for r in reads), reads
+    assert all(r[3] == outcomes.SEASON_FILTER and r[4] == {2024} for r in tables), tables
+    # the spy sees the score columns when something does ask for them (the engine's reader, called directly)
+    monkeypatch.undo()
+    monkeypatch.setattr(pd, "read_parquet", spy_pd)
+    reads.clear()
+    outcomes.nfl_games(tmp_path / "present/repo/nfl-weather/data/processed/games.parquet")
+    assert {"home_score", "away_score"} <= set(reads[0][2])
