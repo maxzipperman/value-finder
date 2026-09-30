@@ -182,6 +182,11 @@ class Handler(BaseHTTPRequestHandler):
                 store.scorer(p, wait=True)
             with store.lock:
                 return self._json(200, api.tests_screen(store))
+        if path == "/api/signals":
+            for p in PROJECTS:                            # the slow part, outside the lock
+                store.scorer(p, wait=True)
+            with store.lock:
+                return self._json(200, api.signals_screen(store))
         if path == "/api/jobs":
             with store.lock:
                 return self._json(200, api.jobs_screen(store))
@@ -191,6 +196,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pull":
             with store.lock:
                 return self._json(200, api.pull(store))
+        if path == "/api/backtests":
+            with store.lock:
+                return self._json(200, api.backtests(store))
         if path == "/api/research":
             with store.lock:
                 return self._json(200, api.research(store))

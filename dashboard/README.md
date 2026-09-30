@@ -1,7 +1,8 @@
 # Dashboard: a local, read-only view on the Mac
 
 One page at <http://127.0.0.1:8787/> showing the forward tests, the board of upcoming games, the scheduled jobs,
-Thursday's pull and the research, from the files the jobs write. Paper only: it places no bet, changes no file
+Thursday's pull and the research (as a list and as charts), from the files the jobs write and the tables committed
+in the repo. Paper only: it places no bet, changes no file
 the jobs own, and listens on 127.0.0.1 only. Python standard library only; nothing is loaded from the internet.
 
 ```bash
@@ -10,6 +11,8 @@ ops/install_dashboard.sh                                        # run it at logi
 ops/install_dashboard.sh --print-plist                          # show the job file it would write; changes nothing
 ops/uninstall_dashboard.sh                                      # remove that
 uv run --project dashboard pytest -q                            # the tests
+nfl-weather/.venv/bin/python dashboard/tools/build_charts.py    # remake the Backtests charts (after research merges)
+nfl-weather/.venv/bin/python dashboard/tools/build_charts.py --check   # are they up to date? exit 1 if not
 ```
 
 `--root PATH` reads a copy of the repo instead of the checkout it lives in (for tests and rehearsals);
@@ -25,24 +28,111 @@ schedules), not from a `TZ` setting: `TZ=... uv run ...` in a rehearsal doesn't 
 
 ## Screens
 
-Home (`#home`), Board (`#board`, with `?sport=nfl|cfb&signals=1`), a game (`#game/<id>`), Forward tests
-(`#tests`), Jobs and records (`#jobs`, and `#jobs/records` for `ops/RUN_RECORDS.md`), Thursday's pull (`#pull`)
-and Research (`#research`). Data refreshes every 60 seconds; the server re-reads the files at most every 30
-seconds (and works out the board's rows at most once a minute from each read) and runs each scorer preview at
-most every 10 minutes.
+Home (`#home`), Signals (`#signals`, with `?sport=nfl|cfb&rule=<rule id>&result=won|lost|push|pending|void`),
+Backtests (`#backtests`), Board (`#board`, with `?sport=nfl|cfb&signals=1`), a game (`#game/<id>`), Forward tests (`#tests`), Jobs and
+records (`#jobs`, and `#jobs/records` for `ops/RUN_RECORDS.md`), Thursday's pull (`#pull`) and Research
+(`#research`). Data refreshes every 60 seconds; the server re-reads the files at most every 30 seconds (and works
+out the board's rows at most once a minute from each read) and runs each scorer preview at most every 10 minutes.
+
+To add a screen: one entry in `SCREENS` in `vfdash/static/app.js` (its address, its `/api/...` answer and the
+function that draws it), one link in the navigation in `vfdash/static/index.html`, one route in `vfdash/server.py`
+and one builder in `vfdash/api.py`. A chart is drawn with `timeChart` in `app.js` (inline SVG, nothing loaded):
+reference lines (`refs`), a smallest span for the axis (`minSpan`) and, for a win-rate chart, `floorAtMost: 40` so
+its axis starts at 40% or lower, with break-even (52.4% at −110) passed as a reference line.
+
+## Signals: one colour, badges, and the log
+
+One colour is kept for signals and used for nothing else (violet, `--signal` in `app.css`): a filled **Signal**
+badge (a rule fired at its registered price), the same colour outlined for **Signal, backup price** (the NFL wind
+rule at the consensus line when Pinnacle had no quote; logged apart, not part of the decision), and a tinted row for
+a game whose newest row is a signal (on the Signals screen, the row of the rule that signals on that newest row: a
+model lean's row is never tinted). A **watch** gets a quiet outlined badge in the neutral colour: the NFL model
+lean, and a wind trigger that didn't become a signal (no price, a price too high, a value not above zero, or outside
+the 1 to 3 day window; the alert job sends a watch for each). Green, amber and red stay for job health and deadlines.
+Every badge carries its word. The rules are `badge` and `strongest` in `vfdash/words.py`.
+
+Home opens with the live signals, one row each (the badge, the game, the kickoff, the rule, the number and price to
+take, a better number if a book logged one, and how long until kickoff), above the four numbers; with none it says
+"No signal is live." and when the next run is. The browser tab shows how many games have a live signal, "(1) Value
+Finder", on every screen, as the Home tile and the menu-bar light count them; the panel has a row for each rule that
+signals, so when a game signals under Rule B and Rule HT its heading says both ("4 signals are live, on 3 games").
+The Board lists "Signals" and then "Everything else", each with its count, under a legend.
+
+The Signals screen lists every bet the scorers count, newest first, from each scorer's `--json` document (the same
+preview, kept 10 minutes, whose "text" is the report on the Forward tests screen): the kickoff, the game, the rule,
+the entry (number, price, book and when it was logged), the close and where it came from, the closing-line value,
+the final total, the result and the units. A row opens the game's page. Above it, for each rule and for the signal
+rules together (the model lean, a watch, is totalled on its own): the record, the units, the return per bet placed,
+the mean closing-line value with the registered interval, and the count toward the decision, each with its sample
+size, whether it clears the multiple-testing bar (read from STATUS.md's "Variants" bullet), and "Paper bets. No
+money was placed." The per-rule numbers are the scorer's own; the totals for rules together, the p-values and the
+charts are worked out in `vfdash/signals.py` from the scorer's bets: the win rate's one-sided p is exact, each bet
+winning with the break-even chance of its own price (the test the college football scorer registers for Rule HT);
+the closing-line value's is the larger of the plain t-test's and the one grouped by game day (the two the registered
+interval is the wider of). Two charts, cumulative units by date and closing-line value per bet with its running
+mean, say what they found in their titles ("not distinguishable from break-even" when it isn't), draw break-even or
+zero as a line, and never span less than 4 units or points, so a small difference never fills the chart; with fewer
+than 2 settled bets each is a sentence instead. The totals and charts ignore the result filter.
+
+Before the first signal the screen says which rule starts when, worked out from `content/forward_tests.json` (the
+date in each test's `starts_text`, else its `starts_utc` in Eastern time). If a scorer fails, takes more than 60
+seconds or prints something that is not its document (not one JSON object with its report as "text" and its tests,
+each with an id, counts and bets, among them every test that scorer prints; or more than 20 MB), the screen says so and lists, from the ledgers, the games whose
+rows include a signal since their rule started, without results.
+
+## Backtests: the research as charts
+
+The Backtests screen draws the project's research as charts: why the wind rule exists and how it did on forecasts as
+issued, how good those forecasts are, how hard it is to prove anything, and other ideas tested. It opens with three
+sentences: what is here, that every chart is a backtest or simulation on past data and not a forward result, and
+which results in the evidence list, if any, have cleared the multiple-testing bar.
+
+- **Prepared, then only read.** The server uses the standard library and can't read parquet, so each chart's numbers
+  are prepared by `tools/build_charts.py`, run by hand from the repo root with a weather project's Python (it uses
+  pandas). It reads only committed outputs (a source that isn't tracked, or differs from its last commit, stops it)
+  and writes one small JSON file per chart to `content/charts/` and nowhere else. Each file names its source files,
+  their git blob hashes, the commit and date each last changed in, the write-up it illustrates, and its words: a title
+  that says what was found, one sentence on what the chart shows and one on what it doesn't, and the sample size.
+  Without pandas it says so in one sentence and exits 1. `--check` compares what it would write with the committed
+  files and exits 1 on any difference. When research that a chart draws on merges, rerun the tool and commit the
+  files; the tests also fail until then (each file's blob hashes are checked against its sources, and every number is
+  recomputed from them).
+- **Drawn as the page loads.** Whether each result clears the project's multiple-testing bar is worked out on every
+  load from STATUS.md's "Variants" bullet, as on the other screens. One chart is drawn by the server itself, because
+  both of its inputs change when research merges: every entry of `content/evidence.json` that has a p-value, placed
+  at that p-value on a logarithmic scale, with the bar as a line and each mark labelled with its sample size.
+- **Honest axes.** A win-rate axis starts at 40% or lower and draws break-even (52.4% at −110) as a line; every other
+  value axis includes zero, or is fixed (0 to 100% for a chance); nothing is cropped to make a small difference look
+  large. The charts use blue and orange, and one blue ramp for ordered cases; never the signal violet, and never the
+  green, amber or red kept for health. Every chart has a hover read-out of the exact numbers and a table of the same
+  numbers that opens beneath it.
+- **Missing or damaged files.** A chart file that is missing, empty, cut off, too large or not in the form the tool
+  writes is shown as one plain sentence in its place; the rest of the screen is drawn.
+- **Links.** Each source file is a link to its page on GitHub at the commit the chart was built from, so it shows the
+  file exactly as the chart read it; each write-up is a link to its page on main. (The repo is private: a link opens
+  for the owner, signed in, in his browser, when he clicks it.) The page itself loads nothing from GitHub, or from
+  anywhere but this Mac. The chart drawn as the page loads names its two sources, read from this Mac, without a link.
+- **One rounding.** A table and the hover read-out print a number the same way: half away from zero on the number as
+  the chart file holds it (`fixed` in the tool and in `app.js`), so 2.05 is 2.1 in both.
+- **Not charted.** College football's high-total rule season by season: strategy-research/README.md gives its win
+  rate by season without counts, from a superseded record of the rule (373–273, before #48 rebuilt the college
+  football games table on the #36 spread fix), and no committed table holds its record by season (only pooled records,
+  which are on the Research screen). The screen says so in that chart's place.
 
 ## What it reads, and the only programs it starts
 
 Reads: `{nfl,cfb}-weather/data/forward/` `ledger.csv`, `runs.csv`, `closes.csv`, `alert_state.json`,
 `alerts.log` (its last 500 KB), `decisions.csv`, `fills.csv`; `STATUS.md`; `ops/RUN_RECORDS.md`;
-`sharp-markets/data/raw/_manifest/oddsapi_manifest.csv`; `dashboard/content/*.json`;
+`sharp-markets/data/raw/_manifest/oddsapi_manifest.csv`; `dashboard/content/*.json` and
+`dashboard/content/charts/*.json`;
 `~/.cache/value-finder/odds_quota.json` (only its time and balance fields, never the key's fingerprint);
 the schedule keys of the four jobs' files in `~/Library/LaunchAgents/`; the last line of
 `~/Library/Logs/valuefinder-closecapture.log` and `valuefinder-ledgersync.log`. It never opens a `.env` file.
 
 Starts (from fixed lists in `vfdash/commands.py`, never with a shell): each project's
-`scripts/score_forward.py --ledger <root>/<project>/data/forward/ledger.csv --now <UTC time>` with that
-project's `.venv/bin/python` in the project folder (a preview, which never records a decision);
+`scripts/score_forward.py --ledger <root>/<project>/data/forward/ledger.csv --now <UTC time> --json` with that
+project's `.venv/bin/python` in the project folder (a preview, which never records a decision; `--json` makes it
+print its report and its graded bets as one JSON document, and changes nothing else);
 `/bin/launchctl list`; `/bin/launchctl print gui/<uid>/<label>` for the four jobs.
 
 What a scorer preview does besides printing: importing its package (`nflweather/config.py`,

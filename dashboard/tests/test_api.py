@@ -76,7 +76,10 @@ def test_board(store):
     assert buf["forecast"] == "17 mph, 61°F"
     assert (buf["total"], buf["under"], buf["source"]) == ("44.5", "−108", "Pinnacle")
     assert buf["lean_chance"] == "52%" and buf["wind_value"] == "+10.4%"
-    assert buf["rules"][0] == {"rule": "Rule B", "value": "SIGNAL", "words": "Signal", "signal": True, "lean": False}
+    assert buf["rules"][0] == {"rule": "Rule B", "value": "SIGNAL", "words": "Signal", "signal": True, "lean": False,
+                               "badge": "signal"}
+    assert buf["badge"] == "signal" and by_id["2026_05_TEN_BAL"]["badge"] == "backup"
+    assert by_id["2026_05_ARI_NYG"]["badge"] == "watch"                  # a model lean is a watch, never a signal
     assert buf["best"] == "45.0 at −110 (FanDuel)"
     assert buf["days"] == 2
     assert by_id["2026_05_TEN_BAL"]["rules"][0]["words"] == "Signal at the backup price"
