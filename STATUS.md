@@ -148,3 +148,5 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 ## Keeping this current
 
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
+
+**Cloud first (the owner's rule, Sep 29, 2026):** work that needs only what is in git goes to the cloud worker, on cloud session credits; local chats, agents and workflows are only for work that needs this Mac, and a hook blocks a local agent or workflow that doesn't say why ([`ops/CLOUD_FIRST.md`](ops/CLOUD_FIRST.md)).
