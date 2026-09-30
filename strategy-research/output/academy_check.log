@@ -1,0 +1,61 @@
+Issue #54: academy vs academy -> under, the 59 games
+
+Games in the screen now: 60 (46-13-1); before the rebuild: 43 (29-13)
+One-sided p vs break-even 0.5238, now: 0.000045
+
+Status of every academy-vs-academy game 2006-2025 that exists in the table:
+status
+in both                                                  43
+ADDED by rebuild: home_spread was missing, now filled    17
+
+The 17 games the rebuild ADDED: 17-0-0 (mean closing total 49.6, mean margin under 15.2)
+The 43 games in both: 29-13-1
+Games in both whose closing total changed in the rebuild: 0
+
+Games with a closing total but still no spread: 0
+ALL academy-vs-academy games with a closing total, whatever the spread (drops the spread filter): 46-13-1 of 60
+
+By era (screen's 59 games; openers where the table has one):
+    era  games  under  over  push  win_pct  p_vs_breakeven  mean_close_total  mean_final_total  mean_margin_under  open_games  open_under  open_over  open_win_pct  open_p_vs_breakeven  mean_open_total
+2006–15     30     24     6     0   0.8000          0.0017           51.3083           42.0000             9.3083          13          10          3        0.7692               0.0653          55.0385
+2016–20     15     12     3     0   0.8000          0.0272           45.0667           38.0000             7.0667          12          10          2        0.8333               0.0284          48.7500
+2021–25     15     10     4     1   0.7143          0.1225           37.9167           32.7333             5.1833          15          11          4        0.7333               0.0843          39.1667
+2006–25     60     46    13     1   0.7797          0.0000           46.4000           38.6833             7.7167          40          31          9        0.7750               0.0010          47.2000
+
+By season:
+        games  under  close  final
+season                            
+2006        3      2   49.4   43.7
+2007        3      3   55.2   44.0
+2008        3      2   45.3   39.0
+2009        3      2   42.3   30.3
+2010        3      2   50.3   44.0
+2011        3      2   54.7   51.7
+2012        3      3   57.5   47.0
+2013        3      2   53.2   49.7
+2014        3      3   55.2   35.7
+2015        3      3   50.0   35.0
+2016        3      3   48.2   41.0
+2017        3      2   50.7   47.0
+2018        3      3   42.3   33.3
+2019        3      2   44.3   42.3
+2020        3      2   39.8   26.3
+2021        3      3   37.5   30.3
+2022        3      2   36.8   26.7
+2023        3      2   31.3   25.7
+2024        3      1   38.2   36.0
+2025        3      2   45.8   45.0
+
+Rank correlation of closing total with season, screen games: -0.574 (p = 0.000)
+Rank correlation of closing total with season, ALL college games with a closing total: -0.057
+
+Army-Navy: 20 games, 17-2-1 at the close, one-sided p vs break-even 0.0007; mean close 44.9, mean final 34.2
+Air Force vs Army or Navy: 40 games, 29-11-0 at the close, one-sided p vs break-even 0.0076; mean close 47.2, mean final 40.9
+Army-Navy games among the 17 added: 14
+
+Second source (cfbd multi-book median total, 2014-25): 36 of 60 screen games have one.
+  cfbd minus table close: mean 0.02, mean abs 0.16, max abs 1.0, differ by >= 1: 2
+  graded on cfbd total instead: 28-7 (table close on the same games: 28-7)
+  Pinnacle total in the table: 42 games; graded on it: 33-8
+
+Screen rows that moved when the table was rebuilt: 37 of 109 (all CFB); every NFL row and every other row is unchanged.
