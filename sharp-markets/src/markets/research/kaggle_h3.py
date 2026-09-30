@@ -11,6 +11,10 @@ and goes into the header of the first request only, to a fixed Kaggle API addres
 (checked as requests will connect to it). Redirects are followed by hand and no redirect hop carries the credential,
 whatever its host; odd redirect addresses are refused. Failures print one plain line with the status code and never
 the credential or a signed address. GET only.
+
+The NFL test (issue #75, docs/H3_KAGGLE_NFL_PREREGISTRATION.md) is in kaggle_h3_nfl.py. It shares this module's
+download, credential and statistics; `run(sport)` (`markets h3-kaggle --sport nba|nfl`) picks one. The NBA test and its
+report are unchanged.
 """
 from __future__ import annotations
 
@@ -185,34 +189,39 @@ def _get(url: str, cred: _Credential, what: str, params: dict | None = None) -> 
     raise SystemExit(f"Kaggle {what} failed: more than {MAX_REDIRECTS} redirects.")
 
 
-def _raw_base() -> Path:
-    return RAW_DIR / "nba" / "kaggle_mgm"
+# The one Kaggle dataset each sport's registered test reads (the NFL one: docs/H3_KAGGLE_NFL_PREREGISTRATION.md).
+DATASETS = {"nba": DATASET, "nfl": "caseydurfee/mgm-grand-nfl-betting-data"}
 
 
-def download(force: bool = False) -> bytes:
-    """The dataset zip, cache first: data/raw/nba/kaggle_mgm/{date}/dataset.zip, with download.json beside it (the
+def _raw_base(sport: str = "nba") -> Path:
+    return RAW_DIR / sport / "kaggle_mgm"
+
+
+def download(force: bool = False, sport: str = "nba") -> bytes:
+    """The dataset zip, cache first: data/raw/{sport}/kaggle_mgm/{date}/dataset.zip, with download.json beside it (the
     time in UTC, the size, the zip's sha256 and the dataset's name; nothing else). A rerun reads the cache."""
-    existing = sorted(_raw_base().glob("*/dataset.zip"))
+    dataset = DATASETS[sport]
+    existing = sorted(_raw_base(sport).glob("*/dataset.zip"))
     if existing and not force:
         return existing[-1].read_bytes()
     cred = _credential()
-    r = _get(f"{API}/datasets/download/{DATASET}", cred, "download")
+    r = _get(f"{API}/datasets/download/{dataset}", cred, "download")
     blob = r.content
     if not zipfile.is_zipfile(io.BytesIO(blob)):
         raise SystemExit(f"Kaggle download failed: the response ({len(blob):,} bytes, "
                          f"{r.headers.get('content-type', 'no content type')}) is not a zip file.")
     when = utcnow().replace(microsecond=0)
-    out = _raw_base() / when.date().isoformat() / "dataset.zip"
+    out = _raw_base(sport) / when.date().isoformat() / "dataset.zip"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(blob)
     (out.parent / "download.json").write_text(json.dumps(
-        {"dataset": DATASET, "downloaded_utc": when.isoformat().replace("+00:00", "Z"), "bytes": len(blob),
+        {"dataset": dataset, "downloaded_utc": when.isoformat().replace("+00:00", "Z"), "bytes": len(blob),
          "sha256": hashlib.sha256(blob).hexdigest()}, indent=2) + "\n")
     return blob
 
 
-def download_record() -> dict | None:
-    recs = sorted(_raw_base().glob("*/download.json"))
+def download_record(sport: str = "nba") -> dict | None:
+    recs = sorted(_raw_base(sport).glob("*/download.json"))
     return json.loads(recs[-1].read_text()) if recs else None
 
 
@@ -426,8 +435,10 @@ def _blank(n: int, G: int) -> dict:
             "wider": "none", "se": nan, "df": 0, "p": nan, "roi": nan, "detectable": nan, "sd_div10": nan}
 
 
-def mean_test(bets: list[dict]) -> dict:
-    """Families A and C: mean of (won - fair) with the wider of the plain and the grouped-by-date standard error."""
+def mean_test(bets: list[dict], z_bar: float | None = None) -> dict:
+    """Families A and C: mean of (won - fair) with the wider of the plain and the grouped-by-date standard error.
+    z_bar: the bar in standard errors, for the smallest detectable effect (the NBA test's Z_BAR unless given)."""
+    z_bar = Z_BAR if z_bar is None else z_bar
     n, G = len(bets), len({b["date"] for b in bets})
     out = _blank(n, G)
     if n == 0:
@@ -436,7 +447,7 @@ def mean_test(bets: list[dict]) -> dict:
     m = float(r.mean())
     out.update(win_rate=float(np.mean([b["won"] for b in bets])), mean_fair=float(np.mean([b["fair"] for b in bets])),
                est=m, roi=float(np.mean([(b["dec"] - 1) if b["won"] else -1.0 for b in bets])),
-               detectable=Z_BAR * 0.5 / math.sqrt(n))
+               detectable=z_bar * 0.5 / math.sqrt(n))
     if n < 2:
         return out
     out["se_plain"] = float(r.std(ddof=1) / math.sqrt(n))
@@ -484,8 +495,10 @@ def _ols(y, x, bins, groups):
             "n": n, "k": kk, "G": G}
 
 
-def regression_test(recs: list[dict], market: str) -> dict:
-    """Family B: (won - fair) for the home side (the over) on its divergence per 10 points, with fair-chance tenths."""
+def regression_test(recs: list[dict], market: str, seasons: tuple | None = None, z_bar: float | None = None) -> dict:
+    """Family B: (won - fair) for the home side (the over) on its divergence per 10 points, with fair-chance tenths.
+    seasons and z_bar default to the NBA test's."""
+    seasons, z_bar = SEASONS if seasons is None else seasons, Z_BAR if z_bar is None else z_bar
     s1 = SIDES[market][0]
     rows = [(r["sides"][s1], r["date"], r["season"]) for r in recs]
     y = [o["won"] - o["fair"] for o, _, _ in rows]
@@ -493,7 +506,7 @@ def regression_test(recs: list[dict], market: str) -> dict:
     bins = [min(int(o["fair"] * 10), 9) for o, _, _ in rows]
     dates = [d for _, d, _ in rows]
     out = _blank(len(rows), len(set(dates)))
-    out["season"] = {s: (None, sum(1 for _, _, se_ in rows if se_ == s)) for s in SEASONS}
+    out["season"] = {s: (None, sum(1 for _, _, se_ in rows if se_ == s)) for s in seasons}
     if rows:
         out.update(win_rate=float(np.mean([o["won"] for o, _, _ in rows])),
                    mean_fair=float(np.mean([o["fair"] for o, _, _ in rows])))
@@ -502,9 +515,9 @@ def regression_test(recs: list[dict], market: str) -> dict:
         return out
     sd = float(np.std(x, ddof=1))
     out.update(est=fit["coef"], se_plain=fit["se_hc1"], se_grouped=fit["se_grouped"], G=fit["G"], sd_div10=sd,
-               detectable=Z_BAR * 0.5 / (math.sqrt(fit["n"]) * sd) if sd > 0 else float("nan"))
+               detectable=z_bar * 0.5 / (math.sqrt(fit["n"]) * sd) if sd > 0 else float("nan"))
     out = _pick_wider(out, df_plain=fit["n"] - fit["k"], df_grouped=fit["G"] - 1)
-    for s in SEASONS:                                   # the sign check only: no standard error, no p-value
+    for s in seasons:                                   # the sign check only: no standard error, no p-value
         idx = [i for i, (_, _, se_) in enumerate(rows) if se_ == s]
         f = _ols([y[i] for i in idx], [x[i] for i in idx], [bins[i] for i in idx], [dates[i] for i in idx]) \
             if idx else None
@@ -512,11 +525,12 @@ def regression_test(recs: list[dict], market: str) -> dict:
     return out
 
 
-def _season_means(bets: list[dict]) -> dict:
+def _season_means(bets: list[dict], seasons: tuple | None = None) -> dict:
     by = defaultdict(list)
     for b in bets:
         by[b["season"]].append(b["won"] - b["fair"])
-    return {s: ((float(np.mean(by[s])) if by[s] else None), len(by[s])) for s in SEASONS}
+    return {s: ((float(np.mean(by[s])) if by[s] else None), len(by[s]))
+            for s in (SEASONS if seasons is None else seasons)}
 
 
 ZERO = 1e-12          # a figure this close to zero is zero: floating-point sums of exact halves can land at 1e-17
@@ -529,13 +543,15 @@ def _sign(x) -> int | None:
     return 0 if abs(x) < ZERO else (1 if x > 0 else -1)
 
 
-def _sign_check(res: dict) -> dict:
+def _sign_check(res: dict, bar: float | None = None) -> dict:
     """The registration: a season counts when its figure has the same sign as the overall figure. A season with no
-    bets, or a figure of exactly zero, does not count; nor does any season when the overall figure is zero."""
+    bets, or a figure of exactly zero, does not count; nor does any season when the overall figure is zero.
+    bar defaults to the NBA test's; both tests need the same sign in at least 4 of their 5 seasons."""
+    bar = BAR if bar is None else bar
     overall = _sign(res["est"]) or 0
     signs = {s: _sign(v) for s, (v, _) in res["season"].items()}
     same = sum(1 for v in signs.values() if overall != 0 and v == overall)
-    passes = (not math.isnan(res["p"])) and res["p"] < BAR and same >= SEASONS_NEEDED
+    passes = (not math.isnan(res["p"])) and res["p"] < bar and same >= SEASONS_NEEDED
     return res | {"signs": signs, "same_sign": same, "passes": bool(passes)}
 
 
@@ -709,6 +725,21 @@ def run_h3(blob: bytes | None = None, db_path=None, reports_dir=None) -> dict:
     res["kalshi_joined_games"] = store_splits(games, db_path or DB_PATH)
     res["report"] = write_report(res, reports_dir or REPORTS_DIR)
     return res
+
+
+SPORTS = ("nba", "nfl")
+
+
+def run(sport: str = "nba", **kw) -> dict:
+    """`markets h3-kaggle --sport {nba,nfl}`. The NBA test is run_h3 above, unchanged. The NFL test
+    (docs/H3_KAGGLE_NFL_PREREGISTRATION.md) is kaggle_h3_nfl.run_h3_nfl, which uses this module's download, credential
+    and statistics with the NFL's own seasons, bar and variants."""
+    if sport == "nba":
+        return run_h3(**kw)
+    if sport == "nfl":
+        from .kaggle_h3_nfl import run_h3_nfl
+        return run_h3_nfl(**kw)
+    raise SystemExit(f"h3-kaggle: no registered test for the sport {sport!r} (only {', '.join(SPORTS)}).")
 
 
 def _pct(x, nd=1):

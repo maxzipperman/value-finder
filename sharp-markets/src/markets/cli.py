@@ -119,10 +119,31 @@ def cmd_backtest(args) -> None:
 
 
 def cmd_h3(args) -> None:
-    from .research.kaggle_h3 import run_h3
-    res = run_h3()
-    print(f"rows={res['n_rows']} games={res['n_games']} unknown teams={res['unknown_teams']} "
-          f"kalshi-joined={res['kalshi_joined_games']} n_variants_tested={res['n_variants']}")
+    from .research.kaggle_h3 import run
+    top, own = getattr(args, "sport", "nba"), getattr(args, "h3_sport", None)
+    if own and top not in ("nba", own):
+        raise SystemExit(f"h3-kaggle: two different sports given (--sport {top} and --sport {own}).")
+    sport = own or top
+    if sport not in ("nba", "nfl"):
+        raise SystemExit(f"h3-kaggle: no registered test for the sport {sport!r} (only nba and nfl).")
+    if sport == "nba":
+        if args.check_only or args.nfl_dir:
+            raise SystemExit("--check-only and --nfl-dir are for --sport nfl only.")
+        res = run("nba")
+        print(f"rows={res['n_rows']} games={res['n_games']} unknown teams={res['unknown_teams']} "
+              f"kalshi-joined={res['kalshi_joined_games']} n_variants_tested={res['n_variants']}")
+        print(f"report: {res['report']}")
+        return
+    res = run(sport, nfl_dir=args.nfl_dir, check_only=args.check_only)
+    if args.check_only:
+        print("check only: no result computed and no report written. No score is read. Won flags are touched only by "
+              "the exact-duplicate check, which compares every column as text, and no flag's value is read. Prices, "
+              "shares and lines are read only for the format counts below.")
+        for line in res["check"]:
+            print(f"  {line}")
+        return
+    print(f"rows={res['n_rows']} joined={res['n_joined']} with scores={res['n_games']} "
+          f"unknown teams={res['unknown_teams']} n_variants_tested={res['n_variants']}")
     print(f"report: {res['report']}")
 
 
@@ -208,10 +229,19 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--end", required=True)
     b.set_defaults(fn=cmd_backtest)
 
-    sub.add_parser("h3-kaggle", help="H3, the registered test on the Kaggle MGM NBA closing splits "
-                                     "(docs/H3_KAGGLE_PREREGISTRATION.md); needs a Kaggle token in KAGGLE_API_TOKEN "
-                                     "or ~/.kaggle/access_token, or KAGGLE_USERNAME and KAGGLE_KEY in .env"
-                   ).set_defaults(fn=cmd_h3)
+    h3 = sub.add_parser("h3-kaggle", help="H3, the registered test on the Kaggle MGM closing splits: NBA "
+                                          "(docs/H3_KAGGLE_PREREGISTRATION.md) or NFL "
+                                          "(docs/H3_KAGGLE_NFL_PREREGISTRATION.md); needs a Kaggle token in "
+                                          "KAGGLE_API_TOKEN or ~/.kaggle/access_token, or KAGGLE_USERNAME and "
+                                          "KAGGLE_KEY in .env, unless the file is already in the cache")
+    h3.add_argument("--sport", dest="h3_sport", choices=["nba", "nfl"], default=None,
+                    help="nba (the default) or nfl; the same as markets --sport before the command")
+    h3.add_argument("--nfl-dir", help="NFL: the nfl-weather project, read-only (its games.parquet scores and the "
+                                      "Rule B replay table); default ../nfl-weather")
+    h3.add_argument("--check-only", action="store_true",
+                    help="NFL: check the file's columns, team names, join to the schedule and the format of its "
+                         "lines, shares and prices (counts only); read no score or won flag; compute no result")
+    h3.set_defaults(fn=cmd_h3)
 
     h = sub.add_parser("h4a-nfl-weather", help="H4a: Kalshi NFL totals vs wind (zero Odds API credits)")
     h.add_argument("--nfl-dir", required=True, help="path to the nfl-weather study project (read-only)")

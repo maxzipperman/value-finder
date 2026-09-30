@@ -19,6 +19,8 @@ uv run markets odds-pull --start 2026-01-05 --end 2026-01-11 --confirm --max-cre
 uv run markets build                                           # raw -> DuckDB tables, matching, analysis grid
 uv run markets backtest --start 2026-01-05 --end 2026-01-11    # H1, H2, lead-lag -> reports/
 uv run markets h3-kaggle                                       # H3: the registered test on BetMGM's NBA closing splits
+uv run markets h3-kaggle --sport nfl --check-only              # H3, NFL: columns, team names, join; no result
+uv run markets h3-kaggle --sport nfl                           # H3, NFL: the 6 registered variants (#75)
 uv run markets odds5m plan                                     # 5M month: bulk multi-sport pulls (docs/ODDS5M_DAY_ONE.md)
 uv run markets odds5m full --pull F1 --confirm --max-credits 170000        # one pull at a time, as docs/ODDS5M_DAY_ONE.md lists them
                                                                # (`--pull day_one` is refused: F3, in it, needs --seasons)
@@ -49,6 +51,7 @@ Data lands in `data/` (gitignored); DuckDB at `data/markets.duckdb`.
 - **Files.** The registration, pushed before the download: [`docs/H3_KAGGLE_PREREGISTRATION.md`](docs/H3_KAGGLE_PREREGISTRATION.md). The report, with the checks on the file and the football candidates on Kaggle: [`reports/h3_kaggle_mgm.md`](reports/h3_kaggle_mgm.md). The code: `markets/research/kaggle_h3.py`; tests: `tests/test_kaggle_h3.py` (fake token, no network).
 - **The token.** `uv run markets h3-kaggle` reads the Kaggle token from `KAGGLE_API_TOKEN`, else `~/.kaggle/access_token` (refused unless only you can read it, mode 600), else `KAGGLE_USERNAME` and `KAGGLE_KEY` in `.env`. It goes with the first request only, to Kaggle's fixed API address on www.kaggle.com, and never on a redirect (Kaggle redirects downloads to a storage host); the download is cached under `data/raw/nba/kaggle_mgm/` with a `download.json` (time, size, sha256), and a rerun makes no request.
 - **Football.** Kaggle has one free NFL source in the same format (`caseydurfee/mgm-grand-nfl-betting-data`, 2021–25 regular seasons, not downloaded) and none for college football. Any football test needs its own registration first.
+- **The NFL test (issue #75, written September 30, 2026; not yet registered or run).** [`docs/H3_KAGGLE_NFL_PREREGISTRATION.md`](docs/H3_KAGGLE_NFL_PREREGISTRATION.md): 6 variants (families A at 10 points, B and C, on spreads and totals), results from the repo's own scores in `nfl-weather/data/processed/games.parquet`, bar p < 0.05 / 294 = 0.000170 with the same sign in 4 of 5 seasons (the running count goes from 288 to 294 when it runs). The hub registers it, then makes the one download and runs `uv run markets h3-kaggle --sport nfl --check-only` (columns, team names, the join, the format of lines, shares and prices, and the lines' sign against nflverse's closing lines; no score or won flag) followed by `--sport nfl`, which writes `reports/h3_kaggle_nfl.md`. The code: `markets/research/kaggle_h3_nfl.py`; tests: `tests/test_kaggle_h3_nfl.py` (a hand-built file, no network). The download is cached under `data/raw/nfl/kaggle_mgm/`.
 
 ## Price-engine backtest on F1 (issues #8 and #53, added September 29, 2026)
 
