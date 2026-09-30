@@ -1,5 +1,18 @@
 # A prediction-model layer: think-through of outside advice
 
+## The hub's reading (September 29, 2026)
+
+The hub read this memo and decided the following on the owner's standing instruction of September 29, 2026 (the hub settles research questions itself and reports afterwards; money and purchases stay the owner's).
+
+- **"Do nothing now" is accepted.** Issue #71 stays open and parked until #10's gate is read, by about October 20, 2026.
+- **D1 and D2 go as the memo advises.** No pull is added to October for a model layer, and F3b's gate stays the only way to the 2023–24 props, with no second reason written for buying them.
+- **D3:** when the hub writes #10's registration, it puts in this sentence: "the sealed 2026 props are opened once, for every hypothesis registered by then".
+- **D4 becomes a small job:** [#76](https://github.com/maxzipperman/value-finder/issues/76), a column in the fill log for how much a book will take.
+- **D5, a backup of the paid data, is being written as its own pull request today.** A second disk, if one is bought, is the owner's purchase, and it is on his list in `STATUS.md`.
+- **The hub's first opinion was wrong on the points in [section 8](#8-where-the-hub-is-wrong), and the hub accepts them,** except that it has not yet formed a view on the bar ([question 3](#9-questions-for-the-owner)), which goes to the owner.
+
+---
+
 *Strategy research · September 29, 2026 · Issue [#71](https://github.com/maxzipperman/value-finder/issues/71) · A memo for the hub and the owner. It recommends; it decides nothing.*
 
 **Why the owner asked.** "Just being comprehensive." He isn't set on building a model layer. He wants to be sure nothing worth having is being missed. So this memo leans on the inventory and the gaps, and "do nothing" is a full answer throughout.
@@ -10,7 +23,7 @@
 - **No API was called** (odds, weather or markets), nothing was bought, and no 2026 game was read. Every count below is filtered to seasons through 2025 before anything is counted.
 - **What was run:** two row counts on committed tables and one sheet of power arithmetic ([Appendix B](#appendix-b-the-counts-and-the-arithmetic)).
 - **What was read:** the repo's own documents and output tables, and the papers in [Appendix A](#appendix-a-sources-and-how-each-was-checked). Each paper is marked as read in full, read as an abstract, or recalled and not verified.
-- **No rule, registered document, code or STATUS.md was changed.** This file is the only new file.
+- **No rule, registered document or code was changed.** This file is the only new file. `STATUS.md` was updated only at merge, with the hub's reading above.
 
 **The advice, quoted as data.**
 
@@ -24,15 +37,15 @@
 
 ## The short answer
 
-- **Is anything worth having being missed? From the advice's list, nothing that is worth having today.** Of its 24 distinct items, 17 exist or arrive on Thursday. Seven are missing, and six of those aren't worth building at this project's size. One, player projections for props, may be worth having later, behind a gate.
+- **Is anything worth having being missed? From the advice's list, nothing that is worth having today.** Of its 24 distinct items, 17 exist in whole or in part, or arrive in October. Seven are missing, and six of those aren't worth building at this project's size. One, player projections for props, may be worth having later, behind a gate.
 - **Three gaps are worth closing, and the advice names none of them.** None is a model:
   - a measurement of how much a book will actually take;
   - a decision on the multiple-testing bar;
   - a backup of the data the month buys.
 - **Your instinct is mostly right.** It isn't too early to think about it. It is too early to build it, and most of it points away from what this project is good at.
 - **A model layer already exists here, and it has been tested.** The NFL "model lean" is a logistic model on a registered paper test. In `nfl-weather/scripts/model_compare.py`, a gradient-boosted model of the under did worse than quoting the league's average under rate (5,352 games, 2006–25, each season predicted from earlier ones). The logistic model beat the average by less than half of one percent of log loss, which is a score of how good a probability forecast is.
-- **The published record says the same in all three sports.** Where a study scores models against the betting line, the line is the more accurate forecast (college football: Fair and Oster 2007; NBA: Manner 2016; NFL: Boulier and Stekler 2003). A few papers report backtest profits; none reports a pre-registered test, as far as their abstracts show, and one of them bets a single season.
-- **The deeper problem is proof, not software.** Graded on results, a model that truly wins 54% needs about 18,400 bets to clear this project's bar. The NFL plays 285 games a season. Only a rule that bets early and is graded on closing-line value can be decided here, in about 700 bets for 1 cent.
+- **The published record mostly says the same, in all three sports.** Where a study scores models against the betting line, the line is the more accurate forecast (college football: Fair and Oster 2007; NBA: Manner 2016; NFL: Boulier and Stekler 2003), except one NFL test of 110 games (Glickman and Stern 1998), whose authors decline to generalize it. The samples are old (1998–2001, 2006–14 and 1994–2000), and Manner compares against the opening line, not the close. A few papers report backtest profits; none reports a pre-registered test, as far as their abstracts show, and one of them bets a single season.
+- **The deeper problem is proof, not software.** Graded on results, a model that truly wins 54% needs about 18,400 bets to clear this project's bar (about 11,100 at the family bar of [question 3](#9-questions-for-the-owner)). The NFL plays 285 games a season. Only a rule that bets early and is graded on closing-line value can be decided here, in about 700 bets for 1 cent.
 - **This project already works the better way round.** It starts from the market's price and tests one small thing the market might miss. The advice starts from a model and asks where it disagrees with the market. With a noisy model, most of that disagreement is the model's own error.
 - **Nothing a model layer needs has to be bought before October 20.** The Odds API's history doesn't expire, a March month is already planned, and about 2.1 million credits are unallocated even if every gate passes.
 - **Compute was never the constraint.** The new Mac Studio helps in two ways that matter, and neither is speed: it can stay awake for the scheduled jobs, and it has the disk. It doesn't add a single game.
@@ -68,7 +81,7 @@ What the repo has, what arrives in October, and what is missing, for each part o
 | Predictions | The model lean and the registered pricing model. | Pinnacle's no-vig price for every college game, four times a day, if the live log in the price-engine file is built | Nothing beyond the rows above |
 | Edge calculation | `ev_under` in `market.py`; the price engine's expected value against the Shin no-vig price; the Kalshi edge net of fees (`v_analysis`). | The price-engine report | Nothing |
 | Monitoring | Alerts, `runs.csv`, the scorers, the dashboard and the menu-bar light. | The forward tests start: October 1, 7 and 8 | Nothing |
-| LLM analysis | None in code. The hub and its workers are language models doing the research. The hub's review of a decision model on September 28 found no use for one at any of 96 decision points (a hub memory note, not a repo file). | Nothing | **A language model inside the pipeline** |
+| LLM analysis | None in code. The hub and its workers are language models doing the research. The hub's review of a decision model on September 28 found no use for one at any of 96 decision points (a hub memory note, not a repo file), and left one opening: a hand-labelled log of college availability news ([section 8](#8-where-the-hub-is-wrong), point 3c). | Nothing | **A language model inside the pipeline** |
 
 ### The per-market list
 
@@ -80,18 +93,18 @@ What the repo has, what arrives in October, and what is missing, for each part o
 | Cross-book dispersion | `total_sd` and `n_books` in the college games table; `blend_std` in the `sharp_fair` view; the best line on every alert row. | The price engine's table of how often each book sits a point or more off Pinnacle | Nothing |
 | Closing-line value | Both scorers; close capture; PLAN.md section 6. | The price engine grades every flag on it | Nothing |
 | Injury adjustments | None. Sources are named in the backlog (#11). | Nothing | **All of it** |
-| Player projections | None. The outcomes are on disk: `player_week.parquet` (479,433 player-weeks, 1999–2025). [`props_median_check.py`](props_median_check.py) measured the skew a line-setter faces. | F3a: the first prop prices the project has ever held | **A projection** |
+| Player projections | None. The outcomes are on disk: `player_week.parquet` (476,159 player-weeks, 1999–2025, counted with the season filter). [`props_median_check.py`](props_median_check.py) measured the skew a line-setter faces. | F3a: the first prop prices the project has ever held | **A projection** |
 | Correlated markets | The same-day correlation of closing-line moves is measured (0.09 to 0.11 in college football) and the keep test allows for it. The first-half and team-totals pre-check failed. | Nothing | Same-game combinations. Out of scope: no venue the owner named prices them fairly. |
 | Historical analogues | The pricing cohort is exactly this: 656 NFL and 855 college games with 15+ mph wind. The spread table takes the 1,000 games priced nearest a spread. | Nothing | Nothing |
 | Simulation | As above. | Nothing | As above |
 
-**Reading the tables.** The 26 rows hold 24 distinct items, because simulation and the comparison of model with market each appear twice. 17 exist in whole or in part, or arrive this week. Seven are missing, in bold above: three wholly (a hierarchical model, injury adjustments, player projections) and four in the form the advice means (team ratings, a team-strength time series, a simulation of games, a language model in the pipeline).
+**Reading the tables.** The 26 rows hold 24 distinct items, because simulation and the comparison of model with market each appear twice. 17 exist in whole or in part, or arrive in October (most on Thursday; the forward tests on October 7 and 8, and the NBA collector's Kalshi depth log on October 20). Seven are missing, in bold above: three wholly (a hierarchical model, injury adjustments, player projections) and four in the form the advice means (team ratings, a team-strength time series, a simulation of games, a language model in the pipeline).
 
 A hierarchical model is one that estimates many small groups at once and pulls each toward the average of all of them. It is the usual tool when each group has few observations.
 
 ### The gaps, and whether each is worth having
 
-The first eight come from the advice. The last four are gaps the inventory turned up that the advice doesn't mention.
+The first eight come from the advice: the seven missing items, and one database across sports, which the inventory counts as present (three stores) and which is listed here as a design choice. The last four are gaps the inventory turned up that the advice doesn't mention.
 
 | Gap | Worth having? | Why | If so: when, and at what cost |
 |---|---|---|---|
@@ -101,11 +114,11 @@ The first eight come from the advice. The last four are gaps the inventory turne
 | Team ratings | No, not now | Nine rating systems added nothing to the college line (Fair and Oster 2007). CFBD's Elo is already on disk if it is ever wanted. The one open use, early-season college games (#11), can't be tested before August 2027. | — |
 | A team-strength time series | No | The same evidence as ratings | — |
 | A simulation of games | No | For totals and spreads the frozen cohort and the landing-mass table already do it, and the richer table was no better (#52). | — |
-| A language model in the pipeline | No | News is a race the project can't run, and there is no labelled text to check a model against. | — |
+| A language model in the pipeline | No | News is a race the project can't run, and there is no labelled text yet to check a model against. The one opening the hub's September 28 review left, a hand-labelled log of college availability news, would create that text; it is a log, not a model in the pipeline ([section 8](#8-where-the-hub-is-wrong), point 3c). | — |
 | One database across sports | Not yet | Three stores work at today's size. Look again only if F4 or N1 is pulled. | — |
-| **How much a book will take** | **Yes** | Every idea that survives ends at a retail book or on Kalshi, and nothing in the repo measures size. The price-engine file records it as unknown for every flag. The fill log (`scripts/log_fill.py`) has no column for it. | Free, forward only. A small job for the hub. |
+| **How much a book will take** | **Yes** | Every idea that survives ends at a retail book or on Kalshi, and nothing in the repo measures size. The price-engine file records it as unknown for every flag. It also says the stake is recorded in the paper fill log where it's known ([`PRICE_ENGINE_PREREGISTRATION.md`](../sharp-markets/docs/PRICE_ENGINE_PREREGISTRATION.md), section 11 and the live form), but the fill log (`scripts/log_fill.py`) has no column for it: it writes the time, game, rule, line, price and book. The registration and the code disagree. | Free, forward only. A small job for the hub. Both scorers read `fills.csv` for their cost-of-waiting report, so a size field must leave `score_forward.py`'s grading unchanged; whether it needs a dated note is the hub's call. |
 | **A decision on the bar** | **Yes** | The plan review called one bar over every variant "unclearable by any sports edge" at these sample sizes and proposed families of tests with their own bars. It is still undecided. It matters more than any model class. | An owner decision ([question 3](#9-questions-for-the-owner)). No work. |
-| **A backup of the paid data** | **Yes** | "Paid data can't be re-created without paying again" ([`odds-api-credits.md`](odds-api-credits.md), "Before you buy", item 6). I found no step for it in the day-one checklist or in `ops/`. One may exist on the Mac; I can't see that from here. | A second disk, ready before Thursday's pull |
+| **A backup of the paid data** | **Yes** | "Paid data can't be re-created without paying again" ([`odds-api-credits.md`](odds-api-credits.md), "Before you buy", item 6), and the same item goes on: "Keep `*/data/raw/oddsapi*` in an encrypted backup outside git." The rule exists; the gap is that no step carries it out. I found none in the day-one checklist or in `ops/`, and no Time Machine destination is set on the laptop (checked September 29). | A second disk, ready before Thursday's pull: an external drive (the owner's purchase, roughly $60 to $150 for 1 to 2 TB; a typical retail range, not a quote), or the Mac Studio over the network at no extra cost |
 | How much a prop line moves in its last day | Already planned | No power statement about props is possible without it. It is #10's secondary readout. | Free, inside #10 |
 
 ---
@@ -120,30 +133,31 @@ The first eight come from the advice. The last four are gaps the inventory turne
 |---|---|---|---|
 | NFL sides and totals | 285 since 2021 (267 in 2002–19) | 27 with a closing spread and total (1999–2025); 20 with over and under prices (2006–25) | 7,276; 5,292 with prices |
 | NFL at several books with timestamps | 285 | 6 (2020–25), from F1 on Thursday | 1,693 |
-| College football totals, FBS-involved | 895 to 934 in 2021–25 | 20 with a consensus close (2006–25) | 14,383 |
+| College football totals, FBS-involved | 849 to 934 in 2021–25 (FBS-involved with a consensus close, the same filter as the 14,383) | 20 with a consensus close (2006–25) | 14,383 |
 | College football at several books with timestamps | about 900 | 6 (2020–25), from F1 | 5,147 |
-| NBA | about 1,320 with playoffs (the plan's estimate) | 6 that The Odds API sells (2020-21 to 2025-26); only the sample week is cached | about 7,770, none on disk |
+| NBA | about 1,320 with playoffs (the plan's estimate) | 6 full seasons that The Odds API sells (2020-21 to 2025-26), plus the 2019-20 restart (171 games; history from June 27, 2020); only the sample week is cached | about 7,770 in the six full seasons, plus 171 in the restart; none on disk |
 | NFL player props | 285 games | 3 (2023–25); prop history starts May 3, 2023 | 855 games. As a rough proxy for the two skewed markets: 2,342 rushers with 8+ carries and 6,041 receivers with 4+ targets, about 8,400 player-games. Posted lines aren't on disk, so the real count is unknown until F3a lands. |
 | Windy games (the pricing cohort) | about 25 NFL, about 50 college | 25 and 18 | 656 and 855 |
 
 **The bar and what it takes to clear it** (80% power; [Appendix B](#appendix-b-the-counts-and-the-arithmetic)):
 
-| Graded on | True effect | Bets needed at p < 0.05 | Bets needed at the project's bar (0.05 / 273) |
-|---|---|---|---|
-| Results at −110 | wins 53% | 40,200 | 126,000 |
-| Results at −110 | wins 54% | 5,900 | 18,400 |
-| Results at −110 | wins 55% | 2,240 | 7,000 |
-| Profit | a 2% edge | 15,500 | 48,500 |
-| Closing-line value, 6 cents of noise per bet | 0.5 cents | 890 | 2,800 |
-| Closing-line value | 1 cent | 220 | 700 |
-| Closing-line value | 2 cents | 56 | 175 |
+| Graded on | True effect | Bets needed at p < 0.05 | Bets needed at the project's bar (0.05 / 273) | Bets needed at a family bar (0.05 / 10, [question 3](#9-questions-for-the-owner)) |
+|---|---|---|---|---|
+| Results at −110 | wins 53% | 40,200 | 126,000 | 75,900 |
+| Results at −110 | wins 54% | 5,900 | 18,400 | 11,100 |
+| Results at −110 | wins 55% | 2,240 | 7,000 | 4,240 |
+| Profit | a 2% edge | 15,500 | 48,500 | 29,200 |
+| Closing-line value, 6 cents of noise per bet | 0.5 cents | 890 | 2,800 | 1,680 |
+| Closing-line value | 1 cent | 220 | 700 | 420 |
+| Closing-line value | 2 cents | 56 | 175 | 105 |
 
 **What follows from the two tables.**
 
 - **A model that bet every NFL game with prices since 2006** (5,292) at a true 54% would clear the bar on results about 1 time in 9. At a true 55%, 6 times in 10.
 - **One that bet every college total since 2006** (14,383) would clear it about 6 times in 10 at a true 54%, and nearly always at 55%.
 - **No model bets every game.** One that flags a quarter of them has a quarter of the sample: 1,300 NFL bets and 3,600 college bets in twenty seasons, against the 7,000 that a true 55% needs. And it has to do this on seasons it has never seen.
-- **So a model graded on results can't be decided here in any useful time, whatever its class.** Only a model that bets before the close and is graded on closing-line value can be, and that is a claim about where the line will move, not about who wins.
+- **At a family bar the history looks less hopeless.** 5,292 NFL bets would clear it about 4 times in 10 at a true 54% and 9 in 10 at 55%; a quarter of college games (3,600 bets) about 7 times in 10 at 55%. But under the protocol in [section 4](#4-the-protocol) those seasons are for building and rehearsal and can't confirm anything, and a forward test at about 300 football bets a season would still need about 14 seasons to show a true 55%.
+- **So, at the project's bar, a model graded on results can't be decided here in any useful time, whatever its class.** At a family bar the conclusion is weaker but holds for anything that has to be confirmed going forward. It depends on the bar, which is the owner's question 3. Only a model that bets before the close and is graded on closing-line value can be, and that is a claim about where the line will move, not about who wins.
 
 ### Class by class
 
@@ -152,12 +166,12 @@ The first eight come from the advice. The last four are gaps the inventory turne
 | Class | The question it could answer better than what exists | Data it needs | Variants if done honestly | Could a plausible effect clear the bar? | Published evidence, model against line |
 |---|---|---|---|---|---|
 | **Gradient boosting** | For sides and totals: none. The repo's one try lost to the base rate. For props: possibly, how a player's yards depend on usage, opponent and game script together. | Game markets: on disk. Props: `player_week.parquet` and F3. | 4 if one configuration is fixed blind (2 sports × 2 markets). A small honest search is 36 configurations (3 depths × 3 learning rates × 2 sizes × 2 feature sets) per sport and market: 144. | On results, no. On closing-line value, only as an early-entry rule. | None I can name and verify for this class in the NFL, college football or the NBA. The two NBA machine-learning papers (Hubáček, Šourek and Železný 2019; Walsh and Joshi 2024) report backtest profits; see the evidence table. |
-| **Logistic models** | The right size of model for these samples, and the one the project already uses. With the market's probability as the starting point, each added term is one rule. | On disk | 1 per term, market and sport: 2 to 8 | The model lean's best cut is 56.4% on 629 bets (p = 0.023), far from the bar. On closing-line value, yes in principle. | Boulier and Stekler 2003 (NFL): probit forecasts from power scores were second to the betting market. Gray and Gray 1997 (NFL): probit rules profitable in sample, confirmed out of sample only in part. |
+| **Logistic models** | The right size of model for these samples, and the one the project already uses. With the market's probability as the starting point, each added term is one rule. | On disk | 1 per term, market and sport: 2 to 8 | The model lean's registered cut (P ≥ 55%) went 56.4% on 629 bets, p = 0.023, walk-forward 2006–25 at −110 ([`bet_walkforward.csv`](../nfl-weather/output/tables/bet_walkforward.csv)), far from the bar. On closing-line value, yes in principle. | Boulier and Stekler 2003 (NFL): probit forecasts from power scores were second to the betting market. Gray and Gray 1997 (NFL): probit rules profitable in sample, confirmed out of sample only in part. |
 | **Bayesian hierarchical** | Two honest uses. (a) How large is the wind edge now, shrunk across eras, to set expectations for January. (b) A player's median yards, shrunk toward his position, against a posted prop line. The hub's use, a hierarchical pricing model, is discussed in [section 8](#8-where-the-hub-is-wrong). | (a) on disk. (b) `player_week.parquet` and F3. | About 10: 3 pooling structures × 2 priors, plus 2 to 4 graded cells | (a) is descriptive and clears nothing. (b) on closing-line value, perhaps. | Glickman and Stern 1998 (NFL): a Bayesian state-space model was "comparable" to the line on 110 games, by the authors' own word not enough to generalize. Lopez, Matthews and Baumer 2018 build their state-space model *from* betting prices. Egidi, Pauli and Torelli 2018 (soccer) feed bookmaker odds into the model. |
 | **Elo-style ratings** | Early-season college football, where last year's results and roster turnover are all anyone has (#11). Not the NFL or NBA. | CFBD returning production and talent (on disk); openers (CFBD from 2021, cfbfastR totals 2012–19); F1's daily grid. | 2 to 4 with published settings taken blind. A tuned rating has 4 knobs (update speed, home edge, margin weight, carry-over): 54 settings at 3 × 3 × 2 × 3. | On results, no. From the opener to the close, perhaps; this is next August's question, not October's. | Fair and Oster 2007 (college football): nine rating systems and their best combination hold nothing that the final line doesn't. FiveThirtyEight's NFL Elo reportedly won 51% against the spread (secondhand; not verified). |
 | **Time-series models** | Line moves: H16b already asks the first question on F1. A richer model waits for that result. | F1; F4 only through its gate | 2 are registered. A richer model adds 12 or more (lags × thresholds). | On closing-line value, yes: that is H16b's design. | Moskowitz 2021: moves partly reverse, too little to beat costs. Simon 2024 (MLB): line changes are negatively autocorrelated. Both are in the repo's sources; neither was opened again here. |
 | **Monte Carlo simulation** | Sizing decision rules, which the project already does well. Pricing derivative markets from a simulated game: the empirical cohort and the landing-mass table already do this for totals and spreads. | On disk | 0 when it sizes a decision rule. 4 to 10 when each simulated price is graded against a market. | Not applicable: simulation is a tool, not a hypothesis. | None needed |
-| **Calibration** | Whether the market's own price is off in a systematic way. This is the project's most productive tool: Rule HT is a calibration finding (slope 0.89 ± 0.03). | On disk; F1 for Pinnacle's close | 0 while descriptive (the price-engine file's own reasoning). 1 per market once a recalibrated price drives a bet. | Rule HT: p = 0.0035, not near the bar, and graded on results over two seasons. | Walsh and Joshi 2024 (NBA): choosing a model on calibration beat choosing on accuracy, in one season of betting. A corrigendum exists; it was not opened here. |
+| **Calibration** | Whether the market's own price is off in a systematic way. This is the project's most productive tool: Rule HT is a calibration finding (slope 0.89, standard error 0.025, [`calibration_slopes.csv`](output/calibration_slopes.csv)). | On disk; F1 for Pinnacle's close | 0 while descriptive (the price-engine file's own reasoning). 1 per market once a recalibrated price drives a bet. | Rule HT: p = 0.0035, not near the bar, and graded on results over two seasons. | Walsh and Joshi 2024 (NBA): choosing a model on calibration beat choosing on accuracy, in one season of betting. A 2025 corrigendum revised the paper's results and, by a search summary of it, kept this conclusion; its text couldn't be opened here (see the evidence table). |
 | **Ensembles** | None beyond the sharp blend. Averaging home-built models averages their noise, not the market's information. | None | 0 for the fixed blend. 5 to 10 once weights are fitted. | No | Manner 2016 (NBA): model plus spread is "statistically not worse" than the spread alone. Fair and Oster 2007: the best combination of rating systems adds nothing to the line. |
 
 ### The evidence, and how far it goes
@@ -170,7 +184,7 @@ The first eight come from the advice. The last four are gaps the inventory turne
 | Boulier and Stekler (2003), *Predicting the outcomes of National Football League games*, International Journal of Forecasting 19 | NFL, 1994–2000 | The betting market was the best predictor, then probit forecasts from power scores. | Abstract only |
 | Štrumbelj and Vračar (2012), *Simulating a basketball match with a homogeneous Markov model and forecasting the outcome*, International Journal of Forecasting 28(2) | NBA | The model matches other statistical approaches; bookmaker odds were the best probabilistic forecasts. | Abstract only |
 | Hubáček, Šourek and Železný (2019), *Exploiting sports-betting market using machine learning*, International Journal of Forecasting 35(2) | NBA, 2007–14 | Positive cumulative profits, from a model trained to be *less* correlated with the bookmaker, with bets sized as a portfolio. The size of the profit and the prices used were not verified. | Abstract only |
-| Walsh and Joshi (2024), *Machine learning for sports betting: should model selection be based on accuracy or calibration?*, Machine Learning with Applications 16 | NBA, several seasons of training, one season of betting | Return of +34.69% for models chosen on calibration against −35.17% for models chosen on accuracy. A corrigendum exists. | Abstract only; the corrigendum was not opened |
+| Walsh and Joshi (2024), *Machine learning for sports betting: should model selection be based on accuracy or calibration?*, Machine Learning with Applications 16 | NBA, several seasons of training, one season of betting | Choosing models on calibration beat choosing them on accuracy, in one season of betting. The paper as first published reported returns of +34.69% against −35.17%; those are the original figures, revised by a 2025 corrigendum (*Machine Learning with Applications* 19, doi 10.1016/j.mlwa.2025.100627) that corrects errors in the authors' code. By a search engine's summary of it, the errors were in the feature-engineering steps, affected all later results, and left the conclusion unchanged. **The corrected figures, and that summary, are not independently confirmed.** | Abstract only. The corrigendum's existence, date and subject were checked in its Crossref record and in the authors' GitHub notice; its text couldn't be opened (the publisher refused access). |
 | Gray and Gray (1997), *Testing Market Efficiency: Evidence from the NFL Sports Betting Market*, Journal of Finance 52(4) | NFL | Probit betting rules profit in sample; out of sample some are confirmed and the rest are inconsistent. | Abstract only |
 | Zuber, Gandar and Bowers (1985), *Beating the spread*, and Sauer, Brajer, Ferris and Marr (1988), *Hold your bets*, both Journal of Political Economy | NFL | The first reports profitable rules from a model. The second is a comment on it; I recall that it shows the result did not hold on other seasons. | Citations verified; the content of the second is recalled, **not verified** |
 | FiveThirtyEight, *Introducing NFL Elo Ratings* (2014) | NFL | Elo reportedly picked 51% against the spread in its own backtest. | **Not verified.** Secondhand; the original page now redirects elsewhere. |
@@ -178,7 +192,7 @@ The first eight come from the advice. The last four are gaps the inventory turne
 **What the evidence supports, stated carefully.**
 
 - **On accuracy, it is consistent.** Every study above that scores a model against the line finds the line at least as accurate, except one test of 110 games whose authors decline to generalize it.
-- **On profit, it is mixed and weak.** Three papers report backtest profits. One bets a single season, and published results lean toward the ones that worked.
+- **On profit, it is mixed and weak.** Four papers report backtest profits (Zuber, Gandar and Bowers; Gray and Gray; Hubáček, Šourek and Železný; Walsh and Joshi). One bets a single season, and published results lean toward the ones that worked.
 - **What it doesn't cover.** None of these is about player props. The college football study's games are 25 years old. Manner compares with the opening line, which is a weaker benchmark than the close, and the models still lost.
 - **A gap I couldn't fill.** I know of no verified study of gradient boosting against closing lines in these three sports. The case against it here rests on the repo's own try and on the power table, not on a paper.
 
@@ -258,7 +272,7 @@ The fitted model is then frozen as a committed file with a registered hash, as t
 **3. A budget of variants, fixed in advance.** At most 10 for the whole experiment: tuning settings, graded cells and controls together. Spending the budget ends the experiment. Two ways to set the bar, and the owner chooses ([question 3](#9-questions-for-the-owner)):
 
 - **The single count:** 0.05 / 283 = 0.000177.
-- **A family bar,** as the plan review proposed: 0.05 / 10 = 0.005 for the rehearsal, with the sealed season and the forward test as the confirmation.
+- **A family bar,** as the plan review proposed; with this experiment's budget of 10, 0.05 / 10 = 0.005 for the rehearsal, with the sealed season and the forward test as the confirmation.
 
 **4. Grading.** Closing-line value at the price taken, in cents of no-vig probability, against the entry book's own close and against a sharp close where one exists. Results at the price taken are reported beside it and can veto, as in the price engine (K2).
 
@@ -324,26 +338,26 @@ The decisions with a real deadline are about order, logging and safekeeping:
 |---|---|---|---|---|
 | D1 | Add no pull to October for a model layer | Thursday, and again at the gate reads | "The credits lapse anyway" will be said on October 25. The plan review already answered it: pulled data invites analysis, and every analysis is a counted variant. | Add nothing |
 | D2 | F3b's gate stays the only route to the 2023–24 props | Before #10's gate is read, by about October 20 | A second reason to buy F3b (a props model) would have to be written before the read. After it, that is widening a gate. | Keep the gate. Write no second reason. |
-| D3 | #10's registration says whether the sealed 2026 props may also confirm one later hypothesis | Before F3a's rows are first joined to outcomes, days after Thursday | Once #10 opens the 2026 props to confirm itself, they can't confirm anything registered later. | One sentence when #10's draft goes into its file, the hub's call: "the sealed 2026 props are opened once, for every hypothesis registered by then". It costs nothing and keeps "do nothing" open. |
-| D4 | Whether to record size: a largest-stake figure on each hand-checked fill, and Kalshi top-of-book size for NFL and college markets | Each week not logged is lost | Size can't be bought later | Worth doing for the fills whatever happens to the model question. Kalshi depth only if Kalshi stays in play after October 20. Log only; every 2026 row is sealed. |
-| D5 | A backup of the raw responses | The disk ready before Thursday's pull; the copy made the same day | The month's data can't be re-created without paying again | A second disk. See the next section. |
+| D3 | #10's registration says whether the sealed 2026 props may also confirm one later hypothesis | Before F3a's rows are first joined to outcomes, days after Thursday | Once #10 opens the 2026 props to confirm itself, they can't confirm anything registered later. | One sentence when #10's draft goes into its file: "the sealed 2026 props are opened once, for every hypothesis registered by then". It costs nothing and keeps "do nothing" open. The sentence interprets the owner's September 28 sealed-holdout decision (`STATUS.md`, "Sealed holdout"; [`ops/LIVE_USES.md`](../ops/LIVE_USES.md)). The hub can settle it under the owner's standing instruction of September 29 on research questions, and the owner can overrule it. |
+| D4 | Whether to record size: a largest-stake figure on each hand-checked fill, and Kalshi top-of-book size for NFL and college markets | Each week not logged is lost | Size can't be bought later | Worth doing for the fills whatever happens to the model question (the price-engine file already says the fill log records the stake; the code doesn't yet). Kalshi depth only if Kalshi stays in play after October 20. Log only; every 2026 row is sealed. |
+| D5 | A backup of the raw responses | The disk ready before Thursday's pull; the copy made the same day | The month's data can't be re-created without paying again | A second disk: an external drive (the owner's purchase, roughly $60 to $150) or the Mac Studio over the network. The rule already exists (`odds-api-credits.md`, "Before you buy", item 6); what is missing is a step that carries it out. See the next section. |
 | D6 | The plan after October (20K or 100K) | About October 25 | Already on the owner's list | A model layer doesn't change it |
 
 ---
 
 ## What the new computer changes, and what it does not
 
-From Wednesday, September 30, the project has a Mac Studio: M5 Max, 18 CPU cores, 40 GPU cores, 64 GB of memory, 1 TB of storage. Today it runs on an M4 laptop with 32 GB and about 16 GB of free disk.
+From Wednesday, September 30, the project has a Mac Studio: M5 Max, 18 CPU cores, 40 GPU cores, 64 GB of memory, 1 TB of storage. That specification is in neither the repo nor the issue and is not independently confirmed. Today the project runs on an M4 laptop with 32 GB of memory (both confirmed on the machine). The laptop's free disk moves: figures on September 29 ranged from about 14 GB to 74 GB, so none is relied on here.
 
 **Compute was never the constraint.** The heaviest analyses in the repo finish in about a minute, by their own write-ups: the screen in about 40 seconds, the landing-mass study in about 30, the 40,000-path keep-test check in about a minute. The slow jobs were slow because a server set the pace. The forecast archive took five to six hours at one request every 7 to 8 seconds, and F1 takes about 12 minutes at 8 requests a second. A faster computer changes neither.
 
 | What becomes practical | Does it matter here? |
 |---|---|
 | A machine that is always on for the scheduled jobs | **Yes, most of all.** A slot missed while the Mac sleeps "is reported as missing, never filled in" (STATUS.md). Missed closes weaken Rule B's closing-line value, and fewer than 20 primary closes make a decision inconclusive. |
-| Disk: 1 TB against about 16 GB free | **Yes.** Day one needs about 3 GB and F4 about 16 GB (the day-one file's estimates), so F4 alone would have filled the laptop's free disk. |
+| Disk: 1 TB | **Yes.** Day one needs about 3 GB. The day-one file says about 16 GB if F4 is earned; it calls that an extrapolation from two live responses, it is unverified, and the file doesn't say whether it includes day one's 3 GB. Whether that fits on the laptop depends on the day; 1 TB removes the question. |
 | The month's odds tables held in memory | A convenience. Day one's 3 GB fits in the laptop's memory too. F4 and N1 are the ones that get easier. |
 | Chains of a Bayesian model in parallel | Practical, not needed. A hierarchical model on 1,500 windy games or 8,400 player-games is small; I would expect minutes on the laptop, though nothing was timed here. |
-| Larger simulations | Practical, not needed. The simulations are already precise to about 0.1 point. Their weak part is their inputs, about 400 games a sport. |
+| Larger simulations | Practical, not needed. The keep-test check (40,000 paths) is already precise to about 0.1 point, and the 20,000-season shares in `simulate_decisions.py` to about 0.3 point. Their weak part is their inputs, about 400 games a sport. |
 | A wide search over a model's settings | Practical, and the one to fear. Compute makes a search cheap. It doesn't make it honest: every setting tried is still a counted variant. |
 | A language model run locally to read news | Practical on 64 GB. It doesn't touch the reasons against it: news is a race, and there is no labelled text to check a model against. |
 
@@ -404,11 +418,11 @@ From Wednesday, September 30, the project has a Mac Studio: M5 Max, 18 CPU cores
 1. **October: build no model and buy nothing for one.** Keep every pull and gate as adopted on September 28 and 29.
 2. **Nothing on the advice's list is being missed that is worth having today.**
 3. **Close three gaps the advice doesn't name:** record size on hand-checked fills, decide the bar, and back up the paid data the day it lands.
-4. **Read Thursday's price-engine run as the project's test of "P(model) against P(market)" on the main markets.** Nothing in the evidence suggests a home-built model would price a game better than Pinnacle, so its result is a ceiling for one.
+4. **Read Thursday's price-engine run as the project's test of "P(model) against P(market)" on the main markets.** Nothing in the evidence suggests a home-built model would price a game better than Pinnacle, so on the main markets, and for edges measured against Pinnacle's close, I expect its result to bound what a home-built model could show. It doesn't bound a model aimed at errors in the close itself, which is what Rule B and Rule HT claim: the price-engine file names that limit, that it cannot catch Pinnacle's close itself being wrong.
 5. **Don't build a model of sides or totals from scratch, in any sport.** The repo's own try, the published record and the power table all say no.
 6. **The option:** the props experiment of section 6, considered only if #10 passes its F3b gate (read by about October 20), registered in January, decided on the sealed 2026 props.
 7. **If #10 fails, or the owner drops the option:** close this issue until the 2027 rules are written, and park #11's priors model with it.
-8. **This week, the hub's call:** the sentence in D3, and the move to the new Mac on a quiet day.
+8. **This week, the hub's call:** the sentence in D3 (it interprets the owner's September 28 sealed-holdout decision, so the hub settles it under his standing instruction on research questions and he can overrule it), and the move to the new Mac on a quiet day.
 
 ### The strongest argument against it
 
@@ -420,7 +434,7 @@ Written as its best advocate would.
 >
 > The owner asked in order to be comprehensive. Reasoning your way to "no" from old papers is the opposite. A capped experiment, registered first, 8 variants, graded on closing-line value, costs four days, and within a month you would know whether there is anything to pursue. If it fails you have lost four days. If you wait for a gate, the question isn't even asked until January.
 
-**What I make of it.** The first paragraph is half right: the single bar is a real problem, and [question 3](#9-questions-for-the-owner) puts it to the owner. But a flexible model makes that problem worse, not better. The second is fair, and it is why the case here rests on the power table more than on the papers: the table holds whatever the papers say. The third is right that four days is cheap, which is why the option is kept and not closed. It is wrong that acting now answers sooner. The sample that decides is the sealed 2026 season, which can't be opened before March either way, and waiting loses no data, because the props log and the alert log already record 2026. What would move me to run it sooner is #10 passing clearly. What would close the question today is the owner's answer to [question 2](#9-questions-for-the-owner).
+**What I make of it.** The first paragraph is half right: the single bar is a real problem, and [question 3](#9-questions-for-the-owner) puts it to the owner. But a flexible model makes that problem worse, not better. The second is fair, and it is why the case here rests on the power table more than on the papers: the table holds whatever the papers say, at the project's bar; at a family bar its numbers are smaller, and the case against results still holds for anything that has to be confirmed going forward ([section 2](#2-model-by-model)). The third is right that four days is cheap, which is why the option is kept and not closed. It is also right that acting now could answer sooner in one direction: the protocol's own kill rule ([section 4](#4-the-protocol), step 5) stops the experiment if its forecasts are no better calibrated than the market's price on the rehearsal seasons, and with only 2025's props available until F3b's gate, that could give a "no" within weeks. I still prefer to wait. #10 reads the same 2025 slice by about October 20 and answers the prior question, whether lines sit above the median at all, without this experiment's 8 variants; if #10 fails, the experiment has little to find, and if it passes, the experiment is registered with that result in hand. An early run can only say "no" or "the rehearsal passed"; a "yes" still needs the sealed 2026 season, which can't be opened before March either way. And waiting loses no data: the alert log records 2026 now and the props log will from its install on day one; props for games before then can still be bought (F3b's 2026 slice, or in March). What would move me to run it sooner is #10 passing clearly. What would close the question today is the owner's answer to [question 2](#9-questions-for-the-owner).
 
 ---
 
@@ -432,9 +446,9 @@ Written as its best advocate would.
 | **2. A home-built model is the hardest and most crowded road.** | Yes, on the main markets, and the literature backs it. | "The new part is a home-built model" isn't quite right: a home-built model of the under has been tried, and the gradient-boosted version lost to the base rate. And the variant count is not the binding problem. A protocol can cap a model at 10 variants by tuning it on a target with no price in it. The binding problem is power: even one variant can't be expected to clear the bar on results at 285 games a season. |
 | **3a. A hierarchical version of the wind pricing model.** | The cohort is small, and the price-engine file says its point value carries a sampling error of 0.4 to 0.5 cents. | It isn't worth doing. The pricing model selects no bet inside the −115 cap, it is frozen for the season, and the landing-mass study already found that a richer table doesn't beat it (8 declared comparisons, all null). Shrinking the windy cohort toward all games also assumes the answer to the open question, which is whether windy games are shaped differently. |
 | **3b. Markets with no sharp price: props, alternates, Kalshi, small-conference totals.** | Props, yes. | Kalshi's game markets and small-conference totals do have a sharp price; Pinnacle priced 56 of 58 college games on September 28. The list is really props and the far ends of Kalshi's ladders. And these are the markets where the repo knows least about whether a bet can be placed. |
-| **3c. A language model reading availability news, forward only.** | As a log, perhaps. | As a bet, no. News is a race. Inactives post 90 minutes before kickoff, and I would expect books to reprice within minutes (not measured here); the alerts run four times a day and the poller every ten minutes. The hub's own review found no use for a decision model at any of 96 decision points. For the NFL, nflverse's structured injury feed is the right source, and it needs no language model. |
+| **3c. A language model reading availability news, forward only.** | As a log, perhaps. The hub's own review of September 28 left exactly one opening: "a forward-collected, fetch-stamped, hand-labeled stream of availability news for CFB games without mandatory reports", counted as a variant under #11. That log would create the labelled text that doesn't exist today. | As a bet, no. News is a race. Inactives post 90 minutes before kickoff, and I would expect books to reprice within minutes (not measured here); the alerts run four times a day and the poller every ten minutes. The same review found no use for a decision model at any of 96 decision points, and nothing could be checked against a hand-labelled log for at least a season. For the NFL, nflverse's structured injury feed is the right source, and it needs no language model. |
 | **4. The reason to think now is the paid month.** | Thinking now is right. | The purchase deadline is soft, for the three reasons in section 5. What has a deadline is the order of registration (D2 and D3), the size log (D4) and the backup (D5). The risk on October 25 is the opposite of the one the hub names: not failing to buy, but buying because the credits are there. |
-| **5. Thursday's result is the cheapest version of "P(model) against P(market)".** | Yes, and it is more than that: it is a ceiling. If prices that beat Pinnacle's no-vig price don't hold their value to the close, I see no reason a home-built model would do better through the same books. | It is lopsided. The price-engine file says a pass is close to automatic if Pinnacle is right, so a pass says little about a home-built model, whose flags would carry less value than Pinnacle's. A fail is the informative result. And it says nothing about props, where no Pinnacle price may exist. |
+| **5. Thursday's result is the cheapest version of "P(model) against P(market)".** | Yes, and on the main markets I expect it to be more than that: a bound on what a home-built model could show, for edges measured against Pinnacle's close. If prices that beat Pinnacle's no-vig price don't hold their value to the close, I see no reason a home-built model would do better through the same books. It is no bound for a model aimed at errors in the close itself, which the price-engine test says it cannot catch. | It is lopsided. The price-engine file says a pass is close to automatic if Pinnacle is right, so a pass says little about a home-built model, whose flags would carry less value than Pinnacle's. A fail is the informative result. And it says nothing about props, where no Pinnacle price may exist. |
 
 ---
 
@@ -464,9 +478,9 @@ Each answer would change the recommendation.
 - Egidi, L., Pauli, F. and Torelli, N. (2018). Combining historical data and bookmakers' odds in modelling football scores. *Statistical Modelling* 18(5–6), 436–459.
 - Gray, P. K. and Gray, S. F. (1997). Testing Market Efficiency: Evidence from the NFL Sports Betting Market. *Journal of Finance* 52(4), 1725–1737.
 - Hubáček, O., Šourek, G. and Železný, F. (2019). Exploiting sports-betting market using machine learning. *International Journal of Forecasting* 35(2), 783–796.
-- Lopez, M. J., Matthews, G. J. and Baumer, B. S. (2018). How often does the best team win? A unified approach to understanding randomness in North American sport. arXiv 1701.05976. The journal, *Annals of Applied Statistics*, is recalled and not verified.
+- Lopez, M. J., Matthews, G. J. and Baumer, B. S. (2018). How often does the best team win? A unified approach to understanding randomness in North American sport. *The Annals of Applied Statistics* 12(4), 2483–2516, doi 10.1214/18-AOAS1165 (journal, volume, issue and pages checked on Project Euclid and in Crossref). Preprint: arXiv 1701.05976.
 - Štrumbelj, E. and Vračar, P. (2012). Simulating a basketball match with a homogeneous Markov model and forecasting the outcome. *International Journal of Forecasting* 28(2), 532–542.
-- Walsh, C. and Joshi, A. (2024). Machine learning for sports betting: should model selection be based on accuracy or calibration? *Machine Learning with Applications* 16, 100539. A corrigendum was published; it was not opened.
+- Walsh, C. and Joshi, A. (2024). Machine learning for sports betting: should model selection be based on accuracy or calibration? *Machine Learning with Applications* 16, 100539. Corrigendum: *Machine Learning with Applications* 19 (March 2025), doi 10.1016/j.mlwa.2025.100627, checked in Crossref and in the authors' GitHub notice. Its text couldn't be opened (the publisher refused access), so its corrected figures are not independently confirmed, and the original paper's return figures are not quoted as findings.
 
 **Citation verified, content recalled and not verified.**
 
@@ -477,11 +491,14 @@ Each answer would change the recommendation.
 
 - FiveThirtyEight's statement that NFL Elo picked 51% against the spread. Secondhand; the original page now redirects elsewhere.
 - That prop limits are the lowest of any market. No source I can name.
-- Whether a backup of the raw data exists on the Mac. I can see only the repo.
+- The Mac Studio's specification. It is in neither the repo nor the issue.
+- The 16 GB disk estimate for F4. The day-one file and the plan review both call it an unverified extrapolation from two live responses.
+
+**Checked on the machine, September 29:** the laptop is an M4 with 32 GB of memory, and no Time Machine destination is set on it.
 
 **Already in the repo's sources, and taken from there:** Kaunitz, Zhong and Kreiner (2017); Moskowitz (2021); Simon (2024); Sinkey and Logan (2009); Buchdahl on closing-line value. None was opened again for this memo.
 
-**The repo's own tables:** [`model_compare.csv`](../nfl-weather/output/tables/model_compare.csv), [`model_compare_bets.csv`](../nfl-weather/output/tables/model_compare_bets.csv), [`bet_model_vs_market.csv`](../nfl-weather/output/tables/bet_model_vs_market.csv), [`bet_summary.json`](../nfl-weather/output/tables/bet_summary.json), [`walkforward.csv`](../cfb-weather/output/tables/walkforward.csv), [`output/odds_5m_plan.csv`](output/odds_5m_plan.csv), [`output/odds_5m_seasons.csv`](output/odds_5m_seasons.csv), [`output/odds_api_counts.csv`](output/odds_api_counts.csv).
+**The repo's own tables:** [`model_compare.csv`](../nfl-weather/output/tables/model_compare.csv), [`model_compare_bets.csv`](../nfl-weather/output/tables/model_compare_bets.csv), [`bet_model_vs_market.csv`](../nfl-weather/output/tables/bet_model_vs_market.csv), [`bet_walkforward.csv`](../nfl-weather/output/tables/bet_walkforward.csv), [`calibration_slopes.csv`](output/calibration_slopes.csv), [`bet_summary.json`](../nfl-weather/output/tables/bet_summary.json), [`walkforward.csv`](../cfb-weather/output/tables/walkforward.csv), [`output/odds_5m_plan.csv`](output/odds_5m_plan.csv), [`output/odds_5m_seasons.csv`](output/odds_5m_seasons.csv), [`output/odds_api_counts.csv`](output/odds_api_counts.csv).
 
 ---
 
@@ -495,9 +512,10 @@ Nothing here compares a predictor with a result.
 |---|---|
 | `nfl-weather/data/processed/games.parquet` | 7,276 games, 1999–2025, all with a closing spread and total; 5,292 with over and under prices (2006–25); 285 a season from 2021 |
 | `cfb-weather/data/processed/games.parquet` | 33,361 rows, 2006–25; 16,740 with a consensus closing total; 14,383 of those FBS-involved |
+| `nfl-weather/data/processed/player_week.parquet` | 476,159 player-weeks, 1999–2025 |
 | `nfl-weather/data/processed/player_week.parquet`, 2023–25 | 855 games; 1,709 quarterback games with 15+ attempts; 2,342 rusher games with 8+ carries; 6,041 receiver games with 4+ targets; 1,513 kicker games with a field-goal attempt |
 | [`output/odds_api_counts.csv`](output/odds_api_counts.csv), 2020–25 | 1,693 NFL games and 5,147 college games |
-| [`output/odds_5m_seasons.csv`](output/odds_5m_seasons.csv), NBA 2020-21 to 2025-26 | 1,171 + 5 × 1,320 = 7,771 games (the plan's estimates) |
+| [`output/odds_5m_seasons.csv`](output/odds_5m_seasons.csv), NBA 2020-21 to 2025-26 | 1,171 + 5 × 1,320 = 7,771 games (the plan's estimates); the 2019-20 restart adds 171 |
 
 The player counts are a proxy chosen by usage. They are not counts of posted prop lines, which don't exist on disk.
 
@@ -506,8 +524,10 @@ The player counts are a proxy chosen by usage. They are not counts of posted pro
 - **Closing-line value:** bets = ((z + 0.84) × 6 / effect in cents)². At the bar: 2,800 for 0.5 cents, 700 for 1 cent, 175 for 2 cents. At p < 0.05: 890, 220 and 56. The 6 cents is the price-engine file's figure for sides and totals. It is not known for props.
 - **Results at −110** (break-even 52.38%): at the bar, 126,000 bets for a true 53%, 18,400 for 54%, 7,000 for 55%, 3,700 for 56%. At p < 0.05: 40,200, 5,900, 2,240 and 1,170. These match the plan review's figures at its earlier bar.
 - **The chance of clearing the bar on results with a fixed number of bets:** 5,292 bets give 11% at a true 54% and 60% at 55%. 14,383 bets give 63% and over 99%.
-- **Profit,** with one bet's result varying by about 1 unit: a 2% edge needs 15,500 bets at p < 0.05 and 48,500 at the bar, as the price-engine file says.
+- **Profit,** with one bet's result varying by about 1 unit: a 2% edge needs 15,500 bets at p < 0.05 (the price-engine file rounds to 15,000) and 48,500 at the bar, as that file says.
 - **A family of 10:** p < 0.005, z = 2.58. With 8 it is z = 2.50.
+- **The same arithmetic at the family bar of 10:** results at −110 need 75,900 bets for a true 53%, 11,100 for 54%, 4,240 for 55% and 2,220 for 56%; closing-line value needs 1,680, 420 and 105 bets for 0.5, 1 and 2 cents; a 2% profit edge needs 29,200. 5,292 bets clear it 41% of the time at a true 54% and 89% at 55%; 14,383 bets 91% and over 99%; 3,600 bets 26% and 72%.
+- **The simulations' precision:** at 40,000 paths a rate near 3% has a standard error of about 0.09 percentage points; at 20,000 seasons a share between 25% and 60% has one of about 0.3 to 0.35 points.
 - **What one season of 560 prop flags can see on results:** 52.38% + (2.50 + 0.84) × 0.5 / √560 = 59.4% at a family bar of 8, and 61.7% at the project's bar.
 
 **Credits.** Day one plus every gate is 2,304,050, against the hard ceiling of 4,440,000, which leaves 2,135,950. The plan's text gives 2,164,320, counted against 5,000,000 less the 531,630 floor. Both are "about 2.1 million".
@@ -515,3 +535,28 @@ The player counts are a proxy chosen by usage. They are not counts of posted pro
 - Four more NFL prop markets at two snapshots, 2023–25: 10 × 4 × 2 × 855 = 68,400.
 - NBA props, four markets at the close, three seasons: 10 × 4 × 3,960 = 158,400.
 - March's completions: 18,870 for F1, 9,480 for F2 and 28,440 for F3b's 2026 games, 56,790 in all, inside the 100K plan ($59). If the rest of F3b waits for March too, add 68,400 for 2023–24 and 5,760 for the 2026 games played by October 1: 130,950, which needs the 5M plan ($119).
+
+---
+
+## Corrections (September 29, 2026)
+
+An independent fact-check found the points below, and each was reproduced before it was changed. None changes the recommendation or any of the decisions D1 to D6.
+
+- **Player-weeks:** 479,433 was the whole file's row count, which includes rows after 2025; filtered to 1999–2025 it is 476,159. Only a row count was read, no 2026 price or result.
+- **Walsh and Joshi:** the returns quoted (+34.69% and −35.17%) are the original paper's, revised by a 2025 corrigendum (doi 10.1016/j.mlwa.2025.100627). Only the direction is now stated as the finding; the corrected figures are not independently confirmed.
+- **The props log:** it doesn't record 2026 yet; it starts when it is installed on day one. Waiting still loses no data, because earlier props can be bought later.
+- **The short answer** now gives the one NFL exception (Glickman and Stern 1998), the ages of the samples, and that Manner compares against the opening line.
+- **The price engine is no longer called a "ceiling".** It is expected to bound a home-built model on the main markets, for edges measured against Pinnacle's close, and not for a model aimed at errors in the close itself.
+- **The power table** gains a column for a family bar of 10, and section 2's conclusion is now stated as depending on the bar (at 0.005: 4,240 bets for a true 55%, 11,100 for 54%, 420 for 1 cent of closing-line value).
+- **The answer to the strongest argument** now concedes that the protocol's own kill rule could give an early "no" on the 2025 props, and says why waiting is still preferred.
+- **The backup gap:** the repo already has the rule (an encrypted backup outside git); the gap is that no step carries it out. The disk is marked as the owner's purchase, with a rough cost, and no Time Machine destination is set on the laptop.
+- **The size gap:** the price-engine file says the fill log records the stake, but the fill log has no column for it. A size field must leave the scorers' grading unchanged.
+- **The computer:** the 16 GB estimate for F4 is marked as an unverified extrapolation, the laptop's free disk is no longer given as a fixed figure, and the Mac Studio's specification is marked as not independently confirmed.
+- **Counts that disagreed:** seven missing items plus the database as a design choice; 17 items exist or arrive in October, not all on Thursday; four papers report backtest profits, not three; the college games a season are 849 to 934 on the same filter as the 14,383 (not 895 to 934); the NBA has six full seasons plus the 2019-20 restart (171 games).
+- **The model lean's 56.4% on 629 bets** is its registered cut (P ≥ 55%), not its best, and comes from `bet_walkforward.csv`.
+- **The hub's September 28 review of a decision model** is now quoted with its one opening, a hand-labelled log of college availability news.
+- **Rule HT's calibration slope:** 0.89 with a standard error of 0.025, from `calibration_slopes.csv` (the repo's documents round it to ± 0.03).
+- **Attributions:** the price-engine file rounds the 2% profit figure to 15,000; the family bar's 10 is this memo's budget, not the plan review's.
+- **D3** now says that its sentence interprets the owner's September 28 sealed-holdout decision, and who settles it.
+- **Simulation precision:** about 0.1 point for the keep-test check, about 0.3 point for the 20,000-season shares.
+- **Lopez, Matthews and Baumer (2018)** now has its verified journal citation.
