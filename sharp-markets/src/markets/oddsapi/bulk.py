@@ -654,11 +654,15 @@ class BulkClient:
             why, rerun = (f"no answer from the Odds API after the retries ({type(e).__name__}: {scrub(e)}). Nothing was "
                           "cached for this call, so a rerun asks again."), True
         except Exception as e:
-            if isinstance(e, (Stop, OSError)) or not self._sent:
+            if isinstance(e, Stop) or not self._sent:
                 raise                    # not the session's: a Stop from _retrying, the cache, or a bug of ours
-            log.error("the request raised an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
-            why, rerun = (f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: "
-                          f"{scrub(e)}). It came from sending the request, which got no answer."), False
+            if isinstance(e, OSError):   # a socket error `requests` didn't wrap (a raw TimeoutError): no answer
+                why, rerun = (f"no answer from the Odds API ({type(e).__name__}: {scrub(e)}; not retried). Nothing was "
+                              "cached for this call, so a rerun asks again."), True
+            else:
+                log.error("the request raised an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
+                why, rerun = (f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: "
+                              f"{scrub(e)}). It came from sending the request, which got no answer."), False
         self._sent = False
         if call is not None:
             self._no_answer(call)
