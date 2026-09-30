@@ -7,7 +7,7 @@ what the documentation charges for what came back, and every attempt with no ans
 budget and the floor checked before every attempt; billing headers that fail closed; the stop on a call billed
 above its upper bound, a retried 5xx included; the alarm on an account that falls further than the run counted, with
 its margin (--alarm-margin); the key blanked everywhere; a STOPPED line and a summary on every stop, after which the
-client refuses every later call; no 200 that isn't JSON ever cached; and a row per answer in
+client refuses every later call; no 200 it can't interpret ever cached; and a row per answer in
 data/raw/_manifest/oddsapi_manifest.csv, with pull id N0 (`markets odds5m headers --pull N0` reads them).
 
 What it asks for and where it caches are its own and unchanged: data/raw/{sport}/oddsapi_hist/, keyed on the same

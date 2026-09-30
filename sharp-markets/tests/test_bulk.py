@@ -733,7 +733,8 @@ def test_a_full_disk_or_a_body_that_is_not_json_stops_with_the_summary(cfg, tmp_
                 r.text = "<html>busy</html>"
             return r
     res = bulk.run_calls(client(tmp_path / "b", Html()), _one_call(cfg))
-    assert "body that is not JSON" in res["stopped"] and res["spent"] == 20
+    # its documented cost can't be worked out, so it counts the larger of the 20 it reported and its upper bound, 60
+    assert "body that is not JSON" in res["stopped"] and res["spent"] == 60
     assert not list((tmp_path / "b/raw").rglob("*.parquet"))                          # not cached: a rerun asks again
     out = capsys.readouterr().out
     assert out.count("STOPPED:") == 2 and out.count("stopped: 1 fetched") == 2
@@ -1467,19 +1468,60 @@ SEALED_GAMES = {
 }
 @pytest.mark.parametrize("sport,which", [(s, w) for s in SEALED_GAMES for w in ("first", "last")])
 def test_every_sealed_window_holds_its_first_and_last_game_in_utc(sport, which):
-    """Item 8 (final review, finding 11): the NCAAF 2026 window ended 2027-01-25, but the CFP title game kicks off
-    at 2027-01-26T00:30Z, so it came out of load_rows as unsealed. Every sealed window must start at least a day
-    before its season's first game and end at least a day after its last, in UTC. The NHL 2026-27 window starts
-    2026-09-28 since Sep 29, 2026 (the hub's decision): the season opened on Sep 29."""
+    """Item 8 (final review, finding 11): every sealed window must start at least a day before its season's first
+    game and end at least a day after its last, in UTC. The NHL 2026-27 window starts 2026-09-28 since Sep 29, 2026
+    (the hub's decision): the season opened on Sep 29. The one exception is the CFP title game (2027-01-26T00:30Z):
+    the NCAAF 2026 window keeps main's end, 2027-01-25, since moving it would add the game to the March pulls, which
+    is the hub's decision (review of cc14201, finding A1). The game is in no window, so nothing plans it, and
+    load_rows judges any row of it by its call (test_a_game_in_no_window_is_judged_by_its_call)."""
     real = bulk.load_config()
     (w,) = [w for w in real["sports"][sport]["windows"] if w["sealed"]]
     kick = t(SEALED_GAMES[sport][0 if which == "first" else 1])
+    if (sport, which) == ("americanfootball_ncaaf", "last"):
+        assert w["to"] == date(2027, 1, 25) and bulk.window_for(real, sport, kick) is None
+        return
     assert bulk.window_for(real, sport, kick) == w and bulk.is_sealed(real, sport, kick)
     if which == "first":
         assert w["from"] <= (kick - timedelta(days=1)).date(), (w["from"], kick)
     else:
         assert w["to"] >= (kick + timedelta(days=1)).date(), (w["to"], kick)
     assert set(SEALED_GAMES) == {s for s, sc in real["sports"].items() if any(x["sealed"] for x in sc["windows"])}
+
+
+MAIN_BEFORE_PR63 = "4bf049729337b21b70e60b0c85611ae6c77f6998"     # origin/main when cc14201 was reviewed (Sep 30)
+
+
+def test_nothing_bought_changed_since_main_but_the_nhl_start(tmp_path):
+    """Review of cc14201, finding A1: the branch had moved the NCAAF 2026 window's end from Jan 25 to Jan 27, 2027,
+    which put the CFP title game into F1, F4, F5 and F6 in March. Only the NHL change is approved. So the NCAAF window
+    ends Jan 25, and against main's config (git show) the only change in a window that a pull buys from is the NHL
+    2026-27 start; the MLS and K League 2026 ends moved too, but no pull buys those seasons."""
+    import subprocess
+    real = bulk.load_config()
+    (w,) = [w for w in real["sports"]["americanfootball_ncaaf"]["windows"] if w["label"] == "2026"]
+    assert w["to"] == date(2027, 1, 25)
+    try:
+        text = subprocess.run(["git", "show", f"{MAIN_BEFORE_PR63}:sharp-markets/config/odds5m.yaml"], check=True,
+                              cwd=Path(__file__).parent, capture_output=True, text=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip(f"main's config at {MAIN_BEFORE_PR63[:7]} is not in this checkout's git history")
+    (tmp_path / "main.yaml").write_text(text)
+    main = bulk.load_config(tmp_path / "main.yaml")
+    assert {k: main[k] for k in ("books", "featured", "pulls", "groups")} == {
+        k: real[k] for k in ("books", "featured", "pulls", "groups")}
+    changed = set()
+    for s, sc in real["sports"].items():
+        before = main["sports"][s]
+        assert (sc["history_from"], sc["sweep_every_days"]) == (before["history_from"], before["sweep_every_days"])
+        assert [x["label"] for x in sc["windows"]] == [x["label"] for x in before["windows"]], s
+        changed |= {(s, x["label"], k) for x, y in zip(sc["windows"], before["windows"]) for k in x if x[k] != y[k]}
+    assert changed == {("icehockey_nhl", "2026-27", "from"), ("soccer_usa_mls", "2026", "to"),
+                       ("soccer_korea_kleague1", "2026", "to")}
+
+    def bought(s, label):
+        return any(s in p["sports"] and (not p.get("only_seasons") or label in p["only_seasons"])
+                   and label not in p.get("skip_seasons", []) for p in real["pulls"].values())
+    assert {c for c in changed if bought(*c[:2])} == {("icehockey_nhl", "2026-27", "from")}
 
 
 def test_a_game_in_no_window_is_judged_by_its_call(tmp_path, monkeypatch):
@@ -2306,14 +2348,14 @@ def test_ctrl_c_inside_the_accounting_of_an_answer_counts_it_once_with_one_manif
     the answer is counted once, at what it cost, it has exactly one manifest row, and the line says so."""
     n = [0]
     if where == "before its count":
-        envelope = bulk._envelope
+        account = bulk.BulkClient._account
 
-        def patched(body):
+        def patched(self, *a, **k):
             n[0] += 1
             if n[0] == 3:
                 raise KeyboardInterrupt
-            return envelope(body)
-        monkeypatch.setattr(bulk, "_envelope", patched)
+            return account(self, *a, **k)
+        monkeypatch.setattr(bulk.BulkClient, "_account", patched)
     elif where == "between its count and its row":
         saw = bulk.BulkClient._saw_balance
 
@@ -2501,3 +2543,256 @@ def test_ctrl_c_while_a_retried_answer_is_accounted_counts_it_at_what_it_cost_wi
     assert res["interrupted"] and api.paid == 1 and c.counted == 20 and c.unanswered == 0
     assert [(r["http_status"], r["credits_last"]) for r in rows] == [("500", "20")]
     assert "had come back, so it is counted at what it cost, 20 credits, and a rerun buys it again." in res["stopped"]
+
+
+# ---------------------------------------------------------------- review of cc14201 (Sep 30)
+def test_any_other_error_the_session_raises_counts_the_attempt_and_stops_the_client(cfg, tmp_path, caplog):
+    """Review of cc14201, finding A2: a session that raised something other than a network error `requests` knows
+    (here a RuntimeError) ended the run as "unexpected error", but the attempt counted nothing and the client took
+    the next call. Now the attempt counts its upper bound to the end of the run (rule 2), the run stops, and the
+    client refuses every later attempt with that stop. At the key check nothing is counted, and it stops the same."""
+    class Raises(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            if not url.endswith("/sports") and len(self.calls) == 2:            # the second paid call
+                self.calls.append((url, dict(params)))
+                raise RuntimeError(f"urllib3 surprise {params['apiKey']}")
+            return super().get(url, params, timeout)
+
+    calls = _nfl_calls(cfg)                                                     # upper bound 60, billed 20
+    api = Raises()
+    c = client(tmp_path, api)
+    c.account()
+    res = bulk.run_calls(c, calls)
+    assert res["stopped"].startswith("unexpected error, probably a bug; tell the hub before rerunning (RuntimeError: "
+                                     "urllib3 surprise REDACTED)") and not res["rerun"]
+    assert "its upper bound, 60 credits, is counted to the end of the run" in res["stopped"]
+    assert c.counted == 20 + 60 and c.unanswered == 60 and res["fetched"] == 1
+    with pytest.raises(bulk.Stop) as ei:
+        c.fetch(calls[2])
+    assert ei.value is c.stopped and len(api.calls) == 3 and c.counted == 80
+    assert "SECRETKEY" not in caplog.text
+
+    class AtTheKeyCheck(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            raise RuntimeError("no")
+    k = client(tmp_path / "k", AtTheKeyCheck())
+    with pytest.raises(bulk.CircuitBreaker, match=r"unexpected error, probably a bug.*RuntimeError: no"):
+        k.account()
+    assert k.counted == 0 and k.stopped is not None
+
+
+class Garbled(FakeOddsApi):
+    """Answers the second paid call with an HTTP 200 whose body is `body`, reported at the usual 20 credits."""
+
+    def __init__(self, body, **kw):
+        super().__init__(**kw)
+        self.body = body
+
+    def get(self, url, params=None, timeout=None):
+        r = super().get(url, params, timeout)
+        if len(self.calls) == 3:                                                # the key check, then two paid calls
+            r.text = self.body
+        return r
+
+
+@pytest.mark.parametrize("body", [{"timestamp": "2024-09-01T00:15:00Z", "data": 5}, {"data": "abc"},
+                                  {"data": {"id": "ev1", "bookmakers": 5}}])
+def test_a_200_it_cannot_interpret_counts_its_upper_bound_gets_its_row_and_stops(cfg, tmp_path, capsys, body):
+    """Review of cc14201, finding A2: a 200 whose JSON `data` is a number was cached and then crashed the accounting
+    (`_envelope`), so it counted nothing, a rerun found it cached and never counted it, and the client took the next
+    call. Now a 200 whose body can't be interpreted counts the larger of what it reported and its upper bound (its
+    documented cost can't be worked out), gets its manifest row, isn't cached, and stops the run with a plain STOPPED
+    line; the client refuses every later attempt."""
+    calls = _nfl_calls(cfg)                                                     # upper bound 60, billed 20
+    api = Garbled(json.dumps(body))
+    c = client(tmp_path, api)
+    c.account()
+    res = bulk.run_calls(c, calls)
+    assert res["stopped"].startswith(f"{calls[1].path} at {bulk.iso(calls[1].at)}: the API answered HTTP 200 with "
+                                     "JSON it cannot read") and res["rerun"]
+    assert ("It counted 60 credits, the larger of what it reported and its upper bound (x-requests-last '20')."
+            in res["stopped"])
+    assert c.counted == 20 + 60 and res["fetched"] == 2
+    rows = [r for r in csv.DictReader(c.manifest.open()) if r["pull"] != "account"]
+    assert [(r["http_status"], r["credits_last"]) for r in rows] == [("200", "20"), ("200", "20")]
+    assert c.is_cached(calls[0]) and not c.is_cached(calls[1])                  # a rerun asks again
+    assert "STOPPED: " in capsys.readouterr().out
+    with pytest.raises(bulk.Stop) as ei:
+        c.fetch(calls[2])
+    assert ei.value is c.stopped and len(api.calls) == 3
+
+
+@pytest.mark.parametrize("where", ["saving the answer", "reading the cache"])
+def test_any_other_error_in_a_fetch_counts_what_came_back_and_stops_the_client(cfg, tmp_path, monkeypatch, where):
+    """Review of cc14201, finding A2: every stop latches the client, not only a Stop or Ctrl-C. An error that isn't
+    one (a bug while the answer is saved, a cache that can't be read) stops the run with the STOPPED line it gives,
+    after an answer that had come back is counted, at the larger of what it reported and its upper bound; and the
+    client refuses every later attempt with that stop, even once the cause is gone."""
+    from markets import cache as cache_mod
+    calls = _nfl_calls(cfg)
+    api = FakeOddsApi()
+    c = client(tmp_path, api)
+    c.account()
+    c.fetch(calls[0])                                                           # 20 counted
+
+    def fail(*a, **k):
+        raise ValueError("a bug") if where == "saving the answer" else PermissionError(13, "Permission denied")
+    if where == "saving the answer":
+        monkeypatch.setattr(cache_mod, "write_record", fail)
+    else:
+        monkeypatch.setattr(c.cache, "lookup", fail)
+    with pytest.raises(bulk.Stop) as ei:
+        c.fetch(calls[1])
+    assert ei.value is c.stopped
+    if where == "saving the answer":
+        assert str(c.stopped).startswith("unexpected error, probably a bug; tell the hub before rerunning (ValueError")
+        assert c.counted == 20 + 60 and c.fetched == 2 and len(api.calls) == 3
+    else:
+        assert str(c.stopped).startswith("a file could not be read or written (Permission denied)")
+        assert c.counted == 20 and len(api.calls) == 2
+    monkeypatch.undo()
+    with pytest.raises(bulk.Stop) as again:
+        c.fetch(calls[2])
+    assert again.value is c.stopped and len(api.calls) == (3 if where == "saving the answer" else 2)
+
+
+@pytest.mark.parametrize("error", [TimeoutError("socket timed out"), ConnectionResetError(104, "Connection reset"),
+                                   "a URL with the key"])
+def test_a_raw_socket_error_from_the_session_is_an_attempt_with_no_answer(cfg, tmp_path, error):
+    """Review of cc14201, finding A3: a socket error the session raised without `requests` wrapping it (an OSError,
+    such as a raw TimeoutError) was reported as "the cache could not be read ... Nothing was fetched" and counted
+    nothing. It is a transport error: the attempt counts its upper bound to the end of the run (rule 2), the line
+    says there was no answer, and a rerun asks again. (A full disk keeps its own lines: see
+    test_a_full_disk_or_a_body_that_is_not_json_stops_with_the_summary.) Review of the fix, finding 3: "not
+    retried" comes first, so an error text that ends in a URL with the key loses only the key."""
+    class Raw(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            if not url.endswith("/sports") and len(self.calls) == 2:            # the second paid call
+                self.calls.append((url, dict(params)))
+                raise error if isinstance(error, OSError) else TimeoutError(f"timed out: {url}?apiKey={params['apiKey']}")
+            return super().get(url, params, timeout)
+
+    calls = _nfl_calls(cfg)                                                     # upper bound 60, billed 20
+    api = Raw()
+    c = client(tmp_path, api)
+    c.account()
+    res = bulk.run_calls(c, calls)
+    assert res["stopped"].startswith("no answer from the Odds API (not retried; TimeoutError: " if isinstance(
+        error, str) else f"no answer from the Odds API (not retried; {type(error).__name__}: ") and res["rerun"]
+    assert "the cache could not be read" not in res["stopped"] and "SECRETKEY" not in res["stopped"]
+    if isinstance(error, str):
+        assert f"{calls[1].path}?apiKey=REDACTED). Nothing was cached" in res["stopped"]
+    assert "its upper bound, 60 credits, is counted to the end of the run" in res["stopped"]
+    assert c.counted == 20 + 60 and c.unanswered == 60 and res["fetched"] == 1 and not c.is_cached(calls[1])
+    with pytest.raises(bulk.Stop) as ei:
+        c.fetch(calls[2])
+    assert ei.value is c.stopped and len(api.calls) == 3
+
+
+@pytest.mark.parametrize("stop", ["the alarm", "billed above its upper bound", "a session error"])
+def test_the_key_check_of_a_client_that_stopped_is_refused_with_the_same_stop(cfg, tmp_path, stop):
+    """Review of cc14201, finding A4 (the hub's Q3 read literally): account() on a stopped client still sent the free
+    key check and reset the start and the lowest balance, so the client no longer described the run that stopped.
+    Now it is refused with the same stop, sends nothing, and changes nothing."""
+    class Raises(Overcharges):
+        def get(self, url, params=None, timeout=None):
+            if stop == "a session error" and not url.endswith("/sports"):
+                raise RuntimeError("boom")
+            return super().get(url, params, timeout)
+
+    api = Raises(others=400 if stop == "the alarm" else 0, overbill=50 if stop.startswith("billed") else 0)
+    c = client(tmp_path, api, alarm_margin=300)
+    c.account()
+    res = bulk.run_calls(c, _nfl_calls(cfg))
+    assert {"the alarm": "the account has fallen by", "billed above its upper bound": "billed 70 credits",
+            "a session error": "unexpected error"}[stop] in res["stopped"] and c.stopped is not None
+    before, sent = (c.start, c.lowest, c.counted, c.unexplained), len(api.calls)
+    with pytest.raises(bulk.Stop) as ei:
+        c.account()
+    assert ei.value is c.stopped and len(api.calls) == sent and (c.start, c.lowest, c.counted, c.unexplained) == before
+
+
+def test_a_cached_404_asked_again_and_answered_with_an_error_shows_on_the_summary_line(cfg, tmp_path, monkeypatch,
+                                                                                       capsys):
+    """Review of cc14201, finding A5: with --retry-404, a cached 404 asked again and answered 500 kept its 404 (as it
+    should) but was left off the pull's line, which said only `cached 404s 2`; only a WARNING showed the 500. The
+    line now counts it like any error answer, and says only a rerun with --retry-404 asks again, since the 404 is
+    kept (review of the fix, finding 4); a 404 asked again that is still a 404 is not an error."""
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    calls, raw = _nfl_calls(cfg, 2), tmp_path / "raw"
+
+    def run(api, **kw):
+        c = bulk.BulkClient(RawCache(raw), max_credits=10_000, session=api, api_key=KEY, rate_per_sec=1e6,
+                            max_retries=0)
+        c.account()
+        return bulk.run_calls(c, calls, "F3", **kw), capsys.readouterr().out
+
+    run(Gone({"ev0"}))
+    res, out = run(Gone({"ev0"}, fail=True), retry_404=True)
+    assert res["errors"] == 2 and res["cached_404"] == 2
+    assert "done: 2 fetched (2 answered with an error and not saved; a rerun with --retry-404 asks again)" in out
+    res, out = run(Gone({"ev0"}), retry_404=True)
+    assert res["errors"] == 0 and "answered with an error" not in out and res["cached_404"] == 2
+
+
+def test_the_headers_stage_and_the_key_check_print_their_counts_plainly(cfg, tmp_path, monkeypatch, capsys):
+    """Review of cc14201, C m3 (wording): `headers` printed "the longest stretch in a row: 1 answers", and `key ok:`
+    printed the credits used as the raw header (12421) next to formatted figures. One answer is singular now, and
+    the credits used are formatted like the other numbers (unknown when the header can't be read)."""
+    from markets.oddsapi import headers
+    manifest = tmp_path / "m.csv"
+    with manifest.open("w", newline="") as f:
+        w = csv.DictWriter(f, bulk.MANIFEST_FIELDS)
+        w.writeheader()
+        w.writerow({"pull": "account", "remaining": 1_000})
+        for left in (970, 970, 910):                                            # the second answer shows no fall
+            w.writerow({"pull": "F1", "expected_credits": 30, "credits_last": 30, "remaining": left})
+    assert headers.stage_headers(manifest, "F1") == 0
+    out = capsys.readouterr().out
+    assert "requests: 3 answers;" in out and "the longest stretch in a row: 1 answer\n" in out
+    assert "the header's lateness: 1 answer (" in out and "The balance header runs late by up to 1 answer." in out
+    assert "(the larger of 5,000 and 2 x 1 answer x 30)" in out
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    api = FakeOddsApi(remaining=4_987_579)                                      # 12,421 used
+    bulk.stage_balance({}, RawCache(tmp_path), args(), session=api)
+    bulk._client(RawCache(tmp_path), args(), session=api)
+    out = capsys.readouterr().out
+    assert out.count("key ok: HTTP 200, 4,987,579 credits remaining, 12,421 used; floor 0") == 2
+
+
+@pytest.mark.parametrize("where", ["its row can't be written", "a bug before its row"])
+def test_an_answer_counted_before_a_bug_keeps_its_count_and_its_row_or_the_line_says_what_it_held(cfg, tmp_path,
+                                                                                                   monkeypatch, where):
+    """Review of the fix (finding 1): an answer already counted when an error other than a Stop came (a `timestamp`
+    that is a lone surrogate, which the manifest file can't hold; a bug in the accounting after the count) kept its
+    count but got no manifest row, and the STOPPED line didn't say so. Now its row is written then if it can be, and
+    if it can't, the line says the row is missing and what it would have held, as after a Ctrl-C."""
+    class Surrogate(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            r = super().get(url, params, timeout)
+            if len(self.calls) == 3 and where == "its row can't be written":     # the second paid answer
+                r.text = json.dumps({**json.loads(r.text), "timestamp": "\ud800"})
+            return r
+
+    if where == "a bug before its row":
+        saw, n = bulk.BulkClient._saw_balance, [0]
+
+        def buggy(self, left):
+            saw(self, left)
+            n[0] += 1
+            if n[0] == 2:                                                       # the second answer, once counted
+                raise ValueError("a bug")
+        monkeypatch.setattr(bulk.BulkClient, "_saw_balance", buggy)
+    calls = _nfl_calls(cfg)                                                     # billed 20 each
+    c = client(tmp_path, Surrogate())
+    c.account()
+    res = bulk.run_calls(c, calls)
+    rows = [r for r in csv.DictReader(c.manifest.open()) if r["pull"] != "account"]
+    assert res["stopped"].startswith("unexpected error, probably a bug") and c.counted == 40 and c.is_cached(calls[1])
+    if where == "a bug before its row":
+        assert len(rows) == 2 and "manifest row" not in res["stopped"]
+    else:
+        assert len(rows) == 1 and ("The answer that had come back was counted at what it cost, 20 credits. Its "
+                                   "manifest row could not be written (" in res["stopped"])
+        assert res["stopped"].endswith(f"; it would have held HTTP 200, credits_last 20, cache key {calls[1].key}.")
