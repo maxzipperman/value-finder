@@ -284,6 +284,72 @@ def is_signal(rule: str, value: str) -> bool:
     return (rule == "rule_b" and v in ("SIGNAL", "SIGNAL_SECONDARY")) or (rule == "rule_ht" and v == "SIGNAL")
 
 
+# The badge a rule's status gets on the page. One colour is kept for signals and used for nothing else: a filled
+# "Signal" badge, and the same colour outlined for a signal at the NFL's backup price (the consensus line, logged
+# apart and not part of the decision). A watch gets a quiet outlined badge in the neutral colour, so it can never be
+# mistaken for a signal: the NFL model lean, and a wind trigger that did not become a signal (no price, a price too
+# high, a value not above zero, or outside the 1 to 3 day window; the alert job sends a watch for these).
+WATCH_RULE_B = ("no_price", "price_too_high", "negative_ev", "outside_horizon")
+BADGE_WORDS = {"signal": "Signal", "backup": "Signal, backup price", "watch": "Watch"}
+
+
+def badge(rule: str, value: str) -> str:
+    """"signal", "backup", "watch" or "" for one rule's status on a row."""
+    v = (value or "").strip()
+    if rule == "rule_b":
+        return ("signal" if v == "SIGNAL" else "backup" if v == "SIGNAL_SECONDARY" else
+                "watch" if v in WATCH_RULE_B else "")
+    if rule == "rule_ht":
+        return "signal" if v == "SIGNAL" else ""
+    if rule == "lean":
+        return "watch" if v in ("UNDER lean", "OVER lean") else ""
+    return ""
+
+
+def strongest(badges) -> str:
+    """The badge a row shows beside its game: a signal before a backup-price signal before a watch."""
+    for b in ("signal", "backup", "watch"):
+        if b in badges:
+            return b
+    return ""
+
+
+def until(kick: datetime | None, now: datetime) -> str:
+    """How long until kickoff, in words: "in 2 days, 5 hours", "in 3 hours, 10 minutes", "in 25 minutes"."""
+    if kick is None:
+        return ""
+    s = int((kick - now).total_seconds())
+    if s <= 0:
+        return "kicked off"
+    d, h, m = s // 86400, s % 86400 // 3600, s % 3600 // 60
+    unit = lambda n, w: f"{n} {w}{'s' if n != 1 else ''}"                       # noqa: E731
+    if d:
+        return "in " + unit(d, "day") + (f", {unit(h, 'hour')}" if h else "")
+    if h:
+        return "in " + unit(h, "hour") + (f", {unit(m, 'minute')}" if m else "")
+    return "in " + unit(max(m, 1), "minute")
+
+
+def signed(v, digits=2) -> str:
+    """"+1.40", "−0.35" (a true minus sign), "0.00"; "" when blank."""
+    x = num(v)
+    if x is None:
+        return ""
+    s = f"{abs(x):.{digits}f}"
+    if float(s) == 0:
+        return s
+    return (MINUS if x < 0 else "+") + s
+
+
+def p_value(p: float | None) -> str:
+    """A p-value as the page writes it: "0.39", "0.0499", "0.000312", "below 0.000001"."""
+    if p is None:
+        return ""
+    if p < 1e-6:
+        return "below 0.000001"
+    return f"{p:.3g}" if p < 0.1 else f"{p:.2f}"
+
+
 def alert_words(key: str) -> str:
     """An alert key from alert_state.json in plain words."""
     k = (key or "").strip()

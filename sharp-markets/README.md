@@ -22,7 +22,8 @@ uv run markets h3-kaggle                                       # H3: the registe
 uv run markets h3-kaggle --sport nfl --check-only              # H3, NFL: columns, team names, join; no result
 uv run markets h3-kaggle --sport nfl                           # H3, NFL: the 6 registered variants (#75)
 uv run markets odds5m plan                                     # 5M month: bulk multi-sport pulls (docs/ODDS5M_DAY_ONE.md)
-uv run markets odds5m full --pull day_one --confirm --max-credits 400000   # a group from config/odds5m.yaml; `all` is refused
+uv run markets odds5m full --pull F1 --confirm --max-credits 170000        # one pull at a time, as docs/ODDS5M_DAY_ONE.md lists them
+                                                               # (`--pull day_one` is refused: F3, in it, needs --seasons)
 uv run markets weather qualifying                              # heat triggers -> data/weather/heat_qualifying.csv (docs/HEAT_HYPOTHESES.md)
 ```
 

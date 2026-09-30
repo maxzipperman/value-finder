@@ -66,12 +66,25 @@ skipped when read and never copied by a restore.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
-Pinnacle's total captured just before kickoff (data/forward/closes.csv). ROI is units won per bet
-placed; a push counts as a bet. Wind triggers that never became a signal (no price, price too high,
+Pinnacle's total captured just before kickoff (data/forward/closes.csv). Amendment 8, section 1: a bet
+uses a captured close only when it was captured 2 to 20 minutes (both inclusive, amendment 3's window as
+scripts/capture_close.py applies it) before the kickoff of the listing graded, the earlier of the kickoff
+on the listing's last row logged before kickoff and the kickoff in the schedule; among such captures of
+the game, the last in the file is taken. A game with a captured close outside that window has none for
+this listing: it is counted as missing, the scorer prints how many and which, and --list-excluded prints
+each refused capture. A capture of the game outside the window when another inside it is used is set
+aside: the scorer says how many when there are any, and --list-excluded prints each. The test's end is
+judged on the schedule's kickoff and season, as before (amendment 8, section 2). ROI is units won per
+bet placed; a push counts as a bet. Wind triggers that never became a signal (no price, price too high,
 outside the horizon) are counted, so coverage gaps can't quietly select winners.
 
     python scripts/fetch_data.py --skip-weather   # refresh schedule/lines/results
     python scripts/score_forward.py [--list-excluded]
+    python scripts/score_forward.py --now 2026-10-20T17:00:00 --json   # the dashboard's read: one JSON document
+
+--json prints one JSON document and nothing else: the report above as text, byte for byte, and each test's counts,
+numbers, decision and bets, each number the one the report prints. It changes nothing about what is graded, decided
+or recorded; with --now it is a preview, and records nothing.
 """
 import argparse
 import csv
@@ -127,7 +140,17 @@ ap.add_argument("--now", help="score as of this UTC time: a preview for tests an
 ap.add_argument("--test-record", action="store_true",
                 help="tests only: with --now, record final decisions beside a test ledger as if made at --now "
                      "(refused for any ledger in data/forward/)")
+ap.add_argument("--json", action="store_true",
+                help="print one JSON document instead of the report: the report itself as text, and each test's "
+                     "counts, numbers, decision and bets. What is graded, decided and recorded doesn't change")
 args = ap.parse_args()
+# --json: the report is printed into a buffer, exactly as it would be printed, and handed over inside one document
+# at the end (json_document). Nothing else about the run changes: the same rows count, the same bets are graded, and
+# a decision is recorded, or not, by the same rules.
+REPORT = io.StringIO() if args.json else None
+if REPORT is not None:
+    STDOUT, sys.stdout = sys.stdout, REPORT
+JSON = {"excluded": {}, "rows": {}, "tests": {}, "decisions": {}, "written": {}}    # filled as the report prints
 CLOCK = pd.Timestamp.now(tz="UTC")
 NOW = pd.Timestamp(args.now, tz="UTC") if args.now else CLOCK
 ledger = Path(args.ledger)
@@ -468,12 +491,21 @@ L = L.merge(g, on="game_id", how="left")
 L["in_schedule"] = L.in_schedule.eq(True)
 # Amendment 6, reading 10: "before kickoff" is before the earlier of the row's kickoff and the schedule's
 L["kick_first"] = L[["row_kick", "kick_utc"]].min(axis=1)
-# Amendment 3: the Pinnacle close captured just before kickoff (scripts/capture_close.py), secondary only
+# Amendment 3: the Pinnacle close captured just before kickoff (scripts/capture_close.py), secondary only. Amendment
+# 8, section 1: a capture is a listing's close only when it was captured inside that window before the listing's
+# kickoff (with_captured, below).
+CAP_WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))   # amendment 3; capture_close.py's WINDOW, inclusive
+CAP_REFUSED = "close captured outside the window for this listing (2 to 20 minutes before its kickoff)"
+CAP_ASIDE = "capture set aside: outside the window for this listing; another capture inside it is used"
 closes = ledger.parent / "closes.csv"
-cap = pd.read_csv(closes) if closes.exists() else pd.DataFrame(columns=["game_id", "book", "close_total"])
-cap = (cap[cap.book.eq("pinnacle")].dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
-       [["game_id", "close_total"]].rename(columns={"close_total": "cap_close"}))
-L = L.merge(cap, on="game_id", how="left")
+cap = pd.read_csv(closes, dtype={"game_id": str}) if closes.exists() else pd.DataFrame(
+    columns=["game_id", "kick_utc", "capture_utc", "book", "close_total"])
+cap = cap.reindex(columns=list(dict.fromkeys(["game_id", "kick_utc", "capture_utc", "book", "close_total"]
+                                             + list(cap.columns))))
+cap = cap.assign(_order=np.arange(len(cap)))                       # file order: the last is taken
+cap = cap[cap.book.eq("pinnacle")].dropna(subset=["close_total"])
+cap["close_total"] = pd.to_numeric(cap.close_total, errors="coerce")
+cap["cap_utc"] = pd.to_datetime(cap.capture_utc.astype(object), utc=True, errors="coerce", format="mixed")
 
 # What counts. Every excluded row is counted by its first failing reason.
 why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), ~L.in_schedule, L.kick_utc.isna(),
@@ -481,8 +513,10 @@ why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), ~L.in_schedule, L.k
                 ["unregistered rules version", "game not in the schedule", "no kickoff time in the schedule",
                  "before Week 5 (Oct 8, 2026)", "after the 2027 season", "logged at or after kickoff"], "")
 print(f"ledger rows: {len(L)}; in the test: {int((why == '').sum())}")
+JSON["rows"] = {"ledger": len(L), "in_test": int((why == "").sum())}
 for reason, n in pd.Series(why[why != ""]).value_counts().items():
     print(f"  excluded, {reason}: {n}")
+    JSON["excluded"][reason] = int(n)
 if args.list_excluded and (why != "").any():
     print(L.assign(excluded=why)[why != ""][["snapshot_utc", "game_id", "rules_version", "lean", "rule_b", "excluded"]]
           .to_string(index=False))
@@ -506,6 +540,12 @@ def listings(rows):
 
 
 L = listings(L)
+# Amendment 8, section 1: the kickoff of each listing, for its captured close: the `kick_first` (the earlier of the
+# row's kickoff and the schedule's) of the listing's last row logged before kickoff. Every row left in L was logged
+# before its own `kick_first` (`why`, above), so that row was logged before the schedule's kickoff, and the bound is
+# never later than it.
+LISTING_KICK = (L.sort_values(["snapshot_utc", "_row"], kind="stable")
+                .drop_duplicates(["game_id", "listing"], keep="last").set_index(["game_id", "listing"]).kick_first)
 
 
 def entries(rows):
@@ -524,8 +564,41 @@ def horizon_of(season):
     return None if pd.isna(k) else k
 
 
+def with_captured(b):
+    """Amendment 8, section 1: each bet's captured Pinnacle close, from its own listing. A capture counts only when
+    its capture time is 2 to 20 minutes (both inclusive) before the kickoff of the bet's listing (LISTING_KICK: the
+    earlier of the kickoff on the listing's last row logged before kickoff and the schedule's; amendment 6, reading
+    10); among those, the last in closes.csv is taken. Adds cap_kick (that kickoff) and cap_close (blank when none);
+    cap_refused: the game has a captured Pinnacle close, but none in that window for this listing, so this bet has
+    none (counted as missing); and cap_aside: how many of the game's Pinnacle captures outside the window were set
+    aside when one inside it is used."""
+    b = b.assign(cap_kick=LISTING_KICK.reindex(pd.MultiIndex.from_frame(b[["game_id", "listing"]])).set_axis(b.index))
+    k = b[["game_id", "cap_kick"]].rename_axis("_b").reset_index()
+    m = k.merge(cap[["game_id", "cap_utc", "close_total", "_order"]], on="game_id")
+    lead = m.cap_kick - m.cap_utc
+    inside = (lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1])
+    aside = (~inside).groupby(m._b).sum()
+    m = m[inside].sort_values("_order", kind="stable").drop_duplicates("_b", keep="last").set_index("_b")
+    out = b.assign(cap_close=m.close_total.reindex(b.index).astype(float))
+    return out.assign(cap_refused=out.cap_close.isna() & out.game_id.isin(cap.game_id),
+                      cap_aside=np.where(out.cap_close.notna(), aside.reindex(b.index).fillna(0), 0).astype(int))
+
+
+def outside(r, label):
+    """The Pinnacle captures of these bets' games outside the window for their listing, one line each
+    (--list-excluded)."""
+    c = r[["game_id", "row_kick", "cap_kick"]].merge(cap, on="game_id")
+    lead = c.cap_kick - c.cap_utc
+    c = c[~((lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1]))]
+    print(c.assign(excluded=label).rename(columns={
+        "row_kick": "row_kickoff", "cap_kick": "listing_kickoff", "kick_utc": "captured_for"})[
+        ["game_id", "row_kickoff", "listing_kickoff", "capture_utc", "captured_for", "close_total", "excluded"]]
+        .to_string(index=False))
+
+
 def grade(bets, side_col):
     """Outcome at the entry line and price."""
+    bets = with_captured(bets)
     under = bets[side_col] == "UNDER"
     entry = bets.total_line
     win = np.where(under, bets.total < entry, bets.total > entry)
@@ -615,21 +688,37 @@ def report(name, bets):
     print(f"\n{name}: {len(bets)} signals, {len(settled)} settled, {n_pend} pending, {len(void)} void (not graded)")
     for reason, v in void.groupby("void", sort=False):
         print(f"  void, {reason}: {len(v)} ({', '.join(v.game_id.astype(str))})")
+    JSON["tests"][name] = {"bets": bets}                  # --json: the numbers this table prints, as it prints them
     if settled.empty:
         return settled
     w, p = int(settled.win.sum()), int(settled.push.sum())
     iv = interval(settled.clv_pts, game_day(settled))
+    JSON["tests"][name] |= {"won": w, "pushed": p, "iv": iv}
     print(f"  record at entry line {w}-{len(settled) - w - p}-{p}   units {settled.profit.sum():+.2f} "
           f"(ROI {100 * settled.profit.sum() / len(settled):+.1f}% per bet placed; "
           f"{int((~settled.priced).sum())} graded at an assumed -110)")
     print(f"  mean CLV {iv['m']:+.2f} pts; {int(settled.close_total.notna().sum())} of {len(settled)} bets have a "
           f"primary close; {interval_text(**iv)}")
     cm, clo, chi, cn = mean_ci(settled.clv_cap)
+    JSON["tests"][name]["secondary"] = (cm, clo, chi, cn)
     if cn:
         print(f"  secondary (amendment 3): mean CLV vs captured Pinnacle close {cm:+.2f} pts "
               f"(95% CI {clo:+.2f} to {chi:+.2f}); {len(settled) - cn} of {len(settled)} without a captured close")
     else:
         print(f"  secondary (amendment 3): no captured closes for these {len(settled)} bets")
+    r = settled[settled.cap_refused]              # amendment 8, section 1: counted and named, never dropped
+    if len(r):
+        print(f"  captured Pinnacle close refused for {len(r)} of these {len(settled)} bets: {CAP_REFUSED}; counted "
+              f"as missing ({', '.join(r.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(r, CAP_REFUSED)
+    a = settled[settled.cap_aside > 0]            # outside the window, while another capture inside it is used
+    if len(a):
+        print(f"  Pinnacle captures set aside for {len(a)} of these {len(settled)} bets: {int(a.cap_aside.sum())} "
+              f"outside the window for the listing, while another inside it is used "
+              f"({', '.join(a.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(a, CAP_ASIDE)
     print(settled[["game_id", "side", "line_src", "total_line", "close_total", "total", "clv_pts", "profit"]]
           .to_string(index=False))
     return settled
@@ -721,6 +810,7 @@ def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
     fingerprint. Under the file lock the record is read again first, so two runs at once write one row. A run
     that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/, an unreadable
     record) says why instead."""
+    JSON["written"][did] = False
     if NOT_RECORDED:
         print(f"    not recorded: {NOT_RECORDED}.")
         return
@@ -742,8 +832,29 @@ def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
             return
         pd.DataFrame([rec], columns=RECORD_COLS).to_csv(DECISIONS, mode="a", header=not DECISIONS.exists(),
                                                         index=False)
+    JSON["written"][did] = True
     print(f"    recorded in decisions.csv on {rec['decided_utc']}, horizon {rec['horizon_utc']}; "
           f"ledger rows sha256 {rec['ledger_rows_sha256'][:16]}")
+
+
+def json_mark():
+    """--json: where the report has got to, so a decision's own lines can be handed over as printed."""
+    return REPORT.tell() if REPORT is not None else 0
+
+
+def json_decision(rule, did, name, status, verdict, start, rec=None):
+    """--json: one decision as printed: interim, final (and whether this run wrote it down) or recorded."""
+    if REPORT is None:
+        return
+    d = {"id": did, "name": name, "status": status, "verdict": verdict, "text": REPORT.getvalue()[start:]}
+    if rec is not None:
+        # a recorded number that is NaN or infinite (json.dumps writes it; JSON has no such value) is null here
+        numbers = json.loads(rec.numbers, parse_constant=lambda _: None)
+        d["recorded"] = {"verdict": rec.verdict, "decided_utc": rec.decided_utc, "horizon_utc": rec.horizon_utc,
+                         "n_bets": int(rec.n_bets), "numbers": numbers, "from": origin(did)[2:] or None}
+    if status == "final":
+        d["written"] = JSON["written"].get(did, False)
+    JSON["decisions"].setdefault(rule, []).append(d)
 
 
 def decision(did, rule, horizon, name, h_utc, bets_by, split_by, split_name, pending, when, labels,
@@ -752,6 +863,7 @@ def decision(did, rule, horizon, name, h_utc, bets_by, split_by, split_name, pen
     horizon beside it when that now differs); otherwise FINAL, written down by a run that may record, once
     the horizon has passed and no bet that kicked off by then is pending; otherwise an interim read.
     Returns the verdict or None."""
+    start = json_mark()
     rec = recorded(did)
     if rec is not None:
         h = pd.Timestamp(rec.horizon_utc)
@@ -768,6 +880,7 @@ def decision(did, rule, horizon, name, h_utc, bets_by, split_by, split_name, pen
             print(f"    a fresh computation on the same horizon now gives: {fresh}, on {len(bets)} bets:")
             show(nums)
             print("    The recorded decision stands.")
+        json_decision(rule, did, name, "recorded", rec.verdict, start, rec)
         return rec.verdict
     bets = bets_by(h_utc)
     verdict, nums = assess(bets, split_by(bets), split_name, labels, enough(bets))
@@ -776,9 +889,11 @@ def decision(did, rule, horizon, name, h_utc, bets_by, split_by, split_name, pen
         print(f"  decision ({name}), FINAL: {verdict}")
         show(nums)
         write_down(did, rule, horizon, h_utc, verdict, nums, bets._row)
+        json_decision(rule, did, name, "final", verdict, start)
         return verdict
     print(f"  decision ({name}): INTERIM read, decides nothing. {when(waiting)}")
     show(nums)
+    json_decision(rule, did, name, "interim", None, start)
     return None
 
 
@@ -898,3 +1013,96 @@ else:
     print("Decision record: the first final decision is written to " + (
         "data/forward/decisions.csv (the live record)." if IS_LIVE else "decisions.csv beside this test ledger."))
 print("Variants under forward test: 2 (MODEL_LEAN, RULE_B).")
+
+
+# ---------------------------------------------------------------- --json: the same report, machine-readable
+# Every number below is one the report above printed (or, for a single bet, one its table printed), taken from the
+# same variables; nothing is graded or decided here. A number that doesn't exist (no interval on one bet) is null.
+def json_num(v):
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    return v if np.isfinite(v) else None
+
+
+def json_time(t):
+    return None if t is None or pd.isna(t) else pd.Timestamp(t).tz_convert("UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def json_text(v):
+    return None if v is None or (isinstance(v, float) and np.isnan(v)) or str(v) == "" else str(v)
+
+
+def json_bet(b):
+    """One bet: its game, its entry row (line, price and where the price came from), its close, its outcome and the
+    units at the price taken. The close, the closing-line value, the final total and the units are given once the bet
+    is settled, as the report's table gives them."""
+    settled, under = b["status"] == "settled", b["side"] == "UNDER"
+    outcome = (b["status"] if b["status"] in ("pending", "void") else
+               "push" if b["push"] else "won" if b["win"] else "lost")
+    kick = b["kick_utc"] if pd.notna(b["kick_utc"]) else b["row_kick"]
+    has_close = settled and pd.notna(b["close_total"])
+    return {"game_id": str(b["game_id"]), "away_team": json_text(b.get("away_team")),
+            "home_team": json_text(b.get("home_team")), "kickoff_utc": json_time(kick),
+            "entry_row_kickoff_utc": json_time(b["row_kick"]), "side": b["side"],
+            "logged_utc": json_time(b["snapshot_utc"]), "entry_line": json_num(b["total_line"]),
+            "entry_price": json_num(b["under_odds"] if under else b["over_odds"]),
+            "price_assumed": not bool(b["priced"]), "price_source": json_text(b["line_src"]),
+            "close_line": json_num(b["close_total"]) if has_close else None,
+            "close_source": "nflverse schedule" if has_close else None,
+            "clv": json_num(b["clv_pts"]) if settled else None,
+            "captured_close": json_num(b["cap_close"]) if settled else None,
+            "clv_captured": json_num(b["clv_cap"]) if settled else None,
+            "final_total": json_num(b["total"]) if settled else None, "outcome": outcome,
+            "void_reason": json_text(b["void"]), "units": json_num(b["profit"]) if settled else None,
+            "ledger_row": int(b["_row"]) + 1, "listing": int(b["listing"])}
+
+
+def json_test(tid, name, printed, rule, decides):
+    """One test as its table printed it: counts, record, units, return per bet placed, mean CLV, the registered
+    interval (both half-widths and the game days), the secondary CLV, the decision as printed, and its bets."""
+    t = JSON["tests"].get(printed, {})
+    bets = t.get("bets", pd.DataFrame(columns=["status", "void"]))
+    settled = bets[bets.status.eq("settled")]
+    void = bets[bets.status.eq("void")]
+    out = {"id": tid, "name": name, "printed_as": printed, "decides": decides,
+           "counts": {"signals": len(bets), "settled": len(settled), "pending": int(bets.status.eq("pending").sum()),
+                      "void": len(void)},
+           "void_reasons": {str(k): len(v) for k, v in void.groupby("void", sort=False)},
+           "record": None, "units": None, "roi_percent": None, "graded_at_assumed_price": None, "mean_clv": None,
+           "n_clv": None, "interval": None, "secondary_clv": None,
+           "decisions": JSON["decisions"].get(rule, []) if rule else [],
+           "bets": [json_bet(b) for b in bets.sort_values("snapshot_utc", kind="stable").to_dict("records")]
+           if len(bets) else []}
+    if "iv" in t:
+        w, p, iv = t["won"], t["pushed"], t["iv"]
+        units = settled.profit.sum()
+        cm, clo, chi, cn = t["secondary"]
+        out |= {"record": {"won": w, "lost": len(settled) - w - p, "pushed": p}, "units": json_num(units),
+                "roi_percent": json_num(100 * units / len(settled)),
+                "graded_at_assumed_price": int((~settled.priced).sum()),
+                "mean_clv": json_num(iv["m"]), "n_clv": int(settled.close_total.notna().sum()),
+                "interval": {"low": json_num(iv["lo"]), "high": json_num(iv["hi"]), "n": int(iv["n"]),
+                             "game_days": int(iv["G"]), "plain_half_width": json_num(iv["plain"]),
+                             "grouped_half_width": json_num(iv["grouped"])},
+                "secondary_clv": {"mean": json_num(cm), "low": json_num(clo), "high": json_num(chi), "n": int(cn),
+                                  "without": len(settled) - int(cn)}}
+    return out
+
+
+def json_document():
+    return {"scorer": ROOT.name, "generated_utc": json_time(CLOCK), "now": json_time(NOW), "preview": bool(args.now),
+            "ledger": str(ledger), "text": REPORT.getvalue(), "rows": JSON["rows"], "excluded": JSON["excluded"],
+            "decision_record": {"written_by_this_run": any(JSON["written"].values()),
+                                "why_not": NOT_RECORDED or None},
+            "tests": [json_test("RULE_B", "Rule B, wind under, at the registered price (Pinnacle)",
+                                "RULE_B (wind under)", "Rule B", True),
+                      json_test("RULE_B_SECONDARY", "Rule B, wind under, at the backup price (not part of the decision)",
+                                "RULE_B, secondary price (not part of the decision)", None, False),
+                      json_test("MODEL_LEAN", "Model lean", "MODEL_LEAN", "model lean", True)]}
+
+
+if REPORT is not None:
+    sys.stdout = STDOUT
+    print(json.dumps(json_document(), allow_nan=False, default=lambda o: o.item() if hasattr(o, "item") else str(o)))

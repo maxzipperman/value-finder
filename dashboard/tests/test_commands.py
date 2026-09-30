@@ -33,7 +33,8 @@ def test_every_command_started_is_allowed(store, runner):
             assert cmd in allowed_exact and cwd is None
         else:
             assert cmd[1] == "scripts/score_forward.py"
-            assert "--now" in cmd and cmd[cmd.index("--now") + 1]
+            assert "--now" in cmd and cmd[cmd.index("--now") + 1]              # always a preview
+            assert cmd[-1] == "--json" and "--test-record" not in cmd
             assert cmd[cmd.index("--ledger") + 1].startswith(str(store.cfg.root))
             assert timeout == 60
     assert any(c[0][1:2] == ["list"] for c in runner.calls)
@@ -45,7 +46,7 @@ def test_scorer_command_shape(tmp_path):
         cmd, cwd = commands.scorer_command(tmp_path / "code", tmp_path / "data", project, NOW)
         assert cmd == [str(tmp_path / "code" / project / ".venv" / "bin" / "python"), "scripts/score_forward.py",
                        "--ledger", str(tmp_path / "data" / project / "data" / "forward" / "ledger.csv"),
-                       "--now", "2026-10-02T17:00:00"]
+                       "--now", "2026-10-02T17:00:00", "--json"]
         assert cwd == str(tmp_path / "code" / project)
     with pytest.raises(ValueError):
         commands.scorer_command(tmp_path, tmp_path, "sharp-markets", NOW)
@@ -76,8 +77,13 @@ def test_scorer_variants_are_refused(tmp_path):
     assert allowed.check(good, cwd)
     no_now = good[:4]
     assert not allowed.check(no_now, cwd)
-    assert not allowed.check(good[:4] + ["--now", "2026-10-02T17:00:00; rm -rf /"], cwd)
+    assert not allowed.check(good[:4] + ["--json"], cwd)                    # --json never stands in for --now
+    assert not allowed.check(good[:4] + ["--json", "--now", good[5]], cwd)   # the fixed order only
+    assert not allowed.check(good[:6], cwd)                                 # the plain report is never asked for
+    assert not allowed.check(good[:4] + ["--now", "2026-10-02T17:00:00; rm -rf /", "--json"], cwd)
     assert not allowed.check(good + ["--test-record"], cwd)
+    assert not allowed.check(good[:6] + ["--test-record"], cwd)
+    assert not allowed.check(good[:6] + ["--list-excluded"], cwd)
     assert not allowed.check(good[:1] + ["scripts/alerts.py"] + good[2:], cwd)
     assert not allowed.check(good, str(tmp_path))                      # wrong working directory
     other = [good[0], good[1], "--ledger", "/etc/passwd", "--now", "2026-10-02T17:00:00"]

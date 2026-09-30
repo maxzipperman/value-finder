@@ -12,8 +12,8 @@ import re
 from pathlib import Path
 
 import pytest
-from conftest import (ENDPOINTS, FINGERPRINT, PLIST_SECRET, SECRET_KEY, FakeRunner, Running, make_home, make_root,
-                      make_store)
+from conftest import (ENDPOINTS, FINGERPRINT, LATER, PLIST_SECRET, RICH_CFB_DOC, RICH_NFL_DOC, SECRET_KEY, Clock,
+                      FakeRunner, Running, make_home, make_root, make_store)
 
 from vfdash import api, readers, words
 from vfdash.server import static_table
@@ -210,5 +210,32 @@ def test_planted_keys_are_never_served(tmp_path):
             assert "PLANTED" not in text, (path, [t for t in re.findall(r"\S*PLANTED\S*", text)])
         _, body, _ = s.get("/api/jobs")
         assert "***" in body.decode("utf-8")                             # the lines are shown, blanked
+    finally:
+        s.close()
+
+
+@pytest.mark.parametrize("mode", ["document", "not_document"])
+def test_planted_keys_in_a_scorer_document_are_never_served(tmp_path, mode):
+    """A key in any string of a scorer's --json document (its report, a bet's source, teams, void reason, a decision's
+    text), or in what it printed when that is not the document, is blanked everywhere the dashboard shows it."""
+    root, home = make_root(tmp_path), make_home(tmp_path)
+    nfl, cfb = json.loads(json.dumps(RICH_NFL_DOC)), json.loads(json.dumps(RICH_CFB_DOC))
+    rb = nfl["tests"][0]
+    rb["bets"][0]["price_source"] = PLANTED
+    rb["bets"][1]["away_team"] = PLANTED
+    rb["bets"][4]["void_reason"] = PLANTED
+    rb["decisions"][0]["text"] += PLANTED
+    cfb["tests"][0]["bets"][1]["close_source"] = PLANTED
+    runner = (FakeRunner(nfl_doc=nfl, cfb_doc=cfb, nfl_text=f"ledger rows: 8\n{PLANTED}\n") if mode == "document" else
+              FakeRunner(raw=f"ledger rows: 8\n{PLANTED}\n", cfb_doc=cfb))
+    store = make_store(root, home, runner=runner, clock=Clock(LATER))
+    s = Running(store)
+    try:
+        for path in ENDPOINTS:
+            status, body, _ = s.get(path)
+            text = body.decode("utf-8")
+            assert "PLANTED" not in text, (path, [t for t in re.findall(r"\S*PLANTED\S*", text)])
+        _, body, _ = s.get("/api/signals" if mode == "document" else "/api/tests")
+        assert "***" in body.decode("utf-8")                               # shown, blanked
     finally:
         s.close()

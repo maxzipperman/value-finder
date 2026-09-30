@@ -6,6 +6,12 @@
 # credits last, never analysed until a hypothesis about it is pre-registered). Owner decision 1
 # (Sep 28): calendar-2026 games for MLB, soccer and the World Cup; the 2026 season for NFL and CFB;
 # 2026-27 for NBA and NHL (2025-26 is the NBA study season in docs/PLAN.md).
+#
+# Each sealed window starts at least one day before its season's first game and ends at least one day after
+# its last game (finals, title games, playoffs), both in UTC: a game outside every window gets no season,
+# so it would be neither planned nor sealed. The comment above each sealed window gives the two games and
+# the source (checked Sep 29, 2026); tests/test_bulk.py checks them in UTC. One exception, for now: NCAAF
+# 2026 ends before its title game (see there).
 
 books:
   us10: [pinnacle, lowvig, betonlineag, draftkings, fanduel, betmgm, williamhill_us, fanatics, betrivers, espnbet]
@@ -25,6 +31,8 @@ sports:
       - {label: "2023", from: 2023-09-01, to: 2024-02-15}
       - {label: "2024", from: 2024-09-01, to: 2025-02-15}
       - {label: "2025", from: 2025-09-01, to: 2026-02-15}
+      # first: NE at SEA, Sep 9 8:20 pm ET = 2026-09-10T00:20Z (nfl-weather/data/processed/games.parquet);
+      # last: Super Bowl LXI, SoFi Stadium, Feb 14, 2027 6:30 pm ET = 2027-02-14T23:30Z (NFL).
       - {label: "2026", from: 2026-09-01, to: 2027-02-20, sealed: true}
   americanfootball_ncaaf:
     history_from: 2020-06-06
@@ -36,6 +44,11 @@ sports:
       - {label: "2023", from: 2023-08-20, to: 2024-01-15}
       - {label: "2024", from: 2024-08-20, to: 2025-01-25}
       - {label: "2025", from: 2025-08-20, to: 2026-01-25}
+      # first: TCU vs North Carolina (Dublin), 2026-08-29T16:00Z (cfb-weather/data/processed/games.parquet);
+      # last: CFP National Championship, Allegiant Stadium, Mon Jan 25, 2027 7:30 pm ET = 2027-01-26T00:30Z
+      # (College Football Playoff). The exception to the rule above: `to` stays 2027-01-25, so the title game is in
+      # no window and nothing plans it (load_rows judges any row of it by its call). Ending the window on Jan 27
+      # would add it to F1, F4, F5 and F6 in March (about 5,410 credits at most); that is the hub's decision.
       - {label: "2026", from: 2026-08-20, to: 2027-01-25, sealed: true}
   basketball_nba:
     history_from: 2020-06-27
@@ -48,6 +61,10 @@ sports:
       - {label: "2023-24", from: 2023-10-20, to: 2024-06-25}
       - {label: "2024-25", from: 2024-10-18, to: 2025-06-25}
       - {label: "2025-26", from: 2025-10-01, to: 2026-06-25}
+      # first: opening night Tue Oct 20, 2026, Boston at Detroit, 3 pm ET = 2026-10-20T19:00Z (NBA.com, "Key dates
+      # for 2026-27 NBA season"; the first game of NBC's opening triple-header);
+      # last: the Finals, not scheduled yet; the league's projected calendar puts a Game 7 on June 19-20, 2027, and
+      # the latest Finals game of the last decade was June 22, 2025 (8 pm ET = 2025-06-23T00:00Z).
       - {label: "2026-27", from: 2026-10-01, to: 2027-06-30, sealed: true}
   icehockey_nhl:
     history_from: 2020-06-29
@@ -60,7 +77,13 @@ sports:
       - {label: "2023-24", from: 2023-10-08, to: 2024-06-30}
       - {label: "2024-25", from: 2024-10-02, to: 2025-06-25}
       - {label: "2025-26", from: 2025-10-05, to: 2026-06-25}
-      - {label: "2026-27", from: 2026-10-01, to: 2027-06-30, sealed: true}
+      # first: opening night Tue Sep 29, 2026, Florida at Carolina, 5 pm ET = 2026-09-29T21:00Z (NHL.com, "NHL
+      # releases 2026-27 regular-season schedule": 84 games, so the season opens in September). `from` was
+      # 2026-10-01 until Sep 29, 2026, which left the Sep 29-30 games in no window; the hub approved 2026-09-28,
+      # which adds three /events sweeps (at most 3 credits) to the probe.
+      # last: the Stanley Cup Final, not scheduled yet (the regular season ends Apr 10, 2027); the latest Final
+      # game in a full season since 2011 was June 26, 2022 (8 pm ET = 2022-06-27T00:00Z).
+      - {label: "2026-27", from: 2026-09-28, to: 2027-06-30, sealed: true}
   baseball_mlb:
     history_from: 2020-06-30
     sweep_every_days: 1
@@ -71,6 +94,9 @@ sports:
       - {label: "2023", from: 2023-03-28, to: 2023-11-05}
       - {label: "2024", from: 2024-03-18, to: 2024-11-02}
       - {label: "2025", from: 2025-03-16, to: 2025-11-05}
+      # first: Opening Night, Yankees at Giants, Wed Mar 25, 2026 8:05 pm ET = 2026-03-26T00:05Z (MLB.com);
+      # last: World Series Game 7 if needed, Sat Oct 31, 2026, about 8 pm ET = 2026-11-01T00:00Z (MLB.com, "2026
+      # MLB Playoff and World Series schedule").
       - {label: "2026", from: 2026-03-20, to: 2026-11-05, sealed: true}
   soccer_usa_mls:
     history_from: 2020-06-27
@@ -82,7 +108,10 @@ sports:
       - {label: "2023", from: 2023-02-20, to: 2023-12-15}
       - {label: "2024", from: 2024-02-15, to: 2024-12-10}
       - {label: "2025", from: 2025-02-15, to: 2025-12-10}
-      - {label: "2026", from: 2026-02-15, to: 2026-12-10, sealed: true}
+      # first: matchday 1, Sat Feb 21, 2026 (MLS 2026 schedule); last: MLS Cup, Fri Dec 18, 2026 in prime time,
+      # about 8 pm ET = 2026-12-19T01:00Z (MLSsoccer.com, "Audi 2026 MLS Cup Playoffs schedule"; conference finals
+      # Dec 11-12). `to` was 2026-12-10 until Sep 29, 2026, which left the conference finals and MLS Cup out.
+      - {label: "2026", from: 2026-02-15, to: 2026-12-20, sealed: true}
   soccer_mexico_ligamx:
     history_from: 2020-07-15
     sweep_every_days: 2
@@ -93,6 +122,10 @@ sports:
       - {label: "2023", from: 2023-01-01, to: 2023-12-31}
       - {label: "2024", from: 2024-01-01, to: 2024-12-31}
       - {label: "2025", from: 2025-01-01, to: 2025-12-31}
+      # first: Clausura 2026 matchday 1, Fri Jan 9, 2026 (evening in Mexico, UTC-6: about 2026-01-10T01:00Z);
+      # last: the Apertura 2026 final, second leg Dec 13, or Dec 27 if Toluca plays the Intercontinental Cup
+      # (Liga MX schedule, via Yahoo Sports "Liga MX unveils the official schedule for Apertura 2026"): at the
+      # latest about 9 pm on Dec 27 = 2026-12-28T03:00Z.
       - {label: "2026", from: 2026-01-01, to: 2026-12-31, sealed: true}
   soccer_brazil_campeonato:
     history_from: 2020-07-28
@@ -104,6 +137,9 @@ sports:
       - {label: "2023", from: 2023-04-10, to: 2023-12-10}
       - {label: "2024", from: 2024-04-10, to: 2024-12-10}
       - {label: "2025", from: 2025-03-25, to: 2025-12-10}
+      # first: round 1, Wed Jan 28, 2026 (evening in Brazil, UTC-3); last: round 38, Wed Dec 2, 2026, at the latest
+      # 9:30 pm = 2026-12-03T00:30Z (CBF calendar; pt.wikipedia "Campeonato Brasileiro de Futebol de 2026 - Série A":
+      # 28 January - 2 December).
       - {label: "2026", from: 2026-01-20, to: 2026-12-10, sealed: true}
   soccer_japan_j_league:
     history_from: 2020-06-23
@@ -115,6 +151,10 @@ sports:
       - {label: "2023", from: 2023-02-15, to: 2023-12-05}
       - {label: "2024", from: 2024-02-20, to: 2024-12-10}
       - {label: "2025", from: 2025-02-10, to: 2025-12-10}
+      # Calendar 2026: the half-season special league from Fri Feb 6, 2026 (7 pm JST = 10:00Z), then the first
+      # summer-to-spring season, 2026-27, from Aug 7, 2026, whose winter break starts about the second week of
+      # December (J.LEAGUE, "2026/27 Meiji Yasuda J.League match schedule"). Its 2027 games are outside the sealed
+      # calendar year by the owner's decision.
       - {label: "2026", from: 2026-02-01, to: 2026-12-31, sealed: true}
   soccer_korea_kleague1:
     history_from: 2020-06-06
@@ -126,12 +166,17 @@ sports:
       - {label: "2023", from: 2023-02-20, to: 2023-12-05}
       - {label: "2024", from: 2024-02-25, to: 2024-12-10}
       - {label: "2025", from: 2025-02-10, to: 2025-12-10}
-      - {label: "2026", from: 2026-02-15, to: 2026-12-10, sealed: true}
+      # first: Incheon vs FC Seoul, Sat Feb 28, 2026 2 pm KST = 05:00Z; last: the league's final round ends Dec 6,
+      # then the promotion-relegation play-off, Dec 10 (7 pm KST) and Sun Dec 13, 2 pm KST = 2026-12-13T05:00Z
+      # (ko.wikipedia "2026년 K리그1", from the K League's schedule). `to` was 2026-12-10 until Sep 29, 2026.
+      - {label: "2026", from: 2026-02-15, to: 2026-12-14, sealed: true}
   soccer_fifa_world_cup:
     history_from: 2022-04-03
     sweep_every_days: 2
     windows:
       - {label: "2022 Qatar", from: 2022-11-13, to: 2022-12-19}
+      # first: Mexico vs South Africa, Estadio Azteca, Jun 11, 2026 1 pm local = 19:00Z; last: the final,
+      # MetLife Stadium, Sun Jul 19, 2026 3 pm ET = 19:00Z (FIFA match schedule).
       - {label: "2026 North America", from: 2026-06-04, to: 2026-07-20, sealed: true}
   soccer_uefa_european_championship:
     history_from: 2021-05-19

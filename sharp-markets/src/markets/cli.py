@@ -11,6 +11,14 @@ from .context import Context
 from .games import select_games
 
 
+def _margin(value: str) -> int:
+    """--alarm-margin: whole credits, at least 300; "23,940", as `markets odds5m headers` prints it, is read as 23940."""
+    n = int(value.replace(",", ""))
+    if n < 300:
+        raise argparse.ArgumentTypeError(f"{n} is below 300; the alarm's margin is at least 300 credits")
+    return n
+
+
 def _dates(args) -> tuple[date, date]:
     return date.fromisoformat(args.start), date.fromisoformat(args.end)
 
@@ -59,7 +67,12 @@ def cmd_cup_calendar(args) -> None:
         print("PROBLEM:", p)
 
 
-def cmd_odds_plan(args, *, pull: bool = False) -> None:
+ALARM_HELP = ("the alarm's margin in credits (at least 300): the run stops when the account has fallen by more than "
+              "this beyond what it counted; default the larger of 5,000 and 10%% of --max-credits")
+
+
+def cmd_odds_plan(args, *, pull: bool = False) -> int:
+    """odds-plan, and odds-pull (exit status 1 when the pull stopped, 0 when it is done or a dry run)."""
     from .oddsapi.ingest import pull_snapshots, snapshot_plan
     ctx = Context(args.sport, args.as_of)
     start, end = _dates(args)
@@ -70,15 +83,12 @@ def cmd_odds_plan(args, *, pull: bool = False) -> None:
           f"credits/snapshot={plan['credits_per_snapshot']}")
     print(f"  cached={plan['cached']}  to fetch={len(plan['todo'])}  estimated credits={plan['est_credits']:,}")
     if not pull:
-        return
+        return 0
     if not args.confirm:
         print("dry run: add --confirm to spend credits")
-        return
-    res = pull_snapshots(ctx, plan, args.max_credits)
-    if res["stopped"]:
-        print(f"STOPPED: {res['stopped']}")
-    print(f"{'stopped' if res['stopped'] else 'done'}: fetched {res['fetched']} snapshots; credits spent this "
-          f"run={res['credits_spent']}; remaining on plan={res['remaining']}")
+        return 0
+    res = pull_snapshots(ctx, plan, args.max_credits, floor=args.floor, alarm_margin=args.alarm_margin)
+    return 1 if res["stopped"] else 0
 
 
 def cmd_build(args) -> None:
@@ -94,6 +104,9 @@ def cmd_build(args) -> None:
           sealed or "")
     if s["odds_rows_without_commence_time"]:
         print(f"odds rows left out with no readable game time: {s['odds_rows_without_commence_time']:,}")
+    if s["odds_bodies_unreadable"]:
+        print(f"cached odds responses that could not be read, skipped: {s['odds_bodies_unreadable']:,} (recorded as "
+              "an odds_body_unreadable anomaly; tell the hub)")
     print(f"http requests this run: {ctx.cache.http_requests}")
 
 
@@ -166,9 +179,9 @@ def cmd_weather(args) -> None:
     join.main(args)
 
 
-def cmd_odds5m(args) -> None:
+def cmd_odds5m(args) -> int:
     from .oddsapi import bulk
-    bulk.main(args)
+    return bulk.main(args)
 
 
 def cmd_price_engine(args) -> None:
@@ -204,6 +217,9 @@ def main(argv: list[str] | None = None) -> None:
         if pull:
             o.add_argument("--confirm", action="store_true", help="actually spend credits")
             o.add_argument("--max-credits", type=int, required=True)
+            o.add_argument("--floor", type=int, default=531_630,
+                           help="stop when the account would drop below this (the same reserve as odds5m)")
+            o.add_argument("--alarm-margin", type=_margin, default=None, help=ALARM_HELP)
         o.set_defaults(fn=lambda a, _pull=pull: cmd_odds_plan(a, pull=_pull))
 
     sub.add_parser("build", help="rebuild DuckDB tables from the raw cache").set_defaults(fn=cmd_build)
@@ -247,8 +263,10 @@ def main(argv: list[str] | None = None) -> None:
     w.set_defaults(fn=cmd_weather)
 
     f = sub.add_parser("odds5m", help="5M-credit month: bulk historical Odds API pulls (docs/ODDS5M_DAY_ONE.md)")
-    f.add_argument("stage", choices=["probe", "balance", "plan", "week", "full", "check"],
-                   help="balance: the free key check alone (with --confirm), to read the credits left after a stop")
+    f.add_argument("stage", choices=["probe", "balance", "plan", "week", "full", "check", "headers"],
+                   help="balance: the free key check alone (with --confirm), to read the credits left after a stop; "
+                   "headers: free and offline, how the balance header behaved in a pull's latest run (--pull, default "
+                   "P0) and the --alarm-margin it advises")
     f.add_argument("--pull", default="all", help="pull IDs or groups (day_one, gated, march) from config/odds5m.yaml, "
                    "comma-separated; `all` works for plan, week and check but not for full")
     f.add_argument("--sports", default=None, help="only these Odds API sport keys, comma-separated")
@@ -261,6 +279,11 @@ def main(argv: list[str] | None = None) -> None:
     f.add_argument("--floor", type=int, default=531_630,
                    help="stop when the account would drop below this (the reserve: 300K + X3's 231,630)")
     f.add_argument("--rate", type=float, default=8.0, help="requests per second (the API allows 30)")
+    f.add_argument("--retry-404", action="store_true", help="week and full: ask the pull's cached 404s (nothing there "
+                   "at that time) again, under the same budget and floor; a 404 is replaced only by a 200")
+    f.add_argument("--alarm-margin", type=_margin, default=None, help="probe, week and full: " + ALARM_HELP)
+    f.add_argument("--per-call", type=int, default=30, help="headers: the most a call of the next pull costs, for the "
+                   "margin it advises (30 for F1, 60 for F3)")
     f.set_defaults(fn=cmd_odds5m)
 
     pe = sub.add_parser("price-engine", help="price-engine backtest on F1, issues #8 and #53 "
@@ -271,7 +294,11 @@ def main(argv: list[str] | None = None) -> None:
     pe.set_defaults(fn=cmd_price_engine)
 
     args = p.parse_args(argv)
-    args.fn(args)
+    try:
+        return args.fn(args) or 0       # the exit status: 1 when a paid run stopped (odds5m, odds-pull)
+    except KeyboardInterrupt:           # Ctrl-C outside a paid run's own handler: a plain line, never a traceback
+        print("STOPPED: interrupted (Ctrl-C)", flush=True)
+        return 1
 
 
 if __name__ == "__main__":
