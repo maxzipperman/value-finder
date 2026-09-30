@@ -45,6 +45,7 @@ def run(cfg: dict, calls: list, cache: RawCache, *, scores: pd.DataFrame | None 
     sides = engine.side_rows(q, fair)
     cl = engine.closes(q)
     events = q[["sport", "event_id", "kickoff", "home", "away"]].drop_duplicates(["sport", "event_id"])
+    out["home_away_changed"] = home_away_changed(q)
     unmatched: Counter = Counter()
     detail: dict = {}
     if scores is None:
@@ -58,6 +59,15 @@ def run(cfg: dict, calls: list, cache: RawCache, *, scores: pd.DataFrame | None 
                graded=graded, results=engine.results_table(graded), books=engine.by_book(graded),
                lag=engine.lag_frequency(q), calibration=engine.calibration(q, cl, scores))
     return out
+
+
+def home_away_changed(q: pd.DataFrame) -> int:
+    """Descriptive, nothing is excluded for it (amendment 1, known limit): how many games are listed with more than
+    one (home, away) pair across their quotes. Nothing guards against the feed swapping home and away between
+    snapshots: a bet's CLV would be graded against the other side's close, and the final score goes on the first
+    listing, so a swap before the entry would flip the result. Whether to exclude such games is the hub's decision."""
+    listing = q[["sport", "event_id", "home", "away"]].drop_duplicates()
+    return int((listing.groupby(["sport", "event_id"]).size() > 1).sum())
 
 
 MIN_SCORE_SHARE = 0.95      # amendment 1, item 8: below this share of a season's games scored, the first page says so
@@ -123,9 +133,10 @@ def _commit() -> str:
         return "unknown"
 
 
-RESULT_COLS = ["variant", "bets", "clv_pin_n", "graded", "games", "ev_entry_pct", "clv_pin_expected", "clv_pin_cents",
-               "clv_pin_se", "clv_pin_p", "clv_pin_pts", "clv_own_cents", "clv_own_pts", "seasons_positive",
-               "seasons_counted", "seasons_20_closes", "top_book", "win_rate", "roi", "roi_lo", "roi_hi", "decision"]
+RESULT_COLS = ["variant", "bets", "clv_pin_n", "graded", "pushes", "games", "ev_entry_pct", "clv_pin_expected",
+               "clv_pin_cents", "clv_pin_se", "clv_pin_p", "clv_pin_pts", "clv_own_cents", "clv_own_pts",
+               "seasons_positive", "seasons_counted", "seasons_20_closes", "top_book", "win_rate", "roi", "roi_lo",
+               "roi_hi", "decision"]
 MOVED_COLS = ["variant", "bets", "clv_pin_n", "clv_pin_same_n", "clv_pin_cents_same", "clv_pin_moved_n",
               "clv_pin_cents_moved", "clv_pin_cents", "clv_pin_pts"]
 
@@ -157,8 +168,9 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
             "retail price. `clv_own_*` is the same against the entry book's own close. Points (`*_pts`) are for "
             "spreads and totals only, and need no conversion between numbers. ROI is flat one-unit bets at the price "
             "taken, pushes left out; its interval is 95%. Standard errors are clustered by game. `graded` is how "
-            "many bets have a final score that won or lost: a primary cell with fewer than 100 cannot act "
-            "(amendment 1, item 4). A2's seasons (amendment 1, item 1): `seasons_counted` have 20 or more bets, "
+            "many bets have a final score that won or lost, and `pushes` how many have a final score that pushed: "
+            "a primary cell with fewer than 100 `graded` cannot act (amendment 1, item 4; pushes do not count "
+            "toward the 100). A2's seasons (amendment 1, item 1): `seasons_counted` have 20 or more bets, "
             "`seasons_20_closes` have 20 or more bets with a Pinnacle close, and `seasons_positive` are counted "
             "seasons with 20 or more closes and mean CLV above zero. `top_book` lists every book tied for the most "
             "bets (amendment 1, item 3).", ""]
@@ -181,6 +193,11 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
                  f"F1 snapshots flagged sealed: {res['sealed_calls']:,} of {res['calls']:,}; their 2026 games are "
                  "left out by `bulk.load_rows` before anything here sees them.", "",
                  table(comp, ["retail quotes", "quotes"]),
+                 "Games listed with more than one (home, away) pair across their quotes (the teams swapped, or a "
+                 f"name spelled two ways): {res.get('home_away_changed', 0):,}. Descriptive; nothing is excluded "
+                 "for it. Nothing guards against a swap: CLV would be graded against the other side's close, and "
+                 "the final score goes on the first listing (amendment 1, known limit; excluding such games is the "
+                 "hub's decision).", "",
                  "Quotes left out, by reason (a quote is one book's two-sided market at one snapshot; nothing is "
                  "dropped silently):", "",
                  table(pd.DataFrame(sorted(res["drops"].items()), columns=["reason", "quotes"]), ["reason", "quotes"]),
@@ -188,7 +205,8 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
                  table(res["coverage"], ["sport", "season", "games", "matched", "share"], 3)
                  if res.get("coverage") is not None else "_(none)_\n",
                  "Games with no final score (kept for CLV, left out of the realized result). "
-                 "`cfb_prefix_name_no_game`: a college name resolved only by the prefix rule and no game was found; "
+                 "`cfb_prefix_name_no_game`: no game found; a name was resolved by the prefix rule (the name may "
+                 "be wrong, or the game missing from the score table); "
                  "`*_team_name_unknown`: a name did not resolve at all:", "",
                  table(pd.DataFrame(sorted(res.get("unmatched", {}).items()), columns=["reason", "games"]),
                        ["reason", "games"]),

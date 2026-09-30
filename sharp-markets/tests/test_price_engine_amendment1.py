@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from markets.oddsapi import bulk
-from markets.research.price_engine import engine, fixture, model, outcomes
+from markets.research.price_engine import engine, fixture, model, outcomes, quotes
 from markets.research.price_engine import names_preflight as pf
 from markets.research.price_engine import run as pe_run
 
@@ -304,7 +304,6 @@ def test_item7_the_constants_amendment_1_states():
     from datetime import timedelta
     import inspect
 
-    from markets.research.price_engine import quotes
     assert (engine.MIN_BETS, engine.MIN_SEASON_BETS, engine.EPS) == (100, 20, 1e-9)
     assert engine.LAG_POINTS == 1.0 and engine.LAG_MIN_DEC == 1 + 100 / 115
     assert engine.CLOSE_WINDOW == pd.Timedelta(minutes=60) and engine.EV_ERROR == 0.10
@@ -341,6 +340,20 @@ def test_item7_h2_takes_the_biggest_gap_then_the_best_price_then_the_book_name()
     assert pick([("draftkings", 45.5, 2.10), ("fanduel", 46.0, 1.87)]) == "fanduel"        # the gap first
     assert pick([("draftkings", 45.5, 1.90), ("fanduel", 45.5, 1.95)]) == "fanduel"        # then the price
     assert pick([("fanduel", 45.5, 1.95), ("draftkings", 45.5, 1.95)]) == "draftkings"     # then the book's name
+    # the one score, gap x 1000 + price, keeps "gap, then price" only while the smaller gap's price is less than
+    # 500 above the other's (gaps differ by 0.5 or more): at 1002 (the auditor's D8 case) the smaller gap goes first
+    assert pick([("draftkings", 45.5, 500.0), ("fanduel", 46.0, 1.95)]) == "fanduel"
+    assert pick([("draftkings", 45.5, 1002.0), ("fanduel", 46.0, 1.95)]) == "draftkings"
+
+
+def test_item7_a4_cuts_at_an_ev_of_010_strictly_with_no_tolerance():
+    """A4's mean is over bets with ev_entry < 0.10, strict and with no 1e-9 tolerance; bets_ev_10plus counts the
+    rest (ev_entry >= 0.10)."""
+    g, _ = _cell([("2020", 30, 30, 1.0)])
+    g["clv_pin_cents"] = [5.0] * 10 + [1.0] * 20
+    g["ev_entry"] = [0.10] * 10 + [0.10 - 1e-10] * 20        # 0.10 - 1e-10 is "0.10" to the flags' tolerance
+    row = engine.summarize(H1_TOT, g)
+    assert row["bets_ev_10plus"] == 10 and row["clv_pin_ev_below_10"] == pytest.approx(1.0)
 
 
 def test_item7_the_statistics_as_coded():
@@ -358,3 +371,121 @@ def test_item7_the_statistics_as_coded():
     assert (row["roi_lo"], row["roi_hi"]) == (pytest.approx(rmean - 1.96 * rse), pytest.approx(rmean + 1.96 * rse))
     one = engine.summarize(H1_TOT, g.iloc[:1])
     assert one["graded"] == 1 and math.isnan(one["roi_lo"]) and math.isnan(one["roi_hi"])
+
+
+# ---------------------------------------------------------------- item 2: every quote counted once
+def _quote(eid, snap, commence, book, market="totals", under=1.95):
+    """bulk.load_rows-style outcome rows for one book's market at one snapshot (made up)."""
+    names = ("Over", "Under") if market == "totals" else ("H", "A")
+    return [{"sport": NFL, "pull": "F1", "snapshot_ts": snap, "requested_ts": snap, "odds_event_id": eid,
+             "commence_time": commence, "home_team": "H", "away_team": "A", "bookmaker": book,
+             "book_last_update": snap, "market_key": market, "market_last_update": snap, "outcome_name": n,
+             "description": None, "point": "44.5", "price_decimal": str(pr), "origin": "historical"}
+            for n, pr in zip(names, (1.95, under))]
+
+
+def _snapshot(snap, dk_under=2.10):
+    """One made-up snapshot: g1 (kept), g2 (listed after its kickoff), g3 (more than 9 days out), two books each,
+    plus one row of a market that isn't featured: 7 quotes."""
+    rows = []
+    for eid, ko in (("g1", "2024-09-08T17:00:00Z"), ("g2", "2024-09-07T15:00:00Z"), ("g3", "2024-09-20T17:00:00Z")):
+        rows += _quote(eid, snap, ko, "pinnacle") + _quote(eid, snap, ko, "draftkings", under=dk_under)
+    return rows + _quote("g1", snap, "2024-09-08T17:00:00Z", "pinnacle", market="alternate_totals")[:1]
+
+
+def test_item2_every_quote_of_a_repeated_snapshot_is_counted_once_as_duplicate_snapshot(monkeypatch, tmp_path):
+    """Four calls: S1, S1 again, S2, S2 again with a different DraftKings price. Every quote of a repeated snapshot
+    is counted once, as duplicate_snapshot, before any other reason: the second copies of g2 and g3 are not counted
+    again as at_or_after_kickoff or more_than_7_days_before_kickoff. Quotes read = kept + every drop reason;
+    duplicate_snapshot_conflicting_price is a sub-count of duplicate_snapshot."""
+    s1, s2 = "2024-09-07T16:00:00Z", "2024-09-08T16:30:00Z"
+    close = _quote("g1", s2, "2024-09-08T17:00:00Z", "pinnacle") + _quote("g1", s2, "2024-09-08T17:00:00Z",
+                                                                         "draftkings")
+    close_moved = _quote("g1", s2, "2024-09-08T17:00:00Z", "pinnacle") + _quote("g1", s2, "2024-09-08T17:00:00Z",
+                                                                               "draftkings", under=1.99)
+    batches = [_snapshot(s1), _snapshot(s1), close, close_moved]
+    read = 7 + 7 + 2 + 2
+    for order in (batches, batches[::-1], [batches[0], batches[2], batches[1], batches[3]]):
+        monkeypatch.setattr(quotes.bulk, "load_rows", lambda cfg, calls, cache, b=order: sum((b[i] for i in calls), []))
+        q, drops = quotes.load_quotes(fixture.config(tmp_path), list(range(len(order))), None)
+        assert len(q) == 4 and set(q.event_id) == {"g1"}
+        assert drops["duplicate_snapshot"] == 9
+        assert (drops["at_or_after_kickoff"], drops["more_than_7_days_before_kickoff"]) == (2, 2)
+        assert drops["market_not_featured"] == 1 and drops["duplicate_snapshot_conflicting_price"] == 1
+        dropped = sum(v for k, v in drops.items() if k != "duplicate_snapshot_conflicting_price")
+        assert len(q) + dropped == read
+
+
+# ---------------------------------------------------------------- item 5: the spread cohort's reader
+def test_item5_the_spread_cohort_reader_filters_the_seasons_as_it_reads(tmp_path, monkeypatch):
+    """model.spread_pairs_from_tables reads only the cohort's seasons (NFL 1999-2019, CFB 2006-2019): a 2026 row
+    and a 2020 row in the file never reach it."""
+    (tmp_path / "nfl-weather/data/processed").mkdir(parents=True)
+    (tmp_path / "cfb-weather/data/processed").mkdir(parents=True)
+    pd.DataFrame(dict(season=[2019, 2020, 2026], spread_line=[3.0, 3.0, 3.0], result=[7.0, 7.0, 7.0])).to_parquet(
+        tmp_path / "nfl-weather/data/processed/games.parquet")
+    pd.DataFrame(dict(season=np.array([2019, 2020, 2026], dtype="int32"), home_spread=[-3.0] * 3,
+                      result=[7.0] * 3)).to_parquet(tmp_path / "cfb-weather/data/processed/games.parquet")
+    monkeypatch.setattr(model, "REPO", tmp_path)
+    seen, real = [], pd.read_parquet
+    monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: seen.append(real(*a, **k).season.tolist()) or real(*a, **k))
+    assert [len(model.spread_pairs_from_tables(sp)[0]) for sp in (NFL, CFB)] == [1, 1]
+    assert seen == [[2019], [2019]]
+
+
+def test_item5_the_frozen_spread_cohort_is_unchanged_by_the_read_time_filter():
+    """The processed tables in git, read with the filter, still give the registered spread cohort, both sports."""
+    for sp in (NFL, CFB):
+        s, m = model.spread_pairs_from_tables(sp)
+        assert model.spread_cohort_hash(s, m) == model.SPREAD_COHORT_SHA256[sp], sp
+
+
+# ---------------------------------------------------------------- the known limit: home and away swapped
+def test_known_limit_games_listed_with_home_and_away_swapped_are_counted_not_excluded():
+    rows = [dict(sport=NFL, event_id="g", home="X", away="Y"), dict(sport=NFL, event_id="g", home="Y", away="X"),
+            dict(sport=NFL, event_id="h", home="X", away="Y"), dict(sport=NFL, event_id="h", home="X", away="Y"),
+            dict(sport=CFB, event_id="g", home="X", away="Y")]
+    assert pe_run.home_away_changed(pd.DataFrame(rows)) == 1
+
+
+def test_item4_the_main_table_shows_pushes_beside_graded():
+    i = pe_run.RESULT_COLS.index("graded")
+    assert pe_run.RESULT_COLS[i + 1] == "pushes"
+    body = pe_run.report({}, _empty_results(), fixture=False)
+    assert "| graded | pushes |" in body or "_(none)_" in body
+
+
+# ---------------------------------------------------------------- item 8: the preflight compares the alias table
+def test_item8_the_preflight_prints_what_the_team_files_give_for_each_alias(tmp_path, monkeypatch, capsys):
+    """Made-up cfbfastR team files: one name agrees with the alias table, one disagrees, the rest are not in them."""
+    files = tmp_path / "cfbfastr"
+    files.mkdir()
+    pd.DataFrame(dict(school=["Miami (OH)", "Ole Miss"], mascot=["RedHawks", "Rebels"],
+                      alt_name1=["Miami", "Nevada Las Vegas"])).to_parquet(files / "team_info_2024.parquet")
+    schools = ["Miami (OH)", "Ole Miss", "UNLV", "Cincinnati"]
+    al = pf.alias_check(schools, files).set_index("alias")
+    assert len(al) == len(outcomes.CFB_ALIASES)
+    assert al.loc["miami redhawks"].tolist() == ["Miami (OH)", "Miami (OH)", True]
+    assert al.loc["nevada las vegas rebels"].tolist() == ["UNLV", "Ole Miss", False]
+    assert al.loc["umass minutemen", "team_files_school"] is None and al.loc["umass minutemen", "agrees"] is None
+    assert pf.alias_check(schools, tmp_path / "none").agrees.isna().all()          # no team files: nothing compared
+    # through main(): printed row by row when the files are present, and written to aliases.csv
+    cfg = fixture.config(tmp_path)
+    _schedule(tmp_path, cfg, CFB, [("c1", "2024-09-07T16:00Z", "Miami RedHawks", "Cincinnati Bearcats")])
+    cfb = pd.DataFrame(dict(season=[2024], start_utc=[T("2024-09-07T16:00Z")], home_team=["Miami (OH)"],
+                            away_team=["Cincinnati"], home_score=[7.0], away_score=[3.0]))
+    nfl = pd.DataFrame(columns=["season", "day", "home_team", "away_team", "home_score", "away_score"])
+    monkeypatch.setattr(pf.bulk, "load_config", lambda: cfg)
+    monkeypatch.setattr(pf.o, "nfl_games", lambda: nfl)
+    monkeypatch.setattr(pf.o, "cfb_games", lambda: cfb.assign(home_team=["Miami (OH)"]))
+    monkeypatch.setattr(pf, "fbs_schools", lambda: {"Miami (OH)"})
+    monkeypatch.setattr(pf, "alias_check", lambda sch, raw, f=pf.alias_check: f(schools, raw))
+    out = tmp_path / "out"
+    assert pf.main(["--out", str(out), "--raw-dir", str(tmp_path / "raw"), "--cfb-raw", str(files)]) == 0
+    printed = capsys.readouterr().out
+    assert "alias table against the team files (1 disagree" in printed
+    assert "'nevada las vegas rebels': alias table 'UNLV', team files 'Ole Miss' (DISAGREES)" in printed
+    assert "'miami redhawks': alias table 'Miami (OH)', team files 'Miami (OH)' (agrees)" in printed
+    assert len(pd.read_csv(out / "aliases.csv")) == len(outcomes.CFB_ALIASES)
+    assert pf.main(["--out", str(out), "--raw-dir", str(tmp_path / "raw"), "--cfb-raw", str(tmp_path / "x")]) == 0
+    assert f"alias table: {len(outcomes.CFB_ALIASES)} rows, not compared" in capsys.readouterr().out

@@ -21,6 +21,9 @@ and why, and which score-table game each event lands on, without reading out a s
   unreached.csv             FBS schools (score table, 2020-25) that no name reaches
   one_game_two_events.csv   score-table games that two or more event ids both match (a relisted game would be
                             bet and graded twice; until the hub decides, that is a known limit)
+  aliases.csv               every alias-table row, the school it gives, and the school cfbfastR's team files
+                            would give for the same name when the files are present (printed too), so any
+                            disagreement is seen on Thursday; the alias table is what the engine uses
 
 Usage, from sharp-markets/ in the checkout that holds the probe's saved schedules:
   uv run python -m markets.research.price_engine.names_preflight --out <scratch dir>
@@ -86,6 +89,18 @@ def _planted(t: pd.DataFrame) -> pd.DataFrame:
     return t
 
 
+def alias_check(schools, cfb_raw: Path | None) -> pd.DataFrame:
+    """For each alias-table row: the school the alias table gives, and the school cfbfastR's team files would give
+    for the same name when the files are present (None when they are missing or don't know the name). `agrees` is
+    None when the team files give nothing, so the hub sees any disagreement on Thursday, by name only."""
+    lookup = o.cfb_names(schools, cfb_raw)
+    rows = []
+    for name, school in sorted(o.CFB_ALIASES.items()):
+        got = lookup.get(name)
+        rows.append((name, school, got, None if got is None else got == school))
+    return pd.DataFrame(rows, columns=["alias", "alias_school", "team_files_school", "agrees"], dtype=object)
+
+
 def check(ev: pd.DataFrame, nfl: pd.DataFrame, cfb: pd.DataFrame, cfb_raw: Path | None,
           fbs: set[str]) -> dict:
     """The preflight on events and score tables (scores are planted here, whatever the tables hold)."""
@@ -110,8 +125,10 @@ def check(ev: pd.DataFrame, nfl: pd.DataFrame, cfb: pd.DataFrame, cfb_raw: Path 
                "cfb_team_files": detail.get("cfb_team_files"),
                "names_by_how": names.groupby(["sport", "how"]).size().to_dict()}
     summary["hub_decides_before_any_price"] = summary["share_under_two_event_ids"] > TWO_EVENT_LIMIT
+    aliases = alias_check(sorted(set(cfb.home_team) | set(cfb.away_team)), cfb_raw)
+    summary["aliases_disagreeing_with_team_files"] = sum(a is False for a in aliases.agrees)
     return {"names": names, "unmatched": un, "unreached": pd.DataFrame(dict(school=sorted(fbs - reached))),
-            "one_game_two_events": shared, "summary": summary}
+            "one_game_two_events": shared, "aliases": aliases, "summary": summary}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -132,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
         print("No saved schedule events: nothing to check.")
         return 0
     res = check(ev, o.nfl_games(), o.cfb_games(), cfb_raw, fbs_schools())
-    for name in ("names", "unmatched", "unreached", "one_game_two_events"):
+    for name in ("names", "unmatched", "unreached", "one_game_two_events", "aliases"):
         res[name].to_csv(out / f"{name}.csv", index=False)
     s = res["summary"]
     print("names by how they resolved:", s["names_by_how"])
@@ -142,7 +159,17 @@ def main(argv: list[str] | None = None) -> int:
           + (": MORE THAN 1 IN 100, the hub decides what to do before any F1 price is opened"
              if s["hub_decides_before_any_price"] else ""))
     print("FBS schools (2020-25) no name reaches:", list(res["unreached"].school))
-    print(f"wrote {out}/names.csv, unmatched.csv, unreached.csv, one_game_two_events.csv")
+    al = res["aliases"]
+    if n_files:
+        print(f"alias table against the team files ({s['aliases_disagreeing_with_team_files']} disagree; "
+              "the alias table is used):")
+        for r in al.itertuples(index=False):
+            got = r.team_files_school if isinstance(r.team_files_school, str) else None
+            mark = "not in the team files" if got is None else "agrees" if r.agrees is True else "DISAGREES"
+            print(f"  {r.alias!r}: alias table {r.alias_school!r}, team files {got!r} ({mark})")
+    else:
+        print(f"alias table: {len(al)} rows, not compared (the team files are missing)")
+    print(f"wrote {out}/names.csv, unmatched.csv, unreached.csv, one_game_two_events.csv, aliases.csv")
     return 0
 
 

@@ -153,8 +153,9 @@ def match(events: pd.DataFrame, nfl: pd.DataFrame | None = None, cfb: pd.DataFra
     """events: sport, event_id, kickoff, home, away (one row per event). Returns sport, event_id, home_score,
     away_score for the events matched to a final score, and the unmatched count by reason.
 
-    A college game with a name resolved only by the prefix rule that finds no game is counted as
-    cfb_prefix_name_no_game, not cfb_no_game (amendment 1, item 8); a name that doesn't resolve is
+    A college game for which no game is found, when a name was resolved by the prefix rule, is counted as
+    cfb_prefix_name_no_game, not cfb_no_game (amendment 1, item 8: "no game found; a name was resolved by the
+    prefix rule", so the name may be wrong or the game missing); a name that doesn't resolve is
     cfb_team_name_unknown. `detail`, if given, is filled with: names (sport, name, resolves_to, how, games),
     unmatched (sport, event_id, reason) and cfb_team_files (how many team_info files were found)."""
     why: Counter = Counter()
