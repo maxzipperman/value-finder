@@ -16,9 +16,9 @@
 What counts (amendment 3): rows written under a registered rules version, logged before kickoff, for
 games from Oct 1, 2026 through the 2027 season's title game (a game dated from Feb 1, 2028 never
 counts, whatever its season label; amendment 4). "Before kickoff" is before the earlier of the kickoff
-on the row and the kickoff in the schedule (amendment 4, reading 11); a schedule kickoff that is itself
-cfbfastR's placeholder for "no time set" is no schedule kickoff there, in the moved-game check or for the
-game day (amendment 6). Rows outside that are counted by
+on the row and the kickoff in the schedule (amendment 4, reading 11); when the schedule's kickoff is
+cfbfastR's placeholder for "no time set" (exactly 00:00 Eastern), it is before the row's kickoff and before
+the placeholder + 30 hours (amendment 6). Rows outside that are counted by
 reason, never silently dropped; --list-excluded prints each one. ROI is units won per bet placed; a push
 counts as a bet. A game is graded only once the schedule marks it completed.
 
@@ -103,6 +103,7 @@ REG_END_2026 = pd.Timestamp("2026-12-13T08:00:00Z")   # the 2026 regular season 
 TEST_END = pd.Timestamp("2028-02-01T00:00:00Z")       # after the 2027 season's title game (January 2028)
 ENOUGH = 40
 MIN_CLOSES = 20                                       # amendment 4, reading 12: a CLV decision needs 20 closes
+PH_CAP = pd.Timedelta(hours=30)                       # amendment 6: a placeholder game's rows count before this
 MOVED = pd.Timedelta(hours=24)                        # amendment 4: void if it kicked off further than this ...
 NO_RESULT = pd.Timedelta(days=30)                     # ... or had no score this long after the entry's kickoff
 VOID_MOVED = "the game kicked off more than 24 hours from the kickoff on its entry row"
@@ -473,25 +474,35 @@ s["sched_kick"] = (pd.to_datetime(S[kick], utc=True, errors="coerce") if kick
                    else pd.Series(pd.NaT, index=s.index, dtype="datetime64[ns, UTC]"))
 if kick is None:
     print("the schedule has no kickoff times (start_utc or start_date): the check for moved games is off")
-# Amendment 6: a schedule kickoff that is itself cfbfastR's placeholder (the schedule's time-not-set flag, or exactly
-# 00:00 Eastern) is not a kickoff. It is read as no schedule kickoff, for "before kickoff" (amendment 4, reading 11),
-# the moved-game check and the game day, which then use the row's own kickoff.
-flag = next((S[c].astype(str).str.lower().isin(["true", "1", "1.0"]) for c in ("tbd", "start_time_tbd") if c in S),
-            pd.Series(False, index=S.index))
-s["sched_placeholder"] = no_kickoff_time(flag.to_numpy(), s.sched_kick).to_numpy() & s.sched_kick.notna().to_numpy()
-s.loc[s.sched_placeholder, "sched_kick"] = pd.NaT
+# Amendment 6: a schedule kickoff at exactly 00:00 Eastern is cfbfastR's placeholder for "no time set", whether or not
+# the schedule's flag is set (a flag on any other time leaves that time as the schedule's kickoff). The placeholder
+# still decides moved games, the listing graded and the game day (amendment 4, sections 1 and 10; amendment 5); only
+# "before kickoff" (amendment 4, reading 11) reads it differently, below.
+s["sched_placeholder"] = no_kickoff_time(False, s.sched_kick).to_numpy()
+played = (S.completed.astype(str).str.lower().isin(["true", "1", "1.0"]) if "completed" in S
+          else pd.Series(False, index=S.index))
+s["sched_played"] = played.to_numpy()
 if "completed" in S:        # the feed scores a game that was never played 0-0: grade completed games only
-    played = S.completed.astype(str).str.lower().isin(["true", "1", "1.0"])
     print(f"schedule rows with a score but not marked completed (not graded): "
           f"{int((~played & s.total.notna()).sum())}")
     s.loc[~played.values, "total"] = np.nan
 s = s.drop_duplicates("game_id")
-L = L.merge(s[["game_id", "sched_kick", "sched_placeholder"]], on="game_id", how="left")
-if (n_ph := int(L.loc[L.sched_placeholder.eq(True), "game_id"].nunique())):
-    print(f"ledger games whose schedule kickoff is cfbfastR's placeholder, read as no schedule kickoff "
-          f"(amendment 6): {n_ph}")
+L = L.merge(s[["game_id", "sched_kick", "sched_placeholder", "sched_played"]], on="game_id", how="left")
+PH_GAMES = (L[L.sched_placeholder.eq(True)].drop_duplicates("game_id")[["game_id", "sched_kick", "sched_played"]]
+            .sort_values("game_id"))
+for label, g in (("completed", PH_GAMES[PH_GAMES.sched_played.eq(True)]),
+                 ("not yet played", PH_GAMES[~PH_GAMES.sched_played.eq(True)])):
+    print(f"ledger games whose schedule kickoff is cfbfastR's placeholder (00:00 Eastern; amendment 6), {label}: "
+          f"{len(g)}" + (f" ({', '.join(g.game_id.astype(str))})" if len(g) else ""))
+if args.list_excluded and len(PH_GAMES):
+    print(PH_GAMES.rename(columns={"sched_kick": "schedule_kickoff", "sched_played": "completed"})
+          .to_string(index=False))
 # Amendment 4, reading 11: "before kickoff" is before the earlier of the row's kickoff and the schedule's
 L["kick_first"] = L[["start_utc", "sched_kick"]].min(axis=1)
+# Amendment 6: when the schedule's kickoff is the placeholder, "before kickoff" is before the row's own kickoff, and
+# in any case before the placeholder + 30 hours (about 06:00 Eastern the day after the game's date)
+ph = L.sched_placeholder.eq(True)
+L.loc[ph, "kick_first"] = pd.concat([L.start_utc[ph], L.sched_kick[ph] + PH_CAP], axis=1).min(axis=1)
 
 # What counts. Every excluded row is counted by its first failing reason.
 why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.start_utc.isna(), L.start_utc < FIRST_KICK,
@@ -542,8 +553,7 @@ def mean_ci(x):
 
 def game_day(bets):
     """Amendment 5, reading 1: each bet's game day, the calendar date of its game's actual kickoff (the
-    schedule's; the entry row's when the schedule gives none, or gives only cfbfastR's placeholder, amendment 6) in
-    Eastern time."""
+    schedule's; the entry row's when the schedule gives none) in Eastern time."""
     kick = bets.sched_kick.fillna(bets.start_utc)
     return kick.dt.tz_convert("America/New_York").dt.strftime("%Y-%m-%d")
 
@@ -606,7 +616,7 @@ def settle(bets):
     """Amendment 4: void (moved more than a day, another listing of the game is the one graded, or no score 30
     days on), pending (no score yet), or settled. One listing per game is graded: the one whose kickoff is nearest
     the game's actual kickoff, the later listing on a tie, and the latest listing when the schedule has no
-    kickoff for the game (or only cfbfastR's placeholder, which is no kickoff: amendment 6)."""
+    kickoff for the game."""
     bets = bets.merge(s[["game_id", "total"]], on="game_id", how="left")
     moved = (bets.sched_kick - bets.start_utc).abs() > MOVED
     dist = (bets.sched_kick - bets.start_utc).abs().fillna(pd.Timedelta(0))

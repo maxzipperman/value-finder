@@ -134,7 +134,7 @@ def test_the_alert_says_a_game_with_no_time_is_not_eligible_then_alerts_once_its
     assert title == "CFB HIGH TOTAL 66.5, NOT ELIGIBLE (no kickoff time set): Southern Miss @ Troy Sat 10-10 ET"
     assert "not take a game until its kickoff time is set" in body.replace("doesn't", "does not")
     assert "No bet." in body and "UNDER" not in title
-    assert "the schedule has no kickoff time set for this game" in body and "placeholder" not in body
+    assert "the schedule marks this game's kickoff time as not set" in body and "placeholder" not in body
     # Game day: the time is set, and the last scheduled run before the real kickoff alerts as Rule HT always has
     set_clock(monkeypatch, last_run_before(REAL_KICK))
     timed = board_row(start_utc=REAL_KICK, kick_et="Sat 10-10 19:30", rule_ht="SIGNAL", lead_days=0)
@@ -257,43 +257,119 @@ def test_rule_b_is_unchanged_by_amendment_6(tmp_path):
 
 
 # ------------------------------------------------------------------ a placeholder in the schedule the scorer reads
-@pytest.mark.parametrize("schedule", [
-    dict(kick=PLACEHOLDER),                                 # 00:00 Eastern, no flag column
-    dict(kick=PLACEHOLDER, start_time_tbd=True),            # 00:00 Eastern and the flag, as cfbfastR writes it
-    dict(kick=REAL_KICK, start_time_tbd=True),              # a flag left set on a real time (Oregon-UCLA, 2020)
-])
-def test_a_placeholder_in_the_schedule_is_no_kickoff(tmp_path, schedule):
-    """The review's case: the schedule the scorer reads still carries the placeholder after the game was played, as
-    the final schedule does for Utah State-Robert Morris (Aug 31, 2024). Read as a kickoff, the placeholder (00:00
+PH_LINE = "ledger games whose schedule kickoff is cfbfastR's placeholder (00:00 Eastern; amendment 6)"
+
+
+@pytest.mark.parametrize("schedule", [dict(kick=PLACEHOLDER), dict(kick=PLACEHOLDER, start_time_tbd=True)])
+def test_a_placeholder_in_the_schedule_is_not_the_before_kickoff_bound(tmp_path, schedule):
+    """The first review's case: the schedule the scorer reads still carries the placeholder after the game was played,
+    as the final schedule does for Utah State-Robert Morris (Aug 31, 2024). Read as the kickoff, the placeholder (00:00
     Eastern) was "the earlier kickoff", so the game-day row with the time set was dropped as logged at or after
-    kickoff and the entry fell back to the evening before (68.5, a win at 67). A placeholder is no schedule kickoff:
-    the entry is the game-day row, 64.5 at -105, a loss."""
+    kickoff and the entry fell back to the evening before (68.5, a win at 67). Now "before kickoff" is before the row's
+    kickoff (and the placeholder + 30 hours): the entry is the game-day row, 64.5 at -105, a loss. The placeholder is
+    19.5 hours from the real kickoff, so the game is not void."""
     rows = [untimed(1, "2026-10-08T14:30Z", mkt_total=70.5, rule_ht="time_tbd"),
             row(1, REAL_KICK, "2026-10-09T14:30Z", mkt_total=69.5),                 # time set a day ahead
             row(1, REAL_KICK, "2026-10-10T02:30Z", mkt_total=68.5),                 # the evening before
             row(1, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5, mkt_under=-105)]  # game day, an hour before
     out = score(tmp_path, rows, [sched(1, 67, **schedule)], "--list-excluded")
     assert "logged at or after kickoff" not in out and "ledger rows: 4; in the test: 4" in out
-    assert "ledger games whose schedule kickoff is cfbfastR's placeholder, read as no schedule kickoff" in out
+    assert f"{PH_LINE}, completed: 1 (1)" in out and f"{PH_LINE}, not yet played: 0" in out
     assert "1 signals at the last quote before kickoff, 1 settled, 0 pending, 0 void" in ht(out)
     assert "record 0-1-0" in ht(out) and "units -1.00" in ht(out)
     assert "no kickoff time set (amendment 6): 1 quotes" in ht(out)
 
 
-def test_a_schedule_with_a_time_is_read_as_before(tmp_path):
-    """The same rows against a schedule that shows the real time: nothing is read as a placeholder."""
+def test_a_placeholder_game_counts_no_row_from_30_hours_after_the_placeholder(tmp_path):
+    """The row's own kickoff says 11:30 AM Eastern the next day (the row is wrong, or the game moved), but the schedule
+    still shows only the placeholder: rows from the placeholder + 30 hours on don't count."""
+    late = pd.Timestamp("2026-10-11T15:30:00Z")
+    rows = [row(1, late, "2026-10-11T09:30Z", mkt_total=66.5),                      # 29.5 h after the placeholder
+            row(1, late, "2026-10-11T10:00Z", mkt_total=60.5)]                      # 30 h: does not count
+    out = score(tmp_path, rows, [sched(1, 50, kick=PLACEHOLDER, start_time_tbd=True)])
+    assert "excluded, logged at or after kickoff: 1" in out
+
+
+def test_a_flag_on_a_real_time_keeps_that_time_as_the_schedule_kickoff(tmp_path):
+    """A flag left set on a real time (Oregon-UCLA, 2020) is not a placeholder: only 00:00 Eastern is. The schedule's
+    real time is still the kickoff, for "before kickoff" as for the moved-game check."""
     rows = [row(1, REAL_KICK, "2026-10-10T02:30Z", mkt_total=68.5),
             row(1, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5, mkt_under=-105),
             row(1, REAL_KICK, "2026-10-10T23:45Z", mkt_total=60.5)]                  # after kickoff: dropped
-    out = score(tmp_path, rows, [sched(1, 67, start_time_tbd=False)])
-    assert "cfbfastR's placeholder" not in out.split("RULE_B:")[0]
+    out = score(tmp_path, rows, [sched(1, 67, start_time_tbd=True)])
+    assert f"{PH_LINE}, completed: 0" in out and f"{PH_LINE}, not yet played: 0" in out
     assert "excluded, logged at or after kickoff: 1" in out
     assert "record 0-1-0" in ht(out)
 
 
-def test_rule_b_reads_a_placeholder_in_the_schedule_as_no_kickoff_too(tmp_path):
+EARLY = pd.Timestamp("2026-10-10T19:30:00Z")          # 3:30 PM Eastern: the game moved four hours earlier
+MOVED_LATER = pd.Timestamp("2026-10-12T23:30:00Z")    # two days later
+
+
+@pytest.mark.parametrize("flag", [True, False])
+def test_a_flagged_real_time_moved_earlier_still_drops_the_in_play_row(tmp_path, flag):
+    """The second review's case: the schedule shows the game kicked off at 3:30 PM Eastern (flag set or not), while
+    the rows still carry 7:30 PM. A row logged at 5:30 PM Eastern is in play: it is not Rule HT's entry, and not Rule
+    B's close, as on main."""
+    rows = [row(1, REAL_KICK, "2026-10-08T14:30Z", mkt_total=66.5),
+            row(1, REAL_KICK, "2026-10-10T21:30Z", mkt_total=58.5, mkt_under=-105)]  # 2 h after the real kickoff
+    out = score(tmp_path, rows, [sched(1, 67, kick=EARLY, start_time_tbd=flag)])
+    assert "excluded, logged at or after kickoff: 1" in out
+    assert "1 signals at the last quote before kickoff, 1 settled" in ht(out) and "record 0-1-0" in ht(out)  # 66.5
+    rows = [row(1, REAL_KICK, "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5, rule_ht="below_threshold"),
+            row(1, REAL_KICK, "2026-10-10T21:30Z", mkt_total=44.5, rule_ht="below_threshold")]
+    rb = score(tmp_path / "b", rows, [sched(1, 40, kick=EARLY, start_time_tbd=flag)]).split("RULE_B:")[1]
+    assert "1 signals, 1 settled" in rb and "0 from a later logged quote" in rb and "1 with none" in rb
+
+
+def test_a_flagged_real_time_moved_two_days_later_is_void(tmp_path):
+    rows = [row(1, REAL_KICK, "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5),
+            row(1, REAL_KICK, "2026-10-10T20:30Z", mkt_total=49.5)]
+    out = score(tmp_path, rows, [sched(1, 40, kick=MOVED_LATER, start_time_tbd=True)])
+    rb = out.split("RULE_B:")[1].split("RULE_HT:")[0]
+    assert "1 signals, 0 settled, 0 pending, 1 void" in rb
+    assert "kicked off more than 24 hours from the kickoff on its entry row: 1 (1)" in rb
+    assert "1 void" in ht(out)
+
+
+def test_a_game_postponed_a_week_to_a_placeholder_is_void(tmp_path):
+    """Signalled for Oct 10; the final schedule has the game on Oct 17 with no time set. The placeholder still decides
+    moved games, so the bet is void, as on main, not graded on the Oct 17 game."""
+    rows = [row(1, REAL_KICK, "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5),
+            row(1, REAL_KICK, "2026-10-10T20:30Z", mkt_total=49.5)]
+    out = score(tmp_path, rows, [sched(1, 40, kick="2026-10-17T04:00:00Z", start_time_tbd=True)])
+    rb = out.split("RULE_B:")[1].split("RULE_HT:")[0]
+    assert "1 signals, 0 settled, 0 pending, 1 void" in rb
+    assert "kicked off more than 24 hours from the kickoff on its entry row: 1 (1)" in rb
+    assert "1 void" in ht(out) and "0 settled" in ht(out)
+
+
+def test_a_game_moved_up_a_day_to_a_placeholder_drops_the_post_game_row_and_is_void(tmp_path):
+    """Signalled for Oct 10 at 7:30 PM Eastern; the final schedule has the game on Oct 9 with no time set. A row logged
+    on Oct 10 is after the game: it is not Rule B's close (the placeholder + 30 hours is 06:00 Eastern Oct 10), and the
+    bet is void, as on main."""
+    rows = [row(1, REAL_KICK, "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5, rule_ht="below_threshold"),
+            row(1, REAL_KICK, "2026-10-10T21:30Z", mkt_total=44.5, rule_ht="below_threshold")]
+    out = score(tmp_path, rows, [sched(1, 40, kick="2026-10-09T04:00:00Z", start_time_tbd=True)], "--list-excluded")
+    assert "excluded, logged at or after kickoff: 1" in out
+    assert f"{PH_LINE}, completed: 1 (1)" in out
+    rb = out.split("RULE_B:")[1].split("RULE_HT:")[0]
+    assert "1 signals, 0 settled, 0 pending, 1 void" in rb
+
+
+def test_the_placeholder_count_splits_completed_and_not_yet_played_games(tmp_path):
+    rows = [row(1, REAL_KICK, "2026-10-09T14:30Z"), row(2, REAL_KICK, "2026-10-09T14:30Z"),
+            row(3, REAL_KICK, "2026-10-09T14:30Z")]
+    s = [sched(1, 50, kick=PLACEHOLDER), sched(2, 50, kick=PLACEHOLDER) | dict(completed=False), sched(3, 50)]
+    out = score(tmp_path, rows, s, "--list-excluded")
+    assert f"{PH_LINE}, completed: 1 (1)" in out and f"{PH_LINE}, not yet played: 1 (2)" in out
+    listed = out.split(f"{PH_LINE}, not yet played")[1].split("ledger rows")[0]
+    assert "schedule_kickoff" in listed and "2026-10-10 04:00:00+00:00" in listed
+
+
+def test_rule_b_reads_a_placeholder_in_the_schedule_the_same_way(tmp_path):
     """Rule B's close is the last quote logged after its entry and before kickoff; with the placeholder read as the
-    schedule's kickoff, the game-day close was dropped and the bet had no primary close."""
+    kickoff, the game-day close was dropped and the bet had no primary close."""
     rows = [row(5, REAL_KICK, "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5, rule_ht="below_threshold"),
             row(5, REAL_KICK, "2026-10-10T20:30Z", mkt_total=49.5, rule_ht="below_threshold")]
     rb = score(tmp_path, rows, [sched(5, 40, kick=PLACEHOLDER, start_time_tbd=True)]).split("RULE_B:")[1]
