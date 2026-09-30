@@ -8,7 +8,7 @@ machine, else from the longest school name the Odds API name starts with. Home a
 either order (neutral sites), and the scores are returned on the Odds API's home and away.
 
 Only seasons 2020-2025 are read. The 2026 seasons are sealed: their scores are never loaded here, whatever the
-tables hold. An event with no match is kept out of the realized-result columns and counted with its reason.
+tables hold: the season filter is applied as the file is read (amendment 1, item 5), and checked again after. An event with no match is kept out of the realized-result columns and counted with its reason.
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from ...sport import load_teams
 from .model import CFB, NFL, REPO
 
 SEASONS = range(2020, 2026)       # 2026 is the sealed holdout
+SEASON_FILTER = [("season", "in", list(SEASONS))]      # applied while the parquet file is read
 EXTRA_NFL = {"washington football team": "WAS", "washington redskins": "WAS", "oakland raiders": "LV"}
 CFB_WINDOW = pd.Timedelta(hours=36)
 
@@ -34,8 +35,11 @@ def norm(name) -> str:
 
 
 def nfl_games(path: Path | None = None) -> pd.DataFrame:
+    # the filter is applied as the file is read, so no 2026 row is ever loaded (amendment 1, item 5); the check
+    # after the read stays as a second layer
     g = pd.read_parquet(path or REPO / "nfl-weather/data/processed/games.parquet",
-                        columns=["season", "gameday", "home_team", "away_team", "home_score", "away_score"])
+                        columns=["season", "gameday", "home_team", "away_team", "home_score", "away_score"],
+                        filters=SEASON_FILTER)
     g = g[g.season.isin(SEASONS) & g.home_score.notna() & g.away_score.notna()].copy()
     g["day"] = pd.to_datetime(g.gameday).dt.date
     return g
@@ -43,7 +47,8 @@ def nfl_games(path: Path | None = None) -> pd.DataFrame:
 
 def cfb_games(path: Path | None = None) -> pd.DataFrame:
     g = pd.read_parquet(path or REPO / "cfb-weather/data/processed/games.parquet",
-                        columns=["season", "start_utc", "home_team", "away_team", "home_points", "away_points"])
+                        columns=["season", "start_utc", "home_team", "away_team", "home_points", "away_points"],
+                        filters=SEASON_FILTER)                          # read-time filter: see nfl_games
     g = g[g.season.isin(SEASONS) & g.home_points.notna() & g.away_points.notna()].copy()
     return g.rename(columns={"home_points": "home_score", "away_points": "away_score"})
 

@@ -308,15 +308,24 @@ def test_a3_scores_never_return_2026(tmp_path):
     assert got.empty and why == Counter({"nfl_no_game": 1, "cfb_no_game": 1})
 
 
-def test_a3_observation_the_score_readers_do_read_2026_rows_into_memory(tmp_path, monkeypatch):
-    """Not a leak into any output, but the registration's words are 'it never loads 2026 scores'."""
+def test_a3_the_score_readers_never_load_2026_rows(tmp_path, monkeypatch):
+    """Amendment 1, item 5 (defect D7, turned round): the registration says the backtest 'never loads 2026 scores'.
+    Before, both readers read the 2026 rows into memory and dropped them after; now the season filter is applied as
+    the file is read, and the check after the read stays."""
     p = tmp_path / "nfl.parquet"
     pd.DataFrame(dict(season=[2024, 2026], gameday=["2024-09-08", "2026-09-13"], home_team=["KC", "KC"],
                       away_team=["BAL", "BAL"], home_score=[20.0, 99.0], away_score=[10.0, 98.0])).to_parquet(p)
+    c = tmp_path / "cfb.parquet"
+    pd.DataFrame(dict(season=[2024, 2026], start_utc=pd.to_datetime(["2024-09-07T19:00Z", "2026-09-12T19:00Z"]),
+                      home_team=["Ohio State", "Ohio State"], away_team=["Oregon", "Oregon"], home_points=[20.0, 99.0],
+                      away_points=[10.0, 98.0])).to_parquet(c)
     seen, real = [], pd.read_parquet
     monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: seen.append(real(*a, **k).season.tolist()) or real(*a, **k))
-    outcomes.nfl_games(p)
-    assert seen == [[2024, 2026]]
+    assert list(outcomes.nfl_games(p).season) == [2024] and list(outcomes.cfb_games(c).season) == [2024]
+    assert seen == [[2024], [2024]]                              # what the reader handed over: no 2026 row
+    # the check after the read is still there: a reader that ignored the filter would still return 2024 only
+    monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: real(*a, **{x: y for x, y in k.items() if x != "filters"}))
+    assert list(outcomes.nfl_games(p).season) == [2024] and list(outcomes.cfb_games(c).season) == [2024]
 
 
 # ================================================================ A6 signs and orientation, end to end
