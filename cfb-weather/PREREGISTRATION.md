@@ -643,15 +643,9 @@ Variants under forward test: still **2**. This amendment tests nothing and leave
 unchanged: on the day of registration it is **273**, so the multiple-testing bar is p < 0.000183
 (`strategy-research/README.md`, `STATUS.md`).
 
-## Amendment 6 (DRAFT, not registered: written 2026-09-30 Pacific for the hub to register, before the first eligible game on Oct 1, 2026, 5:00 PM Pacific)
+## Amendment 6 (registered 2026-09-30 Pacific, before the first eligible game on Oct 1, 2026, 5:00 PM Pacific)
 
-**DRAFT.** This text is not in force. The hub registers it before Oct 1, 2026, 5:00 PM Pacific, by: replacing this
-paragraph and the heading's "DRAFT, not registered" with the date of registration and the registering commit (the
-merge of the pull request that carries it); confirming, from the ledger's counts only (no price or result), that no
-Rule B or Rule HT signal had been logged by then; restating the running variant count on that day at the end; and
-adding the dated note in section 3 to `STRATEGY.md`. Until then the scorer on `main` behaves as amendments 1 to 5
-say. Pull request 86 (the draft reading of Rule HT for a game whose kickoff time isn't set) becomes amendment 7 when
-the hub registers it.
+**Registered** on September 30, 2026 (Pacific) by the hub, on the owner's standing instruction of September 29, 2026, by the merge of pull request 90. State of the ledger at registration, from its counts only: one Rule B signal had been logged (Texas Tech at Colorado, Saturday, October 3, at the 7:30 AM Pacific run of September 30), pending, with no close captured and no outcome known; no Rule HT signal. This amendment does not change that signal's entry; it changes only which captured close may grade it, and none exists yet. The running variant count on this day is 288 (it adds none). Pull request 86 (the reading of Rule HT for a game whose kickoff time isn't set) becomes amendment 7 if the hub registers it.
 
 An independent audit of the scorer (Astra's audit 3, Sep 29, late evening; issue 88) found two places where
 `scripts/score_forward.py` does not do what the registered text says. **This amendment repairs two registered rules

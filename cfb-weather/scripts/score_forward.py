@@ -81,6 +81,11 @@ branch. A blank line, or a line of only spaces, in the file or its copy is not a
 skipped when read and never copied by a restore.
 
     python scripts/score_forward.py [--ledger PATH] [--schedule PATH] [--list-excluded]
+    python scripts/score_forward.py --now 2026-10-20T17:00:00 --json   # the dashboard's read: one JSON document
+
+--json prints one JSON document and nothing else: the report above as text, byte for byte, and each test's counts,
+numbers, decision and bets, each number the one the report prints. It changes nothing about what is graded, decided
+or recorded; with --now it is a preview, and records nothing.
 """
 import argparse
 import csv
@@ -138,7 +143,17 @@ ap.add_argument("--now", help="score as of this UTC time: a preview for tests an
 ap.add_argument("--test-record", action="store_true",
                 help="tests only: with --now, record final decisions beside a test ledger as if made at --now "
                      "(refused for any ledger in data/forward/)")
+ap.add_argument("--json", action="store_true",
+                help="print one JSON document instead of the report: the report itself as text, and each test's "
+                     "counts, numbers, decision and bets. What is graded, decided and recorded doesn't change")
 args = ap.parse_args()
+# --json: the report is printed into a buffer, exactly as it would be printed, and handed over inside one document
+# at the end (json_document). Nothing else about the run changes: the same rows count, the same bets are graded, and
+# a decision is recorded, or not, by the same rules.
+REPORT = io.StringIO() if args.json else None
+if REPORT is not None:
+    STDOUT, sys.stdout = sys.stdout, REPORT
+JSON = {"excluded": {}, "rows": {}, "tests": {}, "decisions": {}, "written": {}}    # filled as the report prints
 CLOCK = pd.Timestamp.now(tz="UTC")
 NOW = pd.Timestamp(args.now, tz="UTC") if args.now else CLOCK
 path = Path(args.ledger)
@@ -498,8 +513,10 @@ why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.start_utc.isna(),
                 ["unregistered rules version", "no kickoff time in the row", "before Oct 1, 2026",
                  "after the 2027 season", "logged at or after kickoff"], "")
 print(f"ledger rows: {len(L)}; in the test: {int((why == '').sum())}")
+JSON["rows"] = {"ledger": len(L), "in_test": int((why == "").sum())}
 for reason, n in pd.Series(why[why != ""]).value_counts().items():
     print(f"  excluded, {reason}: {n}")
+    JSON["excluded"][reason] = int(n)
 if args.list_excluded and (why != "").any():
     print(L.assign(excluded=why)[why != ""][["snapshot_utc", "game_id", "rules_version", "rule_b", "excluded"]]
           .to_string(index=False))
@@ -653,6 +670,7 @@ def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
     fingerprint. Under the file lock the record is read again first, so two runs at once write one row. A run
     that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/, an unreadable
     record) says why instead."""
+    JSON["written"][did] = False
     if NOT_RECORDED:
         print(f"    not recorded: {NOT_RECORDED}.")
         return
@@ -674,8 +692,29 @@ def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
             return
         pd.DataFrame([rec], columns=RECORD_COLS).to_csv(DECISIONS, mode="a", header=not DECISIONS.exists(),
                                                         index=False)
+    JSON["written"][did] = True
     print(f"    recorded in decisions.csv on {rec['decided_utc']}, horizon {rec['horizon_utc']}; "
           f"ledger rows sha256 {rec['ledger_rows_sha256'][:16]}")
+
+
+def json_mark():
+    """--json: where the report has got to, so a decision's own lines can be handed over as printed."""
+    return REPORT.tell() if REPORT is not None else 0
+
+
+def json_decision(rule, did, name, status, verdict, start, rec=None):
+    """--json: one decision as printed: interim, final (and whether this run wrote it down) or recorded."""
+    if REPORT is None:
+        return
+    d = {"id": did, "name": name, "status": status, "verdict": verdict, "text": REPORT.getvalue()[start:]}
+    if rec is not None:
+        # a recorded number that is NaN or infinite (json.dumps writes it; JSON has no such value) is null here
+        numbers = json.loads(rec.numbers, parse_constant=lambda _: None)
+        d["recorded"] = {"verdict": rec.verdict, "decided_utc": rec.decided_utc, "horizon_utc": rec.horizon_utc,
+                         "n_bets": int(rec.n_bets), "numbers": numbers, "from": origin(did)[2:] or None}
+    if status == "final":
+        d["written"] = JSON["written"].get(did, False)
+    JSON["decisions"].setdefault(rule, []).append(d)
 
 
 def reprint(rec, show, fresh_verdict, fresh_nums, n_fresh, fresh_text=None):
@@ -771,6 +810,7 @@ def refused(df, label):
 
 
 def secondary(df, label):
+    """Prints the secondary CLV; returns its numbers, as printed, for --json."""
     m, lo, hi, n = mean_ci(df.mkt_total - df.cap_total)
     if not n:
         print(f"  secondary (amendment 2): no captured closes for these {len(df)} {label}")
@@ -778,6 +818,7 @@ def secondary(df, label):
         print(f"  secondary (amendment 2): mean CLV vs the captured close {m:+.2f} "
               f"(95% CI {lo:+.2f} to {hi:+.2f}); {len(df) - n} of {len(df)} {label} without a captured close")
     refused(df, label)
+    return m, lo, hi, n
 
 
 # ---------------------------------------------------------------- Rule B
@@ -805,6 +846,7 @@ done["profit"] = np.where(push, 0, np.where(win, american_to_profit(done.mkt_und
 done["clv_pts"] = done.mkt_total - done.close_total
 print(f"\nRULE_B: {len(bets)} signals, ", end="")
 header(bets)
+JSON["tests"]["RULE_B"] = {"bets": bets, "done": done, "win": win, "push": push}     # --json: as graded above
 if len(done):
     iv = interval(done.clv_pts, game_day(done))
     m, lo, n = iv["m"], iv["lo"], iv["n"]
@@ -816,7 +858,9 @@ if len(done):
     print(f"  primary close: {src.get('later quote', 0)} from a later logged quote, {src.get('captured close', 0)} "
           f"from the captured close, {src.get('none', 0)} with none (counted, left out of the CLV); {stale} of the "
           f"later quotes were logged more than 6 hours before kickoff")
-    secondary(done, "bets")
+    JSON["tests"]["RULE_B"] |= {"iv": iv, "units": done.profit.sum(), "roi_percent": 100 * done.profit.sum() / len(done),
+                                "record": (int(win.sum()), int((~win & ~push).sum()), int(push.sum())),
+                                "secondary": secondary(done, "bets")}
 
 
 # The decision (amendment 3, section 4, and amendment 4): after 40 signals or the end of the 2026
@@ -866,6 +910,7 @@ def entered(dec):
 
 rec = recorded(RB_ID)
 if len(done) or rec is not None:           # a recorded decision prints even when nothing is settled now
+    json_start = json_mark()
     by_kick = done.sort_values("start_utc")
     pending = bets[bets.status.eq("pending")]
     horizon = max(by_kick.start_utc.iloc[ENOUGH - 1], REG_END_2026) if len(done) >= ENOUGH else None
@@ -879,6 +924,7 @@ if len(done) or rec is not None:           # a recorded decision prints even whe
             reprint(rec, rb_show, rec.verdict, {"n_bets": len(dec)}, len(dec),
                     fresh_text=f"a fresh count on the same horizon now finds {len(dec)} settled signals, not "
                                f"{json.loads(rec.numbers)['n_bets']}.")
+        json_decision("Rule B", RB_ID, RB_HORIZON, "recorded", rec.verdict, json_start, rec)
     elif horizon is not None and NOW > horizon and not (pending.start_utc <= horizon).any():
         dec = by_kick[by_kick.start_utc <= horizon]
         verdict, nums = rb_numbers(dec)
@@ -891,9 +937,11 @@ if len(done) or rec is not None:           # a recorded decision prints even whe
             print("    the signals with a primary close kicked off on 1 game day, so there is no interval; a verdict "
                   "needs at least 2 game days (amendment 5, reading 1)")
         write_down(RB_ID, "Rule B", RB_HORIZON, horizon, verdict, nums, entered(dec))
+        json_decision("Rule B", RB_ID, RB_HORIZON, "final", verdict, json_start)
     elif horizon is None and NOW >= TEST_END and not (pending.start_utc < TEST_END).any():
         rb_show("INCONCLUSIVE", {"n_bets": len(done)})
         write_down(RB_ID, "Rule B", RB_HORIZON, TEST_END, "INCONCLUSIVE", {"n_bets": len(done)}, entered(done))
+        json_decision("Rule B", RB_ID, RB_HORIZON, "final", "INCONCLUSIVE", json_start)
     else:
         waiting = int((pending.start_utc <= horizon).sum()) if horizon is not None else len(pending)
         when = (f"Its horizon has passed: {label(horizon)}. The decision waits for {waiting} pending "
@@ -904,6 +952,7 @@ if len(done) or rec is not None:           # a recorded decision prints even whe
                                  f"at least {MIN_CLOSES} with a primary close": n >= MIN_CLOSES})
         if len(done) > n:
             print(f"    {len(done) - n} of the {len(done)} settled signals have no primary close (left out of the CLV)")
+        json_decision("Rule B", RB_ID, RB_HORIZON, "interim", None, json_start)
 if len(done):
     print(done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under", "close_src",
                 "close_total", "total", "clv_pts", "profit"]].to_string(index=False))
@@ -921,6 +970,7 @@ ht_done["profit"] = np.where(push, 0, np.where(win, american_to_profit(ht_done.m
 ht_done["result"] = np.where(push, "P", np.where(win, "W", "L"))
 print(f"\nRULE_HT: {len(ht)} signals at the last quote before kickoff, ", end="")
 header(ht)
+JSON["tests"]["RULE_HT"] = {"bets": ht, "done": ht_done}                          # --json: as graded above
 
 
 def ht_numbers(d):
@@ -953,24 +1003,29 @@ if len(ht_done):
     print(f"  record {w}-{n - w}-{nums['pushes']} ({100 * w / max(n, 1):.1f}%), units {nums['units']:+.2f}, "
           f"ROI {100 * nums['roi']:+.1f}% per bet placed; average break-even {100 * be:.1f}%, one-sided p {p:.3f} "
           f"(exact, against each bet's own break-even; pushes are left out of the exact test and count in ROI)")
-    secondary(ht_done, "bets")
+    JSON["tests"]["RULE_HT"] |= {"nums": nums, "win_rate_percent": 100 * w / max(n, 1),
+                                 "secondary": secondary(ht_done, "bets")}
 # The decision (amendments 1, 3 and 4): once, after the 2027 season's title game. "At or below
 # break-even" is read at the prices taken: the bets, together, won nothing.
 rec = recorded(HT_ID)
 if len(ht_done) or rec is not None:        # a recorded decision prints even when nothing is settled now
+    json_start = json_mark()
     ht_pending = ht[ht.status.eq("pending")]
     if rec is not None:
         fresh, fresh_nums = ht_numbers(ht_done[ht_done.start_utc < pd.Timestamp(rec.horizon_utc)])
         reprint(rec, ht_show, fresh, fresh_nums, fresh_nums["n_bets"])
+        json_decision("Rule HT", HT_ID, HT_HORIZON, "recorded", rec.verdict, json_start, rec)
     elif NOW >= TEST_END and not (ht_pending.start_utc < TEST_END).any():
         ht_show(verdict, nums)
         write_down(HT_ID, "Rule HT", HT_HORIZON, TEST_END, verdict, nums, ht_done._row)
+        json_decision("Rule HT", HT_ID, HT_HORIZON, "final", verdict, json_start)
     else:
         waiting = int((ht_pending.start_utc < TEST_END).sum())
         when = (f"The title game has passed; the decision waits for {waiting} pending signal"
                 f"{'s' if waiting != 1 else ''}." if NOW >= TEST_END else
                 "The decision comes once, after the 2027 season's title game (January 2028).")
         interim("Rule HT", when, {"one-sided p < 0.05": p < 0.05, "ROI > 0": nums["roi"] > 0})
+        json_decision("Rule HT", HT_ID, HT_HORIZON, "interim", None, json_start)
 if len(ht_done):
     print(ht_done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under",
                    "ht_threshold", "total", "profit"]].to_string(index=False))
@@ -1000,3 +1055,106 @@ else:
     print("\nDecision record: the first final decision is written to " + (
         "data/forward/decisions.csv (the live record)." if IS_LIVE else "decisions.csv beside this test ledger."))
 print("Variants under forward test: 2 (RULE_B, RULE_HT).")
+
+
+# ---------------------------------------------------------------- --json: the same report, machine-readable
+# Every number below is one the report above printed (or, for a single bet, one its table printed), taken from the
+# same variables; nothing is graded or decided here. A number that doesn't exist (no interval on one bet) is null.
+def json_num(v):
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    return v if np.isfinite(v) else None
+
+
+def json_time(t):
+    return None if t is None or pd.isna(t) else pd.Timestamp(t).tz_convert("UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def json_text(v):
+    return None if v is None or (isinstance(v, float) and np.isnan(v)) or str(v) == "" else str(v)
+
+
+def json_id(v):
+    return str(int(v)) if isinstance(v, (int, float, np.integer, np.floating)) and float(v).is_integer() else str(v)
+
+
+def json_bet(i, b, t, rule):
+    """One bet: its game, its entry row (line, price and where the price came from), its close, its outcome and the
+    units at the price taken. The close, the closing-line value, the final total and the units are given once the bet
+    is settled, as the report's tables give them. Rule HT is graded on its result and has no primary close; every bet
+    has the captured close as a secondary one (amendment 2)."""
+    settled = b["status"] == "settled"
+    if not settled:
+        outcome = b["status"]
+    elif rule == "RULE_HT":
+        outcome = {"W": "won", "L": "lost", "P": "push"}[t["done"].result[i]]
+    else:
+        outcome = "push" if t["push"][i] else "won" if t["win"][i] else "lost"
+    kick = b["sched_kick"] if pd.notna(b["sched_kick"]) else b["start_utc"]
+    has_close = rule == "RULE_B" and settled and pd.notna(b["close_total"])
+    captured = b.get("cap_total") if settled else None       # this listing's own capture (amendment 6)
+    return {"game_id": json_id(b["game_id"]), "away_team": json_text(b.get("away_team")),
+            "home_team": json_text(b.get("home_team")), "kickoff_utc": json_time(kick),
+            "entry_row_kickoff_utc": json_time(b["start_utc"]), "side": "UNDER",
+            "logged_utc": json_time(b["snapshot_utc"]), "entry_line": json_num(b["mkt_total"]),
+            "entry_price": json_num(b["mkt_under"]), "price_assumed": False, "price_source": json_text(b["line_src"]),
+            "close_line": json_num(b["close_total"]) if has_close else None,
+            "close_source": json_text(b["close_src"]) if has_close else None,
+            "close_from": json_text(b.get("close_from")) if rule == "RULE_B" and settled else None,
+            "clv": json_num(t["done"].clv_pts[i]) if rule == "RULE_B" and settled else None,
+            "captured_close": json_num(captured),
+            "clv_captured": json_num(b["mkt_total"] - captured) if json_num(captured) is not None else None,
+            "final_total": json_num(b["total"]) if settled else None, "outcome": outcome,
+            "void_reason": json_text(b["void"]), "units": json_num(t["done"].profit[i]) if settled else None,
+            "ledger_row": int(b["_row"]) + 1, "listing": int(b["listing"])}
+
+
+def json_test(tid, name, rule):
+    """One test as its table printed it: counts, record, units, return per bet placed, mean CLV and the registered
+    interval (Rule B; both half-widths and the game days), the exact test (Rule HT), the secondary CLV, the decision
+    as printed, and its bets."""
+    t = JSON["tests"][tid]
+    bets, done = t["bets"], t["done"]
+    void = bets[bets.status.eq("void")]
+    out = {"id": tid, "name": name, "printed_as": tid, "decides": True,
+           "counts": {"signals": len(bets), "settled": len(done), "pending": int(bets.status.eq("pending").sum()),
+                      "void": len(void)},
+           "void_reasons": {str(k): len(v) for k, v in void.groupby("void", sort=False)},
+           "record": None, "units": None, "roi_percent": None, "graded_at_assumed_price": None, "mean_clv": None,
+           "n_clv": None, "interval": None, "secondary_clv": None, "win_rate_percent": None, "avg_break_even": None,
+           "p_one_sided": None, "decisions": JSON["decisions"].get(rule, []),
+           "bets": [json_bet(i, b, t, tid) for i, b in bets.sort_values("snapshot_utc", kind="stable")
+                    .to_dict("index").items()] if len(bets) else []}
+    if "iv" in t:                                        # Rule B, with settled bets
+        iv, (w, lost, p) = t["iv"], t["record"]
+        out |= {"record": {"won": w, "lost": lost, "pushed": p}, "units": json_num(t["units"]),
+                "roi_percent": json_num(t["roi_percent"]), "mean_clv": json_num(iv["m"]), "n_clv": int(iv["n"]),
+                "interval": {"low": json_num(iv["lo"]), "high": json_num(iv["hi"]), "n": int(iv["n"]),
+                             "game_days": int(iv["G"]), "plain_half_width": json_num(iv["plain"]),
+                             "grouped_half_width": json_num(iv["grouped"])}}
+    if "nums" in t:                                      # Rule HT, with settled bets
+        n = t["nums"]
+        out |= {"record": {"won": n["wins"], "lost": n["losses"], "pushed": n["pushes"]}, "units": json_num(n["units"]),
+                "roi_percent": json_num(100 * n["roi"]), "win_rate_percent": json_num(t["win_rate_percent"]),
+                "avg_break_even": json_num(n["avg_break_even"]), "p_one_sided": json_num(n["p_one_sided"])}
+    if "secondary" in t:
+        cm, clo, chi, cn = t["secondary"]
+        out["secondary_clv"] = {"mean": json_num(cm), "low": json_num(clo), "high": json_num(chi), "n": int(cn),
+                                "without": len(done) - int(cn)}
+    return out
+
+
+def json_document():
+    return {"scorer": ROOT.name, "generated_utc": json_time(CLOCK), "now": json_time(NOW), "preview": bool(args.now),
+            "ledger": str(path), "text": REPORT.getvalue(), "rows": JSON["rows"], "excluded": JSON["excluded"],
+            "decision_record": {"written_by_this_run": any(JSON["written"].values()),
+                                "why_not": NOT_RECORDED or None},
+            "tests": [json_test("RULE_B", "Rule B, wind under", "Rule B"),
+                      json_test("RULE_HT", "Rule HT, high-total under", "Rule HT")]}
+
+
+if REPORT is not None:
+    sys.stdout = STDOUT
+    print(json.dumps(json_document(), allow_nan=False, default=lambda o: o.item() if hasattr(o, "item") else str(o)))

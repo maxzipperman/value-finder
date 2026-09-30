@@ -1,0 +1,180 @@
+{
+ "format": 1,
+ "id": "wind-and-scoring",
+ "title": "Wind lowers NFL scoring more than the closing total allows for: at 15–19 mph, 4.2 fewer points against 0.4 off the closing total",
+ "name": "Scoring against wind, NFL, 1999–2025: how much each wind band changed the points scored and the closing total",
+ "shows": "Each dot is how much a wind band changed the points both teams scored, or the closing total, against a calm, mild, dry outdoor game, with its 95% interval, allowing for each team's season and the week.",
+ "not_shows": "It uses the wind recorded at kickoff, not the forecast a bet is placed on 1 to 3 days before, so it shows why the wind rule exists, not a price a forecast can beat.",
+ "sample": "7,276 games, 1999–2025; outdoor games with 10–14 mph wind: 1,249, 15–19 mph: 507, 20+ mph: 185",
+ "n": 7276,
+ "bar": {
+  "tests": [
+   {
+    "label": "The bet built on it, the under in 15+ mph wind against the close (57.2% of 682 bets, 1999–2025)",
+    "p": 0.0066015132782592245,
+    "p_words": "one-sided p = 0.0066"
+   }
+  ],
+  "note": "The chart itself measures scoring, not a bet."
+ },
+ "writeups": [
+  {
+   "path": "nfl-weather/report/nfl_weather_report.html",
+   "section": "Figure 6. Wind costs points the closing total doesn't subtract",
+   "anchor": ""
+  }
+ ],
+ "sources": [
+  {
+   "path": "nfl-weather/output/tables/bet_market_vs_reality.csv",
+   "blob": "21011651bb17001b550a5ace3d826276fac6084e",
+   "commit": "cbd87a2083f1e2f9a872e87df46aa364e8689d21",
+   "changed": "2026-09-28"
+  },
+  {
+   "path": "nfl-weather/output/tables/bet_totals_by_bucket.csv",
+   "blob": "85ce99d787b2ae539aab35c57b26657c5de1cb77",
+   "commit": "cbd87a2083f1e2f9a872e87df46aa364e8689d21",
+   "changed": "2026-09-28"
+  },
+  {
+   "path": "nfl-weather/output/tables/strategies.csv",
+   "blob": "b5e267b1c02d283609f766dfbdd836a813aafae3",
+   "commit": "cbd87a2083f1e2f9a872e87df46aa364e8689d21",
+   "changed": "2026-09-28"
+  }
+ ],
+ "date": "2026-09-28",
+ "built_by": "dashboard/tools/build_charts.py",
+ "plot": {
+  "layout": "columns",
+  "panels": [
+   {
+    "name": "",
+    "x": {
+     "kind": "category",
+     "labels": [
+      "10–14 mph",
+      "15–19 mph",
+      "20+ mph"
+     ],
+     "label": "Wind at kickoff"
+    },
+    "y": {
+     "kind": "points",
+     "label": "Change against a calm game, points",
+     "unit": " points",
+     "digits": 2,
+     "zero": true
+    },
+    "series": [
+     {
+      "id": "scored",
+      "name": "Points scored (both teams)",
+      "mark": "dot",
+      "color": "c1",
+      "points": [
+       [
+        "10–14 mph",
+        -1.513605485687467,
+        -2.5136015491820833,
+        -0.5136094221928509
+       ],
+       [
+        "15–19 mph",
+        -4.180121914085172,
+        -5.627411325416238,
+        -2.7328325027541047
+       ],
+       [
+        "20+ mph",
+        -4.730791425744498,
+        -7.14058308425962,
+        -2.3209997672293765
+       ]
+      ]
+     },
+     {
+      "id": "close",
+      "name": "Closing total",
+      "mark": "dot",
+      "color": "c2",
+      "points": [
+       [
+        "10–14 mph",
+        -0.0832536133015201,
+        -0.2578013181088457,
+        0.09129409150580552
+       ],
+       [
+        "15–19 mph",
+        -0.4152994238001775,
+        -0.6644028780861978,
+        -0.1661959695141572
+       ],
+       [
+        "20+ mph",
+        -1.0576582938069383,
+        -1.4890583042033068,
+        -0.6262582834105699
+       ]
+      ]
+     }
+    ],
+    "refs": [
+     {
+      "value": 0,
+      "label": "A calm game",
+      "role": "zero"
+     }
+    ],
+    "tips": {
+     "10–14 mph": [
+      "1,249 outdoor games"
+     ],
+     "15–19 mph": [
+      "507 outdoor games"
+     ],
+     "20+ mph": [
+      "185 outdoor games"
+     ]
+    }
+   }
+  ]
+ },
+ "table": {
+  "columns": [
+   "Wind at kickoff",
+   "Outdoor games",
+   "Points scored: change (95% interval)",
+   "Closing total: change (95% interval)"
+  ],
+  "num": [
+   false,
+   true,
+   false,
+   false
+  ],
+  "rows": [
+   [
+    "10–14 mph",
+    "1,249",
+    "−1.51 (−2.51 to −0.51)",
+    "−0.08 (−0.26 to +0.09)"
+   ],
+   [
+    "15–19 mph",
+    "507",
+    "−4.18 (−5.63 to −2.73)",
+    "−0.42 (−0.66 to −0.17)"
+   ],
+   [
+    "20+ mph",
+    "185",
+    "−4.73 (−7.14 to −2.32)",
+    "−1.06 (−1.49 to −0.63)"
+   ]
+  ],
+  "note": "Changes are in points, against a calm, mild, dry outdoor game."
+ }
+}
