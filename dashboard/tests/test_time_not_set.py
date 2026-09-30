@@ -195,7 +195,7 @@ def test_the_board_never_shows_the_placeholder_as_a_kickoff():
 
 
 def test_the_not_eligible_notice_shows_when_it_was_first_logged(root, home):
-    """cfb-weather amendment 6 (draft): the alert's key for a Rule HT game with no kickoff time set is "ht_time_tbd",
+    """cfb-weather amendment 7 (draft): the alert's key for a Rule HT game with no kickoff time set is "ht_time_tbd",
     and the game page finds the first row logged with Rule HT status "time_tbd", as it does for "ht" and "SIGNAL"."""
     add_rows(root, ht="time_tbd")
     write(root / "cfb-weather" / "data" / "forward" / "alert_state.json",

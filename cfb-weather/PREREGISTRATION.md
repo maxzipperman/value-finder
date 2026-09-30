@@ -643,7 +643,153 @@ Variants under forward test: still **2**. This amendment tests nothing and leave
 unchanged: on the day of registration it is **273**, so the multiple-testing bar is p < 0.000183
 (`strategy-research/README.md`, `STATUS.md`).
 
-## Amendment 6 (DRAFT, not registered: written 2026-09-30 Pacific for the hub to register, before Rule HT's first eligible game on Oct 6, 2026, 5:00 PM Pacific; no Rule HT signal logged; Rule B's forward test began Oct 1, so Rule B games may already have been played at registration)
+## Amendment 6 (registered 2026-09-30 Pacific, before the first eligible game on Oct 1, 2026, 5:00 PM Pacific)
+
+**Registered** on September 30, 2026 (Pacific) by the hub, on the owner's standing instruction of September 29, 2026, by the merge of pull request 90. State of the ledger at registration, from its counts only: one Rule B signal had been logged (Texas Tech at Colorado, Saturday, October 3, at the 7:30 AM Pacific run of September 30), pending, with no close captured and no outcome known; no Rule HT signal. This amendment does not change that signal's entry; it changes only which captured close may grade it, and none exists yet. The running variant count on this day is 288 (it adds none). Pull request 86 (the reading of Rule HT for a game whose kickoff time isn't set) becomes amendment 7 if the hub registers it.
+
+An independent audit of the scorer (Astra's audit 3, Sep 29, late evening; issue 88) found two places where
+`scripts/score_forward.py` does not do what the registered text says. **This amendment repairs two registered rules
+and changes no threshold, gate or decision rule:** no trigger, price cap, stake, metric, horizon or decision
+criterion changes. Section 1 enforces amendment 2's capture window and amendment 4's listings (section 10) for the
+captured close; section 2 enforces amendment 4's test end (section 4). The rules version stays
+`cfb-v3-2026-09-28`, because the board behaves exactly as before; only `scripts/score_forward.py` changes, and none
+of the files shared with nfl-weather does. Nfl-weather amendment 8 makes the same repair of the NFL scorer. Where
+this amendment and any earlier text differ, this one applies; the last section lists every earlier sentence it
+changes. To be registered by the hub on the owner's standing instruction of September 29, 2026 (the hub decides
+questions of how the tests are graded and reports them; money, and any rule's trigger, gate or price cap, stay the
+owner's). The owner can change any reading here by a dated amendment made before the first outcome it would affect.
+
+### 1. A captured close belongs to the listing it was captured for
+
+* **What went wrong.** The scorer kept one captured close per game id (the last row of `data/forward/closes.csv`)
+  and dropped its capture time and kickoff before it joined the close to the bets. A game that was postponed and
+  signalled again (two listings, amendment 4, section 10) could then take, for its new listing, the close captured
+  for the old one. The audit's case: game 999 listed for Oct 10, 19:00 UTC, whose only captured close (a total of
+  40) was captured Oct 10 at 18:50 UTC; the game was postponed to Oct 31 and signalled again, at 60. The Oct 10
+  listing was correctly void, but the Oct 31 listing was graded against the Oct 10 close, as its primary close
+  (amendment 4, section 6): mean CLV +20.00.
+* **The reading.** A bet's captured close is a row of `closes.csv` for its game whose capture time (`capture_utc`)
+  is from 20 minutes to 2 minutes before the kickoff of the listing graded, both ends included. That kickoff is the
+  earlier of the kickoff on the listing's last row logged before kickoff and the kickoff in the schedule: the bound
+  amendment 4, section 11 gives "before kickoff". The listing's last row is the latest-logged ledger row of that
+  listing (amendment 4, section 10) that counts, whatever it shows (a quote, a signal or neither); for a listing
+  the board logged once, it is the entry row. Every row that counts was logged before the earlier of its own
+  kickoff and the schedule's (amendment 4, section 11), so that row was logged before the game's kickoff in the
+  schedule, and the kickoff it sets is never later than the schedule's; a row logged after the real kickoff never
+  counts, so it can't set the listing's kickoff. The window is amendment 2's ("2–20 minutes before kickoff"), with
+  both ends included as `scripts/capture_close.py` applies it: it calls the odds feed when a kickoff is from 2 to
+  20 minutes away, both ends included. Among a game's rows inside the window, the last in the file is taken, as
+  before (a retried slot writes its row again).
+* **Otherwise the bet has no captured close,** and it is counted as missing, never imputed:
+  * for Rule B's primary close, when no later quote was logged (amendment 4, section 6), the bet has no primary
+    close: it is counted, and left out of the CLV;
+  * for the secondary measure (amendment 2), for both rules, it is one of the bets without a captured close;
+  * the scorer prints, for each rule, how many bets had a captured close refused and which games ("close captured
+    outside the window for this listing"), and `--list-excluded` prints each refused capture with its capture
+    time, the kickoff it was captured for and the kickoff of the listing graded.
+* **A capture outside the window is set aside when another inside it is used.** A game can have several captures:
+  a retry of its slot, a capture for another listing of a postponed game, or one for each kickoff of a game moved
+  on game day. The ones outside the window for the listing graded are set aside, and the one inside it is used.
+  For example, a slot captured at 18:50 for a 19:00 kickoff whose retry's reply landed at 18:58:30 (inside the
+  last 2 minutes): the retry is set aside, even though it is last in the file, and the 18:50 capture is used. When
+  any capture is set aside, the scorer prints, for each rule, how many bets had captures set aside, how many
+  captures, and which games; `--list-excluded` prints each, as for a refused capture. When none is, the report is
+  as it was.
+* **Examples.** For a listing whose kickoff is 19:00 UTC: a close captured at 18:50 is used; one captured at 18:58
+  or 18:40 (exactly 2 or 20 minutes before) is used; one captured at 18:39 (21 minutes before) is not; one captured
+  at 18:59 or after kickoff is not. A game moved earlier, from 19:00 on the entry row to 16:00 in the schedule: a
+  close captured at 18:50 is not used (the game was in play), and one captured at 15:50 is. A game moved later on
+  game day, from 16:00 on the entry row to 21:00 in the schedule, with a row logged at 15:00 that shows 21:00: the
+  listing's kickoff is 21:00, so the true close, captured at 20:50, is used, and one captured at 15:50 for the old
+  kickoff is set aside. If instead the schedule gives 16:00 (the game was played then) and the row that shows
+  21:00 was logged at 16:30, that row doesn't count (it was logged after the schedule's kickoff), and a capture at
+  20:50 is not used. The audit's postponed game: the
+  close captured on Oct 10 is not the Oct 31 listing's close, and a close captured Oct 31 at 18:50 is, wherever it
+  sits in the file.
+* **Known limits, stated up front.**
+  * The capture time college football records is when the feed's reply arrived, a few seconds after the run's
+    clock found the slot due. The runs are 15 minutes apart, so unless the Mac missed a run, a slot's first call is
+    more than 5 minutes before kickoff, and only a retry can fall in the last 2 minutes; a call whose reply lands a
+    few seconds inside them is refused, or set aside when the slot's earlier capture is inside the window, and
+    either way counted and named.
+  * A game moved later, by less than a day, with no row of its listing logged after the move: the listing's
+    kickoff is still the earlier one its rows show, so a close captured for that earlier kickoff is used, and one
+    captured just before the new kickoff is set aside, counted and named. That close is a price from before the
+    kickoff the listing was logged for: never in play (it is at least 2 minutes before the schedule's kickoff too)
+    and never another listing's. It is the last price before a kickoff that was then moved, not the price just
+    before the game was played. The later-quote close (amendment 4, section 6) is unaffected, and once any row of
+    the listing is logged after the move, the true close is used.
+  * An alternative the hub may choose at registration instead: measure the window from the kickoff in the schedule
+    whenever the schedule has one (from the listing's last row only when it has none). That grades a game moved
+    later on its true close even with no row after the move. Its cost on college football: the schedule shows a
+    placeholder kickoff at 00:00 Eastern for a game whose time is not yet set (draft pull request 86), and a
+    placeholder that is still in the schedule would then refuse every genuine close captured for the real kickoff.
+    This draft's reading takes the listing's kickoff from the same "before kickoff" bound that decides which rows
+    count, so however pull request 86, once registered, reads a placeholder for that bound applies to the captured
+    close too. This draft keeps the brief's reading, the earlier of the two.
+* **Nothing else changes:** the entry, the later-quote close, which rows count, void and pending bets, the 20-close
+  limit (a refused close is a missing one), the interval, the horizons and the decision record.
+
+### 2. The test's end is judged on the schedule's kickoff as well as the entry row's
+
+* **What went wrong.** The scorer judged the test's end on the kickoff on the entry row (`start_utc`) alone. The
+  audit's case: a Rule HT game whose entry row gives a kickoff of Jan 31, 2028, 23:00 UTC, and whose final schedule
+  gives Feb 1, 2028, 20:00 UTC. That is 21 hours later, so the bet is not void, and it was settled and printed in
+  the FINAL Rule HT decision (record 1–0–0, STAY ON PAPER, with `--now 2028-02-02`). Amendment 4, section 4 says a
+  game dated after the test's end never counts.
+* **The reading.** A ledger row counts only if the kickoff on the row and the game's kickoff in the schedule are
+  both before Feb 1, 2028, 00:00 UTC. A row either of whose kickoffs is on or after it is excluded as "after the
+  2027 season", counted and listed like any other excluded row. This applies to both rules.
+* **With no kickoff in the schedule** (the game has no schedule row, or the schedule has no kickoff for it), the
+  row's own kickoff decides, as before. Amendment 4, section 10 allows such a schedule, and the scorer already says
+  when its schedule has no kickoff times.
+* **Unchanged, stated up front.** This reads only the test's end. The test's start (Oct 1, 2026, and Rule HT's
+  2026 Week 6, Oct 7, 00:00 UTC) and Rule B's horizon (the later of Dec 12, 2026 and the 40th settled signal's
+  kickoff) are still judged on the kickoff on the entry row, as the scorer has done since amendment 3: a game moved
+  across one of them by less than a day falls on the side its entry row gives. The owner or the hub can read them
+  the same way by a dated amendment before the first outcome it would affect.
+
+### 3. Variants and records
+
+* **Variants.** This repairs how two registered rules are applied, not a betting rule: 0 variants.
+* **Tests.** `tests/test_close_listing.py` runs the audit's two cases (each fails on the scorer as it was on `main`
+  on Sep 29, commit 30444ec, and passes now), a close captured inside the window (used, at both ends), one 21
+  minutes before kickoff and one inside the last 2 minutes (not used), one captured for the earlier listing of a
+  postponed game (not used for the later listing, also after rows on the new date), a game moved later on game day
+  (its true close used once a row shows the new kickoff; without one, the declared limit, with the other capture
+  set aside and named), a row logged after the real kickoff (it never sets the listing's kickoff, so an in-play
+  capture is refused), a retry inside the last 2 minutes (set aside, counted and listed), and the committed 2025
+  rehearsal ledger (`output/tables/rehearsal_2025.csv`), whose printed report is unchanged byte for byte: with no
+  captured closes, it is the committed `output/rehearsal_2025.log` except its record line (a `--now` run is a
+  preview); with a made-up capture for every game, it changes only where a capture falls outside the window, and
+  every such game is named.
+  All inputs are synthetic or 2025; no 2026 price or result is read.
+* **The note for `STRATEGY.md`** (Rule B's and Rule HT's "Decision" rows, dated on registration): *Amendment 6:* a
+  captured close counts only for the listing it was captured for, 2 to 20 minutes before that listing's kickoff,
+  else it is missing; a game whose kickoff in the schedule is on or after Feb 1, 2028 never counts.
+
+### What this amendment replaces
+
+Each earlier sentence below is quoted as registered; the section of this amendment named beside it applies
+instead.
+
+* Amendment 2: "`score_forward.py` reports CLV against that captured close, next to the primary measure." A close
+  counts only when it was captured 2 to 20 minutes before the kickoff of the listing graded (section 1).
+* Amendment 2: "It also reports how many bets have no captured close." A bet whose game's captured close falls
+  outside that window has none, and the scorer also says how many were refused, and which (section 1).
+* Amendment 4, section 6: "If there is none, the close captured by amendment 2 is used." It is the close captured
+  for the entry's own listing, inside the window; otherwise the bet has no primary close (section 1).
+* Amendment 3, section 5: "logged before kickoff, inside the test window". Inside the test window now means that the
+  kickoff on the row and the kickoff in the schedule are both before Feb 1, 2028 (section 2).
+* Amendment 4, section 4: "A game dated after a test's end (Feb 1, 2028) never counts, whatever season label it
+  carries." A game is dated after the test's end when the kickoff on its row or its kickoff in the schedule is on or
+  after Feb 1, 2028; with no kickoff in the schedule, the row's alone (section 2).
+
+Variants under forward test: still **2**. This amendment tests nothing and leaves the running variant count
+unchanged: on the day it was written it is **288**, so the multiple-testing bar is p < 0.000174 (`STATUS.md`); the
+hub restates the count on the day of registration.
+
+## Amendment 7 (DRAFT, not registered: written 2026-09-30 Pacific for the hub to register, before Rule HT's first eligible game on Oct 6, 2026, 5:00 PM Pacific; no Rule HT signal logged; Rule B's forward test began Oct 1, so Rule B games may already have been played at registration)
 
 **DRAFT.** This text is not in force. The hub registers it before Oct 6, 2026, 5:00 PM Pacific, by: replacing this
 paragraph and the heading's "DRAFT, not registered" with the date of registration; re-checking the ledger counts in
@@ -651,26 +797,30 @@ section 4 on the nightly copy current that day (counts only, no price or result)
 signals were logged by then and that none is affected, from the scorer's count of ledger games whose schedule
 kickoff is the placeholder (section 2), which must show 0 completed games; filling in the variant count at the end;
 and adding the notes in section 5 to `STRATEGY.md`, dated. Until then the board, the alert and the scorer on `main`
-behave as amendments 1 to 5 say.
+behave as amendments 1 to 6 say. This draft was written as amendment 6; amendment 6 was then registered for
+the captured close and the test's end (pull request 90), so this is amendment 7, and "amendment 6" below means the
+registered one.
 
 Issue #69, found while building the dashboard (Sep 29): cfbfastR gives a game whose kickoff time isn't set yet a
 placeholder of midnight Eastern on its date, and the board took that placeholder as Rule HT's kickoff. This amendment
-reads Rule HT for such a game: **it is not eligible until its kickoff time is set.** For a game logged with a set time
-and without the time-not-set flag nothing changes: no trigger, threshold, price cap, stake or metric changes, and
-every such game that would have signalled before still signals. Rule B's trigger doesn't change. One reading applies
-to the grading of both rules: when the schedule the scorer reads shows the placeholder, "before kickoff" is bounded by
-the row's own kickoff and the placeholder + 30 hours instead of by the placeholder (section 2). It changes nothing for
-a game whose schedule shows a time. CFB Rule B's forward test began Oct 1, 2026, so by registration Rule B games may
-have been played; the reading affects one only if the schedule shows the placeholder for it, which the hub checks
-(above). The rules version stays `cfb-v3-2026-09-28`: the ledger's columns don't change, and a row logged under this
-amendment is told apart by its Rule HT status `time_tbd`, which no earlier row carries. Only `cfbweather/board.py`
-(one status), `scripts/alerts.py` (one notice) and `scripts/score_forward.py` (which rows are Rule HT quotes, and the
-before-kickoff bound for a placeholder in the schedule) change; none of the files shared with nfl-weather does. Where
-this amendment and any earlier text differ, this one applies; the last section lists every earlier sentence it
-changes, and the related ones it leaves as they are. To be registered by the hub on the owner's standing instruction
-of September 29, 2026 (the hub decides questions of how the tests are graded and reports them; money, and any rule's
-trigger, gate or price cap, stay the owner's). The owner can change any reading here by a dated amendment made before
-the first outcome it would affect.
+reads Rule HT for such a game: **it is not eligible until its kickoff time is set.** For a game logged with a set
+time and without the time-not-set flag nothing changes: no trigger, threshold, price cap, stake or metric changes,
+and every such game that would have signalled before still signals. Rule B's trigger doesn't change. One reading
+applies to the grading of both rules: when the schedule the scorer reads shows the placeholder, "before kickoff" is
+bounded by the row's own kickoff and the placeholder + 30 hours instead of by the placeholder (section 2). Amendment
+6 measures a listing's captured close from that same bound, so the reading applies there too (section 2, "The
+captured close"). It changes nothing for a game whose schedule shows a time. CFB Rule B's forward test began Oct 1,
+2026, so by registration Rule B games may have been played; the reading affects one only if the schedule shows the
+placeholder for it, which the hub checks (above). The rules version stays `cfb-v3-2026-09-28`: the ledger's columns
+don't change, and a row logged under this amendment is told apart by its Rule HT status `time_tbd`, which no earlier
+row carries. Only `cfbweather/board.py` (one status), `scripts/alerts.py` (one notice) and `scripts/score_forward.py`
+(which rows are Rule HT quotes, and the before-kickoff bound for a placeholder in the schedule, which amendment 6
+also uses for the captured close) change; none of the files shared with nfl-weather does. Where this amendment and
+any earlier text differ, this one applies; the last section lists every earlier sentence it changes, and the related
+ones it leaves as they are. To be registered by the hub on the owner's standing instruction of September 29, 2026
+(the hub decides questions of how the tests are graded and reports them; money, and any rule's trigger, gate or price
+cap, stay the owner's). The owner can change any reading here by a dated amendment made before the first outcome it
+would affect.
 
 ### 1. What went wrong
 
@@ -718,19 +868,35 @@ the first outcome it would affect.
   ("its last quote was logged with no kickoff time set, and would have signalled", with game ids); `--list-excluded`
   prints the rows. None is graded.
 * **A placeholder in the schedule the scorer reads.** Here a placeholder is only a schedule kickoff at exactly 00:00
-  Eastern, whether or not the flag is set. A flag on any other time leaves that time as the schedule's kickoff: it
-  is still the best record of when the game began, and dropping it would let a row logged after a kickoff that moved
+  Eastern, whether or not the flag is set. A flag on any other time leaves that time as the schedule's kickoff: it is
+  still the best record of when the game began, and dropping it would let a row logged after a kickoff that moved
   earlier count, or let a game moved by days go unvoided. (All 320 flagged 2026 games and Utah State–Robert Morris
-  sit at 00:00 Eastern.) A placeholder changes one thing, "before kickoff" (amendment 4, section 11): for that game
-  a row counts only if it was logged before its own kickoff and before the placeholder + 30 hours (about 06:00
-  Eastern the day after the game's date), instead of before the placeholder. Everything else keeps the placeholder
-  as the schedule's kickoff: a bet is void when its entry row's kickoff is more than 24 hours from it, the listing
-  graded is the one nearest it (amendment 4, sections 1 and 10), and the game day is its Eastern date (amendment 5,
-  section 1). So a game postponed to a later date that has no time set yet, or moved to the day before, is void as
-  before, and a row logged after the placeholder + 30 hours never counts. This reading is the scorer's, for both
-  rules; for a game whose schedule shows a time nothing changes. The scorer always prints how many ledger games
-  have the placeholder in the schedule, split into completed games and games not yet played, with their game ids,
-  and `--list-excluded` lists them.
+  sit at 00:00 Eastern.) A placeholder changes one thing, "before kickoff" (amendment 4, section 11): for that game a
+  row counts only if it was logged before its own kickoff and before the placeholder + 30 hours (about 06:00 Eastern
+  the day after the game's date), instead of before the placeholder. Everything else keeps the placeholder as the
+  schedule's kickoff: a bet is void when its entry row's kickoff is more than 24 hours from it, the listing graded is
+  the one nearest it (amendment 4, sections 1 and 10), the game day is its Eastern date (amendment 5, section 1), and
+  the test's end is judged on it as well as on the row's kickoff (amendment 6, section 2; a placeholder is never
+  later than a real kickoff on the same date, and the row's own kickoff is checked too). So a game postponed to a
+  later date that has no time set yet, or moved to the day before, is void as before, and a row logged after the
+  placeholder + 30 hours never counts. This reading is the scorer's, for both rules; for a game whose schedule shows
+  a time nothing changes. The scorer always prints how many ledger games have the placeholder in the schedule, split
+  into completed games and games not yet played, with their game ids, and `--list-excluded` lists them.
+* **The captured close (a reading of amendment 6, section 1).** Amendment 6 counts a captured close for a listing
+  only when it was captured 2 to 20 minutes before "the earlier of the kickoff on the listing's last row logged
+  before kickoff and the kickoff in the schedule: the bound amendment 4, section 11 gives "before kickoff"". When
+  the schedule shows the placeholder, that kickoff is the bound this section gives instead: the kickoff on the
+  listing's last row logged before kickoff, and never later than the placeholder + 30 hours. Read against the
+  placeholder itself, the window would be 11:40 to 11:58 PM Eastern the evening before the game's date, and every
+  genuine close captured on game day would be refused; amendment 6 names that cost and says that however this
+  amendment reads the placeholder for "before kickoff" applies to the captured close too. For example, a game dated
+  Saturday, Oct 17, 2026, whose schedule shows the placeholder (04:00 UTC, Oct 17) and whose last row logged before
+  kickoff shows 19:30 UTC: a close captured at 19:20 UTC is used; one captured at 03:50 UTC (11:50 PM Eastern the
+  evening before) is refused, counted and named; so is one captured at 19:29 or later (the last 2 minutes, or in play
+  by that row's kickoff). As amendment 6 says, a capture for another listing of the game is not this listing's
+  close, and no row logged after the placeholder + 30 hours counts, so the listing's kickoff is never later than
+  that. Nothing else in amendment 6 changes. The gap in section 3 applies here too: where the schedule shows only the
+  placeholder, the row's kickoff is the only record of when the game began.
 * **A time set late.** Every alert run refreshes the schedule, and each ledger row carries what the schedule said
   when the row was logged. A game whose time is set is eligible from the first run that logs it with that time,
   and its alert fires on the last scheduled run before the real kickoff, like any other game's. The placeholder
@@ -760,8 +926,10 @@ the first outcome it would affect.
   the schedule shows only the placeholder, nothing in it says when the game began, so the bound is the row's own
   kickoff, and never later than the placeholder + 30 hours. **The one gap**, where main is safer: a game whose
   schedule shows the placeholder after it was played (once in 2021–25, section 4) and that kicked off before a counted
-  row's own kickoff could have a row logged after the real kickoff count, as Rule HT's entry or Rule B's close. Main
-  has no lookahead there, because it drops every row logged after 00:00 Eastern; this reading trades main's common
+  row's own kickoff could have a row logged after the real kickoff count, as Rule HT's entry or Rule B's close, or have
+  a close captured after the real kickoff used (amendment 6 measures its window from the same bound). Main has no
+  lookahead there, because it drops every row logged after 00:00 Eastern (and refuses every capture but one from the
+  evening before); this reading trades main's common
   failure (a stale pre-game entry, section 1) for lookahead in this rare case. So the scorer lists every completed
   game with the placeholder in the schedule by game id (section 2), and the hub checks each one by hand, against when
   the game really kicked off, before any decision is made.
@@ -779,7 +947,8 @@ the first outcome it would affect.
   is chosen among every listing that signalled or would have (section 2), so every bet under it is one the same rows
   would make without it, graded on the same listing. The schedule reading only adds rows that main dropped as logged
   after the placeholder (for Rule HT a later timed quote, which can become the entry; for Rule B a game-day signal or
-  close), and it voids exactly what the placeholder voided before.
+  close) and, through amendment 6's window, the game-day captured close it refused, and it voids exactly what the
+  placeholder voided before.
 * **Known limits.**
   * A game whose flag stays set after it has a real time is not eligible either (its rows carry the flag). The
     committed tables show this once in 2016–25 (Oregon–UCLA, Nov 21, 2020, flagged with a 12:30 PM Pacific kickoff;
@@ -828,23 +997,33 @@ the first outcome it would affect.
 
 **Variants.** This changes how a game is read, not a betting rule: 0 variants.
 
+**Tests.** `tests/test_amendment7.py` runs the board's gate, the notice, and the scorer on games whose time is set
+late, never set, or unset again, and on a placeholder in the schedule the scorer reads. For the captured close
+(section 2): a placeholder game's close captured 10 minutes before the kickoff its rows carry is used (Rule B's
+primary close, Rule HT's secondary); one captured 10 minutes before the placeholder, the evening before, is refused
+or set aside; one in the last 2 minutes, at or after the row's kickoff, or 21 minutes before is refused; a postponed
+game's later listing never takes the close captured for the earlier one; and no capture after the placeholder + 30
+hours is used. The captured-close cases fail when the window is measured from the placeholder. All inputs are
+synthetic; no 2026 price or result is read.
+
 ### 5. Notes for `STRATEGY.md`
 
 The hub adds these notes at registration, each dated with the date of registration (DATE below), at the end of the
-row named, as amendments 3 to 5 did.
+row named, as amendments 3 to 6 did.
 
-* Rule HT, "Trigger": "*Amendment 6 (DATE):* a game with no kickoff time set (cfbfastR's time-not-set flag, or its
+* Rule HT, "Trigger": "*Amendment 7 (DATE):* a game with no kickoff time set (cfbfastR's time-not-set flag, or its
   placeholder kickoff of 00:00 Eastern) is not eligible until its time is set."
-* Rule HT, "Entry": "*Amendment 6 (DATE):* the entry is the listing's last quote, when it was logged with a kickoff
+* Rule HT, "Entry": "*Amendment 7 (DATE):* the entry is the listing's last quote, when it was logged with a kickoff
   time set; a listing whose last quote was logged with no time set is not a bet (the scorer counts it), and a game
   with no time set gets no alert, only a notice on the last scheduled run before its placeholder that it isn't
   eligible."
-* Rule HT, "Decision": "*Amendment 6 (DATE):* the entry is the last quote with a valid under price, when it was logged
+* Rule HT, "Decision": "*Amendment 7 (DATE):* the entry is the last quote with a valid under price, when it was logged
   with a kickoff time set; when the schedule shows cfbfastR's placeholder (00:00 Eastern), before kickoff is before
-  the row's kickoff and the placeholder + 30 hours."
-* Rule B, "Decision": "*Amendment 6 (DATE):* when the schedule shows cfbfastR's placeholder (00:00 Eastern), before
-  kickoff (11) is before the row's kickoff and the placeholder + 30 hours; the check for moved games (1), the listing
-  graded (10) and the game day still use the placeholder."
+  the row's kickoff and the placeholder + 30 hours, and a listing's captured close is measured from that kickoff."
+* Rule B, "Decision": "*Amendment 7 (DATE):* when the schedule shows cfbfastR's placeholder (00:00 Eastern), before
+  kickoff (11) is before the row's kickoff and the placeholder + 30 hours, and a listing's captured close is measured
+  from that kickoff (amendment 6); the check for moved games (1), the listing graded (10), the game day and the test's
+  end still use the placeholder."
 
 ### What this amendment replaces
 
@@ -890,6 +1069,17 @@ instead.
   the schedule's kickoff is cfbfastR's placeholder (exactly 00:00 Eastern), before kickoff is before the earlier of
   the row's kickoff and the placeholder + 30 hours (section 2). A schedule kickoff at any other time, flagged or not,
   is read as before.
+* Amendment 6, section 1: "That kickoff is the earlier of the kickoff on the listing's last row logged before kickoff
+  and the kickoff in the schedule: the bound amendment 4, section 11 gives "before kickoff"." When the schedule's
+  kickoff is the placeholder, that kickoff is the earlier of the kickoff on the listing's last row logged before
+  kickoff and the placeholder + 30 hours: the bound section 2 gives "before kickoff" (section 2, "The captured
+  close"). Amendment 6, section 1: "Every row that counts was logged before the earlier of its own kickoff and the
+  schedule's (amendment 4, section 11), so that row was logged before the game's kickoff in the schedule, and the
+  kickoff it sets is never later than the schedule's; a row logged after the real kickoff never counts, so it can't
+  set the listing's kickoff." It stands where the schedule shows a time. Where it shows the placeholder, every row
+  that counts was logged before its own kickoff and before the placeholder + 30 hours, and the kickoff it sets is
+  never later than either; whether a row was logged after the real kickoff is then known only from the row's own
+  kickoff (section 3, the one gap).
 
 These related sentences are **unchanged**: the placeholder is still the schedule's kickoff for each of them
 (section 2).
@@ -906,6 +1096,14 @@ These related sentences are **unchanged**: the placeholder is still the schedule
   for a game, as amendment 4, section 10 allows, the kickoff on its entry row)".
 * `STRATEGY.md`, Rule HT, "Decision", the note of amendment 4: "a postponed game is graded on the listing that
   matches its actual kickoff".
+* Amendment 6, section 2: "A ledger row counts only if the kickoff on the row and the game's kickoff in the schedule
+  are both before Feb 1, 2028, 00:00 UTC." The placeholder is the schedule's kickoff here too.
+* Amendment 6, section 1: "This draft's reading takes the listing's kickoff from the same "before kickoff" bound that
+  decides which rows count, so however pull request 86, once registered, reads a placeholder for that bound applies
+  to the captured close too." This amendment is pull request 86, and that is how it applies (section 2).
+  `STRATEGY.md`, Rule B's and Rule HT's "Decision", the note of amendment 6: "a captured close counts only for the
+  listing it was captured for, 2 to 20 minutes before that listing's kickoff, else it is missing". For a game whose
+  schedule shows the placeholder, that listing's kickoff is the one section 2 gives.
 
 Variants under forward test: still **2**. This amendment tests nothing and leaves the running variant count
 unchanged: on the day of registration it is **N**, so the multiple-testing bar is p < 0.05 / N (the hub fills in N

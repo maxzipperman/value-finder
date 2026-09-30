@@ -8,7 +8,7 @@ ESPN), and each game's status under the two pre-registered rules (STRATEGY.md):
   (amendment 3).
 * Rule HT (high-total under, amendment 1): a posted total >= the prior season's mean
   closing total + 10, under at -115 or better. Graded at the last quote before kickoff.
-  Amendment 6: a game with no kickoff time set (cfbfastR's midnight placeholder) is not
+  Amendment 7: a game with no kickoff time set (cfbfastR's midnight placeholder) is not
   eligible until its time is set; such a game that would otherwise signal is "time_tbd"."""
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ def is_last_run_before(kick_utc, now_utc=None, tz=None):
 
 
 def no_kickoff_time(tbd, start_utc):
-    """Amendment 6: True where the game has no kickoff time set. cfbfastR gives such a game a placeholder of
+    """Amendment 7: True where the game has no kickoff time set. cfbfastR gives such a game a placeholder of
     midnight Eastern on its date and flags it (start_time_tbd, the flag behind Rule B's "time_tbd"). Either one
     means no time: the flag, or a kickoff at exactly 00:00:00 Eastern. (A real midnight kickoff, a Hawaii night
     game, is listed at 23:59; no FBS game in 2016-25 kicked off at 00:00 Eastern without the flag. That is a habit of
@@ -235,7 +235,7 @@ def compute(days=8, refresh=True, prices=True):
     up["rule_b"] = up.apply(rule_b_status, axis=1)
     up["ht_threshold"] = pd.to_numeric(up.season).astype(int).map(ht_threshold)
     ht = up.apply(rule_ht_status, axis=1)
-    # Amendment 6: no kickoff time, no Rule HT. A game that would signal but whose time isn't set is "time_tbd";
+    # Amendment 7: no kickoff time, no Rule HT. A game that would signal but whose time isn't set is "time_tbd";
     # it becomes eligible from the first run that logs it with a time.
     ht = ht.where(~(no_kickoff_time(up.tbd, up.start_utc).to_numpy() & ht.eq("SIGNAL")), "time_tbd")
     up["rule_ht"] = np.where(up.start_utc >= HT_FIRST_KICK, ht, "before_window")

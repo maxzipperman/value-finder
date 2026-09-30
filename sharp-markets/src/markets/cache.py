@@ -85,16 +85,18 @@ class RawCache:
 
     def get_or_fetch(self, *, sport: str, source: str, data_date: str, url: str, params: dict,
                      fetch: Callable[[], Fetched], key_extra: dict | None = None,
-                     cache_statuses: tuple[int, ...] = (200, 404)) -> dict:
+                     cache_statuses: tuple[int, ...] = (200, 404), refresh: bool = False) -> dict:
         """Return the stored record (dict) for this request, fetching and persisting it on a miss.
 
         `key_extra` is folded into the cache key and stored params but never sent to the server
         (e.g. an `as_of` label for listings, or the market ticker for path-parameter endpoints).
+        `refresh` fetches even on a hit; the new answer replaces the stored one only if its status is in
+        `cache_statuses` (the bulk puller's --retry-404 passes (200,), so a 404 is replaced only by a 200).
         """
         params = {**params, **(key_extra or {})}
         key = cache_key(source, url, params)
         dated = data_date if source in self.dated_sources else None
-        hit = self._source_index(sport, source, dated).get(key)
+        hit = None if refresh else self._source_index(sport, source, dated).get(key)
         if hit is not None:
             self.stats[f"hit:{source}"] += 1
             return read_record(hit)
@@ -134,6 +136,11 @@ def write_record(path: Path, record: dict) -> None:
 
 def read_record(path: Path) -> dict:
     return pq.read_table(path).to_pylist()[0]
+
+
+def read_status(path: Path) -> int:
+    """A stored record's HTTP status alone (faster than read_record: the body isn't read)."""
+    return pq.read_table(path, columns=["http_status"]).column(0)[0].as_py()
 
 
 def body_json(record: dict):

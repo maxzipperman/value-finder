@@ -1,0 +1,9845 @@
+{
+ "format": 1,
+ "id": "wind-rule-units",
+ "title": "At an assumed −110 both replays end ahead: +95.0 units after 1,284 college football signals and +45.4 after 607 NFL signals, with losing stretches of up to 16.5 and 19.0 units",
+ "name": "Units won at an assumed −110, signal by signal, in each sport's forecast replay",
+ "shows": "Each line adds the units won or lost, one unit a bet, as each signal's game is played, in kickoff order; a push adds nothing.",
+ "not_shows": "These are not units anyone could have won: every bet is at the consensus close at an assumed −110, while the live rule bets 1 to 3 days early at one book's price, under a −115 cap.",
+ "sample": "1,284 college football signals (2006–25) and 607 NFL signals (2004–25)",
+ "n": 1891,
+ "bar": {
+  "tests": [
+   {
+    "label": "College football, all signals",
+    "p": 0.0039,
+    "p_words": "one-sided p = 0.0028 (0.0039 grouped by game day)"
+   },
+   {
+    "label": "NFL, all signals",
+    "p": 0.0283,
+    "p_words": "one-sided p = 0.0283 (0.0211 grouped by game day)"
+   }
+  ],
+  "note": ""
+ },
+ "writeups": [
+  {
+   "path": "cfb-weather/README.md",
+   "section": "Forecast replay on NWS MOS, the full run: 2006–25",
+   "anchor": "forecast-replay-on-nws-mos-the-full-run-200625-issue-40-sep-29"
+  },
+  {
+   "path": "nfl-weather/README.md",
+   "section": "Forecast replay on NWS MOS, the full run: 2004–25",
+   "anchor": "forecast-replay-on-nws-mos-the-full-run-200425-issue-40-sep-29"
+  }
+ ],
+ "sources": [
+  {
+   "path": "cfb-weather/data/processed/mos_replay.parquet",
+   "blob": "63c24a2ffe904dc6c40ac51f8d47f39a0ef34869",
+   "commit": "89194c41a4b1e7a8c49530a4c1250a4f2bf9e6b7",
+   "changed": "2026-09-29"
+  },
+  {
+   "path": "cfb-weather/output/tables/mos_replay_seasons.csv",
+   "blob": "fdab955c9c0c1ebb48292a8e934f3cd616025ae0",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
+   "changed": "2026-09-29"
+  },
+  {
+   "path": "cfb-weather/output/tables/mos_replay_eras.csv",
+   "blob": "8115990874b9f9e405b8887ea4ae5b7a5dc25f51",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
+   "changed": "2026-09-29"
+  },
+  {
+   "path": "nfl-weather/data/processed/mos_replay.parquet",
+   "blob": "cfa75028c7d5566f7bd90d8fe1794311d039a7b7",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
+   "changed": "2026-09-29"
+  },
+  {
+   "path": "nfl-weather/output/tables/mos_replay_seasons.csv",
+   "blob": "042a52702843521269619d8ef4ab5283e409fdf3",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
+   "changed": "2026-09-29"
+  },
+  {
+   "path": "nfl-weather/output/tables/mos_replay_eras.csv",
+   "blob": "8de9db687c2b0e20dd56422198917b6650438081",
+   "commit": "abb6a043bd273603cd6903a32645ee9a528cb1df",
+   "changed": "2026-09-29"
+  }
+ ],
+ "date": "2026-09-29",
+ "built_by": "dashboard/tools/build_charts.py",
+ "plot": {
+  "layout": "columns",
+  "panels": [
+   {
+    "name": "",
+    "x": {
+     "kind": "time",
+     "label": "Kickoff date"
+    },
+    "y": {
+     "kind": "units",
+     "label": "Units won, cumulative",
+     "unit": " units",
+     "digits": 1,
+     "zero": true
+    },
+    "series": [
+     {
+      "id": "cfb",
+      "name": "College football (1,284 signals)",
+      "mark": "line",
+      "color": "c1",
+      "points": [
+       [
+        "2006-10-06",
+        -1.0,
+        "Louisville at Middle Tennessee, lost"
+       ],
+       [
+        "2006-10-07",
+        -2.0,
+        "Oklahoma State at Kansas State, lost"
+       ],
+       [
+        "2006-10-12",
+        -1.0909,
+        "Colorado State at Air Force, won"
+       ],
+       [
+        "2006-10-14",
+        -2.0909,
+        "Miami (OH) at Buffalo, lost"
+       ],
+       [
+        "2006-10-14",
+        -1.1818,
+        "Ohio State at Michigan State, won"
+       ],
+       [
+        "2006-10-20",
+        -0.2727,
+        "West Virginia at Connecticut, won"
+       ],
+       [
+        "2006-10-21",
+        0.6364,
+        "Texas at Nebraska, won"
+       ],
+       [
+        "2006-10-21",
+        -0.3636,
+        "Texas Tech at Iowa State, lost"
+       ],
+       [
+        "2006-10-21",
+        0.5455,
+        "Colorado at Oklahoma, won"
+       ],
+       [
+        "2006-10-21",
+        -0.4545,
+        "Texas A&M at Oklahoma State, lost"
+       ],
+       [
+        "2006-10-28",
+        -1.4545,
+        "Michigan State at Indiana, lost"
+       ],
+       [
+        "2006-10-28",
+        -0.5455,
+        "Northwestern at Michigan, won"
+       ],
+       [
+        "2006-10-28",
+        0.3636,
+        "Oklahoma at Missouri, won"
+       ],
+       [
+        "2006-10-28",
+        -0.6364,
+        "Illinois at Wisconsin, lost"
+       ],
+       [
+        "2006-10-28",
+        0.2727,
+        "Syracuse at Cincinnati, won"
+       ],
+       [
+        "2006-10-28",
+        1.1818,
+        "Penn State at Purdue, won"
+       ],
+       [
+        "2006-10-28",
+        2.0909,
+        "Northern Illinois at Iowa, won"
+       ],
+       [
+        "2006-10-28",
+        3.0,
+        "Buffalo at Boston College, won"
+       ],
+       [
+        "2006-10-28",
+        3.9091,
+        "Bowling Green at Temple, won"
+       ],
+       [
+        "2006-10-28",
+        4.8182,
+        "Ball State at Miami (OH), won"
+       ],
+       [
+        "2006-10-28",
+        5.7273,
+        "Minnesota at Ohio State, won"
+       ],
+       [
+        "2006-10-28",
+        6.6364,
+        "Eastern Michigan at Western Michigan, won"
+       ],
+       [
+        "2006-10-28",
+        5.6364,
+        "Memphis at Marshall, lost"
+       ],
+       [
+        "2006-10-28",
+        4.6364,
+        "Florida State at Maryland, lost"
+       ],
+       [
+        "2006-10-28",
+        3.6364,
+        "Akron at Toledo, lost"
+       ],
+       [
+        "2006-11-04",
+        2.6364,
+        "Baylor at Texas Tech, lost"
+       ],
+       [
+        "2006-11-11",
+        3.5455,
+        "Minnesota at Michigan State, won"
+       ],
+       [
+        "2006-11-11",
+        2.5455,
+        "Purdue at Illinois, lost"
+       ],
+       [
+        "2006-11-11",
+        3.4545,
+        "Boise State at San José State, won"
+       ],
+       [
+        "2006-11-18",
+        4.3636,
+        "Utah at Air Force, won"
+       ],
+       [
+        "2006-11-25",
+        5.2727,
+        "Oklahoma at Oklahoma State, won"
+       ],
+       [
+        "2006-12-02",
+        6.1818,
+        "Army at Navy, won"
+       ],
+       [
+        "2007-09-13",
+        7.0909,
+        "TCU at Air Force, won"
+       ],
+       [
+        "2007-09-15",
+        8.0,
+        "San José State at Stanford, won"
+       ],
+       [
+        "2007-09-15",
+        8.9091,
+        "Florida State at Colorado, won"
+       ],
+       [
+        "2007-09-22",
+        9.8182,
+        "San José State at Utah State, won"
+       ],
+       [
+        "2007-09-22",
+        8.8182,
+        "Oregon at Stanford, lost"
+       ],
+       [
+        "2007-09-29",
+        9.7273,
+        "Oklahoma at Colorado, won"
+       ],
+       [
+        "2007-09-29",
+        10.6364,
+        "Iowa State at Nebraska, won"
+       ],
+       [
+        "2007-09-29",
+        9.6364,
+        "Utah State at Utah, lost"
+       ],
+       [
+        "2007-09-29",
+        10.5455,
+        "Alabama at Florida State, won"
+       ],
+       [
+        "2007-09-29",
+        9.5455,
+        "Florida International at Middle Tennessee, lost"
+       ],
+       [
+        "2007-09-29",
+        10.4545,
+        "Arizona State at Stanford, won"
+       ],
+       [
+        "2007-10-06",
+        11.3636,
+        "Kansas at Kansas State, won"
+       ],
+       [
+        "2007-10-06",
+        12.2727,
+        "Iowa State at Texas Tech, won"
+       ],
+       [
+        "2007-10-06",
+        12.2727,
+        "Virginia at Middle Tennessee, push"
+       ],
+       [
+        "2007-10-06",
+        11.2727,
+        "UNLV at Air Force, lost"
+       ],
+       [
+        "2007-10-13",
+        10.2727,
+        "Toledo at Buffalo, lost"
+       ],
+       [
+        "2007-10-13",
+        11.1818,
+        "Texas A&M at Texas Tech, won"
+       ],
+       [
+        "2007-10-13",
+        10.1818,
+        "Missouri at Oklahoma, lost"
+       ],
+       [
+        "2007-10-13",
+        9.1818,
+        "Colorado at Kansas State, lost"
+       ],
+       [
+        "2007-10-20",
+        10.0909,
+        "Miami (OH) at Temple, won"
+       ],
+       [
+        "2007-10-20",
+        11.0,
+        "Cincinnati at Pittsburgh, won"
+       ],
+       [
+        "2007-10-20",
+        11.9091,
+        "Ball State at Western Michigan, won"
+       ],
+       [
+        "2007-10-20",
+        12.8182,
+        "Texas A&M at Nebraska, won"
+       ],
+       [
+        "2007-10-20",
+        13.7273,
+        "Texas Tech at Missouri, won"
+       ],
+       [
+        "2007-10-20",
+        12.7273,
+        "Kansas State at Oklahoma State, lost"
+       ],
+       [
+        "2007-10-20",
+        11.7273,
+        "Tulane at SMU, lost"
+       ],
+       [
+        "2007-10-27",
+        12.6364,
+        "Ball State at Illinois, won"
+       ],
+       [
+        "2007-10-27",
+        11.6364,
+        "Michigan State at Iowa, lost"
+       ],
+       [
+        "2007-10-27",
+        12.5455,
+        "Northwestern at Purdue, won"
+       ],
+       [
+        "2007-10-27",
+        13.4545,
+        "Akron at Buffalo, won"
+       ],
+       [
+        "2007-10-27",
+        14.3636,
+        "Minnesota at Michigan, won"
+       ],
+       [
+        "2007-10-27",
+        15.2727,
+        "Western Michigan at Eastern Michigan, won"
+       ],
+       [
+        "2007-11-03",
+        14.2727,
+        "Rutgers at Connecticut, lost"
+       ],
+       [
+        "2007-11-03",
+        13.2727,
+        "Florida State at Boston College, lost"
+       ],
+       [
+        "2007-11-10",
+        12.2727,
+        "Colorado at Iowa State, lost"
+       ],
+       [
+        "2007-11-10",
+        11.2727,
+        "Kansas State at Nebraska, lost"
+       ],
+       [
+        "2007-11-10",
+        12.1818,
+        "Stanford at Washington State, won"
+       ],
+       [
+        "2008-09-13",
+        13.0909,
+        "Air Force at Houston, won"
+       ],
+       [
+        "2008-09-30",
+        14.0,
+        "Florida Atlantic at Middle Tennessee, won"
+       ],
+       [
+        "2008-10-04",
+        13.0,
+        "Texas A&M at Oklahoma State, lost"
+       ],
+       [
+        "2008-10-04",
+        12.0,
+        "Washington at Arizona, lost"
+       ],
+       [
+        "2008-10-11",
+        12.9091,
+        "Colorado at Kansas, won"
+       ],
+       [
+        "2008-10-11",
+        11.9091,
+        "Utah at Wyoming, lost"
+       ],
+       [
+        "2008-10-11",
+        10.9091,
+        "New Mexico State at Nevada, lost"
+       ],
+       [
+        "2008-10-21",
+        11.8182,
+        "Ohio at Temple, won"
+       ],
+       [
+        "2008-10-23",
+        12.7273,
+        "New Mexico at Air Force, won"
+       ],
+       [
+        "2008-10-25",
+        13.6364,
+        "Eastern Michigan at Ball State, won"
+       ],
+       [
+        "2008-10-25",
+        14.5455,
+        "Minnesota at Purdue, won"
+       ],
+       [
+        "2008-10-25",
+        15.4545,
+        "Baylor at Nebraska, won"
+       ],
+       [
+        "2008-10-25",
+        16.3636,
+        "Louisiana Tech at Army, won"
+       ],
+       [
+        "2008-10-25",
+        15.3636,
+        "Michigan State at Michigan, lost"
+       ],
+       [
+        "2008-10-25",
+        14.3636,
+        "Rutgers at Pittsburgh, lost"
+       ],
+       [
+        "2008-10-25",
+        15.2727,
+        "Bowling Green at Northern Illinois, won"
+       ],
+       [
+        "2008-11-08",
+        16.1818,
+        "Purdue at Michigan State, won"
+       ],
+       [
+        "2008-11-08",
+        15.1818,
+        "Kansas at Nebraska, lost"
+       ],
+       [
+        "2008-11-08",
+        14.1818,
+        "Colorado State at Air Force, lost"
+       ],
+       [
+        "2008-11-15",
+        15.0909,
+        "Northwestern at Michigan, won"
+       ],
+       [
+        "2008-11-15",
+        14.0909,
+        "Ohio State at Illinois, lost"
+       ],
+       [
+        "2008-11-15",
+        15.0,
+        "Purdue at Iowa, won"
+       ],
+       [
+        "2008-11-15",
+        15.9091,
+        "Georgia at Auburn, won"
+       ],
+       [
+        "2008-11-15",
+        16.8182,
+        "Texas at Kansas, won"
+       ],
+       [
+        "2008-11-15",
+        17.7273,
+        "Toledo at Western Michigan, won"
+       ],
+       [
+        "2008-11-15",
+        18.6364,
+        "East Carolina at Southern Mississippi, won"
+       ],
+       [
+        "2008-11-15",
+        19.5455,
+        "Oklahoma State at Colorado, won"
+       ],
+       [
+        "2008-11-22",
+        18.5455,
+        "Eastern Michigan at Temple, lost"
+       ],
+       [
+        "2009-09-05",
+        17.5455,
+        "Stanford at Washington State, lost"
+       ],
+       [
+        "2009-09-05",
+        16.5455,
+        "Maryland at California, lost"
+       ],
+       [
+        "2009-09-12",
+        17.4545,
+        "Memphis at Middle Tennessee, won"
+       ],
+       [
+        "2009-09-12",
+        18.3636,
+        "Utah at San José State, won"
+       ],
+       [
+        "2009-09-19",
+        19.2727,
+        "SMU at Washington State, won"
+       ],
+       [
+        "2009-09-19",
+        18.2727,
+        "San José State at Stanford, lost"
+       ],
+       [
+        "2009-09-26",
+        17.2727,
+        "UNLV at Wyoming, lost"
+       ],
+       [
+        "2009-09-26",
+        18.1818,
+        "California at Oregon, won"
+       ],
+       [
+        "2009-09-26",
+        17.1818,
+        "Arizona at Oregon State, lost"
+       ],
+       [
+        "2009-09-26",
+        18.0909,
+        "Washington at Stanford, won"
+       ],
+       [
+        "2009-10-03",
+        17.0909,
+        "Alabama at Kentucky, lost"
+       ],
+       [
+        "2009-10-03",
+        18.0,
+        "UCLA at Stanford, won"
+       ],
+       [
+        "2009-10-03",
+        17.0,
+        "Florida State at Boston College, lost"
+       ],
+       [
+        "2009-10-03",
+        16.0,
+        "Penn State at Illinois, lost"
+       ],
+       [
+        "2009-10-03",
+        15.0,
+        "UNLV at Nevada, lost"
+       ],
+       [
+        "2009-10-10",
+        14.0,
+        "Purdue at Minnesota, lost"
+       ],
+       [
+        "2009-10-10",
+        14.9091,
+        "Vanderbilt at Army, won"
+       ],
+       [
+        "2009-10-10",
+        15.8182,
+        "Ball State at Temple, won"
+       ],
+       [
+        "2009-10-10",
+        16.7273,
+        "TCU at Air Force, won"
+       ],
+       [
+        "2009-10-24",
+        17.6364,
+        "Central Michigan at Bowling Green, won"
+       ],
+       [
+        "2009-10-24",
+        16.6364,
+        "Minnesota at Ohio State, lost"
+       ],
+       [
+        "2009-10-24",
+        15.6364,
+        "Ball State at Eastern Michigan, lost"
+       ],
+       [
+        "2009-10-24",
+        16.5455,
+        "Boston College at Notre Dame, won"
+       ],
+       [
+        "2009-10-24",
+        17.4545,
+        "Penn State at Michigan, won"
+       ],
+       [
+        "2009-10-24",
+        16.4545,
+        "Texas A&M at Texas Tech, lost"
+       ],
+       [
+        "2009-10-24",
+        17.3636,
+        "Arizona State at Stanford, won"
+       ],
+       [
+        "2009-10-31",
+        16.3636,
+        "Rutgers at Connecticut, lost"
+       ],
+       [
+        "2009-10-31",
+        17.2727,
+        "New Mexico State at Ohio State, won"
+       ],
+       [
+        "2009-10-31",
+        18.1818,
+        "Ohio at Ball State, won"
+       ],
+       [
+        "2009-10-31",
+        17.1818,
+        "Indiana at Iowa, lost"
+       ],
+       [
+        "2009-10-31",
+        18.0909,
+        "Akron at Northern Illinois, won"
+       ],
+       [
+        "2009-10-31",
+        19.0,
+        "Central Michigan at Boston College, won"
+       ],
+       [
+        "2009-10-31",
+        19.9091,
+        "Michigan at Illinois, won"
+       ],
+       [
+        "2009-11-05",
+        18.9091,
+        "Miami (OH) at Temple, lost"
+       ],
+       [
+        "2009-11-07",
+        17.9091,
+        "Western Michigan at Michigan State, lost"
+       ],
+       [
+        "2009-11-07",
+        18.8182,
+        "South Carolina at Arkansas, won"
+       ],
+       [
+        "2009-11-07",
+        19.7273,
+        "Eastern Kentucky at Kentucky, won"
+       ],
+       [
+        "2009-11-07",
+        18.7273,
+        "BYU at Wyoming, lost"
+       ],
+       [
+        "2009-11-14",
+        17.7273,
+        "UNLV at Air Force, lost"
+       ],
+       [
+        "2009-11-21",
+        18.6364,
+        "Oklahoma at Texas Tech, won"
+       ],
+       [
+        "2009-11-27",
+        19.5455,
+        "Toledo at Bowling Green, won"
+       ],
+       [
+        "2009-11-27",
+        20.4545,
+        "Eastern Michigan at Akron, won"
+       ],
+       [
+        "2009-11-28",
+        19.4545,
+        "Syracuse at Connecticut, lost"
+       ],
+       [
+        "2009-11-28",
+        20.3636,
+        "Oklahoma State at Oklahoma, won"
+       ],
+       [
+        "2009-11-28",
+        19.3636,
+        "New Mexico at TCU, lost"
+       ],
+       [
+        "2009-11-28",
+        20.2727,
+        "Tulane at SMU, won"
+       ],
+       [
+        "2009-11-28",
+        19.2727,
+        "Notre Dame at Stanford, lost"
+       ],
+       [
+        "2010-09-03",
+        18.2727,
+        "Villanova at Temple, lost"
+       ],
+       [
+        "2010-09-04",
+        17.2727,
+        "Western Michigan at Michigan State, lost"
+       ],
+       [
+        "2010-09-04",
+        18.1818,
+        "Purdue at Notre Dame, won"
+       ],
+       [
+        "2010-09-04",
+        19.0909,
+        "Connecticut at Michigan, won"
+       ],
+       [
+        "2010-09-04",
+        20.0,
+        "Syracuse at Akron, won"
+       ],
+       [
+        "2010-09-09",
+        20.9091,
+        "Central Michigan at Temple, won"
+       ],
+       [
+        "2010-09-18",
+        19.9091,
+        "Wake Forest at Stanford, lost"
+       ],
+       [
+        "2010-09-25",
+        20.8182,
+        "Virginia Tech at Boston College, won"
+       ],
+       [
+        "2010-09-25",
+        19.8182,
+        "Bowling Green at Michigan, lost"
+       ],
+       [
+        "2010-10-02",
+        20.7273,
+        "Ohio State at Illinois, won"
+       ],
+       [
+        "2010-10-02",
+        21.6364,
+        "Idaho at Western Michigan, won"
+       ],
+       [
+        "2010-10-16",
+        20.6364,
+        "Bowling Green at Temple, lost"
+       ],
+       [
+        "2010-10-16",
+        21.5455,
+        "Texas at Nebraska, won"
+       ],
+       [
+        "2010-10-23",
+        20.5455,
+        "Indiana at Illinois, lost"
+       ],
+       [
+        "2010-10-23",
+        19.5455,
+        "Ole Miss at Arkansas, lost"
+       ],
+       [
+        "2010-10-23",
+        18.5455,
+        "Maryland at Boston College, lost"
+       ],
+       [
+        "2010-10-23",
+        17.5455,
+        "Florida Atlantic at Arkansas State, lost"
+       ],
+       [
+        "2010-10-23",
+        16.5455,
+        "Nebraska at Oklahoma State, lost"
+       ],
+       [
+        "2010-10-30",
+        17.4545,
+        "Northwestern at Indiana, won"
+       ],
+       [
+        "2010-10-30",
+        18.3636,
+        "Clemson at Boston College, won"
+       ],
+       [
+        "2010-10-30",
+        17.3636,
+        "Purdue at Illinois, lost"
+       ],
+       [
+        "2010-10-30",
+        18.2727,
+        "Northern Illinois at Western Michigan, won"
+       ],
+       [
+        "2010-10-30",
+        19.1818,
+        "Tulsa at Notre Dame, won"
+       ],
+       [
+        "2010-10-30",
+        20.0909,
+        "Miami (OH) at Buffalo, won"
+       ],
+       [
+        "2010-11-06",
+        19.0909,
+        "Nebraska at Iowa State, lost"
+       ],
+       [
+        "2010-11-13",
+        18.0909,
+        "Minnesota at Illinois, lost"
+       ],
+       [
+        "2010-11-13",
+        17.0909,
+        "Kansas State at Missouri, lost"
+       ],
+       [
+        "2010-11-20",
+        18.0,
+        "Virginia at Boston College, won"
+       ],
+       [
+        "2010-11-20",
+        18.9091,
+        "UTEP at Tulsa, won"
+       ],
+       [
+        "2010-11-20",
+        19.8182,
+        "Colorado State at Wyoming, won"
+       ],
+       [
+        "2010-11-20",
+        20.7273,
+        "Marshall at SMU, won"
+       ],
+       [
+        "2010-11-20",
+        19.7273,
+        "Stanford at California, lost"
+       ],
+       [
+        "2010-11-20",
+        20.6364,
+        "New Mexico at BYU, won"
+       ],
+       [
+        "2010-11-25",
+        21.5455,
+        "Texas A&M at Texas, won"
+       ],
+       [
+        "2010-11-26",
+        20.5455,
+        "West Virginia at Pittsburgh, lost"
+       ],
+       [
+        "2010-11-26",
+        19.5455,
+        "Northern Illinois at Eastern Michigan, lost"
+       ],
+       [
+        "2010-11-26",
+        20.4545,
+        "Western Michigan at Bowling Green, won"
+       ],
+       [
+        "2010-11-26",
+        21.3636,
+        "Buffalo at Akron, won"
+       ],
+       [
+        "2010-11-26",
+        20.3636,
+        "Central Michigan at Toledo, lost"
+       ],
+       [
+        "2010-11-27",
+        21.2727,
+        "Cincinnati at Connecticut, won"
+       ],
+       [
+        "2010-11-27",
+        22.1818,
+        "Michigan State at Penn State, won"
+       ],
+       [
+        "2010-11-27",
+        23.0909,
+        "Washington at California, won"
+       ],
+       [
+        "2011-09-03",
+        22.0909,
+        "Kent State at Alabama, lost"
+       ],
+       [
+        "2011-09-03",
+        23.0,
+        "Louisiana Monroe at Florida State, won"
+       ],
+       [
+        "2011-09-03",
+        23.9091,
+        "Colorado State at New Mexico, won"
+       ],
+       [
+        "2011-09-03",
+        24.8182,
+        "Louisiana Tech at Southern Mississippi, won"
+       ],
+       [
+        "2011-09-04",
+        23.8182,
+        "SMU at Texas A&M, lost"
+       ],
+       [
+        "2011-09-17",
+        22.8182,
+        "Louisiana Monroe at TCU, lost"
+       ],
+       [
+        "2011-09-17",
+        21.8182,
+        "Miami (OH) at Minnesota, lost"
+       ],
+       [
+        "2011-09-17",
+        20.8182,
+        "Washington at Nebraska, lost"
+       ],
+       [
+        "2011-09-17",
+        19.8182,
+        "Texas Tech at New Mexico, lost"
+       ],
+       [
+        "2011-09-29",
+        18.8182,
+        "Houston at UTEP, lost"
+       ],
+       [
+        "2011-10-01",
+        19.7273,
+        "Mississippi State at Georgia, won"
+       ],
+       [
+        "2011-10-01",
+        18.7273,
+        "Minnesota at Michigan, lost"
+       ],
+       [
+        "2011-10-01",
+        19.6364,
+        "Cincinnati at Miami (OH), won"
+       ],
+       [
+        "2011-10-01",
+        18.6364,
+        "Akron at Eastern Michigan, lost"
+       ],
+       [
+        "2011-10-01",
+        17.6364,
+        "Georgia Tech at NC State, lost"
+       ],
+       [
+        "2011-10-01",
+        18.5455,
+        "Michigan State at Ohio State, won"
+       ],
+       [
+        "2011-10-01",
+        17.5455,
+        "UCLA at Stanford, lost"
+       ],
+       [
+        "2011-10-08",
+        16.5455,
+        "Kansas at Oklahoma State, lost"
+       ],
+       [
+        "2011-10-08",
+        17.4545,
+        "Missouri at Kansas State, won"
+       ],
+       [
+        "2011-10-08",
+        18.3636,
+        "Marshall at UCF, won"
+       ],
+       [
+        "2011-10-15",
+        19.2727,
+        "Michigan at Michigan State, won"
+       ],
+       [
+        "2011-10-15",
+        20.1818,
+        "Toledo at Bowling Green, won"
+       ],
+       [
+        "2011-10-15",
+        20.1818,
+        "Purdue at Penn State, push"
+       ],
+       [
+        "2011-10-15",
+        21.0909,
+        "Utah at Pittsburgh, won"
+       ],
+       [
+        "2011-10-15",
+        20.0909,
+        "Indiana at Wisconsin, lost"
+       ],
+       [
+        "2011-10-15",
+        21.0,
+        "Buffalo at Temple, won"
+       ],
+       [
+        "2011-10-15",
+        21.0,
+        "UNLV at Wyoming, push"
+       ],
+       [
+        "2011-10-15",
+        20.0,
+        "Eastern Michigan at Central Michigan, lost"
+       ],
+       [
+        "2011-10-15",
+        20.9091,
+        "South Florida at Connecticut, won"
+       ],
+       [
+        "2011-10-15",
+        21.8182,
+        "Ohio State at Illinois, won"
+       ],
+       [
+        "2011-10-15",
+        22.7273,
+        "Miami (OH) at Kent State, won"
+       ],
+       [
+        "2011-10-15",
+        21.7273,
+        "Western Michigan at Northern Illinois, lost"
+       ],
+       [
+        "2011-10-15",
+        22.6364,
+        "Western Kentucky at Florida Atlantic, won"
+       ],
+       [
+        "2011-10-29",
+        23.5455,
+        "NC State at Florida State, won"
+       ],
+       [
+        "2011-10-29",
+        24.4545,
+        "Virginia Tech at Duke, won"
+       ],
+       [
+        "2011-10-29",
+        23.4545,
+        "Wake Forest at North Carolina, lost"
+       ],
+       [
+        "2011-10-29",
+        22.4545,
+        "Baylor at Oklahoma State, lost"
+       ],
+       [
+        "2011-10-29",
+        21.4545,
+        "Oklahoma at Kansas State, lost"
+       ],
+       [
+        "2011-10-29",
+        22.3636,
+        "Memphis at UCF, won"
+       ],
+       [
+        "2011-10-29",
+        23.2727,
+        "Iowa State at Texas Tech, won"
+       ],
+       [
+        "2011-11-04",
+        22.2727,
+        "USC at Colorado, lost"
+       ],
+       [
+        "2011-11-05",
+        21.2727,
+        "Vanderbilt at Florida, lost"
+       ],
+       [
+        "2011-11-05",
+        22.1818,
+        "Kansas at Iowa State, won"
+       ],
+       [
+        "2011-11-05",
+        23.0909,
+        "TCU at Wyoming, won"
+       ],
+       [
+        "2011-11-05",
+        22.0909,
+        "Duke at Miami, lost"
+       ],
+       [
+        "2011-11-05",
+        21.0909,
+        "Tulane at SMU, lost"
+       ],
+       [
+        "2011-11-05",
+        22.0,
+        "Northwestern at Nebraska, won"
+       ],
+       [
+        "2011-11-05",
+        22.9091,
+        "Texas A&M at Oklahoma, won"
+       ],
+       [
+        "2011-11-05",
+        21.9091,
+        "Purdue at Wisconsin, lost"
+       ],
+       [
+        "2011-11-05",
+        22.8182,
+        "Army at Air Force, won"
+       ],
+       [
+        "2011-11-05",
+        21.8182,
+        "Arkansas State at Florida Atlantic, lost"
+       ],
+       [
+        "2011-11-05",
+        20.8182,
+        "Kansas State at Oklahoma State, lost"
+       ],
+       [
+        "2011-11-12",
+        21.7273,
+        "Texas at Missouri, won"
+       ],
+       [
+        "2011-11-12",
+        20.7273,
+        "Marshall at Tulsa, lost"
+       ],
+       [
+        "2011-11-12",
+        21.6364,
+        "Oklahoma State at Texas Tech, won"
+       ],
+       [
+        "2011-11-12",
+        22.5455,
+        "NC State at Boston College, won"
+       ],
+       [
+        "2011-11-12",
+        23.4545,
+        "Wyoming at Air Force, won"
+       ],
+       [
+        "2011-11-12",
+        24.3636,
+        "Baylor at Kansas, won"
+       ],
+       [
+        "2011-11-12",
+        23.3636,
+        "Arizona at Colorado, lost"
+       ],
+       [
+        "2011-11-12",
+        22.3636,
+        "San José State at Utah State, lost"
+       ],
+       [
+        "2011-11-12",
+        23.2727,
+        "Michigan at Illinois, won"
+       ],
+       [
+        "2011-11-12",
+        22.2727,
+        "Texas A&M at Kansas State, lost"
+       ],
+       [
+        "2011-11-12",
+        23.1818,
+        "Navy at SMU, won"
+       ],
+       [
+        "2011-11-12",
+        22.1818,
+        "UAB at Memphis, lost"
+       ],
+       [
+        "2011-11-12",
+        21.1818,
+        "Tennessee at Arkansas, lost"
+       ],
+       [
+        "2011-11-12",
+        20.1818,
+        "Oregon at Stanford, lost"
+       ],
+       [
+        "2011-11-12",
+        19.1818,
+        "Fresno State at New Mexico State, lost"
+       ],
+       [
+        "2011-11-12",
+        20.0909,
+        "East Carolina at UTEP, won"
+       ],
+       [
+        "2011-11-12",
+        21.0,
+        "UNLV at New Mexico, won"
+       ],
+       [
+        "2011-11-19",
+        20.0,
+        "Indiana at Michigan State, lost"
+       ],
+       [
+        "2011-11-19",
+        19.0,
+        "Nebraska at Michigan, lost"
+       ],
+       [
+        "2011-11-19",
+        18.0,
+        "Kansas at Texas A&M, lost"
+       ],
+       [
+        "2011-11-19",
+        18.9091,
+        "Wisconsin at Illinois, won"
+       ],
+       [
+        "2011-11-19",
+        17.9091,
+        "Akron at Buffalo, lost"
+       ],
+       [
+        "2011-11-19",
+        16.9091,
+        "Iowa at Purdue, lost"
+       ],
+       [
+        "2011-11-19",
+        17.8182,
+        "New Mexico at Wyoming, won"
+       ],
+       [
+        "2011-11-19",
+        16.8182,
+        "Tulsa at UTEP, lost"
+       ],
+       [
+        "2011-11-19",
+        17.7273,
+        "Texas Tech at Missouri, won"
+       ],
+       [
+        "2011-11-19",
+        18.6364,
+        "Colorado State at TCU, won"
+       ],
+       [
+        "2011-11-19",
+        19.5455,
+        "Boston College at Notre Dame, won"
+       ],
+       [
+        "2011-11-19",
+        18.5455,
+        "California at Stanford, lost"
+       ],
+       [
+        "2011-11-25",
+        19.4545,
+        "Eastern Michigan at Northern Illinois, won"
+       ],
+       [
+        "2011-11-25",
+        20.3636,
+        "Houston at Tulsa, won"
+       ],
+       [
+        "2011-11-25",
+        19.3636,
+        "Bowling Green at Buffalo, lost"
+       ],
+       [
+        "2011-11-25",
+        18.3636,
+        "Akron at Western Michigan, lost"
+       ],
+       [
+        "2011-11-25",
+        19.2727,
+        "Colorado at Utah, won"
+       ],
+       [
+        "2011-11-26",
+        18.2727,
+        "Ohio State at Michigan, lost"
+       ],
+       [
+        "2011-11-26",
+        19.1818,
+        "Iowa State at Oklahoma, won"
+       ],
+       [
+        "2011-11-26",
+        20.0909,
+        "Rice at SMU, won"
+       ],
+       [
+        "2011-11-26",
+        21.0,
+        "Tennessee at Kentucky, won"
+       ],
+       [
+        "2011-11-26",
+        20.0,
+        "Troy at Western Kentucky, lost"
+       ],
+       [
+        "2011-11-26",
+        20.9091,
+        "Illinois at Minnesota, won"
+       ],
+       [
+        "2011-11-26",
+        19.9091,
+        "UAB at Florida Atlantic, lost"
+       ],
+       [
+        "2011-12-03",
+        18.9091,
+        "UNLV at TCU, lost"
+       ],
+       [
+        "2011-12-03",
+        19.8182,
+        "Utah State at New Mexico State, won"
+       ],
+       [
+        "2011-12-03",
+        20.7273,
+        "Oklahoma at Oklahoma State, won"
+       ],
+       [
+        "2012-08-30",
+        19.7273,
+        "UCLA at Rice, lost"
+       ],
+       [
+        "2012-08-31",
+        20.6364,
+        "San José State at Stanford, won"
+       ],
+       [
+        "2012-09-01",
+        21.5455,
+        "Western Michigan at Illinois, won"
+       ],
+       [
+        "2012-09-08",
+        20.5455,
+        "New Hampshire at Minnesota, lost"
+       ],
+       [
+        "2012-09-08",
+        21.4545,
+        "Tulane at Tulsa, won"
+       ],
+       [
+        "2012-09-08",
+        20.4545,
+        "Maryland at Temple, lost"
+       ],
+       [
+        "2012-09-08",
+        21.3636,
+        "Purdue at Notre Dame, won"
+       ],
+       [
+        "2012-09-08",
+        22.2727,
+        "Air Force at Michigan, won"
+       ],
+       [
+        "2012-09-08",
+        23.1818,
+        "Florida at Texas A&M, won"
+       ],
+       [
+        "2012-09-08",
+        24.0909,
+        "Iowa State at Iowa, won"
+       ],
+       [
+        "2012-09-08",
+        23.0909,
+        "Texas Tech at Texas State, lost"
+       ],
+       [
+        "2012-09-08",
+        22.0909,
+        "Duke at Stanford, lost"
+       ],
+       [
+        "2012-09-22",
+        23.0,
+        "UAB at Ohio State, won"
+       ],
+       [
+        "2012-09-22",
+        22.0,
+        "Central Michigan at Iowa, lost"
+       ],
+       [
+        "2012-09-22",
+        21.0,
+        "Connecticut at Western Michigan, lost"
+       ],
+       [
+        "2012-09-22",
+        21.9091,
+        "Eastern Michigan at Michigan State, won"
+       ],
+       [
+        "2012-09-22",
+        22.8182,
+        "Kansas at Northern Illinois, won"
+       ],
+       [
+        "2012-09-22",
+        21.8182,
+        "South Florida at Ball State, lost"
+       ],
+       [
+        "2012-09-29",
+        22.7273,
+        "Nevada at Texas State, won"
+       ],
+       [
+        "2012-10-06",
+        21.7273,
+        "Kent State at Eastern Michigan, lost"
+       ],
+       [
+        "2012-10-06",
+        20.7273,
+        "Oklahoma at Texas Tech, lost"
+       ],
+       [
+        "2012-10-06",
+        21.6364,
+        "Texas State at New Mexico, won"
+       ],
+       [
+        "2012-10-11",
+        20.6364,
+        "Arizona State at Colorado, lost"
+       ],
+       [
+        "2012-10-13",
+        21.5455,
+        "Kansas State at Iowa State, won"
+       ],
+       [
+        "2012-10-13",
+        22.4545,
+        "North Carolina at Miami, won"
+       ],
+       [
+        "2012-10-13",
+        21.4545,
+        "Alabama at Missouri, lost"
+       ],
+       [
+        "2012-10-13",
+        22.3636,
+        "UT San Antonio at Rice, won"
+       ],
+       [
+        "2012-10-13",
+        23.2727,
+        "Oklahoma State at Kansas, won"
+       ],
+       [
+        "2012-10-13",
+        24.1818,
+        "Buffalo at Northern Illinois, won"
+       ],
+       [
+        "2012-10-13",
+        25.0909,
+        "West Virginia at Texas Tech, won"
+       ],
+       [
+        "2012-10-13",
+        24.0909,
+        "Kentucky at Arkansas, lost"
+       ],
+       [
+        "2012-10-13",
+        25.0,
+        "Air Force at Wyoming, won"
+       ],
+       [
+        "2012-10-20",
+        25.9091,
+        "UNLV at Boise State, won"
+       ],
+       [
+        "2012-10-20",
+        26.8182,
+        "Pittsburgh at Buffalo, won"
+       ],
+       [
+        "2012-10-20",
+        25.8182,
+        "Texas Tech at TCU, lost"
+       ],
+       [
+        "2012-10-20",
+        26.7273,
+        "Tulane at UTEP, won"
+       ],
+       [
+        "2012-10-27",
+        26.7273,
+        "Duke at Florida State, push"
+       ],
+       [
+        "2012-10-27",
+        25.7273,
+        "Navy at East Carolina, lost"
+       ],
+       [
+        "2012-10-27",
+        24.7273,
+        "Boise State at Wyoming, lost"
+       ],
+       [
+        "2012-10-27",
+        23.7273,
+        "Troy at Florida Atlantic, lost"
+       ],
+       [
+        "2012-10-27",
+        22.7273,
+        "Syracuse at South Florida, lost"
+       ],
+       [
+        "2012-11-03",
+        23.6364,
+        "Air Force at Army, won"
+       ],
+       [
+        "2012-11-03",
+        22.6364,
+        "Colorado State at Wyoming, lost"
+       ],
+       [
+        "2012-11-10",
+        21.6364,
+        "Wisconsin at Indiana, lost"
+       ],
+       [
+        "2012-11-10",
+        22.5455,
+        "Iowa State at Texas, won"
+       ],
+       [
+        "2012-11-10",
+        21.5455,
+        "Kansas at Texas Tech, lost"
+       ],
+       [
+        "2012-11-10",
+        20.5455,
+        "Colorado at Arizona, lost"
+       ],
+       [
+        "2012-11-10",
+        19.5455,
+        "Penn State at Nebraska, lost"
+       ],
+       [
+        "2012-11-10",
+        18.5455,
+        "San José State at New Mexico State, lost"
+       ],
+       [
+        "2012-11-10",
+        17.5455,
+        "Wyoming at New Mexico, lost"
+       ],
+       [
+        "2012-11-10",
+        16.5455,
+        "West Virginia at Oklahoma State, lost"
+       ],
+       [
+        "2012-11-10",
+        15.5455,
+        "Baylor at Oklahoma, lost"
+       ],
+       [
+        "2012-11-10",
+        16.4545,
+        "Minnesota at Illinois, won"
+       ],
+       [
+        "2012-11-10",
+        17.3636,
+        "South Alabama at North Texas, won"
+       ],
+       [
+        "2012-11-10",
+        16.3636,
+        "Louisiana Tech at Texas State, lost"
+       ],
+       [
+        "2012-11-10",
+        17.2727,
+        "Southern Mississippi at SMU, won"
+       ],
+       [
+        "2012-11-10",
+        18.1818,
+        "Kansas State at TCU, won"
+       ],
+       [
+        "2012-11-10",
+        17.1818,
+        "UCF at UTEP, lost"
+       ],
+       [
+        "2012-11-16",
+        16.1818,
+        "Florida International at Florida Atlantic, lost"
+       ],
+       [
+        "2012-11-17",
+        16.1818,
+        "Minnesota at Nebraska, push"
+       ],
+       [
+        "2012-11-23",
+        17.0909,
+        "Ohio at Kent State, won"
+       ],
+       [
+        "2012-11-23",
+        18.0,
+        "Nebraska at Iowa, won"
+       ],
+       [
+        "2012-11-23",
+        18.9091,
+        "Ball State at Miami (OH), won"
+       ],
+       [
+        "2012-11-23",
+        19.8182,
+        "Northern Illinois at Eastern Michigan, won"
+       ],
+       [
+        "2012-11-23",
+        20.7273,
+        "West Virginia at Iowa State, won"
+       ],
+       [
+        "2012-11-24",
+        21.6364,
+        "Rutgers at Pittsburgh, won"
+       ],
+       [
+        "2012-11-24",
+        22.5455,
+        "Virginia at Virginia Tech, won"
+       ],
+       [
+        "2012-11-24",
+        21.5455,
+        "Oklahoma State at Oklahoma, lost"
+       ],
+       [
+        "2012-11-24",
+        20.5455,
+        "Wisconsin at Penn State, lost"
+       ],
+       [
+        "2012-11-24",
+        19.5455,
+        "San Diego State at Wyoming, lost"
+       ],
+       [
+        "2012-11-30",
+        18.5455,
+        "UCLA at Stanford, lost"
+       ],
+       [
+        "2012-12-01",
+        17.5455,
+        "UCF at Tulsa, lost"
+       ],
+       [
+        "2012-12-01",
+        18.4545,
+        "Oklahoma at TCU, won"
+       ],
+       [
+        "2012-12-01",
+        19.3636,
+        "Boise State at Nevada, won"
+       ],
+       [
+        "2013-08-29",
+        20.2727,
+        "Sacramento State at San José State, won"
+       ],
+       [
+        "2013-09-07",
+        21.1818,
+        "San José State at Stanford, won"
+       ],
+       [
+        "2013-09-14",
+        22.0909,
+        "UCLA at Nebraska, won"
+       ],
+       [
+        "2013-09-14",
+        21.0909,
+        "Ohio State at California, lost"
+       ],
+       [
+        "2013-09-21",
+        22.0,
+        "Michigan State at Notre Dame, won"
+       ],
+       [
+        "2013-09-27",
+        22.9091,
+        "Utah State at San José State, won"
+       ],
+       [
+        "2013-09-28",
+        21.9091,
+        "Miami (OH) at Illinois, lost"
+       ],
+       [
+        "2013-09-28",
+        20.9091,
+        "Colorado at Oregon State, lost"
+       ],
+       [
+        "2013-09-28",
+        19.9091,
+        "Oklahoma at Notre Dame, lost"
+       ],
+       [
+        "2013-09-28",
+        20.8182,
+        "Iowa at Minnesota, won"
+       ],
+       [
+        "2013-09-28",
+        21.7273,
+        "Arizona at Washington, won"
+       ],
+       [
+        "2013-09-28",
+        22.6364,
+        "California at Oregon, won"
+       ],
+       [
+        "2013-10-05",
+        23.5455,
+        "Illinois at Nebraska, won"
+       ],
+       [
+        "2013-10-05",
+        22.5455,
+        "Texas Tech at Kansas, lost"
+       ],
+       [
+        "2013-10-05",
+        21.5455,
+        "Rutgers at SMU, lost"
+       ],
+       [
+        "2013-10-05",
+        20.5455,
+        "Kansas State at Oklahoma State, lost"
+       ],
+       [
+        "2013-10-05",
+        19.5455,
+        "Oregon at Colorado, lost"
+       ],
+       [
+        "2013-10-05",
+        18.5455,
+        "New Mexico State at New Mexico, lost"
+       ],
+       [
+        "2013-10-05",
+        17.5455,
+        "Washington at Stanford, lost"
+       ],
+       [
+        "2013-10-10",
+        18.4545,
+        "San Diego State at Air Force, won"
+       ],
+       [
+        "2013-10-12",
+        19.3636,
+        "New Mexico at Wyoming, won"
+       ],
+       [
+        "2013-10-19",
+        18.3636,
+        "Ohio at Eastern Michigan, lost"
+       ],
+       [
+        "2013-10-19",
+        17.3636,
+        "Colorado State at Wyoming, lost"
+       ],
+       [
+        "2013-10-19",
+        16.3636,
+        "Oklahoma at Kansas, lost"
+       ],
+       [
+        "2013-10-26",
+        15.3636,
+        "Oklahoma State at Iowa State, lost"
+       ],
+       [
+        "2013-10-26",
+        14.3636,
+        "Nebraska at Minnesota, lost"
+       ],
+       [
+        "2013-10-26",
+        13.3636,
+        "Ball State at Akron, lost"
+       ],
+       [
+        "2013-10-26",
+        14.2727,
+        "Northwestern at Iowa, won"
+       ],
+       [
+        "2013-10-26",
+        15.1818,
+        "Toledo at Bowling Green, won"
+       ],
+       [
+        "2013-10-26",
+        16.0909,
+        "Michigan State at Illinois, won"
+       ],
+       [
+        "2013-10-26",
+        15.0909,
+        "Buffalo at Kent State, lost"
+       ],
+       [
+        "2013-10-26",
+        14.0909,
+        "Eastern Michigan at Northern Illinois, lost"
+       ],
+       [
+        "2013-11-07",
+        15.0,
+        "Oregon at Stanford, won"
+       ],
+       [
+        "2013-11-09",
+        15.9091,
+        "TCU at Iowa State, won"
+       ],
+       [
+        "2013-11-09",
+        14.9091,
+        "Missouri at Kentucky, lost"
+       ],
+       [
+        "2013-11-09",
+        15.8182,
+        "Penn State at Minnesota, won"
+       ],
+       [
+        "2013-11-09",
+        16.7273,
+        "SMU at Cincinnati, won"
+       ],
+       [
+        "2013-11-09",
+        15.7273,
+        "Iowa at Purdue, lost"
+       ],
+       [
+        "2013-11-09",
+        14.7273,
+        "Western Michigan at Eastern Michigan, lost"
+       ],
+       [
+        "2013-11-13",
+        13.7273,
+        "Ball State at Northern Illinois, lost"
+       ],
+       [
+        "2013-11-16",
+        12.7273,
+        "Iowa State at Oklahoma, lost"
+       ],
+       [
+        "2013-11-16",
+        13.6364,
+        "Indiana at Wisconsin, won"
+       ],
+       [
+        "2013-11-16",
+        12.6364,
+        "Ohio State at Illinois, lost"
+       ],
+       [
+        "2013-11-16",
+        11.6364,
+        "West Virginia at Kansas, lost"
+       ],
+       [
+        "2013-11-16",
+        12.5455,
+        "Central Michigan at Western Michigan, won"
+       ],
+       [
+        "2013-11-16",
+        11.5455,
+        "Connecticut at SMU, lost"
+       ],
+       [
+        "2013-11-16",
+        10.5455,
+        "TCU at Kansas State, lost"
+       ],
+       [
+        "2013-11-16",
+        11.4545,
+        "California at Colorado, won"
+       ],
+       [
+        "2013-11-16",
+        12.3636,
+        "Florida International at UTEP, won"
+       ],
+       [
+        "2013-11-21",
+        11.3636,
+        "UNLV at Air Force, lost"
+       ],
+       [
+        "2013-11-23",
+        12.2727,
+        "Memphis at Louisville, won"
+       ],
+       [
+        "2013-11-23",
+        13.1818,
+        "Michigan at Iowa, won"
+       ],
+       [
+        "2013-11-23",
+        14.0909,
+        "Illinois at Purdue, won"
+       ],
+       [
+        "2013-11-23",
+        15.0,
+        "UMass at Central Michigan, won"
+       ],
+       [
+        "2013-11-23",
+        14.0,
+        "Bowling Green at Eastern Michigan, lost"
+       ],
+       [
+        "2013-11-23",
+        14.9091,
+        "Chattanooga at Alabama, won"
+       ],
+       [
+        "2013-11-23",
+        15.8182,
+        "BYU at Notre Dame, won"
+       ],
+       [
+        "2013-11-23",
+        16.7273,
+        "Indiana at Ohio State, won"
+       ],
+       [
+        "2013-11-23",
+        17.6364,
+        "Nebraska at Penn State, won"
+       ],
+       [
+        "2013-11-23",
+        18.5455,
+        "Connecticut at Temple, won"
+       ],
+       [
+        "2013-11-23",
+        19.4545,
+        "Western Kentucky at Texas State, won"
+       ],
+       [
+        "2013-11-26",
+        20.3636,
+        "Western Michigan at Northern Illinois, won"
+       ],
+       [
+        "2013-11-29",
+        21.2727,
+        "Florida International at Florida Atlantic, won"
+       ],
+       [
+        "2013-12-07",
+        21.2727,
+        "Marshall at Rice, push"
+       ],
+       [
+        "2014-08-28",
+        22.1818,
+        "North Dakota at San José State, won"
+       ],
+       [
+        "2014-08-30",
+        23.0909,
+        "Youngstown State at Illinois, won"
+       ],
+       [
+        "2014-08-30",
+        22.0909,
+        "App State at Michigan, lost"
+       ],
+       [
+        "2014-08-30",
+        23.0,
+        "Colgate at Ball State, won"
+       ],
+       [
+        "2014-08-30",
+        23.9091,
+        "Southern Utah at Nevada, won"
+       ],
+       [
+        "2014-08-30",
+        22.9091,
+        "Rice at Notre Dame, lost"
+       ],
+       [
+        "2014-08-30",
+        23.8182,
+        "Montana at Wyoming, won"
+       ],
+       [
+        "2014-08-31",
+        24.7273,
+        "SMU at Baylor, won"
+       ],
+       [
+        "2014-09-06",
+        23.7273,
+        "Arizona State at New Mexico, lost"
+       ],
+       [
+        "2014-09-06",
+        24.6364,
+        "Texas Tech at UTEP, won"
+       ],
+       [
+        "2014-09-13",
+        23.6364,
+        "Tulsa at Florida Atlantic, lost"
+       ],
+       [
+        "2014-09-13",
+        22.6364,
+        "New Mexico State at UTEP, lost"
+       ],
+       [
+        "2014-09-13",
+        23.5455,
+        "Nevada at Arizona, won"
+       ],
+       [
+        "2014-09-20",
+        22.5455,
+        "Eastern Michigan at Michigan State, lost"
+       ],
+       [
+        "2014-09-20",
+        21.5455,
+        "Maine at Boston College, lost"
+       ],
+       [
+        "2014-09-20",
+        20.5455,
+        "Marshall at Akron, lost"
+       ],
+       [
+        "2014-09-20",
+        21.4545,
+        "Norfolk State at Buffalo, won"
+       ],
+       [
+        "2014-09-27",
+        22.3636,
+        "Nevada at San José State, won"
+       ],
+       [
+        "2014-10-04",
+        21.3636,
+        "Purdue at Illinois, lost"
+       ],
+       [
+        "2014-10-04",
+        20.3636,
+        "Southern Miss at Middle Tennessee, lost"
+       ],
+       [
+        "2014-10-04",
+        21.2727,
+        "Florida at Tennessee, won"
+       ],
+       [
+        "2014-10-04",
+        22.1818,
+        "Eastern Michigan at Akron, won"
+       ],
+       [
+        "2014-10-04",
+        21.1818,
+        "North Texas at Indiana, lost"
+       ],
+       [
+        "2014-10-04",
+        22.0909,
+        "NC State at Clemson, won"
+       ],
+       [
+        "2014-10-04",
+        23.0,
+        "Buffalo at Bowling Green, won"
+       ],
+       [
+        "2014-10-04",
+        23.9091,
+        "Stanford at Notre Dame, won"
+       ],
+       [
+        "2014-10-04",
+        24.8182,
+        "Kent State at Northern Illinois, won"
+       ],
+       [
+        "2014-10-04",
+        23.8182,
+        "South Alabama at App State, lost"
+       ],
+       [
+        "2014-10-10",
+        24.7273,
+        "Washington State at Stanford, won"
+       ],
+       [
+        "2014-10-10",
+        25.6364,
+        "San Diego State at New Mexico, won"
+       ],
+       [
+        "2014-10-18",
+        26.5455,
+        "Western Michigan at Bowling Green, won"
+       ],
+       [
+        "2014-10-25",
+        27.4545,
+        "Northern Illinois at Eastern Michigan, won"
+       ],
+       [
+        "2014-10-25",
+        26.4545,
+        "Ohio at Western Michigan, lost"
+       ],
+       [
+        "2014-10-25",
+        25.4545,
+        "Michigan at Michigan State, lost"
+       ],
+       [
+        "2014-10-25",
+        26.3636,
+        "Central Michigan at Buffalo, won"
+       ],
+       [
+        "2014-10-25",
+        25.3636,
+        "Oregon State at Stanford, lost"
+       ],
+       [
+        "2014-10-25",
+        24.3636,
+        "UNLV at Utah State, lost"
+       ],
+       [
+        "2014-10-25",
+        23.3636,
+        "Arizona at Washington State, lost"
+       ],
+       [
+        "2014-10-25",
+        24.2727,
+        "USC at Utah, won"
+       ],
+       [
+        "2014-10-31",
+        25.1818,
+        "Cincinnati at Tulane, won"
+       ],
+       [
+        "2014-11-01",
+        24.1818,
+        "UCF at UConn, lost"
+       ],
+       [
+        "2014-11-01",
+        25.0909,
+        "East Carolina at Temple, won"
+       ],
+       [
+        "2014-11-01",
+        26.0,
+        "North Carolina at Miami, won"
+       ],
+       [
+        "2014-11-01",
+        26.9091,
+        "Central Michigan at Eastern Michigan, won"
+       ],
+       [
+        "2014-11-01",
+        27.8182,
+        "Western Michigan at Miami (OH), won"
+       ],
+       [
+        "2014-11-01",
+        28.7273,
+        "Virginia at Georgia Tech, won"
+       ],
+       [
+        "2014-11-01",
+        29.6364,
+        "Indiana at Michigan, won"
+       ],
+       [
+        "2014-11-01",
+        30.5455,
+        "Purdue at Nebraska, won"
+       ],
+       [
+        "2014-11-01",
+        31.4545,
+        "BYU at Middle Tennessee, won"
+       ],
+       [
+        "2014-11-01",
+        32.3636,
+        "Georgia State at App State, won"
+       ],
+       [
+        "2014-11-01",
+        33.2727,
+        "Houston at South Florida, won"
+       ],
+       [
+        "2014-11-01",
+        32.2727,
+        "UAB at Florida Atlantic, lost"
+       ],
+       [
+        "2014-11-01",
+        33.1818,
+        "Texas at Texas Tech, won"
+       ],
+       [
+        "2014-11-01",
+        32.1818,
+        "Illinois at Ohio State, lost"
+       ],
+       [
+        "2014-11-07",
+        33.0909,
+        "Memphis at Temple, won"
+       ],
+       [
+        "2014-11-08",
+        34.0,
+        "Baylor at Oklahoma, won"
+       ],
+       [
+        "2014-11-08",
+        34.9091,
+        "Wisconsin at Purdue, won"
+       ],
+       [
+        "2014-11-11",
+        35.8182,
+        "Toledo at Northern Illinois, won"
+       ],
+       [
+        "2014-11-15",
+        34.8182,
+        "Nevada at Air Force, lost"
+       ],
+       [
+        "2014-11-15",
+        33.8182,
+        "Oklahoma at Texas Tech, lost"
+       ],
+       [
+        "2014-11-15",
+        32.8182,
+        "UNLV at BYU, lost"
+       ],
+       [
+        "2014-11-18",
+        33.7273,
+        "Massachusetts at Akron, won"
+       ],
+       [
+        "2014-11-22",
+        32.7273,
+        "SMU at UCF, lost"
+       ],
+       [
+        "2014-11-22",
+        33.6364,
+        "Penn State at Illinois, won"
+       ],
+       [
+        "2014-11-22",
+        34.5455,
+        "Rutgers at Michigan State, won"
+       ],
+       [
+        "2014-11-22",
+        33.5455,
+        "Louisville at Notre Dame, lost"
+       ],
+       [
+        "2014-11-22",
+        34.4545,
+        "Florida International at North Texas, won"
+       ],
+       [
+        "2014-11-22",
+        35.3636,
+        "Arizona at Utah, won"
+       ],
+       [
+        "2014-11-22",
+        36.2727,
+        "UL Monroe at New Mexico State, won"
+       ],
+       [
+        "2014-11-22",
+        37.1818,
+        "Colorado at Oregon, won"
+       ],
+       [
+        "2014-11-22",
+        36.1818,
+        "Boise State at Wyoming, lost"
+       ],
+       [
+        "2014-11-28",
+        37.0909,
+        "Houston at SMU, won"
+       ],
+       [
+        "2014-11-29",
+        36.0909,
+        "Michigan at Ohio State, lost"
+       ],
+       [
+        "2014-11-29",
+        37.0,
+        "Old Dominion at Florida Atlantic, won"
+       ],
+       [
+        "2014-11-29",
+        36.0,
+        "Utah at Colorado, lost"
+       ],
+       [
+        "2014-11-29",
+        35.0,
+        "New Mexico State at Arkansas State, lost"
+       ],
+       [
+        "2014-11-29",
+        34.0,
+        "UConn at Memphis, lost"
+       ],
+       [
+        "2014-12-06",
+        34.9091,
+        "Temple at Tulane, won"
+       ],
+       [
+        "2015-09-03",
+        35.8182,
+        "Michigan at Utah, won"
+       ],
+       [
+        "2015-09-03",
+        36.7273,
+        "Southern Utah at Utah State, won"
+       ],
+       [
+        "2015-09-03",
+        37.6364,
+        "UC Davis at Nevada, won"
+       ],
+       [
+        "2015-09-03",
+        36.6364,
+        "New Hampshire at San José State, lost"
+       ],
+       [
+        "2015-09-05",
+        37.5455,
+        "Portland State at Washington State, won"
+       ],
+       [
+        "2015-09-05",
+        38.4545,
+        "Virginia at UCLA, won"
+       ],
+       [
+        "2015-09-05",
+        37.4545,
+        "BYU at Nebraska, lost"
+       ],
+       [
+        "2015-09-05",
+        38.3636,
+        "North Dakota at Wyoming, won"
+       ],
+       [
+        "2015-09-12",
+        39.2727,
+        "Middle Tennessee at Alabama, won"
+       ],
+       [
+        "2015-09-12",
+        40.1818,
+        "San Diego State at California, won"
+       ],
+       [
+        "2015-09-12",
+        41.0909,
+        "UCF at Stanford, won"
+       ],
+       [
+        "2015-09-19",
+        42.0,
+        "UNLV at Michigan, won"
+       ],
+       [
+        "2015-09-19",
+        41.0,
+        "Air Force at Michigan State, lost"
+       ],
+       [
+        "2015-09-19",
+        40.0,
+        "Savannah St at Akron, lost"
+       ],
+       [
+        "2015-09-19",
+        39.0,
+        "Memphis at Bowling Green, lost"
+       ],
+       [
+        "2015-09-19",
+        39.9091,
+        "Ball State at Eastern Michigan, won"
+       ],
+       [
+        "2015-09-19",
+        40.8182,
+        "Georgia Tech at Notre Dame, won"
+       ],
+       [
+        "2015-09-19",
+        39.8182,
+        "Virginia Tech at Purdue, lost"
+       ],
+       [
+        "2015-09-19",
+        40.7273,
+        "Northern Illinois at Ohio State, won"
+       ],
+       [
+        "2015-09-26",
+        41.6364,
+        "Georgia Tech at Duke, won"
+       ],
+       [
+        "2015-09-26",
+        42.5455,
+        "Delaware at North Carolina, won"
+       ],
+       [
+        "2015-09-26",
+        41.5455,
+        "Indiana at Wake Forest, lost"
+       ],
+       [
+        "2015-09-26",
+        42.4545,
+        "Maryland at West Virginia, won"
+       ],
+       [
+        "2015-09-26",
+        41.4545,
+        "Virginia Tech at East Carolina, lost"
+       ],
+       [
+        "2015-09-26",
+        42.3636,
+        "App State at Old Dominion, won"
+       ],
+       [
+        "2015-09-26",
+        43.2727,
+        "Florida Atlantic at Charlotte, won"
+       ],
+       [
+        "2015-09-26",
+        44.1818,
+        "Missouri at Kentucky, won"
+       ],
+       [
+        "2015-09-26",
+        43.1818,
+        "Fresno State at San José State, lost"
+       ],
+       [
+        "2015-10-01",
+        44.0909,
+        "Miami at Cincinnati, won"
+       ],
+       [
+        "2015-10-02",
+        45.0,
+        "Temple at Charlotte, won"
+       ],
+       [
+        "2015-10-03",
+        45.9091,
+        "Purdue at Michigan State, won"
+       ],
+       [
+        "2015-10-03",
+        46.8182,
+        "Iowa at Wisconsin, won"
+       ],
+       [
+        "2015-10-03",
+        47.7273,
+        "Louisville at NC State, won"
+       ],
+       [
+        "2015-10-03",
+        48.6364,
+        "Northern Illinois at Central Michigan, won"
+       ],
+       [
+        "2015-10-03",
+        49.5455,
+        "Toledo at Ball State, won"
+       ],
+       [
+        "2015-10-03",
+        50.4545,
+        "Florida State at Wake Forest, won"
+       ],
+       [
+        "2015-10-03",
+        51.3636,
+        "Ohio State at Indiana, won"
+       ],
+       [
+        "2015-10-03",
+        52.2727,
+        "Air Force at Navy, won"
+       ],
+       [
+        "2015-10-03",
+        53.1818,
+        "Bowling Green at Buffalo, won"
+       ],
+       [
+        "2015-10-03",
+        54.0909,
+        "Washington State at California, won"
+       ],
+       [
+        "2015-10-03",
+        55.0,
+        "Nebraska at Illinois, won"
+       ],
+       [
+        "2015-10-03",
+        54.0,
+        "Eastern Kentucky at Kentucky, lost"
+       ],
+       [
+        "2015-10-03",
+        53.0,
+        "Arizona at Stanford, lost"
+       ],
+       [
+        "2015-10-10",
+        53.9091,
+        "Wisconsin at Nebraska, won"
+       ],
+       [
+        "2015-10-10",
+        52.9091,
+        "Washington State at Oregon, lost"
+       ],
+       [
+        "2015-10-10",
+        53.8182,
+        "New Mexico at Nevada, won"
+       ],
+       [
+        "2015-10-15",
+        52.8182,
+        "UCLA at Stanford, lost"
+       ],
+       [
+        "2015-10-17",
+        53.7273,
+        "Bucknell at Army, won"
+       ],
+       [
+        "2015-10-17",
+        52.7273,
+        "Marshall at Florida Atlantic, lost"
+       ],
+       [
+        "2015-10-17",
+        51.7273,
+        "Oklahoma at Kansas State, lost"
+       ],
+       [
+        "2015-10-17",
+        52.6364,
+        "Kent State at Massachusetts, won"
+       ],
+       [
+        "2015-10-24",
+        51.6364,
+        "Clemson at Miami, lost"
+       ],
+       [
+        "2015-10-24",
+        50.6364,
+        "Northwestern at Nebraska, lost"
+       ],
+       [
+        "2015-10-24",
+        51.5455,
+        "Miami (OH) at Western Michigan, won"
+       ],
+       [
+        "2015-10-24",
+        52.4545,
+        "Central Michigan at Ball State, won"
+       ],
+       [
+        "2015-10-24",
+        51.4545,
+        "Texas Tech at Oklahoma, lost"
+       ],
+       [
+        "2015-10-24",
+        52.3636,
+        "Wisconsin at Illinois, won"
+       ],
+       [
+        "2015-10-24",
+        51.3636,
+        "Indiana at Michigan State, lost"
+       ],
+       [
+        "2015-10-24",
+        50.3636,
+        "Ohio at Buffalo, lost"
+       ],
+       [
+        "2015-10-24",
+        49.3636,
+        "Eastern Michigan at Northern Illinois, lost"
+       ],
+       [
+        "2015-10-24",
+        48.3636,
+        "Washington State at Arizona, lost"
+       ],
+       [
+        "2015-10-24",
+        49.2727,
+        "Washington at Stanford, won"
+       ],
+       [
+        "2015-10-29",
+        48.2727,
+        "Western Michigan at Eastern Michigan, lost"
+       ],
+       [
+        "2015-10-30",
+        49.1818,
+        "Louisiana Tech at Rice, won"
+       ],
+       [
+        "2015-10-31",
+        48.1818,
+        "Oklahoma State at Texas Tech, lost"
+       ],
+       [
+        "2015-10-31",
+        49.0909,
+        "Stanford at Washington State, won"
+       ],
+       [
+        "2015-11-05",
+        48.0909,
+        "Mississippi State at Missouri, lost"
+       ],
+       [
+        "2015-11-07",
+        47.0909,
+        "Rutgers at Michigan, lost"
+       ],
+       [
+        "2015-11-07",
+        48.0,
+        "Cincinnati at Houston, won"
+       ],
+       [
+        "2015-11-07",
+        48.9091,
+        "Utah State at New Mexico, won"
+       ],
+       [
+        "2015-11-07",
+        49.8182,
+        "New Mexico State at Texas State, won"
+       ],
+       [
+        "2015-11-07",
+        50.7273,
+        "Auburn at Texas A&M, won"
+       ],
+       [
+        "2015-11-11",
+        51.6364,
+        "Bowling Green at Western Michigan, won"
+       ],
+       [
+        "2015-11-14",
+        50.6364,
+        "Tulane at Army, lost"
+       ],
+       [
+        "2015-11-14",
+        51.5455,
+        "Ohio State at Illinois, won"
+       ],
+       [
+        "2015-11-14",
+        52.4545,
+        "Middle Tennessee at Florida Atlantic, won"
+       ],
+       [
+        "2015-11-14",
+        51.4545,
+        "Kansas State at Texas Tech, lost"
+       ],
+       [
+        "2015-11-14",
+        52.3636,
+        "New Mexico at Boise State, won"
+       ],
+       [
+        "2015-11-18",
+        51.3636,
+        "Central Michigan at Kent State, lost"
+       ],
+       [
+        "2015-11-18",
+        52.2727,
+        "Western Michigan at Northern Illinois, won"
+       ],
+       [
+        "2015-11-21",
+        53.1818,
+        "West Virginia at Kansas, won"
+       ],
+       [
+        "2015-11-21",
+        52.1818,
+        "Purdue at Iowa, lost"
+       ],
+       [
+        "2015-11-21",
+        51.1818,
+        "Arizona at Arizona State, lost"
+       ],
+       [
+        "2015-11-21",
+        52.0909,
+        "Michigan State at Ohio State, won"
+       ],
+       [
+        "2015-11-21",
+        51.0909,
+        "New Mexico State at Louisiana, lost"
+       ],
+       [
+        "2015-11-21",
+        52.0,
+        "California at Stanford, won"
+       ],
+       [
+        "2015-11-27",
+        51.0,
+        "Navy at Houston, lost"
+       ],
+       [
+        "2015-11-27",
+        51.9091,
+        "Baylor at TCU, won"
+       ],
+       [
+        "2016-09-01",
+        52.8182,
+        "South Carolina at Vanderbilt, won"
+       ],
+       [
+        "2016-09-01",
+        53.7273,
+        "Southern Utah at Utah, won"
+       ],
+       [
+        "2016-09-02",
+        54.6364,
+        "Kansas State at Stanford, won"
+       ],
+       [
+        "2016-09-02",
+        55.5455,
+        "Cal Poly at Nevada, won"
+       ],
+       [
+        "2016-09-03",
+        54.5455,
+        "Fordham at Navy, lost"
+       ],
+       [
+        "2016-09-10",
+        53.5455,
+        "Penn State at Pittsburgh, lost"
+       ],
+       [
+        "2016-09-10",
+        54.4545,
+        "Utah State at USC, won"
+       ],
+       [
+        "2016-09-10",
+        53.4545,
+        "Georgia State at Air Force, lost"
+       ],
+       [
+        "2016-09-10",
+        54.3636,
+        "Nevada at Notre Dame, won"
+       ],
+       [
+        "2016-09-10",
+        55.2727,
+        "North Dakota at Bowling Green, won"
+       ],
+       [
+        "2016-09-10",
+        54.2727,
+        "UConn at Navy, lost"
+       ],
+       [
+        "2016-09-10",
+        55.1818,
+        "Tulsa at Ohio State, won"
+       ],
+       [
+        "2016-09-10",
+        54.1818,
+        "North Carolina A&T at Kent State, lost"
+       ],
+       [
+        "2016-09-17",
+        55.0909,
+        "Middle Tennessee at Bowling Green, won"
+       ],
+       [
+        "2016-09-17",
+        56.0,
+        "Idaho at Washington State, won"
+       ],
+       [
+        "2016-09-17",
+        56.9091,
+        "Monmouth at Kent State, won"
+       ],
+       [
+        "2016-09-17",
+        57.8182,
+        "UC Davis at Wyoming, won"
+       ],
+       [
+        "2016-09-17",
+        56.8182,
+        "Utah at San José State, lost"
+       ],
+       [
+        "2016-09-23",
+        55.8182,
+        "USC at Utah, lost"
+       ],
+       [
+        "2016-10-01",
+        56.7273,
+        "Buffalo at Boston College, won"
+       ],
+       [
+        "2016-10-01",
+        57.6364,
+        "Utah at California, won"
+       ],
+       [
+        "2016-10-08",
+        58.5455,
+        "Notre Dame at NC State, won"
+       ],
+       [
+        "2016-10-08",
+        59.4545,
+        "Auburn at Mississippi State, won"
+       ],
+       [
+        "2016-10-08",
+        60.3636,
+        "Army at Duke, won"
+       ],
+       [
+        "2016-10-08",
+        61.2727,
+        "Virginia Tech at North Carolina, won"
+       ],
+       [
+        "2016-10-08",
+        62.1818,
+        "Syracuse at Wake Forest, won"
+       ],
+       [
+        "2016-10-08",
+        61.1818,
+        "Washington State at Stanford, lost"
+       ],
+       [
+        "2016-10-09",
+        62.0909,
+        "Charlotte at Florida Atlantic, won"
+       ],
+       [
+        "2016-10-14",
+        63.0,
+        "Mississippi State at BYU, won"
+       ],
+       [
+        "2016-10-15",
+        63.9091,
+        "Kansas State at Oklahoma, won"
+       ],
+       [
+        "2016-10-15",
+        64.8182,
+        "West Virginia at Texas Tech, won"
+       ],
+       [
+        "2016-10-15",
+        65.7273,
+        "Kansas at Baylor, won"
+       ],
+       [
+        "2016-10-15",
+        64.7273,
+        "Central Michigan at Northern Illinois, lost"
+       ],
+       [
+        "2016-10-15",
+        63.7273,
+        "Northwestern at Michigan State, lost"
+       ],
+       [
+        "2016-10-15",
+        64.6364,
+        "Utah at Oregon State, won"
+       ],
+       [
+        "2016-10-15",
+        65.5455,
+        "Colorado State at Boise State, won"
+       ],
+       [
+        "2016-10-15",
+        66.4545,
+        "Nevada at San José State, won"
+       ],
+       [
+        "2016-10-21",
+        65.4545,
+        "South Florida at Temple, lost"
+       ],
+       [
+        "2016-10-22",
+        64.4545,
+        "North Texas at Army, lost"
+       ],
+       [
+        "2016-10-22",
+        63.4545,
+        "Miami (OH) at Bowling Green, lost"
+       ],
+       [
+        "2016-10-22",
+        64.3636,
+        "Syracuse at Boston College, won"
+       ],
+       [
+        "2016-10-22",
+        65.2727,
+        "Ohio at Kent State, won"
+       ],
+       [
+        "2016-10-22",
+        64.2727,
+        "Memphis at Navy, lost"
+       ],
+       [
+        "2016-10-22",
+        63.2727,
+        "Idaho at App State, lost"
+       ],
+       [
+        "2016-10-22",
+        64.1818,
+        "Ohio State at Penn State, won"
+       ],
+       [
+        "2016-10-29",
+        65.0909,
+        "Kentucky at Missouri, won"
+       ],
+       [
+        "2016-10-29",
+        66.0,
+        "West Virginia at Oklahoma State, won"
+       ],
+       [
+        "2016-10-29",
+        65.0,
+        "Minnesota at Illinois, lost"
+       ],
+       [
+        "2016-10-29",
+        64.0,
+        "Washington at Utah, lost"
+       ],
+       [
+        "2016-10-29",
+        64.9091,
+        "Western Kentucky at Florida Atlantic, won"
+       ],
+       [
+        "2016-10-29",
+        65.8182,
+        "Kansas at Oklahoma, won"
+       ],
+       [
+        "2016-11-12",
+        64.8182,
+        "Miami (OH) at Buffalo, lost"
+       ],
+       [
+        "2016-11-18",
+        63.8182,
+        "UNLV at Boise State, lost"
+       ],
+       [
+        "2016-11-19",
+        62.8182,
+        "Louisiana at Georgia, lost"
+       ],
+       [
+        "2016-11-19",
+        61.8182,
+        "UTEP at Rice, lost"
+       ],
+       [
+        "2016-11-19",
+        62.7273,
+        "Ohio State at Michigan State, won"
+       ],
+       [
+        "2016-11-19",
+        63.6364,
+        "Iowa at Illinois, won"
+       ],
+       [
+        "2016-11-19",
+        62.6364,
+        "Wisconsin at Purdue, lost"
+       ],
+       [
+        "2016-11-19",
+        63.5455,
+        "Virginia at Georgia Tech, won"
+       ],
+       [
+        "2016-11-19",
+        64.4545,
+        "Miami at NC State, won"
+       ],
+       [
+        "2016-11-19",
+        63.4545,
+        "Middle Tennessee at Charlotte, lost"
+       ],
+       [
+        "2016-11-19",
+        62.4545,
+        "UL Monroe at App State, lost"
+       ],
+       [
+        "2016-11-19",
+        61.4545,
+        "Duke at Pittsburgh, lost"
+       ],
+       [
+        "2016-11-19",
+        60.4545,
+        "Virginia Tech at Notre Dame, lost"
+       ],
+       [
+        "2016-11-19",
+        59.4545,
+        "Missouri at Tennessee, lost"
+       ],
+       [
+        "2016-11-19",
+        60.3636,
+        "Buffalo at Western Michigan, won"
+       ],
+       [
+        "2016-11-19",
+        61.2727,
+        "Temple at Tulane, won"
+       ],
+       [
+        "2016-11-19",
+        62.1818,
+        "Texas Tech at Iowa State, won"
+       ],
+       [
+        "2016-11-19",
+        63.0909,
+        "Indiana at Michigan, won"
+       ],
+       [
+        "2016-11-19",
+        64.0,
+        "Northwestern at Minnesota, won"
+       ],
+       [
+        "2016-11-19",
+        63.0,
+        "Western Carolina at South Carolina, lost"
+       ],
+       [
+        "2016-11-19",
+        62.0,
+        "Utah State at Nevada, lost"
+       ],
+       [
+        "2016-11-19",
+        61.0,
+        "Austin Peay at Kentucky, lost"
+       ],
+       [
+        "2016-11-26",
+        61.9091,
+        "UCLA at California, won"
+       ],
+       [
+        "2016-11-26",
+        60.9091,
+        "Rice at Stanford, lost"
+       ],
+       [
+        "2016-12-03",
+        61.8182,
+        "Arkansas State at Texas State, won"
+       ],
+       [
+        "2016-12-03",
+        62.7273,
+        "San Diego State at Wyoming, won"
+       ],
+       [
+        "2017-08-31",
+        61.7273,
+        "UL Monroe at Memphis, lost"
+       ],
+       [
+        "2017-09-02",
+        62.6364,
+        "Abilene Christian at New Mexico, won"
+       ],
+       [
+        "2017-09-09",
+        63.5455,
+        "Jacksonville State at Georgia Tech, won"
+       ],
+       [
+        "2017-09-09",
+        64.4545,
+        "Alabama A&M at Vanderbilt, won"
+       ],
+       [
+        "2017-09-14",
+        65.3636,
+        "New Mexico at Boise State, won"
+       ],
+       [
+        "2017-09-15",
+        64.3636,
+        "Arizona at UTEP, lost"
+       ],
+       [
+        "2017-09-16",
+        65.2727,
+        "Bethune-Cookman at Florida Atlantic, won"
+       ],
+       [
+        "2017-09-16",
+        66.1818,
+        "Oregon at Wyoming, won"
+       ],
+       [
+        "2017-09-23",
+        67.0909,
+        "Rutgers at Nebraska, won"
+       ],
+       [
+        "2017-09-23",
+        66.0909,
+        "San Diego State at Air Force, lost"
+       ],
+       [
+        "2017-09-23",
+        65.0909,
+        "Utah State at San José State, lost"
+       ],
+       [
+        "2017-09-23",
+        64.0909,
+        "UCLA at Stanford, lost"
+       ],
+       [
+        "2017-09-30",
+        65.0,
+        "Houston at Temple, won"
+       ],
+       [
+        "2017-09-30",
+        64.0,
+        "Texas State at Wyoming, lost"
+       ],
+       [
+        "2017-10-07",
+        63.0,
+        "Tulsa at Tulane, lost"
+       ],
+       [
+        "2017-10-07",
+        62.0,
+        "Georgia at Vanderbilt, lost"
+       ],
+       [
+        "2017-10-07",
+        61.0,
+        "Illinois at Iowa, lost"
+       ],
+       [
+        "2017-10-07",
+        61.9091,
+        "Eastern Michigan at Toledo, won"
+       ],
+       [
+        "2017-10-07",
+        60.9091,
+        "Florida International at Middle Tennessee, lost"
+       ],
+       [
+        "2017-10-07",
+        59.9091,
+        "Minnesota at Purdue, lost"
+       ],
+       [
+        "2017-10-07",
+        60.8182,
+        "Ball State at Akron, won"
+       ],
+       [
+        "2017-10-07",
+        61.7273,
+        "Kent State at Northern Illinois, won"
+       ],
+       [
+        "2017-10-07",
+        62.6364,
+        "Charleston Southern at Indiana, won"
+       ],
+       [
+        "2017-10-07",
+        61.6364,
+        "Maryland at Ohio State, lost"
+       ],
+       [
+        "2017-10-07",
+        60.6364,
+        "Missouri at Kentucky, lost"
+       ],
+       [
+        "2017-10-07",
+        61.5455,
+        "Michigan State at Michigan, won"
+       ],
+       [
+        "2017-10-14",
+        62.4545,
+        "UNLV at Air Force, won"
+       ],
+       [
+        "2017-10-14",
+        63.3636,
+        "TCU at Kansas State, won"
+       ],
+       [
+        "2017-10-14",
+        62.3636,
+        "Baylor at Oklahoma State, lost"
+       ],
+       [
+        "2017-10-14",
+        63.2727,
+        "Houston at Tulsa, won"
+       ],
+       [
+        "2017-10-14",
+        62.2727,
+        "Ohio State at Nebraska, lost"
+       ],
+       [
+        "2017-10-14",
+        61.2727,
+        "Michigan State at Minnesota, lost"
+       ],
+       [
+        "2017-10-14",
+        62.1818,
+        "Oregon at Stanford, won"
+       ],
+       [
+        "2017-10-15",
+        63.0909,
+        "Akron at Western Michigan, won"
+       ],
+       [
+        "2017-10-20",
+        62.0909,
+        "Air Force at Nevada, lost"
+       ],
+       [
+        "2017-10-21",
+        61.0909,
+        "Idaho at Missouri, lost"
+       ],
+       [
+        "2017-10-21",
+        62.0,
+        "Iowa State at Texas Tech, won"
+       ],
+       [
+        "2017-10-21",
+        61.0,
+        "Maryland at Wisconsin, lost"
+       ],
+       [
+        "2017-10-21",
+        61.9091,
+        "Illinois at Minnesota, won"
+       ],
+       [
+        "2017-10-21",
+        62.8182,
+        "Syracuse at Miami, won"
+       ],
+       [
+        "2017-10-21",
+        61.8182,
+        "North Texas at Florida Atlantic, lost"
+       ],
+       [
+        "2017-10-21",
+        62.7273,
+        "Colorado at Washington State, won"
+       ],
+       [
+        "2017-10-28",
+        61.7273,
+        "Air Force at Colorado State, lost"
+       ],
+       [
+        "2017-10-28",
+        60.7273,
+        "Louisiana Tech at Rice, lost"
+       ],
+       [
+        "2017-11-04",
+        61.6364,
+        "Army at Air Force, won"
+       ],
+       [
+        "2017-11-04",
+        60.6364,
+        "Coastal Carolina at Arkansas, lost"
+       ],
+       [
+        "2017-11-04",
+        61.5455,
+        "Colorado State at Wyoming, won"
+       ],
+       [
+        "2017-11-04",
+        62.4545,
+        "UCF at SMU, won"
+       ],
+       [
+        "2017-11-10",
+        61.4545,
+        "Washington at Stanford, lost"
+       ],
+       [
+        "2017-11-11",
+        60.4545,
+        "UConn at UCF, lost"
+       ],
+       [
+        "2017-11-15",
+        59.4545,
+        "Western Michigan at Northern Illinois, lost"
+       ],
+       [
+        "2017-11-15",
+        58.4545,
+        "Toledo at Bowling Green, lost"
+       ],
+       [
+        "2017-11-17",
+        57.4545,
+        "Middle Tennessee at Western Kentucky, lost"
+       ],
+       [
+        "2017-11-17",
+        56.4545,
+        "UNLV at New Mexico, lost"
+       ],
+       [
+        "2017-11-18",
+        57.3636,
+        "Mississippi State at Arkansas, won"
+       ],
+       [
+        "2017-11-18",
+        58.2727,
+        "TCU at Texas Tech, won"
+       ],
+       [
+        "2017-11-18",
+        59.1818,
+        "Rutgers at Indiana, won"
+       ],
+       [
+        "2017-11-18",
+        60.0909,
+        "Michigan at Wisconsin, won"
+       ],
+       [
+        "2017-11-18",
+        59.0909,
+        "SMU at Memphis, lost"
+       ],
+       [
+        "2017-11-18",
+        60.0,
+        "Fresno State at Wyoming, won"
+       ],
+       [
+        "2017-11-18",
+        60.9091,
+        "Iowa State at Baylor, won"
+       ],
+       [
+        "2017-11-18",
+        59.9091,
+        "Charlotte at Southern Miss, lost"
+       ],
+       [
+        "2017-11-18",
+        60.8182,
+        "Texas State at Arkansas State, won"
+       ],
+       [
+        "2017-11-18",
+        59.8182,
+        "Kansas State at Oklahoma State, lost"
+       ],
+       [
+        "2017-11-18",
+        60.7273,
+        "Oklahoma at Kansas, won"
+       ],
+       [
+        "2017-11-18",
+        61.6364,
+        "Navy at Notre Dame, won"
+       ],
+       [
+        "2017-11-18",
+        62.5455,
+        "Purdue at Iowa, won"
+       ],
+       [
+        "2017-11-18",
+        61.5455,
+        "Illinois at Ohio State, lost"
+       ],
+       [
+        "2017-11-18",
+        62.4545,
+        "Syracuse at Louisville, won"
+       ],
+       [
+        "2017-11-18",
+        63.3636,
+        "Maryland at Michigan State, won"
+       ],
+       [
+        "2017-11-18",
+        64.2727,
+        "Houston at Tulane, won"
+       ],
+       [
+        "2017-11-18",
+        63.2727,
+        "New Mexico State at Louisiana, lost"
+       ],
+       [
+        "2017-11-18",
+        64.1818,
+        "LSU at Tennessee, won"
+       ],
+       [
+        "2017-11-18",
+        65.0909,
+        "Missouri at Vanderbilt, won"
+       ],
+       [
+        "2017-11-21",
+        66.0,
+        "Kent State at Akron, won"
+       ],
+       [
+        "2017-11-24",
+        66.9091,
+        "Ohio at Buffalo, won"
+       ],
+       [
+        "2017-11-24",
+        65.9091,
+        "Missouri at Arkansas, lost"
+       ],
+       [
+        "2017-11-24",
+        64.9091,
+        "Iowa at Nebraska, lost"
+       ],
+       [
+        "2017-11-25",
+        63.9091,
+        "Ohio State at Michigan, lost"
+       ],
+       [
+        "2017-11-25",
+        62.9091,
+        "Indiana at Purdue, lost"
+       ],
+       [
+        "2017-11-25",
+        63.8182,
+        "UNLV at Nevada, won"
+       ],
+       [
+        "2017-11-25",
+        63.8182,
+        "Notre Dame at Stanford, push"
+       ],
+       [
+        "2018-08-30",
+        62.8182,
+        "New Mexico State at Minnesota, lost"
+       ],
+       [
+        "2018-08-30",
+        61.8182,
+        "UC Davis at San José State, lost"
+       ],
+       [
+        "2018-08-31",
+        62.7273,
+        "San Diego State at Stanford, won"
+       ],
+       [
+        "2018-09-08",
+        63.6364,
+        "Eastern Michigan at Purdue, won"
+       ],
+       [
+        "2018-09-08",
+        62.6364,
+        "New Mexico at Wisconsin, lost"
+       ],
+       [
+        "2018-09-08",
+        63.5455,
+        "Ball State at Notre Dame, won"
+       ],
+       [
+        "2018-09-08",
+        62.5455,
+        "Youngstown State at West Virginia, lost"
+       ],
+       [
+        "2018-09-08",
+        61.5455,
+        "Wyoming at Missouri, lost"
+       ],
+       [
+        "2018-09-08",
+        62.4545,
+        "Western Illinois at Illinois, won"
+       ],
+       [
+        "2018-09-08",
+        63.3636,
+        "Virginia at Indiana, won"
+       ],
+       [
+        "2018-09-13",
+        62.3636,
+        "Old Dominion at Charlotte, lost"
+       ],
+       [
+        "2018-09-13",
+        61.3636,
+        "Boston College at Wake Forest, lost"
+       ],
+       [
+        "2018-09-15",
+        62.2727,
+        "Middle Tennessee at Georgia, won"
+       ],
+       [
+        "2018-09-15",
+        63.1818,
+        "Georgia Southern at Clemson, won"
+       ],
+       [
+        "2018-09-15",
+        62.1818,
+        "Ohio at Virginia, lost"
+       ],
+       [
+        "2018-09-15",
+        61.1818,
+        "Idaho State at California, lost"
+       ],
+       [
+        "2018-09-15",
+        60.1818,
+        "Oregon State at Nevada, lost"
+       ],
+       [
+        "2018-09-15",
+        61.0909,
+        "Washington at Utah, won"
+       ],
+       [
+        "2018-09-29",
+        60.0909,
+        "Army at Buffalo, lost"
+       ],
+       [
+        "2018-09-29",
+        59.0909,
+        "Purdue at Nebraska, lost"
+       ],
+       [
+        "2018-09-29",
+        58.0909,
+        "Boise State at Wyoming, lost"
+       ],
+       [
+        "2018-10-06",
+        57.0909,
+        "Alabama at Arkansas, lost"
+       ],
+       [
+        "2018-10-06",
+        58.0,
+        "North Texas at UTEP, won"
+       ],
+       [
+        "2018-10-06",
+        57.0,
+        "Liberty at New Mexico State, lost"
+       ],
+       [
+        "2018-10-06",
+        56.0,
+        "Utah at Stanford, lost"
+       ],
+       [
+        "2018-10-06",
+        56.9091,
+        "Fresno State at Nevada, won"
+       ],
+       [
+        "2018-10-13",
+        57.8182,
+        "Akron at Buffalo, won"
+       ],
+       [
+        "2018-10-13",
+        58.7273,
+        "Southern Miss at North Texas, won"
+       ],
+       [
+        "2018-10-13",
+        59.6364,
+        "Washington at Oregon, won"
+       ],
+       [
+        "2018-10-13",
+        58.6364,
+        "UNLV at Utah State, lost"
+       ],
+       [
+        "2018-10-20",
+        57.6364,
+        "Illinois at Wisconsin, lost"
+       ],
+       [
+        "2018-10-20",
+        58.5455,
+        "Maryland at Iowa, won"
+       ],
+       [
+        "2018-10-20",
+        59.4545,
+        "Michigan at Michigan State, won"
+       ],
+       [
+        "2018-10-20",
+        58.4545,
+        "Miami (OH) at Army, lost"
+       ],
+       [
+        "2018-10-20",
+        59.3636,
+        "Florida Atlantic at Marshall, won"
+       ],
+       [
+        "2018-10-20",
+        60.2727,
+        "Charlotte at Middle Tennessee, won"
+       ],
+       [
+        "2018-10-20",
+        59.2727,
+        "Eastern Michigan at Ball State, lost"
+       ],
+       [
+        "2018-10-20",
+        58.2727,
+        "Penn State at Indiana, lost"
+       ],
+       [
+        "2018-10-20",
+        57.2727,
+        "Minnesota at Nebraska, lost"
+       ],
+       [
+        "2018-10-20",
+        58.1818,
+        "Akron at Kent State, won"
+       ],
+       [
+        "2018-10-20",
+        59.0909,
+        "Louisiana at App State, won"
+       ],
+       [
+        "2018-10-20",
+        58.0909,
+        "Memphis at Missouri, lost"
+       ],
+       [
+        "2018-10-20",
+        57.0909,
+        "Georgia Southern at New Mexico State, lost"
+       ],
+       [
+        "2018-10-20",
+        58.0,
+        "Vanderbilt at Kentucky, won"
+       ],
+       [
+        "2018-10-20",
+        57.0,
+        "Ohio State at Purdue, lost"
+       ],
+       [
+        "2018-10-20",
+        57.9091,
+        "Fresno State at New Mexico, won"
+       ],
+       [
+        "2018-10-27",
+        56.9091,
+        "Wake Forest at Louisville, lost"
+       ],
+       [
+        "2018-10-27",
+        55.9091,
+        "Coastal Carolina at Georgia State, lost"
+       ],
+       [
+        "2018-10-27",
+        54.9091,
+        "Oregon State at Colorado, lost"
+       ],
+       [
+        "2018-11-03",
+        55.8182,
+        "Oklahoma State at Baylor, won"
+       ],
+       [
+        "2018-11-03",
+        56.7273,
+        "San José State at Wyoming, won"
+       ],
+       [
+        "2018-11-03",
+        57.6364,
+        "Kansas State at TCU, won"
+       ],
+       [
+        "2018-11-03",
+        56.6364,
+        "Liberty at Massachusetts, lost"
+       ],
+       [
+        "2018-11-03",
+        55.6364,
+        "UTEP at Rice, lost"
+       ],
+       [
+        "2018-11-03",
+        54.6364,
+        "Alcorn State at New Mexico State, lost"
+       ],
+       [
+        "2018-11-03",
+        53.6364,
+        "UConn at Tulsa, lost"
+       ],
+       [
+        "2018-11-03",
+        52.6364,
+        "Houston at SMU, lost"
+       ],
+       [
+        "2018-11-06",
+        51.6364,
+        "Kent State at Buffalo, lost"
+       ],
+       [
+        "2018-11-10",
+        50.6364,
+        "Illinois at Nebraska, lost"
+       ],
+       [
+        "2018-11-10",
+        51.5455,
+        "Kansas at Kansas State, won"
+       ],
+       [
+        "2018-11-10",
+        52.4545,
+        "Wisconsin at Penn State, won"
+       ],
+       [
+        "2018-11-10",
+        53.3636,
+        "Lafayette at Army, won"
+       ],
+       [
+        "2018-11-10",
+        52.3636,
+        "SMU at UConn, lost"
+       ],
+       [
+        "2018-11-10",
+        53.2727,
+        "Akron at Eastern Michigan, won"
+       ],
+       [
+        "2018-11-10",
+        52.2727,
+        "Virginia Tech at Pittsburgh, lost"
+       ],
+       [
+        "2018-11-10",
+        51.2727,
+        "Texas at Texas Tech, lost"
+       ],
+       [
+        "2018-11-10",
+        52.1818,
+        "Clemson at Boston College, won"
+       ],
+       [
+        "2018-11-10",
+        51.1818,
+        "Oregon State at Stanford, lost"
+       ],
+       [
+        "2018-11-17",
+        52.0909,
+        "Michigan State at Nebraska, won"
+       ],
+       [
+        "2018-11-23",
+        51.0909,
+        "Houston at Memphis, lost"
+       ],
+       [
+        "2018-11-23",
+        52.0,
+        "Arkansas at Missouri, won"
+       ],
+       [
+        "2018-11-23",
+        52.9091,
+        "Washington at Washington State, won"
+       ],
+       [
+        "2018-11-24",
+        53.8182,
+        "Wyoming at New Mexico, won"
+       ],
+       [
+        "2018-11-24",
+        52.8182,
+        "Southern Miss at UTEP, lost"
+       ],
+       [
+        "2018-11-24",
+        53.7273,
+        "SMU at Tulsa, won"
+       ],
+       [
+        "2018-11-24",
+        52.7273,
+        "Oklahoma State at TCU, lost"
+       ],
+       [
+        "2018-12-01",
+        52.7273,
+        "Drake at Iowa State, push"
+       ],
+       [
+        "2018-12-01",
+        51.7273,
+        "UAB at Middle Tennessee, lost"
+       ],
+       [
+        "2019-08-29",
+        52.6364,
+        "Morgan State at Bowling Green, won"
+       ],
+       [
+        "2019-08-29",
+        53.5455,
+        "Robert Morris at Buffalo, won"
+       ],
+       [
+        "2019-09-07",
+        52.5455,
+        "Richmond at Boston College, lost"
+       ],
+       [
+        "2019-09-07",
+        51.5455,
+        "Minnesota at Fresno State, lost"
+       ],
+       [
+        "2019-09-14",
+        50.5455,
+        "Stanford at UCF, lost"
+       ],
+       [
+        "2019-09-14",
+        51.4545,
+        "Iowa at Iowa State, won"
+       ],
+       [
+        "2019-09-14",
+        52.3636,
+        "Idaho at Wyoming, won"
+       ],
+       [
+        "2019-09-14",
+        53.2727,
+        "Weber State at Nevada, won"
+       ],
+       [
+        "2019-09-21",
+        52.2727,
+        "UL Monroe at Iowa State, lost"
+       ],
+       [
+        "2019-09-21",
+        51.2727,
+        "SMU at TCU, lost"
+       ],
+       [
+        "2019-09-21",
+        52.1818,
+        "Wyoming at Tulsa, won"
+       ],
+       [
+        "2019-09-21",
+        53.0909,
+        "South Carolina at Missouri, won"
+       ],
+       [
+        "2019-09-21",
+        54.0,
+        "Central Michigan at Miami, won"
+       ],
+       [
+        "2019-09-21",
+        53.0,
+        "West Virginia at Kansas, lost"
+       ],
+       [
+        "2019-09-21",
+        52.0,
+        "New Mexico State at New Mexico, lost"
+       ],
+       [
+        "2019-09-21",
+        52.9091,
+        "Wagner at Florida Atlantic, won"
+       ],
+       [
+        "2019-09-21",
+        53.8182,
+        "UTSA at North Texas, won"
+       ],
+       [
+        "2019-09-28",
+        52.8182,
+        "Kansas at TCU, lost"
+       ],
+       [
+        "2019-09-28",
+        53.7273,
+        "Iowa State at Baylor, won"
+       ],
+       [
+        "2019-09-28",
+        54.6364,
+        "Colorado State at Utah State, won"
+       ],
+       [
+        "2019-09-28",
+        53.6364,
+        "UNLV at Wyoming, lost"
+       ],
+       [
+        "2019-09-28",
+        54.5455,
+        "Washington State at Utah, won"
+       ],
+       [
+        "2019-10-05",
+        53.5455,
+        "TCU at Iowa State, lost"
+       ],
+       [
+        "2019-10-05",
+        54.4545,
+        "Illinois at Minnesota, won"
+       ],
+       [
+        "2019-10-05",
+        53.4545,
+        "Virginia Tech at Miami, lost"
+       ],
+       [
+        "2019-10-05",
+        52.4545,
+        "Arkansas State at Georgia State, lost"
+       ],
+       [
+        "2019-10-05",
+        53.3636,
+        "Washington at Stanford, won"
+       ],
+       [
+        "2019-10-12",
+        52.3636,
+        "Michigan at Illinois, lost"
+       ],
+       [
+        "2019-10-12",
+        53.2727,
+        "Miami (OH) at Western Michigan, won"
+       ],
+       [
+        "2019-10-12",
+        54.1818,
+        "Toledo at Bowling Green, won"
+       ],
+       [
+        "2019-10-12",
+        55.0909,
+        "Michigan State at Wisconsin, won"
+       ],
+       [
+        "2019-10-12",
+        54.0909,
+        "Ole Miss at Missouri, lost"
+       ],
+       [
+        "2019-10-12",
+        55.0,
+        "Nebraska at Minnesota, won"
+       ],
+       [
+        "2019-10-12",
+        55.9091,
+        "USC at Notre Dame, won"
+       ],
+       [
+        "2019-10-17",
+        54.9091,
+        "UCLA at Stanford, lost"
+       ],
+       [
+        "2019-10-19",
+        53.9091,
+        "Georgia Tech at Miami, lost"
+       ],
+       [
+        "2019-10-19",
+        54.8182,
+        "New Mexico at Wyoming, won"
+       ],
+       [
+        "2019-10-19",
+        55.7273,
+        "Kentucky at Georgia, won"
+       ],
+       [
+        "2019-10-19",
+        56.6364,
+        "Arizona State at Utah, won"
+       ],
+       [
+        "2019-10-19",
+        57.5455,
+        "Army at Georgia State, won"
+       ],
+       [
+        "2019-10-19",
+        56.5455,
+        "Boise State at BYU, lost"
+       ],
+       [
+        "2019-10-19",
+        57.4545,
+        "Nevada at Utah State, won"
+       ],
+       [
+        "2019-10-26",
+        58.3636,
+        "Nevada at Wyoming, won"
+       ],
+       [
+        "2019-10-26",
+        59.2727,
+        "Ohio at Ball State, won"
+       ],
+       [
+        "2019-10-26",
+        60.1818,
+        "Virginia at Louisville, won"
+       ],
+       [
+        "2019-10-26",
+        59.1818,
+        "Florida International at Middle Tennessee, lost"
+       ],
+       [
+        "2019-10-26",
+        58.1818,
+        "South Carolina at Tennessee, lost"
+       ],
+       [
+        "2019-10-26",
+        59.0909,
+        "Missouri at Kentucky, won"
+       ],
+       [
+        "2019-10-26",
+        60.0,
+        "California at Utah, won"
+       ],
+       [
+        "2019-10-26",
+        60.9091,
+        "Utah State at Air Force, won"
+       ],
+       [
+        "2019-10-31",
+        59.9091,
+        "Georgia Southern at App State, lost"
+       ],
+       [
+        "2019-11-02",
+        60.8182,
+        "Akron at Bowling Green, won"
+       ],
+       [
+        "2019-11-02",
+        61.7273,
+        "Virginia Tech at Notre Dame, won"
+       ],
+       [
+        "2019-11-02",
+        62.6364,
+        "Rutgers at Illinois, won"
+       ],
+       [
+        "2019-11-09",
+        63.5455,
+        "Florida International at Florida Atlantic, won"
+       ],
+       [
+        "2019-11-16",
+        64.4545,
+        "Kansas at Oklahoma State, won"
+       ],
+       [
+        "2019-11-16",
+        63.4545,
+        "TCU at Texas Tech, lost"
+       ],
+       [
+        "2019-11-16",
+        62.4545,
+        "Wisconsin at Nebraska, lost"
+       ],
+       [
+        "2019-11-16",
+        63.3636,
+        "West Virginia at Kansas State, won"
+       ],
+       [
+        "2019-11-16",
+        62.3636,
+        "Syracuse at Duke, lost"
+       ],
+       [
+        "2019-11-16",
+        61.3636,
+        "Louisville at NC State, lost"
+       ],
+       [
+        "2019-11-23",
+        60.3636,
+        "Old Dominion at Middle Tennessee, lost"
+       ],
+       [
+        "2019-11-26",
+        61.2727,
+        "Western Michigan at Northern Illinois, won"
+       ],
+       [
+        "2019-11-29",
+        60.2727,
+        "Iowa at Nebraska, lost"
+       ],
+       [
+        "2019-11-29",
+        61.1818,
+        "West Virginia at TCU, won"
+       ],
+       [
+        "2019-11-30",
+        61.1818,
+        "Northwestern at Illinois, push"
+       ],
+       [
+        "2019-11-30",
+        60.1818,
+        "Middle Tennessee at Western Kentucky, lost"
+       ],
+       [
+        "2019-11-30",
+        61.0909,
+        "Wyoming at Air Force, won"
+       ],
+       [
+        "2019-11-30",
+        60.0909,
+        "Rice at UTEP, lost"
+       ],
+       [
+        "2019-11-30",
+        59.0909,
+        "Baylor at Kansas, lost"
+       ],
+       [
+        "2019-11-30",
+        58.0909,
+        "Wisconsin at Minnesota, lost"
+       ],
+       [
+        "2019-11-30",
+        57.0909,
+        "Notre Dame at Stanford, lost"
+       ],
+       [
+        "2019-11-30",
+        58.0,
+        "UAB at North Texas, won"
+       ],
+       [
+        "2019-11-30",
+        58.9091,
+        "Utah State at New Mexico, won"
+       ],
+       [
+        "2019-11-30",
+        59.8182,
+        "Tulane at SMU, won"
+       ],
+       [
+        "2019-11-30",
+        60.7273,
+        "Texas A&M at LSU, won"
+       ],
+       [
+        "2019-11-30",
+        61.6364,
+        "Iowa State at Kansas State, won"
+       ],
+       [
+        "2019-11-30",
+        62.5455,
+        "UL Monroe at Louisiana, won"
+       ],
+       [
+        "2019-11-30",
+        63.4545,
+        "Oklahoma at Oklahoma State, won"
+       ],
+       [
+        "2019-12-14",
+        64.3636,
+        "Army at Navy, won"
+       ],
+       [
+        "2020-09-12",
+        63.3636,
+        "Austin Peay at Pittsburgh, lost"
+       ],
+       [
+        "2020-09-19",
+        62.3636,
+        "Navy at Tulane, lost"
+       ],
+       [
+        "2020-09-26",
+        61.3636,
+        "Kansas State at Oklahoma, lost"
+       ],
+       [
+        "2020-09-26",
+        60.3636,
+        "Texas at Texas Tech, lost"
+       ],
+       [
+        "2020-09-26",
+        61.2727,
+        "West Virginia at Oklahoma State, won"
+       ],
+       [
+        "2020-09-26",
+        60.2727,
+        "Alabama at Missouri, lost"
+       ],
+       [
+        "2020-09-26",
+        61.1818,
+        "Troy at BYU, won"
+       ],
+       [
+        "2020-10-10",
+        60.1818,
+        "Missouri at LSU, lost"
+       ],
+       [
+        "2020-10-10",
+        61.0909,
+        "The Citadel at Army, won"
+       ],
+       [
+        "2020-10-10",
+        62.0,
+        "Texas State at Troy, won"
+       ],
+       [
+        "2020-10-10",
+        61.0,
+        "Pittsburgh at Boston College, lost"
+       ],
+       [
+        "2020-10-10",
+        60.0,
+        "Arkansas at Auburn, lost"
+       ],
+       [
+        "2020-10-16",
+        59.0,
+        "SMU at Tulane, lost"
+       ],
+       [
+        "2020-10-17",
+        58.0,
+        "Pittsburgh at Miami, lost"
+       ],
+       [
+        "2020-10-17",
+        58.9091,
+        "Louisville at Notre Dame, won"
+       ],
+       [
+        "2020-10-17",
+        59.8182,
+        "Ole Miss at Arkansas, won"
+       ],
+       [
+        "2020-10-24",
+        58.8182,
+        "West Virginia at Texas Tech, lost"
+       ],
+       [
+        "2020-10-24",
+        57.8182,
+        "Utah State at Boise State, lost"
+       ],
+       [
+        "2020-10-24",
+        56.8182,
+        "Texas State at BYU, lost"
+       ],
+       [
+        "2020-10-30",
+        57.7273,
+        "Hawai'i at Wyoming, won"
+       ],
+       [
+        "2020-10-31",
+        56.7273,
+        "Iowa State at Kansas, lost"
+       ],
+       [
+        "2020-10-31",
+        57.6364,
+        "Purdue at Illinois, won"
+       ],
+       [
+        "2020-10-31",
+        58.5455,
+        "Northwestern at Iowa, won"
+       ],
+       [
+        "2020-11-07",
+        57.5455,
+        "Michigan State at Iowa, lost"
+       ],
+       [
+        "2020-11-07",
+        58.4545,
+        "Oklahoma State at Kansas State, won"
+       ],
+       [
+        "2020-11-07",
+        59.3636,
+        "Western Kentucky at Florida Atlantic, won"
+       ],
+       [
+        "2020-11-07",
+        60.2727,
+        "Stanford at Oregon, won"
+       ],
+       [
+        "2020-11-10",
+        59.2727,
+        "Kent State at Bowling Green, lost"
+       ],
+       [
+        "2020-11-10",
+        60.1818,
+        "Miami (OH) at Buffalo, won"
+       ],
+       [
+        "2020-11-14",
+        61.0909,
+        "Penn State at Nebraska, won"
+       ],
+       [
+        "2020-11-14",
+        62.0,
+        "Fresno State at Utah State, won"
+       ],
+       [
+        "2020-11-14",
+        62.9091,
+        "Baylor at Texas Tech, won"
+       ],
+       [
+        "2020-11-14",
+        63.8182,
+        "Northwestern at Purdue, won"
+       ],
+       [
+        "2020-11-14",
+        64.7273,
+        "Nevada at New Mexico, won"
+       ],
+       [
+        "2020-11-14",
+        65.6364,
+        "SMU at Tulsa, won"
+       ],
+       [
+        "2020-11-19",
+        66.5455,
+        "Tulane at Tulsa, won"
+       ],
+       [
+        "2020-11-20",
+        67.4545,
+        "Massachusetts at Florida Atlantic, won"
+       ],
+       [
+        "2020-11-28",
+        66.4545,
+        "Kent State at Buffalo, lost"
+       ],
+       [
+        "2020-11-28",
+        65.4545,
+        "Coastal Carolina at Texas State, lost"
+       ],
+       [
+        "2020-12-05",
+        66.3636,
+        "Penn State at Rutgers, won"
+       ],
+       [
+        "2020-12-05",
+        67.2727,
+        "Tulsa at Navy, won"
+       ],
+       [
+        "2020-12-11",
+        66.2727,
+        "North Texas at UTEP, lost"
+       ],
+       [
+        "2020-12-12",
+        67.1818,
+        "Western Michigan at Ball State, won"
+       ],
+       [
+        "2020-12-12",
+        66.1818,
+        "Wake Forest at Louisville, lost"
+       ],
+       [
+        "2020-12-12",
+        65.1818,
+        "Fresno State at New Mexico, lost"
+       ],
+       [
+        "2020-12-19",
+        64.1818,
+        "Ole Miss at LSU, lost"
+       ],
+       [
+        "2021-08-28",
+        63.1818,
+        "Southern Utah at San José State, lost"
+       ],
+       [
+        "2021-09-04",
+        64.0909,
+        "Montana State at Wyoming, won"
+       ],
+       [
+        "2021-09-04",
+        63.0909,
+        "Bethune-Cookman at UTEP, lost"
+       ],
+       [
+        "2021-09-10",
+        62.0909,
+        "North Dakota at Utah State, lost"
+       ],
+       [
+        "2021-09-11",
+        61.0909,
+        "Youngstown State at Michigan State, lost"
+       ],
+       [
+        "2021-09-11",
+        61.0909,
+        "Tulsa at Oklahoma State, push"
+       ],
+       [
+        "2021-09-11",
+        60.0909,
+        "Wyoming at Northern Illinois, lost"
+       ],
+       [
+        "2021-09-11",
+        59.0909,
+        "Toledo at Notre Dame, lost"
+       ],
+       [
+        "2021-09-11",
+        60.0,
+        "Buffalo at Nebraska, won"
+       ],
+       [
+        "2021-09-11",
+        60.9091,
+        "South Alabama at Bowling Green, won"
+       ],
+       [
+        "2021-09-11",
+        61.8182,
+        "Iowa at Iowa State, won"
+       ],
+       [
+        "2021-09-11",
+        62.7273,
+        "Southern Illinois at Kansas State, won"
+       ],
+       [
+        "2021-09-11",
+        63.6364,
+        "Stephen F. Austin at Texas Tech, won"
+       ],
+       [
+        "2021-09-11",
+        64.5455,
+        "Utah at BYU, won"
+       ],
+       [
+        "2021-09-18",
+        63.5455,
+        "Ball State at Wyoming, lost"
+       ],
+       [
+        "2021-09-18",
+        62.5455,
+        "Utah State at Air Force, lost"
+       ],
+       [
+        "2021-09-18",
+        63.4545,
+        "Oklahoma State at Boise State, won"
+       ],
+       [
+        "2021-09-18",
+        64.3636,
+        "Arizona State at BYU, won"
+       ],
+       [
+        "2021-09-25",
+        65.2727,
+        "New Mexico at UTEP, won"
+       ],
+       [
+        "2021-09-25",
+        64.2727,
+        "Colorado at Arizona State, lost"
+       ],
+       [
+        "2021-10-02",
+        65.1818,
+        "Western Michigan at Buffalo, won"
+       ],
+       [
+        "2021-10-02",
+        64.1818,
+        "Florida International at Florida Atlantic, lost"
+       ],
+       [
+        "2021-10-02",
+        63.1818,
+        "New Mexico State at San José State, lost"
+       ],
+       [
+        "2021-10-09",
+        62.1818,
+        "San José State at Colorado State, lost"
+       ],
+       [
+        "2021-10-09",
+        61.1818,
+        "TCU at Texas Tech, lost"
+       ],
+       [
+        "2021-10-09",
+        62.0909,
+        "Wyoming at Air Force, won"
+       ],
+       [
+        "2021-10-09",
+        61.0909,
+        "Memphis at Tulsa, lost"
+       ],
+       [
+        "2021-10-16",
+        60.0909,
+        "UCF at Cincinnati, lost"
+       ],
+       [
+        "2021-10-16",
+        61.0,
+        "Kentucky at Georgia, won"
+       ],
+       [
+        "2021-10-16",
+        61.9091,
+        "Pittsburgh at Virginia Tech, won"
+       ],
+       [
+        "2021-10-16",
+        62.8182,
+        "NC State at Boston College, won"
+       ],
+       [
+        "2021-10-23",
+        63.7273,
+        "Kansas State at Texas Tech, won"
+       ],
+       [
+        "2021-10-23",
+        64.6364,
+        "New Mexico at Wyoming, won"
+       ],
+       [
+        "2021-10-23",
+        64.6364,
+        "Liberty at North Texas, push"
+       ],
+       [
+        "2021-10-23",
+        65.5455,
+        "West Virginia at TCU, won"
+       ],
+       [
+        "2021-10-28",
+        64.5455,
+        "Troy at Coastal Carolina, lost"
+       ],
+       [
+        "2021-10-30",
+        65.4545,
+        "Washington at Stanford, won"
+       ],
+       [
+        "2021-11-05",
+        64.4545,
+        "Utah at Stanford, lost"
+       ],
+       [
+        "2021-11-06",
+        65.3636,
+        "Missouri at Georgia, won"
+       ],
+       [
+        "2021-11-06",
+        65.3636,
+        "Georgia Tech at Miami, push"
+       ],
+       [
+        "2021-11-06",
+        64.3636,
+        "Colorado State at Wyoming, lost"
+       ],
+       [
+        "2021-11-06",
+        65.2727,
+        "NC State at Florida State, won"
+       ],
+       [
+        "2021-11-06",
+        66.1818,
+        "Tulane at UCF, won"
+       ],
+       [
+        "2021-11-06",
+        67.0909,
+        "Marshall at Florida Atlantic, won"
+       ],
+       [
+        "2021-11-06",
+        68.0,
+        "Oregon at Washington, won"
+       ],
+       [
+        "2021-11-06",
+        68.9091,
+        "San Diego State at Hawai'i, won"
+       ],
+       [
+        "2021-11-13",
+        69.8182,
+        "Syracuse at Louisville, won"
+       ],
+       [
+        "2021-11-13",
+        70.7273,
+        "Michigan at Penn State, won"
+       ],
+       [
+        "2021-11-13",
+        71.6364,
+        "Houston at Temple, won"
+       ],
+       [
+        "2021-11-13",
+        72.5455,
+        "South Alabama at App State, won"
+       ],
+       [
+        "2021-11-13",
+        71.5455,
+        "Iowa State at Texas Tech, lost"
+       ],
+       [
+        "2021-11-13",
+        70.5455,
+        "Air Force at Colorado State, lost"
+       ],
+       [
+        "2021-11-17",
+        69.5455,
+        "Northern Illinois at Buffalo, lost"
+       ],
+       [
+        "2021-11-20",
+        68.5455,
+        "New Mexico State at Kentucky, lost"
+       ],
+       [
+        "2021-11-20",
+        67.5455,
+        "Florida Atlantic at Western Kentucky, lost"
+       ],
+       [
+        "2021-11-20",
+        68.4545,
+        "Iowa State at Oklahoma, won"
+       ],
+       [
+        "2021-11-20",
+        69.3636,
+        "Kansas at TCU, won"
+       ],
+       [
+        "2021-11-23",
+        68.3636,
+        "Western Michigan at Northern Illinois, lost"
+       ],
+       [
+        "2021-11-26",
+        69.2727,
+        "Ohio at Bowling Green, won"
+       ],
+       [
+        "2021-11-27",
+        70.1818,
+        "Wake Forest at Boston College, won"
+       ],
+       [
+        "2021-11-27",
+        69.1818,
+        "Houston at UConn, lost"
+       ],
+       [
+        "2021-11-27",
+        68.1818,
+        "Navy at Temple, lost"
+       ],
+       [
+        "2022-08-27",
+        69.0909,
+        "UConn at Utah State, won"
+       ],
+       [
+        "2022-08-27",
+        70.0,
+        "North Texas at UTEP, won"
+       ],
+       [
+        "2022-09-01",
+        70.9091,
+        "Portland State at San José State, won"
+       ],
+       [
+        "2022-09-03",
+        69.9091,
+        "Tulsa at Wyoming, lost"
+       ],
+       [
+        "2022-09-03",
+        68.9091,
+        "Texas State at Nevada, lost"
+       ],
+       [
+        "2022-09-03",
+        69.8182,
+        "Maine at New Mexico, won"
+       ],
+       [
+        "2022-09-09",
+        68.8182,
+        "Boise State at New Mexico, lost"
+       ],
+       [
+        "2022-09-10",
+        67.8182,
+        "USC at Stanford, lost"
+       ],
+       [
+        "2022-09-10",
+        68.7273,
+        "New Mexico State at UTEP, won"
+       ],
+       [
+        "2022-09-17",
+        69.6364,
+        "Tulane at Kansas State, won"
+       ],
+       [
+        "2022-09-17",
+        68.6364,
+        "Arkansas-Pine Bluff at Oklahoma State, lost"
+       ],
+       [
+        "2022-09-17",
+        67.6364,
+        "Jacksonville State at Tulsa, lost"
+       ],
+       [
+        "2022-09-17",
+        68.5455,
+        "UTEP at New Mexico, won"
+       ],
+       [
+        "2022-09-17",
+        69.4545,
+        "San Diego State at Utah, won"
+       ],
+       [
+        "2022-09-22",
+        70.3636,
+        "West Virginia at Virginia Tech, won"
+       ],
+       [
+        "2022-09-22",
+        69.3636,
+        "Coastal Carolina at Georgia State, lost"
+       ],
+       [
+        "2022-09-24",
+        68.3636,
+        "Baylor at Iowa State, lost"
+       ],
+       [
+        "2022-09-24",
+        67.3636,
+        "Florida International at Western Kentucky, lost"
+       ],
+       [
+        "2022-09-24",
+        66.3636,
+        "Northern Illinois at Kentucky, lost"
+       ],
+       [
+        "2022-09-24",
+        67.2727,
+        "Western Michigan at San José State, won"
+       ],
+       [
+        "2022-09-29",
+        66.2727,
+        "Utah State at BYU, lost"
+       ],
+       [
+        "2022-10-01",
+        65.2727,
+        "Northern Illinois at Ball State, lost"
+       ],
+       [
+        "2022-10-08",
+        64.2727,
+        "Oregon State at Stanford, lost"
+       ],
+       [
+        "2022-10-15",
+        65.1818,
+        "Central Michigan at Akron, won"
+       ],
+       [
+        "2022-10-15",
+        66.0909,
+        "Miami (OH) at Bowling Green, won"
+       ],
+       [
+        "2022-10-22",
+        65.0909,
+        "Kansas at Baylor, lost"
+       ],
+       [
+        "2022-10-22",
+        66.0,
+        "Cincinnati at SMU, won"
+       ],
+       [
+        "2022-10-22",
+        66.9091,
+        "West Virginia at Texas Tech, won"
+       ],
+       [
+        "2022-10-22",
+        65.9091,
+        "Ole Miss at LSU, lost"
+       ],
+       [
+        "2022-10-22",
+        64.9091,
+        "Texas at Oklahoma State, lost"
+       ],
+       [
+        "2022-10-22",
+        63.9091,
+        "Purdue at Wisconsin, lost"
+       ],
+       [
+        "2022-10-22",
+        64.8182,
+        "Vanderbilt at Missouri, won"
+       ],
+       [
+        "2022-10-22",
+        65.7273,
+        "Arizona State at Stanford, won"
+       ],
+       [
+        "2022-10-22",
+        66.6364,
+        "Florida Atlantic at UTEP, won"
+       ],
+       [
+        "2022-10-22",
+        67.5455,
+        "Southern Miss at Texas State, won"
+       ],
+       [
+        "2022-10-22",
+        66.5455,
+        "Fresno State at New Mexico, lost"
+       ],
+       [
+        "2022-10-22",
+        67.4545,
+        "Boise State at Air Force, won"
+       ],
+       [
+        "2022-10-22",
+        66.4545,
+        "Kansas State at TCU, lost"
+       ],
+       [
+        "2022-10-22",
+        67.3636,
+        "Utah State at Wyoming, won"
+       ],
+       [
+        "2022-10-22",
+        68.2727,
+        "Washington at California, won"
+       ],
+       [
+        "2022-11-04",
+        69.1818,
+        "Oregon State at Washington, won"
+       ],
+       [
+        "2022-11-05",
+        70.0909,
+        "Kentucky at Missouri, won"
+       ],
+       [
+        "2022-11-05",
+        71.0,
+        "Iowa at Purdue, won"
+       ],
+       [
+        "2022-11-05",
+        71.9091,
+        "Maryland at Wisconsin, won"
+       ],
+       [
+        "2022-11-05",
+        72.8182,
+        "Oregon at Colorado, won"
+       ],
+       [
+        "2022-11-05",
+        73.7273,
+        "West Virginia at Iowa State, won"
+       ],
+       [
+        "2022-11-05",
+        74.6364,
+        "Oklahoma State at Kansas, won"
+       ],
+       [
+        "2022-11-05",
+        75.5455,
+        "Michigan State at Illinois, won"
+       ],
+       [
+        "2022-11-05",
+        76.4545,
+        "Syracuse at Pittsburgh, won"
+       ],
+       [
+        "2022-11-05",
+        77.3636,
+        "Navy at Cincinnati, won"
+       ],
+       [
+        "2022-11-05",
+        78.2727,
+        "Arizona at Utah, won"
+       ],
+       [
+        "2022-11-05",
+        77.2727,
+        "Clemson at Notre Dame, lost"
+       ],
+       [
+        "2022-11-11",
+        76.2727,
+        "East Carolina at Cincinnati, lost"
+       ],
+       [
+        "2022-11-12",
+        75.2727,
+        "Temple at Houston, lost"
+       ],
+       [
+        "2022-11-12",
+        76.1818,
+        "Army at Troy, won"
+       ],
+       [
+        "2022-11-12",
+        75.1818,
+        "UCF at Tulane, lost"
+       ],
+       [
+        "2022-11-12",
+        76.0909,
+        "Texas A&M at Auburn, won"
+       ],
+       [
+        "2022-11-19",
+        77.0,
+        "Wisconsin at Nebraska, won"
+       ],
+       [
+        "2022-11-19",
+        77.9091,
+        "Northwestern at Purdue, won"
+       ],
+       [
+        "2022-11-19",
+        78.8182,
+        "Illinois at Michigan, won"
+       ],
+       [
+        "2022-11-19",
+        77.8182,
+        "Indiana at Michigan State, lost"
+       ],
+       [
+        "2022-11-19",
+        78.7273,
+        "UTSA at Rice, won"
+       ],
+       [
+        "2022-11-19",
+        77.7273,
+        "Boston College at Notre Dame, lost"
+       ],
+       [
+        "2022-11-19",
+        78.6364,
+        "Georgia at Kentucky, won"
+       ],
+       [
+        "2022-11-19",
+        79.5455,
+        "NC State at Louisville, won"
+       ],
+       [
+        "2022-11-19",
+        78.5455,
+        "Florida Atlantic at Middle Tennessee, lost"
+       ],
+       [
+        "2022-11-26",
+        77.5455,
+        "Kent State at Buffalo, lost"
+       ],
+       [
+        "2022-11-26",
+        78.4545,
+        "Rice at North Texas, won"
+       ],
+       [
+        "2022-11-26",
+        79.3636,
+        "Memphis at SMU, won"
+       ],
+       [
+        "2022-11-26",
+        78.3636,
+        "Iowa State at TCU, lost"
+       ],
+       [
+        "2022-11-26",
+        79.2727,
+        "Southern Miss at UL Monroe, won"
+       ],
+       [
+        "2022-11-26",
+        80.1818,
+        "Tennessee at Vanderbilt, won"
+       ],
+       [
+        "2022-11-26",
+        79.1818,
+        "BYU at Stanford, lost"
+       ],
+       [
+        "2023-08-31",
+        80.0909,
+        "Nebraska at Minnesota, won"
+       ],
+       [
+        "2023-08-31",
+        81.0,
+        "Florida at Utah, won"
+       ],
+       [
+        "2023-09-01",
+        80.0,
+        "Stanford at Hawai'i, lost"
+       ],
+       [
+        "2023-09-02",
+        80.9091,
+        "Northern Iowa at Iowa State, won"
+       ],
+       [
+        "2023-09-02",
+        79.9091,
+        "Monmouth at Florida Atlantic, lost"
+       ],
+       [
+        "2023-09-09",
+        78.9091,
+        "Houston at Rice, lost"
+       ],
+       [
+        "2023-09-16",
+        77.9091,
+        "Florida State at Boston College, lost"
+       ],
+       [
+        "2023-09-16",
+        78.8182,
+        "Norfolk State at Temple, won"
+       ],
+       [
+        "2023-09-16",
+        79.7273,
+        "Florida International at UConn, won"
+       ],
+       [
+        "2023-09-22",
+        78.7273,
+        "Air Force at San José State, lost"
+       ],
+       [
+        "2023-09-23",
+        79.6364,
+        "SMU at TCU, won"
+       ],
+       [
+        "2023-09-23",
+        78.6364,
+        "Duke at UConn, lost"
+       ],
+       [
+        "2023-09-23",
+        77.6364,
+        "Miami at Temple, lost"
+       ],
+       [
+        "2023-09-23",
+        76.6364,
+        "BYU at Kansas, lost"
+       ],
+       [
+        "2023-09-23",
+        75.6364,
+        "Oklahoma State at Iowa State, lost"
+       ],
+       [
+        "2023-09-23",
+        76.5455,
+        "Gardner-Webb at East Carolina, won"
+       ],
+       [
+        "2023-09-23",
+        77.4545,
+        "Georgia Tech at Wake Forest, won"
+       ],
+       [
+        "2023-09-23",
+        78.3636,
+        "App State at Wyoming, won"
+       ],
+       [
+        "2023-09-30",
+        79.2727,
+        "UAB at Tulane, won"
+       ],
+       [
+        "2023-09-30",
+        78.2727,
+        "Michigan at Nebraska, lost"
+       ],
+       [
+        "2023-09-30",
+        77.2727,
+        "Houston at Texas Tech, lost"
+       ],
+       [
+        "2023-09-30",
+        76.2727,
+        "New Mexico at Wyoming, lost"
+       ],
+       [
+        "2023-10-06",
+        77.1818,
+        "Nebraska at Illinois, won"
+       ],
+       [
+        "2023-10-07",
+        78.0909,
+        "Maryland at Ohio State, won"
+       ],
+       [
+        "2023-10-07",
+        77.0909,
+        "UTSA at Temple, lost"
+       ],
+       [
+        "2023-10-07",
+        78.0,
+        "Central Michigan at Buffalo, won"
+       ],
+       [
+        "2023-10-07",
+        78.9091,
+        "Wake Forest at Clemson, won"
+       ],
+       [
+        "2023-10-07",
+        79.8182,
+        "Texas State at Louisiana, won"
+       ],
+       [
+        "2023-10-07",
+        80.7273,
+        "Ball State at Eastern Michigan, won"
+       ],
+       [
+        "2023-10-07",
+        81.6364,
+        "Bowling Green at Miami (OH), won"
+       ],
+       [
+        "2023-10-07",
+        80.6364,
+        "Northern Illinois at Akron, lost"
+       ],
+       [
+        "2023-10-07",
+        81.5455,
+        "Arkansas State at Troy, won"
+       ],
+       [
+        "2023-10-11",
+        82.4545,
+        "Sam Houston at New Mexico State, won"
+       ],
+       [
+        "2023-10-14",
+        83.3636,
+        "Iowa State at Cincinnati, won"
+       ],
+       [
+        "2023-10-14",
+        84.2727,
+        "Temple at North Texas, won"
+       ],
+       [
+        "2023-10-14",
+        85.1818,
+        "Texas A&M at Tennessee, won"
+       ],
+       [
+        "2023-10-14",
+        84.1818,
+        "Kansas at Oklahoma State, lost"
+       ],
+       [
+        "2023-10-14",
+        85.0909,
+        "Iowa at Wisconsin, won"
+       ],
+       [
+        "2023-10-14",
+        86.0,
+        "Ohio at Northern Illinois, won"
+       ],
+       [
+        "2023-10-14",
+        85.0,
+        "Marshall at Georgia State, lost"
+       ],
+       [
+        "2023-10-14",
+        84.0,
+        "USC at Notre Dame, lost"
+       ],
+       [
+        "2023-10-21",
+        84.9091,
+        "Air Force at Navy, won"
+       ],
+       [
+        "2023-10-21",
+        83.9091,
+        "Wisconsin at Illinois, lost"
+       ],
+       [
+        "2023-10-21",
+        84.8182,
+        "Minnesota at Iowa, won"
+       ],
+       [
+        "2023-10-21",
+        85.7273,
+        "South Carolina at Missouri, won"
+       ],
+       [
+        "2023-10-21",
+        86.6364,
+        "Northwestern at Nebraska, won"
+       ],
+       [
+        "2023-10-21",
+        87.5455,
+        "South Florida at UConn, won"
+       ],
+       [
+        "2023-10-21",
+        88.4545,
+        "Eastern Michigan at Northern Illinois, won"
+       ],
+       [
+        "2023-10-21",
+        89.3636,
+        "UCLA at Stanford, won"
+       ],
+       [
+        "2023-10-28",
+        88.3636,
+        "Virginia at Miami, lost"
+       ],
+       [
+        "2023-11-11",
+        89.2727,
+        "Maryland at Nebraska, won"
+       ],
+       [
+        "2023-11-11",
+        88.2727,
+        "Utah at Washington, lost"
+       ],
+       [
+        "2023-11-18",
+        87.2727,
+        "Coastal Carolina at Army, lost"
+       ],
+       [
+        "2023-11-18",
+        88.1818,
+        "Sacred Heart at UConn, won"
+       ],
+       [
+        "2023-11-18",
+        89.0909,
+        "East Carolina at Navy, won"
+       ],
+       [
+        "2023-11-18",
+        88.0909,
+        "Hawai'i at Wyoming, lost"
+       ],
+       [
+        "2023-11-21",
+        89.0,
+        "Eastern Michigan at Buffalo, won"
+       ],
+       [
+        "2023-11-24",
+        88.0,
+        "Miami at Boston College, lost"
+       ],
+       [
+        "2023-11-24",
+        87.0,
+        "Utah State at New Mexico, lost"
+       ],
+       [
+        "2023-11-25",
+        86.0,
+        "Liberty at UTEP, lost"
+       ],
+       [
+        "2023-11-25",
+        86.9091,
+        "Jacksonville State at New Mexico State, won"
+       ],
+       [
+        "2023-12-16",
+        87.8182,
+        "Miami (OH) at App State, won"
+       ],
+       [
+        "2023-12-21",
+        88.7273,
+        "South Florida at Syracuse, won"
+       ],
+       [
+        "2023-12-23",
+        87.7273,
+        "Georgia State at Utah State, lost"
+       ],
+       [
+        "2023-12-23",
+        88.6364,
+        "Coastal Carolina at San José State, won"
+       ],
+       [
+        "2024-08-24",
+        89.5455,
+        "Delaware State at Hawai'i, won"
+       ],
+       [
+        "2024-08-29",
+        88.5455,
+        "Sacramento State at San José State, lost"
+       ],
+       [
+        "2024-08-30",
+        87.5455,
+        "TCU at Stanford, lost"
+       ],
+       [
+        "2024-09-06",
+        86.5455,
+        "Western Illinois at Indiana, lost"
+       ],
+       [
+        "2024-09-07",
+        85.5455,
+        "Texas at Michigan, lost"
+       ],
+       [
+        "2024-09-07",
+        84.5455,
+        "Kansas State at Tulane, lost"
+       ],
+       [
+        "2024-09-07",
+        85.4545,
+        "Troy at Memphis, won"
+       ],
+       [
+        "2024-09-07",
+        84.4545,
+        "McNeese at Texas A&M, lost"
+       ],
+       [
+        "2024-09-07",
+        83.4545,
+        "Missouri State at Ball State, lost"
+       ],
+       [
+        "2024-09-07",
+        84.3636,
+        "St. Francis (PA) at Kent State, won"
+       ],
+       [
+        "2024-09-07",
+        85.2727,
+        "Northern Illinois at Notre Dame, won"
+       ],
+       [
+        "2024-09-07",
+        84.2727,
+        "Jacksonville State at Louisville, lost"
+       ],
+       [
+        "2024-09-07",
+        84.2727,
+        "UTSA at Texas State, push"
+       ],
+       [
+        "2024-09-07",
+        85.1818,
+        "East Carolina at Old Dominion, won"
+       ],
+       [
+        "2024-09-07",
+        86.0909,
+        "Cal Poly at Stanford, won"
+       ],
+       [
+        "2024-09-07",
+        87.0,
+        "Georgia Southern at Nevada, won"
+       ],
+       [
+        "2024-09-07",
+        87.9091,
+        "Northern Arizona at Arizona, won"
+       ],
+       [
+        "2024-09-14",
+        86.9091,
+        "Virginia Tech at Old Dominion, lost"
+       ],
+       [
+        "2024-09-14",
+        85.9091,
+        "Vanderbilt at Georgia State, lost"
+       ],
+       [
+        "2024-09-21",
+        84.9091,
+        "Arkansas State at Iowa State, lost"
+       ],
+       [
+        "2024-09-21",
+        85.8182,
+        "Arizona State at Texas Tech, won"
+       ],
+       [
+        "2024-09-21",
+        86.7273,
+        "Tennessee at Oklahoma, won"
+       ],
+       [
+        "2024-09-21",
+        85.7273,
+        "Iowa at Minnesota, lost"
+       ],
+       [
+        "2024-09-21",
+        86.6364,
+        "Fresno State at New Mexico, won"
+       ],
+       [
+        "2024-09-28",
+        87.5455,
+        "Nebraska at Purdue, won"
+       ],
+       [
+        "2024-10-05",
+        86.5455,
+        "Purdue at Wisconsin, lost"
+       ],
+       [
+        "2024-10-05",
+        85.5455,
+        "Massachusetts at Northern Illinois, lost"
+       ],
+       [
+        "2024-10-05",
+        84.5455,
+        "Navy at Air Force, lost"
+       ],
+       [
+        "2024-10-05",
+        83.5455,
+        "Indiana at Northwestern, lost"
+       ],
+       [
+        "2024-10-05",
+        84.4545,
+        "Rutgers at Nebraska, won"
+       ],
+       [
+        "2024-10-05",
+        85.3636,
+        "USC at Minnesota, won"
+       ],
+       [
+        "2024-10-05",
+        84.3636,
+        "Baylor at Iowa State, lost"
+       ],
+       [
+        "2024-10-12",
+        85.2727,
+        "Missouri at Massachusetts, won"
+       ],
+       [
+        "2024-10-12",
+        86.1818,
+        "UAB at Army, won"
+       ],
+       [
+        "2024-10-12",
+        85.1818,
+        "Purdue at Illinois, lost"
+       ],
+       [
+        "2024-10-18",
+        84.1818,
+        "Oklahoma State at BYU, lost"
+       ],
+       [
+        "2024-10-19",
+        85.0909,
+        "Rice at Tulane, won"
+       ],
+       [
+        "2024-10-19",
+        84.0909,
+        "Baylor at Texas Tech, lost"
+       ],
+       [
+        "2024-10-26",
+        85.0,
+        "Wagner at Massachusetts, won"
+       ],
+       [
+        "2024-10-29",
+        84.0,
+        "New Mexico State at Florida International, lost"
+       ],
+       [
+        "2024-10-29",
+        84.9091,
+        "Louisiana at Texas State, won"
+       ],
+       [
+        "2024-11-02",
+        83.9091,
+        "Duke at Miami, lost"
+       ],
+       [
+        "2024-11-02",
+        82.9091,
+        "UCLA at Nebraska, lost"
+       ],
+       [
+        "2024-11-02",
+        83.8182,
+        "Kansas State at Houston, won"
+       ],
+       [
+        "2024-11-02",
+        82.8182,
+        "Arizona at UCF, lost"
+       ],
+       [
+        "2024-11-02",
+        83.7273,
+        "Navy at Rice, won"
+       ],
+       [
+        "2024-11-02",
+        82.7273,
+        "TCU at Baylor, lost"
+       ],
+       [
+        "2024-11-05",
+        83.6364,
+        "Bowling Green at Central Michigan, won"
+       ],
+       [
+        "2024-11-05",
+        83.6364,
+        "Miami (OH) at Ball State, push"
+       ],
+       [
+        "2024-11-09",
+        82.6364,
+        "Syracuse at Boston College, lost"
+       ],
+       [
+        "2024-11-09",
+        81.6364,
+        "Temple at Tulane, lost"
+       ],
+       [
+        "2024-11-16",
+        80.6364,
+        "Liberty at Massachusetts, lost"
+       ],
+       [
+        "2024-11-16",
+        81.5455,
+        "Tulane at Navy, won"
+       ],
+       [
+        "2024-11-16",
+        82.4545,
+        "Florida Atlantic at Temple, won"
+       ],
+       [
+        "2024-11-22",
+        83.3636,
+        "Purdue at Michigan State, won"
+       ],
+       [
+        "2024-11-23",
+        82.3636,
+        "Illinois at Rutgers, lost"
+       ],
+       [
+        "2024-11-23",
+        81.3636,
+        "North Carolina at Boston College, lost"
+       ],
+       [
+        "2024-11-23",
+        82.2727,
+        "James Madison at App State, won"
+       ],
+       [
+        "2024-11-23",
+        83.1818,
+        "Boise State at Wyoming, won"
+       ],
+       [
+        "2024-11-23",
+        84.0909,
+        "Alabama at Oklahoma, won"
+       ],
+       [
+        "2024-11-26",
+        85.0,
+        "Kent State at Buffalo, won"
+       ],
+       [
+        "2024-11-28",
+        84.0,
+        "Memphis at Tulane, lost"
+       ],
+       [
+        "2024-11-29",
+        83.0,
+        "Miami (OH) at Bowling Green, lost"
+       ],
+       [
+        "2024-11-29",
+        82.0,
+        "Texas State at South Alabama, lost"
+       ],
+       [
+        "2024-11-30",
+        82.9091,
+        "Michigan at Ohio State, won"
+       ],
+       [
+        "2024-11-30",
+        83.8182,
+        "North Texas at Temple, won"
+       ],
+       [
+        "2024-11-30",
+        84.7273,
+        "Eastern Michigan at Western Michigan, won"
+       ],
+       [
+        "2024-11-30",
+        83.7273,
+        "Rutgers at Michigan State, lost"
+       ],
+       [
+        "2024-12-26",
+        82.7273,
+        "Arkansas State at Bowling Green, lost"
+       ],
+       [
+        "2025-08-23",
+        83.6364,
+        "Stanford at Hawai'i, won"
+       ],
+       [
+        "2025-08-29",
+        84.5455,
+        "Central Michigan at San José State, won"
+       ],
+       [
+        "2025-09-05",
+        85.4545,
+        "James Madison at Louisville, won"
+       ],
+       [
+        "2025-09-06",
+        84.4545,
+        "St. Francis (PA) at Buffalo, lost"
+       ],
+       [
+        "2025-09-06",
+        85.3636,
+        "Sacramento State at Nevada, won"
+       ],
+       [
+        "2025-09-06",
+        86.2727,
+        "Texas Southern at California, won"
+       ],
+       [
+        "2025-09-13",
+        85.2727,
+        "Houston Christian at Nebraska, lost"
+       ],
+       [
+        "2025-09-13",
+        86.1818,
+        "Oregon State at Texas Tech, won"
+       ],
+       [
+        "2025-09-13",
+        85.1818,
+        "Boston College at Stanford, lost"
+       ],
+       [
+        "2025-09-13",
+        86.0909,
+        "Portland State at Hawai'i, won"
+       ],
+       [
+        "2025-09-20",
+        87.0,
+        "Fresno State at Hawai'i, won"
+       ],
+       [
+        "2025-09-27",
+        86.0,
+        "San José State at Stanford, lost"
+       ],
+       [
+        "2025-10-03",
+        85.0,
+        "West Virginia at BYU, lost"
+       ],
+       [
+        "2025-10-04",
+        84.0,
+        "Texas at Florida, lost"
+       ],
+       [
+        "2025-10-04",
+        83.0,
+        "Michigan State at Nebraska, lost"
+       ],
+       [
+        "2025-10-04",
+        83.9091,
+        "UNLV at Wyoming, won"
+       ],
+       [
+        "2025-10-11",
+        82.9091,
+        "Pittsburgh at Florida State, lost"
+       ],
+       [
+        "2025-10-11",
+        83.8182,
+        "UL Monroe at Coastal Carolina, won"
+       ],
+       [
+        "2025-10-11",
+        82.8182,
+        "Kansas at Texas Tech, lost"
+       ],
+       [
+        "2025-10-11",
+        81.8182,
+        "Arizona State at Utah, lost"
+       ],
+       [
+        "2025-10-18",
+        80.8182,
+        "Baylor at TCU, lost"
+       ],
+       [
+        "2025-10-18",
+        81.7273,
+        "Army at Tulane, won"
+       ],
+       [
+        "2025-10-18",
+        82.6364,
+        "Central Michigan at Bowling Green, won"
+       ],
+       [
+        "2025-10-18",
+        81.6364,
+        "Texas A&M at Arkansas, lost"
+       ],
+       [
+        "2025-10-18",
+        82.5455,
+        "Wyoming at Air Force, won"
+       ],
+       [
+        "2025-10-18",
+        83.4545,
+        "Florida State at Stanford, won"
+       ],
+       [
+        "2025-10-25",
+        84.3636,
+        "Wisconsin at Oregon, won"
+       ],
+       [
+        "2025-10-25",
+        83.3636,
+        "Stanford at Miami, lost"
+       ],
+       [
+        "2025-10-28",
+        82.3636,
+        "James Madison at Texas State, lost"
+       ],
+       [
+        "2025-11-01",
+        83.2727,
+        "UAB at UConn, won"
+       ],
+       [
+        "2025-11-01",
+        82.2727,
+        "East Carolina at Temple, lost"
+       ],
+       [
+        "2025-11-01",
+        83.1818,
+        "Notre Dame at Boston College, won"
+       ],
+       [
+        "2025-11-08",
+        84.0909,
+        "BYU at Texas Tech, won"
+       ],
+       [
+        "2025-11-08",
+        85.0,
+        "UNLV at Colorado State, won"
+       ],
+       [
+        "2025-11-11",
+        85.9091,
+        "Ohio at Western Michigan, won"
+       ],
+       [
+        "2025-11-15",
+        86.8182,
+        "Wisconsin at Indiana, won"
+       ],
+       [
+        "2025-11-15",
+        87.7273,
+        "Notre Dame at Pittsburgh, won"
+       ],
+       [
+        "2025-11-15",
+        88.6364,
+        "Arizona at Cincinnati, won"
+       ],
+       [
+        "2025-11-15",
+        89.5455,
+        "Eastern Michigan at Ball State, won"
+       ],
+       [
+        "2025-11-15",
+        90.4545,
+        "Oregon State at Tulsa, won"
+       ],
+       [
+        "2025-11-15",
+        91.3636,
+        "Tennessee Tech at Kentucky, won"
+       ],
+       [
+        "2025-11-15",
+        90.3636,
+        "UTEP at Missouri State, lost"
+       ],
+       [
+        "2025-11-15",
+        91.2727,
+        "Penn State at Michigan State, won"
+       ],
+       [
+        "2025-11-15",
+        92.1818,
+        "Maryland at Illinois, won"
+       ],
+       [
+        "2025-11-15",
+        91.1818,
+        "Middle Tennessee at Western Kentucky, lost"
+       ],
+       [
+        "2025-11-15",
+        92.0909,
+        "New Mexico State at Tennessee, won"
+       ],
+       [
+        "2025-11-15",
+        91.0909,
+        "UCLA at Ohio State, lost"
+       ],
+       [
+        "2025-11-22",
+        92.0,
+        "Kansas at Iowa State, won"
+       ],
+       [
+        "2025-11-22",
+        92.9091,
+        "Baylor at Arizona, won"
+       ],
+       [
+        "2025-11-28",
+        91.9091,
+        "Iowa at Nebraska, lost"
+       ],
+       [
+        "2025-11-28",
+        90.9091,
+        "Ohio at Buffalo, lost"
+       ],
+       [
+        "2025-11-29",
+        91.8182,
+        "Colorado at Kansas State, won"
+       ],
+       [
+        "2025-11-29",
+        92.7273,
+        "Iowa State at Oklahoma State, won"
+       ],
+       [
+        "2025-11-29",
+        93.6364,
+        "East Carolina at Florida Atlantic, won"
+       ],
+       [
+        "2025-11-29",
+        92.6364,
+        "Florida International at Sam Houston, lost"
+       ],
+       [
+        "2025-11-29",
+        91.6364,
+        "Louisiana Tech at Missouri State, lost"
+       ],
+       [
+        "2025-11-29",
+        92.5455,
+        "UAB at Tulsa, won"
+       ],
+       [
+        "2025-11-29",
+        93.4545,
+        "Missouri at Arkansas, won"
+       ],
+       [
+        "2025-11-29",
+        94.3636,
+        "LSU at Oklahoma, won"
+       ],
+       [
+        "2025-11-29",
+        95.2727,
+        "Northwestern at Illinois, won"
+       ],
+       [
+        "2025-11-29",
+        94.2727,
+        "Notre Dame at Stanford, lost"
+       ],
+       [
+        "2025-12-19",
+        95.1818,
+        "Kennesaw State at Western Michigan, won"
+       ],
+       [
+        "2025-12-19",
+        94.1818,
+        "Alabama at Oklahoma, lost"
+       ],
+       [
+        "2025-12-20",
+        95.0909,
+        "Miami at Texas A&M, won"
+       ],
+       [
+        "2025-12-23",
+        94.0909,
+        "Toledo at Louisville, lost"
+       ],
+       [
+        "2025-12-29",
+        95.0,
+        "Georgia Southern at App State, won"
+       ]
+      ]
+     },
+     {
+      "id": "nfl",
+      "name": "NFL (607 signals)",
+      "mark": "line",
+      "color": "c2",
+      "points": [
+       [
+        "2004-09-11",
+        0.9091,
+        "TEN at MIA, won"
+       ],
+       [
+        "2004-09-12",
+        1.8182,
+        "ATL at SF, won"
+       ],
+       [
+        "2004-09-12",
+        0.8182,
+        "KC at DEN, lost"
+       ],
+       [
+        "2004-09-19",
+        1.7273,
+        "DEN at JAX, won"
+       ],
+       [
+        "2004-09-19",
+        0.7273,
+        "PIT at BAL, lost"
+       ],
+       [
+        "2004-09-19",
+        1.6364,
+        "WAS at NYG, won"
+       ],
+       [
+        "2004-09-19",
+        2.5455,
+        "BUF at OAK, won"
+       ],
+       [
+        "2004-09-19",
+        3.4545,
+        "NE at ARI, won"
+       ],
+       [
+        "2004-09-20",
+        4.3636,
+        "MIN at PHI, won"
+       ],
+       [
+        "2004-09-26",
+        5.2727,
+        "PIT at MIA, won"
+       ],
+       [
+        "2004-10-03",
+        6.1818,
+        "NYG at GB, won"
+       ],
+       [
+        "2004-10-03",
+        7.0909,
+        "STL at SF, won"
+       ],
+       [
+        "2004-10-10",
+        6.0909,
+        "ARI at SF, lost"
+       ],
+       [
+        "2004-10-17",
+        7.0,
+        "CAR at PHI, won"
+       ],
+       [
+        "2004-10-17",
+        6.0,
+        "CIN at CLE, lost"
+       ],
+       [
+        "2004-10-17",
+        5.0,
+        "MIA at BUF, lost"
+       ],
+       [
+        "2004-10-17",
+        4.0,
+        "SEA at NE, lost"
+       ],
+       [
+        "2004-10-17",
+        4.9091,
+        "SF at NYJ, won"
+       ],
+       [
+        "2004-10-17",
+        5.8182,
+        "DEN at OAK, won"
+       ],
+       [
+        "2004-10-31",
+        4.8182,
+        "ARI at BUF, lost"
+       ],
+       [
+        "2004-10-31",
+        5.7273,
+        "BAL at PHI, won"
+       ],
+       [
+        "2004-10-31",
+        4.7273,
+        "GB at WAS, lost"
+       ],
+       [
+        "2004-11-07",
+        3.7273,
+        "NYJ at BUF, lost"
+       ],
+       [
+        "2004-11-14",
+        2.7273,
+        "DET at JAX, lost"
+       ],
+       [
+        "2004-11-21",
+        3.6364,
+        "SD at OAK, won"
+       ],
+       [
+        "2004-11-28",
+        4.5455,
+        "WAS at PIT, won"
+       ],
+       [
+        "2004-12-12",
+        3.5455,
+        "CLE at BUF, lost"
+       ],
+       [
+        "2004-12-12",
+        4.4545,
+        "NYJ at PIT, won"
+       ],
+       [
+        "2004-12-12",
+        5.3636,
+        "DET at GB, won"
+       ],
+       [
+        "2004-12-19",
+        4.3636,
+        "BUF at CIN, lost"
+       ],
+       [
+        "2004-12-19",
+        5.2727,
+        "HOU at CHI, won"
+       ],
+       [
+        "2004-12-19",
+        6.1818,
+        "SD at CLE, won"
+       ],
+       [
+        "2004-12-19",
+        7.0909,
+        "NO at TB, won"
+       ],
+       [
+        "2004-12-20",
+        6.0909,
+        "NE at MIA, lost"
+       ],
+       [
+        "2004-12-26",
+        7.0,
+        "HOU at JAX, won"
+       ],
+       [
+        "2004-12-26",
+        6.0,
+        "CAR at TB, lost"
+       ],
+       [
+        "2005-01-02",
+        5.0,
+        "PIT at BUF, lost"
+       ],
+       [
+        "2005-01-09",
+        5.9091,
+        "MIN at GB, won"
+       ],
+       [
+        "2005-01-23",
+        5.9091,
+        "ATL at PHI, push"
+       ],
+       [
+        "2005-09-11",
+        6.8182,
+        "NO at CAR, won"
+       ],
+       [
+        "2005-09-25",
+        5.8182,
+        "ATL at BUF, lost"
+       ],
+       [
+        "2005-10-02",
+        6.7273,
+        "DEN at JAX, won"
+       ],
+       [
+        "2005-10-02",
+        5.7273,
+        "PHI at KC, lost"
+       ],
+       [
+        "2005-10-16",
+        6.6364,
+        "CLE at BAL, won"
+       ],
+       [
+        "2005-10-16",
+        5.6364,
+        "NYJ at BUF, lost"
+       ],
+       [
+        "2005-10-23",
+        6.5455,
+        "DET at CLE, won"
+       ],
+       [
+        "2005-10-23",
+        7.4545,
+        "SD at PHI, won"
+       ],
+       [
+        "2005-10-23",
+        6.4545,
+        "SF at WAS, lost"
+       ],
+       [
+        "2005-10-30",
+        7.3636,
+        "WAS at NYG, won"
+       ],
+       [
+        "2005-11-06",
+        8.2727,
+        "TEN at CLE, won"
+       ],
+       [
+        "2005-11-06",
+        9.1818,
+        "PIT at GB, won"
+       ],
+       [
+        "2005-11-13",
+        10.0909,
+        "KC at BUF, won"
+       ],
+       [
+        "2005-11-13",
+        11.0,
+        "NE at MIA, won"
+       ],
+       [
+        "2005-11-13",
+        11.9091,
+        "SF at CHI, won"
+       ],
+       [
+        "2005-11-27",
+        10.9091,
+        "SF at TEN, lost"
+       ],
+       [
+        "2005-12-11",
+        9.9091,
+        "NE at BUF, lost"
+       ],
+       [
+        "2005-12-18",
+        10.8182,
+        "CLE at OAK, won"
+       ],
+       [
+        "2005-12-24",
+        11.7273,
+        "SD at KC, won"
+       ],
+       [
+        "2006-01-01",
+        12.6364,
+        "HOU at SF, won"
+       ],
+       [
+        "2006-01-01",
+        13.5455,
+        "STL at DAL, won"
+       ],
+       [
+        "2006-09-17",
+        14.4545,
+        "KC at DEN, won"
+       ],
+       [
+        "2006-09-24",
+        13.4545,
+        "CIN at PIT, lost"
+       ],
+       [
+        "2006-09-24",
+        12.4545,
+        "NYJ at BUF, lost"
+       ],
+       [
+        "2006-09-24",
+        13.3636,
+        "BAL at CLE, won"
+       ],
+       [
+        "2006-10-08",
+        14.2727,
+        "STL at GB, won"
+       ],
+       [
+        "2006-10-22",
+        15.1818,
+        "NE at BUF, won"
+       ],
+       [
+        "2006-10-22",
+        16.0909,
+        "DEN at CLE, won"
+       ],
+       [
+        "2006-10-29",
+        15.0909,
+        "ARI at GB, lost"
+       ],
+       [
+        "2006-10-29",
+        16.0,
+        "JAX at PHI, won"
+       ],
+       [
+        "2006-10-29",
+        16.9091,
+        "TB at NYG, won"
+       ],
+       [
+        "2006-10-29",
+        17.8182,
+        "NYJ at CLE, won"
+       ],
+       [
+        "2006-11-05",
+        16.8182,
+        "TEN at JAX, lost"
+       ],
+       [
+        "2006-11-12",
+        17.7273,
+        "WAS at PHI, won"
+       ],
+       [
+        "2006-11-23",
+        16.7273,
+        "TB at DAL, lost"
+       ],
+       [
+        "2006-11-23",
+        17.6364,
+        "DEN at KC, won"
+       ],
+       [
+        "2006-12-03",
+        16.6364,
+        "KC at CLE, lost"
+       ],
+       [
+        "2006-12-03",
+        15.6364,
+        "SD at BUF, lost"
+       ],
+       [
+        "2006-12-07",
+        15.6364,
+        "CLE at PIT, push"
+       ],
+       [
+        "2006-12-10",
+        16.5455,
+        "BAL at KC, won"
+       ],
+       [
+        "2006-12-10",
+        17.4545,
+        "NE at MIA, won"
+       ],
+       [
+        "2006-12-10",
+        16.4545,
+        "NO at DAL, lost"
+       ],
+       [
+        "2006-12-21",
+        17.3636,
+        "MIN at GB, won"
+       ],
+       [
+        "2006-12-24",
+        18.2727,
+        "NO at NYG, won"
+       ],
+       [
+        "2006-12-24",
+        17.2727,
+        "TEN at BUF, lost"
+       ],
+       [
+        "2006-12-25",
+        18.1818,
+        "PHI at DAL, won"
+       ],
+       [
+        "2006-12-31",
+        17.1818,
+        "DET at DAL, lost"
+       ],
+       [
+        "2006-12-31",
+        16.1818,
+        "JAX at KC, lost"
+       ],
+       [
+        "2007-02-04",
+        17.0909,
+        "IND at CHI, won"
+       ],
+       [
+        "2007-09-10",
+        18.0,
+        "ARI at SF, won"
+       ],
+       [
+        "2007-09-16",
+        17.0,
+        "OAK at DEN, lost"
+       ],
+       [
+        "2007-09-23",
+        16.0,
+        "JAX at DEN, lost"
+       ],
+       [
+        "2007-09-30",
+        15.0,
+        "OAK at MIA, lost"
+       ],
+       [
+        "2007-10-14",
+        14.0,
+        "CIN at KC, lost"
+       ],
+       [
+        "2007-10-14",
+        13.0,
+        "NE at DAL, lost"
+       ],
+       [
+        "2007-10-21",
+        13.9091,
+        "BAL at BUF, won"
+       ],
+       [
+        "2007-10-21",
+        12.9091,
+        "NYJ at CIN, lost"
+       ],
+       [
+        "2007-10-21",
+        13.8182,
+        "MIN at DAL, won"
+       ],
+       [
+        "2007-10-28",
+        14.7273,
+        "BUF at NYJ, won"
+       ],
+       [
+        "2007-11-18",
+        15.6364,
+        "MIA at PHI, won"
+       ],
+       [
+        "2007-12-02",
+        16.5455,
+        "SD at KC, won"
+       ],
+       [
+        "2007-12-02",
+        17.4545,
+        "NYG at CHI, won"
+       ],
+       [
+        "2007-12-03",
+        16.4545,
+        "NE at BAL, lost"
+       ],
+       [
+        "2007-12-16",
+        15.4545,
+        "ATL at TB, lost"
+       ],
+       [
+        "2007-12-16",
+        14.4545,
+        "BAL at MIA, lost"
+       ],
+       [
+        "2007-12-16",
+        15.3636,
+        "BUF at CLE, won"
+       ],
+       [
+        "2007-12-16",
+        14.3636,
+        "JAX at PIT, lost"
+       ],
+       [
+        "2007-12-16",
+        15.2727,
+        "NYJ at NE, won"
+       ],
+       [
+        "2007-12-16",
+        16.1818,
+        "SEA at CAR, won"
+       ],
+       [
+        "2007-12-16",
+        17.0909,
+        "WAS at NYG, won"
+       ],
+       [
+        "2007-12-23",
+        18.0,
+        "CLE at CIN, won"
+       ],
+       [
+        "2007-12-23",
+        17.0,
+        "GB at CHI, lost"
+       ],
+       [
+        "2007-12-23",
+        16.0,
+        "NYG at BUF, lost"
+       ],
+       [
+        "2007-12-23",
+        16.9091,
+        "NYJ at TEN, won"
+       ],
+       [
+        "2007-12-30",
+        15.9091,
+        "CIN at MIA, lost"
+       ],
+       [
+        "2008-01-05",
+        14.9091,
+        "WAS at SEA, lost"
+       ],
+       [
+        "2008-09-14",
+        15.8182,
+        "OAK at KC, won"
+       ],
+       [
+        "2008-09-14",
+        16.7273,
+        "TEN at CIN, won"
+       ],
+       [
+        "2008-09-14",
+        17.6364,
+        "PIT at CLE, won"
+       ],
+       [
+        "2008-09-21",
+        18.5455,
+        "DET at SF, won"
+       ],
+       [
+        "2008-10-05",
+        17.5455,
+        "CIN at DAL, lost"
+       ],
+       [
+        "2008-10-19",
+        16.5455,
+        "TEN at KC, lost"
+       ],
+       [
+        "2008-10-26",
+        17.4545,
+        "NYG at PIT, won"
+       ],
+       [
+        "2008-11-09",
+        18.3636,
+        "TEN at CHI, won"
+       ],
+       [
+        "2008-11-09",
+        19.2727,
+        "KC at SD, won"
+       ],
+       [
+        "2008-11-16",
+        18.2727,
+        "BAL at NYG, lost"
+       ],
+       [
+        "2008-11-16",
+        19.1818,
+        "OAK at MIA, won"
+       ],
+       [
+        "2008-11-16",
+        20.0909,
+        "PHI at CIN, won"
+       ],
+       [
+        "2008-11-16",
+        21.0,
+        "SD at PIT, won"
+       ],
+       [
+        "2008-11-23",
+        21.9091,
+        "HOU at CLE, won"
+       ],
+       [
+        "2008-11-30",
+        22.8182,
+        "IND at CLE, won"
+       ],
+       [
+        "2008-11-30",
+        23.7273,
+        "NO at TB, won"
+       ],
+       [
+        "2008-12-07",
+        24.6364,
+        "PHI at NYG, won"
+       ],
+       [
+        "2008-12-14",
+        23.6364,
+        "SD at KC, lost"
+       ],
+       [
+        "2008-12-14",
+        24.5455,
+        "SF at MIA, won"
+       ],
+       [
+        "2008-12-14",
+        25.4545,
+        "WAS at CIN, won"
+       ],
+       [
+        "2008-12-14",
+        26.3636,
+        "NYG at DAL, won"
+       ],
+       [
+        "2008-12-20",
+        25.3636,
+        "BAL at DAL, lost"
+       ],
+       [
+        "2008-12-21",
+        26.2727,
+        "CIN at CLE, won"
+       ],
+       [
+        "2008-12-21",
+        25.2727,
+        "MIA at KC, lost"
+       ],
+       [
+        "2008-12-21",
+        24.2727,
+        "PIT at TEN, lost"
+       ],
+       [
+        "2008-12-21",
+        25.1818,
+        "PHI at WAS, won"
+       ],
+       [
+        "2008-12-21",
+        24.1818,
+        "CAR at NYG, lost"
+       ],
+       [
+        "2008-12-28",
+        25.0909,
+        "CLE at PIT, won"
+       ],
+       [
+        "2008-12-28",
+        24.0909,
+        "DET at GB, lost"
+       ],
+       [
+        "2008-12-28",
+        25.0,
+        "KC at CIN, won"
+       ],
+       [
+        "2008-12-28",
+        25.9091,
+        "NE at BUF, won"
+       ],
+       [
+        "2008-12-28",
+        24.9091,
+        "DAL at PHI, lost"
+       ],
+       [
+        "2009-09-20",
+        25.8182,
+        "CLE at DEN, won"
+       ],
+       [
+        "2009-09-27",
+        24.8182,
+        "KC at PHI, lost"
+       ],
+       [
+        "2009-09-27",
+        25.7273,
+        "NO at BUF, won"
+       ],
+       [
+        "2009-09-27",
+        24.7273,
+        "PIT at CIN, lost"
+       ],
+       [
+        "2009-10-04",
+        23.7273,
+        "CIN at CLE, lost"
+       ],
+       [
+        "2009-10-04",
+        24.6364,
+        "STL at SF, won"
+       ],
+       [
+        "2009-10-11",
+        25.5455,
+        "CLE at BUF, won"
+       ],
+       [
+        "2009-10-18",
+        26.4545,
+        "KC at WAS, won"
+       ],
+       [
+        "2009-10-18",
+        25.4545,
+        "STL at JAX, lost"
+       ],
+       [
+        "2009-11-08",
+        24.4545,
+        "KC at JAX, lost"
+       ],
+       [
+        "2009-11-12",
+        25.3636,
+        "CHI at SF, won"
+       ],
+       [
+        "2009-12-10",
+        26.2727,
+        "PIT at CLE, won"
+       ],
+       [
+        "2009-12-17",
+        25.2727,
+        "IND at JAX, lost"
+       ],
+       [
+        "2009-12-20",
+        26.1818,
+        "SF at PHI, won"
+       ],
+       [
+        "2009-12-27",
+        27.0909,
+        "OAK at CLE, won"
+       ],
+       [
+        "2009-12-28",
+        26.0909,
+        "MIN at CHI, lost"
+       ],
+       [
+        "2010-01-03",
+        25.0909,
+        "IND at BUF, lost"
+       ],
+       [
+        "2010-01-03",
+        24.0909,
+        "JAX at CLE, lost"
+       ],
+       [
+        "2010-01-03",
+        23.0909,
+        "CIN at NYJ, lost"
+       ],
+       [
+        "2010-09-20",
+        22.0909,
+        "NO at SF, lost"
+       ],
+       [
+        "2010-10-03",
+        21.0909,
+        "CIN at CLE, lost"
+       ],
+       [
+        "2010-10-10",
+        20.0909,
+        "PHI at SF, lost"
+       ],
+       [
+        "2010-10-17",
+        19.0909,
+        "ATL at PHI, lost"
+       ],
+       [
+        "2010-10-17",
+        20.0,
+        "BAL at NE, won"
+       ],
+       [
+        "2010-10-17",
+        19.0,
+        "DET at NYG, lost"
+       ],
+       [
+        "2010-10-24",
+        18.0,
+        "PIT at MIA, lost"
+       ],
+       [
+        "2010-10-24",
+        18.9091,
+        "WAS at CHI, won"
+       ],
+       [
+        "2010-10-31",
+        19.8182,
+        "GB at NYJ, won"
+       ],
+       [
+        "2010-10-31",
+        18.8182,
+        "MIN at NE, lost"
+       ],
+       [
+        "2010-11-07",
+        17.8182,
+        "NE at CLE, lost"
+       ],
+       [
+        "2010-11-07",
+        16.8182,
+        "IND at PHI, lost"
+       ],
+       [
+        "2010-11-14",
+        17.7273,
+        "MIN at CHI, won"
+       ],
+       [
+        "2010-11-14",
+        16.7273,
+        "NYJ at CLE, lost"
+       ],
+       [
+        "2010-11-21",
+        17.6364,
+        "ARI at KC, won"
+       ],
+       [
+        "2010-11-21",
+        16.6364,
+        "BUF at CIN, lost"
+       ],
+       [
+        "2010-11-21",
+        17.5455,
+        "TB at SF, won"
+       ],
+       [
+        "2010-12-05",
+        16.5455,
+        "SF at GB, lost"
+       ],
+       [
+        "2010-12-05",
+        17.4545,
+        "WAS at NYG, won"
+       ],
+       [
+        "2010-12-12",
+        17.4545,
+        "ATL at CAR, push"
+       ],
+       [
+        "2010-12-12",
+        16.4545,
+        "OAK at JAX, lost"
+       ],
+       [
+        "2010-12-12",
+        15.4545,
+        "NE at CHI, lost"
+       ],
+       [
+        "2010-12-19",
+        14.4545,
+        "DEN at OAK, lost"
+       ],
+       [
+        "2010-12-26",
+        15.3636,
+        "BAL at CLE, won"
+       ],
+       [
+        "2010-12-26",
+        14.3636,
+        "DET at MIA, lost"
+       ],
+       [
+        "2010-12-26",
+        15.2727,
+        "WAS at JAX, won"
+       ],
+       [
+        "2010-12-26",
+        14.2727,
+        "SEA at TB, lost"
+       ],
+       [
+        "2011-01-02",
+        13.2727,
+        "PIT at CLE, lost"
+       ],
+       [
+        "2011-01-09",
+        14.1818,
+        "GB at PHI, won"
+       ],
+       [
+        "2011-09-18",
+        15.0909,
+        "HOU at MIA, won"
+       ],
+       [
+        "2011-10-02",
+        14.0909,
+        "TEN at CLE, lost"
+       ],
+       [
+        "2011-10-09",
+        13.0909,
+        "CIN at JAX, lost"
+       ],
+       [
+        "2011-10-16",
+        12.0909,
+        "BUF at NYG, lost"
+       ],
+       [
+        "2011-10-16",
+        11.0909,
+        "IND at CIN, lost"
+       ],
+       [
+        "2011-10-16",
+        12.0,
+        "STL at GB, won"
+       ],
+       [
+        "2011-10-16",
+        12.9091,
+        "DAL at NE, won"
+       ],
+       [
+        "2011-10-30",
+        13.8182,
+        "MIA at NYG, won"
+       ],
+       [
+        "2011-11-13",
+        14.7273,
+        "DEN at KC, won"
+       ],
+       [
+        "2011-11-13",
+        13.7273,
+        "PIT at CIN, lost"
+       ],
+       [
+        "2011-11-13",
+        14.6364,
+        "STL at CLE, won"
+       ],
+       [
+        "2011-11-13",
+        15.5455,
+        "WAS at MIA, won"
+       ],
+       [
+        "2011-11-13",
+        14.5455,
+        "DET at CHI, lost"
+       ],
+       [
+        "2011-11-20",
+        15.4545,
+        "BUF at MIA, won"
+       ],
+       [
+        "2011-11-27",
+        14.4545,
+        "CLE at CIN, lost"
+       ],
+       [
+        "2011-11-27",
+        15.3636,
+        "HOU at JAX, won"
+       ],
+       [
+        "2011-12-04",
+        16.2727,
+        "KC at CHI, won"
+       ],
+       [
+        "2011-12-04",
+        15.2727,
+        "OAK at MIA, lost"
+       ],
+       [
+        "2011-12-04",
+        16.1818,
+        "TEN at BUF, won"
+       ],
+       [
+        "2011-12-04",
+        17.0909,
+        "BAL at CLE, won"
+       ],
+       [
+        "2011-12-11",
+        18.0,
+        "PHI at MIA, won"
+       ],
+       [
+        "2011-12-11",
+        17.0,
+        "TB at JAX, lost"
+       ],
+       [
+        "2011-12-11",
+        16.0,
+        "OAK at GB, lost"
+       ],
+       [
+        "2012-01-01",
+        15.0,
+        "DET at GB, lost"
+       ],
+       [
+        "2012-01-01",
+        14.0,
+        "BAL at CIN, lost"
+       ],
+       [
+        "2012-01-01",
+        14.9091,
+        "PIT at CLE, won"
+       ],
+       [
+        "2012-01-22",
+        15.8182,
+        "NYG at SF, won"
+       ],
+       [
+        "2012-09-09",
+        14.8182,
+        "BUF at NYJ, lost"
+       ],
+       [
+        "2012-09-09",
+        13.8182,
+        "IND at CHI, lost"
+       ],
+       [
+        "2012-09-09",
+        14.7273,
+        "PHI at CLE, won"
+       ],
+       [
+        "2012-09-09",
+        15.6364,
+        "CAR at TB, won"
+       ],
+       [
+        "2012-09-16",
+        15.6364,
+        "DET at SF, push"
+       ],
+       [
+        "2012-09-23",
+        16.5455,
+        "BUF at CLE, won"
+       ],
+       [
+        "2012-09-30",
+        17.4545,
+        "OAK at DEN, won"
+       ],
+       [
+        "2012-10-14",
+        16.4545,
+        "CIN at CLE, lost"
+       ],
+       [
+        "2012-10-14",
+        15.4545,
+        "DET at PHI, lost"
+       ],
+       [
+        "2012-10-14",
+        16.3636,
+        "STL at MIA, won"
+       ],
+       [
+        "2012-10-21",
+        15.3636,
+        "TEN at BUF, lost"
+       ],
+       [
+        "2012-10-28",
+        14.3636,
+        "ATL at PHI, lost"
+       ],
+       [
+        "2012-10-28",
+        15.2727,
+        "SD at CLE, won"
+       ],
+       [
+        "2012-11-11",
+        16.1818,
+        "NYG at CIN, won"
+       ],
+       [
+        "2012-11-11",
+        17.0909,
+        "TEN at MIA, won"
+       ],
+       [
+        "2012-11-11",
+        18.0,
+        "HOU at CHI, won"
+       ],
+       [
+        "2012-11-25",
+        17.0,
+        "PIT at CLE, lost"
+       ],
+       [
+        "2012-12-02",
+        16.0,
+        "JAX at BUF, lost"
+       ],
+       [
+        "2012-12-02",
+        16.9091,
+        "NE at MIA, won"
+       ],
+       [
+        "2012-12-16",
+        15.9091,
+        "WAS at CLE, lost"
+       ],
+       [
+        "2012-12-23",
+        14.9091,
+        "SD at NYJ, lost"
+       ],
+       [
+        "2012-12-23",
+        13.9091,
+        "WAS at PHI, lost"
+       ],
+       [
+        "2012-12-23",
+        12.9091,
+        "CLE at DEN, lost"
+       ],
+       [
+        "2012-12-30",
+        11.9091,
+        "PHI at NYG, lost"
+       ],
+       [
+        "2013-09-22",
+        10.9091,
+        "JAX at SEA, lost"
+       ],
+       [
+        "2013-09-23",
+        9.9091,
+        "OAK at DEN, lost"
+       ],
+       [
+        "2013-10-06",
+        10.8182,
+        "DET at GB, won"
+       ],
+       [
+        "2013-10-06",
+        11.7273,
+        "NO at CHI, won"
+       ],
+       [
+        "2013-11-03",
+        10.7273,
+        "NO at NYJ, lost"
+       ],
+       [
+        "2013-11-03",
+        9.7273,
+        "PHI at OAK, lost"
+       ],
+       [
+        "2013-11-10",
+        10.6364,
+        "BUF at PIT, won"
+       ],
+       [
+        "2013-11-10",
+        11.5455,
+        "CIN at BAL, won"
+       ],
+       [
+        "2013-11-10",
+        10.5455,
+        "OAK at NYG, lost"
+       ],
+       [
+        "2013-11-17",
+        9.5455,
+        "BAL at CHI, lost"
+       ],
+       [
+        "2013-11-17",
+        8.5455,
+        "NYJ at BUF, lost"
+       ],
+       [
+        "2013-11-24",
+        9.4545,
+        "CAR at MIA, won"
+       ],
+       [
+        "2013-11-24",
+        10.3636,
+        "NYJ at BAL, won"
+       ],
+       [
+        "2013-11-24",
+        11.2727,
+        "PIT at CLE, won"
+       ],
+       [
+        "2013-11-24",
+        10.2727,
+        "DAL at NYG, lost"
+       ],
+       [
+        "2013-11-24",
+        9.2727,
+        "DEN at NE, lost"
+       ],
+       [
+        "2013-12-15",
+        8.2727,
+        "CHI at CLE, lost"
+       ],
+       [
+        "2013-12-15",
+        9.1818,
+        "SEA at NYG, won"
+       ],
+       [
+        "2013-12-15",
+        8.1818,
+        "CIN at PIT, lost"
+       ],
+       [
+        "2013-12-22",
+        9.0909,
+        "MIA at BUF, won"
+       ],
+       [
+        "2013-12-22",
+        8.0909,
+        "MIN at CIN, lost"
+       ],
+       [
+        "2013-12-22",
+        9.0,
+        "NO at CAR, won"
+       ],
+       [
+        "2013-12-22",
+        9.9091,
+        "TEN at JAX, won"
+       ],
+       [
+        "2013-12-29",
+        10.8182,
+        "NYJ at MIA, won"
+       ],
+       [
+        "2013-12-29",
+        9.8182,
+        "GB at CHI, lost"
+       ],
+       [
+        "2014-01-11",
+        10.7273,
+        "NO at SEA, won"
+       ],
+       [
+        "2014-01-11",
+        9.7273,
+        "IND at NE, lost"
+       ],
+       [
+        "2014-01-12",
+        10.6364,
+        "SD at DEN, won"
+       ],
+       [
+        "2014-01-19",
+        11.5455,
+        "NE at DEN, won"
+       ],
+       [
+        "2014-09-21",
+        10.5455,
+        "BAL at CLE, lost"
+       ],
+       [
+        "2014-09-21",
+        11.4545,
+        "SD at BUF, won"
+       ],
+       [
+        "2014-10-12",
+        12.3636,
+        "DET at MIN, won"
+       ],
+       [
+        "2014-10-19",
+        13.2727,
+        "ATL at BAL, won"
+       ],
+       [
+        "2014-10-26",
+        12.2727,
+        "BUF at NYJ, lost"
+       ],
+       [
+        "2014-10-26",
+        11.2727,
+        "CHI at NE, lost"
+       ],
+       [
+        "2014-10-26",
+        12.1818,
+        "STL at KC, won"
+       ],
+       [
+        "2014-11-02",
+        13.0909,
+        "NYJ at KC, won"
+       ],
+       [
+        "2014-11-02",
+        14.0,
+        "TB at CLE, won"
+       ],
+       [
+        "2014-11-02",
+        13.0,
+        "WAS at MIN, lost"
+       ],
+       [
+        "2014-11-02",
+        12.0,
+        "DEN at NE, lost"
+       ],
+       [
+        "2014-11-06",
+        12.9091,
+        "CLE at CIN, won"
+       ],
+       [
+        "2014-11-09",
+        13.8182,
+        "KC at BUF, won"
+       ],
+       [
+        "2014-11-16",
+        14.7273,
+        "HOU at CLE, won"
+       ],
+       [
+        "2014-11-23",
+        15.6364,
+        "ARI at SEA, won"
+       ],
+       [
+        "2014-11-23",
+        14.6364,
+        "MIA at DEN, lost"
+       ],
+       [
+        "2014-11-30",
+        13.6364,
+        "CAR at MIN, lost"
+       ],
+       [
+        "2014-11-30",
+        14.5455,
+        "CLE at BUF, won"
+       ],
+       [
+        "2014-11-30",
+        13.5455,
+        "NO at PIT, lost"
+       ],
+       [
+        "2014-11-30",
+        14.4545,
+        "NE at GB, won"
+       ],
+       [
+        "2014-11-30",
+        15.3636,
+        "DEN at KC, won"
+       ],
+       [
+        "2014-12-07",
+        14.3636,
+        "NYJ at MIN, lost"
+       ],
+       [
+        "2014-12-07",
+        15.2727,
+        "SEA at PHI, won"
+       ],
+       [
+        "2014-12-14",
+        16.1818,
+        "JAX at BAL, won"
+       ],
+       [
+        "2014-12-15",
+        17.0909,
+        "NO at CHI, won"
+       ],
+       [
+        "2015-01-18",
+        16.0909,
+        "GB at SEA, lost"
+       ],
+       [
+        "2015-09-13",
+        17.0,
+        "IND at BUF, won"
+       ],
+       [
+        "2015-09-17",
+        16.0,
+        "DEN at KC, lost"
+       ],
+       [
+        "2015-09-20",
+        15.0,
+        "TEN at CLE, lost"
+       ],
+       [
+        "2015-09-27",
+        15.9091,
+        "SD at MIN, won"
+       ],
+       [
+        "2015-10-04",
+        14.9091,
+        "CAR at TB, lost"
+       ],
+       [
+        "2015-10-04",
+        13.9091,
+        "CLE at SD, lost"
+       ],
+       [
+        "2015-10-18",
+        12.9091,
+        "DEN at CLE, lost"
+       ],
+       [
+        "2015-10-18",
+        11.9091,
+        "HOU at JAX, lost"
+       ],
+       [
+        "2015-11-01",
+        10.9091,
+        "ARI at CLE, lost"
+       ],
+       [
+        "2015-11-01",
+        11.8182,
+        "GB at DEN, won"
+       ],
+       [
+        "2015-11-08",
+        12.7273,
+        "STL at MIN, won"
+       ],
+       [
+        "2015-11-15",
+        12.7273,
+        "MIN at OAK, push"
+       ],
+       [
+        "2015-11-22",
+        13.6364,
+        "DAL at MIA, won"
+       ],
+       [
+        "2015-11-22",
+        14.5455,
+        "STL at BAL, won"
+       ],
+       [
+        "2015-11-22",
+        13.5455,
+        "TB at PHI, lost"
+       ],
+       [
+        "2015-11-26",
+        14.4545,
+        "CHI at GB, won"
+       ],
+       [
+        "2015-12-13",
+        15.3636,
+        "SD at KC, won"
+       ],
+       [
+        "2015-12-13",
+        14.3636,
+        "WAS at CHI, lost"
+       ],
+       [
+        "2015-12-13",
+        15.2727,
+        "OAK at DEN, won"
+       ],
+       [
+        "2015-12-13",
+        16.1818,
+        "DAL at GB, won"
+       ],
+       [
+        "2015-12-24",
+        17.0909,
+        "SD at OAK, won"
+       ],
+       [
+        "2015-12-27",
+        18.0,
+        "CLE at KC, won"
+       ],
+       [
+        "2015-12-27",
+        17.0,
+        "HOU at TEN, lost"
+       ],
+       [
+        "2015-12-27",
+        17.9091,
+        "IND at MIA, won"
+       ],
+       [
+        "2016-01-03",
+        18.8182,
+        "NYJ at BUF, won"
+       ],
+       [
+        "2016-01-03",
+        19.7273,
+        "PIT at CLE, won"
+       ],
+       [
+        "2016-01-03",
+        20.6364,
+        "STL at SF, won"
+       ],
+       [
+        "2016-09-11",
+        19.6364,
+        "CIN at NYJ, lost"
+       ],
+       [
+        "2016-09-11",
+        20.5455,
+        "CLE at PHI, won"
+       ],
+       [
+        "2016-09-18",
+        21.4545,
+        "SEA at LA, won"
+       ],
+       [
+        "2016-09-25",
+        20.4545,
+        "DET at GB, lost"
+       ],
+       [
+        "2016-10-09",
+        21.3636,
+        "WAS at BAL, won"
+       ],
+       [
+        "2016-10-16",
+        22.2727,
+        "PIT at MIA, won"
+       ],
+       [
+        "2016-10-16",
+        21.2727,
+        "SF at BUF, lost"
+       ],
+       [
+        "2016-10-16",
+        22.1818,
+        "KC at OAK, won"
+       ],
+       [
+        "2016-10-23",
+        23.0909,
+        "BAL at NYJ, won"
+       ],
+       [
+        "2016-10-23",
+        24.0,
+        "MIN at PHI, won"
+       ],
+       [
+        "2016-11-06",
+        23.0,
+        "NYJ at MIA, lost"
+       ],
+       [
+        "2016-11-20",
+        23.9091,
+        "BUF at CIN, won"
+       ],
+       [
+        "2016-11-20",
+        24.8182,
+        "CHI at NYG, won"
+       ],
+       [
+        "2016-11-20",
+        25.7273,
+        "PIT at CLE, won"
+       ],
+       [
+        "2016-11-27",
+        24.7273,
+        "SF at MIA, lost"
+       ],
+       [
+        "2016-11-27",
+        23.7273,
+        "KC at DEN, lost"
+       ],
+       [
+        "2016-12-11",
+        22.7273,
+        "ARI at MIA, lost"
+       ],
+       [
+        "2016-12-11",
+        23.6364,
+        "DEN at TEN, won"
+       ],
+       [
+        "2016-12-18",
+        22.6364,
+        "CLE at BUF, lost"
+       ],
+       [
+        "2016-12-18",
+        23.5455,
+        "DET at NYG, won"
+       ],
+       [
+        "2016-12-25",
+        22.5455,
+        "DEN at KC, lost"
+       ],
+       [
+        "2017-01-01",
+        21.5455,
+        "NE at MIA, lost"
+       ],
+       [
+        "2017-01-01",
+        20.5455,
+        "SEA at SF, lost"
+       ],
+       [
+        "2017-01-08",
+        21.4545,
+        "MIA at PIT, won"
+       ],
+       [
+        "2017-09-21",
+        20.4545,
+        "LA at SF, lost"
+       ],
+       [
+        "2017-10-01",
+        21.3636,
+        "OAK at DEN, won"
+       ],
+       [
+        "2017-10-02",
+        20.3636,
+        "WAS at KC, lost"
+       ],
+       [
+        "2017-10-22",
+        21.2727,
+        "CAR at CHI, won"
+       ],
+       [
+        "2017-10-22",
+        20.2727,
+        "NYJ at MIA, lost"
+       ],
+       [
+        "2017-10-29",
+        21.1818,
+        "CAR at TB, won"
+       ],
+       [
+        "2017-11-05",
+        20.1818,
+        "BAL at TEN, lost"
+       ],
+       [
+        "2017-11-19",
+        21.0909,
+        "JAX at CLE, won"
+       ],
+       [
+        "2017-11-19",
+        22.0,
+        "KC at NYG, won"
+       ],
+       [
+        "2017-11-26",
+        21.0,
+        "CAR at NYJ, lost"
+       ],
+       [
+        "2017-11-26",
+        21.9091,
+        "CHI at PHI, won"
+       ],
+       [
+        "2017-11-26",
+        20.9091,
+        "MIA at NE, lost"
+       ],
+       [
+        "2017-12-10",
+        21.8182,
+        "CHI at CIN, won"
+       ],
+       [
+        "2017-12-10",
+        22.7273,
+        "DAL at NYG, won"
+       ],
+       [
+        "2017-12-10",
+        21.7273,
+        "GB at CLE, lost"
+       ],
+       [
+        "2017-12-10",
+        22.6364,
+        "IND at BUF, won"
+       ],
+       [
+        "2017-12-25",
+        23.5455,
+        "OAK at PHI, won"
+       ],
+       [
+        "2017-12-31",
+        24.4545,
+        "DAL at PHI, won"
+       ],
+       [
+        "2017-12-31",
+        25.3636,
+        "NYJ at NE, won"
+       ],
+       [
+        "2017-12-31",
+        26.2727,
+        "WAS at NYG, won"
+       ],
+       [
+        "2017-12-31",
+        27.1818,
+        "JAX at TEN, won"
+       ],
+       [
+        "2018-01-13",
+        28.0909,
+        "ATL at PHI, won"
+       ],
+       [
+        "2018-09-09",
+        27.0909,
+        "BUF at BAL, lost"
+       ],
+       [
+        "2018-09-09",
+        26.0909,
+        "PIT at CLE, lost"
+       ],
+       [
+        "2018-09-16",
+        27.0,
+        "HOU at TEN, won"
+       ],
+       [
+        "2018-10-07",
+        26.0,
+        "ARI at SF, lost"
+       ],
+       [
+        "2018-10-21",
+        26.9091,
+        "CAR at PHI, won"
+       ],
+       [
+        "2018-10-21",
+        27.8182,
+        "HOU at JAX, won"
+       ],
+       [
+        "2018-10-21",
+        26.8182,
+        "MIN at NYJ, lost"
+       ],
+       [
+        "2018-10-21",
+        27.7273,
+        "NO at BAL, won"
+       ],
+       [
+        "2018-10-21",
+        28.6364,
+        "DAL at WAS, won"
+       ],
+       [
+        "2018-10-28",
+        29.5455,
+        "NYJ at CHI, won"
+       ],
+       [
+        "2018-11-04",
+        28.5455,
+        "KC at CLE, lost"
+       ],
+       [
+        "2018-11-04",
+        29.4545,
+        "HOU at DEN, won"
+       ],
+       [
+        "2018-11-04",
+        30.3636,
+        "LAC at SEA, won"
+       ],
+       [
+        "2018-12-02",
+        31.2727,
+        "ARI at GB, won"
+       ],
+       [
+        "2018-12-02",
+        32.1818,
+        "DEN at CIN, won"
+       ],
+       [
+        "2018-12-02",
+        31.1818,
+        "NYJ at TEN, lost"
+       ],
+       [
+        "2018-12-09",
+        30.1818,
+        "NE at MIA, lost"
+       ],
+       [
+        "2018-12-09",
+        29.1818,
+        "NYJ at BUF, lost"
+       ],
+       [
+        "2018-12-13",
+        28.1818,
+        "LAC at KC, lost"
+       ],
+       [
+        "2018-12-23",
+        28.1818,
+        "CIN at CLE, push"
+       ],
+       [
+        "2018-12-24",
+        29.0909,
+        "DEN at OAK, won"
+       ],
+       [
+        "2018-12-30",
+        30.0,
+        "DET at GB, won"
+       ],
+       [
+        "2018-12-30",
+        29.0,
+        "MIA at BUF, lost"
+       ],
+       [
+        "2019-09-09",
+        29.9091,
+        "DEN at OAK, won"
+       ],
+       [
+        "2019-09-19",
+        30.8182,
+        "TEN at JAX, won"
+       ],
+       [
+        "2019-09-22",
+        31.7273,
+        "CIN at BUF, won"
+       ],
+       [
+        "2019-09-22",
+        32.6364,
+        "LA at CLE, won"
+       ],
+       [
+        "2019-09-29",
+        33.5455,
+        "LAC at MIA, won"
+       ],
+       [
+        "2019-09-29",
+        32.5455,
+        "JAX at DEN, lost"
+       ],
+       [
+        "2019-10-10",
+        31.5455,
+        "NYG at NE, lost"
+       ],
+       [
+        "2019-10-13",
+        30.5455,
+        "SEA at CLE, lost"
+       ],
+       [
+        "2019-10-27",
+        29.5455,
+        "PHI at BUF, lost"
+       ],
+       [
+        "2019-10-27",
+        28.5455,
+        "CAR at SF, lost"
+       ],
+       [
+        "2019-11-03",
+        29.4545,
+        "WAS at BUF, won"
+       ],
+       [
+        "2019-11-10",
+        28.4545,
+        "KC at TEN, lost"
+       ],
+       [
+        "2019-11-24",
+        29.3636,
+        "DEN at BUF, won"
+       ],
+       [
+        "2019-11-24",
+        28.3636,
+        "MIA at CLE, lost"
+       ],
+       [
+        "2019-11-24",
+        29.2727,
+        "OAK at NYJ, won"
+       ],
+       [
+        "2019-11-24",
+        30.1818,
+        "SEA at PHI, won"
+       ],
+       [
+        "2019-12-01",
+        31.0909,
+        "NYJ at CIN, won"
+       ],
+       [
+        "2019-12-01",
+        32.0,
+        "TB at JAX, won"
+       ],
+       [
+        "2019-12-01",
+        31.0,
+        "WAS at CAR, lost"
+       ],
+       [
+        "2019-12-01",
+        31.9091,
+        "OAK at KC, won"
+       ],
+       [
+        "2019-12-08",
+        32.8182,
+        "BAL at BUF, won"
+       ],
+       [
+        "2019-12-08",
+        31.8182,
+        "CIN at CLE, lost"
+       ],
+       [
+        "2019-12-15",
+        30.8182,
+        "MIA at NYG, lost"
+       ],
+       [
+        "2019-12-22",
+        29.8182,
+        "CIN at MIA, lost"
+       ],
+       [
+        "2019-12-29",
+        30.7273,
+        "OAK at DEN, won"
+       ],
+       [
+        "2020-09-13",
+        29.7273,
+        "IND at JAX, lost"
+       ],
+       [
+        "2020-09-13",
+        28.7273,
+        "NYJ at BUF, lost"
+       ],
+       [
+        "2020-09-17",
+        27.7273,
+        "CIN at CLE, lost"
+       ],
+       [
+        "2020-09-27",
+        26.7273,
+        "LA at BUF, lost"
+       ],
+       [
+        "2020-09-27",
+        25.7273,
+        "WAS at CLE, lost"
+       ],
+       [
+        "2020-09-27",
+        26.6364,
+        "TB at DEN, won"
+       ],
+       [
+        "2020-10-05",
+        27.5455,
+        "NE at KC, won"
+       ],
+       [
+        "2020-10-11",
+        26.5455,
+        "IND at CLE, lost"
+       ],
+       [
+        "2020-10-18",
+        25.5455,
+        "HOU at TEN, lost"
+       ],
+       [
+        "2020-11-01",
+        26.4545,
+        "LV at CLE, won"
+       ],
+       [
+        "2020-11-01",
+        25.4545,
+        "MIN at GB, lost"
+       ],
+       [
+        "2020-11-01",
+        24.4545,
+        "NE at BUF, lost"
+       ],
+       [
+        "2020-11-01",
+        23.4545,
+        "TEN at CIN, lost"
+       ],
+       [
+        "2020-11-01",
+        22.4545,
+        "NO at CHI, lost"
+       ],
+       [
+        "2020-11-01",
+        23.3636,
+        "DAL at PHI, won"
+       ],
+       [
+        "2020-11-02",
+        22.3636,
+        "TB at NYG, lost"
+       ],
+       [
+        "2020-11-08",
+        21.3636,
+        "CAR at KC, lost"
+       ],
+       [
+        "2020-11-08",
+        20.3636,
+        "HOU at JAX, lost"
+       ],
+       [
+        "2020-11-15",
+        21.2727,
+        "HOU at CLE, won"
+       ],
+       [
+        "2020-11-15",
+        22.1818,
+        "JAX at GB, won"
+       ],
+       [
+        "2020-11-15",
+        23.0909,
+        "PHI at NYG, won"
+       ],
+       [
+        "2020-11-15",
+        22.0909,
+        "TB at CAR, lost"
+       ],
+       [
+        "2020-11-15",
+        21.0909,
+        "CIN at PIT, lost"
+       ],
+       [
+        "2020-11-15",
+        22.0,
+        "BAL at NE, won"
+       ],
+       [
+        "2020-11-16",
+        22.9091,
+        "MIN at CHI, won"
+       ],
+       [
+        "2020-11-29",
+        23.8182,
+        "LAC at BUF, won"
+       ],
+       [
+        "2020-12-02",
+        24.7273,
+        "BAL at PIT, won"
+       ],
+       [
+        "2020-12-06",
+        23.7273,
+        "LV at NYJ, lost"
+       ],
+       [
+        "2020-12-14",
+        22.7273,
+        "BAL at CLE, lost"
+       ],
+       [
+        "2020-12-19",
+        21.7273,
+        "BUF at DEN, lost"
+       ],
+       [
+        "2020-12-21",
+        20.7273,
+        "PIT at CIN, lost"
+       ],
+       [
+        "2021-01-16",
+        21.6364,
+        "BAL at BUF, won"
+       ],
+       [
+        "2021-09-12",
+        22.5455,
+        "PIT at BUF, won"
+       ],
+       [
+        "2021-09-12",
+        23.4545,
+        "DEN at NYG, won"
+       ],
+       [
+        "2021-09-12",
+        24.3636,
+        "MIA at NE, won"
+       ],
+       [
+        "2021-09-20",
+        23.3636,
+        "DET at GB, lost"
+       ],
+       [
+        "2021-09-26",
+        24.2727,
+        "ATL at NYG, won"
+       ],
+       [
+        "2021-09-26",
+        25.1818,
+        "CHI at CLE, won"
+       ],
+       [
+        "2021-09-26",
+        26.0909,
+        "LAC at KC, won"
+       ],
+       [
+        "2021-09-26",
+        25.0909,
+        "WAS at BUF, lost"
+       ],
+       [
+        "2021-10-17",
+        26.0,
+        "LAC at BAL, won"
+       ],
+       [
+        "2021-10-17",
+        25.0,
+        "ARI at CLE, lost"
+       ],
+       [
+        "2021-10-21",
+        25.9091,
+        "DEN at CLE, won"
+       ],
+       [
+        "2021-10-24",
+        26.8182,
+        "KC at TEN, won"
+       ],
+       [
+        "2021-10-25",
+        27.7273,
+        "NO at SEA, won"
+       ],
+       [
+        "2021-10-31",
+        28.6364,
+        "PIT at CLE, won"
+       ],
+       [
+        "2021-11-07",
+        29.5455,
+        "BUF at JAX, won"
+       ],
+       [
+        "2021-11-07",
+        30.4545,
+        "GB at KC, won"
+       ],
+       [
+        "2021-11-14",
+        30.4545,
+        "NO at TEN, push"
+       ],
+       [
+        "2021-11-14",
+        31.3636,
+        "PHI at DEN, won"
+       ],
+       [
+        "2021-11-21",
+        32.2727,
+        "DET at CLE, won"
+       ],
+       [
+        "2021-11-21",
+        33.1818,
+        "HOU at TEN, won"
+       ],
+       [
+        "2021-11-21",
+        32.1818,
+        "IND at BUF, lost"
+       ],
+       [
+        "2021-11-28",
+        31.1818,
+        "PIT at CIN, lost"
+       ],
+       [
+        "2021-12-05",
+        32.0909,
+        "DEN at KC, won"
+       ],
+       [
+        "2021-12-06",
+        33.0,
+        "NE at BUF, won"
+       ],
+       [
+        "2021-12-12",
+        32.0,
+        "BAL at CLE, lost"
+       ],
+       [
+        "2021-12-12",
+        31.0,
+        "LV at KC, lost"
+       ],
+       [
+        "2021-12-19",
+        31.9091,
+        "DAL at NYG, won"
+       ],
+       [
+        "2021-12-20",
+        32.8182,
+        "LV at CLE, won"
+       ],
+       [
+        "2021-12-26",
+        31.8182,
+        "JAX at NYJ, lost"
+       ],
+       [
+        "2021-12-26",
+        30.8182,
+        "NYG at PHI, lost"
+       ],
+       [
+        "2021-12-26",
+        29.8182,
+        "PIT at KC, lost"
+       ],
+       [
+        "2022-01-09",
+        30.7273,
+        "CIN at CLE, won"
+       ],
+       [
+        "2022-01-09",
+        31.6364,
+        "NYJ at BUF, won"
+       ],
+       [
+        "2022-01-16",
+        30.6364,
+        "PHI at TB, lost"
+       ],
+       [
+        "2022-09-18",
+        31.5455,
+        "IND at JAX, won"
+       ],
+       [
+        "2022-09-22",
+        30.5455,
+        "PIT at CLE, lost"
+       ],
+       [
+        "2022-09-25",
+        29.5455,
+        "HOU at CHI, lost"
+       ],
+       [
+        "2022-10-02",
+        30.4545,
+        "BUF at BAL, won"
+       ],
+       [
+        "2022-10-02",
+        31.3636,
+        "CHI at NYG, won"
+       ],
+       [
+        "2022-10-02",
+        30.3636,
+        "JAX at PHI, lost"
+       ],
+       [
+        "2022-10-09",
+        29.3636,
+        "LAC at CLE, lost"
+       ],
+       [
+        "2022-10-09",
+        30.2727,
+        "PIT at BUF, won"
+       ],
+       [
+        "2022-10-16",
+        29.2727,
+        "NE at CLE, lost"
+       ],
+       [
+        "2022-10-23",
+        30.1818,
+        "IND at TEN, won"
+       ],
+       [
+        "2022-10-23",
+        31.0909,
+        "NYJ at DEN, won"
+       ],
+       [
+        "2022-11-10",
+        32.0,
+        "ATL at CAR, won"
+       ],
+       [
+        "2022-11-13",
+        31.0,
+        "MIN at BUF, lost"
+       ],
+       [
+        "2022-11-20",
+        31.9091,
+        "CAR at BAL, won"
+       ],
+       [
+        "2022-11-20",
+        30.9091,
+        "DET at NYG, lost"
+       ],
+       [
+        "2022-11-20",
+        31.8182,
+        "NYJ at NE, won"
+       ],
+       [
+        "2022-11-27",
+        32.7273,
+        "CIN at TEN, won"
+       ],
+       [
+        "2022-11-27",
+        33.6364,
+        "DEN at CAR, won"
+       ],
+       [
+        "2022-11-27",
+        34.5455,
+        "TB at CLE, won"
+       ],
+       [
+        "2022-12-17",
+        35.4545,
+        "BAL at CLE, won"
+       ],
+       [
+        "2022-12-22",
+        36.3636,
+        "JAX at NYJ, won"
+       ],
+       [
+        "2022-12-24",
+        37.2727,
+        "ATL at BAL, won"
+       ],
+       [
+        "2022-12-24",
+        36.2727,
+        "BUF at CHI, lost"
+       ],
+       [
+        "2022-12-24",
+        37.1818,
+        "CIN at NE, won"
+       ],
+       [
+        "2022-12-24",
+        38.0909,
+        "NO at CLE, won"
+       ],
+       [
+        "2022-12-24",
+        39.0,
+        "LV at PIT, won"
+       ],
+       [
+        "2022-12-29",
+        39.9091,
+        "DAL at TEN, won"
+       ],
+       [
+        "2023-01-01",
+        38.9091,
+        "MIA at NE, lost"
+       ],
+       [
+        "2023-01-14",
+        37.9091,
+        "SEA at SF, lost"
+       ],
+       [
+        "2023-01-22",
+        38.8182,
+        "DAL at SF, won"
+       ],
+       [
+        "2023-09-24",
+        39.7273,
+        "TEN at CLE, won"
+       ],
+       [
+        "2023-10-08",
+        40.6364,
+        "NO at NE, won"
+       ],
+       [
+        "2023-10-12",
+        41.5455,
+        "DEN at KC, won"
+       ],
+       [
+        "2023-10-15",
+        42.4545,
+        "MIN at CHI, won"
+       ],
+       [
+        "2023-10-15",
+        42.4545,
+        "SF at CLE, push"
+       ],
+       [
+        "2023-10-15",
+        43.3636,
+        "DET at TB, won"
+       ],
+       [
+        "2023-10-22",
+        42.3636,
+        "BUF at NE, lost"
+       ],
+       [
+        "2023-10-22",
+        41.3636,
+        "DET at BAL, lost"
+       ],
+       [
+        "2023-10-22",
+        42.2727,
+        "WAS at NYG, won"
+       ],
+       [
+        "2023-10-22",
+        43.1818,
+        "MIA at PHI, won"
+       ],
+       [
+        "2023-10-29",
+        42.1818,
+        "NE at MIA, lost"
+       ],
+       [
+        "2023-11-12",
+        43.0909,
+        "SF at JAX, won"
+       ],
+       [
+        "2023-11-19",
+        44.0,
+        "TB at SF, won"
+       ],
+       [
+        "2023-12-10",
+        43.0,
+        "JAX at CLE, lost"
+       ],
+       [
+        "2023-12-17",
+        43.9091,
+        "ATL at CAR, won"
+       ],
+       [
+        "2023-12-17",
+        44.8182,
+        "CHI at CLE, won"
+       ],
+       [
+        "2023-12-17",
+        45.7273,
+        "NYJ at MIA, won"
+       ],
+       [
+        "2023-12-17",
+        46.6364,
+        "BAL at JAX, won"
+       ],
+       [
+        "2023-12-24",
+        47.5455,
+        "DAL at MIA, won"
+       ],
+       [
+        "2023-12-25",
+        48.4545,
+        "LV at KC, won"
+       ],
+       [
+        "2023-12-31",
+        47.4545,
+        "ATL at CHI, lost"
+       ],
+       [
+        "2024-01-07",
+        48.3636,
+        "NYJ at NE, won"
+       ],
+       [
+        "2024-01-07",
+        49.2727,
+        "TB at CAR, won"
+       ],
+       [
+        "2024-01-07",
+        48.2727,
+        "LA at SF, lost"
+       ],
+       [
+        "2024-01-13",
+        49.1818,
+        "MIA at KC, won"
+       ],
+       [
+        "2024-01-15",
+        48.1818,
+        "PIT at BUF, lost"
+       ],
+       [
+        "2024-01-20",
+        48.1818,
+        "HOU at BAL, push"
+       ],
+       [
+        "2024-09-08",
+        47.1818,
+        "ARI at BUF, lost"
+       ],
+       [
+        "2024-09-15",
+        48.0909,
+        "CLE at JAX, won"
+       ],
+       [
+        "2024-09-15",
+        49.0,
+        "LAC at CAR, won"
+       ],
+       [
+        "2024-09-15",
+        48.0,
+        "CIN at KC, lost"
+       ],
+       [
+        "2024-09-29",
+        47.0,
+        "LA at CHI, lost"
+       ],
+       [
+        "2024-09-29",
+        46.0,
+        "MIN at GB, lost"
+       ],
+       [
+        "2024-10-06",
+        45.0,
+        "BAL at CIN, lost"
+       ],
+       [
+        "2024-10-06",
+        44.0,
+        "CAR at CHI, lost"
+       ],
+       [
+        "2024-10-27",
+        43.0,
+        "ARI at MIA, lost"
+       ],
+       [
+        "2024-11-03",
+        43.9091,
+        "DET at GB, won"
+       ],
+       [
+        "2024-11-10",
+        44.8182,
+        "NE at CHI, won"
+       ],
+       [
+        "2024-11-24",
+        45.7273,
+        "TB at NYG, won"
+       ],
+       [
+        "2024-12-01",
+        44.7273,
+        "SEA at NYJ, lost"
+       ],
+       [
+        "2024-12-08",
+        45.6364,
+        "CAR at PHI, won"
+       ],
+       [
+        "2024-12-08",
+        46.5455,
+        "CLE at PIT, won"
+       ],
+       [
+        "2024-12-08",
+        47.4545,
+        "NO at NYG, won"
+       ],
+       [
+        "2024-12-15",
+        48.3636,
+        "KC at CLE, won"
+       ],
+       [
+        "2024-12-15",
+        47.3636,
+        "NYJ at JAX, lost"
+       ],
+       [
+        "2024-12-15",
+        46.3636,
+        "IND at DEN, lost"
+       ],
+       [
+        "2024-12-21",
+        45.3636,
+        "PIT at BAL, lost"
+       ],
+       [
+        "2024-12-29",
+        44.3636,
+        "NYJ at BUF, lost"
+       ],
+       [
+        "2024-12-29",
+        45.2727,
+        "TEN at JAX, won"
+       ],
+       [
+        "2024-12-29",
+        46.1818,
+        "MIA at CLE, won"
+       ],
+       [
+        "2025-01-04",
+        45.1818,
+        "CLE at BAL, lost"
+       ],
+       [
+        "2025-01-05",
+        44.1818,
+        "BUF at NE, lost"
+       ],
+       [
+        "2025-01-05",
+        45.0909,
+        "NYG at PHI, won"
+       ],
+       [
+        "2025-01-05",
+        44.0909,
+        "MIA at NYJ, lost"
+       ],
+       [
+        "2025-01-18",
+        45.0,
+        "HOU at KC, won"
+       ],
+       [
+        "2025-01-19",
+        44.0,
+        "LA at PHI, lost"
+       ],
+       [
+        "2025-09-07",
+        44.9091,
+        "CIN at CLE, won"
+       ],
+       [
+        "2025-09-29",
+        43.9091,
+        "NYJ at MIA, lost"
+       ],
+       [
+        "2025-10-12",
+        44.8182,
+        "DEN at NYJ, won"
+       ],
+       [
+        "2025-10-12",
+        43.8182,
+        "DAL at CAR, lost"
+       ],
+       [
+        "2025-10-12",
+        44.7273,
+        "LA at BAL, won"
+       ],
+       [
+        "2025-10-19",
+        43.7273,
+        "MIA at CLE, lost"
+       ],
+       [
+        "2025-10-19",
+        42.7273,
+        "NE at TEN, lost"
+       ],
+       [
+        "2025-10-19",
+        43.6364,
+        "NO at CHI, won"
+       ],
+       [
+        "2025-11-02",
+        44.5455,
+        "CAR at GB, won"
+       ],
+       [
+        "2025-11-06",
+        45.4545,
+        "LV at DEN, won"
+       ],
+       [
+        "2025-11-09",
+        46.3636,
+        "NO at CAR, won"
+       ],
+       [
+        "2025-11-09",
+        47.2727,
+        "NYG at CHI, won"
+       ],
+       [
+        "2025-11-16",
+        48.1818,
+        "CIN at PIT, won"
+       ],
+       [
+        "2025-11-16",
+        47.1818,
+        "GB at NYG, lost"
+       ],
+       [
+        "2025-11-16",
+        46.1818,
+        "TB at BUF, lost"
+       ],
+       [
+        "2025-11-16",
+        45.1818,
+        "BAL at CLE, lost"
+       ],
+       [
+        "2025-11-16",
+        46.0909,
+        "DET at PHI, won"
+       ],
+       [
+        "2025-11-28",
+        47.0,
+        "CHI at PHI, won"
+       ],
+       [
+        "2025-11-30",
+        47.9091,
+        "SF at CLE, won"
+       ],
+       [
+        "2025-11-30",
+        48.8182,
+        "BUF at PIT, won"
+       ],
+       [
+        "2025-12-14",
+        49.7273,
+        "LV at PHI, won"
+       ],
+       [
+        "2025-12-14",
+        48.7273,
+        "NYJ at JAX, lost"
+       ],
+       [
+        "2025-12-14",
+        47.7273,
+        "WAS at NYG, lost"
+       ],
+       [
+        "2025-12-18",
+        46.7273,
+        "LA at SEA, lost"
+       ],
+       [
+        "2025-12-21",
+        45.7273,
+        "BUF at CLE, lost"
+       ],
+       [
+        "2025-12-21",
+        46.6364,
+        "MIN at NYG, won"
+       ],
+       [
+        "2025-12-28",
+        45.6364,
+        "NO at TEN, lost"
+       ],
+       [
+        "2026-01-03",
+        46.5455,
+        "CAR at TB, won"
+       ],
+       [
+        "2026-01-10",
+        45.5455,
+        "LA at CAR, lost"
+       ],
+       [
+        "2026-01-10",
+        44.5455,
+        "GB at CHI, lost"
+       ],
+       [
+        "2026-01-11",
+        45.4545,
+        "BUF at JAX, won"
+       ],
+       [
+        "2026-01-11",
+        46.3636,
+        "SF at PHI, won"
+       ],
+       [
+        "2026-01-17",
+        45.3636,
+        "BUF at DEN, lost"
+       ]
+      ]
+     }
+    ],
+    "refs": [
+     {
+      "value": 0,
+      "label": "Even",
+      "role": "zero"
+     }
+    ]
+   }
+  ]
+ },
+ "table": {
+  "columns": [
+   "Season",
+   "College football signals",
+   "Record",
+   "Units",
+   "Running total",
+   "NFL signals",
+   "Record",
+   "Units",
+   "Running total"
+  ],
+  "num": [
+   false,
+   true,
+   false,
+   true,
+   true,
+   true,
+   false,
+   true,
+   true
+  ],
+  "rows": [
+   [
+    "2004",
+    "",
+    "",
+    "",
+    "",
+    "39",
+    "23–15–1",
+    "+5.9",
+    "+5.9"
+   ],
+   [
+    "2005",
+    "",
+    "",
+    "",
+    "",
+    "21",
+    "15–6",
+    "+7.6",
+    "+13.5"
+   ],
+   [
+    "2006",
+    "32",
+    "20–12",
+    "+6.2",
+    "+6.2",
+    "28",
+    "16–11–1",
+    "+3.5",
+    "+17.1"
+   ],
+   [
+    "2007",
+    "37",
+    "22–14–1",
+    "+6.0",
+    "+12.2",
+    "27",
+    "13–14",
+    "−2.2",
+    "+14.9"
+   ],
+   [
+    "2008",
+    "28",
+    "18–10",
+    "+6.4",
+    "+18.5",
+    "32",
+    "22–10",
+    "+10.0",
+    "+24.9"
+   ],
+   [
+    "2009",
+    "47",
+    "25–22",
+    "+0.7",
+    "+19.3",
+    "19",
+    "9–10",
+    "−1.8",
+    "+23.1"
+   ],
+   [
+    "2010",
+    "42",
+    "24–18",
+    "+3.8",
+    "+23.1",
+    "29",
+    "10–18–1",
+    "−8.9",
+    "+14.2"
+   ],
+   [
+    "2011",
+    "96",
+    "48–46–2",
+    "−2.4",
+    "+20.7",
+    "27",
+    "15–12",
+    "+1.6",
+    "+15.8"
+   ],
+   [
+    "2012",
+    "74",
+    "37–35–2",
+    "−1.4",
+    "+19.4",
+    "24",
+    "10–13–1",
+    "−3.9",
+    "+11.9"
+   ],
+   [
+    "2013",
+    "64",
+    "34–29–1",
+    "+1.9",
+    "+21.3",
+    "29",
+    "15–14",
+    "−0.4",
+    "+11.5"
+   ],
+   [
+    "2014",
+    "78",
+    "48–30",
+    "+13.6",
+    "+34.9",
+    "26",
+    "16–10",
+    "+4.5",
+    "+16.1"
+   ],
+   [
+    "2015",
+    "88",
+    "55–33",
+    "+17.0",
+    "+51.9",
+    "27",
+    "16–10–1",
+    "+4.5",
+    "+20.6"
+   ],
+   [
+    "2016",
+    "77",
+    "46–31",
+    "+10.8",
+    "+62.7",
+    "24",
+    "13–11",
+    "+0.8",
+    "+21.5"
+   ],
+   [
+    "2017",
+    "82",
+    "43–38–1",
+    "+1.1",
+    "+63.8",
+    "22",
+    "15–7",
+    "+6.6",
+    "+28.1"
+   ],
+   [
+    "2018",
+    "78",
+    "34–43–1",
+    "−12.1",
+    "+51.7",
+    "23",
+    "12–10–1",
+    "+0.9",
+    "+29.0"
+   ],
+   [
+    "2019",
+    "80",
+    "48–31–1",
+    "+12.6",
+    "+64.4",
+    "25",
+    "14–11",
+    "+1.7",
+    "+30.7"
+   ],
+   [
+    "2020",
+    "46",
+    "24–22",
+    "−0.2",
+    "+64.2",
+    "32",
+    "12–20",
+    "−9.1",
+    "+21.6"
+   ],
+   [
+    "2021",
+    "62",
+    "33–26–3",
+    "+4.0",
+    "+68.2",
+    "34",
+    "22–11–1",
+    "+9.0",
+    "+30.6"
+   ],
+   [
+    "2022",
+    "73",
+    "44–29",
+    "+11.0",
+    "+79.2",
+    "30",
+    "20–10",
+    "+8.2",
+    "+38.8"
+   ],
+   [
+    "2023",
+    "65",
+    "39–26",
+    "+9.5",
+    "+88.6",
+    "27",
+    "18–7–2",
+    "+9.4",
+    "+48.2"
+   ],
+   [
+    "2024",
+    "69",
+    "32–35–2",
+    "−5.9",
+    "+82.7",
+    "29",
+    "13–16",
+    "−4.2",
+    "+44.0"
+   ],
+   [
+    "2025",
+    "66",
+    "41–25",
+    "+12.3",
+    "+95.0",
+    "33",
+    "18–15",
+    "+1.4",
+    "+45.4"
+   ]
+  ],
+  "note": "By season; the chart plots every signal. One unit a bet at −110: a win pays 0.909 units."
+ }
+}

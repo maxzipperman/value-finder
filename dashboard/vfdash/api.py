@@ -5,7 +5,9 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, timedelta, timezone
 
+from . import backtests as backtests_mod
 from . import health as health_mod
+from . import signals as signals_mod
 from . import status_md, words
 from .data import JOBS, PROJECTS, SPORT_OF, DEFAULT_RUN_TIMES, Snap, Store, schedule_words
 from .ledger import I, RULES, get
@@ -25,8 +27,6 @@ TESTS = [
     {"id": "cfb_rule_ht", "project": "cfb-weather", "sport": "cfb", "column": "rule_ht", "signals": ("SIGNAL",),
      "decision_ids": ("CFB_RULE_HT",), "scorer_key": "RULE_HT", "target": None},
 ]
-SCORE_LINE = re.compile(r"^(RULE_B|MODEL_LEAN|RULE_HT)\b[^:\n]*:\s*(\d+) signals[^,\n]*,\s*(\d+) settled,\s*(\d+) pending,"
-                        r"\s*(\d+) void", re.M)
 RULE_NAMES = {"rule_b": "Rule B", "rule_ht": "Rule HT", "lean": "Model lean"}
 # Rule B statuses a row reaches only once the wind trigger is met (nflweather/live.py and cfbweather/live.py
 # call this set TRIGGERED). Rule B's expected value is priced from the frozen cohort of outdoor games with 15+ mph
@@ -65,9 +65,10 @@ class Screen:
 
     def header(self, label: str, at: datetime | None) -> dict:
         h = health_mod.assess(self.snap, self.now, self.tz)
+        live = self.part("count of live signals", lambda: signals_live(on_board(self.store, self.snap, self.now)), 0)
         return {"last_written": f"{label} {self.when(at)}" if at else f"{label}: nothing recorded yet",
                 "last_written_utc": words.iso_z(at), "read_at": f"Read at {words.clock(self.now, self.tz)}",
-                "health": h.level, "problems": h.problems}
+                "health": h.level, "problems": h.problems, "signals_live": live}
 
     def done(self, payload: dict) -> dict:
         payload["notes"] = list(dict.fromkeys(self.notes))
@@ -196,7 +197,8 @@ def rule_cells(sport: str, r) -> list[dict]:
         out.append({"rule": RULE_NAMES[rule], "value": v,
                     "words": words.status_words(rule, v, get(r, "wx_src"), get(r, "ht_threshold")),
                     "signal": words.is_signal(rule, v), "lean": rule == "lean" and v.strip() in ("UNDER lean",
-                                                                                                "OVER lean")})
+                                                                                                "OVER lean"),
+                    "badge": words.badge(rule, v)})
     return out
 
 
@@ -237,6 +239,7 @@ def game_row(scr: Screen, sport: str, L, r, listed: bool = True) -> dict:
     logged = L.logged(r)
     met = wind_rule_met(r)
     b = get(r, "rule_b").strip()
+    rules = rule_cells(sport, r)
     return {
         "sport": SPORT_OF[L.project], "sport_key": sport, "game_id": get(r, "game_id"),
         "kickoff": words.kickoff_et(k) if timed or k is None else f"{words.day_label(k, words.EASTERN)}, time not set",
@@ -256,7 +259,8 @@ def game_row(scr: Screen, sport: str, L, r, listed: bool = True) -> dict:
         "wind_value_best": words.pct(get(r, "ev_best_line"), signed=True, digits=1) if b in WIND_BEST_SHOWN else "",
         # the NFL lean model's chance of the under, a different model: outdoor NFL games only
         "lean_chance": words.pct(get(r, "p_under")) if lean_model_applies(sport, r) else "",
-        "rules": rule_cells(sport, r), "signal": L.signal(r), "best": best_words(r),
+        "rules": rules, "signal": L.signal(r), "badge": words.strongest([c["badge"] for c in rules]),
+        "best": best_words(r),
         "days": words.days_to(k, scr.now, scr.tz), "lead_days": get(r, "lead_days"),
         "logged": scr.when(logged), "logged_utc": words.iso_z(logged), "rules_version": get(r, "rules_version"),
     }
@@ -271,11 +275,13 @@ def tests_content(scr: Screen) -> dict:
     return {}
 
 
-def scorer_counts(text: str) -> dict:
+def scorer_counts(doc: dict | None) -> dict:
+    """Each test's counts, from the scorer's document: {test id: {signals, settled, pending, void}}."""
     out = {}
-    for m in SCORE_LINE.finditer(text or ""):
-        out.setdefault(m.group(1), {"signals": int(m.group(2)), "settled": int(m.group(3)),
-                                    "pending": int(m.group(4)), "void": int(m.group(5))})
+    for t in (doc or {}).get("tests", []):
+        c = t.get("counts", {})
+        if all(isinstance(c.get(k), int) for k in ("signals", "settled", "pending", "void")):
+            out[t["id"]] = {k: c[k] for k in ("signals", "settled", "pending", "void")}
     return out
 
 
@@ -320,26 +326,31 @@ def ledger_counts(scr: Screen, test: dict, start: datetime | None) -> dict:
             "by_latest_status": [{"words": w, "games": n} for w, n in sorted(latest.items(), key=lambda x: -x[1])]}
 
 
-def scorer_block(scr: Screen, project: str, wait: bool) -> dict:
-    s = scr.store.scorer(project, wait=wait)
+def scorer_trouble(project: str, s, then: str = "The counts above are from the ledger.") -> str:
+    """What went wrong with a scorer's preview, in plain words ("" when it ran and printed its document)."""
     name = "NFL" if project == "nfl-weather" else "college football"
-    words_ = {
+    return {
         "ok": "",
         "waiting": f"The {name} scorer's read is being prepared; it appears here when it is ready.",
         "missing": (f"The {name} scorer can't be run here: its Python environment "
-                    f"({project}/.venv) or its script is missing. The counts above are from the ledger."),
-        "timed_out": f"The {name} scorer took more than 60 seconds and was stopped. The counts above are from the "
-                     "ledger.",
-        "failed": f"The {name} scorer stopped with an error, so its read is not shown in full. The counts above are "
-                  "from the ledger.",
+                    f"({project}/.venv) or its script is missing. {then}"),
+        "timed_out": f"The {name} scorer took more than 60 seconds and was stopped. {then}",
+        "failed": f"The {name} scorer stopped with an error, so its read is not shown in full. {then}",
+        "not_document": (f"The {name} scorer printed something that is not the report the dashboard reads (its "
+                         f"--json document), so its read is not shown. {then}"),
         "skipped": (f"The {name} scorer was not started: starting it would create "
                     f"{'this folder' if ',' not in s.error else 'these folders'} ({s.error}), and the dashboard never "
-                    "changes the project folders. The counts above are from the ledger."),
+                    f"changes the project folders. {then}"),
     }[s.status]
-    return {"project": project, "status": s.status, "words": words_, "text": s.text or "",
-            "error": s.error[-1200:] if s.status == "failed" else "",
+
+
+def scorer_block(scr: Screen, project: str, wait: bool) -> dict:
+    s = scr.store.scorer(project, wait=wait)
+    return {"project": project, "status": s.status, "words": scorer_trouble(project, s), "text": s.text or "",
+            "error": s.error[-1200:] if s.status in ("failed", "not_document") else "",
+            "error_label": "What it printed" if s.status == "not_document" else "What it printed as an error",
             "ran": scr.when(s.ran_at) if s.ran_at and s.status != "skipped" else None,
-            "counts": scorer_counts(s.text) if s.status == "ok" else {}}
+            "counts": scorer_counts(s.doc) if s.status == "ok" else {}}
 
 
 def forward_tests(scr: Screen, wait: bool) -> list[dict]:
@@ -367,9 +378,10 @@ def forward_tests(scr: Screen, wait: bool) -> list[dict]:
                 f", {sk['pending']} waiting for a result" if sk["pending"] else "")
             detail = (f"{sk['signals']} signals, {sk['settled']} settled, {sk['pending']} waiting for a result, "
                       f"{sk['void']} void (the scorer's count)")
-        elif sc["status"] in ("failed", "timed_out", "missing", "skipped"):
+        elif sc["status"] in ("failed", "timed_out", "missing", "skipped", "not_document"):
             why = {"failed": "stopped with an error", "timed_out": "took too long and was stopped",
-                   "missing": "can't be run here", "skipped": "was not started"}[sc["status"]]
+                   "missing": "can't be run here", "skipped": "was not started",
+                   "not_document": "printed something the dashboard can't read"}[sc["status"]]
             progress = f"The scorer {why}; {logged} logged (from the ledger)"
             detail = progress
         else:
@@ -525,6 +537,46 @@ def evidence(scr: Screen) -> tuple[list[dict], int | None, str | None]:
     return entries, n, status_md.bar(n)
 
 
+LIVE_RULE_WORDS = {"rule_b": "Wind rule (Rule B)", "rule_ht": "High-total rule (Rule HT)"}
+
+
+def better_number(r) -> str:
+    """The best number any book offers, when it is better for the under than the rule's own quote: a higher total,
+    or the same total at a better price. "" when it isn't better, or wasn't logged."""
+    line, price = words.num(get(r, "total")), words.num(get(r, "under"))
+    bl, bp, bb = words.num(get(r, "best_line")), words.num(get(r, "best_line_under")), get(r, "best_line_book")
+    if line is not None and bl is not None and (bl > line or (bl == line and bp is not None and price is not None
+                                                              and bp > price)):
+        return f"Better at {words.book(bb) or 'another book'}: under {bl:.1f} at {words.odds(bp)}"
+    bu, bub = words.num(get(r, "best_under")), get(r, "best_under_book")
+    if line is not None and bu is not None and price is not None and bu > price:
+        return f"Better at {words.book(bub) or 'another book'}: under {line:.1f} at {words.odds(bu)}"
+    return ""
+
+
+def live_signals(scr: Screen) -> list[dict]:
+    """Each signal live on the board (a game still to kick off whose newest row is a signal), one per rule: what to
+    take, the better number if a book offers one, and how long until kickoff. The same games the light counts."""
+    out = []
+    for sport, L, r, listed in on_board(scr.store, scr.snap, scr.now):
+        for rule in RULES[sport]:
+            if not words.is_signal(rule, get(r, rule)):
+                continue
+            k, timed = L.kickoff(r), L.time_set(r)
+            src = words.book(get(r, "line_src")) if get(r, "line_src") else ""
+            take = (f"Under {words.total(get(r, 'total'))} at {words.odds(get(r, 'under'))}" + (f", {src}" if src else "")
+                    if words.num(get(r, "total")) is not None else "No number logged")
+            out.append({"badge": words.badge(rule, get(r, rule)), "sport": SPORT_OF[L.project], "sport_key": sport,
+                        "game_id": get(r, "game_id"), "matchup": f"{get(r, 'away_team')} at {get(r, 'home_team')}",
+                        "kickoff": words.kickoff_et(k) if timed or k is None
+                        else f"{words.day_label(k, words.EASTERN)}, time not set",
+                        "rule": LIVE_RULE_WORDS[rule], "take": take, "better": better_number(r),
+                        "until": words.until(k, scr.now) if timed else "Kickoff time not set",
+                        "_sort": (L.until(r) or scr.now, get(r, "game_id"), rule)})
+    out.sort(key=lambda x: x.pop("_sort"))
+    return out
+
+
 # ---------------------------------------------------------------- the screens
 
 def home(store: Store) -> dict:
@@ -543,8 +595,15 @@ def home(store: Store) -> dict:
     ev_sorted = sorted((e for e in ev if e["kind"] != "pending"), key=lambda e: e["date"], reverse=True)
     q = scr.snap.quota or {}
     nxt = words.next_run(run_times(scr.snap), scr.now, scr.tz)
+    live = scr.part("live signals", lambda: live_signals(scr), [])
     return scr.done({
         "header": scr.header("Last run", at),
+        "live": live,
+        "live_note": "A signal is the rule firing on a pre-registered paper test. It is not a proven edge.",
+        "live_none": "No signal is live." + (
+            f" The next run is at {words.clock(nxt, scr.tz)}"
+            f"{' today' if nxt.astimezone(scr.tz).date() == scr.now.astimezone(scr.tz).date() else ' tomorrow'}."
+            if nxt else ""),
         "numbers": {
             "signals_live": s["signals_live"], "games_on_board": s["games_on_board"],
             "leans_live": scr.part("model leans", lambda: leans_live(on_board(store, scr.snap, scr.now)), 0),
@@ -615,6 +674,12 @@ def game(store: Store, game_id: str) -> tuple[int, dict]:
     fills = scr.part("paper fills", lambda: game_fills(scr, project, game_id), [])
     head = {k: last[k] for k in ("game_id", "kickoff", "matchup", "venue")}
     head["sport"] = SPORT_WORDS[sport]                    # in the header line, in words: "College football"
+    newest = L.game_rows(game_id)[-1]
+    head["badge"] = last["badge"]                         # the newest row's: a signal, a backup-price signal, a watch
+    head["badge_words"] = ("" if not last["badge"] else
+                           "The newest row is a watch, not a bet." if last["badge"] == "watch" else
+                           "The newest row is a signal." + ("" if to_play(L, newest, scr.now) else
+                                                           " The game has kicked off."))
     return 200, scr.done({"header": scr.header("Last logged", words.parse_utc(last["logged_utc"])), "game": head,
                           "rows": rows, "charts": charts, "closes": closes, "alerts": alerts, "fills": fills,
                           "wind_rule_bar": wind_rule_bar(scr.snap)})
@@ -646,7 +711,7 @@ def game_fills(scr: Screen, project: str, game_id: str) -> list[dict]:
 
 FIRST_SEEN = {"ruleb": ("rule_b", "SIGNAL"), "ruleb_secondary": ("rule_b", "SIGNAL_SECONDARY"),
               "leanUNDER": ("lean", "UNDER lean"), "leanOVER": ("lean", "OVER lean"), "ht": ("rule_ht", "SIGNAL"),
-              "ht_time_tbd": ("rule_ht", "time_tbd")}   # cfb-weather amendment 6 (draft)
+              "ht_time_tbd": ("rule_ht", "time_tbd")}   # cfb-weather amendment 7 (draft)
 
 
 def game_alerts(scr: Screen, project: str, L, game_id: str, last: dict) -> dict:
@@ -691,6 +756,28 @@ def tests_screen(store: Store) -> dict:
     newest = max((words.parse_utc(L.latest_snapshot) for L in scr.snap.ledgers.values()
                   if words.parse_utc(L.latest_snapshot)), default=None)
     return scr.done({"header": scr.header("Last run", newest), "groups": groups, "variants": n, "bar": bar})
+
+
+def signals_screen(store: Store) -> dict:
+    """The Signals screen: every bet the scorers count (signals.py). The server runs both scorers first, outside its
+    lock; here they are only read (a preview is kept for 10 minutes)."""
+    scr = Screen(store)
+    scored = {p: store.scorer(p, wait=True) for p in PROJECTS}
+    docs = {p: s.doc if s.status == "ok" else None for p, s in scored.items()}
+    then = signals_mod.LISTED                             # or NONE_LISTED, when that ledger has none (signals.build)
+    trouble = {p: scorer_trouble(p, s, then) for p, s in scored.items()}
+    content = tests_content(scr)
+    if not content:
+        scr.notes.append("The descriptions of the forward tests (dashboard/content/forward_tests.json) could not be "
+                         "read, so the dates the tests start are not shown.")
+    games = scr.part("board", lambda: on_board(store, scr.snap, scr.now), [])
+    payload = scr.part("log of signals", lambda: signals_mod.build(scr, docs, trouble, content, games), None) or {
+        "rules": [], "together": {}, "bets": [], "fallback": [], "empty": None, "paper": signals_mod.PAPER,
+        "trouble": [w for w in trouble.values() if w]}
+    ran = [s.ran_at for s in scored.values() if s.ran_at and s.status != "skipped"]
+    header = scr.header("Scored", max(ran) if ran else None)
+    header["last_written"] = (f"Scored as a preview at {scr.when(max(ran))}" if ran else "Not scored yet")
+    return scr.done({"header": header, **payload})
 
 
 def jobs_screen(store: Store) -> dict:
@@ -801,3 +888,15 @@ def research(store: Store) -> dict:
     header = scr.header("Newest entry", None)
     header["last_written"], header["last_written_utc"] = evidence_stamp(ev), None
     return scr.done({"header": header, "entries": ev, "variants": n, "bar": bar})
+
+
+def backtests(store: Store) -> dict:
+    """The Backtests screen: the research as charts, from the prepared chart files (vfdash/backtests.py)."""
+    scr = Screen(store)
+    payload = scr.part("charts", lambda: backtests_mod.build(scr), None) or {
+        "intro": [], "groups": [], "variants": None, "bar": None, "newest": None}
+    header = scr.header("Newest table", None)
+    header["last_written"] = (f"Charts from tables dated up to {payload['newest']}" if payload.get("newest")
+                              else "No chart file could be read")
+    header["last_written_utc"] = None
+    return scr.done({"header": header, **payload})

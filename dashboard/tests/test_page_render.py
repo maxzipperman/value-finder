@@ -40,17 +40,20 @@ def find(n, tag):
 
 
 def table(n, first_head: str):
-    """(headers, {first link or cell text: [cell texts]}) of the table whose first header is `first_head`."""
+    """(headers, {first link or cell text: [cell texts]}) of the tables whose first header is `first_head`, in order
+    (the Board draws its signals and everything else as two tables with the same headers)."""
+    found, rows = None, {}
     for t in find(n, "table"):
         heads = [text(th) for th in find(t, "th")]
         if heads and heads[0] == first_head:
-            rows = {}
+            found = heads
             for tr in find(next(find(t, "tbody")), "tr"):
                 cells = [text(td) for td in find(tr, "td")]
                 links = [text(a) for a in find(tr, "a")]
                 rows[links[0] if links else cells[0]] = cells
-            return heads, rows
-    raise AssertionError(f"no table headed {first_head!r}")
+    if found is None:
+        raise AssertionError(f"no table headed {first_head!r}")
+    return found, rows
 
 
 def test_the_board_as_drawn(root, home, tmp_path):

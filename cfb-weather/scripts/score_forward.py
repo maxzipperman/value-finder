@@ -8,7 +8,7 @@
   RULE_HT  high-total under (amendment 1), from 2026 Week 6: each game's LAST logged quote before
            kickoff, if that quote is a SIGNAL. A quote is a posted total with a valid under price
            (amendment 4). Graded on win rate and ROI at that price; the promotion test is one-sided
-           against the break-even of the prices taken, with pushes left out of it. Amendment 6: a row
+           against the break-even of the prices taken, with pushes left out of it. Amendment 7: a row
            logged while the game had no kickoff time set (cfbfastR's midnight placeholder) is never graded;
            those rows are counted, and --list-excluded prints each one. It is still a quote, so a listing
            whose last quote was logged with no time set is not a bet, and is counted when that quote would
@@ -16,12 +16,24 @@
 
 What counts (amendment 3): rows written under a registered rules version, logged before kickoff, for
 games from Oct 1, 2026 through the 2027 season's title game (a game dated from Feb 1, 2028 never
-counts, whatever its season label; amendment 4). "Before kickoff" is before the earlier of the kickoff
-on the row and the kickoff in the schedule (amendment 4, reading 11); when the schedule's kickoff is
-cfbfastR's placeholder for "no time set" (exactly 00:00 Eastern), it is before the row's kickoff and before
-the placeholder + 30 hours (amendment 6). Rows outside that are counted by
-reason, never silently dropped; --list-excluded prints each one. ROI is units won per bet placed; a push
-counts as a bet. A game is graded only once the schedule marks it completed.
+counts, whatever its season label; amendment 4). The test's end is judged on the kickoff on the row and
+on the game's kickoff in the schedule: a row counts only if both are before Feb 1, 2028 (amendment 6,
+section 2; with no kickoff in the schedule, the row's alone, as before). "Before kickoff" is before the
+earlier of the kickoff on the row and the kickoff in the schedule (amendment 4, reading 11); when the
+schedule's kickoff is cfbfastR's placeholder for "no time set" (exactly 00:00 Eastern), it is before the
+row's kickoff and before the placeholder + 30 hours (amendment 7, a draft). Rows outside that are counted
+by reason, never silently dropped; --list-excluded prints each one. ROI is units won per bet placed; a
+push counts as a bet. A game is graded only once the schedule marks it completed.
+
+The captured close (amendment 6, section 1): a bet uses a close from closes.csv only when it was captured
+2 to 20 minutes (both inclusive, amendment 2's window as scripts/capture_close.py applies it) before the
+kickoff of the listing graded: the earlier of the kickoff on the listing's last row logged before kickoff
+and the kickoff in the schedule, the bound "before kickoff" gives (so for a placeholder in the schedule,
+amendment 7: the row's kickoff, and never later than the placeholder + 30 hours). Among such captures of
+the game, the last in the file is taken. A game with a captured close outside that window has none for
+this listing: it is counted as missing, the scorer prints how many and which, and --list-excluded prints
+each refused capture. A capture of the game outside the window when another inside it is used is set
+aside: the scorer says how many when there are any, and --list-excluded prints each.
 
 Listings (amendment 4, reading 10): a game's rows are grouped by the kickoff on each row, so a game that
 is postponed and signals again is two listings. Each listing has its own entry (and, for Rule B, its own
@@ -76,6 +88,11 @@ branch. A blank line, or a line of only spaces, in the file or its copy is not a
 skipped when read and never copied by a restore.
 
     python scripts/score_forward.py [--ledger PATH] [--schedule PATH] [--list-excluded]
+    python scripts/score_forward.py --now 2026-10-20T17:00:00 --json   # the dashboard's read: one JSON document
+
+--json prints one JSON document and nothing else: the report above as text, byte for byte, and each test's counts,
+numbers, decision and bets, each number the one the report prints. It changes nothing about what is graded, decided
+or recorded; with --now it is a preview, and records nothing.
 """
 import argparse
 import csv
@@ -104,7 +121,7 @@ REG_END_2026 = pd.Timestamp("2026-12-13T08:00:00Z")   # the 2026 regular season 
 TEST_END = pd.Timestamp("2028-02-01T00:00:00Z")       # after the 2027 season's title game (January 2028)
 ENOUGH = 40
 MIN_CLOSES = 20                                       # amendment 4, reading 12: a CLV decision needs 20 closes
-PH_CAP = pd.Timedelta(hours=30)                       # amendment 6: a placeholder game's rows count before this
+PH_CAP = pd.Timedelta(hours=30)                       # amendment 7: a placeholder game's rows count before this
 MOVED = pd.Timedelta(hours=24)                        # amendment 4: void if it kicked off further than this ...
 NO_RESULT = pd.Timedelta(days=30)                     # ... or had no score this long after the entry's kickoff
 VOID_MOVED = "the game kicked off more than 24 hours from the kickoff on its entry row"
@@ -134,7 +151,17 @@ ap.add_argument("--now", help="score as of this UTC time: a preview for tests an
 ap.add_argument("--test-record", action="store_true",
                 help="tests only: with --now, record final decisions beside a test ledger as if made at --now "
                      "(refused for any ledger in data/forward/)")
+ap.add_argument("--json", action="store_true",
+                help="print one JSON document instead of the report: the report itself as text, and each test's "
+                     "counts, numbers, decision and bets. What is graded, decided and recorded doesn't change")
 args = ap.parse_args()
+# --json: the report is printed into a buffer, exactly as it would be printed, and handed over inside one document
+# at the end (json_document). Nothing else about the run changes: the same rows count, the same bets are graded, and
+# a decision is recorded, or not, by the same rules.
+REPORT = io.StringIO() if args.json else None
+if REPORT is not None:
+    STDOUT, sys.stdout = sys.stdout, REPORT
+JSON = {"excluded": {}, "rows": {}, "tests": {}, "decisions": {}, "written": {}}    # filled as the report prints
 CLOCK = pd.Timestamp.now(tz="UTC")
 NOW = pd.Timestamp(args.now, tz="UTC") if args.now else CLOCK
 path = Path(args.ledger)
@@ -475,10 +502,11 @@ s["sched_kick"] = (pd.to_datetime(S[kick], utc=True, errors="coerce") if kick
                    else pd.Series(pd.NaT, index=s.index, dtype="datetime64[ns, UTC]"))
 if kick is None:
     print("the schedule has no kickoff times (start_utc or start_date): the check for moved games is off")
-# Amendment 6: a schedule kickoff at exactly 00:00 Eastern is cfbfastR's placeholder for "no time set", whether or not
+# Amendment 7: a schedule kickoff at exactly 00:00 Eastern is cfbfastR's placeholder for "no time set", whether or not
 # the schedule's flag is set (a flag on any other time leaves that time as the schedule's kickoff). The placeholder
-# still decides moved games, the listing graded and the game day (amendment 4, sections 1 and 10; amendment 5); only
-# "before kickoff" (amendment 4, reading 11) reads it differently, below.
+# still decides moved games, the listing graded, the game day and the test's end (amendment 4, sections 1 and 10;
+# amendment 5; amendment 6, section 2); only "before kickoff" (amendment 4, reading 11) reads it differently, below,
+# and with it the kickoff each listing's captured close is measured from (amendment 6, section 1).
 s["sched_placeholder"] = no_kickoff_time(False, s.sched_kick).to_numpy()
 played = (S.completed.astype(str).str.lower().isin(["true", "1", "1.0"]) if "completed" in S
           else pd.Series(False, index=S.index))
@@ -493,26 +521,31 @@ PH_GAMES = (L[L.sched_placeholder.eq(True)].drop_duplicates("game_id")[["game_id
             .sort_values("game_id"))
 for label, g in (("completed", PH_GAMES[PH_GAMES.sched_played.eq(True)]),
                  ("not yet played", PH_GAMES[~PH_GAMES.sched_played.eq(True)])):
-    print(f"ledger games whose schedule kickoff is cfbfastR's placeholder (00:00 Eastern; amendment 6), {label}: "
+    print(f"ledger games whose schedule kickoff is cfbfastR's placeholder (00:00 Eastern; amendment 7), {label}: "
           f"{len(g)}" + (f" ({', '.join(g.game_id.astype(str))})" if len(g) else ""))
 if args.list_excluded and len(PH_GAMES):
     print(PH_GAMES.rename(columns={"sched_kick": "schedule_kickoff", "sched_played": "completed"})
           .to_string(index=False))
 # Amendment 4, reading 11: "before kickoff" is before the earlier of the row's kickoff and the schedule's
 L["kick_first"] = L[["start_utc", "sched_kick"]].min(axis=1)
-# Amendment 6: when the schedule's kickoff is the placeholder, "before kickoff" is before the row's own kickoff, and
+# Amendment 7: when the schedule's kickoff is the placeholder, "before kickoff" is before the row's own kickoff, and
 # in any case before the placeholder + 30 hours (about 06:00 Eastern the day after the game's date)
 ph = L.sched_placeholder.eq(True)
 L.loc[ph, "kick_first"] = pd.concat([L.start_utc[ph], L.sched_kick[ph] + PH_CAP], axis=1).min(axis=1)
 
-# What counts. Every excluded row is counted by its first failing reason.
+# What counts. Every excluded row is counted by its first failing reason. Amendment 6, section 2: the test's end
+# is judged on the row's kickoff and on the schedule's (a missing schedule kickoff is NaT, and NaT >= TEST_END is
+# False, so such a row is judged on its own kickoff alone, as before).
 why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.start_utc.isna(), L.start_utc < FIRST_KICK,
-                 ~L.season.isin(TEST_SEASONS) | (L.start_utc >= TEST_END), L.snapshot_utc >= L.kick_first],
+                 ~L.season.isin(TEST_SEASONS) | (L.start_utc >= TEST_END) | (L.sched_kick >= TEST_END),
+                 L.snapshot_utc >= L.kick_first],
                 ["unregistered rules version", "no kickoff time in the row", "before Oct 1, 2026",
                  "after the 2027 season", "logged at or after kickoff"], "")
 print(f"ledger rows: {len(L)}; in the test: {int((why == '').sum())}")
+JSON["rows"] = {"ledger": len(L), "in_test": int((why == "").sum())}
 for reason, n in pd.Series(why[why != ""]).value_counts().items():
     print(f"  excluded, {reason}: {n}")
+    JSON["excluded"][reason] = int(n)
 if args.list_excluded and (why != "").any():
     print(L.assign(excluded=why)[why != ""][["snapshot_utc", "game_id", "rules_version", "rule_b", "excluded"]]
           .to_string(index=False))
@@ -535,6 +568,14 @@ def listings(rows):
 
 
 L = listings(L)
+# Amendment 6, section 1: the kickoff of each listing, for its captured close: the `kick_first` (the earlier of the
+# row's kickoff and the schedule's) of the listing's last row logged before kickoff. Every row left in L was logged
+# before its own `kick_first` (`why`, above), so that row was logged before the schedule's kickoff when the schedule
+# has one, and the bound is never later than it. Amendment 7 (draft): when the schedule's kickoff is the placeholder,
+# `kick_first` is already the row's kickoff capped at the placeholder + 30 hours (above), so the window is measured from
+# the game-day kickoff the row carried, not from 23:40-23:58 Eastern the evening before.
+LISTING_KICK = (L.sort_values(["snapshot_utc", "_row"], kind="stable")
+                .drop_duplicates(["game_id", "listing"], keep="last").set_index(["game_id", "listing"]).kick_first)
 
 
 def interim(name, when, tests):
@@ -660,6 +701,7 @@ def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
     fingerprint. Under the file lock the record is read again first, so two runs at once write one row. A run
     that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/, an unreadable
     record) says why instead."""
+    JSON["written"][did] = False
     if NOT_RECORDED:
         print(f"    not recorded: {NOT_RECORDED}.")
         return
@@ -681,8 +723,29 @@ def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
             return
         pd.DataFrame([rec], columns=RECORD_COLS).to_csv(DECISIONS, mode="a", header=not DECISIONS.exists(),
                                                         index=False)
+    JSON["written"][did] = True
     print(f"    recorded in decisions.csv on {rec['decided_utc']}, horizon {rec['horizon_utc']}; "
           f"ledger rows sha256 {rec['ledger_rows_sha256'][:16]}")
+
+
+def json_mark():
+    """--json: where the report has got to, so a decision's own lines can be handed over as printed."""
+    return REPORT.tell() if REPORT is not None else 0
+
+
+def json_decision(rule, did, name, status, verdict, start, rec=None):
+    """--json: one decision as printed: interim, final (and whether this run wrote it down) or recorded."""
+    if REPORT is None:
+        return
+    d = {"id": did, "name": name, "status": status, "verdict": verdict, "text": REPORT.getvalue()[start:]}
+    if rec is not None:
+        # a recorded number that is NaN or infinite (json.dumps writes it; JSON has no such value) is null here
+        numbers = json.loads(rec.numbers, parse_constant=lambda _: None)
+        d["recorded"] = {"verdict": rec.verdict, "decided_utc": rec.decided_utc, "horizon_utc": rec.horizon_utc,
+                         "n_bets": int(rec.n_bets), "numbers": numbers, "from": origin(did)[2:] or None}
+    if status == "final":
+        d["written"] = JSON["written"].get(did, False)
+    JSON["decisions"].setdefault(rule, []).append(d)
 
 
 def reprint(rec, show, fresh_verdict, fresh_nums, n_fresh, fresh_text=None):
@@ -709,22 +772,83 @@ def f(v):
 last = L.dropna(subset=["mkt_total"])
 quotes = last[is_price(last.mkt_under)]                             # amendment 4: a total with a valid under price
 # Amendment 2: the close captured 2-20 minutes before kickoff (scripts/capture_close.py). Secondary and
-# descriptive, and Rule B's primary close when no later quote was logged (amendment 4).
+# descriptive, and Rule B's primary close when no later quote was logged (amendment 4). Amendment 6, section 1:
+# a capture is this listing's close only when it was captured inside that window before this listing's kickoff.
+CAP_WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))   # amendment 2; capture_close.py's WINDOW, inclusive
+CAP_REFUSED = "close captured outside the window for this listing (2 to 20 minutes before its kickoff)"
+CAP_ASIDE = "capture set aside: outside the window for this listing; another capture inside it is used"
 cap_path = path.parent / "closes.csv"
-cap = (pd.read_csv(cap_path).dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
-       if cap_path.exists() else pd.DataFrame(columns=["game_id", "close_total", "line_src"]))
-cap_src = pd.Series(cap["line_src"].fillna("").astype(str).values if "line_src" in cap else "",
-                    index=pd.to_numeric(cap.game_id), dtype=str)
-cap = pd.Series(cap.close_total.values, index=pd.to_numeric(cap.game_id), dtype=float)
+cap = pd.read_csv(cap_path) if cap_path.exists() else pd.DataFrame(columns=["capture_utc", "game_id", "line_src",
+                                                                             "close_total"])
+cap = cap.reindex(columns=list(dict.fromkeys(["capture_utc", "game_id", "start_utc", "line_src", "close_total"]
+                                             + list(cap.columns))))
+cap = cap.assign(_order=np.arange(len(cap))).dropna(subset=["close_total"])     # file order: the last is taken
+cap["game_id"] = pd.to_numeric(cap.game_id)
+cap["close_total"] = pd.to_numeric(cap.close_total, errors="coerce")
+cap["cap_utc"] = pd.to_datetime(cap.capture_utc.astype(object), utc=True, errors="coerce", format="mixed")
+
+
+def with_captured(b):
+    """Amendment 6, section 1: each bet's captured close, from its own listing. A capture counts only when its
+    capture time is 2 to 20 minutes (both inclusive) before the kickoff of the bet's listing (LISTING_KICK: the
+    earlier of the kickoff on the listing's last row logged before kickoff and the schedule's; amendment 4, reading
+    11); among those, the last in closes.csv is taken. Adds cap_kick (that kickoff), cap_total, cap_src and cap_utc
+    (blank when none); cap_refused: the game has a captured close, but none in that window for this listing, so this
+    bet has none (counted as missing); and cap_aside: how many of the game's captures outside the window were set
+    aside when one inside it is used."""
+    b = b.assign(cap_kick=LISTING_KICK.reindex(pd.MultiIndex.from_frame(b[["game_id", "listing"]])).set_axis(b.index))
+    k = b[["game_id", "cap_kick"]].rename_axis("_b").reset_index()
+    m = k.merge(cap[["game_id", "cap_utc", "close_total", "line_src", "_order"]], on="game_id")
+    lead = m.cap_kick - m.cap_utc
+    inside = (lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1])
+    aside = (~inside).groupby(m._b).sum()
+    m = (m[inside].sort_values("_order", kind="stable").drop_duplicates("_b", keep="last").set_index("_b"))
+    out = b.assign(cap_total=m.close_total.reindex(b.index).astype(float),
+                   cap_src=m.line_src.reindex(b.index).fillna("").astype(str),
+                   cap_utc=m.cap_utc.reindex(b.index))
+    return out.assign(cap_refused=out.cap_total.isna() & out.game_id.isin(cap.game_id),
+                      cap_aside=np.where(out.cap_total.notna(), aside.reindex(b.index).fillna(0), 0).astype(int))
+
+
+def outside(r, label):
+    """The captures of these bets' games outside the window for their listing, one line each (--list-excluded)."""
+    c = r[["game_id", "listing", "start_utc", "cap_kick"]].merge(cap, on="game_id", suffixes=("", "_captured"))
+    lead = c.cap_kick - c.cap_utc
+    c = c[~((lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1]))]
+    print(c.assign(excluded=label).rename(columns={
+        "start_utc": "row_kickoff", "cap_kick": "listing_kickoff", "start_utc_captured": "captured_for"})[
+        ["game_id", "row_kickoff", "listing_kickoff", "capture_utc", "captured_for", "close_total", "excluded"]]
+        .to_string(index=False))
+
+
+def refused(df, label):
+    """Amendment 6, section 1: the bets whose game has a captured close outside the window for their listing,
+    counted and named; --list-excluded prints each capture refused. Captures set aside (outside the window, while
+    another inside it is used) are counted and named when there are any, and --list-excluded prints each."""
+    r = df[df.cap_refused]
+    if len(r):
+        print(f"  captured close refused for {len(r)} of these {len(df)} {label}: {CAP_REFUSED}; counted as missing "
+              f"({', '.join(r.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(r, CAP_REFUSED)
+    a = df[df.cap_aside > 0]
+    if len(a):
+        print(f"  captures set aside for {len(a)} of these {len(df)} {label}: {int(a.cap_aside.sum())} outside the "
+              f"window for the listing, while another inside it is used ({', '.join(a.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(a, CAP_ASIDE)
 
 
 def secondary(df, label):
-    m, lo, hi, n = mean_ci(df.mkt_total - df.game_id.map(cap))
+    """Prints the secondary CLV; returns its numbers, as printed, for --json."""
+    m, lo, hi, n = mean_ci(df.mkt_total - df.cap_total)
     if not n:
         print(f"  secondary (amendment 2): no captured closes for these {len(df)} {label}")
-        return
-    print(f"  secondary (amendment 2): mean CLV vs the captured close {m:+.2f} "
-          f"(95% CI {lo:+.2f} to {hi:+.2f}); {len(df) - n} of {len(df)} {label} without a captured close")
+    else:
+        print(f"  secondary (amendment 2): mean CLV vs the captured close {m:+.2f} "
+              f"(95% CI {lo:+.2f} to {hi:+.2f}); {len(df) - n} of {len(df)} {label} without a captured close")
+    refused(df, label)
+    return m, lo, hi, n
 
 
 # ---------------------------------------------------------------- Rule B
@@ -739,10 +863,11 @@ later = (later[later.snapshot_utc > later.entry_utc].sort_values("snapshot_utc",
 bets = bets.merge(later[["game_id", "listing", "mkt_total", "snapshot_utc", "line_src", "_row"]].rename(
     columns={"mkt_total": "close_total", "snapshot_utc": "close_utc", "line_src": "close_src", "_row": "close_row"}),
     on=["game_id", "listing"], how="left")
-use_cap = bets.close_total.isna() & bets.game_id.map(cap).notna()
+bets = with_captured(bets)                          # amendment 6, section 1: the capture of this listing only
+use_cap = bets.close_total.isna() & bets.cap_total.notna()
 bets["close_from"] = np.where(bets.close_total.notna(), "later quote", np.where(use_cap, "captured close", "none"))
-bets.loc[use_cap, "close_total"] = bets.game_id.map(cap)[use_cap]
-bets["close_src"] = np.where(use_cap, "captured close (" + bets.game_id.map(cap_src).fillna("").astype(str) + ")",
+bets.loc[use_cap, "close_total"] = bets.cap_total[use_cap]
+bets["close_src"] = np.where(use_cap, "captured close (" + bets.cap_src + ")",
                              bets.close_src.fillna("none").astype(str))
 bets = settle(bets)
 done = bets[bets.status.eq("settled")].copy()
@@ -751,6 +876,7 @@ done["profit"] = np.where(push, 0, np.where(win, american_to_profit(done.mkt_und
 done["clv_pts"] = done.mkt_total - done.close_total
 print(f"\nRULE_B: {len(bets)} signals, ", end="")
 header(bets)
+JSON["tests"]["RULE_B"] = {"bets": bets, "done": done, "win": win, "push": push}     # --json: as graded above
 if len(done):
     iv = interval(done.clv_pts, game_day(done))
     m, lo, n = iv["m"], iv["lo"], iv["n"]
@@ -762,7 +888,9 @@ if len(done):
     print(f"  primary close: {src.get('later quote', 0)} from a later logged quote, {src.get('captured close', 0)} "
           f"from the captured close, {src.get('none', 0)} with none (counted, left out of the CLV); {stale} of the "
           f"later quotes were logged more than 6 hours before kickoff")
-    secondary(done, "bets")
+    JSON["tests"]["RULE_B"] |= {"iv": iv, "units": done.profit.sum(), "roi_percent": 100 * done.profit.sum() / len(done),
+                                "record": (int(win.sum()), int((~win & ~push).sum()), int(push.sum())),
+                                "secondary": secondary(done, "bets")}
 
 
 # The decision (amendment 3, section 4, and amendment 4): after 40 signals or the end of the 2026
@@ -812,6 +940,7 @@ def entered(dec):
 
 rec = recorded(RB_ID)
 if len(done) or rec is not None:           # a recorded decision prints even when nothing is settled now
+    json_start = json_mark()
     by_kick = done.sort_values("start_utc")
     pending = bets[bets.status.eq("pending")]
     horizon = max(by_kick.start_utc.iloc[ENOUGH - 1], REG_END_2026) if len(done) >= ENOUGH else None
@@ -825,6 +954,7 @@ if len(done) or rec is not None:           # a recorded decision prints even whe
             reprint(rec, rb_show, rec.verdict, {"n_bets": len(dec)}, len(dec),
                     fresh_text=f"a fresh count on the same horizon now finds {len(dec)} settled signals, not "
                                f"{json.loads(rec.numbers)['n_bets']}.")
+        json_decision("Rule B", RB_ID, RB_HORIZON, "recorded", rec.verdict, json_start, rec)
     elif horizon is not None and NOW > horizon and not (pending.start_utc <= horizon).any():
         dec = by_kick[by_kick.start_utc <= horizon]
         verdict, nums = rb_numbers(dec)
@@ -837,9 +967,11 @@ if len(done) or rec is not None:           # a recorded decision prints even whe
             print("    the signals with a primary close kicked off on 1 game day, so there is no interval; a verdict "
                   "needs at least 2 game days (amendment 5, reading 1)")
         write_down(RB_ID, "Rule B", RB_HORIZON, horizon, verdict, nums, entered(dec))
+        json_decision("Rule B", RB_ID, RB_HORIZON, "final", verdict, json_start)
     elif horizon is None and NOW >= TEST_END and not (pending.start_utc < TEST_END).any():
         rb_show("INCONCLUSIVE", {"n_bets": len(done)})
         write_down(RB_ID, "Rule B", RB_HORIZON, TEST_END, "INCONCLUSIVE", {"n_bets": len(done)}, entered(done))
+        json_decision("Rule B", RB_ID, RB_HORIZON, "final", "INCONCLUSIVE", json_start)
     else:
         waiting = int((pending.start_utc <= horizon).sum()) if horizon is not None else len(pending)
         when = (f"Its horizon has passed: {label(horizon)}. The decision waits for {waiting} pending "
@@ -850,6 +982,7 @@ if len(done) or rec is not None:           # a recorded decision prints even whe
                                  f"at least {MIN_CLOSES} with a primary close": n >= MIN_CLOSES})
         if len(done) > n:
             print(f"    {len(done) - n} of the {len(done)} settled signals have no primary close (left out of the CLV)")
+        json_decision("Rule B", RB_ID, RB_HORIZON, "interim", None, json_start)
 if len(done):
     print(done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under", "close_src",
                 "close_total", "total", "clv_pts", "profit"]].to_string(index=False))
@@ -859,8 +992,8 @@ if len(done):
 
 # ---------------------------------------------------------------- Rule HT (amendment 1)
 def logged_without_time(rows):
-    """Amendment 6: rows logged while the game had no kickoff time set. The board marks such a row's Rule HT status
-    "time_tbd" when it would otherwise signal; a row logged before amendment 6 is known by its weather source
+    """Amendment 7: rows logged while the game had no kickoff time set. The board marks such a row's Rule HT status
+    "time_tbd" when it would otherwise signal; a row logged before amendment 7 is known by its weather source
     "time_tbd" (the schedule's flag, at an outdoor venue) or by a kickoff at exactly midnight Eastern, cfbfastR's
     placeholder (board.no_kickoff_time). Only what the row itself carries is used, never the schedule as it is now."""
     out = no_kickoff_time(False, rows.start_utc).to_numpy()
@@ -870,23 +1003,23 @@ def logged_without_time(rows):
     return out
 
 
-NO_TIME = "logged with no kickoff time set (amendment 6)"
+NO_TIME = "logged with no kickoff time set (amendment 7)"
 HT_LAST_UNTIMED = "its last quote was logged with no kickoff time set, and would have signalled"
-# Amendment 6: Rule HT's entry is each listing's last quote (amendment 4, sections 5 and 10), when that quote was logged
+# Amendment 7: Rule HT's entry is each listing's last quote (amendment 4, sections 5 and 10), when that quote was logged
 # with a kickoff time set. The last quote is taken over every quote, timed or not: a quote logged with no time set is
 # never graded, and it isn't skipped either, so a listing whose last quote has no time set is not a bet (an earlier
 # timed signal never becomes the entry). Those listings are counted when their last quote would have signalled.
-ht_all = quotes if "rule_ht" in quotes else quotes.iloc[0:0]
+ht_all = quotes if "rule_ht" in quotes else quotes.iloc[0:0].assign(rule_ht=pd.Series(dtype=str))
 untimed = logged_without_time(ht_all)
 last_any = (ht_all.assign(_untimed=untimed).sort_values("snapshot_utc", kind="stable")
             .drop_duplicates(["game_id", "listing"], keep="last"))
 last_untimed = last_any[last_any._untimed & (last_any.start_utc >= HT_FIRST_KICK)].drop(columns="_untimed")
 # The listing graded (amendment 4, section 10) is chosen among every listing whose last quote signalled or would have
 # (status "time_tbd", or a pre-amendment SIGNAL logged with no time), so an untimed listing nearer the actual kickoff
-# still voids a farther timed one, as it would without amendment 6; the untimed listings are then dropped, not graded.
+# still voids a farther timed one, as it would without amendment 7; the untimed listings are then dropped, not graded.
 cand = last_any[(last_any.start_utc >= HT_FIRST_KICK) & last_any.rule_ht.isin(["SIGNAL", "time_tbd"])]
 if len(cand):
-    cand = settle(cand)
+    cand = settle(with_captured(cand))                               # amendment 6: this listing's capture only
     ht = cand[~cand._untimed.astype(bool) & cand.rule_ht.eq("SIGNAL")].drop(columns="_untimed")
 else:
     ht = cand.drop(columns="_untimed").assign(status="", void="", total=np.nan)
@@ -896,9 +1029,11 @@ ht_done["profit"] = np.where(push, 0, np.where(win, american_to_profit(ht_done.m
 ht_done["result"] = np.where(push, "P", np.where(win, "W", "L"))
 print(f"\nRULE_HT: {len(ht)} signals at the last quote before kickoff, ", end="")
 header(ht)
+JSON["tests"]["RULE_HT"] = {"bets": ht, "done": ht_done}                          # --json: as graded above
 no_time = ht_all[untimed & (ht_all.start_utc >= HT_FIRST_KICK).to_numpy()]
+never = last_untimed[last_untimed.rule_ht.isin(["SIGNAL", "time_tbd"])]
+JSON["tests"]["RULE_HT"]["no_kickoff_time"] = {"quotes": len(no_time), "not_a_bet": list(never.game_id)}  # as printed
 if len(no_time):
-    never = last_untimed[last_untimed.rule_ht.isin(["SIGNAL", "time_tbd"])]
     print(f"  excluded from Rule HT, {NO_TIME}: {len(no_time)} quotes")
     print(f"  not a bet, {HT_LAST_UNTIMED}: {len(never)}" + (f" ({', '.join(never.game_id.astype(str))})"
                                                                if len(never) else ""))
@@ -939,24 +1074,29 @@ if len(ht_done):
     print(f"  record {w}-{n - w}-{nums['pushes']} ({100 * w / max(n, 1):.1f}%), units {nums['units']:+.2f}, "
           f"ROI {100 * nums['roi']:+.1f}% per bet placed; average break-even {100 * be:.1f}%, one-sided p {p:.3f} "
           f"(exact, against each bet's own break-even; pushes are left out of the exact test and count in ROI)")
-    secondary(ht_done, "bets")
+    JSON["tests"]["RULE_HT"] |= {"nums": nums, "win_rate_percent": 100 * w / max(n, 1),
+                                 "secondary": secondary(ht_done, "bets")}
 # The decision (amendments 1, 3 and 4): once, after the 2027 season's title game. "At or below
 # break-even" is read at the prices taken: the bets, together, won nothing.
 rec = recorded(HT_ID)
 if len(ht_done) or rec is not None:        # a recorded decision prints even when nothing is settled now
+    json_start = json_mark()
     ht_pending = ht[ht.status.eq("pending")]
     if rec is not None:
         fresh, fresh_nums = ht_numbers(ht_done[ht_done.start_utc < pd.Timestamp(rec.horizon_utc)])
         reprint(rec, ht_show, fresh, fresh_nums, fresh_nums["n_bets"])
+        json_decision("Rule HT", HT_ID, HT_HORIZON, "recorded", rec.verdict, json_start, rec)
     elif NOW >= TEST_END and not (ht_pending.start_utc < TEST_END).any():
         ht_show(verdict, nums)
         write_down(HT_ID, "Rule HT", HT_HORIZON, TEST_END, verdict, nums, ht_done._row)
+        json_decision("Rule HT", HT_ID, HT_HORIZON, "final", verdict, json_start)
     else:
         waiting = int((ht_pending.start_utc < TEST_END).sum())
         when = (f"The title game has passed; the decision waits for {waiting} pending signal"
                 f"{'s' if waiting != 1 else ''}." if NOW >= TEST_END else
                 "The decision comes once, after the 2027 season's title game (January 2028).")
         interim("Rule HT", when, {"one-sided p < 0.05": p < 0.05, "ROI > 0": nums["roi"] > 0})
+        json_decision("Rule HT", HT_ID, HT_HORIZON, "interim", None, json_start)
 if len(ht_done):
     print(ht_done[["game_id", "kick_et", "away_team", "home_team", "line_src", "mkt_total", "mkt_under",
                    "ht_threshold", "total", "profit"]].to_string(index=False))
@@ -986,3 +1126,112 @@ else:
     print("\nDecision record: the first final decision is written to " + (
         "data/forward/decisions.csv (the live record)." if IS_LIVE else "decisions.csv beside this test ledger."))
 print("Variants under forward test: 2 (RULE_B, RULE_HT).")
+
+
+# ---------------------------------------------------------------- --json: the same report, machine-readable
+# Every number below is one the report above printed (or, for a single bet, one its table printed), taken from the
+# same variables; nothing is graded or decided here. A number that doesn't exist (no interval on one bet) is null.
+def json_num(v):
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    return v if np.isfinite(v) else None
+
+
+def json_time(t):
+    return None if t is None or pd.isna(t) else pd.Timestamp(t).tz_convert("UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def json_text(v):
+    return None if v is None or (isinstance(v, float) and np.isnan(v)) or str(v) == "" else str(v)
+
+
+def json_id(v):
+    return str(int(v)) if isinstance(v, (int, float, np.integer, np.floating)) and float(v).is_integer() else str(v)
+
+
+def json_bet(i, b, t, rule):
+    """One bet: its game, its entry row (line, price and where the price came from), its close, its outcome and the
+    units at the price taken. The close, the closing-line value, the final total and the units are given once the bet
+    is settled, as the report's tables give them. Rule HT is graded on its result and has no primary close; every bet
+    has the captured close as a secondary one (amendment 2)."""
+    settled = b["status"] == "settled"
+    if not settled:
+        outcome = b["status"]
+    elif rule == "RULE_HT":
+        outcome = {"W": "won", "L": "lost", "P": "push"}[t["done"].result[i]]
+    else:
+        outcome = "push" if t["push"][i] else "won" if t["win"][i] else "lost"
+    kick = b["sched_kick"] if pd.notna(b["sched_kick"]) else b["start_utc"]
+    has_close = rule == "RULE_B" and settled and pd.notna(b["close_total"])
+    captured = b.get("cap_total") if settled else None       # this listing's own capture (amendment 6)
+    return {"game_id": json_id(b["game_id"]), "away_team": json_text(b.get("away_team")),
+            "home_team": json_text(b.get("home_team")), "kickoff_utc": json_time(kick),
+            "entry_row_kickoff_utc": json_time(b["start_utc"]), "side": "UNDER",
+            "logged_utc": json_time(b["snapshot_utc"]), "entry_line": json_num(b["mkt_total"]),
+            "entry_price": json_num(b["mkt_under"]), "price_assumed": False, "price_source": json_text(b["line_src"]),
+            "close_line": json_num(b["close_total"]) if has_close else None,
+            "close_source": json_text(b["close_src"]) if has_close else None,
+            "close_from": json_text(b.get("close_from")) if rule == "RULE_B" and settled else None,
+            "clv": json_num(t["done"].clv_pts[i]) if rule == "RULE_B" and settled else None,
+            "captured_close": json_num(captured),
+            "clv_captured": json_num(b["mkt_total"] - captured) if json_num(captured) is not None else None,
+            "final_total": json_num(b["total"]) if settled else None, "outcome": outcome,
+            "void_reason": json_text(b["void"]), "units": json_num(t["done"].profit[i]) if settled else None,
+            "ledger_row": int(b["_row"]) + 1, "listing": int(b["listing"])}
+
+
+def json_test(tid, name, rule):
+    """One test as its table printed it: counts, record, units, return per bet placed, mean CLV and the registered
+    interval (Rule B; both half-widths and the game days), the exact test (Rule HT), the secondary CLV, the decision
+    as printed, and its bets."""
+    t = JSON["tests"][tid]
+    bets, done = t["bets"], t["done"]
+    void = bets[bets.status.eq("void")]
+    out = {"id": tid, "name": name, "printed_as": tid, "decides": True,
+           "counts": {"signals": len(bets), "settled": len(done), "pending": int(bets.status.eq("pending").sum()),
+                      "void": len(void)},
+           "void_reasons": {str(k): len(v) for k, v in void.groupby("void", sort=False)},
+           "record": None, "units": None, "roi_percent": None, "graded_at_assumed_price": None, "mean_clv": None,
+           "n_clv": None, "interval": None, "secondary_clv": None, "win_rate_percent": None, "avg_break_even": None,
+           "p_one_sided": None, "decisions": JSON["decisions"].get(rule, []),
+           **({"no_kickoff_time": {"quotes": int(t["no_kickoff_time"]["quotes"]),        # amendment 7 (draft)
+                                   "not_a_bet": [json_id(g) for g in t["no_kickoff_time"]["not_a_bet"]]}}
+              if "no_kickoff_time" in t else {}),
+           "bets": [json_bet(i, b, t, tid) for i, b in bets.sort_values("snapshot_utc", kind="stable")
+                    .to_dict("index").items()] if len(bets) else []}
+    if "iv" in t:                                        # Rule B, with settled bets
+        iv, (w, lost, p) = t["iv"], t["record"]
+        out |= {"record": {"won": w, "lost": lost, "pushed": p}, "units": json_num(t["units"]),
+                "roi_percent": json_num(t["roi_percent"]), "mean_clv": json_num(iv["m"]), "n_clv": int(iv["n"]),
+                "interval": {"low": json_num(iv["lo"]), "high": json_num(iv["hi"]), "n": int(iv["n"]),
+                             "game_days": int(iv["G"]), "plain_half_width": json_num(iv["plain"]),
+                             "grouped_half_width": json_num(iv["grouped"])}}
+    if "nums" in t:                                      # Rule HT, with settled bets
+        n = t["nums"]
+        out |= {"record": {"won": n["wins"], "lost": n["losses"], "pushed": n["pushes"]}, "units": json_num(n["units"]),
+                "roi_percent": json_num(100 * n["roi"]), "win_rate_percent": json_num(t["win_rate_percent"]),
+                "avg_break_even": json_num(n["avg_break_even"]), "p_one_sided": json_num(n["p_one_sided"])}
+    if "secondary" in t:
+        cm, clo, chi, cn = t["secondary"]
+        out["secondary_clv"] = {"mean": json_num(cm), "low": json_num(clo), "high": json_num(chi), "n": int(cn),
+                                "without": len(done) - int(cn)}
+    return out
+
+
+def json_document():
+    return {"scorer": ROOT.name, "generated_utc": json_time(CLOCK), "now": json_time(NOW), "preview": bool(args.now),
+            "ledger": str(path), "text": REPORT.getvalue(), "rows": JSON["rows"], "excluded": JSON["excluded"],
+            "placeholder_games": {k: [json_id(g) for g in v.game_id] for k, v in                  # amendment 7 (draft)
+                                  (("completed", PH_GAMES[PH_GAMES.sched_played.eq(True)]),
+                                   ("not_yet_played", PH_GAMES[~PH_GAMES.sched_played.eq(True)]))},
+            "decision_record": {"written_by_this_run": any(JSON["written"].values()),
+                                "why_not": NOT_RECORDED or None},
+            "tests": [json_test("RULE_B", "Rule B, wind under", "Rule B"),
+                      json_test("RULE_HT", "Rule HT, high-total under", "Rule HT")]}
+
+
+if REPORT is not None:
+    sys.stdout = STDOUT
+    print(json.dumps(json_document(), allow_nan=False, default=lambda o: o.item() if hasattr(o, "item") else str(o)))

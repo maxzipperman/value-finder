@@ -22,6 +22,7 @@ scripts/install_alerts.sh                  # launchd: 7:30, 11:30, 15:30, 19:30 
 Every bet alert ends with timing advice (issue #5): wind unders now, Rule HT at the close.
 Log the price you actually got with `scripts/log_fill.py`, and `score_forward.py`
 reports how much waiting gained or cost against the alert-time quote.
+Add `--max-stake DOLLARS` (the most the book would have taken; the point is to record whether it takes at least your $25 to $50 a bet) and `--note "..."` when you know them (issue #76). They are the last two columns of `fills.csv`, blank when left out; an older file is widened in place on the next fill, its old cells untouched, and the scorer's grading doesn't read them.
 
 **Close capture** (amendment 2). Every 15 minutes `ops/capture_closes.sh` runs `scripts/capture_close.py`.
 When FBS games kick off in 2–20 minutes, it makes one Odds API call and adds one row per game in that kickoff

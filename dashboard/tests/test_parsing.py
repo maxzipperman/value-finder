@@ -72,7 +72,7 @@ def test_display_words():
     assert words.is_signal("rule_b", "SIGNAL_SECONDARY") and not words.is_signal("lean", "UNDER lean")
     assert words.alert_words("ruleb_price_too_high") == "Wind watch, no bet (wind trigger, price too high)"
     assert words.alert_words("lag17") == "Line lag watch (wind 17 mph)"
-    # cfb-weather amendment 6 (draft): a Rule HT game with no kickoff time set
+    # cfb-weather amendment 7 (draft): a Rule HT game with no kickoff time set
     assert words.status_words("rule_ht", "time_tbd") == "Would signal, but no kickoff time is set (not eligible yet)"
     assert words.alert_words("ht_time_tbd") == "Rule HT: not eligible, no kickoff time set"
     assert not words.is_signal("rule_ht", "time_tbd")

@@ -330,16 +330,25 @@ def summarize(v: Variant, g: pd.DataFrame) -> dict:
                gap_pts=_mean(g.get("gap", [])),
                hours_before_median=float(g.hours_before.median()) if len(g) else math.nan)
     # robustness: seasons, the busiest book, stale Pinnacle, likely-void errors
-    seasons = g.groupby("season").clv_pin_cents.agg(["mean", "count"]) if len(g) else pd.DataFrame()
-    counted = seasons[seasons["count"] >= MIN_SEASON_BETS] if len(seasons) else seasons
+    # A2's seasons (amendment 1, item 1): a season is COUNTED when it has MIN_SEASON_BETS or more bets. A counted
+    # season is ABOVE ZERO only when MIN_SEASON_BETS or more of its bets have a Pinnacle close and their mean CLV is
+    # above zero. seasons_20_closes counts the seasons with MIN_SEASON_BETS or more bets with a Pinnacle close.
+    seasons = g.groupby("season").clv_pin_cents.agg(["mean", "count", "size"]) if len(g) else pd.DataFrame()
+    counted = seasons[seasons["size"] >= MIN_SEASON_BETS] if len(seasons) else seasons
     row["seasons_counted"] = len(counted)
-    row["seasons_positive"] = int((counted["mean"] > 0).sum()) if len(counted) else 0
+    row["seasons_20_closes"] = int((seasons["count"] >= MIN_SEASON_BETS).sum()) if len(seasons) else 0
+    row["seasons_positive"] = (int(((counted["count"] >= MIN_SEASON_BETS) & (counted["mean"] > 0)).sum())
+                               if len(counted) else 0)
     best = seasons["mean"].idxmax() if len(seasons) and seasons["mean"].notna().any() else None
     row["clv_pin_wo_best_season"] = _mean(c[g.season != best]) if best is not None else math.nan
+    # K3's book (amendment 1, item 3): when two or more books tie for the most bets, each tied book is removed in
+    # turn and the lowest mean CLV left is kept, NaN if any removal leaves no bet with a Pinnacle close (K3 kills)
     top = g.book.value_counts() if len(g) else pd.Series(dtype=int)
-    row["top_book"] = top.index[0] if len(top) else ""
+    tied = sorted(top.index[top == top.iloc[0]]) if len(top) else []
+    row["top_book"] = "+".join(tied)
     row["top_book_share"] = float(top.iloc[0] / len(g)) if len(top) else math.nan
-    row["clv_pin_wo_top_book"] = _mean(c[g.book != row["top_book"]]) if len(top) else math.nan
+    wo = [_mean(c[g.book != b]) for b in tied]
+    row["clv_pin_wo_top_book"] = (math.nan if any(math.isnan(x) for x in wo) else min(wo)) if wo else math.nan
     row["clv_pin_fresh_pin"] = _mean(c[~g.pin_stale.astype(bool)]) if len(g) else math.nan
     row["bets_ev_10plus"] = int((g.ev_entry >= EV_ERROR).sum()) if len(g) else 0
     row["clv_pin_ev_below_10"] = _mean(c[g.ev_entry < EV_ERROR]) if len(g) else math.nan
@@ -352,8 +361,20 @@ def summarize(v: Variant, g: pd.DataFrame) -> dict:
     return row
 
 
+def a2(row: dict) -> bool:
+    """A2 as amendment 1 (item 1) reads it: at least 3 seasons are counted (MIN_SEASON_BETS or more bets), at least
+    3 seasons have MIN_SEASON_BETS or more bets with a Pinnacle close, and all counted seasons but at most one are
+    above zero. A cell that passes this passes both earlier readings (all bets; bets with a Pinnacle close)."""
+    return (row["seasons_counted"] >= 3 and row["seasons_20_closes"] >= 3
+            and row["seasons_positive"] >= row["seasons_counted"] - 1)
+
+
+TOO_FEW_RESULTS = "inconclusive: too few results to check the return"
+
+
 def decide(row: dict, blend_clv: float | None = None) -> str:
-    """The registered decision rule for a primary cell (docs/PRICE_ENGINE_PREREGISTRATION.md, "Decision rules")."""
+    """The registered decision rule for a primary cell (docs/PRICE_ENGINE_PREREGISTRATION.md, "Decision rules",
+    with amendment 1)."""
     if not row["primary"]:
         return "reported"
     if row["bets"] < MIN_BETS or row["clv_pin_n"] < MIN_BETS:
@@ -369,9 +390,13 @@ def decide(row: dict, blend_clv: float | None = None) -> str:
         kill.append("one season carries it")
     if kill:
         return "kill: " + "; ".join(kill)
+    # amendment 1, item 4: K2 needs results. Fewer than MIN_BETS bets with a final score that won or lost (`graded`;
+    # a push returns the stake and is left out, as in the ROI) and the cell cannot reach "act"
+    if not row["graded"] >= MIN_BETS:
+        return TOO_FEW_RESULTS
     h2 = row["hypothesis"] == "H2"
     act = [row["clv_pin_p"] < ALPHA,                                                             # A1
-           row["seasons_counted"] >= 3 and row["seasons_positive"] >= row["seasons_counted"] - 1,  # A2
+           a2(row),                                                                              # A2 (amendment 1)
            row["clv_pin_fresh_pin"] > 0,                                                         # A3
            row["clv_pin_ev_below_10"] > 0,                                                       # A4
            h2 or (blend_clv is not None and blend_clv > 0),                                      # A5 (H1)

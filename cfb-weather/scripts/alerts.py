@@ -7,7 +7,7 @@
            (board.is_last_run_before: no scheduled run falls between now and kickoff),
            telling you to take the latest number. That run's row is the scored entry
            unless a later manual snapshot is logged. A game whose kickoff time isn't set
-           (cfbfastR's midnight placeholder) is not eligible until it is (amendment 6): if it
+           (cfbfastR's midnight placeholder) is not eligible until it is (amendment 7): if it
            would otherwise signal, the last scheduled run before the placeholder sends one
            notice saying so, and no bet.
 
@@ -140,12 +140,12 @@ def game_alerts(r, game, now):
                     f"latest number before kickoff; paper only through 2027 (PREREGISTRATION.md). "
                     f"{timing_note('high_total_under')}"))
     elif r.rule_ht == "time_tbd" and board.is_last_run_before(r.start_utc, now):
-        # Amendment 6: the kickoff is cfbfastR's placeholder, so this is not the last run before the game
+        # Amendment 7: the kickoff is cfbfastR's placeholder, so this is not the last run before the game
         out.append(("ht_time_tbd", f"CFB HIGH TOTAL {r.mkt_total:.1f}, NOT ELIGIBLE (no kickoff time set): "
                                    f"{r.away_team} @ {r.home_team} {r.kick_et[:9]} ET",
                     f"The total is at least {r.ht_threshold:.1f} and the under is {r.mkt_under:+.0f}, but the schedule "
                     f"marks this game's kickoff time as not set. Rule HT doesn't take a game until its kickoff time "
-                    f"is set (cfb-weather amendment 6). No bet. If the time is set, the game is eligible from the next "
+                    f"is set (cfb-weather amendment 7). No bet. If the time is set, the game is eligible from the next "
                     f"run, and Rule HT alerts on the last scheduled run before the real kickoff."))
     if r.rule_b == "SIGNAL":
         shop = (f" Best under at this number: {r.best_under:+.0f} ({r.best_under_book})."
