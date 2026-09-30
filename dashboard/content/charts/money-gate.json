@@ -1,0 +1,364 @@
+{
+ "format": 1,
+ "id": "money-gate",
+ "title": "Today's gate passes a rule with no edge 50% of the time; the recommended sequential gate passes one 2.6% of the time, and a real edge 28% (half the historical move) to 80% (all of it)",
+ "name": "The paper-to-money gate: how often each candidate gate passes, college football's wind rule",
+ "shows": "For each candidate gate, the chance it passes by the 40th signal: with no edge (a false pass), with half the historical line move and with all of it (college football, 40 signals a season, same-day correlation 0.11, the write-up's realistic case).",
+ "not_shows": "It is no evidence that the wind rule has an edge, and it is not the chance of real money this season, which is lower: 21% and 65% for the recommended gate, since a signal already logged when a gate passes stays on paper.",
+ "sample": "40,000 simulated runs of 40 signals for each gate and each case",
+ "n": 40000,
+ "bar": {
+  "tests": [],
+  "none": "A simulation of a staking rule, not a betting test: it adds no variants."
+ },
+ "writeups": [
+  {
+   "path": "strategy-research/README.md",
+   "section": "The paper-to-money gate",
+   "anchor": "the-paper-to-money-gate-added-september-29-2026-51"
+  }
+ ],
+ "sources": [
+  {
+   "path": "strategy-research/output/money_gate.csv",
+   "blob": "e3c89a52a0bcebd918718e5445912d3f41b198ca",
+   "changed": "2026-09-29"
+  }
+ ],
+ "date": "2026-09-29",
+ "built_by": "dashboard/tools/build_charts.py",
+ "plot": {
+  "layout": "rows",
+  "panels": [
+   {
+    "name": "",
+    "rows": [
+     "Today's gate: average closing-line value above 0 at signal 20",
+     "t above 1.65 at signal 20",
+     "t above 1.65 at signal 40",
+     "Bootstrap 90% lower bound above 0 at signal 20",
+     "Bootstrap 95% lower bound above 0 at signal 20",
+     "Bootstrap 95% lower bound above 0 at signal 40",
+     "t above a calibrated 2.33 at signal 20",
+     "t above a calibrated 2.34 at signal 40",
+     "Sequential, constant bar 3.37 (5%), signals 10 to 40",
+     "Sequential, O'Brien–Fleming bar 2.75 (5%), signals 10 to 40: the recommended gate",
+     "Sequential, O'Brien–Fleming bar 2.48 (5%, realistic case), signals 10 to 40",
+     "Sequential, constant bar 2.77 (10%), signals 10 to 40",
+     "Sequential, O'Brien–Fleming bar 2.22 (10%), signals 10 to 40",
+     "For reference: the registered keep test at signal 40"
+    ],
+    "x": {
+     "kind": "chance",
+     "label": "Chance the gate passes, %",
+     "unit": "%",
+     "digits": 1,
+     "min": 0,
+     "max": 100
+    },
+    "series": [
+     {
+      "id": "none",
+      "name": "No edge",
+      "mark": "bar",
+      "color": "o1",
+      "points": [
+       [
+        "Today's gate: average closing-line value above 0 at signal 20",
+        50.35
+       ],
+       [
+        "t above 1.65 at signal 20",
+        9.385
+       ],
+       [
+        "t above 1.65 at signal 40",
+        8.753
+       ],
+       [
+        "Bootstrap 90% lower bound above 0 at signal 20",
+        15.87
+       ],
+       [
+        "Bootstrap 95% lower bound above 0 at signal 20",
+        10.18
+       ],
+       [
+        "Bootstrap 95% lower bound above 0 at signal 40",
+        9.32
+       ],
+       [
+        "t above a calibrated 2.33 at signal 20",
+        3.433
+       ],
+       [
+        "t above a calibrated 2.34 at signal 40",
+        2.882
+       ],
+       [
+        "Sequential, constant bar 3.37 (5%), signals 10 to 40",
+        2.987
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.75 (5%), signals 10 to 40: the recommended gate",
+        2.56
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.48 (5%, realistic case), signals 10 to 40",
+        4.175
+       ],
+       [
+        "Sequential, constant bar 2.77 (10%), signals 10 to 40",
+        6.782
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.22 (10%), signals 10 to 40",
+        6.492
+       ],
+       [
+        "For reference: the registered keep test at signal 40",
+        5.468
+       ]
+      ]
+     },
+     {
+      "id": "half",
+      "name": "Half the historical line move",
+      "mark": "bar",
+      "color": "o2",
+      "points": [
+       [
+        "Today's gate: average closing-line value above 0 at signal 20",
+        85.56
+       ],
+       [
+        "t above 1.65 at signal 20",
+        38.93
+       ],
+       [
+        "t above 1.65 at signal 40",
+        55.42
+       ],
+       [
+        "Bootstrap 90% lower bound above 0 at signal 20",
+        51.9
+       ],
+       [
+        "Bootstrap 95% lower bound above 0 at signal 20",
+        40.64
+       ],
+       [
+        "Bootstrap 95% lower bound above 0 at signal 40",
+        56.38
+       ],
+       [
+        "t above a calibrated 2.33 at signal 20",
+        21.05
+       ],
+       [
+        "t above a calibrated 2.34 at signal 40",
+        33.31
+       ],
+       [
+        "Sequential, constant bar 3.37 (5%), signals 10 to 40",
+        21.81
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.75 (5%), signals 10 to 40: the recommended gate",
+        27.93
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.48 (5%, realistic case), signals 10 to 40",
+        36.05
+       ],
+       [
+        "Sequential, constant bar 2.77 (10%), signals 10 to 40",
+        37.66
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.22 (10%), signals 10 to 40",
+        44.91
+       ],
+       [
+        "For reference: the registered keep test at signal 40",
+        45.11
+       ]
+      ]
+     },
+     {
+      "id": "full",
+      "name": "The full historical line move",
+      "mark": "bar",
+      "color": "o3",
+      "points": [
+       [
+        "Today's gate: average closing-line value above 0 at signal 20",
+        98.19
+       ],
+       [
+        "t above 1.65 at signal 20",
+        77.5
+       ],
+       [
+        "t above 1.65 at signal 40",
+        94.28
+       ],
+       [
+        "Bootstrap 90% lower bound above 0 at signal 20",
+        85.99
+       ],
+       [
+        "Bootstrap 95% lower bound above 0 at signal 20",
+        78.67
+       ],
+       [
+        "Bootstrap 95% lower bound above 0 at signal 40",
+        94.54
+       ],
+       [
+        "t above a calibrated 2.33 at signal 20",
+        58.24
+       ],
+       [
+        "t above a calibrated 2.34 at signal 40",
+        84.52
+       ],
+       [
+        "Sequential, constant bar 3.37 (5%), signals 10 to 40",
+        69.56
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.75 (5%), signals 10 to 40: the recommended gate",
+        79.53
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.48 (5%, realistic case), signals 10 to 40",
+        85.39
+       ],
+       [
+        "Sequential, constant bar 2.77 (10%), signals 10 to 40",
+        84.02
+       ],
+       [
+        "Sequential, O'Brien–Fleming bar 2.22 (10%), signals 10 to 40",
+        89.78
+       ],
+       [
+        "For reference: the registered keep test at signal 40",
+        90.9
+       ]
+      ]
+     }
+    ],
+    "refs": [
+     {
+      "value": 5,
+      "label": "5%",
+      "role": "line"
+     }
+    ]
+   }
+  ]
+ },
+ "table": {
+  "columns": [
+   "Gate",
+   "No edge",
+   "Half the move",
+   "The full move"
+  ],
+  "num": [
+   false,
+   true,
+   true,
+   true
+  ],
+  "rows": [
+   [
+    "Today's gate: average closing-line value above 0 at signal 20",
+    "50.3%",
+    "85.6%",
+    "98.2%"
+   ],
+   [
+    "t above 1.65 at signal 20",
+    "9.4%",
+    "38.9%",
+    "77.5%"
+   ],
+   [
+    "t above 1.65 at signal 40",
+    "8.8%",
+    "55.4%",
+    "94.3%"
+   ],
+   [
+    "Bootstrap 90% lower bound above 0 at signal 20",
+    "15.9%",
+    "51.9%",
+    "86.0%"
+   ],
+   [
+    "Bootstrap 95% lower bound above 0 at signal 20",
+    "10.2%",
+    "40.6%",
+    "78.7%"
+   ],
+   [
+    "Bootstrap 95% lower bound above 0 at signal 40",
+    "9.3%",
+    "56.4%",
+    "94.5%"
+   ],
+   [
+    "t above a calibrated 2.33 at signal 20",
+    "3.4%",
+    "21.1%",
+    "58.2%"
+   ],
+   [
+    "t above a calibrated 2.34 at signal 40",
+    "2.9%",
+    "33.3%",
+    "84.5%"
+   ],
+   [
+    "Sequential, constant bar 3.37 (5%), signals 10 to 40",
+    "3.0%",
+    "21.8%",
+    "69.6%"
+   ],
+   [
+    "Sequential, O'Brien–Fleming bar 2.75 (5%), signals 10 to 40: the recommended gate",
+    "2.6%",
+    "27.9%",
+    "79.5%"
+   ],
+   [
+    "Sequential, O'Brien–Fleming bar 2.48 (5%, realistic case), signals 10 to 40",
+    "4.2%",
+    "36.0%",
+    "85.4%"
+   ],
+   [
+    "Sequential, constant bar 2.77 (10%), signals 10 to 40",
+    "6.8%",
+    "37.7%",
+    "84.0%"
+   ],
+   [
+    "Sequential, O'Brien–Fleming bar 2.22 (10%), signals 10 to 40",
+    "6.5%",
+    "44.9%",
+    "89.8%"
+   ],
+   [
+    "For reference: the registered keep test at signal 40",
+    "5.5%",
+    "45.1%",
+    "90.9%"
+   ]
+  ],
+  "note": "The t in a gate's name is the average closing-line value divided by its standard error. The CSV's calibrated 2.72 row is left out, as in the write-up's table; it is within a point of the 2.75 row everywhere."
+ }
+}

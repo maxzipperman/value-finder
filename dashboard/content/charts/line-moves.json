@@ -1,0 +1,284 @@
+{
+ "format": 1,
+ "id": "line-moves",
+ "title": "NFL totals fell 0.24 points on average from the opener to the close, and further in wind (−1.8 at 20+ mph); college football totals moved 1.8 to 1.9 points on average",
+ "name": "How totals move from the opener to the close",
+ "shows": "The top panel is the NFL's average change in the total, opener to close, by wind at kickoff, with 95% intervals; the lower one is the average size of a college football move, up or down.",
+ "not_shows": "A move is not a bet: moves did not predict the result beyond the close (slope +0.01 ± 0.12 for NFL totals), so timing gets a better number, not a signal.",
+ "sample": "4,018 NFL games, 2007–21 (2,916 outdoor games with an opener by wind band), and 10,532 college football games",
+ "n": 14550,
+ "bar": {
+  "tests": [],
+  "none": "A description of how lines move, not a betting test: it adds no variant."
+ },
+ "writeups": [
+  {
+   "path": "strategy-research/README.md",
+   "section": "Structure and timing (not bets)",
+   "anchor": "structure-and-timing-not-bets"
+  }
+ ],
+ "sources": [
+  {
+   "path": "strategy-research/output/line_moves.csv",
+   "blob": "fb0997140883913cf4c7356e9d9ea01026daa9b9",
+   "changed": "2026-09-30"
+  },
+  {
+   "path": "nfl-weather/output/tables/bet_open_vs_close.csv",
+   "blob": "5ee94db4d78fcecb38f57767ae008323b1bed52e",
+   "changed": "2026-09-28"
+  },
+  {
+   "path": "strategy-research/output/cfb_open_vs_close.csv",
+   "blob": "ed8fde6b75be5420149e13a77003177fb589bf47",
+   "changed": "2026-09-30"
+  }
+ ],
+ "date": "2026-09-30",
+ "built_by": "dashboard/tools/build_charts.py",
+ "plot": {
+  "layout": "columns",
+  "panels": [
+   {
+    "name": "NFL, 2007–21: change in the total from the opener to the close, by wind (points)",
+    "x": {
+     "kind": "category",
+     "labels": [
+      "0–4 mph",
+      "5–9 mph",
+      "10–14 mph",
+      "15–19 mph",
+      "20+ mph"
+     ],
+     "label": "Wind at kickoff"
+    },
+    "y": {
+     "kind": "points",
+     "label": "points",
+     "unit": " points",
+     "digits": 2,
+     "zero": true
+    },
+    "series": [
+     {
+      "id": "move",
+      "name": "Average change, with its 95% interval",
+      "mark": "dot",
+      "color": "c1",
+      "points": [
+       [
+        "0–4 mph",
+        -0.2158,
+        -0.3457,
+        -0.0859
+       ],
+       [
+        "5–9 mph",
+        -0.2914,
+        -0.3857,
+        -0.1971
+       ],
+       [
+        "10–14 mph",
+        -0.3812,
+        -0.5261,
+        -0.2364
+       ],
+       [
+        "15–19 mph",
+        -0.7935,
+        -1.028,
+        -0.5589
+       ],
+       [
+        "20+ mph",
+        -1.7789,
+        -2.3427,
+        -1.2152
+       ]
+      ]
+     }
+    ],
+    "refs": [
+     {
+      "value": 0,
+      "label": "No change",
+      "role": "zero"
+     },
+     {
+      "value": -0.2364,
+      "label": "All games, −0.24",
+      "role": "pooled"
+     }
+    ],
+    "tips": {
+     "0–4 mph": [
+      "614 games",
+      "Moved down in 49.2%"
+     ],
+     "5–9 mph": [
+      "1,249 games",
+      "Moved down in 49.4%"
+     ],
+     "10–14 mph": [
+      "682 games",
+      "Moved down in 52.6%"
+     ],
+     "15–19 mph": [
+      "276 games",
+      "Moved down in 60.9%"
+     ],
+     "20+ mph": [
+      "95 games",
+      "Moved down in 66.3%"
+     ]
+    }
+   },
+   {
+    "name": "College football: average size of the move, up or down (points)",
+    "x": {
+     "kind": "category",
+     "labels": [
+      "Group of 5 and other games",
+      "Both teams Power 5"
+     ],
+     "label": "Games"
+    },
+    "y": {
+     "kind": "points",
+     "label": "points",
+     "unit": " points",
+     "digits": 2,
+     "zero": true
+    },
+    "series": [
+     {
+      "id": "size",
+      "name": "Average size of the move",
+      "mark": "bar",
+      "color": "c1",
+      "points": [
+       [
+        "Group of 5 and other games",
+        1.8327
+       ],
+       [
+        "Both teams Power 5",
+        1.9003
+       ]
+      ]
+     }
+    ],
+    "refs": [],
+    "tips": {
+     "Group of 5 and other games": [
+      "6,457 games",
+      "Moved 3 or more points in 22.9%",
+      "Typical miss: opener 13.1, close 12.9 points"
+     ],
+     "Both teams Power 5": [
+      "4,075 games",
+      "Moved 3 or more points in 23.5%",
+      "Typical miss: opener 13.0, close 12.8 points"
+     ]
+    }
+   }
+  ]
+ },
+ "table": {
+  "columns": [
+   "Games",
+   "Count",
+   "Average change (points)",
+   "95% interval",
+   "Moved down",
+   "Average size of the move (points)",
+   "Moved 3 or more points"
+  ],
+  "num": [
+   false,
+   true,
+   true,
+   false,
+   true,
+   true,
+   true
+  ],
+  "rows": [
+   [
+    "NFL, 0–4 mph",
+    "614",
+    "−0.22",
+    "−0.35 to −0.09",
+    "49.2%",
+    "",
+    ""
+   ],
+   [
+    "NFL, 5–9 mph",
+    "1,249",
+    "−0.29",
+    "−0.39 to −0.20",
+    "49.4%",
+    "",
+    ""
+   ],
+   [
+    "NFL, 10–14 mph",
+    "682",
+    "−0.38",
+    "−0.53 to −0.24",
+    "52.6%",
+    "",
+    ""
+   ],
+   [
+    "NFL, 15–19 mph",
+    "276",
+    "−0.79",
+    "−1.03 to −0.56",
+    "60.9%",
+    "",
+    ""
+   ],
+   [
+    "NFL, 20+ mph",
+    "95",
+    "−1.78",
+    "−2.34 to −1.22",
+    "66.3%",
+    "",
+    ""
+   ],
+   [
+    "NFL, all games",
+    "4,018",
+    "−0.24",
+    "",
+    "48.8%",
+    "",
+    ""
+   ],
+   [
+    "College football, Group of 5 and other games",
+    "6,457",
+    "",
+    "",
+    "",
+    "1.83",
+    "22.9%"
+   ],
+   [
+    "College football, Both teams Power 5",
+    "4,075",
+    "",
+    "",
+    "",
+    "1.90",
+    "23.5%"
+   ]
+  ],
+  "note": ""
+ }
+}

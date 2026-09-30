@@ -1,0 +1,287 @@
+{
+ "format": 1,
+ "id": "wind-rule-opener-vs-close",
+ "title": "On the same games the wind rule won 3.0 points more often at the opener than at the close in college football and 4.1 in the NFL, but the opener is posted before the forecast that fires",
+ "name": "The forecast replays graded at the opener and at the close, on the same games",
+ "shows": "Each row pairs the under's win rate at the opening total and at the closing total on the same games, with 95% intervals, for all seasons and for the eras declared before the replays ran.",
+ "not_shows": "It does not show a price the rule could get: the opener is usually posted before the forecast that fires, so it flatters the rule, and the live entry, 1 to 3 days early, sits between the two.",
+ "sample": "951 college football signals with an opener (2006–25) and 397 NFL signals with an SBR opener (2007–21)",
+ "n": 1348,
+ "bar": {
+  "tests": [],
+  "none": "A comparison of two prices for the same bets, not a separate test: it adds no variant, and the opener's record is not held against the bar because the opener is posted before the forecast that fires."
+ },
+ "writeups": [
+  {
+   "path": "cfb-weather/README.md",
+   "section": "Forecast replay on NWS MOS, the full run: 2006–25",
+   "anchor": "forecast-replay-on-nws-mos-the-full-run-200625-issue-40-sep-29"
+  },
+  {
+   "path": "nfl-weather/README.md",
+   "section": "Forecast replay on NWS MOS, the full run: 2004–25",
+   "anchor": "forecast-replay-on-nws-mos-the-full-run-200425-issue-40-sep-29"
+  }
+ ],
+ "sources": [
+  {
+   "path": "cfb-weather/output/tables/mos_replay_eras.csv",
+   "blob": "8115990874b9f9e405b8887ea4ae5b7a5dc25f51",
+   "changed": "2026-09-29"
+  },
+  {
+   "path": "nfl-weather/output/tables/mos_replay_eras.csv",
+   "blob": "8de9db687c2b0e20dd56422198917b6650438081",
+   "changed": "2026-09-29"
+  }
+ ],
+ "date": "2026-09-29",
+ "built_by": "dashboard/tools/build_charts.py",
+ "plot": {
+  "layout": "rows",
+  "panels": [
+   {
+    "name": "",
+    "rows": [
+     "College football, all seasons (951 games with an opener, 2007–25)",
+     "College football, 2006–15 (306 games with an opener, 2007–15)",
+     "College football, 2016–25 (645 games with an opener, 2016–25)",
+     "College football, 2021–25 (328 games with an opener, 2021–25)",
+     "NFL, all seasons (397 games with an opener, 2007–21)",
+     "NFL, 2004–14 (211 games with an opener, 2007–14)",
+     "NFL, 2015–25 (186 games with an opener, 2015–21)",
+     "NFL, 2021–25 (34 games with an opener, 2021)"
+    ],
+    "x": {
+     "kind": "win_rate",
+     "label": "Win rate for the under, %",
+     "unit": "%",
+     "digits": 1,
+     "floor_at_most": 40
+    },
+    "series": [
+     {
+      "id": "open",
+      "name": "At the opener",
+      "mark": "dot",
+      "color": "c2",
+      "points": [
+       [
+        "College football, all seasons (951 games with an opener, 2007–25)",
+        59.8,
+        56.7,
+        62.9
+       ],
+       [
+        "College football, 2006–15 (306 games with an opener, 2007–15)",
+        61.8,
+        56.3,
+        67.1
+       ],
+       [
+        "College football, 2016–25 (645 games with an opener, 2016–25)",
+        58.9,
+        55.0,
+        62.6
+       ],
+       [
+        "College football, 2021–25 (328 games with an opener, 2021–25)",
+        60.4,
+        55.0,
+        65.6
+       ],
+       [
+        "NFL, all seasons (397 games with an opener, 2007–21)",
+        58.2,
+        53.3,
+        63.0
+       ],
+       [
+        "NFL, 2004–14 (211 games with an opener, 2007–14)",
+        56.0,
+        49.2,
+        62.5
+       ],
+       [
+        "NFL, 2015–25 (186 games with an opener, 2015–21)",
+        60.8,
+        53.5,
+        67.6
+       ],
+       [
+        "NFL, 2021–25 (34 games with an opener, 2021)",
+        72.7,
+        55.8,
+        84.9
+       ]
+      ]
+     },
+     {
+      "id": "close",
+      "name": "At the close, same games",
+      "mark": "dot",
+      "color": "c1",
+      "points": [
+       [
+        "College football, all seasons (951 games with an opener, 2007–25)",
+        56.8,
+        53.6,
+        59.9
+       ],
+       [
+        "College football, 2006–15 (306 games with an opener, 2007–15)",
+        58.4,
+        52.8,
+        63.8
+       ],
+       [
+        "College football, 2016–25 (645 games with an opener, 2016–25)",
+        56.0,
+        52.2,
+        59.9
+       ],
+       [
+        "College football, 2021–25 (328 games with an opener, 2021–25)",
+        57.6,
+        52.1,
+        62.9
+       ],
+       [
+        "NFL, all seasons (397 games with an opener, 2007–21)",
+        54.1,
+        49.1,
+        59.0
+       ],
+       [
+        "NFL, 2004–14 (211 games with an opener, 2007–14)",
+        52.2,
+        45.4,
+        58.8
+       ],
+       [
+        "NFL, 2015–25 (186 games with an opener, 2015–21)",
+        56.3,
+        49.0,
+        63.3
+       ],
+       [
+        "NFL, 2021–25 (34 games with an opener, 2021)",
+        66.7,
+        49.6,
+        80.2
+       ]
+      ]
+     }
+    ],
+    "refs": [
+     {
+      "value": 52.38,
+      "label": "Break-even at −110, 52.4%",
+      "role": "breakeven"
+     }
+    ],
+    "tips": {
+     "College football, all seasons (951 games with an opener, 2007–25)": [
+      "566–380–5 at the opener, 534–406–11 at the close"
+     ],
+     "College football, 2006–15 (306 games with an opener, 2007–15)": [
+      "188–116–2 at the opener, 177–126–3 at the close"
+     ],
+     "College football, 2016–25 (645 games with an opener, 2016–25)": [
+      "378–264–3 at the opener, 357–280–8 at the close"
+     ],
+     "College football, 2021–25 (328 games with an opener, 2021–25)": [
+      "197–129–2 at the opener, 186–137–5 at the close"
+     ],
+     "NFL, all seasons (397 games with an opener, 2007–21)": [
+      "227–163–7 at the opener, 212–180–5 at the close"
+     ],
+     "NFL, 2004–14 (211 games with an opener, 2007–14)": [
+      "117–92–2 at the opener, 109–100–2 at the close"
+     ],
+     "NFL, 2015–25 (186 games with an opener, 2015–21)": [
+      "110–71–5 at the opener, 103–80–3 at the close"
+     ],
+     "NFL, 2021–25 (34 games with an opener, 2021)": [
+      "24–9–1 at the opener, 22–11–1 at the close"
+     ]
+    }
+   }
+  ]
+ },
+ "table": {
+  "columns": [
+   "Games",
+   "At the opener",
+   "Win rate (95% interval)",
+   "At the close",
+   "Win rate (95% interval)"
+  ],
+  "num": [
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  "rows": [
+   [
+    "College football, all seasons (951 games with an opener, 2007–25)",
+    "566–380–5",
+    "59.8% (56.7–62.9%)",
+    "534–406–11",
+    "56.8% (53.6–59.9%)"
+   ],
+   [
+    "College football, 2006–15 (306 games with an opener, 2007–15)",
+    "188–116–2",
+    "61.8% (56.3–67.1%)",
+    "177–126–3",
+    "58.4% (52.8–63.8%)"
+   ],
+   [
+    "College football, 2016–25 (645 games with an opener, 2016–25)",
+    "378–264–3",
+    "58.9% (55.0–62.6%)",
+    "357–280–8",
+    "56.0% (52.2–59.9%)"
+   ],
+   [
+    "College football, 2021–25 (328 games with an opener, 2021–25)",
+    "197–129–2",
+    "60.4% (55.0–65.6%)",
+    "186–137–5",
+    "57.6% (52.1–62.9%)"
+   ],
+   [
+    "NFL, all seasons (397 games with an opener, 2007–21)",
+    "227–163–7",
+    "58.2% (53.3–63.0%)",
+    "212–180–5",
+    "54.1% (49.1–59.0%)"
+   ],
+   [
+    "NFL, 2004–14 (211 games with an opener, 2007–14)",
+    "117–92–2",
+    "56.0% (49.2–62.5%)",
+    "109–100–2",
+    "52.2% (45.4–58.8%)"
+   ],
+   [
+    "NFL, 2015–25 (186 games with an opener, 2015–21)",
+    "110–71–5",
+    "60.8% (53.5–67.6%)",
+    "103–80–3",
+    "56.3% (49.0–63.3%)"
+   ],
+   [
+    "NFL, 2021–25 (34 games with an opener, 2021)",
+    "24–9–1",
+    "72.7% (55.8–84.9%)",
+    "22–11–1",
+    "66.7% (49.6–80.2%)"
+   ]
+  ],
+  "note": "Pushes are left out of the win rates. The NFL's openers are SBR's, 2007–21; college football's are cfbfastR's consensus opener, else the median CFBD opener."
+ }
+}

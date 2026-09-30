@@ -1,0 +1,382 @@
+{
+ "format": 1,
+ "id": "keep-test",
+ "title": "With no edge, the registered interval keeps a rule 2.8 to 3.0% of the time in college football and 5.8 to 7.4% in the NFL in the realistic case, against an intended 2.5%",
+ "name": "The keep test: how often a wind rule with no edge would be kept",
+ "shows": "For each sport, season volume and assumed correlation between bets, the chance the keep test keeps a wind rule that has no edge, under the plain interval, the one grouped by game day, and the wider of the two, which both sports registered on Sep 29.",
+ "not_shows": "It does not measure any real bet: the closing-line values are simulated from past line moves, and the win rate against the close is not simulated.",
+ "sample": "40,000 simulated runs of 40 bets for each case",
+ "n": 40000,
+ "bar": {
+  "tests": [],
+  "none": "A check of how a test is graded, not a betting test: it adds no variants."
+ },
+ "writeups": [
+  {
+   "path": "strategy-research/README.md",
+   "section": "The keep test: plain, grouped by game day, and the wider of the two",
+   "anchor": "the-keep-test-plain-grouped-by-game-day-and-the-wider-of-the-two-added-september-29-2026"
+  }
+ ],
+ "sources": [
+  {
+   "path": "strategy-research/output/keep_test_check.csv",
+   "blob": "2f8bcd1ab9d22ead1d2229deb75d2e43621aa3fd",
+   "changed": "2026-09-29"
+  }
+ ],
+ "date": "2026-09-29",
+ "built_by": "dashboard/tools/build_charts.py",
+ "plot": {
+  "layout": "rows",
+  "panels": [
+   {
+    "name": "",
+    "rows": [
+     "College football, 25 signals a season, bets independent",
+     "College football, 40 signals a season, bets independent",
+     "College football, 55 signals a season, bets independent",
+     "College football, 25 signals a season, realistic correlation",
+     "College football, 40 signals a season, realistic correlation",
+     "College football, 55 signals a season, realistic correlation",
+     "College football, 25 signals a season, stress correlation",
+     "College football, 40 signals a season, stress correlation",
+     "College football, 55 signals a season, stress correlation",
+     "NFL, 17 signals a season, bets independent",
+     "NFL, 25 signals a season, bets independent",
+     "NFL, 17 signals a season, realistic correlation",
+     "NFL, 25 signals a season, realistic correlation",
+     "NFL, 17 signals a season, stress correlation",
+     "NFL, 25 signals a season, stress correlation"
+    ],
+    "x": {
+     "kind": "chance",
+     "label": "Chance a no-edge rule is kept, %",
+     "unit": "%",
+     "digits": 1,
+     "min": 0
+    },
+    "series": [
+     {
+      "id": "plain",
+      "name": "Plain interval",
+      "mark": "bar",
+      "color": "c2",
+      "points": [
+       [
+        "College football, 25 signals a season, bets independent",
+        2.77
+       ],
+       [
+        "College football, 40 signals a season, bets independent",
+        2.69
+       ],
+       [
+        "College football, 55 signals a season, bets independent",
+        2.72
+       ],
+       [
+        "College football, 25 signals a season, realistic correlation",
+        5.24
+       ],
+       [
+        "College football, 40 signals a season, realistic correlation",
+        5.75
+       ],
+       [
+        "College football, 55 signals a season, realistic correlation",
+        6.29
+       ],
+       [
+        "College football, 25 signals a season, stress correlation",
+        6.64
+       ],
+       [
+        "College football, 40 signals a season, stress correlation",
+        7.26
+       ],
+       [
+        "College football, 55 signals a season, stress correlation",
+        8.67
+       ],
+       [
+        "NFL, 17 signals a season, bets independent",
+        2.12
+       ],
+       [
+        "NFL, 25 signals a season, bets independent",
+        2.05
+       ],
+       [
+        "NFL, 17 signals a season, realistic correlation",
+        7.98
+       ],
+       [
+        "NFL, 25 signals a season, realistic correlation",
+        10.27
+       ],
+       [
+        "NFL, 17 signals a season, stress correlation",
+        9.04
+       ],
+       [
+        "NFL, 25 signals a season, stress correlation",
+        10.98
+       ]
+      ]
+     },
+     {
+      "id": "grouped",
+      "name": "Grouped by game day",
+      "mark": "bar",
+      "color": "ink",
+      "points": [
+       [
+        "College football, 25 signals a season, bets independent",
+        3.28
+       ],
+       [
+        "College football, 40 signals a season, bets independent",
+        3.14
+       ],
+       [
+        "College football, 55 signals a season, bets independent",
+        3.39
+       ],
+       [
+        "College football, 25 signals a season, realistic correlation",
+        3.57
+       ],
+       [
+        "College football, 40 signals a season, realistic correlation",
+        3.67
+       ],
+       [
+        "College football, 55 signals a season, realistic correlation",
+        3.98
+       ],
+       [
+        "College football, 25 signals a season, stress correlation",
+        3.83
+       ],
+       [
+        "College football, 40 signals a season, stress correlation",
+        3.88
+       ],
+       [
+        "College football, 55 signals a season, stress correlation",
+        4.36
+       ],
+       [
+        "NFL, 17 signals a season, bets independent",
+        2.01
+       ],
+       [
+        "NFL, 25 signals a season, bets independent",
+        2.01
+       ],
+       [
+        "NFL, 17 signals a season, realistic correlation",
+        6.44
+       ],
+       [
+        "NFL, 25 signals a season, realistic correlation",
+        8.09
+       ],
+       [
+        "NFL, 17 signals a season, stress correlation",
+        6.6
+       ],
+       [
+        "NFL, 25 signals a season, stress correlation",
+        7.81
+       ]
+      ]
+     },
+     {
+      "id": "wider",
+      "name": "The wider of the two (registered)",
+      "mark": "bar",
+      "color": "c1",
+      "points": [
+       [
+        "College football, 25 signals a season, bets independent",
+        1.87
+       ],
+       [
+        "College football, 40 signals a season, bets independent",
+        1.73
+       ],
+       [
+        "College football, 55 signals a season, bets independent",
+        1.68
+       ],
+       [
+        "College football, 25 signals a season, realistic correlation",
+        2.8
+       ],
+       [
+        "College football, 40 signals a season, realistic correlation",
+        2.88
+       ],
+       [
+        "College football, 55 signals a season, realistic correlation",
+        3.04
+       ],
+       [
+        "College football, 25 signals a season, stress correlation",
+        3.28
+       ],
+       [
+        "College football, 40 signals a season, stress correlation",
+        3.37
+       ],
+       [
+        "College football, 55 signals a season, stress correlation",
+        3.79
+       ],
+       [
+        "NFL, 17 signals a season, bets independent",
+        1.43
+       ],
+       [
+        "NFL, 25 signals a season, bets independent",
+        1.35
+       ],
+       [
+        "NFL, 17 signals a season, realistic correlation",
+        5.83
+       ],
+       [
+        "NFL, 25 signals a season, realistic correlation",
+        7.39
+       ],
+       [
+        "NFL, 17 signals a season, stress correlation",
+        6.27
+       ],
+       [
+        "NFL, 25 signals a season, stress correlation",
+        7.4
+       ]
+      ]
+     }
+    ],
+    "refs": [
+     {
+      "value": 2.5,
+      "label": "Intended, 2.5%",
+      "role": "line"
+     }
+    ]
+   }
+  ]
+ },
+ "table": {
+  "columns": [
+   "Case",
+   "Plain",
+   "Grouped by game day",
+   "Wider of the two (registered)"
+  ],
+  "num": [
+   false,
+   true,
+   true,
+   true
+  ],
+  "rows": [
+   [
+    "College football, 25 signals a season, bets independent",
+    "2.8%",
+    "3.3%",
+    "1.9%"
+   ],
+   [
+    "College football, 40 signals a season, bets independent",
+    "2.7%",
+    "3.1%",
+    "1.7%"
+   ],
+   [
+    "College football, 55 signals a season, bets independent",
+    "2.7%",
+    "3.4%",
+    "1.7%"
+   ],
+   [
+    "College football, 25 signals a season, realistic correlation",
+    "5.2%",
+    "3.6%",
+    "2.8%"
+   ],
+   [
+    "College football, 40 signals a season, realistic correlation",
+    "5.8%",
+    "3.7%",
+    "2.9%"
+   ],
+   [
+    "College football, 55 signals a season, realistic correlation",
+    "6.3%",
+    "4.0%",
+    "3.0%"
+   ],
+   [
+    "College football, 25 signals a season, stress correlation",
+    "6.6%",
+    "3.8%",
+    "3.3%"
+   ],
+   [
+    "College football, 40 signals a season, stress correlation",
+    "7.3%",
+    "3.9%",
+    "3.4%"
+   ],
+   [
+    "College football, 55 signals a season, stress correlation",
+    "8.7%",
+    "4.4%",
+    "3.8%"
+   ],
+   [
+    "NFL, 17 signals a season, bets independent",
+    "2.1%",
+    "2.0%",
+    "1.4%"
+   ],
+   [
+    "NFL, 25 signals a season, bets independent",
+    "2.1%",
+    "2.0%",
+    "1.4%"
+   ],
+   [
+    "NFL, 17 signals a season, realistic correlation",
+    "8.0%",
+    "6.4%",
+    "5.8%"
+   ],
+   [
+    "NFL, 25 signals a season, realistic correlation",
+    "10.3%",
+    "8.1%",
+    "7.4%"
+   ],
+   [
+    "NFL, 17 signals a season, stress correlation",
+    "9.0%",
+    "6.6%",
+    "6.3%"
+   ],
+   [
+    "NFL, 25 signals a season, stress correlation",
+    "11.0%",
+    "7.8%",
+    "7.4%"
+   ]
+  ],
+  "note": ""
+ }
+}
