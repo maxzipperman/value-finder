@@ -274,14 +274,17 @@ def norm(text):
     return " ".join(text.replace("**", "").replace("`", "").split())
 
 
-def test_amendment_6_is_a_dated_draft_that_repairs_registered_rules_and_quotes_what_it_replaces():
+def test_amendment_6_is_registered_and_repairs_registered_rules_and_quotes_what_it_replaces():
     whole = (ROOT / "PREREGISTRATION.md").read_text()
     head, text = whole.split("## Amendment 6 ")[0], whole.split("## Amendment 6 ")[1].split("\n## ")[0]
-    assert text.startswith("(DRAFT, not registered: written 2026-09-30 Pacific for the hub to register")
+    assert text.startswith("(registered 2026-09-30 Pacific, before the first eligible game on Oct 1, 2026, 5:00 PM Pacific)")
+    assert "by the merge of pull request 90" in text
+    assert "DRAFT, not registered" not in text
+    assert "To be registered by the hub" not in text
     t = norm(text)
     assert "This amendment repairs two registered rules and changes no threshold, gate or decision rule" in t
     assert "0 variants" in t and "on the day it was written it is 288, so the multiple-testing bar is p < 0.000174" in t
-    assert "becomes amendment 7 when the hub registers it" in t and "Nfl-weather amendment 8" in t
+    assert "becomes amendment 7 if the hub registers it" in t and "Nfl-weather amendment 8" in t
     assert "2 to 20 minutes" in t and "both ends included" in t
     assert "earlier of the kickoff on the listing's last row logged before kickoff" in t and "set aside" in t
     bullets = text.split("### What this amendment replaces")[1].split("\n* ")[1:]
@@ -296,7 +299,7 @@ def test_amendment_6_is_a_dated_draft_that_repairs_registered_rules_and_quotes_w
         for q in quotes:
             assert norm(q) in norm(src), (label, q)
     status = (ROOT.parent / "STATUS.md").read_text()
-    assert status.count("*Amendment 6 (draft, Sep 30, awaiting the hub):*") == 2
+    assert status.count("*Amendment 6 (registered Sep 30, PR 90):*") == 2
 
 
 # ------------------------------------------------------------------ the committed rehearsal ledger
