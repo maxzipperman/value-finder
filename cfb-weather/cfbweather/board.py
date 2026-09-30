@@ -7,7 +7,9 @@ ESPN), and each game's status under the two pre-registered rules (STRATEGY.md):
   positive expected value at that line and price under the registered pricing model
   (amendment 3).
 * Rule HT (high-total under, amendment 1): a posted total >= the prior season's mean
-  closing total + 10, under at -115 or better. Graded at the last quote before kickoff."""
+  closing total + 10, under at -115 or better. Graded at the last quote before kickoff.
+  Amendment 6: a game with no kickoff time set (cfbfastR's midnight placeholder) is not
+  eligible until its time is set; such a game that would otherwise signal is "time_tbd"."""
 from __future__ import annotations
 
 import io
@@ -109,6 +111,18 @@ def is_last_run_before(kick_utc, now_utc=None, tz=None):
     now_utc = pd.Timestamp.now(tz="UTC") if now_utc is None else pd.Timestamp(now_utc)
     nxt = next_scheduled_run(now_utc.tz_convert(tz or local_zone()))
     return pd.Timestamp(kick_utc) > now_utc and nxt.tz_convert("UTC") >= pd.Timestamp(kick_utc)
+
+
+def no_kickoff_time(tbd, start_utc):
+    """Amendment 6: True where the game has no kickoff time set. cfbfastR gives such a game a placeholder of
+    midnight Eastern on its date and flags it (start_time_tbd, the flag behind Rule B's "time_tbd"). Either one
+    means no time: the flag, or a kickoff at exactly 00:00:00 Eastern. (A real midnight kickoff, a Hawaii night
+    game, is listed at 23:59; no FBS game in 2016-25 kicked off at 00:00 Eastern without the flag.)"""
+    start = pd.to_datetime(pd.Series(start_utc), utc=True)
+    et = start.dt.tz_convert("America/New_York")
+    midnight = et.dt.hour.eq(0) & et.dt.minute.eq(0) & et.dt.second.eq(0)
+    flag = pd.Series(np.broadcast_to(np.asarray(tbd, dtype=object), len(start)), index=start.index)
+    return flag.eq(True) | midnight
 
 
 def rule_ht_status(r):
@@ -219,7 +233,11 @@ def compute(days=8, refresh=True, prices=True):
     up = price(up, pricing_cohort(PRICING_COHORT_SHA256))
     up["rule_b"] = up.apply(rule_b_status, axis=1)
     up["ht_threshold"] = pd.to_numeric(up.season).astype(int).map(ht_threshold)
-    up["rule_ht"] = np.where(up.start_utc >= HT_FIRST_KICK, up.apply(rule_ht_status, axis=1), "before_window")
+    ht = up.apply(rule_ht_status, axis=1)
+    # Amendment 6: no kickoff time, no Rule HT. A game that would signal but whose time isn't set is "time_tbd";
+    # it becomes eligible from the first run that logs it with a time.
+    ht = ht.where(~(no_kickoff_time(up.tbd, up.start_utc).to_numpy() & ht.eq("SIGNAL")), "time_tbd")
+    up["rule_ht"] = np.where(up.start_utc >= HT_FIRST_KICK, ht, "before_window")
     up["kick_et"] = up.start_utc.dt.tz_convert("America/New_York").dt.strftime("%a %m-%d %H:%M")
     return up.sort_values("start_utc")
 
