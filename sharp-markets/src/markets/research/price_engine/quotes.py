@@ -97,8 +97,9 @@ def _ts(value) -> datetime | None:
 
 
 def quote_rows(rows: list[dict], drops: Counter, latest: dict | None = None) -> list[tuple]:
-    """Group one batch of outcome rows into two-sided quotes. Quotes at or after the kickoff the snapshot itself
-    lists, or far outside F1's 7-day grid, are counted and dropped here to keep memory small; load_quotes applies
+    """Group one call's outcome rows into two-sided quotes. Quotes at or after the kickoff the snapshot itself
+    lists, or more than 9 days before it (F1's 7-day grid plus COARSE_MARGIN), are counted and dropped here to keep
+    memory small; load_quotes applies
     the exact rules with the latest-listed kickoff, which `latest` collects from every row, dropped ones too."""
     latest = {} if latest is None else latest
     groups: dict[tuple, list[dict]] = {}
@@ -132,13 +133,19 @@ def quote_rows(rows: list[dict], drops: Counter, latest: dict | None = None) -> 
     return out
 
 
-def load_quotes(cfg: dict, calls: list, cache, *, batch: int = 50) -> tuple[pd.DataFrame, Counter]:
-    """The quote table for F1's cached calls, and the count of everything left out, by reason."""
+def load_quotes(cfg: dict, calls: list, cache) -> tuple[pd.DataFrame, Counter]:
+    """The quote table for F1's cached calls, and the count of everything left out, by reason.
+
+    F1 is read one call at a time (amendment 1, item 2). Before the 2022 switch to 5-minute snapshots the API kept
+    one snapshot every 10 minutes, so two calls can get back the same snapshot. Read together, their rows fell into
+    one group of four outcomes and the whole snapshot was dropped as `*_not_two_outcomes`, depending on where the
+    batch boundary fell. Read one call at a time, each copy is a whole two-sided quote; the first is kept and the
+    rest are counted as `duplicate_snapshot` below, wherever the two calls fall."""
     drops: Counter = Counter()
     raw: list[tuple] = []
     latest: dict = {}
-    for i in range(0, len(calls), batch):
-        rows = bulk.load_rows(cfg, calls[i:i + batch], cache)          # sealed seasons are left out here
+    for c in calls:
+        rows = bulk.load_rows(cfg, [c], cache)          # sealed seasons are left out here
         raw += quote_rows(rows, drops, latest)
     cols = ["sport", "event_id", "commence", "home", "away", "snap", "book", "market", "line", "dec_a", "dec_b", "upd"]
     q = pd.DataFrame(raw, columns=cols)
