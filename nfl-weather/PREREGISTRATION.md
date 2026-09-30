@@ -808,3 +808,109 @@ instead.
 Rule variants under forward test: still **2**. This amendment tests nothing and leaves the running variant
 count unchanged: on the day of registration it is **273**, so the multiple-testing bar is p < 0.000183
 (`strategy-research/README.md`, `STATUS.md`).
+
+## Amendment 8 (DRAFT, not registered: written 2026-09-30 Pacific for the hub to register, before any Week 5 game)
+
+**DRAFT.** This text is not in force. The hub registers it before the first eligible game (Week 5, Oct 8, 2026), by:
+replacing this paragraph and the heading's "DRAFT, not registered" with the date of registration and the
+registering commit (the merge of the pull request that carries it); confirming, from the ledger's counts only (no
+price or result), that no Rule B signal had been logged and no forward outcome was known by then; restating the
+running variant count on that day at the end; and adding the dated note in section 3 to `STRATEGY.md`. Until then
+the scorer on `main` behaves as amendments 1 to 7 say.
+
+An independent audit of the college football scorer (Astra's audit 3, Sep 29, late evening; issue 88) found that a
+captured close could be joined to the wrong listing of a game, and asked for this scorer to be checked the same way.
+It has the same flaw, in its secondary measure. **This amendment repairs a registered rule and changes no threshold,
+gate or decision rule:** no trigger, price cap, stake, metric, horizon or decision criterion changes, and the
+captured close stays descriptive, as amendment 3 says, so no decision can change. Section 1 enforces amendment 3's
+capture window and amendment 6's listings (section 9) for the captured close. Section 2 records that the test's
+end, checked the same way, already follows the schedule. The rules version stays `v3-2026-09-28`, because the board
+behaves exactly as before; only `scripts/score_forward.py` changes, and none of the files shared with cfb-weather
+does. Cfb-weather amendment 6 makes the same repair of the college football scorer, where the captured close can be
+Rule B's primary close. Where this amendment and any earlier text differ, this one applies; the last section lists
+every earlier sentence it changes. To be registered by the hub on the owner's standing instruction of September 29,
+2026 (the hub decides questions of how the tests are graded and reports them; money, and any rule's trigger, gate or
+price cap, stay the owner's). The owner can change any reading here by a dated amendment made before the first
+outcome it would affect.
+
+### 1. A captured close belongs to the listing it was captured for
+
+* **What went wrong.** The scorer kept one captured Pinnacle close per game id (the last Pinnacle row of
+  `data/forward/closes.csv`) and dropped its capture time and kickoff before it joined the close to the ledger. A
+  game that was postponed and signalled again (two listings, amendment 6, section 9) could then take, for its new
+  listing, the close captured for the old one. The audit's case, as an NFL game: listed for Sunday, Oct 11, 2026,
+  1:00 PM Eastern, with a Pinnacle close of 40 captured at 12:50 PM that day; postponed to Sunday, Nov 1, and
+  signalled again, at 50. The Oct 11 listing was correctly void, but the Nov 1 listing's secondary CLV was +10.00,
+  against the Oct 11 close.
+* **The reading.** A bet's captured close is a Pinnacle row of `closes.csv` for its game whose capture time
+  (`capture_utc`) is from 20 minutes to 2 minutes before the kickoff of the listing graded, both ends included. That
+  kickoff is the earlier of the kickoff on the bet's entry row and the kickoff in the schedule: the bound amendment
+  6, section 10 gives "before kickoff". The window is amendment 3's ("2–20 minutes before kickoff"), with both ends
+  included as `scripts/capture_close.py` applies it: it calls the odds feed when a kickoff is from 2 to 20 minutes
+  away, both ends included, and records the time of its call rounded down to the minute, so every close it
+  captures lies inside the window for the kickoff it was captured for. Among a game's Pinnacle rows inside the
+  window, the last in the file is taken, as before (a retried slot writes its rows again).
+* **Otherwise the bet has no captured close:** it is one of the bets without a captured close, counted and never
+  imputed. The scorer prints, for each table, how many bets had a captured close refused and which games ("close
+  captured outside the window for this listing"), and `--list-excluded` prints each refused capture with its capture
+  time, the kickoff it was captured for and the kickoff of the listing graded. This applies to Rule B, its secondary
+  price and the model lean.
+* **Examples.** For a listing whose kickoff is 1:00 PM Eastern (17:00 UTC in October): a close captured at 16:50 UTC
+  is used; one captured at 16:58 or 16:40 (exactly 2 or 20 minutes before) is used; one captured at 16:39 (21
+  minutes before) is not; one captured at 16:59 or after kickoff is not. A game moved earlier, from 1:00 PM on the
+  entry row to 10:00 AM in the schedule: a close captured at 12:50 PM is not used (the game was in play), and one
+  captured at 9:50 AM is. The postponed game above: the close captured Oct 11 is not the Nov 1 listing's close, and
+  one captured Nov 1 at 12:50 PM is, wherever it sits in the file.
+* **Known limit, stated up front.** A game moved later, by less than a day, after its entry row was logged: the
+  bound is the entry row's earlier kickoff, so a close captured just before the new kickoff is refused. The reading
+  errs toward a missing close rather than an in-play price. The primary close (nflverse's closing total) is
+  unaffected.
+* **Nothing else changes:** the entries, the primary close, which rows count, void and pending bets, the 20-close
+  limit, the interval, the horizons and the decision record.
+
+### 2. The test's end, checked: it already follows the schedule
+
+* The audit found that the college football scorer judged the test's end on the entry row's kickoff alone
+  (cfb-weather amendment 6, section 2). This scorer was checked the same way. It takes each game's season and kickoff
+  from the schedule: a game not in the schedule, or with no kickoff in it, never counts, and "after the 2027 season"
+  is the schedule's season label. Every decision uses only the bets whose kickoff in the schedule is on or before its
+  horizon, and its horizon is the last regular-season kickoff in the schedule (amendment 6, section 4). So a game
+  whose entry row gives a kickoff before a horizon, and whose schedule moves it past the horizon by less than a day
+  (not void), is left out of that decision, as amendment 6, section 4 says. A test now holds this. No code changes
+  for it, and no reading changes.
+* There is no case without a schedule kickoff to declare: such a row never counts.
+
+### 3. Variants and records
+
+* **Variants.** This repairs how a registered rule is applied, not a betting rule: 0 variants.
+* **Tests.** `tests/test_close_listing.py` runs the audit's case as an NFL game (it fails on the scorer as it was on
+  `main` on Sep 29, commit 30444ec, and passes now), a close captured inside the window (used, at both ends), one 21
+  minutes before kickoff and one inside the last 2 minutes (not used), one captured for the earlier listing of a
+  postponed game (not used for the later listing), a game moved past the pooled horizon (left out of that decision,
+  on `main` and now), and the committed 2025 rehearsal ledger (`output/tables/rehearsal_2025.csv`), whose printed
+  report is unchanged byte for byte: with no captured closes, it is the committed `output/rehearsal_2025.log` except
+  its record line (a `--now` run is a preview); with a made-up capture for every game, it changes only where a
+  capture falls outside the window, and every such game is named. All inputs are synthetic or 2025; no 2026 price or
+  result is read.
+* **The note for `STRATEGY.md`** (Rule B's "Decision" row, dated on registration): *Amendment 8:* the secondary CLV
+  uses a captured close only for the listing it was captured for, 2 to 20 minutes before that listing's kickoff;
+  else it is missing.
+
+### What this amendment replaces
+
+Each earlier sentence below is quoted as registered; the section of this amendment named beside it applies
+instead.
+
+* Amendment 3: "`score_forward.py` reports, for each rule, CLV against that captured close, next to the primary
+  measure." A close counts only when it was captured 2 to 20 minutes before the kickoff of the listing graded
+  (section 1).
+* Amendment 3: "It also reports how many bets have no captured close (the Mac was asleep, the quota was low, or
+  Pinnacle had no line)." A bet whose game's captured close falls outside that window has none too, and the scorer
+  also says how many were refused, and which (section 1).
+* Amendment 7, section 2: "every logged book's total and prices in that one feed event are written to
+  `data/forward/closes.csv`, and the secondary CLV uses its Pinnacle row, as amendment 3 says." It uses that row
+  only for the listing it was captured for (section 1).
+
+Rule variants under forward test: still **2**. This amendment tests nothing and leaves the running variant count
+unchanged: on the day it was written it is **288**, so the multiple-testing bar is p < 0.000174 (`STATUS.md`); the
+hub restates the count on the day of registration.

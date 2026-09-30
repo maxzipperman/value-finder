@@ -642,3 +642,120 @@ instead.
 Variants under forward test: still **2**. This amendment tests nothing and leaves the running variant count
 unchanged: on the day of registration it is **273**, so the multiple-testing bar is p < 0.000183
 (`strategy-research/README.md`, `STATUS.md`).
+
+## Amendment 6 (DRAFT, not registered: written 2026-09-30 Pacific for the hub to register, before the first eligible game on Oct 1, 2026, 5:00 PM Pacific)
+
+**DRAFT.** This text is not in force. The hub registers it before Oct 1, 2026, 5:00 PM Pacific, by: replacing this
+paragraph and the heading's "DRAFT, not registered" with the date of registration and the registering commit (the
+merge of the pull request that carries it); confirming, from the ledger's counts only (no price or result), that no
+Rule B or Rule HT signal had been logged by then; restating the running variant count on that day at the end; and
+adding the dated note in section 3 to `STRATEGY.md`. Until then the scorer on `main` behaves as amendments 1 to 5
+say. Pull request 86 (the draft reading of Rule HT for a game whose kickoff time isn't set) becomes amendment 7 when
+the hub registers it.
+
+An independent audit of the scorer (Astra's audit 3, Sep 29, late evening; issue 88) found two places where
+`scripts/score_forward.py` does not do what the registered text says. **This amendment repairs two registered rules
+and changes no threshold, gate or decision rule:** no trigger, price cap, stake, metric, horizon or decision
+criterion changes. Section 1 enforces amendment 2's capture window and amendment 4's listings (section 10) for the
+captured close; section 2 enforces amendment 4's test end (section 4). The rules version stays
+`cfb-v3-2026-09-28`, because the board behaves exactly as before; only `scripts/score_forward.py` changes, and none
+of the files shared with nfl-weather does. Nfl-weather amendment 8 makes the same repair of the NFL scorer. Where
+this amendment and any earlier text differ, this one applies; the last section lists every earlier sentence it
+changes. To be registered by the hub on the owner's standing instruction of September 29, 2026 (the hub decides
+questions of how the tests are graded and reports them; money, and any rule's trigger, gate or price cap, stay the
+owner's). The owner can change any reading here by a dated amendment made before the first outcome it would affect.
+
+### 1. A captured close belongs to the listing it was captured for
+
+* **What went wrong.** The scorer kept one captured close per game id (the last row of `data/forward/closes.csv`)
+  and dropped its capture time and kickoff before it joined the close to the bets. A game that was postponed and
+  signalled again (two listings, amendment 4, section 10) could then take, for its new listing, the close captured
+  for the old one. The audit's case: game 999 listed for Oct 10, 19:00 UTC, whose only captured close (a total of
+  40) was captured Oct 10 at 18:50 UTC; the game was postponed to Oct 31 and signalled again, at 60. The Oct 10
+  listing was correctly void, but the Oct 31 listing was graded against the Oct 10 close, as its primary close
+  (amendment 4, section 6): mean CLV +20.00.
+* **The reading.** A bet's captured close is a row of `closes.csv` for its game whose capture time (`capture_utc`)
+  is from 20 minutes to 2 minutes before the kickoff of the listing graded, both ends included. That kickoff is the
+  earlier of the kickoff on the bet's entry row and the kickoff in the schedule: the bound amendment 4, section 11
+  gives "before kickoff". The window is amendment 2's ("2–20 minutes before kickoff"), with both ends included as
+  `scripts/capture_close.py` applies it: it calls the odds feed when a kickoff is from 2 to 20 minutes away, both
+  ends included. Among a game's rows inside the window, the last in the file is taken, as before (a retried slot
+  writes its row again).
+* **Otherwise the bet has no captured close,** and it is counted as missing, never imputed:
+  * for Rule B's primary close, when no later quote was logged (amendment 4, section 6), the bet has no primary
+    close: it is counted, and left out of the CLV;
+  * for the secondary measure (amendment 2), for both rules, it is one of the bets without a captured close;
+  * the scorer prints, for each rule, how many bets had a captured close refused and which games ("close captured
+    outside the window for this listing"), and `--list-excluded` prints each refused capture with its capture
+    time, the kickoff it was captured for and the kickoff of the listing graded.
+* **Examples.** For a listing whose kickoff is 19:00 UTC: a close captured at 18:50 is used; one captured at 18:58
+  or 18:40 (exactly 2 or 20 minutes before) is used; one captured at 18:39 (21 minutes before) is not; one captured
+  at 18:59 or after kickoff is not. A game moved earlier, from 19:00 on the entry row to 16:00 in the schedule: a
+  close captured at 18:50 is not used (the game was in play), and one captured at 15:50 is. The audit's postponed
+  game: the close captured on Oct 10 is not the Oct 31 listing's close, and a close captured Oct 31 at 18:50 is,
+  wherever it sits in the file.
+* **Known limits, stated up front.**
+  * The capture time college football records is when the feed's reply arrived, a few seconds after the run's
+    clock found the slot due. The runs are 15 minutes apart, so unless the Mac missed a run, a slot's first call is
+    more than 5 minutes before kickoff, and only a retry can fall in the last 2 minutes; a call whose reply lands a
+    few seconds inside them is refused, counted and named.
+  * A game moved later, by less than a day, after its entry row was logged: the bound is the entry row's earlier
+    kickoff, so a close captured just before the new kickoff is refused. The later-quote close (amendment 4,
+    section 6) is unaffected. The reading errs toward a missing close rather than an in-play price.
+* **Nothing else changes:** the entry, the later-quote close, which rows count, void and pending bets, the 20-close
+  limit (a refused close is a missing one), the interval, the horizons and the decision record.
+
+### 2. The test's end is judged on the schedule's kickoff as well as the entry row's
+
+* **What went wrong.** The scorer judged the test's end on the kickoff on the entry row (`start_utc`) alone. The
+  audit's case: a Rule HT game whose entry row gives a kickoff of Jan 31, 2028, 23:00 UTC, and whose final schedule
+  gives Feb 1, 2028, 20:00 UTC. That is 21 hours later, so the bet is not void, and it was settled and printed in
+  the FINAL Rule HT decision (record 1–0–0, STAY ON PAPER, with `--now 2028-02-02`). Amendment 4, section 4 says a
+  game dated after the test's end never counts.
+* **The reading.** A ledger row counts only if the kickoff on the row and the game's kickoff in the schedule are
+  both before Feb 1, 2028, 00:00 UTC. A row either of whose kickoffs is on or after it is excluded as "after the
+  2027 season", counted and listed like any other excluded row. This applies to both rules.
+* **With no kickoff in the schedule** (the game has no schedule row, or the schedule has no kickoff for it), the
+  row's own kickoff decides, as before. Amendment 4, section 10 allows such a schedule, and the scorer already says
+  when its schedule has no kickoff times.
+* **Unchanged, stated up front.** This reads only the test's end. The test's start (Oct 1, 2026, and Rule HT's
+  2026 Week 6, Oct 7, 00:00 UTC) and Rule B's horizon (the later of Dec 12, 2026 and the 40th settled signal's
+  kickoff) are still judged on the kickoff on the entry row, as the scorer has done since amendment 3: a game moved
+  across one of them by less than a day falls on the side its entry row gives. The owner or the hub can read them
+  the same way by a dated amendment before the first outcome it would affect.
+
+### 3. Variants and records
+
+* **Variants.** This repairs how two registered rules are applied, not a betting rule: 0 variants.
+* **Tests.** `tests/test_close_listing.py` runs the audit's two cases (each fails on the scorer as it was on `main`
+  on Sep 29, commit 30444ec, and passes now), a close captured inside the window (used, at both ends), one 21
+  minutes before kickoff and one inside the last 2 minutes (not used), one captured for the earlier listing of a
+  postponed game (not used for the later listing), and the committed 2025 rehearsal ledger
+  (`output/tables/rehearsal_2025.csv`), whose printed report is unchanged byte for byte: with no captured closes, it
+  is the committed `output/rehearsal_2025.log` except its record line (a `--now` run is a preview); with a made-up
+  capture for every game, it changes only where a capture falls outside the window, and every such game is named.
+  All inputs are synthetic or 2025; no 2026 price or result is read.
+* **The note for `STRATEGY.md`** (Rule B's and Rule HT's "Decision" rows, dated on registration): *Amendment 6:* a
+  captured close counts only for the listing it was captured for, 2 to 20 minutes before that listing's kickoff,
+  else it is missing; a game whose kickoff in the schedule is on or after Feb 1, 2028 never counts.
+
+### What this amendment replaces
+
+Each earlier sentence below is quoted as registered; the section of this amendment named beside it applies
+instead.
+
+* Amendment 2: "`score_forward.py` reports CLV against that captured close, next to the primary measure." A close
+  counts only when it was captured 2 to 20 minutes before the kickoff of the listing graded (section 1).
+* Amendment 2: "It also reports how many bets have no captured close." A bet whose game's captured close falls
+  outside that window has none, and the scorer also says how many were refused, and which (section 1).
+* Amendment 4, section 6: "If there is none, the close captured by amendment 2 is used." It is the close captured
+  for the entry's own listing, inside the window; otherwise the bet has no primary close (section 1).
+* Amendment 3, section 5: "logged before kickoff, inside the test window". Inside the test window now means that the
+  kickoff on the row and the kickoff in the schedule are both before Feb 1, 2028 (section 2).
+* Amendment 4, section 4: "A game dated after a test's end (Feb 1, 2028) never counts, whatever season label it
+  carries." A game is dated after the test's end when the kickoff on its row or its kickoff in the schedule is on or
+  after Feb 1, 2028; with no kickoff in the schedule, the row's alone (section 2).
+
+Variants under forward test: still **2**. This amendment tests nothing and leaves the running variant count
+unchanged: on the day it was written it is **288**, so the multiple-testing bar is p < 0.000174 (`STATUS.md`); the
+hub restates the count on the day of registration.
