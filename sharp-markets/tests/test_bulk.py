@@ -2753,3 +2753,40 @@ def test_the_headers_stage_and_the_key_check_print_their_counts_plainly(cfg, tmp
     bulk._client(RawCache(tmp_path), args(), session=api)
     out = capsys.readouterr().out
     assert out.count("key ok: HTTP 200, 4,987,579 credits remaining, 12,421 used; floor 0") == 2
+
+
+@pytest.mark.parametrize("where", ["its row can't be written", "a bug before its row"])
+def test_an_answer_counted_before_a_bug_keeps_its_count_and_its_row_or_the_line_says_what_it_held(cfg, tmp_path,
+                                                                                                   monkeypatch, where):
+    """Review of the fix (finding 1): an answer already counted when an error other than a Stop came (a `timestamp`
+    that is a lone surrogate, which the manifest file can't hold; a bug in the accounting after the count) kept its
+    count but got no manifest row, and the STOPPED line didn't say so. Now its row is written then if it can be, and
+    if it can't, the line says the row is missing and what it would have held, as after a Ctrl-C."""
+    class Surrogate(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            r = super().get(url, params, timeout)
+            if len(self.calls) == 3 and where == "its row can't be written":     # the second paid answer
+                r.text = json.dumps({**json.loads(r.text), "timestamp": "\ud800"})
+            return r
+
+    if where == "a bug before its row":
+        saw, n = bulk.BulkClient._saw_balance, [0]
+
+        def buggy(self, left):
+            saw(self, left)
+            n[0] += 1
+            if n[0] == 2:                                                       # the second answer, once counted
+                raise ValueError("a bug")
+        monkeypatch.setattr(bulk.BulkClient, "_saw_balance", buggy)
+    calls = _nfl_calls(cfg)                                                     # billed 20 each
+    c = client(tmp_path, Surrogate())
+    c.account()
+    res = bulk.run_calls(c, calls)
+    rows = [r for r in csv.DictReader(c.manifest.open()) if r["pull"] != "account"]
+    assert res["stopped"].startswith("unexpected error, probably a bug") and c.counted == 40 and c.is_cached(calls[1])
+    if where == "a bug before its row":
+        assert len(rows) == 2 and "manifest row" not in res["stopped"]
+    else:
+        assert len(rows) == 1 and ("The answer that had come back was counted at what it cost, 20 credits. Its "
+                                   "manifest row could not be written (" in res["stopped"])
+        assert res["stopped"].endswith(f"; it would have held HTTP 200, credits_last 20, cache key {calls[1].key}.")

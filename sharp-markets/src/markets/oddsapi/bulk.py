@@ -512,19 +512,20 @@ def _latched(method):
             raise
         except Exception as e:           # noqa: BLE001 - a full disk or a bug ends the run as a Stop does
             if self.stopped is None:
-                self._count_out()
-                self.stopped = _as_stop(e)
+                self.stopped = _as_stop(e, self._count_out())
             raise self.stopped from None
     return wrapper
 
 
-def _as_stop(e: Exception) -> Stop:
-    """The Stop for an error that isn't one: a full disk, or a bug (its traceback is logged, key blanked)."""
+def _as_stop(e: Exception, note: str = "") -> Stop:
+    """The Stop for an error that isn't one: a full disk, or a bug (its traceback is logged, key blanked). `note` says
+    how the attempt it cut short was counted (BulkClient._count_out)."""
     if isinstance(e, OSError):
         return Stop(f"a file could not be read or written ({e.strerror or e}): is the disk full? The call that was out "
-                    f"is not cached, so a rerun asks again. {DISK_HELP}", rerun=True)
+                    f"is not cached, so a rerun asks again. {DISK_HELP}{note}", rerun=True)
     log.error("the run stopped on an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
-    return Stop(f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: {scrub(e)})")
+    return Stop(f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: {scrub(e)})"
+                + (f".{note}" if note else ""))
 
 
 class BulkClient:
@@ -592,15 +593,43 @@ class BulkClient:
         self.unanswered += call.expected
         self._sent = False
 
-    def _count_out(self) -> None:
-        """An error other than a Stop cut an attempt short (_latched): an answer that came back and wasn't counted counts
-        the larger of what it reported and its upper bound; a request still out, its upper bound."""
+    def _count_out(self) -> str:
+        """An error other than a Stop cut an attempt short (_latched); what follows says how it was counted, for the
+        STOPPED line. An answer already counted keeps its count, and its manifest row is written now (if it can't be,
+        the line says what the row would have held); an answer not yet counted counts the larger of what it reported
+        and its upper bound, with no row; a request still out, its upper bound."""
+        if (logged := self._write_unlogged()) is not None:
+            _, cost, note = logged
+            return note and f" The answer that had come back was counted at what it cost, {_credits(cost)}.{note}"
         if self._answer is not None:
             (call, f, retrying), self._answer = self._answer, None
-            self.counted += max(_cost(f.headers.get("x-requests-last")) or 0, call.expected)
+            last = _cost(f.headers.get("x-requests-last"))
+            cost = max(last or 0, call.expected)
+            self.counted += cost
             self.fetched += not retrying
-        elif self._sent and self._out is not None:
+            return (f" The answer that had come back was counted at {_credits(cost)}, the larger of what it reported "
+                    f"and its upper bound, and has no manifest row (it would have held HTTP {f.status}, credits_last "
+                    f"{last}, cache key {call.key}).")
+        if self._sent and self._out is not None:
             self._no_answer(self._out)
+            return f" The call that was out is counted at its upper bound, {_credits(self._out.expected)}."
+        return ""
+
+    def _write_unlogged(self) -> tuple[Call, int, str] | None:
+        """An answer counted whose manifest row isn't written yet (a Ctrl-C or an error came between the two): the row is
+        written now, unless it already was. Returns (call, cost, note), the note saying what the row would have held
+        when it can't be written; None when there is no such answer."""
+        if self._unlogged is None:
+            return None
+        (call, row, cost, size), self._unlogged = self._unlogged, None
+        try:
+            if self._manifest_size() == size:
+                self._log(row)
+            return call, cost, ""
+        except Exception as e:           # noqa: BLE001 - a full disk, or a row the file can't hold
+            return call, cost, (f" Its manifest row could not be written ({getattr(e, 'strerror', None) or e}); it "
+                                f"would have held HTTP {row['http_status']}, credits_last {row['credits_last']}, cache "
+                                f"key {row['cache_key']}.")
 
     def _saw_balance(self, left: int) -> None:
         if self.start is None or left - self.last_seen > self.margin:   # library use with no key check, or credits added
@@ -772,14 +801,8 @@ class BulkClient:
         out, self._out = self._out, None
         self.stopped = self.stopped or Stop(f"{INTERRUPTED} (Ctrl-C)", rerun=True)
         note = ""
-        if self._unlogged is not None:                     # counted: its row is written now, unless it already was
-            (call, row, cost, size), self._unlogged = self._unlogged, None
-            try:
-                if self._manifest_size() == size:
-                    self._log(row)
-            except OSError as e:
-                note = (f" Its manifest row could not be written ({e.strerror or e}); it would have held HTTP "
-                        f"{row['http_status']}, credits_last {row['credits_last']}, cache key {row['cache_key']}.")
+        if (logged := self._write_unlogged()) is not None:  # counted: its row is written now, unless it already was
+            call, cost, note = logged
         elif self._answer is not None:                     # came back, not counted yet: counted and logged now
             (call, answer, retrying), before = self._answer, self.counted
             try:
