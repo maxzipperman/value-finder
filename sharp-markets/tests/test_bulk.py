@@ -2682,3 +2682,26 @@ def test_a_raw_socket_error_from_the_session_is_an_attempt_with_no_answer(cfg, t
     with pytest.raises(bulk.Stop) as ei:
         c.fetch(calls[2])
     assert ei.value is c.stopped and len(api.calls) == 3
+
+
+@pytest.mark.parametrize("stop", ["the alarm", "billed above its upper bound", "a session error"])
+def test_the_key_check_of_a_client_that_stopped_is_refused_with_the_same_stop(cfg, tmp_path, stop):
+    """Review of cc14201, finding A4 (the hub's Q3 read literally): account() on a stopped client still sent the free
+    key check and reset the start and the lowest balance, so the client no longer described the run that stopped.
+    Now it is refused with the same stop, sends nothing, and changes nothing."""
+    class Raises(Overcharges):
+        def get(self, url, params=None, timeout=None):
+            if stop == "a session error" and not url.endswith("/sports"):
+                raise RuntimeError("boom")
+            return super().get(url, params, timeout)
+
+    api = Raises(others=400 if stop == "the alarm" else 0, overbill=50 if stop.startswith("billed") else 0)
+    c = client(tmp_path, api, alarm_margin=300)
+    c.account()
+    res = bulk.run_calls(c, _nfl_calls(cfg))
+    assert {"the alarm": "the account has fallen by", "billed above its upper bound": "billed 70 credits",
+            "a session error": "unexpected error"}[stop] in res["stopped"] and c.stopped is not None
+    before, sent = (c.start, c.lowest, c.counted, c.unexplained), len(api.calls)
+    with pytest.raises(bulk.Stop) as ei:
+        c.account()
+    assert ei.value is c.stopped and len(api.calls) == sent and (c.start, c.lowest, c.counted, c.unexplained) == before

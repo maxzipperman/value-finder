@@ -682,7 +682,10 @@ class BulkClient:
     def account(self) -> dict:
         """GET /v4/sports, free and never cached: checks the key and reads the balance the run starts from. Raises Stop,
         before any paid call, on a rejected key, an answer other than 200, a balance that is unreadable or below the
-        floor, or a manifest row that can't be written (a full disk)."""
+        floor, or a manifest row that can't be written (a full disk). A client that stopped refuses it with that stop,
+        so its start and lowest balance still describe the run that stopped."""
+        if self.stopped is not None:
+            raise self.stopped
         r = self._get(self._base() + "/sports", {})
         h = _headers(r)                  # every value with the key blanked, in case a header echoes the request
         self.start = self.lowest = self.last_seen = _cost(h.get("x-requests-remaining"), up=False)
