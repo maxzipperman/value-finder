@@ -795,7 +795,7 @@ hub restates the count on the day of registration.
 paragraph and the heading's "DRAFT, not registered" with the date of registration; re-checking the ledger counts in
 section 4 on the nightly copy current that day (counts only, no price or result); stating, for Rule B, how many
 signals were logged by then and that none is affected, from the scorer's count of ledger games whose schedule
-kickoff is the placeholder (section 2), which must show 0 completed games; filling in the variant count at the end;
+kickoff is the placeholder (section 2), which must show no completed game; filling in the variant count at the end;
 and adding the notes in section 5 to `STRATEGY.md`, dated. Until then the board, the alert and the scorer on `main`
 behave as amendments 1 to 6 say. This draft was written as amendment 6; amendment 6 was then registered for
 the captured close and the test's end (pull request 90), so this is amendment 7, and "amendment 6" below means the
@@ -880,8 +880,9 @@ would affect.
   later than a real kickoff on the same date, and the row's own kickoff is checked too). So a game postponed to a
   later date that has no time set yet, or moved to the day before, is void as before, and a row logged after the
   placeholder + 30 hours never counts. This reading is the scorer's, for both rules; for a game whose schedule shows
-  a time nothing changes. The scorer always prints how many ledger games have the placeholder in the schedule, split
-  into completed games and games not yet played, with their game ids, and `--list-excluded` lists them.
+  a time nothing changes. When any ledger game has the placeholder in the schedule, the scorer prints how many,
+  split into completed games and games not yet played, with their game ids, and `--list-excluded` lists them; when
+  none does, the report is as it was (as amendment 6 does for a capture set aside), so no such line means none.
 * **The captured close (a reading of amendment 6, section 1).** Amendment 6 counts a captured close for a listing
   only when it was captured 2 to 20 minutes before "the earlier of the kickoff on the listing's last row logged
   before kickoff and the kickoff in the schedule: the bound amendment 4, section 11 gives "before kickoff"". When
@@ -989,8 +990,8 @@ would affect.
     games kicking off Oct 1–6, logged 3 to 8 days ahead. None has a midnight-Eastern kickoff or the weather source
     `time_tbd`. It was read for these counts only; no price or result in it was read. The hub re-checks these counts
     at registration on the copy current that day, counts only, together with the number of Rule B signals logged and
-    the scorer's count of ledger games whose schedule kickoff is the placeholder (section 2), which must show 0
-    completed games, so that no known outcome is affected.
+    the scorer's count of ledger games whose schedule kickoff is the placeholder (section 2), which must show no
+    completed game (no such line, or "completed: 0"), so that no known outcome is affected.
 * **So the rate is not measured yet.** The scorer will measure it from Week 6: it counts every Rule HT quote logged
   with no kickoff time set, and every listing whose last quote was logged with no time set and would have
   signalled.

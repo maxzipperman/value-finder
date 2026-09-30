@@ -520,7 +520,7 @@ L = L.merge(s[["game_id", "sched_kick", "sched_placeholder", "sched_played"]], o
 PH_GAMES = (L[L.sched_placeholder.eq(True)].drop_duplicates("game_id")[["game_id", "sched_kick", "sched_played"]]
             .sort_values("game_id"))
 for label, g in (("completed", PH_GAMES[PH_GAMES.sched_played.eq(True)]),
-                 ("not yet played", PH_GAMES[~PH_GAMES.sched_played.eq(True)])):
+                 ("not yet played", PH_GAMES[~PH_GAMES.sched_played.eq(True)])) if len(PH_GAMES) else ():
     print(f"ledger games whose schedule kickoff is cfbfastR's placeholder (00:00 Eastern; amendment 7), {label}: "
           f"{len(g)}" + (f" ({', '.join(g.game_id.astype(str))})" if len(g) else ""))
 if args.list_excluded and len(PH_GAMES):

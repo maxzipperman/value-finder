@@ -300,7 +300,7 @@ def test_a_flag_on_a_real_time_keeps_that_time_as_the_schedule_kickoff(tmp_path)
             row(1, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5, mkt_under=-105),
             row(1, REAL_KICK, "2026-10-10T23:45Z", mkt_total=60.5)]                  # after kickoff: dropped
     out = score(tmp_path, rows, [sched(1, 67, start_time_tbd=True)])
-    assert f"{PH_LINE}, completed: 0" in out and f"{PH_LINE}, not yet played: 0" in out
+    assert PH_LINE not in out                                    # no placeholder in the schedule: the report as it was
     assert "excluded, logged at or after kickoff: 1" in out
     assert "record 0-1-0" in ht(out)
 
