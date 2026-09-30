@@ -14,7 +14,13 @@
 # It changes nothing. It loads and unloads no job and changes no setting: the only launchctl commands it
 # runs are 'list' and 'print'. It writes no file except, with --manifest, that one file. --fetch updates git's
 # own copy of GitHub's branches; --tests runs the suites, which write only their temporary files.
-# Keys: it reads each .env file only to learn which names have a value. No value is printed or saved.
+# It only reports. The commands it prints (unload, install) are for the owner to run; the hub's check-in
+# never runs them for him (.claude/commands/hub.md).
+# Keys: it reads each .env file only to learn which names have a value, the way the projects read them
+# (the weather projects take only a line that starts NAME=). No value is printed or saved, and the name of
+# git's sign-in helper is shown as a label, never as the text it is configured with.
+# With --compare, the Mac being checked is the one about to take the jobs over (or back), so a changed file
+# that git tracks, or another commit than the other Mac's, is a FAIL there.
 # Every line starts OK, WARN or FAIL. The exit status is 0 when nothing failed, 1 when something did, and 2
 # for a wrong option. Plain macOS bash (3.2) and the tools macOS ships, plus git.
 # For the tests only: MAC_CHECK_LOCALTIME stands in for /etc/localtime, MAC_CHECK_NOW (seconds since 1970)
@@ -34,11 +40,19 @@ DASHBOARD_JOB="com.valuefinder.dashboard"     # read-only; allowed on either Mac
 DATA_FOLDERS="nfl-weather/data cfb-weather/data sharp-markets/data"
 CACHE_LABEL="~/.cache/value-finder"
 # the forward-test records, hashed file by file: every file in each weather project's data/forward/, the odds
-# responses the alert and close jobs saved, and the paid download's own manifest
+# responses the alert and close jobs saved, and the paid download's own manifest. A *.tmp file is a write in
+# progress (runlog.py, board.py and the paid cache write one, then rename it), so it is never a record.
 RECORD_ROOTS="nfl-weather/data/forward nfl-weather/data/raw/oddsapi/live cfb-weather/data/forward cfb-weather/data/raw/oddsapi/live sharp-markets/data/raw/_manifest/oddsapi_manifest.csv"
+# the paid odds data (sharp-markets/docs/ODDS5M_DAY_ONE.md: data/raw/{sport}/oddsapi/... and data/raw/nba/
+# oddsapi_hist/): not a cache, since it can't be had again without paying. Listed file by file with its size.
+PAID_GLOB="sharp-markets/data/raw/*/oddsapi*"
 REQUIRED_KEYS="ODDS_API_KEY NTFY_TOPIC"       # the names the scheduled jobs read; any other empty name is a WARN
+STRICT_ENV="nfl-weather cfb-weather"          # read with line.strip().startswith(NAME + "="); sharp-markets uses python-dotenv
 MANIFEST_HEADER="# Value Finder mac_check manifest, version 1 (counts and hashes only: no key, no file content)"
-RUN_TIMES="07:30 11:30 15:30 19:30"
+# the times the jobs start by the clock: the four alert runs and the nightly ledger copy (close capture runs
+# every 15 minutes, and matters only near a kickoff, which the 3-hour kickoff rule covers)
+RUN_TIMES="07:30 11:30 15:30 19:30 23:45"
+QUIET_BEFORE=90      # minutes clear before the next run, for a handover of 30 to 60 minutes with room to spare
 
 usage() {
   printf '%s\n' "Usage: ops/mac_check.sh --role live|standby [--repo PATH] [--fetch] [--tests]" \
@@ -93,7 +107,22 @@ human() {  # bytes as the Finder shows them (1 GB = 1,000,000,000 bytes)
   awk -v b="$1" 'BEGIN { if (b >= 1e9) printf "%.1f GB", b / 1e9; else if (b >= 1e6) printf "%.1f MB", b / 1e6;
                          else if (b >= 1e3) printf "%.0f KB", b / 1e3; else printf "%d bytes", b }'
 }
-in_repo() { case "$1" in "$REPO"/*|"$REPO_P"/*) return 0 ;; esac; return 1; }
+# where a path in a job file points: "repo" (the main checkout, where the jobs belong: the repo itself or a
+# project or ops folder in it), "worker" (a worker's worktree under .claude/, on another branch and deleted
+# when its work merges), "elsewhere" (another place in the repo) or "outside"
+job_path_kind() {
+  local p="$1" r
+  for r in "$REPO" "$REPO_P"; do
+    case "$p" in
+      "$r") printf repo; return ;;
+      "$r"/.claude/*) printf worker; return ;;
+      "$r"/nfl-weather|"$r"/cfb-weather|"$r"/sharp-markets|"$r"/dashboard|"$r"/ops) printf repo; return ;;
+      "$r"/nfl-weather/*|"$r"/cfb-weather/*|"$r"/sharp-markets/*|"$r"/dashboard/*|"$r"/ops/*) printf repo; return ;;
+      "$r"/*) printf elsewhere; return ;;
+    esac
+  done
+  printf outside
+}
 # a Python that is really there (never Apple's /usr/bin/python3, which asks to install developer tools)
 venv_ok() { [ -x "$1/bin/python" ] && [ -d "$(awk -F' = ' '$1 == "home" { print $2; exit }' "$1/pyvenv.cfg" 2>/dev/null)" ]; }
 installer_for() {
@@ -153,7 +182,7 @@ plist_paths() {  # "kind<TAB>path" for the program, arguments, working folder an
 }
 check_job() {   # check_job LABEL KIND   (KIND: core, credit or dashboard)
   local label="$1" kind="$2" f="$LA/$1.plist" rec="" loaded=0 present=0 state pid code sig from words bad=FAIL
-  local outside="" missing="" k p
+  local outside="" worker="" missing="" k p
   [ "$kind" = "dashboard" ] && bad=WARN        # the dashboard only reads: never a FAIL
   [ -f "$f" ] && present=1
   rec="$(job_info "$label")"
@@ -173,14 +202,16 @@ check_job() {   # check_job LABEL KIND   (KIND: core, credit or dashboard)
     fi
     while IFS="$TAB" read -r k p; do
       case "$p" in /*) ;; *) continue ;; esac
-      if in_repo "$p"; then
-        if [ "$k" != "log" ] && [ ! -e "$p" ]; then missing="${missing:-$p}"; fi
-      else
-        case "$p" in
-          /bin/*|/usr/bin/*|/sbin/*|/usr/sbin/*|"$HOME"/Library/Logs/*) ;;
-          *) outside="${outside:-$p}" ;;
-        esac
-      fi
+      case "$(job_path_kind "$p")" in
+        repo) if [ "$k" != "log" ] && [ ! -e "$p" ]; then missing="${missing:-$p}"; fi ;;
+        worker) worker="${worker:-$p}" ;;
+        elsewhere) outside="${outside:-$p}" ;;
+        *)
+          case "$p" in
+            /bin/*|/usr/bin/*|/sbin/*|/usr/sbin/*|"$HOME"/Library/Logs/*) ;;
+            *) outside="${outside:-$p}" ;;
+          esac ;;
+      esac
     done < <(plist_paths "$f")
   fi
 
@@ -201,14 +232,14 @@ check_job() {   # check_job LABEL KIND   (KIND: core, credit or dashboard)
   # live (or the dashboard on either Mac)
   if [ $loaded -eq 0 ] && [ $present -eq 0 ]; then
     if [ "$kind" = "core" ]; then
-      say FAIL "$label: not installed on the live Mac. Install it:"
+      say FAIL "$label: not installed on this Mac. If this is the Mac that should run the jobs (and no move is under way), install it:"
       more "$(tilde "$REPO")/$(installer_for "$label")"
     fi
     return
   fi
   if [ $loaded -eq 0 ]; then
     if [ "$kind" = "core" ]; then
-      say FAIL "$label: its file is there but it is not loaded, so it will not run. Reinstall it:"
+      say FAIL "$label: its file is there but it is not loaded, so it will not run. If this is the Mac that should run the jobs, reinstall it:"
       more "$(tilde "$REPO")/$(installer_for "$label")"
     else
       say WARN "$label: its file is there but it is not loaded"
@@ -222,8 +253,11 @@ check_job() {   # check_job LABEL KIND   (KIND: core, credit or dashboard)
   if [ -n "$from" ] && [ "$from" != "$f" ]; then
     say WARN "$label: $words, loaded from $(tilde "$from") instead of ~/Library/LaunchAgents"
   fi
-  if [ -n "$outside" ]; then
-    say $bad "$label: $words, but its file points outside this repo ($(tilde "$outside")). Reinstall it from here:"
+  if [ -n "$worker" ]; then
+    say $bad "$label: $words, but its file points into a worker's folder ($(tilde "$worker")), not the main checkout. Reinstall it from here:"
+    more "$(tilde "$REPO")/$(installer_for "$label")"
+  elif [ -n "$outside" ]; then
+    say $bad "$label: $words, but its file points outside this repo's project folders ($(tilde "$outside")). Reinstall it from here:"
     more "$(tilde "$REPO")/$(installer_for "$label")"
   elif [ -n "$missing" ]; then
     say $bad "$label: $words, but its file names $(tilde "$missing"), which is not there (an environment not built?)"
@@ -241,6 +275,32 @@ for j in $CREDIT_EXTRAS; do
 done
 if [ "$ROLE" = "live" ] && [ -z "$EXTRAS_SEEN" ]; then
   say OK "Paid-plan live uses (optional, ops/install_live_uses.sh): none installed"
+fi
+# The live uses carry two settings in their job files (ops/install_live_uses.sh): a plan tier (free or
+# paid) and a credit floor (a number). Neither is a key. Removing the jobs deletes the files, so the check
+# prints the command that puts back exactly these jobs with exactly these settings.
+live_use_setting() {   # live_use_setting FILE NAME : the value if it has the expected form, else nothing
+  local v
+  v="$(plutil -extract "EnvironmentVariables.$2" raw -o - "$1" 2>/dev/null)" || return 0
+  case "$2:$v" in ODDS_API_TIER:free|ODDS_API_TIER:paid) printf '%s' "$v" ;; ODDS_BACKGROUND_FLOOR:*[!0-9]*|ODDS_BACKGROUND_FLOOR:) ;;
+                  ODDS_BACKGROUND_FLOOR:*) printf '%s' "$v" ;; esac
+}
+if [ "$ROLE" = "live" ] && [ -n "$EXTRAS_SEEN" ]; then
+  LU_CMDS="" LU_PREV="" LU_SAME=1 LU_NAMES=""
+  for n in $EXTRAS_SEEN; do
+    f="$LA/com.valuefinder.$n.plist"
+    [ -f "$f" ] || continue
+    t="$(live_use_setting "$f" ODDS_API_TIER)"; fl="$(live_use_setting "$f" ODDS_BACKGROUND_FLOOR)"
+    pre="${t:+ODDS_API_TIER=$t }${fl:+ODDS_BACKGROUND_FLOOR=$fl }"
+    LU_CMDS="$LU_CMDS$pre$(tilde "$REPO")/ops/install_live_uses.sh $n$NL"
+    [ -n "$LU_NAMES" ] && [ "$pre" != "$LU_PREV" ] && LU_SAME=0
+    LU_PREV="$pre"; LU_NAMES="$LU_NAMES $n"
+  done
+  if [ -n "$LU_NAMES" ]; then
+    say OK "Paid-plan live uses installed:$LU_NAMES. To put back exactly these, with the same settings, after removing them (write this down):"
+    if [ $LU_SAME -eq 1 ]; then more "$LU_PREV$(tilde "$REPO")/ops/install_live_uses.sh$LU_NAMES"
+    else printf '%s' "$LU_CMDS" | while IFS= read -r l; do more "$l"; done; fi
+  fi
 fi
 if [ -f "$LA/$DASHBOARD_JOB.plist" ] || [ -n "$(job_info "$DASHBOARD_JOB")" ]; then
   check_job "$DASHBOARD_JOB" dashboard
@@ -310,6 +370,8 @@ if [ "$ROLE" = "live" ]; then
     say WARN "Will not start again by itself after a power cut ('Start up automatically after a power failure' in System Settings > Energy). After any restart, log in: the jobs run only while you are logged in"
   elif [ "$AUTORESTART" = "1" ]; then
     say OK "Starts again by itself after a power cut (then log in: the jobs run only while you are logged in)"
+  elif [ $LAPTOP -eq 0 ]; then
+    say WARN "Could not read whether this Mac starts again by itself after a power cut. Look in System Settings > Energy for 'Start up automatically after a power failure'"
   fi
 else
   if [ $LAPTOP -eq 1 ]; then say OK "A laptop (sleep matters only on the live Mac)"
@@ -330,8 +392,10 @@ else
   say WARN "Could not read the free disk space"
 fi
 
-# When is it quiet enough to move the jobs? No alert run within 30 minutes, none started in the last 10
-# minutes, and no kickoff within 3 hours (close capture needs the jobs at every kickoff).
+# When is it quiet enough to move the jobs? No run by the clock within 90 minutes (the handover takes 30 to 60
+# minutes, and a run that falls inside it doesn't happen at all), none started in the last 10 minutes, and no
+# kickoff within 3 hours (close capture needs the jobs at every kickoff). With no kickoff in the ledgers to go
+# by, it can't say.
 MIN_NOW=$((10#$(date -r "$NOW" +%H) * 60 + 10#$(date -r "$NOW" +%M)))
 NEXT_RUN="" TO_NEXT=99999 SINCE_LAST=99999
 for t in $RUN_TIMES; do
@@ -341,6 +405,8 @@ for t in $RUN_TIMES; do
   s=$(( (MIN_NOW - m + 1440) % 1440 ))
   [ $s -lt $SINCE_LAST ] && SINCE_LAST=$s
 done
+NEXT_WORDS="Next alert run $NEXT_RUN"
+[ "$NEXT_RUN" = "23:45" ] && NEXT_WORDS="Next run by the clock 23:45 (the nightly ledger copy)"
 hm() { if [ "$1" -ge 60 ]; then printf '%d h %d min' $(($1 / 60)) $(($1 % 60)); else printf '%d min' "$1"; fi; }
 KICK_PY='
 import csv, sys, datetime as dt
@@ -389,10 +455,10 @@ if [ -n "$KPY" ]; then
   KICKS="$("$KPY" -I -B -c "$KICK_PY" "$NOW" "$REPO/nfl-weather/data/forward/ledger.csv" \
            "$REPO/cfb-weather/data/forward/ledger.csv" 2>/dev/null)"
 fi
-TIMING="Next alert run $NEXT_RUN (in $(hm $TO_NEXT))."
+TIMING="$NEXT_WORDS (in $(hm $TO_NEXT))."
 QUIET=1 WHY=""
-[ $TO_NEXT -le 30 ] && { QUIET=0; WHY="an alert run starts within 30 minutes"; }
-[ $SINCE_LAST -lt 10 ] && { QUIET=0; WHY="an alert run started less than 10 minutes ago and may still be going"; }
+[ $TO_NEXT -lt $QUIET_BEFORE ] && { QUIET=0; WHY="a run starts within $QUIET_BEFORE minutes, and a run due while no Mac has the jobs doesn't happen"; }
+[ $SINCE_LAST -lt 10 ] && { QUIET=0; WHY="a run started less than 10 minutes ago and may still be going"; }
 if [ -n "$KICKS" ]; then
   K_EPOCH="$(printf '%s\n' "$KICKS" | head -n 1 | cut -f1)"
   K_LABEL="$(printf '%s\n' "$KICKS" | head -n 1 | cut -f2)"
@@ -401,12 +467,16 @@ if [ -n "$KICKS" ]; then
   TIMING="$TIMING Next kickoff in the ledgers $K_WHEN, $K_LABEL (in $(hm $K_MIN))."
   if [ $K_MIN -lt 180 ]; then QUIET=0; WHY="${WHY:+$WHY, and }a game kicks off within 3 hours"; fi
 elif [ -n "$KPY" ]; then
-  TIMING="$TIMING No upcoming kickoff in the ledgers."
+  TIMING="$TIMING No upcoming kickoff in this Mac's ledgers, so the check can't tell when the next game is."
+  [ $QUIET -eq 1 ] && QUIET=2
 else
   TIMING="$TIMING Kickoffs not read (no Python environment yet)."
+  [ $QUIET -eq 1 ] && QUIET=2
 fi
 if [ $QUIET -eq 1 ]; then
   say OK "$TIMING A quiet time to move the jobs"
+elif [ $QUIET -eq 2 ]; then
+  say WARN "$TIMING Not known to be a quiet time: look up the next kickoff before moving the jobs (ops/MOVE_TO_NEW_MAC.md, section 3)"
 else
   say WARN "$TIMING Not a quiet time to move the jobs: $WHY"
 fi
@@ -428,8 +498,19 @@ else
   say WARN "gh is not installed (brew install gh). The hub uses it for pull requests"
 fi
 if [ -n "$GIT" ]; then
+  # only a label: a helper's configured text can hold a token, and this output is copied into the hub's chat
   HELPER="$("$GIT" config --get-urlmatch credential.helper https://github.com 2>/dev/null | head -n 1)"
-  if [ -n "$HELPER" ]; then say OK "git signs in to GitHub with: $HELPER (the nightly ledger copy pushes with it)"
+  case "$HELPER" in
+    "") HLABEL="" ;;
+    osxkeychain) HLABEL="the macOS keychain (osxkeychain)" ;;
+    *"gh auth git-credential"*) HLABEL="gh (gh auth setup-git)" ;;
+    store|"store "*) HLABEL="a plain file on disk (store)" ;;
+    cache|"cache "*) HLABEL="git's short-lived memory (cache)" ;;
+    manager|manager-core|*git-credential-manager*) HLABEL="Git Credential Manager" ;;
+    *) HLABEL="another helper (its text is not shown)" ;;
+  esac
+  HELPER=""
+  if [ -n "$HLABEL" ]; then say OK "git signs in to GitHub with $HLABEL (the nightly ledger copy pushes with it)"
   else say WARN "git has no way to sign in to GitHub, so the nightly ledger copy can't push. Run: gh auth setup-git"; fi
 fi
 if command -v uv >/dev/null 2>&1; then
@@ -519,6 +600,11 @@ else
   N_UN="$(printf '%s\n' "$ST" | grep -c '^??')"
   if [ -z "$ST" ]; then
     say OK "Clean: nothing changed or added outside git"
+  elif [ -n "$COMPARE" ] && [ "$N_CH" -gt 0 ]; then
+    # the Mac about to take the jobs: a changed tracked file (a data/processed file copied over the committed
+    # one, say) means it would run other code or data than git holds
+    say FAIL "Not clean: $N_CH files that git tracks are changed here, so this Mac would not run what git holds. Stop and tell the hub. First ones:"
+    printf '%s\n' "$ST" | grep '^[^?]' | head -n 5 | while IFS= read -r l; do more "$l"; done
   else
     say WARN "Not clean: $N_CH changed and $N_UN new files that git doesn't track. First ones:"
     printf '%s\n' "$ST" | head -n 3 | while IFS= read -r l; do more "$l"; done
@@ -567,7 +653,8 @@ done
 if [ $TESTS -eq 1 ]; then
   section "Test suites"
   for p in nfl-weather cfb-weather sharp-markets dashboard; do
-    case " $ENV_OK " in *" $p "*) ;; *) say FAIL "$p tests: not run (no working environment)"; continue ;; esac
+    sev=FAIL; [ "$p" = "dashboard" ] && sev=WARN      # like its environment: the dashboard is optional
+    case " $ENV_OK " in *" $p "*) ;; *) say $sev "$p tests: not run (no working environment)"; continue ;; esac
     t0=$(date +%s)
     # no -q here: two projects already set it, and twice leaves out the "N passed" line
     OUT="$(cd "$REPO/$p" && "$REPO/$p/.venv/bin/python" -B -m pytest -p no:cacheprovider tests 2>&1)"; RC=$?
@@ -586,36 +673,80 @@ fi
 
 # ---------------------------------------------------------------------------------------------------------
 section "Keys (names only; no value is ever shown)"
-env_names() {   # "NAME<TAB>1" (has a value) or "NAME<TAB>0" (empty) for each assignment in a .env file, in order
-  local line name val
-  while IFS= read -r line || [ -n "$line" ]; do
-    line="${line%$'\r'}"
-    if [[ "$line" =~ ^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=(.*)$ ]]; then
-      name="${BASH_REMATCH[2]}"; val="${BASH_REMATCH[3]}"
-      val="${val#"${val%%[![:space:]]*}"}"                  # leading spaces
-      case "$val" in \#*) val="" ;; esac                     # only a comment
-      val="${val%"${val##*[![:space:]]}"}"                  # trailing spaces
-      case "$val" in \"\"|\'\') val="" ;; esac               # empty quotes
-      if [ -n "$val" ]; then printf '%s\t1\n' "$name"; else printf '%s\t0\n' "$name"; fi
-      val=""
+# A .env line is read the way its project reads it. The weather projects (nflweather/oddsapi.py, notify._env,
+# quota.py, cfbweather/notify._env) take a name's value only from a line that, spaces trimmed, starts NAME=;
+# they strip spaces and quotes from the value, and the last such line wins. They skip 'export NAME=...' and
+# 'NAME = ...'. sharp-markets reads its .env with python-dotenv, which takes those forms too.
+# env_line LINE STRICT sets _K (A: an assignment the project reads, F: a line it skips, empty: neither), _N
+# (the name) and _V (the value as the project would use it). Callers clear _V; nothing prints it.
+env_line() {
+  local t="$1"
+  _K="" _N="" _V=""
+  t="${t%$'\r'}"
+  t="${t#"${t%%[![:space:]]*}"}"; t="${t%"${t##*[![:space:]]}"}"
+  if [ "$2" = "1" ]; then
+    if [[ "$t" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      _K=A _N="${BASH_REMATCH[1]}" _V="${BASH_REMATCH[2]}"
+      _V="${_V#"${_V%%[![:space:]]*}"}"; _V="${_V%"${_V##*[![:space:]]}"}"
+      while [ "${_V#\"}" != "$_V" ]; do _V="${_V#\"}"; done; while [ "${_V%\"}" != "$_V" ]; do _V="${_V%\"}"; done
+      while [ "${_V#\'}" != "$_V" ]; do _V="${_V#\'}"; done; while [ "${_V%\'}" != "$_V" ]; do _V="${_V%\'}"; done
+    elif [[ "$t" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*= ]] ||
+         [[ "$t" =~ ^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]+= ]]; then
+      _K=F _N="${BASH_REMATCH[1]}"
     fi
-  done < "$1"
-  [[ x =~ x ]]                                               # leaves no value behind in BASH_REMATCH
+  elif [[ "$t" =~ ^(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+    _K=A _N="${BASH_REMATCH[2]}" _V="${BASH_REMATCH[3]}"
+    case "$_V" in
+      \"*) _V="${_V#\"}"; _V="${_V%%\"*}" ;;
+      \'*) _V="${_V#\'}"; _V="${_V%%\'*}" ;;
+      \#*) _V="" ;;
+      *) _V="${_V%%[[:space:]]#*}"; _V="${_V%"${_V##*[![:space:]]}"}" ;;
+    esac
+  fi
+  t=""
+  [[ x =~ x ]]                                   # leaves no value behind in BASH_REMATCH
 }
-env_value_same() {  # env_value_same NAME FILE... : 0 when every file gives NAME the same non-empty value
-  local name="$1" first="" f cur line n
+env_strict() { case " $STRICT_ENV " in *" $1 "*) printf 1 ;; *) printf 0 ;; esac; }
+# env_names FILE STRICT: one line per assignment, "A<TAB>NAME<TAB>STATE", or "F<TAB>NAME<TAB>-" for a line
+# the project skips. STATE: 1 (a value), 0 (empty, or only a comment), S (a space inside the value, which the
+# weather jobs would keep as part of it).
+env_names() {
+  local line st
+  while IFS= read -r line || [ -n "$line" ]; do
+    env_line "$line" "$2"
+    case "$_K" in
+      A) case "$_V" in
+           "") st=0 ;;
+           \#*) st=0 ;;
+           *[[:space:]]*) if [ "$2" = "1" ]; then st=S; else st=1; fi ;;
+           *) st=1 ;;
+         esac
+         printf 'A\t%s\t%s\n' "$_N" "$st" ;;
+      F) printf 'F\t%s\t-\n' "$_N" ;;
+    esac
+    _V=""
+  done < "$1"
+  line=""
+}
+# env_state FILE STRICT: "NAME<TAB>STATE<TAB>SKIPPED" per name. STATE is the last readable line's (1, 0 or
+# S), or F when the project can read no line for it. SKIPPED is 1 when some line for it is one it skips.
+env_state() {
+  env_names "$1" "$2" | awk -F'\t' '$1 == "A" { v[$2] = $3; seen[$2] = 1 } $1 == "F" { f[$2] = 1; seen[$2] = 1 }
+    END { for (n in seen) print n "\t" ((n in v) ? v[n] : "F") "\t" ((n in f) ? 1 : 0) }'
+}
+env_value_same() {  # env_value_same NAME FILE... : 0 when every file gives NAME the same non-empty value, as its project reads it
+  local name="$1" first="" f cur line strict
   shift
   for f in "$@"; do
     cur=""
+    strict="$(env_strict "$(basename "$(dirname "$f")")")"
     while IFS= read -r line || [ -n "$line" ]; do
-      line="${line%$'\r'}"
-      if [[ "$line" =~ ^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=(.*)$ ]]; then
-        n="${BASH_REMATCH[2]}"
-        [ "$n" = "$name" ] && cur="$(printf '%s' "${BASH_REMATCH[3]}" | tr -d "\"' \t")"
-      fi
+      env_line "$line" "$strict"
+      [ "$_K" = "A" ] && [ "$_N" = "$name" ] && cur="$_V"
+      _V=""
     done < "$f"
-    [[ x =~ x ]]                                             # leaves no value behind in BASH_REMATCH
-    [ -n "$cur" ] || return 1
+    line=""
+    [ -n "$cur" ] || { first=""; return 1; }
     if [ -z "$first" ]; then first="$cur"; elif [ "$cur" != "$first" ]; then cur=""; first=""; return 1; fi
   done
   cur=""; first=""
@@ -632,30 +763,55 @@ for p in nfl-weather cfb-weather sharp-markets; do
   fi
   ENV_FILES="$ENV_FILES$f$NL"
   MODE="$(stat -f '%Lp' "$f" 2>/dev/null)"; OWNER="$(stat -f '%u' "$f" 2>/dev/null)"
+  PRIVATE=0
   if [ "$OWNER" != "$UIDN" ]; then
     say FAIL "$p/.env belongs to another user"
-  elif [ "${MODE: -2}" != "00" ]; then
+  elif [ -z "$MODE" ] || [ $(( 8#$MODE & 077 )) -ne 0 ]; then
     say FAIL "$p/.env can be read by others (mode $MODE). Make it yours only:"
     more "chmod 600 $(tilde "$f")"
+  else
+    PRIVATE=1
   fi
-  if [ ! -r "$f" ]; then say FAIL "$p/.env can't be read"; continue; fi
-  STATE="$(env_names "$f" | awk -F'\t' '{ v[$1] = $2 } END { for (n in v) print n "\t" v[n] }')"
-  SET="" EMPTY_REQ="" EMPTY_OPT=""
+  if [ ! -r "$f" ]; then
+    say FAIL "$p/.env can't be read, even by you (mode $MODE). Make it readable by you only:"
+    more "chmod 600 $(tilde "$f")"
+    continue
+  fi
+  STRICT="$(env_strict "$p")"
+  STATE="$(env_state "$f" "$STRICT")"
+  SET="" EMPTY_REQ="" EMPTY_OPT="" SKIPPED="" SPACE_REQ="" SPACE_OPT="" EXTRA=""
   NAMES="$(sed -n 's/^[[:space:]]*\(export[[:space:]]\{1,\}\)\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*=.*/\2/p' "$ex" 2>/dev/null)"
   for n in $NAMES; do
-    if printf '%s\n' "$STATE" | grep -q "^$n${TAB}1\$"; then SET="$SET${SET:+,}$n"
-    else
-      case " $REQUIRED_KEYS " in *" $n "*) EMPTY_REQ="$EMPTY_REQ $n" ;; *) EMPTY_OPT="$EMPTY_OPT $n" ;; esac
-    fi
+    st="$(printf '%s\n' "$STATE" | awk -F'\t' -v n="$n" '$1 == n { print $2 " " $3; exit }')"
+    req=0; case " $REQUIRED_KEYS " in *" $n "*) req=1 ;; esac
+    case "$st" in
+      "1 1") SET="$SET${SET:+,}$n"; EXTRA="$EXTRA $n" ;;
+      "1 "*) SET="$SET${SET:+,}$n" ;;
+      "F "*) SKIPPED="$SKIPPED $n" ;;
+      "S "*) if [ $req -eq 1 ]; then SPACE_REQ="$SPACE_REQ $n"; else SPACE_OPT="$SPACE_OPT $n"; fi ;;
+      *) if [ $req -eq 1 ]; then EMPTY_REQ="$EMPTY_REQ $n"; else EMPTY_OPT="$EMPTY_OPT $n"; fi ;;
+    esac
   done
   KEY_LINES="${KEY_LINES}keys$TAB$p$TAB$SET$NL"
   if [ -n "$EMPTY_REQ" ]; then
     say FAIL "$p/.env has no value for:$EMPTY_REQ (the jobs need it)"
   fi
+  if [ -n "$SKIPPED" ]; then
+    say FAIL "$p/.env writes$SKIPPED as 'export NAME=…' or 'NAME = …'. This project reads only lines of the form NAME=value, so to it there is no value. Rewrite each such line as NAME=value, with no 'export' and no spaces around the = sign"
+  fi
+  if [ -n "$SPACE_REQ" ]; then
+    say FAIL "$p/.env has a space inside the value of:$SPACE_REQ (a comment after it?). The jobs use everything after the = sign, spaces and all. Put only the value after NAME="
+  fi
+  if [ -n "$SPACE_OPT" ]; then
+    say WARN "$p/.env has a space inside the value of:$SPACE_OPT (a comment after it?). The project would use everything after the = sign"
+  fi
+  if [ -n "$EXTRA" ]; then
+    say WARN "$p/.env also has a line for$EXTRA written as 'export NAME=…' or 'NAME = …', which this project skips. The NAME=value line is the one it uses; delete the other"
+  fi
   if [ -n "$EMPTY_OPT" ]; then
     say WARN "$p/.env has no value for:$EMPTY_OPT (not used by the scheduled jobs)"
   fi
-  if [ -z "$EMPTY_REQ" ] && [ "${MODE: -2}" = "00" ] && [ "$OWNER" = "$UIDN" ]; then
+  if [ -z "$EMPTY_REQ$SKIPPED$SPACE_REQ" ] && [ $PRIVATE -eq 1 ]; then
     SHOWN="${SET//,/, }"
     say OK "$p/.env: yours only (mode $MODE); values set for ${SHOWN:-no name}"
   fi
@@ -665,9 +821,9 @@ if [ "$N_ENV" -ge 2 ]; then
   OLDIFS="$IFS"; IFS="$NL"
   # shellcheck disable=SC2086
   if env_value_same ODDS_API_KEY $ENV_FILES; then
-    say OK "ODDS_API_KEY is the same in all $N_ENV .env files (they share one credit file)"
+    say OK "ODDS_API_KEY is the same in all $N_ENV .env files, as each project reads it (they share one credit file)"
   else
-    say WARN "ODDS_API_KEY is not the same in every .env file. The projects share one credit file; ODDS5M_DAY_ONE.md puts the same key in all three"
+    say WARN "ODDS_API_KEY is not the same in every .env file, as each project reads it. The projects share one credit file; ODDS5M_DAY_ONE.md puts the same key in all three"
   fi
   IFS="$OLDIFS"
 fi
@@ -737,41 +893,90 @@ done
 
 # ---------------------------------------------------------------------------------------------------------
 section "Data and forward-test records"
-listing() {   # "path<TAB>bytes<TAB>modified" for every file under $1, paths relative to it (links not followed)
-  find "$1" -type f ! -name .DS_Store -exec stat -f "%z${TAB}%m${TAB}%N" {} + 2>/dev/null |
-    awk -F'\t' -v OFS='\t' -v pre="$1/" '{ p = $3; if (index(p, pre) == 1) p = substr(p, length(pre) + 1); print p, $1, $2 }' |
-    LC_ALL=C sort
+# Left out everywhere: .DS_Store, and *.tmp, a write in progress that the code renames at once (a copy can
+# catch one, and rsync never deletes it afterwards). A file whose name holds a tab, a line break or a
+# backslash can't be written into the manifest's lines, so it is reported, not fingerprinted.
+odd_names() {  # odd_names PATH... (relative to the current folder): such names, one per line, shown with ? for the odd character
+  find "$@" \( -name "*${TAB}*" -o -name "*${NL}*" -o -name '*\\*' \) -print0 2>/dev/null | tr '\000\n\t\\' '\n???'
 }
 FOLDER_LINES=""
 folder() {    # folder LABEL PATH
-  local label="$1" d="$2" L n b dg
-  if [ ! -d "$d" ]; then say FAIL "$label is missing on this Mac"; return; fi
-  L="$(listing "$d")"
-  if [ -z "$L" ]; then n=0 b=0; else
-    n="$(printf '%s\n' "$L" | awk 'END { print NR }')"
-    b="$(printf '%s\n' "$L" | awk -F'\t' '{ s += $2 } END { printf "%.0f", s }')"
+  local label="$1" d="$2" n b dg
+  if [ -L "$d" ]; then
+    say FAIL "$label is a link to another place ($(tilde "$(readlink "$d")")), not a folder. rsync copies a link as a link, so its files would not reach the other Mac. Tell the hub"
+    return
   fi
-  dg="$(printf '%s\n' "$L" | shasum -a 256 | cut -c1-64)"
-  FOLDER_LINES="${FOLDER_LINES}folder$TAB$label$TAB$n$TAB$b$TAB$dg$NL"
-  say OK "$label: $(commas "$n") files, $(human "$b")"
+  if [ ! -d "$d" ]; then say FAIL "$label is missing on this Mac"; return; fi
+  # the count from NUL-separated names (right even for a name with a line break); the fingerprint from each
+  # file's name and size, so two Macs at the same commit agree although git set other file times
+  n="$(cd "$d" && find . -type f ! -name .DS_Store ! -name '*.tmp' -print0 2>/dev/null | tr -cd '\000' | wc -c | tr -d ' ')"
+  b="$(cd "$d" && find . -type f ! -name .DS_Store ! -name '*.tmp' -exec stat -f '%z' {} + 2>/dev/null | awk '{ s += $1 } END { printf "%.0f", s }')"
+  dg="$(cd "$d" && find . -type f ! -name .DS_Store ! -name '*.tmp' -exec stat -f "%N${TAB}%z" {} + 2>/dev/null | LC_ALL=C sort | shasum -a 256 | cut -c1-64)"
+  FOLDER_LINES="${FOLDER_LINES}folder$TAB$label$TAB${n:-0}$TAB${b:-0}$TAB$dg$NL"
+  say OK "$label: $(commas "${n:-0}") files, $(human "${b:-0}")"
 }
 if [ -d "$REPO" ]; then
   for d in $DATA_FOLDERS; do folder "$d" "$REPO/$d"; done
 fi
 folder "$CACHE_LABEL" "$HOME/.cache/value-finder"
 
-RECORD_LINES=""
+RECORD_LINES="" PAID_LINES=""
 if [ -d "$REPO" ]; then
   ROOTS=""
-  for r in $RECORD_ROOTS; do [ -e "$REPO/$r" ] && ROOTS="$ROOTS $r"; done
+  for r in $RECORD_ROOTS; do
+    if [ -L "$REPO/$r" ]; then
+      say FAIL "$r is a link to another place ($(tilde "$(readlink "$REPO/$r")")), not the records themselves. rsync copies a link as a link, so these records would not reach the other Mac, and the check can't fingerprint them. Tell the hub"
+      continue
+    fi
+    [ -e "$REPO/$r" ] && ROOTS="$ROOTS $r"
+  done
+  PAID_ROOTS=""
+  for r in "$REPO"/$PAID_GLOB; do
+    [ -e "$r" ] || [ -L "$r" ] || continue
+    r="${r#"$REPO"/}"
+    case "$r" in sharp-markets/data/raw/_manifest/*) continue ;; esac     # the download's own log: a record above
+    if [ -L "$REPO/$r" ]; then
+      say FAIL "$r (paid odds data) is a link to another place, not the files themselves. rsync would copy only the link. Tell the hub"
+      continue
+    fi
+    PAID_ROOTS="$PAID_ROOTS $r"
+  done
+  if [ -n "$ROOTS$PAID_ROOTS" ]; then
+    # shellcheck disable=SC2086
+    ODD="$(cd "$REPO" && odd_names $ROOTS $PAID_ROOTS)"
+    # shellcheck disable=SC2086
+    LINKS="$( (cd "$REPO" && find $ROOTS -type l 2>/dev/null) | head -n 3)"
+    if [ -n "$ODD" ]; then
+      say FAIL "$(printf '%s\n' "$ODD" | grep -c .) record or paid files have a tab, a line break or a backslash in their name (shown as ?), so the check can't fingerprint them. Tell the hub:"
+      printf '%s\n' "$ODD" | head -n 3 | while IFS= read -r l; do more "$l"; done
+    fi
+    if [ -n "$LINKS" ]; then
+      say FAIL "Some records are links to other files, not the files themselves, so they would not reach the other Mac. Tell the hub:"
+      printf '%s\n' "$LINKS" | while IFS= read -r l; do more "$l"; done
+    fi
+  fi
   if [ -n "$ROOTS" ]; then
     # shellcheck disable=SC2086
     RECORD_LINES="$(cd "$REPO" && {
-        find $ROOTS -type f ! -name .DS_Store -exec shasum -a 256 {} + 2>/dev/null | awk '{ print "H\t" substr($0, 67) "\t" $1 }'
-        find $ROOTS -type f ! -name .DS_Store -exec stat -f "S${TAB}%N${TAB}%z${TAB}%m" {} + 2>/dev/null
+        find $ROOTS -type f ! -name .DS_Store ! -name '*.tmp' ! -name "*${TAB}*" ! -name "*${NL}*" ! -name '*\\*' \
+          -exec shasum -a 256 {} + 2>/dev/null | awk '{ print "H\t" substr($0, 67) "\t" $1 }'
+        find $ROOTS -type f ! -name .DS_Store ! -name '*.tmp' ! -name "*${TAB}*" ! -name "*${NL}*" ! -name '*\\*' \
+          -exec stat -f "S${TAB}%N${TAB}%z${TAB}%m" {} + 2>/dev/null
       } | awk -F'\t' -v OFS='\t' '$1 == "H" { h[$2] = $3; next } { s[$2] = $3; m[$2] = $4 }
                                   END { for (p in s) print "record", p, h[p], s[p], m[p] }' | LC_ALL=C sort)"
     [ -n "$RECORD_LINES" ] && RECORD_LINES="$RECORD_LINES$NL"
+  fi
+  if [ -n "$PAID_ROOTS" ]; then
+    # too big to hash at every check (3 GB on day one, 16 GB with F4), so each file's size and time
+    # shellcheck disable=SC2086
+    PAID_LINES="$(cd "$REPO" && find $PAID_ROOTS -type f ! -name .DS_Store ! -name '*.tmp' ! -name "*${TAB}*" ! -name "*${NL}*" \
+                    ! -name '*\\*' -exec stat -f "paid${TAB}%N${TAB}%z${TAB}%m" {} + 2>/dev/null | LC_ALL=C sort)"
+    [ -n "$PAID_LINES" ] && PAID_LINES="$PAID_LINES$NL"
+  fi
+  NPAID="$(printf '%s' "$PAID_LINES" | grep -c '^paid')"
+  if [ "$NPAID" -gt 0 ]; then
+    PB="$(printf '%s' "$PAID_LINES" | awk -F'\t' '{ s += $3 } END { printf "%.0f", s }')"
+    say OK "Paid odds data (not a cache: it can't be had again without paying): $(commas "$NPAID") files, $(human "$PB"), each listed with its size"
   fi
   for p in nfl-weather cfb-weather; do
     fw="$REPO/$p/data/forward"
@@ -793,7 +998,7 @@ if [ -d "$REPO" ]; then
 fi
 
 # ---------------------------------------------------------------------------------------------------------
-CUR="$MANIFEST_HEADER${NL}written_utc$TAB$(date -u -r "$NOW" +%Y-%m-%dT%H:%M:%SZ)${NL}mac$TAB${MODEL:-Mac} (${HWMODEL:-?}), macOS ${OSV:-?}${NL}repo_head$TAB${HEAD_SHA:-none}$NL$FOLDER_LINES$RECORD_LINES$COHORT_LINES${KEY_LINES}kaggle$TAB$KAGGLE_STATE"
+CUR="$MANIFEST_HEADER${NL}written_utc$TAB$(date -u -r "$NOW" +%Y-%m-%dT%H:%M:%SZ)${NL}mac$TAB${MODEL:-Mac} (${HWMODEL:-?}), macOS ${OSV:-?}${NL}repo_head$TAB${HEAD_SHA:-none}$NL$FOLDER_LINES$RECORD_LINES$PAID_LINES$COHORT_LINES${KEY_LINES}kaggle$TAB$KAGGLE_STATE"
 
 if [ -n "$COMPARE" ]; then
   section "Compared with the other Mac's manifest"
@@ -808,6 +1013,7 @@ if [ -n "$COMPARE" ]; then
       function out(s, m) { print s "\t" m; if (s != "OK") bad++ }
       FNR == NR { if ($1 == "folder") { of[$2] = 1; on[$2] = $3; ob[$2] = $4; od[$2] = $5; oorder[++nof] = $2 }
                   else if ($1 == "record") { orc[$2] = 1; oh[$2] = $3; om[$2] = $5; rorder[++nor] = $2 }
+                  else if ($1 == "paid") { opd[$2] = 1; ops[$2] = $3; opm[$2] = $4; porder[++nop] = $2 }
                   else if ($1 == "cohort") oc[$2] = $3
                   else if ($1 == "keys") { ok_[$2] = 1; okeys[$2] = $3 }
                   else if ($1 == "repo_head") ohead = $2
@@ -816,22 +1022,30 @@ if [ -n "$COMPARE" ]; then
                   next }
       $1 == "folder" { cf[$2] = 1; cn[$2] = $3; cb[$2] = $4; cd[$2] = $5; corder[++ncf] = $2 }
       $1 == "record" { crc[$2] = 1; ch[$2] = $3; cm[$2] = $5; crorder[++ncr] = $2 }
+      $1 == "paid" { cpd[$2] = 1; cps[$2] = $3; cpm[$2] = $4; cporder[++ncp] = $2 }
       $1 == "cohort" { cc[$2] = $3 }
       $1 == "keys" { ck_[$2] = 1; ckeys[$2] = $3 }
       $1 == "repo_head" { chead = $2 }
       END {
         for (i = 1; i <= nor; i++) { p = rorder[i]
-          if (!(p in crc)) out("FAIL", "Record missing here: " p)
-          else if (ch[p] != oh[p]) out("FAIL", "Record differs from the other Mac: " p " (sha256 here " substr(ch[p], 1, 12) ", there " substr(oh[p], 1, 12) ")")
+          if (!(p in crc)) { out("FAIL", "Record missing here: " p); rbad++ }
+          else if (ch[p] != oh[p]) { out("FAIL", "Record differs from the other Mac: " p " (sha256 here " substr(ch[p], 1, 12) ", there " substr(oh[p], 1, 12) ")"); rbad++ }
           else if (cm[p] != om[p]) out("WARN", "Record has the same content but another file time: " p " (copied without keeping times?)")
           else same++ }
         for (i = 1; i <= ncr; i++) { p = crorder[i]
-          if (!(p in orc)) out("FAIL", "Record here that the other Mac does not have: " p) }
+          if (!(p in orc)) { out("FAIL", "Record here that the other Mac does not have: " p); rbad++ } }
+        if (nor == 0) { out("FAIL", "The other Mac'"'"'s manifest lists no forward-test records, so it proves nothing. Write it again there"); rbad++ }
+        for (i = 1; i <= nop; i++) { p = porder[i]
+          if (!(p in cpd)) { out("FAIL", "Paid odds file missing here: " p); pbad++ }
+          else if (cps[p] != ops[p]) { out("FAIL", "Paid odds file has another size here: " p " (" cps[p] " bytes here, " ops[p] " there)"); pbad++ }
+          else if (cpm[p] != opm[p]) out("WARN", "Paid odds file has the same size but another file time: " p " (copied without keeping times?)") }
+        for (i = 1; i <= ncp; i++) { p = cporder[i]
+          if (!(p in opd)) out("WARN", "Paid odds file here that the other Mac does not list: " p) }
         for (i = 1; i <= nof; i++) { p = oorder[i]
           if (!(p in cf)) out("FAIL", "Folder missing here: " p)
           else if (cn[p] != on[p] || cb[p] != ob[p])
             out("WARN", "Folder differs: " p " has " cn[p] " files (" hb(cb[p]) ") here and " on[p] " (" hb(ob[p]) ") there")
-          else if (cd[p] != od[p]) out("WARN", "Folder has the same number of files and bytes, but other names or file times: " p)
+          else if (cd[p] != od[p]) out("WARN", "Folder has the same number of files and bytes, but other file names or sizes: " p)
         }
         for (i = 1; i <= ncf; i++) { p = corder[i]; if (!(p in of)) out("WARN", "Folder here that the other manifest does not list: " p) }
         for (p in oc) if (!(p in cc)) out("FAIL", "Pricing cohort missing here: " p)
@@ -843,10 +1057,14 @@ if [ -n "$COMPARE" ]; then
           n = split(ckeys[p], a, ","); for (j = 1; j <= n; j++) if (a[j] != "" && index("," okeys[p] ",", "," a[j] ",") == 0)
             out("WARN", "Keys: " p "/.env has a value for " a[j] " here but not on the other Mac")
         }
-        if (ohead != "" && chead != "" && ohead != chead)
-          out("WARN", "The repo is at another commit here (" substr(chead, 1, 7) ") than there (" substr(ohead, 1, 7) ")")
-        if (!bad) out("OK", "Same as the manifest written " owritten " on " omac ": " same " records byte for byte, " nof " folders, the cohorts and the key names")
+        if (ohead == "" || ohead == "none" || chead == "" || chead == "none")
+          out("WARN", "Can'"'"'t tell whether the two repos are at the same commit (no git on one of them)")
+        else if (ohead != chead)
+          out("FAIL", "The repo is at another commit here (" substr(chead, 1, 7) ") than on the other Mac (" substr(ohead, 1, 7) "), so this Mac would run other code. Run git pull --ff-only on both Macs, then write the other Mac'"'"'s manifest again and compare again (ops/MOVE_TO_NEW_MAC.md)")
+        if (nor && !rbad) out("OK", "Records: all " nor " forward-test records are here, the same byte for byte as on the other Mac")
         else if (same) print "MORE\t" same " other records are the same byte for byte."
+        if (nop && !pbad) out("OK", "Paid odds data: all " nop " files are here, each the same size as on the other Mac")
+        if (!bad) out("OK", "Same as the manifest written " owritten " on " omac ": " (nor + 0) " records byte for byte, " (nop + 0) " paid files, " (nof + 0) " folders, the cohorts, the key names and the commit")
       }' "$COMPARE" -)
   fi
 fi
@@ -858,7 +1076,8 @@ if [ -n "$MANIFEST" ]; then
   elif printf '%s\n' "$CUR" > "$MANIFEST" 2>/dev/null; then
     NREC="$(printf '%s' "$RECORD_LINES" | grep -c '^record')"
     NFOL="$(printf '%s' "$FOLDER_LINES" | grep -c '^folder')"
-    say OK "Written to $(tilde "$MANIFEST"): $NREC records and $NFOL folders, counts and hashes only (no key, no file content)"
+    NPD="$(printf '%s' "$PAID_LINES" | grep -c '^paid')"
+    say OK "Written to $(tilde "$MANIFEST"): $NREC records, $NPD paid files and $NFOL folders, counts and hashes only (no key, no file content)"
   else
     say FAIL "Could not write $MANIFEST"
   fi
