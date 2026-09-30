@@ -1467,19 +1467,60 @@ SEALED_GAMES = {
 }
 @pytest.mark.parametrize("sport,which", [(s, w) for s in SEALED_GAMES for w in ("first", "last")])
 def test_every_sealed_window_holds_its_first_and_last_game_in_utc(sport, which):
-    """Item 8 (final review, finding 11): the NCAAF 2026 window ended 2027-01-25, but the CFP title game kicks off
-    at 2027-01-26T00:30Z, so it came out of load_rows as unsealed. Every sealed window must start at least a day
-    before its season's first game and end at least a day after its last, in UTC. The NHL 2026-27 window starts
-    2026-09-28 since Sep 29, 2026 (the hub's decision): the season opened on Sep 29."""
+    """Item 8 (final review, finding 11): every sealed window must start at least a day before its season's first
+    game and end at least a day after its last, in UTC. The NHL 2026-27 window starts 2026-09-28 since Sep 29, 2026
+    (the hub's decision): the season opened on Sep 29. The one exception is the CFP title game (2027-01-26T00:30Z):
+    the NCAAF 2026 window keeps main's end, 2027-01-25, since moving it would add the game to the March pulls, which
+    is the hub's decision (review of cc14201, finding A1). The game is in no window, so nothing plans it, and
+    load_rows judges any row of it by its call (test_a_game_in_no_window_is_judged_by_its_call)."""
     real = bulk.load_config()
     (w,) = [w for w in real["sports"][sport]["windows"] if w["sealed"]]
     kick = t(SEALED_GAMES[sport][0 if which == "first" else 1])
+    if (sport, which) == ("americanfootball_ncaaf", "last"):
+        assert w["to"] == date(2027, 1, 25) and bulk.window_for(real, sport, kick) is None
+        return
     assert bulk.window_for(real, sport, kick) == w and bulk.is_sealed(real, sport, kick)
     if which == "first":
         assert w["from"] <= (kick - timedelta(days=1)).date(), (w["from"], kick)
     else:
         assert w["to"] >= (kick + timedelta(days=1)).date(), (w["to"], kick)
     assert set(SEALED_GAMES) == {s for s, sc in real["sports"].items() if any(x["sealed"] for x in sc["windows"])}
+
+
+MAIN_BEFORE_PR63 = "4bf049729337b21b70e60b0c85611ae6c77f6998"     # origin/main when cc14201 was reviewed (Sep 30)
+
+
+def test_nothing_bought_changed_since_main_but_the_nhl_start(tmp_path):
+    """Review of cc14201, finding A1: the branch had moved the NCAAF 2026 window's end from Jan 25 to Jan 27, 2027,
+    which put the CFP title game into F1, F4, F5 and F6 in March. Only the NHL change is approved. So the NCAAF window
+    ends Jan 25, and against main's config (git show) the only change in a window that a pull buys from is the NHL
+    2026-27 start; the MLS and K League 2026 ends moved too, but no pull buys those seasons."""
+    import subprocess
+    real = bulk.load_config()
+    (w,) = [w for w in real["sports"]["americanfootball_ncaaf"]["windows"] if w["label"] == "2026"]
+    assert w["to"] == date(2027, 1, 25)
+    try:
+        text = subprocess.run(["git", "show", f"{MAIN_BEFORE_PR63}:sharp-markets/config/odds5m.yaml"], check=True,
+                              cwd=Path(__file__).parent, capture_output=True, text=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip(f"main's config at {MAIN_BEFORE_PR63[:7]} is not in this checkout's git history")
+    (tmp_path / "main.yaml").write_text(text)
+    main = bulk.load_config(tmp_path / "main.yaml")
+    assert {k: main[k] for k in ("books", "featured", "pulls", "groups")} == {
+        k: real[k] for k in ("books", "featured", "pulls", "groups")}
+    changed = set()
+    for s, sc in real["sports"].items():
+        before = main["sports"][s]
+        assert (sc["history_from"], sc["sweep_every_days"]) == (before["history_from"], before["sweep_every_days"])
+        assert [x["label"] for x in sc["windows"]] == [x["label"] for x in before["windows"]], s
+        changed |= {(s, x["label"], k) for x, y in zip(sc["windows"], before["windows"]) for k in x if x[k] != y[k]}
+    assert changed == {("icehockey_nhl", "2026-27", "from"), ("soccer_usa_mls", "2026", "to"),
+                       ("soccer_korea_kleague1", "2026", "to")}
+
+    def bought(s, label):
+        return any(s in p["sports"] and (not p.get("only_seasons") or label in p["only_seasons"])
+                   and label not in p.get("skip_seasons", []) for p in real["pulls"].values())
+    assert {c for c in changed if bought(*c[:2])} == {("icehockey_nhl", "2026-27", "from")}
 
 
 def test_a_game_in_no_window_is_judged_by_its_call(tmp_path, monkeypatch):

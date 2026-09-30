@@ -10,7 +10,8 @@
 # Each sealed window starts at least one day before its season's first game and ends at least one day after
 # its last game (finals, title games, playoffs), both in UTC: a game outside every window gets no season,
 # so it would be neither planned nor sealed. The comment above each sealed window gives the two games and
-# the source (checked Sep 29, 2026); tests/test_bulk.py checks them in UTC.
+# the source (checked Sep 29, 2026); tests/test_bulk.py checks them in UTC. One exception, for now: NCAAF
+# 2026 ends before its title game (see there).
 
 books:
   us10: [pinnacle, lowvig, betonlineag, draftkings, fanduel, betmgm, williamhill_us, fanatics, betrivers, espnbet]
@@ -45,8 +46,10 @@ sports:
       - {label: "2025", from: 2025-08-20, to: 2026-01-25}
       # first: TCU vs North Carolina (Dublin), 2026-08-29T16:00Z (cfb-weather/data/processed/games.parquet);
       # last: CFP National Championship, Allegiant Stadium, Mon Jan 25, 2027 7:30 pm ET = 2027-01-26T00:30Z
-      # (College Football Playoff). `to` was 2027-01-25 until Sep 29, 2026, which left the title game out.
-      - {label: "2026", from: 2026-08-20, to: 2027-01-27, sealed: true}
+      # (College Football Playoff). The exception to the rule above: `to` stays 2027-01-25, so the title game is in
+      # no window and nothing plans it (load_rows judges any row of it by its call). Ending the window on Jan 27
+      # would add it to F1, F4, F5 and F6 in March (about 5,410 credits at most); that is the hub's decision.
+      - {label: "2026", from: 2026-08-20, to: 2027-01-25, sealed: true}
   basketball_nba:
     history_from: 2020-06-27
     sweep_every_days: 1
