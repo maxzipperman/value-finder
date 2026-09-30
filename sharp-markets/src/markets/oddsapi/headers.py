@@ -41,6 +41,10 @@ def _int(value) -> int | None:
         return None
 
 
+def _answers(n: int) -> str:
+    return f"{n:,} answer{'' if n == 1 else 's'}"
+
+
 def _runs(rows: list[dict], pull: str) -> list[tuple[dict, list[dict]]]:
     """(key-check row, the rows after it up to the next key check) for the run that holds the pull's last row, then for
     the last run before it that bought anything (a `balance` check buys nothing); [] when the pull has no run."""
@@ -132,17 +136,17 @@ def stage_headers(manifest: Path, pull: str | None, per_call: int = 30) -> int:
         rises = ", ".join(f"+{size:,}" + (f" x {k:,}" if k > 1 else "") + (" (credits added)" * (size > DEFAULT_MARGIN))
                           for size, k in a["rises"].items())
         print(f"headers, {pull}: the run after the key check at {a['key_check']} (pulls {', '.join(a['pulls'])})\n"
-              f"  requests: {a['requests']:,} answers; the run counted {a['counted']:,} credits for them\n"
+              f"  requests: {_answers(a['requests'])}; the run counted {a['counted']:,} credits for them\n"
               f"  the balance: {a['start']:,} at the key check, lowest {a['lowest']:,}: a fall of "
               f"{a['start'] - a['lowest']:,}\n"
               f"  charged answers that showed no fall in the balance: {a['no_fall']:,} of {a['charged']:,}; the "
-              f"longest stretch in a row: {a['stretch']:,} answers\n"
+              f"longest stretch in a row: {_answers(a['stretch'])}\n"
               f"  rises in the balance: {sum(a['rises'].values()):,}{': ' + rises if rises else ''}\n"
-              f"  the header's lateness: {a['lateness']:,} answers (the longer of that stretch and the answers' worth "
+              f"  the header's lateness: {_answers(a['lateness'])} (the longer of that stretch and the answers' worth "
               "of charges hidden by the largest out-of-date rise, in this run or the paid run before it; "
               f"{a['lateness_this_run']:,} in this run)")
     print(a["verdict"])
     if a["kind"] != "none":
         print(f"Smallest --alarm-margin advised for a pull whose calls cost up to {per_call} credits: "
-              f"{a['advised']:,} (the larger of {DEFAULT_MARGIN:,} and 2 x {a['lateness']:,} answers x {per_call})")
+              f"{a['advised']:,} (the larger of {DEFAULT_MARGIN:,} and 2 x {_answers(a['lateness'])} x {per_call})")
     return 0

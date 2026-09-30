@@ -2728,3 +2728,28 @@ def test_a_cached_404_asked_again_and_answered_with_an_error_shows_on_the_summar
     assert "done: 2 fetched (2 answered with an error and not saved; a rerun asks again), credits 0" in out
     res, out = run(Gone({"ev0"}), retry_404=True)
     assert res["errors"] == 0 and "answered with an error" not in out and res["cached_404"] == 2
+
+
+def test_the_headers_stage_and_the_key_check_print_their_counts_plainly(cfg, tmp_path, monkeypatch, capsys):
+    """Review of cc14201, C m3 (wording): `headers` printed "the longest stretch in a row: 1 answers", and `key ok:`
+    printed the credits used as the raw header (12421) next to formatted figures. One answer is singular now, and
+    the credits used are formatted like the other numbers (unknown when the header can't be read)."""
+    from markets.oddsapi import headers
+    manifest = tmp_path / "m.csv"
+    with manifest.open("w", newline="") as f:
+        w = csv.DictWriter(f, bulk.MANIFEST_FIELDS)
+        w.writeheader()
+        w.writerow({"pull": "account", "remaining": 1_000})
+        for left in (970, 970, 910):                                            # the second answer shows no fall
+            w.writerow({"pull": "F1", "expected_credits": 30, "credits_last": 30, "remaining": left})
+    assert headers.stage_headers(manifest, "F1") == 0
+    out = capsys.readouterr().out
+    assert "requests: 3 answers;" in out and "the longest stretch in a row: 1 answer\n" in out
+    assert "the header's lateness: 1 answer (" in out and "The balance header runs late by up to 1 answer." in out
+    assert "(the larger of 5,000 and 2 x 1 answer x 30)" in out
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    api = FakeOddsApi(remaining=4_987_579)                                      # 12,421 used
+    bulk.stage_balance({}, RawCache(tmp_path), args(), session=api)
+    bulk._client(RawCache(tmp_path), args(), session=api)
+    out = capsys.readouterr().out
+    assert out.count("key ok: HTTP 200, 4,987,579 credits remaining, 12,421 used; floor 0") == 2

@@ -1146,8 +1146,8 @@ def _client(cache, args, session=None) -> BulkClient:
 
 def started(c: BulkClient, info: dict) -> None:
     """A paid run's first two lines: the key check, then the alarm's margin in force (odds5m and odds-pull)."""
-    print(f"key ok: HTTP {info['status']}, {info['remaining']:,} credits remaining, {info['used']} used; "
-          f"floor {c.floor:,}", flush=True)
+    print(f"key ok: HTTP {info['status']}, {info['remaining']:,} credits remaining, "
+          f"{_n(_cost(info['used'], up=False))} used; floor {c.floor:,}", flush=True)
     how = ("set by --alarm-margin" if c.alarm_margin is not None else
            f"the default: the larger of {DEFAULT_MARGIN:,} and 10% of --max-credits")
     print(f"alarm margin: {c.margin:,} credits ({how})", flush=True)
@@ -1166,8 +1166,8 @@ def stage_balance(cfg, cache, args, session=None) -> dict:
         info = c.account()
     except Stop as e:
         raise SystemExit(f"STOPPED: {scrub(e)}") from None
-    print(f"key ok: HTTP {info['status']}, {info['remaining']:,} credits remaining, {info['used']} used; "
-          f"floor {c.floor:,}. Nothing was spent.")
+    print(f"key ok: HTTP {info['status']}, {info['remaining']:,} credits remaining, "
+          f"{_n(_cost(info['used'], up=False))} used; floor {c.floor:,}. Nothing was spent.")
     return info
 
 
