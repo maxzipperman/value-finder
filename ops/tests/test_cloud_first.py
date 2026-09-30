@@ -118,6 +118,22 @@ def test_exactly_15_characters_is_enough(home):
     allowed(run(agent("LOCAL-BECAUSE: jobs: " + "x" * 15), home))
 
 
+@pytest.mark.parametrize("explanation", [
+    "." * 15,                                  # long enough, but no letters or digits
+    "\u200b" * 15,                             # zero-width spaces: 15 characters, nothing written
+    "a.b.c.d.e.f.g.h.i",                       # 17 characters, only 9 letters
+    "<one sentence on why>",                   # the template, not filled in
+    "<one sentence on why it needs this Mac>",
+])
+def test_an_explanation_without_ten_letters_or_digits_or_unfilled_is_blocked(home, explanation):
+    blocked(run(agent("LOCAL-BECAUSE: keys: " + explanation), home))
+
+
+def test_ten_letters_or_digits_among_15_characters_is_enough(home):
+    allowed(run(agent("LOCAL-BECAUSE: keys: ab-cd-ef-gh-ij."), home))
+    allowed(run(agent("LOCAL-BECAUSE: keys: Odds API key, see .env <here>"), home))  # "<" later is fine
+
+
 @pytest.mark.parametrize("line", [
     "   LOCAL-BECAUSE: keys: indented by spaces is fine",
     "\tLOCAL-BECAUSE:keys:no spaces around the colons",
@@ -146,6 +162,16 @@ def test_the_line_must_be_its_own_line_not_split(home):
     blocked(run(agent("LOCAL-BECAUSE: keys:\nit needs the Odds API key"), home))
 
 
+@pytest.mark.parametrize("separator", ["\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"])
+def test_only_lf_crlf_and_cr_start_a_line(home, separator):
+    blocked(run(agent("hello " + separator + GOOD), home))
+
+
+@pytest.mark.parametrize("newline", ["\r\n", "\r"])
+def test_crlf_and_cr_prompts_with_the_line_are_allowed(home, newline):
+    allowed(run(agent(newline.join(["Pull the odds.", GOOD, "Then report."])), home))
+
+
 # --- Workflow -------------------------------------------------------------------------------------
 
 SCRIPT_WITH = "export const meta = {name: 'x', description: 'y'}\n// " + GOOD + "\nawait agent('go')\n"
@@ -158,6 +184,23 @@ def test_workflow_script_with_the_line_is_allowed(home):
 
 def test_workflow_script_without_the_line_is_blocked(home):
     blocked(run(workflow(script=SCRIPT_WITHOUT), home))
+
+
+def test_an_inline_script_is_judged_alone(home, project):
+    with_line, without_line = project / "with.js", project / "without.js"
+    with_line.write_text(SCRIPT_WITH)
+    without_line.write_text(SCRIPT_WITHOUT)
+    d = project / ".claude" / "workflows"
+    d.mkdir(parents=True)
+    (d / "saved.js").write_text(SCRIPT_WITH)
+    # The inline script has the line: allowed, whatever the file says.
+    allowed(run(workflow(script=SCRIPT_WITH, scriptPath=str(without_line)), home, project))
+    allowed(run(workflow(script=SCRIPT_WITH, scriptPath=str(project / "missing.js")), home, project))
+    # The inline script lacks the line: blocked, even though the file or the saved workflow has it.
+    blocked(run(workflow(script=SCRIPT_WITHOUT, scriptPath=str(with_line)), home, project))
+    blocked(run(workflow(script=SCRIPT_WITHOUT, name="saved"), home, project))
+    # An empty inline script falls back to the file.
+    allowed(run(workflow(script="", scriptPath=str(with_line)), home, project))
 
 
 def test_workflow_by_script_path_whose_file_holds_the_line(home, project):
@@ -206,10 +249,40 @@ def test_workflow_symlink_out_of_home_is_not_read(tmp_path, home, project):
     assert code == 2 and "could not be read" in err
 
 
-def test_workflow_env_file_is_never_read(home, project):
-    f = home / ".env"
+@pytest.mark.parametrize("filename", [".env", ".env.local", "prod.env", "PROD.ENV", ".ENV", "x.Env"])
+def test_workflow_env_file_is_never_read(home, project, filename):
+    f = home / filename
     f.write_text(SCRIPT_WITH)
     code, _, err = run(workflow(scriptPath=str(f)), home, project)
+    assert code == 2 and "could not be read" in err
+
+
+def test_workflow_symlink_to_an_env_file_is_not_read(home, project):
+    (home / "prod.env").write_text(SCRIPT_WITH)
+    (home / "wf.js").symlink_to(home / "prod.env")
+    code, _, err = run(workflow(scriptPath=str(home / "wf.js")), home, project)
+    assert code == 2 and "could not be read" in err
+
+
+def test_workflow_by_name_never_picks_an_env_file(home, project):
+    d = project / ".claude" / "workflows"
+    d.mkdir(parents=True)
+    (d / "prod.env").write_text(SCRIPT_WITH)
+    (d / ".env").write_text(SCRIPT_WITH)
+    for name in ("prod", "prod.env", "env"):
+        code, _, err = run(workflow(name=name), home, project)
+        assert code == 2 and "could not be read" in err, name
+    (d / "prod.js").write_text(SCRIPT_WITH)
+    allowed(run(workflow(name="prod"), home, project))
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no FIFOs here")
+def test_workflow_fifo_is_not_read_and_does_not_hang(home, project):
+    fifo = home / "wf.js"
+    os.mkfifo(str(fifo))
+    start = time.monotonic()
+    code, _, err = run(workflow(scriptPath=str(fifo)), home, project)
+    assert time.monotonic() - start < 5.0
     assert code == 2 and "could not be read" in err
 
 
@@ -231,6 +304,7 @@ def test_workflow_by_name(home, project):
     blocked(run(workflow(name="plain"), home, project))
     code, _, err = run(workflow(name="nowhere"), home, project)
     assert code == 2 and "could not be read" in err
+    assert "built-in workflow" in err and "switch the rule off" in err
     code, _, err = run(workflow(name="../plain"), home, project)
     assert code == 2 and "could not be read" in err
 
@@ -318,11 +392,48 @@ def test_the_hook_parses_as_python_3_9():
     ast.parse(HOOK.read_text(), feature_version=(3, 9))
 
 
+# --- .claude/settings.json and the command it runs -----------------------------------------------
+
+REPO = HOOK.parents[2]
+# The hook runs only if its file is there: `python3 <missing file>` exits 2, and exit 2 would block.
+COMMAND = 'f="$CLAUDE_PROJECT_DIR/ops/hooks/cloud_first.py"; [ -f "$f" ] && [ -r "$f" ] || exit 0; python3 "$f"'
+
+
+def settings():
+    return json.loads((REPO / ".claude" / "settings.json").read_text())
+
+
 def test_settings_hold_both_hooks():
-    settings = json.loads((HOOK.parents[2] / ".claude" / "settings.json").read_text())
-    session_start = settings["hooks"]["SessionStart"][0]["hooks"][0]
-    assert session_start["command"] == '"$CLAUDE_PROJECT_DIR"/ops/cloud_setup.sh'
-    (entry,) = settings["hooks"]["PreToolUse"]
-    assert entry["matcher"] == "Agent|Task|Workflow"
-    (hook,) = entry["hooks"]
-    assert hook == {"type": "command", "command": 'python3 "$CLAUDE_PROJECT_DIR"/ops/hooks/cloud_first.py', "timeout": 10}
+    hooks = settings()["hooks"]
+    assert set(hooks) == {"SessionStart", "PreToolUse"}
+    # SessionStart exactly as on main before this change.
+    assert hooks["SessionStart"] == [
+        {"hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/ops/cloud_setup.sh', "timeout": 900}]}
+    ]
+    assert hooks["PreToolUse"] == [
+        {"matcher": "Agent|Task|Workflow", "hooks": [{"type": "command", "command": COMMAND, "timeout": 10}]}
+    ]
+
+
+def run_command(payload, project_dir):
+    """Run the settings' command string under /bin/sh, as the app does."""
+    e = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_CODE_REMOTE", "VF_CLOUD_FIRST", "CLAUDE_PROJECT_DIR")}
+    if project_dir is not None:
+        e["CLAUDE_PROJECT_DIR"] = str(project_dir)
+    command = settings()["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    p = subprocess.run(["/bin/sh", "-c", command], input=json.dumps(payload).encode(),
+                       capture_output=True, env=e, timeout=30)
+    return p.returncode, p.stdout.decode(), p.stderr.decode()
+
+
+def test_the_command_fails_open_when_the_hook_file_is_missing(tmp_path):
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert run_command(agent("Review the PR"), empty) == (0, "", "")
+    assert run_command(agent("Review the PR"), None) == (0, "", "")  # CLAUDE_PROJECT_DIR unset
+
+
+def test_the_command_runs_the_hook_when_it_is_there():
+    code, _, err = run_command(agent("Review the PR"), REPO)
+    assert code == 2 and "cloud-first" in err
+    assert run_command(agent(GOOD), REPO) == (0, "", "")

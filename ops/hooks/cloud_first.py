@@ -16,14 +16,21 @@ How the line is read:
 - `LOCAL-BECAUSE:` and the reason are matched exactly, lower case for the reason. Spaces around the
   second colon are allowed.
 - The explanation is what follows the second colon, with a trailing `*/` and the surrounding
-  whitespace removed; it must be at least 15 characters long (characters, not bytes).
-- Agent and Task: looked for in `prompt` and `description`. Workflow: in `script`; for a workflow
-  started from a file (`scriptPath`) or by `name`, in that file, if it can be found under the project
-  folder ($CLAUDE_PROJECT_DIR or the session's cwd) or the home folder. A saved workflow `name` is
-  looked up as .claude/workflows/<name>[.ext] under each of those folders.
+  whitespace removed. It must be at least 15 characters long (characters, not bytes), hold at least
+  10 letters or digits, and not start with `<` (an unfilled `<one sentence ...>` template).
+- Lines are split only at LF, CRLF and CR, not at the other characters str.splitlines() splits at
+  (vertical tab, form feed, U+001C to U+001E, U+0085, U+2028 and U+2029).
+- Agent and Task: looked for in `prompt` and `description`. Workflow: in `script` when it is a
+  non-empty string (then only there, even if `scriptPath` or `name` is also given); otherwise, for a
+  workflow started from a file (`scriptPath`) or by `name`, in that file, if it can be found under the
+  project folder ($CLAUDE_PROJECT_DIR or the session's cwd) or the home folder. A saved workflow `name`
+  is looked up as .claude/workflows/<name>[.ext] under each of those folders; that location is an
+  assumption, to be confirmed on the Mac.
 - A workflow file that cannot be read is a deliberate block, not a failure: one that is missing, lies
-  outside those folders (after following symlinks), is not a regular file, is a .env file, or is over
-  2 MB.
+  outside those folders (after following symlinks), is not a regular file (checked on the opened file,
+  so a FIFO swapped in cannot hang the hook), is a .env file (a name starting with `.env`, or ending in
+  `.env`), or is over 2 MB. So a built-in or plugin workflow started by `name`, with no file in those
+  folders, is always blocked, even with a reason; pass its script inline with the line instead.
 
 Other tools pass. So does every call when CLAUDE_CODE_REMOTE is "true" (a cloud session) or
 VF_CLOUD_FIRST is "off" (the owner's switch; case and surrounding spaces ignored).
@@ -31,6 +38,13 @@ VF_CLOUD_FIRST is "off" (the owner's switch; case and surrounding spaces ignored
 It fails open: input that is not JSON, a missing field, or any unexpected error lets the call through,
 with one line on standard error saying the check could not run. It writes no file, makes no network
 request, reads no .env file, and never prints the tool's input.
+
+Known leftover: a tool input nested deeply enough (about a thousand levels of JSON arrays or objects)
+makes the JSON parser raise RecursionError, and that fails open like every other unexpected error:
+the call is allowed, with the one-line warning. The brief's fail-open rule wins over closing this.
+
+.claude/settings.json runs this file only if it exists and is readable (otherwise the call goes ahead):
+without that guard, python3 exits 2 when it cannot open the script, and exit 2 would block every call.
 
 Standard library only; Python 3.9 or later (macOS's own python3 is 3.9).
 """
@@ -42,7 +56,8 @@ import stat
 import sys
 
 REASONS = ("keys", "raw-data", "jobs", "live-checkout", "hardware", "home-token", "owner-asked")
-MIN_EXPLANATION = 15
+MIN_EXPLANATION = 15  # characters
+MIN_ALNUM = 10  # letters or digits among them
 MARKER = "LOCAL-BECAUSE:"
 MAX_SCRIPT_BYTES = 2 * 1024 * 1024  # a workflow file bigger than this is not read (and so is blocked)
 
@@ -53,6 +68,7 @@ LINE = re.compile(
     + r")[ \t]*:(.*)\Z"
 )
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
+NEWLINES = re.compile(r"\r\n|\r|\n")
 
 BLOCK_MESSAGE = """\
 Blocked by the owner's cloud-first rule (September 29, 2026): this {what} would run on this Mac, on the plan's limits.
@@ -68,6 +84,7 @@ Blocked by the owner's cloud-first rule (September 29, 2026): the workflow's scr
 - Work that needs this Mac: pass the script inline (`script`), or keep the file under the project or home folder, with this line in it as a comment:
     // LOCAL-BECAUSE: <reason>: <one sentence on why it needs this Mac>
   where <reason> is one of: keys, raw-data, jobs, live-checkout, hardware, home-token, owner-asked.
+- A saved or built-in workflow whose file isn't in the project's or home folder's .claude/workflows can't be checked: pass the script inline with the line, or the owner can switch the rule off.
 The rule is in CLAUDE.md ("The hub") and ops/CLOUD_FIRST.md."""
 
 
@@ -83,7 +100,7 @@ def has_reason_line(text):
     """True when some line of `text` is a valid LOCAL-BECAUSE line."""
     if not isinstance(text, str) or MARKER not in text:
         return False
-    for line in text.splitlines():
+    for line in NEWLINES.split(text):
         if MARKER not in line:
             continue
         m = LINE.match(line)
@@ -92,9 +109,18 @@ def has_reason_line(text):
         explanation = m.group(2).strip()
         if explanation.endswith("*/"):
             explanation = explanation[:-2].strip()
-        if len(explanation) >= MIN_EXPLANATION:
+        if _explains(explanation):
             return True
     return False
+
+
+def _explains(explanation):
+    """At least 15 characters, at least 10 of them letters or digits, and not an unfilled `<...>`."""
+    return (
+        len(explanation) >= MIN_EXPLANATION
+        and sum(1 for c in explanation if c.isalnum()) >= MIN_ALNUM
+        and not explanation.startswith("<")
+    )
 
 
 def _roots(hook_input):
@@ -113,24 +139,45 @@ def _inside(path, roots):
     return any(os.path.commonpath([path, root]) == root for root in roots)
 
 
+def _is_env(filename):
+    """A .env file: its name starts with `.env` (.env, .env.local) or ends in `.env` (prod.env)."""
+    lower = filename.lower()
+    return lower.startswith(".env") or os.path.splitext(lower)[1] == ".env"
+
+
+OPEN_FLAGS = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+
+
 def _read_script(path, roots):
     """Read a workflow file, only from under `roots`, only a regular file, never a .env, capped."""
     real = os.path.realpath(path)
     if not _inside(real, roots):
         raise Unreadable()
-    if os.path.basename(real).startswith(".env"):
+    if _is_env(os.path.basename(path)) or _is_env(os.path.basename(real)):
         raise Unreadable()
     try:
-        st = os.stat(real)
-        if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_SCRIPT_BYTES:
-            raise Unreadable()
-        with open(real, "rb") as f:
-            data = f.read(MAX_SCRIPT_BYTES + 1)
+        # Open first (non-blocking, so a FIFO cannot hang the hook), then check what was opened.
+        fd = os.open(real, OPEN_FLAGS)
     except OSError:
         raise Unreadable()
-    if len(data) > MAX_SCRIPT_BYTES:
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_SCRIPT_BYTES:
+            raise Unreadable()
+        chunks, size = [], 0
+        while size <= MAX_SCRIPT_BYTES:
+            chunk = os.read(fd, MAX_SCRIPT_BYTES + 1 - size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            size += len(chunk)
+    except OSError:
         raise Unreadable()
-    return data.decode("utf-8", errors="replace")
+    finally:
+        os.close(fd)
+    if size > MAX_SCRIPT_BYTES:
+        raise Unreadable()
+    return b"".join(chunks).decode("utf-8", errors="replace")
 
 
 def _script_from_path(script_path, hook_input, roots):
@@ -156,6 +203,8 @@ def _script_from_name(name, roots):
         except OSError:
             continue
         for entry in entries:
+            if _is_env(entry):
+                continue
             if entry == name or os.path.splitext(entry)[0] == name:
                 try:
                     return _read_script(os.path.join(folder, entry), roots)
@@ -189,9 +238,9 @@ def decide(hook_input):
     script, script_path, name = tool_input.get("script"), tool_input.get("scriptPath"), tool_input.get("name")
     if not any(isinstance(v, str) and v for v in (script, script_path, name)):
         raise UnexpectedInput()
-    if has_reason_line(script):
-        return None
-    if isinstance(script, str) and script and not script_path and not name:
+    if isinstance(script, str) and script:  # an inline script is the one that runs: judge only it
+        if has_reason_line(script):
+            return None
         return BLOCK_MESSAGE.format(what="workflow", where=" (in the script, as a comment)")
     roots = _roots(hook_input)
     try:
