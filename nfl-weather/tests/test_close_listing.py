@@ -220,7 +220,7 @@ def norm(text):
 def test_amendment_8_is_a_dated_draft_that_repairs_a_registered_rule_and_quotes_what_it_replaces():
     whole = (ROOT / "PREREGISTRATION.md").read_text()
     head, text = whole.split("## Amendment 8 ")[0], whole.split("## Amendment 8 ")[1].split("\n## ")[0]
-    assert text.startswith("(DRAFT, not registered: written 2026-09-30 Pacific for the hub to register")
+    assert text.startswith("(registered 2026-09-30 Pacific, before ")        # registered by the hub, Sep 30
     t = norm(text)
     assert "This amendment repairs a registered rule and changes no threshold, gate or decision rule" in t
     assert "0 variants" in t and "on the day it was written it is 288, so the multiple-testing bar is p < 0.000174" in t
