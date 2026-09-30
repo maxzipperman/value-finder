@@ -61,6 +61,7 @@ Every bet alert ends with timing advice (issue #5): unders and favorites now, ov
 underdogs later. After you bet, log what you actually got, e.g.
 `scripts/log_fill.py 2026_06_BUF_NYJ --rule rule_b --line 41.5 --price -108 --book fanduel`;
 `score_forward.py` then reports the cost of waiting against the alert-time quote.
+Add `--max-stake DOLLARS` (the most the book would have taken; the point is to record whether it takes at least your $25 to $50 a bet) and `--note "..."` when you know them (issue #76). They are the last two columns of `fills.csv`, blank when left out; an older file is widened in place on the next fill, its old cells untouched, and the scorer's grading doesn't read them.
 
 **Close capture** (amendment 3). Every 15 minutes `ops/capture_closes.sh` runs `scripts/capture_close.py`.
 When games kick off in 2–20 minutes, it makes one Odds API call and adds each logged book's total and prices

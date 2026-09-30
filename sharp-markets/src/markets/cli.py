@@ -192,7 +192,10 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--end", required=True)
     b.set_defaults(fn=cmd_backtest)
 
-    sub.add_parser("h3-kaggle", help="early H3 test on the Kaggle MGM splits (needs KAGGLE_* in .env)").set_defaults(fn=cmd_h3)
+    sub.add_parser("h3-kaggle", help="H3, the registered test on the Kaggle MGM NBA closing splits "
+                                     "(docs/H3_KAGGLE_PREREGISTRATION.md); needs a Kaggle token in KAGGLE_API_TOKEN "
+                                     "or ~/.kaggle/access_token, or KAGGLE_USERNAME and KAGGLE_KEY in .env"
+                   ).set_defaults(fn=cmd_h3)
 
     h = sub.add_parser("h4a-nfl-weather", help="H4a: Kalshi NFL totals vs wind (zero Odds API credits)")
     h.add_argument("--nfl-dir", required=True, help="path to the nfl-weather study project (read-only)")

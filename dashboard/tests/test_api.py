@@ -412,6 +412,20 @@ def test_half_written_files(root, home, tmp_path):
     assert p["research"]["entries"] == []
 
 
+def test_the_paper_fill_record_reads_with_and_without_the_size_columns(root, home):
+    """Issue #76: log_fill.py adds max_stake and note as the last two columns. The game page shows the same fill
+    from a file without them, from a widened file with the cells blank, and from one with them filled."""
+    fills = root / "nfl-weather" / "data" / "forward" / "fills.csv"
+    old = fills.read_text()
+    shown = {"when": "8:05 AM", "rule": "Rule B", "line": "44.5", "price": "−108", "book": "FanDuel"}
+    for text in (old,
+                 old.replace("book\n", "book,max_stake,note\n").replace("fanduel\n", "fanduel,,\n"),
+                 old.replace("book\n", "book,max_stake,note\n").replace("fanduel\n", 'fanduel,50,"took $50, no more"\n')):
+        fills.write_text(text)
+        status, d = api.game(make_store(root, home), "2026_05_BUF_NE")
+        assert status == 200 and d["fills"] == [shown]
+
+
 def test_widened_and_unknown_columns(root, home):
     """Extra columns the dashboard has never seen are ignored; columns it expects but that are missing are blank."""
     nfl = root / "nfl-weather" / "data" / "forward" / "ledger.csv"
