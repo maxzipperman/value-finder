@@ -757,7 +757,7 @@ class BulkClient:
             raise
         self._out = None
         if sent:
-            if self.is_cached(call):
+            if rec["http_status"] in self.cache_statuses:      # saved (a 404 asked again keeps the saved 404)
                 self.not_saved.pop(call.key, None)
             else:                        # an error answer: not cached, so a rerun asks again
                 self.not_saved[call.key] = rec["http_status"]

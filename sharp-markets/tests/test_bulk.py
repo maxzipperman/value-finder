@@ -2705,3 +2705,26 @@ def test_the_key_check_of_a_client_that_stopped_is_refused_with_the_same_stop(cf
     with pytest.raises(bulk.Stop) as ei:
         c.account()
     assert ei.value is c.stopped and len(api.calls) == sent and (c.start, c.lowest, c.counted, c.unexplained) == before
+
+
+def test_a_cached_404_asked_again_and_answered_with_an_error_shows_on_the_summary_line(cfg, tmp_path, monkeypatch,
+                                                                                       capsys):
+    """Review of cc14201, finding A5: with --retry-404, a cached 404 asked again and answered 500 kept its 404 (as it
+    should) but was left off the pull's line, which said only `cached 404s 2`; only a WARNING showed the 500. The
+    line now counts it like any error answer; a 404 asked again that is still a 404 is not an error."""
+    from markets import http
+    monkeypatch.setattr(http.time, "sleep", lambda s: None)
+    calls, raw = _nfl_calls(cfg, 2), tmp_path / "raw"
+
+    def run(api, **kw):
+        c = bulk.BulkClient(RawCache(raw), max_credits=10_000, session=api, api_key=KEY, rate_per_sec=1e6,
+                            max_retries=0)
+        c.account()
+        return bulk.run_calls(c, calls, "F3", **kw), capsys.readouterr().out
+
+    run(Gone({"ev0"}))
+    res, out = run(Gone({"ev0"}, fail=True), retry_404=True)
+    assert res["errors"] == 2 and res["cached_404"] == 2
+    assert "done: 2 fetched (2 answered with an error and not saved; a rerun asks again), credits 0" in out
+    res, out = run(Gone({"ev0"}), retry_404=True)
+    assert res["errors"] == 0 and "answered with an error" not in out and res["cached_404"] == 2
