@@ -462,3 +462,18 @@ def test_the_stated_gap_a_placeholder_in_the_schedule_and_an_earlier_real_kickof
     assert "logged at or after kickoff" not in out
     assert f"{PH_LINE}, completed: 1 (1)" in out
     assert "1 signals at the last quote before kickoff, 1 settled" in ht(out) and "record 0-1-0" in ht(out)  # 58.5
+
+
+def test_a_nearer_untimed_listing_still_voids_a_farther_timed_one(tmp_path):
+    """The review's case D. Listing X was logged with a time (Thu 7:00 PM Eastern) and signalled; listing Y, 29 hours
+    later, was logged at the placeholder (a row from before amendment 6, as SIGNAL) and would have signalled. The game
+    was played Fri at noon Eastern: 17 hours from X, 12 from Y. Main grades Y and voids X as another listing. Y is not
+    a bet under amendment 6, but it is still the listing nearest the actual kickoff, so X stays void: amendment 6 never
+    turns a void listing into a bet."""
+    x, y = pd.Timestamp("2026-10-08T23:00:00Z"), pd.Timestamp("2026-10-10T04:00:00Z")
+    rows = [row(1, x, "2026-10-07T14:30Z", mkt_total=68.5),
+            row(1, y, "2026-10-09T02:00Z", mkt_total=66.5, wx_src="time_tbd")]
+    out = ht(score(tmp_path, rows, [sched(1, 60, kick="2026-10-09T16:00:00Z")]))
+    assert "1 signals at the last quote before kickoff, 0 settled, 0 pending, 1 void" in out
+    assert "void, another listing of this game is the one graded: 1 (1)" in out
+    assert f"not a bet, {LAST_UNTIMED}: 1 (1)" in out

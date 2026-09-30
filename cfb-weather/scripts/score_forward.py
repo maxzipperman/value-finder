@@ -880,10 +880,16 @@ ht_all = quotes if "rule_ht" in quotes else quotes.iloc[0:0]
 untimed = logged_without_time(ht_all)
 last_any = (ht_all.assign(_untimed=untimed).sort_values("snapshot_utc", kind="stable")
             .drop_duplicates(["game_id", "listing"], keep="last"))
-last = last_any[~last_any._untimed].drop(columns="_untimed")
 last_untimed = last_any[last_any._untimed & (last_any.start_utc >= HT_FIRST_KICK)].drop(columns="_untimed")
-ht = last[(last.start_utc >= HT_FIRST_KICK)]
-ht = settle(ht[ht.rule_ht == "SIGNAL"]) if len(ht) else ht.assign(status="", void="", total=np.nan)
+# The listing graded (amendment 4, section 10) is chosen among every listing whose last quote signalled or would have
+# (status "time_tbd", or a pre-amendment SIGNAL logged with no time), so an untimed listing nearer the actual kickoff
+# still voids a farther timed one, as it would without amendment 6; the untimed listings are then dropped, not graded.
+cand = last_any[(last_any.start_utc >= HT_FIRST_KICK) & last_any.rule_ht.isin(["SIGNAL", "time_tbd"])]
+if len(cand):
+    cand = settle(cand)
+    ht = cand[~cand._untimed.astype(bool) & cand.rule_ht.eq("SIGNAL")].drop(columns="_untimed")
+else:
+    ht = cand.drop(columns="_untimed").assign(status="", void="", total=np.nan)
 ht_done = ht[ht.status.eq("settled")].copy()
 win, push = ht_done.total < ht_done.mkt_total, ht_done.total == ht_done.mkt_total
 ht_done["profit"] = np.where(push, 0, np.where(win, american_to_profit(ht_done.mkt_under), -1.0))

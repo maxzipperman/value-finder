@@ -679,14 +679,44 @@ the first outcome it would affect.
   signal. Rule HT prices only the posted total and the under, so it could signal on such a game.
 * **The alert.** Rule HT alerts on the last scheduled run before kickoff (amendment 3, section 3). Before a midnight
   placeholder that is the 7:30 PM Pacific run the evening before the game, which told you to take that number.
+* **The entry.** The board shows only games that kick off after now, so it stops logging the game once the
+  placeholder has passed. The scorer's last logged quote before kickoff (before the earlier of the row's and the
+  schedule's kickoff, amendment 4, section 11) was then that evening's row: a number many hours before the game,
+  not the latest one, which is what the rule claims to bet.
+* **The same through the schedule.** The scorer also reads each game's kickoff from the schedule as it stands when
+  it scores. A schedule can still carry the placeholder after the game is played: Utah State–Robert Morris, played
+  Aug 31, 2024, is still flagged, at 00:00 Eastern, in the final schedule (section 4). Read as a kickoff, that
+  placeholder is "the earlier kickoff" (amendment 4, section 11), so every row logged on game day after 00:00
+  Eastern, with the real time set, would be dropped as logged at or after kickoff, and the entry would fall back to
+  a row from the evening before.
+
+### 2. The reading
+
+* **No kickoff time set.** A game has no kickoff time set when the schedule flags its start time as not set
+  (`start_time_tbd`, the same flag behind Rule B's `time_tbd`) or when its kickoff is exactly 00:00 Eastern, the
+  placeholder (`board.no_kickoff_time`). cfbfastR lists a real midnight-Eastern kickoff, a Hawaii night game, at
+  11:59 PM; in 2016–25 no game kicked off at 00:00 Eastern without the flag, and in the 2026 schedule as built on
+  Sep 28 all 320 flagged games sit at 00:00 Eastern and no other game does. That listing is a habit of the feed, not
+  a guarantee (section 3, known limits).
+* **Not eligible until its time is set.** A row logged while the game has no kickoff time set is never graded for Rule
+  HT (it still counts as the listing's last quote when it comes last: see the entry, below). When such a game would
+  otherwise signal, its Rule HT status is `time_tbd` (otherwise the status is what it was: `below_threshold`,
+  `no_price` or `price_too_high`).
+* **The alert.** A game with no kickoff time set gets no Rule HT alert. On the last scheduled run before its
+  placeholder (the run that used to alert), if it would otherwise signal, one notice says it is not eligible because
+  the schedule marks its kickoff time as not set, that there is no bet, and that if the time is set it is eligible
+  from the next run. It is sent once, and it is not counted as a signal in `data/forward/runs.csv`.
 * **The entry.** Rule HT's entry is the listing's last quote before kickoff (amendment 4, sections 5, 10 and 11),
   **when it was logged with a kickoff time set**, and a bet when it is a signal. The last quote is taken over every
   quote, timed or not. A listing whose last quote was logged with no kickoff time set is not a bet, even when an
   earlier quote logged with a time signalled (the time was unset again, or the flag was turned on at a real time):
-  that earlier quote was not the latest number, and no alert was sent for it. The scorer counts every Rule HT quote
-  logged with no kickoff time set, and every listing whose last quote was logged with no kickoff time set and would
-  have signalled ("its last quote was logged with no kickoff time set, and would have signalled", with game ids);
-  `--list-excluded` prints the rows. None is graded.
+  that earlier quote was not the latest number, and no alert was sent for it. When a game has more than one listing,
+  the listing graded (the one nearest the actual kickoff, amendment 4, section 10) is chosen among every listing whose
+  last quote signalled or would have, timed or not; a listing whose last quote has no time set is then not a bet, and
+  the others stay void, as they would be without this amendment. The scorer counts every Rule HT quote logged with no
+  kickoff time set, and every listing whose last quote was logged with no kickoff time set and would have signalled
+  ("its last quote was logged with no kickoff time set, and would have signalled", with game ids); `--list-excluded`
+  prints the rows. None is graded.
 * **A placeholder in the schedule the scorer reads.** Here a placeholder is only a schedule kickoff at exactly 00:00
   Eastern, whether or not the flag is set. A flag on any other time leaves that time as the schedule's kickoff: it
   is still the best record of when the game began, and dropping it would let a row logged after a kickoff that moved
@@ -745,9 +775,10 @@ the first outcome it would affect.
   not a bet, and neither is a listing whose time was unset again before its last quote. Section 4 says what is known
   about how often; the ledger will measure it. Whether a quote had a time is fixed when it is logged, from what the
   row carried, so the exclusion can't select on outcomes. The eligibility reading can cost a bet, never add one: a
-  listing is a bet only when its last quote, over every quote, is a signal logged with a time, so every bet under it
-  is one the same rows would make without it. The schedule reading only adds rows that main dropped as logged after
-  the placeholder (for Rule HT a later timed quote, which can become the entry; for Rule B a game-day signal or
+  listing is a bet only when its last quote, over every quote, is a signal logged with a time, and the listing graded
+  is chosen among every listing that signalled or would have (section 2), so every bet under it is one the same rows
+  would make without it, graded on the same listing. The schedule reading only adds rows that main dropped as logged
+  after the placeholder (for Rule HT a later timed quote, which can become the entry; for Rule B a game-day signal or
   close), and it voids exactly what the placeholder voided before.
 * **Known limits.**
   * A game whose flag stays set after it has a real time is not eligible either (its rows carry the flag). The
