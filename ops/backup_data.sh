@@ -15,15 +15,17 @@
 #   group 2, the forward-test records: each weather project's data/forward/, also kept at every run as a dated
 #            snapshot, DEST/value-finder-backup/forward-snapshots/<UTC date and time>/, with a SHA-256 list of its files
 #   group 3, slow to re-create: ~/.cache/value-finder (the forecast archive) and sharp-markets' markets.duckdb
-# Never copied: names that look like key files (.env*, *.env, env, .netrc, kaggle.json, .kaggle, *.pem, *.p12, id_rsa*,
-# id_ed25519*, *secret*, *credential*; each one found is named in the output, and none is ever opened), .venv and .git
-# folders, Finder's .DS_Store files, and half-written *.tmp files. Links are copied as links and never followed.
-# The source is only read. Nothing on the destination is ever deleted. In groups 1 and 2, a file the copy replaces is
-# first kept in value-finder-backup/replaced/<UTC date and time>/. Three kinds of change are each a FAIL, and the
-# backup keeps its own copy, until the hub decides: a file or folder on the backup that is something else here (a link,
-# say; this holds in group 3 too), a file that got smaller here (except the alert jobs' *_state.json files, which are
-# rewritten), and a file on the backup that is gone from here. --accept-changes is that decision: the backup's copies
-# are moved into replaced/<UTC date and time>/ (never deleted), and this Mac's files are copied.
+# Never copied: names that look like key files, in upper or lower case (.env*, *.env, env, .netrc, kaggle.json, .kaggle,
+# *.pem, *.p12, *.key, id_rsa*, id_ed25519*, *secret*, *credential*, *password*, *api_key*, *api-key*, *apikey*,
+# *token*.json, service-account*.json; each one found is named in the output, and none is ever opened), .venv and .git
+# folders, Finder's .DS_Store and ._ files, and half-written *.tmp files. Links are copied as links and never followed.
+# The source is only read. Nothing on the destination is ever deleted. In all three groups, a file the copy replaces is
+# first kept in value-finder-backup/replaced/<UTC date and time>/ (a folder name no earlier run used). Three kinds of
+# change are each a FAIL, and the backup keeps its own copy, until the hub decides: a file or folder on the backup that
+# is something else here (a link, say; this holds in group 3 too), a file of groups 1 and 2 that got smaller here
+# (except the alert jobs' *_state.json files, which are rewritten), and a file or folder of groups 1 and 2 on the backup
+# that is gone from here. --accept-changes is that decision: the backup's copies (and any partial copies a stopped
+# backup left) are moved into replaced/<UTC date and time>/ (never deleted), and this Mac's files are copied.
 # A backup last made from another Mac, checkout or sharp-markets data folder is refused (--new-source allows it).
 # A snapshot is written as forward-snapshots/.incomplete-<time> and gets its real name only once it matches this Mac.
 # After copying, every file of groups 1 and 2 is compared on both sides by size and SHA-256, both ways. --check makes
@@ -77,7 +79,7 @@ fi
   refuse "$REPO does not look like the Value Finder checkout: it has no nfl-weather or cfb-weather folder."
 
 # ---- the destination, and the rules that refuse it -------------------------------------------------------------------
-[ -e "$DEST" ] || refuse "The destination $DEST does not exist. Plug in the backup drive, or connect to the Mac Studio's shared folder, and check the name."
+[ -e "$DEST" ] || refuse "The destination $DEST does not exist. Plug in the backup drive, or connect to the other Mac's shared folder, and check the name."
 [ -d "$DEST" ] || refuse "The destination $DEST is not a folder."
 DEST_P="$(cd -- "$DEST" 2>/dev/null && pwd -P)" || refuse "The destination $DEST can't be opened."
 case "$DEST" in /*) DEST_ABS="$DEST" ;; *) DEST_ABS="$PWD/$DEST" ;; esac
@@ -126,8 +128,11 @@ done
 for p in nfl-weather cfb-weather; do add 2 dir "$REPO/$p/data/forward" "$p/data/forward"; done
 add 3 dir "$HOME/.cache/value-finder" "home-cache/value-finder"
 add 3 file "$MDATA/markets.duckdb" "sharp-markets/data/markets.duckdb"
-if [ -e "$MDATA/markets.duckdb.wal" ]; then
-  add 3 file "$MDATA/markets.duckdb.wal" "sharp-markets/data/markets.duckdb.wal"
+# DuckDB's write-ahead file belongs with the markets.duckdb beside it. One the backup still has from an older
+# markets.duckdb is moved into replaced/ once this Mac's markets.duckdb (which has none) is copied.
+WALREL="sharp-markets/data/markets.duckdb.wal"
+if [ -e "$MDATA/markets.duckdb.wal" ] || [ -e "$B/$WALREL" ] || [ -L "$B/$WALREL" ]; then
+  add 3 file "$MDATA/markets.duckdb.wal" "$WALREL"
 fi
 LABEL[1]="Group 1, the paid data"
 LABEL[2]="Group 2, the forward-test records"
@@ -170,7 +175,7 @@ NC=1
 while [ $NC -lt 6 ]; do
   img="$(image_file_of "${CP[$((NC - 1))]}")"
   [ -n "$img" ] || break
-  [ "$img" != "?" ] || refuse "The destination $DEST is on a disk image, and hdiutil could not say where the image's file is, so the script can't tell whether it is on this Mac's own disk. Use an external drive or the Mac Studio."
+  [ "$img" != "?" ] || refuse "The destination $DEST is on a disk image, and hdiutil could not say where the image's file is, so the script can't tell whether it is on this Mac's own disk. Use an external drive or the other Mac's shared folder."
   CP[NC]="$img" CDEV[NC]="$(dev_of "$img")" CPHYS[NC]="$(physical_disk_of "$img")"
   NC=$((NC + 1))
 done
@@ -185,9 +190,9 @@ while [ $i -lt $N ]; do
       what="The destination $DEST is"
       [ $c -eq 0 ] || what="The destination $DEST is a disk image whose file, ${CP[$c]}, is"
       [ "$sdev" != "${CDEV[$c]}" ] ||
-        refuse "$what on the same disk as $s. A copy on the same disk is not a backup: if the disk fails, both are lost. Use an external drive or the Mac Studio."
+        refuse "$what on the same disk as $s. A copy on the same disk is not a backup: if the disk fails, both are lost. Use an external drive or the other Mac's shared folder."
       [ -z "${CPHYS[$c]}" ] || [ "$sphys" != "${CPHYS[$c]}" ] ||
-        refuse "$what on the same physical disk (${CPHYS[$c]}) as $s. A copy on the same disk is not a backup: if the disk fails, both are lost. Use an external drive or the Mac Studio."
+        refuse "$what on the same physical disk (${CPHYS[$c]}) as $s. A copy on the same disk is not a backup: if the disk fails, both are lost. Use an external drive or the other Mac's shared folder."
       c=$((c + 1))
     done
   fi
@@ -266,11 +271,18 @@ elif command -v sha256sum >/dev/null 2>&1; then SHA="sha256sum"
 else SHA="shasum -a 256"; fi
 
 # Names never copied, and never opened. Keys are replaced, not backed up; the rest is re-created or half-written.
-KEYNAMES=(.env '.env*' '*.env' env .netrc kaggle.json .kaggle '*.pem' '*.p12' 'id_rsa*' 'id_ed25519*' '*secret*' '*credential*')
-SKIPNAMES=("${KEYNAMES[@]}" .venv .git .DS_Store '*.tmp')
+# Matched in upper or lower case: this Mac's disk ignores case, so .ENV is the same file programs open as .env.
+KEYNAMES=('.env*' '*.env' env .netrc kaggle.json .kaggle '*.pem' '*.p12' '*.key' 'id_rsa*' 'id_ed25519*' '*secret*'
+          '*credential*' '*password*' '*api_key*' '*api-key*' '*apikey*' '*token*.json' 'service-account*.json')
+SKIPNAMES=("${KEYNAMES[@]}" .venv .git .DS_Store '._*' '*.tmp')
 EXCL=() FIND_KEY=() FIND_SKIP=()
-for n in "${SKIPNAMES[@]}"; do EXCL+=("--exclude=$n"); FIND_SKIP+=(-o -name "$n"); done
-for n in "${KEYNAMES[@]}"; do FIND_KEY+=(-o -name "$n"); done
+# rsync's patterns know no "ignore case", so each letter becomes a pair: .env* is .[Ee][Nn][Vv]*.
+while IFS= read -r n; do EXCL+=("--exclude=$n"); done <<EOF
+$(printf '%s\n' "${SKIPNAMES[@]}" | awk '{ o = ""; for (x = 1; x <= length($0); x++) { c = substr($0, x, 1)
+  u = toupper(c); l = tolower(c); o = o (u != l ? "[" l u "]" : c) } print o }')
+EOF
+for n in "${SKIPNAMES[@]}"; do FIND_SKIP+=(-o -iname "$n"); done
+for n in "${KEYNAMES[@]}"; do FIND_KEY+=(-o -iname "$n"); done
 FIND_KEY=("${FIND_KEY[@]:1}")
 FIND_SKIP=("${FIND_SKIP[@]:1}")
 # A name with a line break in it can't be listed one per line; such names are listed on their own (odd_names).
@@ -302,19 +314,34 @@ kind_word() { case "$1" in f) echo file ;; d) echo folder ;; l) echo link ;; *) 
 
 # Every entry under folder $1 (files, folders, links), written to $2, one line each:
 #   type<TAB>size<TAB>mtime<TAB>link target<TAB>./path      (type: f file, d folder, l link, o anything else)
-# never entering the names that are not copied. Returns non-zero, with find's message in $2.err, when part of the
-# folder could not be read.
+# never entering the names that are not copied. Returns non-zero, with find's and stat's messages in $2.err (one line
+# each, naming the file), when part of the folder could not be read, or a name could not be looked at (a path longer
+# than macOS allows, say).
 list_entries() {
-  ( cd "$1" && find . -mindepth 1 \( "${FIND_EX[@]}" \) -prune -o -print0 ) > "$2.names" 2> "$2.err"
-  local rc=$?
-  ( cd "$1" && xargs -0 stat -f '%Sp%t%z%t%m%t%Y%t%N' < "$2.names" ) 2>/dev/null |
-    awk -F'\t' 'BEGIN { OFS = "\t" } { t = substr($1, 1, 1); $1 = (t == "-") ? "f" : (t == "d" || t == "l") ? t : "o"; print }' > "$2"
+  local rc=0
+  ( cd "$1" && find . -mindepth 1 \( "${FIND_EX[@]}" \) -prune -o -print0 ) > "$2.names" 2> "$2.err" || rc=1
+  ( cd "$1" && xargs -0 stat -f '%Sp%t%z%t%m%t%Y%t%N' < "$2.names" 2>> "$2.err" ) |
+    awk -F'\t' 'BEGIN { OFS = "\t" } { t = substr($1, 1, 1); $1 = (t == "-") ? "f" : (t == "d" || t == "l") ? t : "o"; print }' > "$2" || rc=1
+  [ ! -s "$2.err" ] || rc=1
   return $rc
+}
+# Each line of $1.err (the messages of list_entries) as a FAIL line "1<TAB>could not be read <where> (why)<TAB>path",
+# the path being $3 and, when the message names one ("stat: ./a/b: stat: File name too long", "find: ./a: Permission
+# denied"), the file under it.
+read_errors() {
+  awk -v where="$2" -v under="$3" 'NF {
+    path = ""; msg = $0
+    if (match($0, /^[a-z]+: \.\//)) {
+      rest = substr($0, RLENGTH + 1); k = 0
+      for (x = 1; x < length(rest); x++) if (substr(rest, x, 2) == ": ") k = x
+      if (k > 0) { path = "/" substr(rest, 1, k - 1); msg = substr(rest, k + 2); sub(/: l?stat$/, "", path) }
+    }
+    printf "1\tcould not be read %s (%s)\t%s%s\n", where, msg, under, path }' "$1.err"
 }
 # Names under folder $1 with a line break in them, one per line, the break shown as "?".
 odd_names() { ( cd "$1" && find . -mindepth 1 \( "${FIND_SKIP[@]}" \) -prune -o -name "*$NL*" -prune -print0 ) 2>/dev/null | tr '\n\0' '?\n'; }
 # Names under folder $1 that look like key files (never copied, never opened), one per line.
-key_names() { ( cd "$1" && find . -mindepth 1 \( -name .venv -o -name .git \) -prune -o \( "${FIND_KEY[@]}" \) -prune -print ) 2>/dev/null; }
+key_names() { ( cd "$1" && find . -mindepth 1 \( -iname .venv -o -iname .git \) -prune -o \( "${FIND_KEY[@]}" \) -prune -print ) 2>/dev/null; }
 # The SHA-256 of each ./path listed in file $2 (one per line) under folder $1, as sha256sum prints them, into $3.
 hash_list() { ( cd "$1" && tr '\n' '\0' < "$2" | xargs -0 $SHA ) > "$3" 2>/dev/null; }
 
@@ -330,7 +357,16 @@ function show(p) { sub(/^\.\//, "", p); return under "/" p }
 function kind(t) { return t == "f" ? "file" : t == "d" ? "folder" : t == "l" ? "link" : "special file" }
 function shrinks(p) { return group == 1 || p !~ /_state\.json$/ }
 function blocks(n) { return (n + 0 <= 0) ? 4096 : int((n + 4095) / 4096) * 4096 }
-function partial(p) { sub(/.*\//, "", p); return p ~ /^\..+\.[A-Za-z0-9]{6,10}$/ }
+# A partial copy that a stopped rsync left: ".NAME.XXXXXX" (6 letters and digits) or ".NAME.XXXXXXXXXX" (10, as the
+# rsync of macOS makes them), where NAME is a file beside it on this Mac (st holds the entries of the source).
+function leftover(p,   b, d, s) {
+  b = p; sub(/.*\//, "", b); d = substr(p, 1, length(p) - length(b))
+  if (substr(b, 1, 1) != ".") return 0
+  s = b; sub(/.*\./, "", s)
+  if ((length(s) != 6 && length(s) != 10) || s ~ /[^A-Za-z0-9]/) return 0
+  b = substr(b, 2, length(b) - length(s) - 2)
+  return b != "" && ((d b) in st) && st[d b] == "f"
+}
 function under_clash(p) { while (sub(/\/[^\/]*$/, "", p)) if (p in clash) return 1; return 0 }
 '
 
@@ -338,9 +374,9 @@ function under_clash(p) { while (sub(/\/[^\/]*$/, "", p)) if (p in clash) return
 GF[1]=0 GF[2]=0 GF[3]=0 GB[1]=0 GB[2]=0 GB[3]=0
 i=0
 while [ $i -lt $N ]; do
-  nf=0 nb=0
+  nf=0 nb=0 LERR[i]=0
   if [ "${K[$i]}" = dir ] && [ -d "${SRC[$i]}" ]; then
-    list_entries "${SRC[$i]}" "$WORK/$i.s"
+    list_entries "${SRC[$i]}" "$WORK/$i.s" || LERR[i]=1
     read -r nf nb <<EOF
 $(awk -F'\t' '$1 == "f" { n++; b += $2 } END { printf "%d %.0f\n", n, b }' "$WORK/$i.s")
 EOF
@@ -356,9 +392,9 @@ EOF
 done
 
 if [ "$CHECK" -eq 1 ]; then
-  echo "Checking the backup in $B against $REPO (copying nothing)."
+  echo "Checking the backup in $B against $REPO on $HOST_NAME (copying nothing)."
 else
-  echo "Backing up $REPO to $B."
+  echo "Backing up $REPO on $HOST_NAME to $B."
 fi
 [ -z "${MARKETS_DATA_DIR:-}${MARKETS_ROOT:-}" ] || echo "The sharp-markets data folder is $MDATA (set by MARKETS_DATA_DIR or MARKETS_ROOT)."
 if [ -n "$MOVED" ] && [ "$CHECK" -eq 1 ]; then echo "Note: $MOVED"
@@ -372,6 +408,7 @@ for g in 1 2 3; do
     if [ "${G[$i]}" = "$g" ]; then
       if [ -e "${SRC[$i]}" ]; then
         printf '      %-44s %15s %10s\n' "$(shown "${SRC[$i]}")" "$(count "${F[$i]}" file)" "$(human "${Z[$i]}")"
+        [ "${LERR[$i]}" = 0 ] || echo "        (part of it could not be read, so these numbers are short: see the FAIL lines below)"
       elif [ "$g" != 3 ] && { [ -e "$B/${REL[$i]}" ] || [ -L "$B/${REL[$i]}" ]; }; then
         printf '      %-44s not on this Mac, but the backup has it\n' "$(shown "${SRC[$i]}")"
       elif [ "$g" != 3 ]; then
@@ -385,7 +422,7 @@ for g in 1 2 3; do
 done
 if [ -s "$WORK/keys" ]; then
   echo "  Left out, because each name looks like a key file (keys are replaced, never backed up, and never opened):"
-  awk 'NR <= 10 { print "      " $0 } END { if (NR > 10) printf "      ... and %d more\n", NR - 10 }' "$WORK/keys"
+  sed 's/^/      /' "$WORK/keys"
 fi
 
 # ---- before copying: what the backup already holds ------------------------------------------------------------------------
@@ -402,7 +439,7 @@ function aside(p,   q) { clash[p] = 1; q = p; sub(/^\.\//, "", q); print q > mov
 FILENAME == ARGV[1] { p = rest4($0); st[p] = $1; ss[p] = $2; next }
 { p = rest4($0) }
 under_clash(p) { next }
-!(p in st) { if (accept && group != 3 && $1 == "f" && !partial(p)) aside(p); next }
+!(p in st) { if (accept && group != 3 && $1 == "f") aside(p); next }
 ($1 == "f" || $1 == "d") && $1 != st[p] {
   if (accept) aside(p)
   else { hold(p); printf "1\t%s\t%s\n", "is a " kind(st[p]) " on this Mac but a " kind($1) " on the backup; not copied, so the backup keeps its " kind($1), show(p) }
@@ -455,11 +492,26 @@ fi
 
 # ---- copy ------------------------------------------------------------------------------------------------------------
 CF[1]="" CF[2]="" CF[3]=""
-SNAPNAME="" SNAPTMP="" REPLACED=0
+SNAPNAME="" SNAPTMP="" REPLACED=0 REPNAME=""
+# Move $1, on the backup, to $2 in this run's replaced/ folder. Never over anything already there: returns non-zero
+# instead.
+set_aside() {
+  if [ -e "$2" ] || [ -L "$2" ]; then echo "  Not moved, because $2 already exists: $1" >&2; return 1; fi
+  mkdir -p "$(dirname "$2")" && mv "$1" "$2"
+}
 if [ "$CHECK" -eq 0 ]; then
+  mkdir -p "$B/forward-snapshots" "$B/replaced" || refuse "Could not make the folder $B."
+  # This run's replaced/ folder: one that no earlier run used, even when the clock gives the same second twice. mkdir
+  # makes it or fails, in one step, so two runs can't both take it.
+  REPNAME="$STAMP"
+  k=2
+  until mkdir "$B/replaced/$REPNAME" 2>/dev/null; do
+    [ -e "$B/replaced/$REPNAME" ] || [ -L "$B/replaced/$REPNAME" ] || refuse "Could not make the folder $B/replaced/$REPNAME."
+    REPNAME="$STAMP-$k"; k=$((k + 1))
+  done
+  REP="$B/replaced/$REPNAME"
   echo
-  echo "Copying (nothing on the backup is deleted; a file the copy replaces is kept in value-finder-backup/replaced/$STAMP/):"
-  mkdir -p "$B/forward-snapshots" || refuse "Could not make the folder $B."
+  echo "Copying (nothing on the backup is deleted; a file the copy replaces is kept in value-finder-backup/replaced/$REPNAME/):"
   { printf 'machine: %s\n' "$HOST_ID"; printf 'computer name: %s\n' "$HOST_NAME"; printf 'checkout: %s\n' "$REPO"
     printf 'sharp-markets data folder: %s\n' "$MDATA"; printf 'recorded: %s\n' "$STAMP"; } > "$SOURCE_TXT" ||
     refuse "Could not write $SOURCE_TXT."
@@ -469,6 +521,7 @@ if [ "$CHECK" -eq 0 ]; then
     SNAPNAME="$STAMP-$k"; k=$((k + 1))
   done
   SNAPTMP="forward-snapshots/.incomplete-$SNAPNAME"
+  DUCKDONE=0
   i=0
   while [ $i -lt $N ]; do
     s="${SRC[$i]}" d="$B/${REL[$i]}" g="${G[$i]}" rc=0
@@ -477,18 +530,18 @@ if [ "$CHECK" -eq 0 ]; then
       echo "  $(shown "$s")"
       # --accept-changes: the backup's copies that this Mac's files replace are moved aside first, never deleted.
       while IFS= read -r m; do
-        if [ "$m" = . ]; then from="$d" to="$B/replaced/$STAMP/${REL[$i]}"
-        else from="$d/$m" to="$B/replaced/$STAMP/${REL[$i]}/$m"; fi
-        mkdir -p "$(dirname "$to")" && mv "$from" "$to" ||
-          CF[g]="${CF[$g]}$(printf '1\t%s\t%s' "could not be moved into replaced/ (its message is above), so it was left as it was" "${REL[$i]}/$m")"$'\n'
+        if [ "$m" = . ]; then from="$d" to="$REP/${REL[$i]}" what="${REL[$i]}"
+        else from="$d/$m" to="$REP/${REL[$i]}/$m" what="${REL[$i]}/$m"; fi
+        set_aside "$from" "$to" ||
+          CF[g]="${CF[$g]}$(printf '1\t%s\t%s' "could not be moved into replaced/ (its message is above), so it was left as it was" "$what")"$'\n'
       done < "$WORK/$i.moves"
       if grep -qx '!whole' "$WORK/$i.pat"; then
         [ "${K[$i]}" = file ] ||
           CF[g]="${CF[$g]}$(printf '1\t%s\t%s' "nothing of it was copied this time: a name that needs a decision has a backslash in it" "${REL[$i]}")"$'\n'
       elif [ "${K[$i]}" = dir ]; then
-        # Archive mode keeps times and copies links as links. There is no --delete of any kind.
-        args=(-a "${EXCL[@]}")
-        [ "$g" = 3 ] || args+=(-b "--backup-dir=$B/replaced/$STAMP/${REL[$i]}")
+        # Archive mode keeps times and copies links as links. There is no --delete of any kind, and a file the copy
+        # replaces is kept in replaced/ (-b).
+        args=(-a "${EXCL[@]}" -b "--backup-dir=$REP/${REL[$i]}")
         [ ! -s "$WORK/$i.pat0" ] || args+=(--from0 "--exclude-from=$WORK/$i.pat0")
         mkdir -p "$d" && rsync "${args[@]}" "$s/" "$d/" || rc=$?
         if [ "$g" = 2 ]; then
@@ -498,17 +551,34 @@ if [ "$CHECK" -eq 0 ]; then
             CF[g]="${CF[$g]}$(printf '1\t%s\t%s' "the copy into the new snapshot stopped with an error (code $snaprc; its message is above)" "$SNAPTMP/${REL[$i]}")"$'\n'
         fi
       else
-        mkdir -p "$(dirname "$d")" && rsync -a "$s" "$d" || rc=$?
+        # One file, copied into its folder on the backup: rsync then replaces whatever has its name there (a link
+        # too) and never follows a link out of the backup. The file it replaces is kept in replaced/ (-b).
+        pdir="$(dirname "${REL[$i]}")"
+        mkdir -p "$B/$pdir" && rsync -a -b "--backup-dir=$REP/$pdir" "$s" "$B/$pdir/" || rc=$?
+        [ $rc -ne 0 ] || [ "${REL[$i]}" != sharp-markets/data/markets.duckdb ] || DUCKDONE=1
       fi
       if [ $rc -ne 0 ]; then
         CF[g]="${CF[$g]}$(printf '1\t%s\t%s' "the copy stopped with an error (code $rc; its message is above)" "${REL[$i]}")"$'\n'
       fi
+    elif { [ -e "$d" ] || [ -L "$d" ]; } &&
+         { { [ "$ACCEPT" -eq 1 ] && [ "$g" != 3 ]; } || { [ "${REL[$i]}" = "$WALREL" ] && [ "$DUCKDONE" -eq 1 ]; }; }; then
+      # A folder of groups 1 and 2 gone from this Mac, with --accept-changes; or a markets.duckdb.wal on the backup
+      # that belongs to the older markets.duckdb just replaced. Moved into replaced/, never deleted.
+      if set_aside "$d" "$REP/${REL[$i]}"; then
+        echo "  $(shown "$s"): not on this Mac, so the backup's copy was moved into value-finder-backup/replaced/$REPNAME/"
+      else
+        CF[g]="${CF[$g]}$(printf '1\t%s\t%s' "could not be moved into replaced/ (its message is above), so it was left as it was" "${REL[$i]}")"$'\n'
+      fi
     fi
     i=$((i + 1))
   done
-  [ ! -d "$B/replaced/$STAMP" ] || REPLACED="$(find "$B/replaced/$STAMP" -type f | awk 'END { print NR }')"
-  [ "$REPLACED" -eq 0 ] ||
-    echo "  $(count "$REPLACED" file) on the backup were replaced or set aside; the backup's older copies are kept in value-finder-backup/replaced/$STAMP/."
+  REPLACED="$(find "$REP" ! -type d ! -name '._*' 2>/dev/null | awk 'END { print NR }')"
+  if [ "$REPLACED" -eq 0 ]; then
+    rmdir "$REP" 2>/dev/null; rmdir "$B/replaced" 2>/dev/null       # only when empty: nothing was kept this time
+  else
+    were=were; [ "$REPLACED" -ne 1 ] || were=was
+    echo "  $(count "$REPLACED" file) on the backup $were replaced or set aside; the backup's older copies are kept in value-finder-backup/replaced/$REPNAME/."
+  fi
 fi
 
 # ---- compare ---------------------------------------------------------------------------------------------------------
@@ -552,7 +622,7 @@ END {
   for (x = 1; x <= nd; x++) {
     p = dord[x]
     if ((p in st) || dt[p] != "f" || under_clash(p)) continue
-    if (partial(p)) printf "note\t%s\t%s\n", "a partial copy that a stopped backup left (harmless: restores skip it)", show(p)
+    if (leftover(p)) printf "note\t%s\t%s\n", "a partial copy that a stopped backup left (harmless: restores skip it)", show(p)
     else printf "1\t%s\t%s\n", "is on the backup but no longer on this Mac (the backup keeps it)", show(p)
   }
 }'
@@ -563,9 +633,7 @@ verify_dir() {
   local src="$1" dst="$2" out="$3" under="$4" group="$5" last="$6" w
   w="$WORK/v$VN"; VN=$((VN + 1))
   VF=0 VB=0 VL=0
-  if ! list_entries "$src" "$w.s"; then
-    printf '1\t%s\t%s\n' "part of it could not be read on this Mac ($(head -1 "$w.s.err"))" "$under" >> "$out"
-  fi
+  list_entries "$src" "$w.s" || read_errors "$w.s" "on this Mac" "$under" >> "$out"
   odd_names "$src" | while IFS= read -r o; do
     printf '1\t%s\t%s\n' "has a line break in its name, which this script can't check (rename it; the hub can help)" "$under/${o#./}"
   done >> "$out"
@@ -577,9 +645,7 @@ EOF
       printf '%s\t%s\t%s\n' "$((VF + VL))" "no copy on the backup yet ($(count "$VF" file))" "$under" >> "$out"
     return 0
   fi
-  if ! list_entries "$dst" "$w.d"; then
-    printf '1\t%s\t%s\n' "part of it could not be read on the backup ($(head -1 "$w.d.err"))" "$under" >> "$out"
-  fi
+  list_entries "$dst" "$w.d" || read_errors "$w.d" "on the backup" "$under" >> "$out"
   awk -F'\t' "$AWKLIB"'FILENAME == ARGV[1] { if ($1 == "f") f[rest4($0)] = 1; next } $1 == "f" && (rest4($0) in f) { print rest4($0) }' \
     "$w.s" "$w.d" > "$w.both"
   hash_list "$src" "$w.both" "$w.sh"
@@ -595,6 +661,8 @@ finish_snapshot() {
   awk -F'\t' "$AWKLIB"'$1 == "f" { p = rest4($0); if (p != "./checksums.txt") print p }' "$WORK/snap.s" > "$WORK/snap.f"
   hash_list "$dir" "$WORK/snap.f" "$WORK/snap.h"
   [ "$(awk 'END { print NR }' "$WORK/snap.f")" = "$(awk 'END { print NR }' "$WORK/snap.h")" ] || return 1
+  # mv onto a folder that exists would put this one inside it, so a name taken since this run picked it is refused.
+  [ ! -e "$B/forward-snapshots/$SNAPNAME" ] && [ ! -L "$B/forward-snapshots/$SNAPNAME" ] || return 1
   cp "$WORK/snap.h" "$dir/checksums.txt" && mv "$dir" "$B/forward-snapshots/$SNAPNAME"
 }
 
@@ -741,7 +809,7 @@ else
   printf '%s  %-4s  from %s (%s):%s  group 1: %s, %s; group 2: %s, %s (%s); group 3: %s, %s; %s kept in replaced/%s\n' \
     "$STAMP" "$result" "$HOST_NAME" "$HOST_ID" "$REPO" "$(count "${GF[1]}" file)" "$(human "${GB[1]}")" \
     "$(count "${GF[2]}" file)" "$(human "${GB[2]}")" "$snapnote" "$(count "${GF[3]}" file)" "$(human "${GB[3]}")" \
-    "$(count "$REPLACED" file)" "$STAMP" >> "$B/backup-log.txt" 2>/dev/null || true
+    "$(count "$REPLACED" file)" "$REPNAME" >> "$B/backup-log.txt" 2>/dev/null || true
   if [ $FAILED -eq 0 ] && [ -n "$SNAPDONE" ]; then
     echo "Backup finished: groups 1 and 2 match file for file. The forward-test records were also saved as $SNAPDONE."
   elif [ $FAILED -eq 0 ]; then

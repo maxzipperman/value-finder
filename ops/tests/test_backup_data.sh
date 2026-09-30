@@ -15,9 +15,10 @@ export LC_ALL=C
 HERE="$(cd "$(dirname "$0")" && pwd -P)"
 SCRIPT="$(dirname "$HERE")/backup_data.sh"
 T="$(mktemp -d "${TMPDIR:-/tmp}/vf-backup-tests.XXXXXX")" && T="$(cd "$T" && pwd -P)" || exit 1
-IMGDEV="" NESTDEV=""
+IMGDEV="" NESTDEV="" EXDEV=""
 cleanup() {
   [ -z "$NESTDEV" ] || hdiutil detach "$NESTDEV" -force >/dev/null 2>&1 || echo "Could not detach the test disk $NESTDEV." >&2
+  [ -z "$EXDEV" ] || hdiutil detach "$EXDEV" -force >/dev/null 2>&1 || echo "Could not detach the test disk $EXDEV." >&2
   [ -z "$IMGDEV" ] || hdiutil detach "$IMGDEV" -force >/dev/null 2>&1 || echo "Could not detach the test disk $IMGDEV." >&2
   chmod -R u+rwx "$T" 2>/dev/null
   rm -rf "$T"
@@ -57,6 +58,12 @@ mk "$RAW/nba/kalshi/2026-01-05/c.parquet" 'PAR1 candles'
 mk "$RAW/americanfootball_nfl/.env" "ODDS_API_KEY=$KEY"     # key files inside a copied folder
 for n in .env~ .envrc prod.env secrets.env env kaggle.json .env.local; do mk "$RAW/nba/$n" "ODDS_API_KEY=$KEY"; done
 mk "$RAW/nba/deep/er/and/deeper/.env" "ODDS_API_KEY=$KEY"
+# Key files named in capitals or mixed case (this Mac's disk ignores case: .ENV is the file programs open as .env), and
+# other names that look like keys. Each in a folder of its own, as .ENV and .Env would be one file in one folder.
+CASED=(.ENV .Env Prod.ENV KAGGLE.JSON ID_ED25519 SERVER.PEM Secret.txt Credentials.json API_SECRET .NETRC ENV
+       api_key.txt odds_api.key token.json .odds_api_key service-account.json db_password.txt)
+CASEDAT=()
+for n in "${CASED[@]}"; do CASEDAT+=("cased/${#CASEDAT[@]}/$n"); mk "$RAW/nba/cased/$((${#CASEDAT[@]} - 1))/$n" "ODDS_API_KEY=$KEY"; done
 mk "$RAW/.DS_Store" 'finder'
 mk "$RAW/nba/kalshi/x.parquet.tmp" 'half written'
 mk "$R/sharp-markets/data/markets.duckdb" 'DUCK'
@@ -80,6 +87,7 @@ mk "$R/cfb-weather/data/forward/.git/HEAD" 'a git folder inside a copied folder'
 mk "$H/.cache/value-finder/mos/GFS/a.txt" 'forecast archive'
 mk "$H/.cache/value-finder/odds_quota.json" '{}'
 mk "$H/.cache/value-finder/.env" "ODDS_API_KEY=$KEY"
+mk "$H/.cache/value-finder/Secrets.json" "ODDS_API_KEY=$KEY"
 mk "$H/.kaggle/kaggle.json" "{\"key\":\"$KEY\"}"
 mk "$S/outside/secret.txt" 'OUTSIDE-CONTENT-9c2b'
 ln -s ../../../../../outside/secret.txt "$RAW/nba/link_to_outside.txt"
@@ -245,8 +253,15 @@ expect "  ... group 1 OK" has "OK    Group 1, the paid data: 7 files and 2 links
 expect "  ... group 2 OK, snapshot included" has "OK    Group 2, the forward-test records: 6 files"
 expect "  ... group 2 checked in the snapshot too" has "on the backup and in the snapshot forward-snapshots/"
 expect "  ... group 3 copied" has "--    Group 3, slow to re-create: 3 files"
+expect "  ... names the checkout and this Mac in its first line" has "Backing up $R on "
 expect "  ... names the key files it left out" has "sharp-markets/data/raw/nba/prod.env"
 expect "  ... including one five folders down" has "sharp-markets/data/raw/nba/deep/er/and/deeper/.env"
+for n in "${CASEDAT[@]}"; do
+  expect "  ... leaves out and names ${n##*/}" has "sharp-markets/data/raw/nba/$n"
+done
+expect "  ... and Secrets.json in the forecast archive (group 3)" has "~/.cache/value-finder/Secrets.json"
+nkeys() { printf '%s\n' "$OUT" | awk '/^  Left out/ { on = 1; next } on && /^      / { n++; next } { on = 0 } END { print n + 0 }'; }
+expect "  ... names every one of the $((${#CASED[@]} + 12)) key files, not only the first 10" [ "$(nkeys)" = $((${#CASED[@]} + 12)) ]
 expect "  ... the manifest is copied" cmp -s "$MANIFEST" "$BK/sharp-markets/data/raw/_manifest/oddsapi_manifest.csv"
 expect "  ... a file name with a space is copied" cmp -s "$NFLODDS/2025-09-07/odds week 1.json" "$BK/sharp-markets/data/raw/americanfootball_nfl/oddsapi/hist_odds/2025-09-07/odds week 1.json"
 expect "  ... every oddsapi* folder is copied" cmp -s "$R/nfl-weather/data/raw/oddsapi_hist/h.json" "$BK/nfl-weather/data/raw/oddsapi_hist/h.json"
@@ -256,7 +271,7 @@ expect "  ... the decision record is copied" cmp -s "$R/cfb-weather/data/forward
 expect "  ... the forecast archive is copied" [ -f "$BK/home-cache/value-finder/mos/GFS/a.txt" ]
 expect "  ... markets.duckdb is copied" cmp -s "$R/sharp-markets/data/markets.duckdb" "$BK/sharp-markets/data/markets.duckdb"
 expect "  ... times are kept" [ "$(stat -f %m "$R/nfl-weather/data/forward/ledger.csv")" = "$(stat -f %m "$BK/nfl-weather/data/forward/ledger.csv")" ]
-expect "  ... no key file anywhere on the backup" [ -z "$(find "$D" \( -name '.env*' -o -name '*.env' -o -name env -o -name kaggle.json \))" ]
+expect "  ... no key file anywhere on the backup, in any case" [ -z "$(find "$D" \( -iname '.env*' -o -iname '*.env' -o -iname env -o -iname kaggle.json -o -iname '*secret*' -o -iname '*credential*' -o -iname '*password*' -o -iname '*.key' -o -iname '*api_key*' -o -iname '*.pem' -o -iname 'id_*' -o -iname .netrc -o -iname '*token*.json' -o -iname 'service-account*' \))" ]
 expect "  ... the key is nowhere on the backup" sh -c '! grep -rqF "$1" "$2"' - "$KEY" "$D"
 expect "  ... no .venv, .git, .kaggle, .DS_Store or half-written .tmp" [ -z "$(find "$D" \( -name .venv -o -name .git -o -name .kaggle -o -name .DS_Store -o -name '*.tmp' \))" ]
 expect "  ... a link is copied as a link" [ -L "$BK/sharp-markets/data/raw/nba/link_to_outside.txt" ]
@@ -423,6 +438,16 @@ rm "$DUCK"; mv "$S/moved/markets.duckdb" "$DUCK"
 run "a backup once it is back" 0 -- "$D" --repo "$R"
 expect "  ... the backup has the file again" cmp -s "$DUCK" "$BK/sharp-markets/data/markets.duckdb"
 
+# markets.duckdb on the backup replaced, by hand, with a link to a folder on this Mac's disk.
+mkdir -p "$T/outside-dir"
+mv "$BK/sharp-markets/data/markets.duckdb" "$T/duck.from-backup"
+ln -s "$T/outside-dir" "$BK/sharp-markets/data/markets.duckdb"
+printf 'more' >> "$DUCK"
+run "a backup when markets.duckdb on the backup is a link to a folder elsewhere" 0 -- "$D" --repo "$R"
+expect "  ... writes nothing through the link" empty_dir "$T/outside-dir"
+expect "  ... the backup holds this Mac's markets.duckdb, as a file" plain_same "$BK/sharp-markets/data/markets.duckdb" "$DUCK"
+rm -rf "$T/outside-dir" "$T/duck.from-backup"
+
 # ---- a file that got smaller, and files gone from this Mac -------------------------------------------------------------------
 cp -p "$MANIFEST" "$T/manifest.good"
 printf 'pull,requested,returned\n' > "$MANIFEST"
@@ -465,11 +490,48 @@ run "a backup once they are back" 0 -- "$D" --repo "$R"
 mv "$R/cfb-weather/data/raw/oddsapi" "$S/oddsapi.moved"
 run "--check when a paid-data folder is gone from this Mac" 1 -- "$D" --repo "$R" --check
 expect "  ... says it is not on this Mac, but the backup has it" has "cfb-weather/data/raw/oddsapi: not on this Mac, but the backup has it"
+run "a backup after that" 1 -- "$D" --repo "$R"
+expect "  ... FAIL for it" has "cfb-weather/data/raw/oddsapi: not on this Mac, but the backup has it"
+expect "  ... the backup keeps it" [ -f "$BK/cfb-weather/data/raw/oddsapi/live/x.json" ]
+run "the hub's decision that the folder was removed on purpose: --accept-changes" 0 -- "$D" --repo "$R" --accept-changes
+expect "  ... says it moved the backup's copy into replaced/" has "cfb-weather/data/raw/oddsapi: not on this Mac, so the backup's copy was moved into value-finder-backup/replaced/"
+LASTREP="$(ls -d "$BK"/replaced/* | tail -1)"
+expect "  ... which keeps it" cmp -s "$S/oddsapi.moved/live/x.json" "$LASTREP/cfb-weather/data/raw/oddsapi/live/x.json"
+expect "  ... out of the main copy" [ ! -e "$BK/cfb-weather/data/raw/oddsapi" ]
+run "a backup after that" 0 -- "$D" --repo "$R"
 mv "$S/oddsapi.moved" "$R/cfb-weather/data/raw/oddsapi"
+run "a backup once the folder is back" 0 -- "$D" --repo "$R"
+expect "  ... copies it again" [ -f "$BK/cfb-weather/data/raw/oddsapi/live/x.json" ]
 
-mk "$BK/sharp-markets/data/raw/americanfootball_nfl/oddsapi/hist_odds/2025-09-07/.k3.json.K60GoyT0AP" 'part of a copy'
-run "--check with a partial copy a stopped backup left on the drive" 0 -- "$D" --repo "$R" --check
-expect "  ... lists it as harmless" has "hist_odds/2025-09-07/.k3.json.K60GoyT0AP: a partial copy that a stopped backup left (harmless: restores skip it)"
+# rsync's own leftovers: ".NAME." and 10 letters and digits (the rsync of macOS) or 6 (another rsync), beside a NAME
+# that is on this Mac.
+HO="$BK/sharp-markets/data/raw/americanfootball_nfl/oddsapi/hist_odds/2025-09-07"
+mk "$HO/.k1.json.K60GoyT0AP" 'part of a copy'
+mk "$HO/.k1.json.a1B2c3" 'part of a copy'
+run "--check with partial copies a stopped backup left on the drive" 0 -- "$D" --repo "$R" --check
+expect "  ... lists one as harmless" has "hist_odds/2025-09-07/.k1.json.K60GoyT0AP: a partial copy that a stopped backup left (harmless: restores skip it)"
+expect "  ... and the other" has "hist_odds/2025-09-07/.k1.json.a1B2c3: a partial copy that a stopped backup left"
+# Real files whose names only look like that: gone from this Mac, they are a FAIL, not "harmless".
+mk "$RAW/nba/kalshi/.index.parquet" 'an index'
+mk "$R/nfl-weather/data/forward/.decisions.backup" 'a copy of the decisions'
+touch -t 202609010000 "$RAW/nba/kalshi/.index.parquet" "$R/nfl-weather/data/forward/.decisions.backup"
+run "a backup of two dot files ending in 7 and 6 letters" 0 -- "$D" --repo "$R"
+mk "$HO/.k3.json.K60GoyT0AP" 'no k3.json here'
+mkdir -p "$S/gone2"
+mv "$RAW/nba/kalshi/.index.parquet" "$R/nfl-weather/data/forward/.decisions.backup" "$S/gone2/"
+run "--check after they were deleted here" 1 -- "$D" --repo "$R" --check
+expect "  ... FAIL for .index.parquet, not \"harmless\"" has "sharp-markets/data/raw/nba/kalshi/.index.parquet: is on the backup but no longer on this Mac"
+expect "  ... FAIL for .decisions.backup" has "nfl-weather/data/forward/.decisions.backup: is on the backup but no longer on this Mac"
+expect "  ... FAIL for a leftover-looking name with no such file beside it" has "2025-09-07/.k3.json.K60GoyT0AP: is on the backup but no longer on this Mac"
+run "a backup after that" 1 -- "$D" --repo "$R"
+expect "  ... FAIL too" has ".index.parquet: is on the backup but no longer on this Mac"
+run "--accept-changes" 0 -- "$D" --repo "$R" --accept-changes
+LASTREP="$(ls -d "$BK"/replaced/* | tail -1)"
+expect "  ... keeps the two files in replaced/" same2 "$S/gone2/.index.parquet" "$LASTREP/sharp-markets/data/raw/nba/kalshi/.index.parquet" "$S/gone2/.decisions.backup" "$LASTREP/nfl-weather/data/forward/.decisions.backup"
+expect "  ... and moves the partial copies there too" [ -f "$LASTREP/sharp-markets/data/raw/americanfootball_nfl/oddsapi/hist_odds/2025-09-07/.k1.json.K60GoyT0AP" ]
+expect "  ... out of the main copy" [ -z "$(ls -A "$HO" | grep '^\.')" ]
+run "--check after that" 0 -- "$D" --repo "$R" --check
+expect "  ... lists no partial copy" hasnt "partial copy"
 
 NLNAME="$RAW/nba/new
 line.json"
@@ -555,6 +617,98 @@ expect "  ... not the default folder's" [ ! -e "$D3/value-finder-backup/sharp-ma
 run "the same backup without MARKETS_DATA_DIR" 2 -- "$D3" --repo "$R"
 expect "  ... is refused: the backup came from another data folder" has "sharp-markets data folder $ALT"
 
+# ---- two runs in the same second (a clock that repeats itself) --------------------------------------------------------------
+# A stand-in date gives every run the same start time, so every run has the same name. Each must still keep what it
+# replaces in a folder of its own.
+mkdir -p "$T/fixdate"
+cat > "$T/fixdate/date" <<'STUB'
+#!/bin/sh
+[ "$*" = "+%s" ] && { echo 1790000000; exit 0; }
+exec /bin/date "$@"
+STUB
+chmod +x "$T/fixdate/date"
+D8="$MNT/drive8"
+BK8="$D8/value-finder-backup"
+mkdir -p "$D8"
+cp -p "$MANIFEST" "$T/manifest.v1"
+run "a backup, before two runs with the same start time" 0 -- "$D8" --repo "$R"
+printf 'F8,x,y\n' >> "$MANIFEST"; cp -p "$MANIFEST" "$T/manifest.v2"
+run "a first run at a repeated time" 0 PATH="$T/usb:$T/fixdate:$PATH" -- "$D8" --repo "$R"
+printf 'F9,x,y\n' >> "$MANIFEST"
+run "a second run at the same time" 0 PATH="$T/usb:$T/fixdate:$PATH" -- "$D8" --repo "$R"
+expect "  ... says it kept the older copy in a folder with -2 added" has "kept in value-finder-backup/replaced/2026-09-21T141320Z-2/"
+M8=sharp-markets/data/raw/_manifest/oddsapi_manifest.csv
+expect "  ... the first version is still kept" cmp -s "$T/manifest.v1" "$BK8/replaced/2026-09-21T141320Z/$M8"
+expect "  ... and the second" cmp -s "$T/manifest.v2" "$BK8/replaced/2026-09-21T141320Z-2/$M8"
+expect "  ... and the main copy has the third" cmp -s "$MANIFEST" "$BK8/$M8"
+K8="$NFLODDS/2025-09-14/k2.json"
+mv "$K8" "$T/k2.v1"
+run "--accept-changes at the same time again, after k2.json was removed here" 0 PATH="$T/usb:$T/fixdate:$PATH" -- "$D8" --repo "$R" --accept-changes
+mk "$K8" '{"b":"version 2"}'
+run "a backup of a new k2.json" 0 -- "$D8" --repo "$R"
+mv "$K8" "$T/k2.v2"
+run "--accept-changes at the same time once more, after it was removed again" 0 PATH="$T/usb:$T/fixdate:$PATH" -- "$D8" --repo "$R" --accept-changes
+K8R=sharp-markets/data/raw/americanfootball_nfl/oddsapi/hist_odds/2025-09-14/k2.json
+expect "  ... both versions of k2.json are kept, each in its own folder" same2 "$T/k2.v1" "$BK8/replaced/2026-09-21T141320Z-3/$K8R" "$T/k2.v2" "$BK8/replaced/2026-09-21T141320Z-4/$K8R"
+mv "$T/k2.v1" "$K8"; cp -p "$T/manifest.v1" "$MANIFEST"; touch -r "$T/manifest.v1" "$MANIFEST"
+rm -rf "$D8"
+
+# ---- group 3: what a backup replaces is kept too ------------------------------------------------------------------------
+D9="$MNT/drive9"
+BK9="$D9/value-finder-backup"
+mkdir -p "$D9"
+FORECAST="$H/.cache/value-finder/mos/GFS/a.txt"
+cp -p "$DUCK" "$T/duck.good"; cp -p "$FORECAST" "$T/forecast.good"
+mk "$R/sharp-markets/data/markets.duckdb.wal" 'the write-ahead file of this markets.duckdb'
+run "a backup with markets.duckdb and its write-ahead file" 0 -- "$D9" --repo "$R"
+expect "  ... copies the write-ahead file" [ -f "$BK9/sharp-markets/data/markets.duckdb.wal" ]
+rm "$R/sharp-markets/data/markets.duckdb.wal"
+printf 'D' > "$DUCK"                                  # cut short
+: > "$FORECAST"                                       # emptied
+run "a backup after markets.duckdb was cut short and a forecast file emptied" 0 -- "$D9" --repo "$R"
+LASTREP="$(ls -d "$BK9"/replaced/* | tail -1)"
+expect "  ... keeps the good markets.duckdb in replaced/" cmp -s "$T/duck.good" "$LASTREP/sharp-markets/data/markets.duckdb"
+expect "  ... and the good forecast file" cmp -s "$T/forecast.good" "$LASTREP/home-cache/value-finder/mos/GFS/a.txt"
+wal_aside() { [ -f "$LASTREP/sharp-markets/data/markets.duckdb.wal" ] && [ ! -e "$BK9/sharp-markets/data/markets.duckdb.wal" ]; }
+expect "  ... moves the old write-ahead file there, away from the new markets.duckdb" wal_aside
+expect "  ... says so" has "sharp-markets/data/markets.duckdb.wal: not on this Mac, so the backup's copy was moved into value-finder-backup/replaced/"
+cp -p "$T/duck.good" "$DUCK"; cp -p "$T/forecast.good" "$FORECAST"
+rm -rf "$D9"
+
+# ---- a path longer than macOS allows -------------------------------------------------------------------------------------
+# rsync stops on it; the script must name the file, not leave it out of its count and comparison without a word.
+DEEP="$T/deeprepo"
+mkdir -p "$DEEP/nfl-weather/data/forward" "$DEEP/cfb-weather/data/forward" "$DEEP/sharp-markets/data/raw/deep"
+mk "$DEEP/sharp-markets/data/raw/short.json" '{}'
+SEG="$(printf 'd%.0s' $(seq 1 120))"
+( cd "$DEEP/sharp-markets/data/raw/deep" && for x in 1 2 3 4 5 6 7 8 9 10 11 12; do mkdir "$SEG$x" && cd "$SEG$x" || exit 1; done
+  printf 'paid' > paid130.json )
+D10="$MNT/drive10"
+mkdir -p "$D10"
+run "a backup with a paid file whose path is over 1,024 characters" 1 -- "$D10" --repo "$DEEP"
+expect "  ... FAIL naming the file" has "/paid130.json: could not be read on this Mac (File name too long)"
+expect "  ... says the count is short" has "part of it could not be read, so these numbers are short"
+rm -rf "$DEEP" "$D10"
+
+# ---- an ExFAT drive, where macOS keeps extra information in ._ files -------------------------------------------------------
+XMNT="$T/exfat"
+mkdir -p "$XMNT"
+if hdiutil create -quiet -size 16m -fs ExFAT -volname VFExFAT "$T/exfat.dmg" &&
+   XATTACH="$(hdiutil attach -nobrowse -noverify -mountpoint "$XMNT" "$T/exfat.dmg")" &&
+   EXDEV="$(printf '%s\n' "$XATTACH" | awk 'NR == 1 { print $1 }')" && [ -n "$EXDEV" ]; then
+  USB_NODES="$USB_NODES$(printf '%s\n' "$XATTACH" | awk '$1 ~ /^\/dev\/disk/ { sub(/^\/dev\//, "", $1); printf "%s ", $1 }')"
+  run "a backup to an ExFAT drive" 0 -- "$XMNT" --repo "$R"
+  xattr -w com.example.note yes "$XMNT/value-finder-backup/$M8"          # makes a ._ file beside it
+  xattr -w com.example.note yes "$XMNT/value-finder-backup/nfl-weather/data/forward/ledger.csv"
+  expect "  ... (the test made ._ files on it)" [ -e "$XMNT/value-finder-backup/sharp-markets/data/raw/_manifest/._oddsapi_manifest.csv" ]
+  run "--check on the ExFAT drive" 0 -- "$XMNT" --repo "$R" --check
+  expect "  ... does not call the ._ files missing here" hasnt "/._"
+  run "another backup to it" 0 -- "$XMNT" --repo "$R"
+  hdiutil detach "$EXDEV" -force >/dev/null 2>&1 && EXDEV=""
+else
+  fail "could not make the ExFAT test disk"
+fi
+
 # ---- the restore commands on ops/BACKUP.md ------------------------------------------------------------------------------------
 # Into a copy of the checkout: the paid data from the backup (skipping a partial copy), then --check; the forward
 # records from the latest snapshot, then the comparison the page gives.
@@ -564,26 +718,53 @@ D7="$MNT/drive7"
 mkdir -p "$D7"
 run "a backup of the copy" 0 -- "$D7" --repo "$R7"
 BK7="$D7/value-finder-backup"
-mk "$BK7/sharp-markets/data/raw/nba/kalshi/.c2.parquet.a1B2c3" 'part of a copy'
+mk "$BK7/sharp-markets/data/raw/nba/kalshi/2026-01-05/.c.parquet.a1B2c3" 'part of a copy'
 rm "$R7/sharp-markets/data/raw/americanfootball_nfl/oddsapi/hist_odds/2025-09-07/k1.json"
 printf 'damaged' > "$R7/sharp-markets/data/raw/_manifest/oddsapi_manifest.csv"
-mv "$R7/sharp-markets/data/raw" "$R7/sharp-markets/data/raw.damaged"
-rsync -a --exclude='.*.??????' --exclude='.*.??????????' "$BK7/sharp-markets/data/raw/" "$R7/sharp-markets/data/raw/"
-expect "restoring the paid data skips the partial copy" [ ! -e "$R7/sharp-markets/data/raw/nba/kalshi/.c2.parquet.a1B2c3" ]
+MD="$( cd "$R7/sharp-markets/data" &&
+  mv raw "raw.damaged-$(date +%Y%m%d-%H%M%S)" && [ ! -e raw ] && echo "Moved aside." &&
+  rsync -a --exclude='.*.??????' --exclude='.*.??????????' "$BK7/sharp-markets/data/raw/" raw/ )"
+expect "restoring the paid data: the damaged folder is moved aside" [ "$MD" = "Moved aside." ]
+expect "  ... under a dated name, holding the damaged manifest" grep -qx damaged "$R7"/sharp-markets/data/raw.damaged-*/_manifest/oddsapi_manifest.csv
+expect "  ... the restore skips the partial copy" [ ! -e "$R7/sharp-markets/data/raw/nba/kalshi/2026-01-05/.c.parquet.a1B2c3" ]
 run "--check after restoring the paid data" 0 -- "$D7" --repo "$R7" --check
 expect "  ... the lost file is back" [ -f "$R7/sharp-markets/data/raw/americanfootball_nfl/oddsapi/hist_odds/2025-09-07/k1.json" ]
-mv "$R7/sharp-markets/data/markets.duckdb" "$R7/sharp-markets/data/markets.duckdb.damaged"
-rsync -a "$BK7/sharp-markets/data/markets.duckdb" "$R7/sharp-markets/data/markets.duckdb"
-expect "restoring markets.duckdb with its own two commands" cmp -s "$R/sharp-markets/data/markets.duckdb" "$R7/sharp-markets/data/markets.duckdb"
+# markets.duckdb, twice: the second restore must not replace the first damaged copy.
+restore_duck() {
+  ( cd "$R7/sharp-markets/data" && t=$(date +%Y%m%d-%H%M%S) && [ ! -e "markets.duckdb.damaged-$t" ] &&
+    mv markets.duckdb "markets.duckdb.damaged-$t" &&
+    { [ ! -e markets.duckdb.wal ] || mv markets.duckdb.wal "markets.duckdb.wal.damaged-$t"; } && echo "Moved aside." &&
+    rsync -a "$BK7"/sharp-markets/data/markets.duckdb* ./ )
+}
+printf 'DAMAGED-ONCE' > "$R7/sharp-markets/data/markets.duckdb"
+printf 'an old write-ahead file' > "$R7/sharp-markets/data/markets.duckdb.wal"
+MD="$(restore_duck)"
+expect "restoring markets.duckdb with its two commands" cmp -s "$R/sharp-markets/data/markets.duckdb" "$R7/sharp-markets/data/markets.duckdb"
+expect "  ... moves this Mac's write-ahead file aside too" [ ! -e "$R7/sharp-markets/data/markets.duckdb.wal" ]
+sleep 1
+printf 'DAMAGED-AGAIN' > "$R7/sharp-markets/data/markets.duckdb"
+MD="$(restore_duck)"
+expect "  ... a second restore keeps both damaged copies, each under its own name" [ "$(cat "$R7"/sharp-markets/data/markets.duckdb.damaged-*)" = "DAMAGED-ONCEDAMAGED-AGAIN" ]
 SNAP7="$BK7/forward-snapshots/$(ls "$BK7/forward-snapshots" | tail -1)"
-mv "$R7/nfl-weather/data/forward" "$R7/nfl-weather/data/forward.damaged"
-rsync -a "$SNAP7/nfl-weather/data/forward/" "$R7/nfl-weather/data/forward/"
-CMP="$(diff -rq "$SNAP7/nfl-weather/data/forward" "$R7/nfl-weather/data/forward" && echo "The restored folder matches the snapshot.")"
-expect "restoring the forward records from a snapshot, then comparing both ways" [ "$CMP" = "The restored folder matches the snapshot." ]
-rm "$R7/nfl-weather/data/forward/forecasts/f1.json"
-CMP="$(diff -rq "$SNAP7/nfl-weather/data/forward" "$R7/nfl-weather/data/forward" && echo "The restored folder matches the snapshot.")"
+printf '9,B\n' >> "$R7/nfl-weather/data/forward/ledger.csv"                    # the damage
+F7="$R7/nfl-weather/data"
+rsync -a "$SNAP7/nfl-weather/data/forward/" "$F7/forward.restored/"
+CMP="$(cd "$F7" && diff -rq "$SNAP7/nfl-weather/data/forward" forward.restored && echo "The restored folder matches the snapshot.")"
+expect "restoring the forward records from a snapshot into forward.restored, then comparing both ways" [ "$CMP" = "The restored folder matches the snapshot." ]
+rm "$F7/forward.restored/forecasts/f1.json"
+CMP="$(cd "$F7" && diff -rq "$SNAP7/nfl-weather/data/forward" forward.restored && echo "The restored folder matches the snapshot.")"
 caught() { [ "$CMP" != "The restored folder matches the snapshot." ] && printf '%s' "$CMP" | grep -q "f1.json"; }
 expect "  ... an incomplete restore is caught" caught
+cp -p "$SNAP7/nfl-weather/data/forward/forecasts/f1.json" "$F7/forward.restored/forecasts/f1.json"
+SW="$(cd "$F7" && mv forward "forward.damaged-$(date +%Y%m%d-%H%M%S)" && [ ! -e forward ] && mv forward.restored forward && echo "Restored.")"
+expect "  ... the swap puts the restored folder in place" same2 "$SNAP7/nfl-weather/data/forward/ledger.csv" "$F7/forward/ledger.csv" "$SNAP7/nfl-weather/data/forward/runs.csv" "$F7/forward/runs.csv"
+expect "  ... and keeps the damaged one under a dated name" grep -q '^9,B$' "$F7"/forward.damaged-*/ledger.csv
+# If a job had made a new forward/ in between, the swap stops instead of moving the restored folder inside it.
+rsync -a "$SNAP7/nfl-weather/data/forward/" "$F7/forward.restored/"
+SW="$(cd "$F7" && mv forward "forward.damaged-$(date +%Y%m%d-%H%M%S)-b" && mkdir forward && printf 'row 5\n' > forward/ledger.csv &&
+      [ ! -e forward ] && mv forward.restored forward && echo "Restored.")"
+swap_stopped() { [ -z "$SW" ] && [ -d "$F7/forward.restored" ] && grep -qx 'row 5' "$F7/forward/ledger.csv"; }
+expect "  ... the swap stops when forward/ was made again in between, leaving both" swap_stopped
 chmod -R u+rwx "$R7"; rm -rf "$R7"
 
 echo
