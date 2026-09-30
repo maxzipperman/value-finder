@@ -12,10 +12,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
-from conftest import (CFB_DOC, LATER, NFL_DOC, RICH_CFB_DOC, RICH_NFL_DOC, Clock, FakeRunner, copy_content,
-                      make_store, nfl_row, rich_store, scorer_doc, doc_test)
+from conftest import (CFB_DOC, LATER, NFL_DOC, RICH_CFB_DOC, RICH_NFL_DOC, Clock, FakeRunner, bet, cfb_row,
+                      copy_content, make_store, nfl_row, rich_store, scorer_doc, doc_test)
 
-from vfdash import api, signals, words
+from vfdash import api, data, signals, words
 
 HERE = Path(__file__).resolve().parent
 APP_JS = HERE.parent / "vfdash" / "static" / "app.js"
@@ -153,6 +153,8 @@ def test_the_log_s_totals_against_hand_arithmetic(root, home):
     assert rb["toward"] == "Toward the decision: 3 of the 40 settled bets it needs."
     assert by["nfl_rule_b_backup"]["summary"]["units"] == "+0.91"
     assert by["nfl_rule_b_backup"]["summary"]["toward"].startswith("Not part of any decision")
+    assert by["nfl_rule_b_backup"]["summary"]["decision"] == ""              # it never has one to come
+    assert rb["decision"] == "Interim read, which decides nothing."
     assert by["nfl_lean"]["summary"]["units"] == "+0.91" and by["nfl_lean"]["kind"] == "watch"
     cb = by["cfb_rule_b"]["summary"]
     assert (cb["record"], cb["units"], cb["roi"]) == ("1-1-0", f"{MINUS}0.08", f"{MINUS}4.1% per bet placed")
@@ -265,8 +267,8 @@ def test_the_signals_screen_as_drawn(root, home, tmp_path):
     assert page["doc_title"] == "(1) Value Finder"
     assert "Paper bets. No money was placed." in drawn and "Signalthe rule fired at its registered price" in drawn
     heads, trs = table_rows(page, "Date and kickoff (ET)")
-    assert heads == ["Date and kickoff (ET)", "Game", "Rule", "Entry", "Close", "CLV (points)", "Final total",
-                     "Result", "Units"]
+    assert heads == ["Date and kickoff (ET)", "Game", "Rule", "Entry", "Close", "Closing-line value (points)",
+                     "Final total", "Result", "Units"]
     assert len(trs) == 15
     tinted = [tr for tr in trs if "signal" in tr["cls"].split()]
     assert len(tinted) == 1 and "Utah at BYU" in text(tinted[0]) and "Signal" in text(tinted[0])
@@ -379,7 +381,9 @@ def test_a_failing_scorer_is_said_and_the_ledgers_are_shown(root, home, mode, sa
                        runner=FakeRunner(scorer=mode))
     d = api.signals_screen(store)
     assert d["trouble"][0].startswith(said)
-    assert d["trouble"][0].endswith("The games that signalled are listed below from the ledgers, without results.")
+    # the NFL's ledger has no signal since its rule started; the college ledger has two, listed below
+    assert d["trouble"][0].endswith("Its ledger shows no game that has signalled since its rule started.")
+    assert d["trouble"][1].endswith("The games that signalled are listed below from the ledgers, without results.")
     assert d["bets"] == [] and d["empty"] is None
     games = {(f["rule"], f["game_id"]) for f in d["fallback"]}
     # college football: Army at Navy (Rule B, Oct 2) and Ohio State at Michigan (Rule HT, Oct 10) signalled after
@@ -459,3 +463,103 @@ def test_badges_in_words():
     assert words.until(datetime(2026, 10, 4, 17, 0, tzinfo=UTC), datetime(2026, 10, 2, 17, 0, tzinfo=UTC)) == "in 2 days"
     assert words.until(datetime(2026, 10, 2, 20, 10, tzinfo=UTC), datetime(2026, 10, 2, 17, 0, tzinfo=UTC)) == (
         "in 3 hours, 10 minutes")
+
+
+# ------------------------------------------------------------------ added after the first worker stopped
+def test_a_signal_on_a_game_with_no_kickoff_time_in_the_panel(root, home, tmp_path):
+    """A college game logged with cfbfastR's placeholder (midnight Eastern, wx_src time_tbd) whose Rule HT signals:
+    the panel lists it with its date and "time not set", never the placeholder as a kickoff or a countdown."""
+    with (root / "cfb-weather" / "data" / "forward" / "ledger.csv").open("a") as f:
+        f.write(cfb_row("2026-10-02T14:30:14Z", "401000010", "Sat 10-10 00:00", "Air Force", "Army", "time_tbd",
+                        "SIGNAL", "2026-10-10 04:00:00+00:00", total="64.5", src="time_tbd") + "\n")
+    store = make_store(root, home, clock=Clock(datetime(2026, 10, 3, 17, 0, tzinfo=UTC)))
+    d = api.home(store)
+    af = next(s for s in d["live"] if s["game_id"] == "401000010")
+    assert (af["badge"], af["rule"], af["kickoff"], af["until"]) == (
+        "signal", "High-total rule (Rule HT)", "Sat Oct 10, time not set", "Kickoff time not set")
+    assert af["take"] == f"Under 64.5 at {MINUS}109, Pinnacle" and "12:00 AM" not in str(af)
+    assert d["header"]["signals_live"] == len(d["live"]) == api.summary(store)["signals_live"]
+    if NODE:
+        page = draw(tmp_path, "#home", d)
+        row = next(li for li in find(next(find(page, "section", "live")), "li") if "Air Force at Army" in text(li))
+        assert "Sat Oct 10, time not set" in text(row) and "Kickoff time not set" in text(row)
+        assert [text(b) for b in find(row, "span", "badge")] == ["Signal"]
+        assert page["doc_title"] == f"({len(d['live'])}) Value Finder"
+
+
+def lean_on_a_live_game():
+    """The NFL document with a model lean on BUF at NE, whose newest row is a Rule B signal at Pinnacle's price."""
+    doc = json.loads(json.dumps(NFL_DOC))
+    lean = next(t for t in doc["tests"] if t["id"] == "MODEL_LEAN")
+    lean.update(doc_test("MODEL_LEAN", "Model lean", [
+        bet("2026_05_BUF_NE", "BUF", "NE", "2026-10-04T17:00:00Z", "2026-10-01T14:30:07Z", 44.5, -110.0, "pinnacle",
+            "pending")]))
+    return doc
+
+
+def test_a_lean_is_never_drawn_in_the_signal_colour(root, home, tmp_path):
+    """The log tints a bet's row only when its own rule signals on the game's newest row: the Rule B bet on BUF at NE
+    is tinted with its Signal badge, the model lean on the same game (a watch) is not, and the backup-price bet on
+    TEN at BAL carries the outlined badge."""
+    store = make_store(root, home, runner=FakeRunner(nfl_doc=lean_on_a_live_game()))
+    d = api.signals_screen(store)
+    by = {(r["rule"], r["game_id"]): r for r in d["bets"]}
+    assert (by[("nfl_rule_b", "2026_05_BUF_NE")]["live"], by[("nfl_rule_b", "2026_05_BUF_NE")]["badge"]) == (
+        True, "signal")
+    assert (by[("nfl_lean", "2026_05_BUF_NE")]["live"], by[("nfl_lean", "2026_05_BUF_NE")]["badge"]) == (False, "")
+    assert by[("nfl_rule_b_backup", "2026_05_TEN_BAL")]["badge"] == "backup"
+    assert not any(r["live"] for r in d["bets"] if r["rule_kind"] == "watch")
+    if NODE:
+        _, trs = table_rows(draw(tmp_path, "#signals", d), "Date and kickoff (ET)")
+        lean = next(tr for tr in trs if "NFL model lean" in text(tr))
+        assert "signal" not in lean["cls"].split()
+        assert [text(b) for b in find(lean, "span", "badge")] == ["Watch", "Pending"]
+        rb = next(tr for tr in trs if "BUF at NE" in text(tr) and "NFL wind rule" in text(tr)
+                  and "backup" not in text(tr))
+        assert "signal" in rb["cls"].split() and [text(b) for b in find(rb, "span", "badge")][0] == "Signal"
+        ten = next(tr for tr in trs if "TEN at BAL" in text(tr))
+        assert "signal" in ten["cls"].split() and "Signal, backup price" in [text(b) for b in find(ten, "span",
+                                                                                                    "badge")]
+
+
+@pytest.mark.parametrize("printed", [
+    "[" * 200_000 + "]" * 200_000,                                  # nested deeper than Python reads
+    json.dumps({"text": "x", "tests": [{"id": "RULE_B"}]}),        # a test without its counts and bets
+    json.dumps({"tests": []}),                                      # no report
+    json.dumps({"text": "x", "tests": [{"id": "RULE_B", "counts": {}, "bets": ["a bet"]}]}),
+    json.dumps({"text": "x" * (data.DOCUMENT_BYTES + 1), "tests": []}),   # too big to be the document
+    "ledger rows: 8\n", "", "null", "{"])
+def test_what_is_not_a_document_is_said_plainly(root, home, printed):
+    assert data.read_document(printed) is None
+    store = make_store(root, home, runner=FakeRunner(raw=printed))
+    d = api.signals_screen(store)
+    assert d["trouble"] == ["The NFL scorer printed something that is not the report the dashboard reads (its --json "
+                            "document), so its read is not shown. Its ledger shows no game that has signalled since "
+                            "its rule started."]
+    assert not any("could not be shown" in n for n in d["notes"]) and "error" not in d
+    t = api.tests_screen(store)
+    assert t["groups"][0]["scorer"]["status"] == "not_document" and len(t["groups"][0]["scorer"]["error"]) <= 1200
+
+
+def test_a_document_with_odd_fields_is_still_read(root, home):
+    """Missing optional fields (no record, no interval, no decisions, a bet with only its outcome) are shown as not
+    known; nothing breaks."""
+    doc = {"text": "ledger rows: 1\n", "tests": [{"id": "RULE_B", "counts": {"signals": 1, "settled": 1, "pending": 0,
+                                                                          "void": 0},
+                                                  "bets": [{"outcome": "won"}]}]}
+    store = make_store(root, home, runner=FakeRunner(raw=json.dumps(doc)))
+    d = api.signals_screen(store)
+    assert d["trouble"] == [] and not any("could not be shown" in n for n in d["notes"])
+    row = next(r for r in d["bets"] if r["rule"] == "nfl_rule_b")
+    assert (row["matchup"], row["entry"], row["result_words"], row["units"]) == ("Game ?", "No number logged", "Won", "")
+
+
+def test_the_empty_screen_without_the_content_file(root, home, tmp_path):
+    content = copy_content(tmp_path / "content")
+    (content / "forward_tests.json").write_text("{ not json")
+    store = make_store(root, home, clock=Clock(datetime(2026, 9, 29, 17, 0, tzinfo=UTC)), runner=no_bets_runner(),
+                       content=content)
+    d = api.signals_screen(store)
+    assert d["empty"]["text"] == ("No rule has signalled yet. When each rule starts could not be read from the "
+                                  "forward-test descriptions (dashboard/content/forward_tests.json).")
+    assert any("forward_tests.json" in n for n in d["notes"])

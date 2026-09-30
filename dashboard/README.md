@@ -42,7 +42,8 @@ its axis starts at 40% or lower, with break-even (52.4% at −110) passed as a r
 One colour is kept for signals and used for nothing else (violet, `--signal` in `app.css`): a filled **Signal**
 badge (a rule fired at its registered price), the same colour outlined for **Signal, backup price** (the NFL wind
 rule at the consensus line when Pinnacle had no quote; logged apart, not part of the decision), and a tinted row for
-a game whose newest row is a signal. A **watch** gets a quiet outlined badge in the neutral colour: the NFL model
+a game whose newest row is a signal (on the Signals screen, the row of the rule that signals on that newest row: a
+model lean's row is never tinted). A **watch** gets a quiet outlined badge in the neutral colour: the NFL model
 lean, and a wind trigger that didn't become a signal (no price, a price too high, a value not above zero, or outside
 the 1 to 3 day window; the alert job sends a watch for each). Green, amber and red stay for job health and deadlines.
 Every badge carries its word. The rules are `badge` and `strongest` in `vfdash/words.py`.
@@ -70,7 +71,8 @@ than 2 settled bets each is a sentence instead. The totals and charts ignore the
 
 Before the first signal the screen says which rule starts when, worked out from `content/forward_tests.json` (the
 date in each test's `starts_text`, else its `starts_utc` in Eastern time). If a scorer fails, takes more than 60
-seconds or prints something that is not its document, the screen says so and lists, from the ledgers, the games whose
+seconds or prints something that is not its document (not one JSON object with its report as "text" and its tests,
+each with an id, counts and bets; or more than 20 MB), the screen says so and lists, from the ledgers, the games whose
 rows include a signal since their rule started, without results.
 
 ## What it reads, and the only programs it starts

@@ -659,20 +659,20 @@
       out.append(h("div", { class: "tablewrap" }, h("table", null,
         cols(["12%", "12%", "13%", "15%", "12%", "7%", "7%", "13%", "9%"]),
         h("thead", null, h("tr", null, [["Date and kickoff (ET)", ""], ["Game", ""], ["Rule", ""], ["Entry", ""], ["Close", ""],
-          ["CLV (points)", "num"], ["Final total", "num"], ["Result", ""], ["Units", "num"]].map(([t, cl]) => h("th", { scope: "col", class: cl || null }, t)))),
+          ["Closing-line value (points)", "num"], ["Final total", "num"], ["Result", ""], ["Units", "num"]].map(([t, cl]) => h("th", { scope: "col", class: cl || null }, t)))),
         h("tbody", null, bets.map((b) => {
-          const tr = h("tr", { class: "clickable" + (b.live ? " signal" : "") },
+          const tr = h("tr", { class: (b.game_id ? "clickable" : "") + (b.live ? " signal" : "") },
             h("td", null, b.kickoff),
-            h("td", null, h("span", { class: "tag" }, b.sport), h("a", { href: "#game/" + encodeURIComponent(b.game_id) }, b.matchup)),
+            h("td", null, h("span", { class: "tag" }, b.sport), b.game_id ? h("a", { href: "#game/" + encodeURIComponent(b.game_id) }, b.matchup) : b.matchup),
             h("td", { class: "rulecell small" }, h("div", null, b.rule_name, b.rule_kind === "watch" ? badge("watch") : "",
               b.live ? badge(b.badge) : "")),
             h("td", { class: "stack" }, h("div", null, b.entry), h("div", { class: "faint" }, b.entry_source), b.logged ? h("div", { class: "faint" }, b.logged) : ""),
-            h("td", { class: "stack" }, b.close ? [h("div", null, b.close), h("div", { class: "faint" }, b.close_source)] : h("span", { class: "faint" }, b.result === "pending" ? "Not closed yet" : "None")),
+            h("td", { class: "stack" }, b.close ? [h("div", null, b.close), h("div", { class: "faint" }, b.close_source)] : h("span", { class: "faint" }, b.result === "pending" ? "Not closed yet" : b.result === "void" ? "Not graded" : "No close logged")),
             h("td", { class: "num" }, b.clv || dash(b.rule === "cfb_rule_ht" ? "Rule HT is graded on its results, not on closing-line value" : "No closing-line value")),
             h("td", { class: "num" }, b.final_total || dash("No final score yet")),
             h("td", { class: "stack" }, h("div", null, resultBadge(b.result, b.result_words)), b.void_reason ? h("div", { class: "faint" }, b.void_reason) : ""),
             h("td", { class: "num" }, b.units || dash(b.result === "pending" ? "Waiting for a result" : "Not graded")));
-          tr.addEventListener("click", (ev) => { if (ev.target.tagName !== "A") location.hash = "game/" + encodeURIComponent(b.game_id); });
+          if (b.game_id) tr.addEventListener("click", (ev) => { if (ev.target.tagName !== "A") location.hash = "game/" + encodeURIComponent(b.game_id); });
           return tr;
         })))));
     } else {

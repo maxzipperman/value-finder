@@ -313,13 +313,14 @@ def rich_store(root: Path, home: Path, runner=None, clock=None) -> Store:
 
 class FakeRunner:
     """Answers the allowed commands with canned output and records every call. A scorer answers with its --json
-    document (the printed report as its text); `scorer` says how it fails instead."""
+    document (the printed report as its text); `scorer` says how it fails instead. With `raw` (for the NFL scorer
+    only) it prints exactly that, exits 0, and the college scorer answers as usual."""
 
     def __init__(self, listing=LIST_OK, scorer="ok", nfl_text=NFL_SCORE, cfb_text=CFB_SCORE,
-                 stderr="Traceback ...\nValueError: boom", nfl_doc=None, cfb_doc=None):
+                 stderr="Traceback ...\nValueError: boom", nfl_doc=None, cfb_doc=None, raw=None):
         self.listing, self.scorer, self.nfl_text, self.cfb_text = listing, scorer, nfl_text, cfb_text
         self.docs = {"nfl-weather": nfl_doc or NFL_DOC, "cfb-weather": cfb_doc or CFB_DOC}
-        self.stderr = stderr
+        self.stderr, self.raw = stderr, raw
         self.calls = []
         self.lock = threading.Lock()
 
@@ -335,6 +336,8 @@ class FakeRunner:
         if cmd[1] == commands.SCORER:
             project = "nfl-weather" if cwd.endswith("nfl-weather") else "cfb-weather"
             text = self.nfl_text if project == "nfl-weather" else self.cfb_text
+            if self.raw is not None and project == "nfl-weather":
+                return commands.Result(ok=True, stdout=self.raw, code=0, seconds=0.1)
             if self.scorer == "ok":
                 doc = dict(self.docs[project], text=text)
                 return commands.Result(ok=True, stdout=json.dumps(doc), code=0, seconds=0.1)

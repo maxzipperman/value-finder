@@ -762,7 +762,7 @@ def signals_screen(store: Store) -> dict:
     scr = Screen(store)
     scored = {p: store.scorer(p, wait=True) for p in PROJECTS}
     docs = {p: s.doc if s.status == "ok" else None for p, s in scored.items()}
-    then = "The games that signalled are listed below from the ledgers, without results."
+    then = signals_mod.LISTED                             # or NONE_LISTED, when that ledger has none (signals.build)
     trouble = {p: scorer_trouble(p, s, then) for p, s in scored.items()}
     content = tests_content(scr)
     if not content:

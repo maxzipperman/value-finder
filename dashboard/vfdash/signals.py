@@ -22,6 +22,9 @@ from .data import PROJECTS, SPORT_OF
 from .ledger import RULES, get
 
 PAPER = "Paper bets. No money was placed."
+# What the screen adds when a scorer's document can't be read: the ledgers' games that signalled, or that there are none
+LISTED = "The games that signalled are listed below from the ledgers, without results."
+NONE_LISTED = "Its ledger shows no game that has signalled since its rule started."
 # The rules the log shows, in this order. "kind" is the badge the rule's bets carry when their game is live: a
 # signal, a signal at the NFL's backup price, or a watch (the model lean, which is logged and graded but never a bet).
 LOG_RULES = [
@@ -340,7 +343,7 @@ def chart_clv(bets: list[dict], bar: Bar, clv_graded: bool = True) -> dict:
 
 def matchup(b: dict) -> str:
     a, h = b.get("away_team"), b.get("home_team")
-    return f"{a} at {h}" if a and h else f"Game {b.get('game_id', '?')}"
+    return f"{a} at {h}" if a and h else f"Game {b.get('game_id') or '?'}"
 
 
 def close_words(b: dict) -> tuple[str, str]:
@@ -370,9 +373,11 @@ def bet_row(rule: dict, b: dict, live: dict, tz) -> dict:
     price = "an assumed −110" if b.get("price_assumed") else words.odds(b.get("entry_price")) or "no price"
     close, close_from = close_words(b)
     outcome = b.get("outcome") if b.get("outcome") in RESULT_WORDS else "pending"
-    badge = live.get((rule["sport_key"], str(b.get("game_id"))), "")
+    # tinted only when this rule's own status on the game's newest row is a signal: a model lean (a watch) is never
+    # tinted, and a Rule HT bet isn't tinted for a game on which only Rule B is live
+    badge = live.get((rule["sport_key"], str(b.get("game_id")), rule["column"]), "")
     return {"rule": rule["id"], "rule_name": rule["name"], "rule_kind": rule["kind"], "sport": SPORT_OF[rule["project"]],
-            "sport_key": rule["sport_key"], "game_id": str(b.get("game_id", "")), "matchup": matchup(b),
+            "sport_key": rule["sport_key"], "game_id": str(b.get("game_id") or ""), "matchup": matchup(b),
             "kickoff": words.kickoff_et(kick), "kick_utc": b.get("kickoff_utc"),
             "entry": f"{side} {line:.1f} at {price}" if isinstance(line, (int, float)) else "No number logged",
             "entry_source": words.book(b.get("price_source") or "") or "Source not logged",
@@ -389,13 +394,15 @@ def bet_row(rule: dict, b: dict, live: dict, tz) -> dict:
 
 
 def live_badges(games: list[tuple]) -> dict:
-    """{(sport, game id): badge} for each game on the board whose newest row is a signal: the games a row of the log
-    is tinted for."""
+    """{(sport, game id, rule column): badge} for each game on the board whose newest row is a signal, under each rule
+    that signals on that row ("signal" or "backup"): the rows of the log that are tinted. Only Rule B and Rule HT can
+    signal (words.is_signal); the NFL model lean is a watch, so a lean's row is never tinted. Both of the NFL's Rule B
+    rows (Pinnacle's price and the backup price) read the rule_b column: the scorer puts a game in one or the other."""
     out = {}
     for sport, L, r, _listed in games:
-        if L.signal(r):
-            out[(sport, get(r, "game_id"))] = words.strongest([words.badge(c, get(r, c)) for c in RULES[sport]
-                                                               if words.is_signal(c, get(r, c))])
+        for c in RULES[sport]:
+            if words.is_signal(c, get(r, c)):
+                out[(sport, get(r, "game_id"), c)] = words.badge(c, get(r, c))
     return out
 
 
@@ -496,7 +503,8 @@ def build(scr, docs: dict, trouble: dict, content: dict, games: list[tuple]) -> 
         if s is not None:
             s["toward"] = rule["toward"].format(settled=f"{s['settled']:,}")
             decisions = [d for d in t.get("decisions", []) if isinstance(d, dict)]
-            s["decision"] = decision_words(decisions)
+            # the backup price decides nothing (its "toward" line says so): no line about a decision to come
+            s["decision"] = "" if rule["kind"] == "backup" or t.get("decides") is False else decision_words(decisions)
         rules.append({"id": rule["id"], "name": rule["name"], "kind": rule["kind"], "sport_key": rule["sport_key"],
                       "sport": SPORT_OF[rule["project"]], "read": t is not None, "summary": s,
                       "charts": {"units": chart_units(bets, bar, s["p_win"] if s else None, scr.tz),
@@ -518,11 +526,17 @@ def build(scr, docs: dict, trouble: dict, content: dict, games: list[tuple]) -> 
                 "Rule HT is graded on its results, not on closing-line value, so its bets are not in the "
                 "closing-line value chart." if key in ("all", "cfb") else "") if s)}
     rows.sort(key=lambda x: (x["kick_utc"] or "", x["logged_utc"] or ""), reverse=True)
-    fallback = [r for p in PROJECTS if docs.get(p) is None for r in fallback_rows(scr.snap, p, content, scr.tz)]
+    by_project = {p: fallback_rows(scr.snap, p, content, scr.tz) if docs.get(p) is None else [] for p in PROJECTS}
+    fallback = [r for p in PROJECTS for r in by_project[p]]
+    fallback.sort(key=lambda x: (x["kick_utc"] or "", x["game_id"]), reverse=True)
+    trouble = {p: (w.replace(LISTED, NONE_LISTED) if w and not by_project[p] else w) for p, w in trouble.items()}
     today = scr.now.astimezone(words.EASTERN).date()
     empty = None
     if not rows and not fallback:
-        empty = {"text": "No rule has signalled yet. " + starts_sentence(content, today),
+        starts = starts_sentence(content, today)
+        empty = {"text": "No rule has signalled yet." + (
+            f" {starts}" if starts else " When each rule starts could not be read from the forward-test "
+                                        "descriptions (dashboard/content/forward_tests.json)."),
                  "next": ("When a rule signals, each bet appears here with its entry, its close and its result, newest "
                           "first, and the totals and the two charts fill in as results come in.")}
     return {"rules": rules, "together": together, "bets": rows, "fallback": fallback,
@@ -531,7 +545,8 @@ def build(scr, docs: dict, trouble: dict, content: dict, games: list[tuple]) -> 
                               "count.") if fallback else "",
             "trouble": [w for p in PROJECTS if (w := trouble.get(p))], "empty": empty, "variants": bar.variants,
             "bar": bar.text, "paper": PAPER,
-            "legend_live": "a tinted row is a game still to kick off whose newest row is a signal",
+            "legend_live": ("a tinted row is a bet on a game still to kick off whose newest row is a signal under that "
+                            "rule"),
             "totals_note": ("The totals and charts count every settled bet of the rules shown, whatever result is "
                             "picked below."),
             "filters": {"rules": [{"id": r["id"], "name": r["name"], "sport_key": r["sport_key"]} for r in LOG_RULES]}}
