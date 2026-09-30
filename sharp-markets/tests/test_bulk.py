@@ -2656,18 +2656,20 @@ def test_any_other_error_in_a_fetch_counts_what_came_back_and_stops_the_client(c
     assert again.value is c.stopped and len(api.calls) == (3 if where == "saving the answer" else 2)
 
 
-@pytest.mark.parametrize("error", [TimeoutError("socket timed out"), ConnectionResetError(104, "Connection reset")])
+@pytest.mark.parametrize("error", [TimeoutError("socket timed out"), ConnectionResetError(104, "Connection reset"),
+                                   "a URL with the key"])
 def test_a_raw_socket_error_from_the_session_is_an_attempt_with_no_answer(cfg, tmp_path, error):
     """Review of cc14201, finding A3: a socket error the session raised without `requests` wrapping it (an OSError,
     such as a raw TimeoutError) was reported as "the cache could not be read ... Nothing was fetched" and counted
     nothing. It is a transport error: the attempt counts its upper bound to the end of the run (rule 2), the line
     says there was no answer, and a rerun asks again. (A full disk keeps its own lines: see
-    test_a_full_disk_or_a_body_that_is_not_json_stops_with_the_summary.)"""
+    test_a_full_disk_or_a_body_that_is_not_json_stops_with_the_summary.) Review of the fix, finding 3: "not
+    retried" comes first, so an error text that ends in a URL with the key loses only the key."""
     class Raw(FakeOddsApi):
         def get(self, url, params=None, timeout=None):
             if not url.endswith("/sports") and len(self.calls) == 2:            # the second paid call
                 self.calls.append((url, dict(params)))
-                raise error
+                raise error if isinstance(error, OSError) else TimeoutError(f"timed out: {url}?apiKey={params['apiKey']}")
             return super().get(url, params, timeout)
 
     calls = _nfl_calls(cfg)                                                     # upper bound 60, billed 20
@@ -2675,8 +2677,11 @@ def test_a_raw_socket_error_from_the_session_is_an_attempt_with_no_answer(cfg, t
     c = client(tmp_path, api)
     c.account()
     res = bulk.run_calls(c, calls)
-    assert res["stopped"].startswith(f"no answer from the Odds API ({type(error).__name__}: ") and res["rerun"]
-    assert "the cache could not be read" not in res["stopped"]
+    assert res["stopped"].startswith("no answer from the Odds API (not retried; TimeoutError: " if isinstance(
+        error, str) else f"no answer from the Odds API (not retried; {type(error).__name__}: ") and res["rerun"]
+    assert "the cache could not be read" not in res["stopped"] and "SECRETKEY" not in res["stopped"]
+    if isinstance(error, str):
+        assert f"{calls[1].path}?apiKey=REDACTED). Nothing was cached" in res["stopped"]
     assert "its upper bound, 60 credits, is counted to the end of the run" in res["stopped"]
     assert c.counted == 20 + 60 and c.unanswered == 60 and res["fetched"] == 1 and not c.is_cached(calls[1])
     with pytest.raises(bulk.Stop) as ei:

@@ -687,7 +687,7 @@ class BulkClient:
             if isinstance(e, Stop) or not self._sent:
                 raise                    # not the session's: a Stop from _retrying, the cache, or a bug of ours
             if isinstance(e, OSError):   # a socket error `requests` didn't wrap (a raw TimeoutError): no answer
-                why, rerun = (f"no answer from the Odds API ({type(e).__name__}: {scrub(e)}; not retried). Nothing was "
+                why, rerun = (f"no answer from the Odds API (not retried; {type(e).__name__}: {scrub(e)}). Nothing was "
                               "cached for this call, so a rerun asks again."), True
             else:
                 log.error("the request raised an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
