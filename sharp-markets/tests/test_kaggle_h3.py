@@ -55,15 +55,18 @@ def _zip(csv_text="a,b\n1,2\n"):
 
 
 class FakeHTTP:
-    """Answers by (host, path); records every request's host, URL and headers."""
+    """Answers by (host, path); records every request's host, URL and headers. Unknown routes get `default` (if
+    given) or fail the test. The host is read from the address as requests will connect to it."""
 
-    def __init__(self, routes):
-        self.routes, self.seen = routes, []
+    def __init__(self, routes, default=None):
+        self.routes, self.seen, self.default = routes, [], default
 
     def send(self, adapter, request, **kw):
         parts = urlsplit(request.url)
         self.seen.append({"host": parts.hostname, "url": request.url, "headers": dict(request.headers)})
-        answer = self.routes[(parts.hostname, parts.path)]
+        answer = self.routes.get((parts.hostname, parts.path), self.default)
+        if answer is None:
+            raise AssertionError(f"no fake route for {parts.hostname}")
         if isinstance(answer, Exception):
             raise answer
         status, body, headers = answer
@@ -74,8 +77,8 @@ class FakeHTTP:
         return r
 
 
-def _install(monkeypatch, routes):
-    fake = FakeHTTP(routes)
+def _install(monkeypatch, routes, default=None):
+    fake = FakeHTTP(routes, default)
     monkeypatch.setattr(HTTPAdapter, "send", lambda self, request, **kw: fake.send(self, request, **kw))
     return fake
 
@@ -116,6 +119,73 @@ def test_requests_itself_drops_the_header_on_a_cross_host_redirect(monkeypatch):
     requests.Session().get(f"https://www.kaggle.com{DL_PATH}", headers={"Authorization": f"Bearer {FAKE}"})
     assert fake.seen[0]["headers"]["Authorization"] == f"Bearer {FAKE}"
     assert fake.seen[1]["host"] == STORAGE and "Authorization" not in fake.seen[1]["headers"]
+
+
+# Redirect addresses a hostile or broken server could send. The first one is the review's case: Python's urlsplit
+# reads its host as www.kaggle.com, but requests connects to evil.example.
+HOSTILE_LOCATIONS = [
+    "https://evil.example\\@www.kaggle.com/x",
+    "https://evil.example%5C@www.kaggle.com/x",
+    "https://www.kaggle.com@evil.example/x",
+    "https://evil.example#@www.kaggle.com/x",
+    "https://evil.example?@www.kaggle.com/x",
+    "https://evil.example/ @www.kaggle.com/x",
+    "https://evil.example\t@www.kaggle.com/x",
+    "//evil.example/x",
+    "https://www.kaggle.com./x",
+    "https://www.kaggle.com:8443/x",
+    "https://www.kaggle.com/api/v1/somewhere-else",       # not even Kaggle itself gets the credential on a redirect
+]
+
+
+@pytest.mark.parametrize("location", HOSTILE_LOCATIONS)
+def test_no_redirect_hop_carries_the_credential(monkeypatch, capsys, location):
+    _token_file()
+    fake = _install(monkeypatch, {("www.kaggle.com", DL_PATH): (302, b"", {"Location": location})},
+                    default=(404, b"", {}))
+    with pytest.raises(SystemExit) as e:
+        k.download()
+    assert fake.seen[0]["host"] == "www.kaggle.com" and fake.seen[0]["headers"]["Authorization"] == f"Bearer {FAKE}"
+    for later in fake.seen[1:]:
+        assert "Authorization" not in later["headers"], later["host"]
+        assert not any(FAKE in str(v) for v in later["headers"].values())
+    text = str(e.value)
+    assert FAKE not in text and "\n" not in text and e.value.__context__ is None
+    out = capsys.readouterr()
+    assert FAKE not in out.out + out.err
+
+
+def test_the_backslash_redirect_is_refused_before_any_request_to_it(monkeypatch):
+    _token_file()
+    fake = _install(monkeypatch, {("www.kaggle.com", DL_PATH):
+                                  (302, b"", {"Location": "https://evil.example\\@www.kaggle.com/x"})})
+    with pytest.raises(SystemExit) as e:
+        k.download()
+    assert "refused" in str(e.value)
+    assert [s["host"] for s in fake.seen] == ["www.kaggle.com"]
+
+
+@pytest.mark.parametrize("url", ["https://evil.example/api/v1/x", "http://www.kaggle.com/api/v1/x",
+                                 "https://evil.example\\@www.kaggle.com/api/v1/x",
+                                 "https://www.kaggle.com@evil.example/api/v1/x",
+                                 "https://www.kaggle.com:8443/api/v1/x"])
+def test_the_credential_is_only_ever_attached_for_the_kaggle_api_address(monkeypatch, url):
+    _token_file()
+    fake = _install(monkeypatch, {}, default=(200, b"{}", {}))
+    with pytest.raises(SystemExit) as e:
+        k._get(url, k._credential(), "test")
+    assert FAKE not in str(e.value)
+    assert fake.seen == []
+
+
+def test_a_dataset_name_from_search_results_cannot_change_the_host(monkeypatch):
+    """dataset_files() takes names that come back from Kaggle's search; they are escaped into the path."""
+    _token_file()
+    fake = _install(monkeypatch, {}, default=(404, b"", {}))
+    with pytest.raises(SystemExit):
+        k.dataset_files("evil.example\\@x/y@evil.example")
+    assert [s["host"] for s in fake.seen] == ["www.kaggle.com"]
+    assert "%5C" in fake.seen[0]["url"] and "%40" in fake.seen[0]["url"]
 
 
 def test_group_readable_token_file_is_refused_before_any_request(monkeypatch, capsys):
@@ -462,6 +532,22 @@ def test_the_bar_needs_both_the_p_value_and_four_seasons():
     assert not k._sign_check(base | {"p": float("nan")})["passes"]
 
 
+def test_a_season_figure_that_is_zero_up_to_rounding_has_no_sign():
+    """The registration: a figure of exactly zero does not count as the same sign. The real file's family A total
+    >= 15, 2023-24, came out as -1.85e-17 (six wins and six losses at even fair chances): that is zero."""
+    seasons = {s: (-0.01, 10) for s in k.SEASONS} | {"2023-24": (-1.850371707708594e-17, 12)}
+    r = k._sign_check({"est": -0.01, "p": k.BAR / 2, "season": seasons})
+    assert r["signs"]["2023-24"] == 0 and r["same_sign"] == 4 and r["passes"]
+    assert k._signs(r) == "− − 0 − −"
+    r = k._sign_check({"est": -0.01, "p": k.BAR / 2, "season": seasons | {"2025-26": (None, 0)}})
+    assert r["signs"]["2025-26"] is None and r["same_sign"] == 3 and not r["passes"]
+    assert k._signs(r) == "− − 0 − ·"
+    assert k._pts(-1.850371707708594e-17) == "0.00" and k._pts(-0.0001) == "-0.01"
+    # an overall figure of zero has no sign, so no season can share it
+    r = k._sign_check({"est": 1e-17, "p": k.BAR / 2, "season": {s: (0.01, 10) for s in k.SEASONS}})
+    assert r["same_sign"] == 0 and not r["passes"]
+
+
 def test_file_checks_count_exact_duplicates_and_rows_after_the_cutoff():
     from markets.sport import load_teams
     rows, _ = k.load_rows(_zip(_csv_text(GAMES + [GAMES[0]])))
@@ -473,6 +559,39 @@ def test_file_checks_count_exact_duplicates_and_rows_after_the_cutoff():
     assert ch["markets"]["spread"]["counts"]["push"] == 1 and ch["markets"]["total"]["counts"]["push"] == 1
     assert ch["markets"]["spread"]["counts"]["whole-number line"] == 0            # every synthetic spread is 3.5
     assert info["constant_columns"]["spread_home_points"] == "-3.5"
+
+
+def test_blank_results_on_whole_number_lines_and_price_mismatches_are_described_from_the_file():
+    """A blank spread result on a whole-number line is probably a push the file left blank: the report says so from
+    the file's own figures, with no outside push rates. The price check reports the largest mismatch."""
+    import csv as _csv
+    from markets.sport import load_teams
+    rows = list(_csv.DictReader(io.StringIO(_csv_text())))
+    for r in rows:
+        r["money_home_odds"], r["money_away_odds"] = "", ""
+        if r["game_id"] == "G2":                                   # the blank result, on a whole-number spread
+            r |= {"spread_home_points": "-3", "spread_away_points": "3", "spread_home_won": "", "spread_away_won": ""}
+        if r["game_id"] == "G1":                                   # 1.50 is -200 exactly; 2.80 is +180 exactly
+            r |= {"money_home_odds": "-200", "money_away_odds": "180"}
+        if r["game_id"] == "G3":                                   # -350 is 1.2857, given as 1.25: off by 0.0357
+            r |= {"money_home_odds": "-350", "money_away_odds": "320"}
+    buf = io.StringIO()
+    w = _csv.DictWriter(buf, fieldnames=list(rows[0]))
+    w.writeheader()
+    w.writerows(rows)
+    edited, _ = k.load_rows(_zip(buf.getvalue()))
+    games, info = k.parse_games(edited, load_teams("nba"))
+    ch = k.file_checks(games, info)
+    sp = ch["markets"]["spread"]
+    assert sp["counts"]["missing result"] == 1 and sp["counts"]["whole-number line"] == 1
+    assert sp["blank_result_whole_lines"] == [-3.0]
+    line = k._pushes_line(ch)
+    assert "1 spread has a blank result" in line and "−3" in line and "probably" in line
+    assert "%" not in line and "usual" not in line                  # no push rates from outside the file
+    mo = ch["markets"]["money"]
+    assert mo["counts"]["prices checked against American odds"] == 4
+    assert mo["counts"]["decimal and American differ by more than 0.01"] == 1
+    assert mo["max_price_diff"] == pytest.approx(1 + 100 / 350 - 1.25)
 
 
 def test_a_file_without_the_share_columns_stops(tmp_path):
@@ -504,6 +623,9 @@ def test_end_to_end_report_splits_table_and_no_token(monkeypatch, tmp_path, caps
     assert "n_variants_tested = 14" in text and "0.000174" in text and "273 to 287" in text
     assert "None of the 14 variants passes the bar" in text and "recorded as a null" in text
     assert k.REGISTRATION["commit"] in text and res["sha256"] in text
+    assert k.REGISTRATION["github_utc"] in text and k.REGISTRATION["code_github_utc"] in text
+    assert "never read" not in text and "No result after the cut-off was computed" in text
+    assert "the database this run used" in text
     assert res["download"]["downloaded_utc"] in text
     for bad in (FAKE, "SIGNED", STORAGE):
         assert bad not in text

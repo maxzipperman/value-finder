@@ -6,10 +6,11 @@ Question: at BetMGM's close, does the split between tickets and money say anythi
 hasn't already priced in? 14 variants (families A, B and C); games after 2026-01-31 are left out of everything.
 
 Credentials, in this order: the environment variable KAGGLE_API_TOKEN; the file ~/.kaggle/access_token (refused if
-other users can read it); KAGGLE_USERNAME and KAGGLE_KEY from .env (basic auth). The credential is read at run time,
-goes into one request header for www.kaggle.com and nowhere else: redirects are followed by hand and any other host
-gets no credential. Failures print one plain line with the status code and never the credential or a signed address.
-GET only.
+other users can read it); KAGGLE_USERNAME and KAGGLE_KEY from .env (basic auth). The credential is read at run time
+and goes into the header of the first request only, to a fixed Kaggle API address on https://www.kaggle.com
+(checked as requests will connect to it). Redirects are followed by hand and no redirect hop carries the credential,
+whatever its host; odd redirect addresses are refused. Failures print one plain line with the status code and never
+the credential or a signed address. GET only.
 """
 from __future__ import annotations
 
@@ -124,28 +125,58 @@ def _session() -> requests.Session:
     return s
 
 
+_ODD_URL_CHARS = re.compile(r"[\\\s\x00-\x1f\x7f]")   # never valid in an address; parsers disagree on them
+
+
+def _authority(url: str) -> str:
+    """The user-and-host part of an address: after '//', up to the first '/', '?' or '#'."""
+    rest = url.split("//", 1)[1] if "//" in url else ""
+    return re.split(r"[/?#]", rest, maxsplit=1)[0]
+
+
 def _get(url: str, cred: _Credential, what: str, params: dict | None = None) -> requests.Response:
-    """GET, following redirects by hand. The credential goes only to https://www.kaggle.com; any other host (Kaggle
-    sends downloads to a storage host at a signed address) gets no credential. The signed address is never printed
-    or stored. Any failure raises SystemExit with one plain line: the status code and host, never the credential."""
+    """GET, following redirects by hand. The credential goes with the FIRST request only, and only when that
+    request's address (as requests will actually connect to it) is https://www.kaggle.com on the standard port: the
+    callers pass fixed Kaggle API addresses. No redirect hop carries it, whatever its host, so an odd or hostile
+    redirect can't collect it. An address with a backslash, a space or a control character anywhere, or an '@' before
+    its path, is refused, as is one whose host Python's URL parser and requests read differently. The signed address
+    Kaggle redirects downloads to is never printed or stored. Any failure raises SystemExit with one plain line: the
+    status code and host, never the credential."""
     s = _session()
     for hop in range(MAX_REDIRECTS + 1):
-        parts = urlsplit(url)
+        first = hop == 0
+        where = "the address" if first else "a redirect to an address"
+        if _ODD_URL_CHARS.search(url) or "@" in _authority(url):
+            raise SystemExit(f"Kaggle {what} failed: refused {where} with a backslash, a space or an '@' in it.")
+        prep = s.prepare_request(requests.Request("GET", url, params=params if first else None))
+        parts = urlsplit(prep.url)                       # the address as requests will connect to it
         host = parts.hostname or "?"
+        if host != (urlsplit(url).hostname or "?"):
+            raise SystemExit(f"Kaggle {what} failed: refused {where} whose host is read two different ways.")
         if parts.scheme != "https":
-            raise SystemExit(f"Kaggle {what} failed: refused to follow a redirect to a non-https address on {host}.")
-        to_kaggle = host == KAGGLE_HOST
+            raise SystemExit(f"Kaggle {what} failed: refused {where} on {host} that is non-https.")
+        to_kaggle = host == KAGGLE_HOST and parts.port in (None, 443)
+        if first:
+            if not to_kaggle:
+                raise SystemExit(f"Kaggle {what} failed: the credential is only sent to https://{KAGGLE_HOST}, "
+                                 f"not to {host}.")
+            prep.headers.update(cred.headers)
+            if cred.basic:
+                prep.prepare_auth(cred.basic)
         err = None
         try:
-            r = s.get(url, params=params if hop == 0 else None, headers=dict(cred.headers) if to_kaggle else {},
-                      auth=cred.basic if to_kaggle else None, allow_redirects=False, timeout=TIMEOUT_S)
+            r = s.send(prep, allow_redirects=False, timeout=TIMEOUT_S)
         except requests.RequestException as e:       # the message may hold a URL or a header: show only its kind
             err = type(e).__name__
         if err:
             raise SystemExit(f"Kaggle {what} failed: no usable response from {host} ({err}).")
         if r.is_redirect:
-            url = urljoin(r.url, r.headers["location"])
+            location = r.headers.get("location") or ""
             r.close()
+            if _ODD_URL_CHARS.search(location):          # checked before joining, which would quietly drop some
+                raise SystemExit(f"Kaggle {what} failed: refused a redirect to an address with a backslash, a space "
+                                 "or an '@' in it.")
+            url = urljoin(prep.url, location)
             continue
         if r.status_code != 200:
             msg = _kaggle_message(r, cred) if to_kaggle else ""
@@ -488,10 +519,22 @@ def _season_means(bets: list[dict]) -> dict:
     return {s: ((float(np.mean(by[s])) if by[s] else None), len(by[s])) for s in SEASONS}
 
 
+ZERO = 1e-12          # a figure this close to zero is zero: floating-point sums of exact halves can land at 1e-17
+
+
+def _sign(x) -> int | None:
+    """+1, -1, 0 for a figure of zero (up to floating-point rounding), None for a season with no figure."""
+    if x is None or math.isnan(x):
+        return None
+    return 0 if abs(x) < ZERO else (1 if x > 0 else -1)
+
+
 def _sign_check(res: dict) -> dict:
-    overall = 0 if math.isnan(res["est"]) else int(np.sign(res["est"]))
-    signs = {s: (None if v is None or v == 0 else int(np.sign(v))) for s, (v, _) in res["season"].items()}
-    same = sum(1 for v in signs.values() if v is not None and overall != 0 and v == overall)
+    """The registration: a season counts when its figure has the same sign as the overall figure. A season with no
+    bets, or a figure of exactly zero, does not count; nor does any season when the overall figure is zero."""
+    overall = _sign(res["est"]) or 0
+    signs = {s: _sign(v) for s, (v, _) in res["season"].items()}
+    same = sum(1 for v in signs.values() if overall != 0 and v == overall)
     passes = (not math.isnan(res["p"])) and res["p"] < BAR and same >= SEASONS_NEEDED
     return res | {"signs": signs, "same_sign": same, "passes": bool(passes)}
 
@@ -553,11 +596,14 @@ def file_checks(games: list[dict], info: dict) -> dict:
         s1, s2 = SIDES[m]
         c = Counter()
         sums = {"stake": [], "wager": []}
-        margins, decs, off_pairs = [], [], Counter()
+        margins, decs, off_pairs, blank_whole, max_diff = [], [], Counter(), [], 0.0
         for g in games:
             a, b = g["m"][m][s1], g["m"][m][s2]
+            whole = m != "money" and a["line"] is not None and float(a["line"]).is_integer()
             if m != "money" and a["line"] is not None:
-                c["whole-number line"] += float(a["line"]).is_integer()
+                c["whole-number line"] += whole
+            if whole and (a["won"] is None or b["won"] is None):
+                blank_whole.append(a["line"])
             if any(o[w] is None for o in (a, b) for w in ("stake", "wager")):
                 c["missing splits"] += 1
             for w in ("stake", "wager"):
@@ -584,6 +630,7 @@ def file_checks(games: list[dict], info: dict) -> dict:
                 conv = _american_to_decimal(o.get("american"))
                 if conv is not None and o["dec"] is not None:
                     c["prices checked against American odds"] += 1
+                    max_diff = max(max_diff, abs(conv - o["dec"]))
                     if abs(conv - o["dec"]) > 0.01:
                         c["decimal and American differ by more than 0.01"] += 1
                         off_pairs[(o["american"], o["dec"])] += 1
@@ -594,7 +641,8 @@ def file_checks(games: list[dict], info: dict) -> dict:
                       "margin_median": float(np.median(margins)) if margins else float("nan"),
                       "margin_range": (min(margins), max(margins)) if margins else (None, None),
                       "dec_range": (min(decs), max(decs)) if decs else (None, None),
-                      "off_pairs": off_pairs.most_common(3)}
+                      "off_pairs": off_pairs.most_common(3), "max_price_diff": max_diff,
+                      "blank_result_whole_lines": blank_whole}
     return {"per_season": per_season, "dup_games": sum(v - 1 for v in keys.values() if v > 1),
             "dup_ids": sum(v - 1 for v in ids.values() if v > 1), "markets": markets, "pregame": pregame}
 
@@ -635,8 +683,11 @@ def store_splits(games: list[dict], db_path) -> int:
 
 # ================================================================ the run and the report
 
+# Times on GitHub are from GitHub's own record of the branch (the repository activity API: the branch was created
+# with the registration commit, then the code commit was pushed), not from this computer's clock.
 REGISTRATION = {"commit": "ea635ecf1628955ebc806a5d487ba1e968c90b76", "committed_utc": "2026-09-29T23:05:39Z",
-                "pushed_utc": "2026-09-29T23:05:41Z"}
+                "github_utc": "2026-09-29T23:05:40Z",
+                "code_commit": "b4cd484c1c440ad6cdc9746b51ed790935200ca6", "code_github_utc": "2026-09-29T23:22:30Z"}
 
 
 def run_h3(blob: bytes | None = None, db_path=None, reports_dir=None) -> dict:
@@ -665,8 +716,10 @@ def _pct(x, nd=1):
 
 
 def _pts(x, nd=2):
-    """A difference in win chance, in percentage points."""
-    return "—" if x is None or (isinstance(x, float) and math.isnan(x)) else f"{x * 100:+.{nd}f}"
+    """A difference in win chance, in percentage points. A figure of zero (see ZERO) is shown as 0.00, unsigned."""
+    if x is None or (isinstance(x, float) and math.isnan(x)):
+        return "—"
+    return f"{0:.{nd}f}" if abs(x) < ZERO else f"{x * 100:+.{nd}f}"
 
 
 def _se(x, nd=2):
@@ -688,8 +741,44 @@ def _colname(c: str) -> str:
     return f"`{c}`" if c.strip() else "an unnamed first column"
 
 
+def _line_text(x: float) -> str:
+    return f"{x:g}".replace("-", "−")
+
+
+def _pushes_line(ch: dict) -> str:
+    """What the file itself shows about pushes. No outside push rates: the file has no final scores."""
+    sp, tt = ch["markets"]["spread"], ch["markets"]["total"]
+    if sp["counts"]["push"] or tt["counts"]["push"]:
+        out = [f"{sp['counts']['push']:,} spreads and {tt['counts']['push']:,} totals are marked as pushes (both sides "
+               "lost), left out as registered."]
+    else:
+        out = ["the file marks no spread or total as a push (both sides lost)."]
+    out.append(f"{sp['counts']['whole-number line']:,} spreads and {tt['counts']['whole-number line']:,} totals closed "
+               "on a whole number, where a push can happen.")
+    for label, mk in (("spread", sp), ("total", tt)):
+        n, lines = mk["counts"]["missing result"], mk["blank_result_whole_lines"]
+        if not n:
+            out.append(f"No {label} has a blank result.")
+            continue
+        one = n == 1
+        s = f"{n:,} {label}{'' if one else 's'} {'has' if one else 'have'} a blank result"
+        if lines:
+            vals = " and ".join(_line_text(x) for x in lines) if len(lines) <= 3 else f"{len(lines):,} lines"
+            if one:
+                s += f"; it closed on a whole number ({vals}), so it is probably a push the file left blank"
+            else:
+                s += (f"; {len(lines):,} of them closed on a whole number ({vals}), so "
+                      f"{'that one is' if len(lines) == 1 else 'those are'} probably "
+                      f"{'a push' if len(lines) == 1 else 'pushes'} the file left blank")
+        s += (". It is left out as a missing figure, so no result depends on whether it was a push." if one else
+              f". All {n:,} are left out as missing figures, so no result depends on whether they were pushes.")
+        out.append(s)
+    out.append("The file has no final scores, so whether any other whole-number game was a push can't be checked.")
+    return " ".join(out)
+
+
 def _signs(v: dict) -> str:
-    return " ".join({1: "+", -1: "−", None: "·"}[v["signs"][s]] for s in SEASONS)
+    return " ".join({1: "+", -1: "−", 0: "0", None: "·"}[v["signs"][s]] for s in SEASONS)
 
 
 def _name(v: dict) -> str:
@@ -785,7 +874,9 @@ def write_report(res: dict, reports_dir) -> Path:
          "- **Scraped by a third party from Yahoo.** Provenance is a caveat; the checks under \"The file itself\" "
          "are what we could verify.",
          f"- **Games after {CUTOFF:%B %d, %Y} are left out of everything** ({info['after_cutoff']:,} rows): they are "
-         "the validation period of the Kalshi study. Their results were never read.",
+         "the validation period of the Kalshi study. The registered code counts those rows and uses nothing else "
+         "from them. No result after the cut-off was computed (the notes below describe a direct look at the raw "
+         "file, for its dates and team names).",
          "- **Only large effects are detectable.** See the \"Smallest detectable\" column: a null here means any "
          "effect is smaller than that, not that there is none.",
          "- **NBA only.** Nothing here tests football.", "",
@@ -793,7 +884,8 @@ def write_report(res: dict, reports_dir) -> Path:
          "Differences, standard errors and detectable effects are in percentage points of win chance (for family B, "
          "per 10 points of divergence). \"Won − fair\" is how much more often the backed side won than BetMGM's "
          "closing price, margin removed, said it would. Signs by season run 2021-22, 2022-23, 2023-24, 2024-25, "
-         "2025-26 (to January 31); \"·\" is a season with no bets. The return at the close decides nothing.", "",
+         "2025-26 (to January 31); \"·\" is a season with no bets, and \"0\" a season whose figure is zero, which "
+         "counts as neither sign. The return at the close decides nothing.", "",
          "### Family A: back the side whose share of money exceeds its share of tickets by at least k points", "",
          *_table(vs, "A"), "",
          "### Family B: the same idea without a threshold (regression with fair-chance tenths)", "",
@@ -852,21 +944,12 @@ def write_report(res: dict, reports_dir) -> Path:
           f"{ch['pregame'].get('total agrees', 0):,} of "
           f"{ch['pregame'].get('total agrees', 0) + ch['pregame'].get('total differs', 0):,} "
           f"({ch['pregame'].get('unreadable', 0):,} unreadable). The test never uses the lines themselves.",
-          "- **Pushes:** " + (
-              f"none in spreads or totals. A push can only happen on a whole-number line, and only "
-              f"{ch['markets']['spread']['counts']['whole-number line']:,} spreads and "
-              f"{ch['markets']['total']['counts']['whole-number line']:,} totals closed on one. At the usual NBA rates "
-              "(roughly 3% of whole-number spreads and 2% of whole-number totals land exactly on the number) about "
-              f"{0.03 * ch['markets']['spread']['counts']['whole-number line']:.0f} and "
-              f"{0.02 * ch['markets']['total']['counts']['whole-number line']:.0f} would be expected, so the file most "
-              "likely records those few as a win for one side. Too few to move any result."
-              if not ch["markets"]["spread"]["counts"]["push"] and not ch["markets"]["total"]["counts"]["push"] else
-              f"{ch['markets']['spread']['counts']['push']:,} in spreads and "
-              f"{ch['markets']['total']['counts']['push']:,} in totals, left out as registered."),
+          "- **Pushes:** " + _pushes_line(ch),
           "- **Prices:** the test uses the file's decimal prices as given. They mostly agree with the file's American "
           "odds; " + "; ".join(
               f"{MARKET_LABEL[m]}s: {ch['markets'][m]['counts']['decimal and American differ by more than 0.01']:,} of "
-              f"{ch['markets'][m]['counts']['prices checked against American odds']:,} differ by more than 0.01"
+              f"{ch['markets'][m]['counts']['prices checked against American odds']:,} differ by more than 0.01 "
+              f"(at most {ch['markets'][m]['max_price_diff']:.2f})"
               for m in MARKETS) + ". "
           + ("The most common mismatches are " + ", ".join(
               f"American {a:+.0f} given as decimal {d:.2f} (where {a:+.0f} is {_american_to_decimal(a):.2f}; {n:,} times)"
@@ -882,7 +965,9 @@ def write_report(res: dict, reports_dir) -> Path:
           + ". Team names play no part in the test, so these games stay in it; they only get no team code in the "
             "`splits` table and can't join to a Kalshi game.",
           f"- **Games that join to a Kalshi game** (same Eastern date, away and home team): "
-          f"{res['kalshi_joined_games']:,}. Their closing splits are in the `splits` table of `data/markets.duckdb`.",
+          f"{res['kalshi_joined_games']:,}. The closing splits of every tested game are written to the `splits` "
+          "table of the database this run used (`data/markets.duckdb` in the checkout where it ran; see the notes "
+          "below for this run).",
           "", "| Season | Rows tested | Games | First date | Last date | Games missing any split | "
               "Rows after the cut-off |", "|---|---|---|---|---|---|---|"]
     for s, d in ch["per_season"].items():
@@ -897,13 +982,16 @@ def write_report(res: dict, reports_dir) -> Path:
         k_ = c["counts"]
         mirror = k_["lines that don't mirror"]
         L.append(f"| {MARKET_LABEL[m]} | {c['n']:,} | {k_['missing splits']:,} | {_pct(c['wager_sum_within_1'])} | "
-                 f"{_pct(c['stake_sum_within_1'])} | {_range(c['wager_sum_range'])} | {_range(c['stake_sum_range'])} | "
+                 f"{_pct(c['stake_sum_within_1'])} | {_range(c['wager_sum_range'], 2)} | "
+                 f"{_range(c['stake_sum_range'], 2)} | "
                  f"{k_['missing or impossible price']:,} | {k_['margin below 0%']:,} | {k_['margin above 20%']:,} | "
                  f"{_pct(c['margin_median'], 2)} | {_range(c['dec_range'], 2)} | {k_['missing result']:,} | "
                  f"{k_['push']:,} | {k_['both sides marked won']:,} | {mirror:,} |")
     L += ["", "## Record", "",
-          f"- **Registration:** commit `{REGISTRATION['commit']}`, committed {REGISTRATION['committed_utc']} and pushed "
-          f"by {REGISTRATION['pushed_utc']} (UTC), before the download.",
+          f"- **Registration:** commit `{REGISTRATION['commit']}`, committed {REGISTRATION['committed_utc']}; GitHub "
+          f"records the branch created with it at {REGISTRATION['github_utc']} (UTC), before the download.",
+          f"- **The code for the registered test:** commit `{REGISTRATION['code_commit']}`, on GitHub at "
+          f"{REGISTRATION['code_github_utc']} (UTC), before the download.",
           f"- **Download:** {dl.get('downloaded_utc', 'not recorded')} (UTC), {dl.get('bytes', 0):,} bytes.",
           f"- **The file's sha256** (the zip as downloaded): `{res['sha256']}`.",
           f"- **Variants:** {res['n_variants']} ({len(MARKETS) * len(THRESHOLDS)} in family A, {len(MARKETS)} in B, "
