@@ -2,6 +2,8 @@
 
 This page moves the scheduled jobs and the data from the laptop (the MacBook Air) to the Mac Studio. Follow it with the two Macs side by side.
 
+**Wednesday, September 30:** you move one way, with Migration Assistant, before Thursday's paid pull. Follow ["Route A, one way"](#route-a-one-way-the-move-the-owner-makes-on-wednesday-september-30) in section 4. The rest of the page stays for a later move or handover.
+
 - Every command goes into Terminal (Applications > Utilities > Terminal). Paste it, press Return, and compare what you see with the words under it.
 - Each box holds one command. `~` means your home folder.
 - Each step says which Mac it's on: **On the laptop** or **On the Mac Studio**.
@@ -46,7 +48,7 @@ On the other Mac:
 
 Each line starts OK, WARN or FAIL, and the last line counts them. The check changes nothing. On a standby Mac, any job that's loaded is a FAIL that says *"This Mac is not the live one, and it is running the jobs. Unload them now:"*, followed by the exact commands. Run them straight away.
 
-The hub runs the same check at every check-in, and only reports what it finds. It never installs or removes a job itself: the commands are yours to run.
+At every check-in the hub runs this check on the Mac it runs on, runs the two forward-test scorers there, and reports. It takes the role from that Mac's own jobs: `--role live` if they are loaded there, `--role standby` if not. It never installs, loads, unloads or removes a job, and it never tells you to because of what `STATUS.md` says: if what it sees doesn't match the Mac that `STATUS.md` names as the live one, it asks you which Mac is live, and writes your answer into `STATUS.md`. The commands the check prints are yours to run.
 
 ## 2. What moves, and what doesn't
 
@@ -91,7 +93,7 @@ A move adds new things at once: new environments, new paths, keys in new files, 
 
 The handover takes about 30 to 60 minutes. While it runs, no Mac has the jobs. **A run that falls due in that time does not happen.** Nothing runs it later: `runs.csv` simply has no row for it. That is why you start with 90 minutes clear.
 
-The best window is a weekday morning. Start between 7:40 (after the 7:30 run has finished) and 10:00, so that you finish well before 11:30. Weekday college games start in the afternoon Pacific at the earliest, and the NFL has no weekday-morning games. For example, Friday, October 2 (if the download is done) or Monday, October 5. Avoid Saturdays and Sundays: games start from 6:30 AM Pacific (NFL games in London) and run all day.
+The best window is a weekday morning. Start between 7:40 (after the 7:30 run has finished) and 10:00, so that you finish well before 11:30. Weekday college games start in the afternoon Pacific at the earliest, and the NFL has no weekday-morning games this week (the week of September 28); for a later week, check the ledger. For example, Friday, October 2 (if the download is done) or Monday, October 5. Avoid Saturdays and Sundays: games start from 6:30 AM Pacific (NFL games in London) and run all day.
 
 **How to see the next run and the next kickoffs:**
 
@@ -131,7 +133,7 @@ What I could not test: Migration Assistant itself; Time Machine's settings; whet
 
 1. **Before anything else, keep the job files out of the copy.** First choose where the copy comes from:
    - **(a) Straight from the laptop.** The laptop shows only Migration Assistant until the copy is done, so treat its jobs as stopped for that time. The whole laptop (about 380 GB) can take hours over Wi-Fi; a Thunderbolt cable between the Macs is faster. Do it in a long quiet window with no download running and no kickoff (section 3). Wednesday evening after the 19:30 run is one; the laptop must be running its jobs again (step 4) before 7:30 AM Thursday.
-   - **(b) From a Time Machine backup of the laptop.** The laptop keeps working. This needs a Time Machine drive. **First, on the laptop,** open System Settings > General > Time Machine > Options, and set "Back up frequency" to **Manually**. Otherwise a later automatic backup, made after the jobs are back, would hold the job files again, and Setup Assistant might offer that one.
+   - **(b) From a Time Machine backup of the laptop.** The laptop keeps working, but not its jobs: they are off from their removal below until you put them back after the backup (step 4), so every run due in that time is lost, and a first full backup of about 380 GB can take several hours to a drive plugged into the laptop, and a day or more to a drive on the network. This needs a Time Machine drive. **First, on the laptop,** open System Settings > General > Time Machine > Options, and set "Back up frequency" to **Manually**. Otherwise a later automatic backup, made after the jobs are back, would hold the job files again, and Setup Assistant might offer that one.
 
    Then, **on the laptop,** in a quiet hour (section 3):
 
@@ -211,6 +213,205 @@ What I could not test: Migration Assistant itself; Time Machine's settings; whet
 5. **On the Mac Studio,** connect to the network. If the check said `uv`, `gh` or `git` is missing, do route B's steps 2 to 4. If `gh` isn't signed in, do route B's step 4.
 6. **On the Mac Studio,** rebuild the environments ("Rebuild the environments" below). The copied ones hold the laptop's paths.
 7. **On the Mac Studio,** run the check again with `--role standby`. The Mac Studio's data is the copy from the transfer day. The handover (section 6) brings the code up to date and copies the records fresh from the laptop anyway.
+
+### Route A, one way: the move the owner makes on Wednesday, September 30
+
+This is the move you chose: Migration Assistant straight from the laptop, over a Thunderbolt cable, on Wednesday, September 30, before Thursday's paid pull. It goes one way. From step 11 on, the Mac Studio runs the jobs, and the laptop never runs them again: its copy of the data stays as it is, as the backup. These 15 steps take the place of route A's steps above and of the handover (section 6).
+
+**Before you start.**
+
+- The check must be on the laptop: `~/code/value-finder/ops/mac_check.sh` comes with pull request 78, which the hub merges and pulls into `~/code/value-finder` first. If step 1 says `no such file or directory`, stop and ask the hub.
+- Tell the hub in its chat: "I'm starting the move to the Mac Studio now. Don't pull, merge or commit in `~/code/value-finder` until I say it's done." The compare in step 8 needs the laptop's code to stay as step 3 finds it. The hub never installs, loads, unloads or removes a job. If what it sees doesn't match the Mac that `STATUS.md` names as the live one, it asks you which Mac is live. Its chat may not come across to the Mac Studio; a new hub chat there picks up from `STATUS.md`, its memory folder and its notes (section 8, "The Claude app").
+
+**What you miss.** No Mac runs the jobs from step 2 until step 11. A run that falls due in that time does not happen, and nothing makes it up: `runs.csv` simply has no row for it.
+
+- If the transfer takes long, you miss the 15:30 run, and the 19:30 run too if step 11 comes after it.
+- No game kicks off on Wednesday, so close capture misses nothing. No game that counts toward a forward test kicks off before Thursday's 5:00 PM college game, and the NFL's forward test starts on October 8.
+- One small cost is possible. College football's Rule B reads a game's forecast 1 to 3 days before kickoff, so Wednesday's runs are the last that can signal for Thursday's two games. A missed run costs something only if their wind forecast reaches 15 mph in it. On September 29 it was under 10 mph for both.
+- The nightly ledger copy at 23:45 must come from the Mac Studio. Finish step 11 before 23:45, and it will. If you finish later, Wednesday night's copy doesn't happen, and Thursday night's includes everything. Never put the jobs back on the laptop to make that copy.
+- One Mac must be running the jobs before the 7:30 run on Thursday. If the Mac Studio can't take them by then, go back to the laptop ("If something goes wrong", at the end of this route).
+
+**What I could not test:** Migration Assistant itself; whether Setup Assistant lets you transfer with no network; how long the transfer takes; whether Homebrew (`uv`, `gh`), the developer tools and git's sign-in come across; and whether the Claude app on the Mac Studio shows the hub chat. The steps are built so that none of that can start the jobs on two Macs: the job files leave the laptop before the copy (step 2), and the Mac Studio is checked before it joins a network (step 5).
+
+1. **On the laptop, right after the 11:30 run has finished.** The last line of each `runs.csv` is that project's last run. Its time is in UTC, 7 hours ahead of Pacific: the 11:30 run shows as `18:30`.
+
+   ```
+   tail -n 1 ~/code/value-finder/nfl-weather/data/forward/runs.csv
+   ```
+   ```
+   tail -n 1 ~/code/value-finder/cfb-weather/data/forward/runs.csv
+   ```
+
+   What you should see: each line starts `2026-09-30T18:3` and says `ok`, like `2026-09-30T18:30:07Z,nfl-alerts,v3-2026-09-28,ok,16,…`. If a line still shows an earlier time, wait a minute and look again. Then run the check:
+
+   ```
+   ~/code/value-finder/ops/mac_check.sh --role live
+   ```
+
+   What you should see: all four jobs `OK … loaded`, and no FAIL. The laptop gets a WARN for being a laptop; that's expected. In "Clock and power", **write down the timing line.** It reads like *"Next alert run 15:30 (in 3 h 55 min). Next kickoff in the ledgers Thu Oct 1, 5:00 PM, College: Western Kentucky at New Mexico State (in 29 h 25 min). A quiet time to move the jobs"*, and it tells you how long you have before the 15:30 run.
+   - If it doesn't end "A quiet time to move the jobs", stop and ask the hub.
+   - If "The repo" says `Not clean` and the number before "changed" isn't 0, stop and ask the hub: the Mac Studio's compare (step 8) would fail on those files.
+   - If "Jobs" lists paid-plan live uses (none were installed on September 29), write down the command it prints under *"To put back exactly these…"*. You run it on the Mac Studio in step 11, never on the laptop.
+2. **On the laptop, remove the jobs.** First check that none is running. In this list, the first column must show `-` for every line; if a number shows, wait a minute and look again:
+
+   ```
+   launchctl list | grep -E 'com\.(nflweather|cfbweather|valuefinder)\.'
+   ```
+
+   Then remove the four jobs. Each command unloads a job and deletes its job file, so the copy can't carry it to the Mac Studio, and each prints `removed com.…`:
+
+   ```
+   ~/code/value-finder/nfl-weather/scripts/install_alerts.sh --remove
+   ```
+   ```
+   ~/code/value-finder/cfb-weather/scripts/install_alerts.sh --remove
+   ```
+   ```
+   ~/code/value-finder/ops/install_close_capture.sh --remove
+   ```
+   ```
+   ~/code/value-finder/ops/install_ledger_sync.sh --remove
+   ```
+
+   If you wrote down a live-uses command in step 1, remove those too:
+
+   ```
+   ~/code/value-finder/ops/install_live_uses.sh --remove
+   ```
+
+   **Write down the time.** From now until step 11, no Mac runs the jobs. Then check:
+
+   ```
+   ~/code/value-finder/ops/mac_check.sh --role standby
+   ```
+
+   What you should see: in "Jobs", every job `OK … not installed here, as it should be on a standby Mac`, and no FAIL anywhere. If a job is still there, run each command the check prints under *"This Mac is not the live one…"*, then run the check again.
+3. **On the laptop, write the manifest:** a file of counts and fingerprints of the data and of every forward-test record, with no key and no file content in it. Migration Assistant carries it to the Mac Studio with everything else.
+
+   ```
+   ~/code/value-finder/ops/mac_check.sh --role standby --manifest ~/laptop.manifest
+   ```
+
+   What you should see: no FAIL, and at the end `OK Written to ~/laptop.manifest: … records, … paid files and 4 folders`.
+4. **Start Migration Assistant.** Connect the two Macs with a Thunderbolt cable. On the Mac Studio, go through Setup Assistant and choose to transfer from a Mac. On the laptop, open Migration Assistant (Applications > Utilities) and choose to transfer to another Mac. Transfer your user account, `maxzipperman`. If Setup Assistant asks for a time zone, choose Pacific (Los Angeles): the check fails on any other. If it lets you go on without a network, don't join Wi-Fi and leave the Ethernet cable out until step 5 is done. If the Mac Studio already has an account named `maxzipperman`, stop and ask the hub before transferring. The laptop shows only Migration Assistant until the transfer is done.
+5. **On the Mac Studio, the first thing after you log in,** before it joins any network if you could keep it off one, open Terminal and run:
+
+   ```
+   ~/code/value-finder/ops/mac_check.sh --role standby
+   ```
+
+   What you must see: in "Jobs", every job `OK … not installed here, as it should be on a standby Mac`. If you see *"This Mac is not the live one…"*, run each command it prints under that line, then run the check again, until every job says "not installed here". The other parts will show WARN and FAIL lines for now (git, tools, environments); the next steps fix them.
+6. **On the Mac Studio, the developer tools.** Join your network now. Then run:
+
+   ```
+   git --version
+   ```
+
+   What you should see: a line like `git version 2.50.1 (Apple Git-155)`. If a window offers to install the command line developer tools, choose Install, wait until it finishes, and run `git --version` again. If Terminal prints a message about the Xcode license instead, do what it says (it asks for your Mac password), and run `git --version` again. Then run the check again:
+
+   ```
+   ~/code/value-finder/ops/mac_check.sh --role standby
+   ```
+
+   What you should see: in "Tools", `OK git version …`; in "The repo", `OK On main, at …`, and no FAIL saying git cannot run. If "Tools" says `uv is not installed` or `gh is not installed`, Homebrew didn't come across: do route B's steps 2 and 3, then run the check again.
+7. **On the Mac Studio, rebuild the environments:** the eight commands of "Rebuild the environments (both routes)" below, in order. The copied ones were built on the laptop. Each `uv venv` prints `Creating virtual environment at: …`, and each install prints `Installed … packages`.
+8. **On the Mac Studio, compare its data with the laptop's manifest:**
+
+   ```
+   ~/code/value-finder/ops/mac_check.sh --role standby --compare ~/laptop.manifest
+   ```
+
+   What you must see: **no FAIL line anywhere**; four OK lines under "Python environments", such as `OK nfl-weather: Python 3.12.11, imports nflweather`; and, under "Compared with the other Mac's manifest", `OK   Records: all N forward-test records are here, the same byte for byte as on the other Mac` (N is a number). Don't go on without all three. On any FAIL, stop, install nothing, and tell the hub: the laptop's data is untouched, and you can go back to it. A WARN you don't understand: ask the hub before going on.
+9. **On the Mac Studio, run the four test suites.** It takes about ten minutes:
+
+   ```
+   ~/code/value-finder/ops/mac_check.sh --role standby --tests
+   ```
+
+   What you should see: four lines like `OK nfl-weather tests: 322 passed (166 s)`, and no FAIL. On a FAIL, stop and tell the hub.
+10. **On the Mac Studio, check that git can sign in to GitHub,** because the nightly ledger copy pushes to it. If "Tools" in the last check said `gh is not signed in to GitHub`, first sign in (choose GitHub.com, HTTPS, "Yes" to authenticate Git, and "Login with a web browser"):
+
+    ```
+    gh auth login
+    ```
+    ```
+    gh auth setup-git
+    ```
+
+    Then, in any case:
+
+    ```
+    git -C ~/code/value-finder ls-remote origin refs/heads/ledgers
+    ```
+
+    What you should see: one line ending `refs/heads/ledgers`. If a window asks to let git use your keychain, choose Always Allow. If it asks for a username, press Control-C, run the two `gh` commands above, and run this one again.
+11. **On the Mac Studio, install the jobs.** From the first of these commands on, the Mac Studio is the live Mac. Each prints `installed com.…`. Close capture runs once right away; it spends a credit only when a kickoff is 2 to 20 minutes off, and none is on Wednesday.
+
+    ```
+    ~/code/value-finder/nfl-weather/scripts/install_alerts.sh
+    ```
+    ```
+    ~/code/value-finder/cfb-weather/scripts/install_alerts.sh
+    ```
+    ```
+    ~/code/value-finder/ops/install_close_capture.sh
+    ```
+    ```
+    ~/code/value-finder/ops/install_ledger_sync.sh
+    ```
+
+    If you wrote down a live-uses command in step 1, run it now, exactly as written. **Write down the time.** Then:
+
+    ```
+    ~/code/value-finder/ops/mac_check.sh --role live
+    ```
+
+    What you must see: all four jobs `OK … loaded`, and no FAIL. It warns about sleep until step 12. Then send one test notification. You should get a Mac banner and a phone push, and it spends no credit:
+
+    ```
+    cd ~/code/value-finder/nfl-weather
+    ```
+    ```
+    .venv/bin/python scripts/alerts.py --test
+    ```
+
+    If the banner doesn't show, allow Script Editor in System Settings > Notifications. The phone push is the one that matters.
+12. **On the Mac Studio, set it never to sleep.** In System Settings > Energy, turn on "Prevent automatic sleeping when the display is off" and "Start up automatically after a power failure". Then:
+
+    ```
+    ~/code/value-finder/ops/mac_check.sh --role live
+    ```
+
+    What you should see: `OK Never goes to sleep by itself`, `OK Starts again by itself after a power cut`, and no FAIL. Section 8 has the rest: log in after every restart, and keep macOS from restarting by itself.
+13. **On the laptop, reinstall nothing.** Run the check once:
+
+    ```
+    ~/code/value-finder/ops/mac_check.sh --role standby
+    ```
+
+    What you should see: every job `OK … not installed here`, and no FAIL. Then leave the laptop alone: its copy of the data is the backup. Don't run the project's scripts there and don't pull. Quit the Claude app on the laptop (Claude menu > Quit Claude), and don't leave it open there: the old hub's daily check-in runs at about 9 AM while the app is open, and it would run the two scorers on the laptop's copy.
+14. **Tell the hub the move is done.** On the Mac Studio, open the Claude app. If the hub chat came across and answers, tell it there; if not, start a new hub chat (section 8, "The simplest plan"). Tell it: "The move is done. The laptop stopped running the jobs at" the time from step 2, "and the Mac Studio has run them since" the time from step 11. It updates `STATUS.md` to name the Mac Studio as the live Mac. Until it does, its check-in sees the jobs loaded on a Mac that `STATUS.md` doesn't name, and asks you which Mac is live; it never tells you to remove them.
+15. **Thursday, October 1: the paid key goes into the Mac Studio's three `.env` files** (`nfl-weather`, `cfb-weather` and `sharp-markets`), never into the laptop's. Before you buy, redo the free "Before buying" steps of [`ODDS5M_DAY_ONE.md`](../sharp-markets/docs/ODDS5M_DAY_ONE.md) on the Mac Studio (section 3, "If you decide to move before Thursday"). After you buy, type the key into each file on a line of its own, exactly `ODDS_API_KEY=` followed by the key (section 5, "A key typed by hand"). The download and the backtest run on the Mac Studio.
+
+**Afterwards.** After the Mac Studio's first alert run (15:30 or 19:30 on Wednesday, or 7:30 on Thursday), run the two `tail` commands of step 1 on the Mac Studio: each shows a new line with that run's time, in UTC, and `ok`. On Thursday morning, check that Wednesday night's ledger copy ran on the Mac Studio. This shows when its log was last written, which should be Sep 30 at 23:45 or a minute after:
+
+```
+ls -l ~/Library/Logs/valuefinder-ledgersync.log
+```
+
+and this should end with `ledgers pushed` or `ledgers unchanged`:
+
+```
+tail -n 3 ~/Library/Logs/valuefinder-ledgersync.log
+```
+
+Leave the laptop's copy of the data untouched for at least two weeks (section 6, step 16).
+
+**If something goes wrong.**
+
+- **Before step 11** (no installer has run on the Mac Studio), nothing on the Mac Studio has written a record, and the laptop's data is as step 3 left it. To go back, run on the laptop the four installers and the `--role live` check that section 7 gives under "if step 11 of the handover had not started", and tell the hub. Do it before the 7:30 run on Thursday at the latest. Leave the Mac Studio as step 5 left it, with no jobs.
+- **From step 11 on,** follow section 7 from the top. Copying the Mac Studio's records back needs Remote Login on the laptop (section 5, step 1).
+- **If the Mac Studio can't be used at all after step 11** (it won't start, or you can't log in), its jobs are stopped too: they run only while you are logged in on it. Put the jobs back on the laptop as above, and tell the hub. The Mac Studio's job files are still in place, and they start again at its next login. So the first thing after that login, run section 7's five `--remove` commands and its standby check, and tell the hub which records the Mac Studio may have written in between.
 
 ### Route B: a clean setup
 
@@ -437,7 +638,9 @@ Do this in a quiet hour (section 3), with about 90 minutes before the next run. 
    ```
 
    What you must see: **no FAIL line anywhere**, and, under "Compared with the other Mac's manifest", the line `OK   Records: all N forward-test records are here, the same byte for byte as on the other Mac` (N is a number: it was 235 on the laptop on September 29, and grows with every run). Don't go on without both.
-   - A FAIL starting "Record" means a forward-test record differs, is missing or is extra. Copy again (step 7) and compare again. If it still fails, stop and go back to the laptop (section 7). The laptop's copy is untouched.
+   - A FAIL starting "Record differs" or "Record missing here" means a forward-test record didn't arrive as it is on the laptop. Copy again (step 7) and compare again. If it still fails, stop and go back to the laptop (section 7). The laptop's copy is untouched.
+   - A FAIL starting "Record here that the other Mac does not have" names a file that is on the Mac Studio but no longer on the laptop, left from an earlier copy. Copying again can't clear it, because `rsync` never deletes: the file stays until you remove it by hand. In Finder, move the file it names out of `~/code/value-finder` into a folder of its own in your home folder (don't delete it: it's a record), then compare again, and tell the hub which file it was.
+   - A FAIL starting "Record could not be read" or "Forward-test records that can't be read" means the check couldn't fingerprint a record, so nothing proves it arrived. Stop and tell the hub.
    - A FAIL saying "The repo is at another commit" means a change reached GitHub between the two pulls. Do step 4 again on both Macs, then step 6 on the laptop, the last command of step 7, and compare again.
    - A FAIL starting "Not clean" means files that come with the code were changed on the Mac Studio. Stop and tell the hub (open the Claude app for that); section 7 takes you back meanwhile.
    - A FAIL starting "Paid odds file" means the paid data didn't all arrive. Run the `sharp-markets/data` copy of section 5 again, and compare again.
@@ -506,7 +709,7 @@ Do this in a quiet hour (section 3), with about 90 minutes before the next run. 
     ```
 
     Every job should say `OK … not installed here`. Leave Remote Login on until step 15 is done: section 7 needs it.
-14. **Tell the hub the move is done, before anything else.** Open the Claude app again and tell the hub: "The move is done. The Mac Studio has run the jobs since" and the time of step 11, and which scheduled run, if any, fell between step 5 and step 11. It records in `STATUS.md` which Mac runs the jobs, from which time, and updates `CLAUDE.md`. From then on its check-ins check each Mac in its right role.
+14. **Tell the hub the move is done, before anything else.** Open the Claude app again and tell the hub: "The move is done. The Mac Studio has run the jobs since" and the time of step 11, and which scheduled run, if any, fell between step 5 and step 11. It records in `STATUS.md` that the Mac Studio is the live Mac, and from which time. A hub checks only the Mac it runs on, so from now on the hub runs on the Mac Studio (section 8, "One hub at a time"), and the laptop's standby check (step 13) is yours to run. If a check-in sees jobs loaded where `STATUS.md` names another Mac, or none where it names this one, the hub asks you which Mac is live; it never tells you to change the jobs because of that.
 15. **Watch the first real run on the Mac Studio.** After the next 7:30, 11:30, 15:30 or 19:30, run:
 
     ```
@@ -526,6 +729,8 @@ Do this in a quiet hour (section 3), with about 90 minutes before the next run. 
 16. **Leave the laptop's copy of the data untouched for two weeks.** Don't delete it, and don't run the project's scripts there. It's the backup. After two weeks, the hub can say whether the laptop's copy can be archived.
 
 ## 7. If something goes wrong: going back to the laptop
+
+You can go back at any time, even after you told the hub the move was done. The hub never tells you to unload the jobs you put back on the laptop: at a check-in it takes the role from the jobs loaded on the Mac it runs on, and if that doesn't match the live Mac `STATUS.md` names, it asks you which Mac is live and writes your answer into `STATUS.md`.
 
 **First, whatever went wrong and whenever, on the Mac Studio:** remove its jobs. These commands are safe even if nothing was installed there; each prints `removed com.…`.
 
@@ -572,7 +777,7 @@ If you removed live uses, run the command you wrote down, exactly as written. Th
 ~/code/value-finder/ops/mac_check.sh --role live
 ```
 
-Every job should say `OK … loaded`. Open the Claude app, and tell the hub what went wrong and at what times the jobs stopped and started.
+Every job should say `OK … loaded`. Open the Claude app, and tell the hub what went wrong and at what times the jobs stopped and started. It writes into `STATUS.md` that the laptop is the live Mac again.
 
 **If step 11 had started** (even one installer), the Mac Studio may have written records. They go back to the laptop, so the forward test stays one continuous record. Do it in a quiet hour if you can. If a run is due, go on anyway: a run missed during the switch simply doesn't happen (and a missed close is reported as missing), while two Macs running the jobs would spoil the record.
 
@@ -623,7 +828,7 @@ Every job should say `OK … loaded`. Open the Claude app, and tell the hub what
 
    What you must see: **no FAIL line anywhere**, and the line `OK   Records: all N forward-test records are here, the same byte for byte as on the other Mac`. WARN lines for folders that differ are expected here: the laptop's caches are older than the Mac Studio's. If it says "The repo is at another commit", run `git -C ~/code/value-finder pull --ff-only` on both Macs, write the Mac Studio's manifest again (step 1), copy it again (the last command of step 3), and compare again. Any other FAIL: don't put the jobs back; tell the hub.
 5. **On the laptop,** put the jobs back (the four installers above, and the live-uses command if you wrote one down), and run the check with `--role live`.
-6. Open the Claude app and tell the hub, and say at what time each Mac stopped and started.
+6. Open the Claude app and tell the hub, and say at what time each Mac stopped and started. It writes into `STATUS.md` that the laptop is the live Mac again. A hub checks only the Mac it runs on, so if it had moved to the Mac Studio, use the hub on the laptop again (section 8, "One hub at a time").
 
 **If the check ever finds both Macs running the jobs,** stop the standby Mac's jobs at once with the commands the check prints. Then tell the hub straight away, with the times. The hub compares the two ledgers and the two `runs.csv` files and settles which rows stand. Rows are logged, never dropped, so the double rows stay visible in the record.
 
@@ -654,7 +859,7 @@ Every job should say `OK … loaded`. Open the Claude app, and tell the hub what
   - **What's not known.** Whether the Claude app on the Mac Studio shows the copied hub chat and lets it carry on, and whether its daily check-in moves with it. None of this was tested.
   - **The simplest plan.** Start a new hub chat on the Mac Studio. Open a Claude Code chat in `~/code/value-finder`, name it "Value Finder — hub", pin it, keep it out of auto-archive, and type `/hub`. It reads `CLAUDE.md`, `STATUS.md` and the memory folder. `CLAUDE.md` names the hub's chat (today `local_446fc83e-…`), and the new hub updates that line with its own in its first pull request.
   - **The memory folder** is plain files: `~/.claude/projects/-Users-maxzipperman-code-value-finder/memory/` (`MEMORY.md` and the notes it lists). Its name comes from the repo's path, so it works only with the same account name and `~/code/value-finder`. Route A copies it. For route B, copy it with section 5, step 5.
-  - **One hub at a time.** Once the new hub runs on the Mac Studio, stop using the old one on the laptop, or quit the Claude app there. A hub checks only the Mac it runs on. At a check-in it only reports: it never installs or removes a job, and it takes the live Mac's name from `STATUS.md` on GitHub, so a Mac that hasn't pulled yet can't mislead it.
+  - **One hub at a time.** Once the new hub runs on the Mac Studio, stop using the old one on the laptop, and quit the Claude app there: a check-in also runs the two forward-test scorers, on the copy of the data of the Mac it runs on. A hub checks only the Mac it runs on. At a check-in it runs the check there, with `--role live` if that Mac has the jobs loaded and `--role standby` if not, runs the scorers and reports. It never installs, loads, unloads or removes a job. It reads the live Mac's name from `STATUS.md` on GitHub, so a Mac that hasn't pulled yet can't mislead it, and if what it sees doesn't match that name, it asks you which Mac is live.
 - **The daily check-in** runs at about 9 AM while the Claude app is open. The hub renews it at each check-in (`hub.md`, section 5), so the new hub sets it up at its first `/hub`. On an always-on Mac Studio, leave the app open.
 - **Local worker chats** run on the Mac where they were started. Let them finish, or let the hub start new ones on the Mac Studio. The cloud worker doesn't change.
 
@@ -671,4 +876,5 @@ Every job should say `OK … loaded`. Open the Claude app, and tell the hub what
 - Migration Assistant, in either form, and Time Machine's "Manually" setting and backup choice. Whether Setup Assistant allows a transfer with no internet. Whether the laptop's jobs run during a transfer. Whether Homebrew comes across.
 - `rsync` between two Macs over the network. The options were tested only within one Mac, and the commands' wording in zsh and bash with a stand-in for `rsync`.
 - The installers, the jobs and the notifications on the Mac Studio. The check ran on the laptop (macOS 26.3) and in the test suite's fake home folders (`ops/tests/`), not on the Mac Studio.
-- Whether a copied hub chat works in the Claude app on another Mac, and whether a hub follows its new instruction to only report. That instruction is in `.claude/commands/hub.md`; the pause in step 2 of the handover is there so that nothing depends on it during the move.
+- The check's answer when git can't run (an Xcode license not yet agreed to, say) or can't read the repo was tested with a stand-in for git that fails, not with a real one.
+- Whether a copied hub chat works in the Claude app on another Mac, and whether a hub follows its instruction never to change a job on its own, and to ask you which Mac is live when what it sees doesn't match `STATUS.md`. That instruction is in `.claude/commands/hub.md`; the pause in step 2 of the handover is there so that nothing depends on it during the move.

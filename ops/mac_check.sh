@@ -13,9 +13,10 @@
 #
 # It changes nothing. It loads and unloads no job and changes no setting: the only launchctl commands it
 # runs are 'list' and 'print'. It writes no file except, with --manifest, that one file. --fetch updates git's
-# own copy of GitHub's branches; --tests runs the suites, which write only their temporary files.
-# It only reports. The commands it prints (unload, install) are for the owner to run; the hub's check-in
-# never runs them for him (.claude/commands/hub.md).
+# own copy of GitHub's branches. --tests runs the four suites, which can write in the projects: besides their
+# temporary files, importing a weather project's config makes its data and output folders if they are missing.
+# The commands it prints (unload, install) are for the owner to run. The hub never runs them, and never
+# changes a job on its own (.claude/commands/hub.md).
 # Keys: it reads each .env file only to learn which names have a value, the way the projects read them
 # (the weather projects take only a line that starts NAME=). No value is printed or saved, and the name of
 # git's sign-in helper is shown as a label, never as the text it is configured with.
@@ -155,8 +156,15 @@ DEVTOOLS=0
 xcode-select -p >/dev/null 2>&1 && DEVTOOLS=1
 GIT="$(command -v git 2>/dev/null)"
 if [ "$GIT" = "/usr/bin/git" ] && [ $DEVTOOLS -eq 0 ]; then GIT=""; fi
+# git can be there and still not run: until the Xcode license is agreed to, say, it prints a request and
+# exits. Then nothing git says about the repo can be trusted, and the check must not read its silence as
+# "clean" or "same commit".
+GIT_OK=0 GIT_VER=""
+if [ -n "$GIT" ]; then
+  GIT_VER="$("$GIT" --version 2>/dev/null)" && case "$GIT_VER" in "git version "*) GIT_OK=1 ;; esac
+fi
 HAVE_REPO=0
-if [ -n "$GIT" ] && [ -e "$REPO/.git" ]; then HAVE_REPO=1; fi
+if [ $GIT_OK -eq 1 ] && [ -e "$REPO/.git" ]; then HAVE_REPO=1; fi
 
 # ---------------------------------------------------------------------------------------------------------
 section "Jobs: exactly one Mac runs them"
@@ -483,8 +491,11 @@ fi
 
 # ---------------------------------------------------------------------------------------------------------
 section "Tools"
-if [ -n "$GIT" ]; then
-  say OK "$("$GIT" --version 2>/dev/null)"
+GIT_FIX="open Terminal, run 'git --version', and follow what macOS asks (to install the developer tools, or to agree to the Xcode license). Then run this check again"
+if [ $GIT_OK -eq 1 ]; then
+  say OK "$GIT_VER"
+elif [ -n "$GIT" ]; then
+  say FAIL "git cannot run here: $GIT_FIX"
 else
   say FAIL "git is not installed. Installing Homebrew installs Apple's Command Line Tools, which include it (or run: xcode-select --install)"
 fi
@@ -497,12 +508,13 @@ if command -v gh >/dev/null 2>&1; then
 else
   say WARN "gh is not installed (brew install gh). The hub uses it for pull requests"
 fi
-if [ -n "$GIT" ]; then
-  # only a label: a helper's configured text can hold a token, and this output is copied into the hub's chat
+if [ $GIT_OK -eq 1 ]; then
+  # only a label: a helper's configured text can hold a token, and this output is copied into the hub's chat.
+  # It says which helper git is set up to use, not that a sign-in is stored there or works.
   HELPER="$("$GIT" config --get-urlmatch credential.helper https://github.com 2>/dev/null | head -n 1)"
   case "$HELPER" in
     "") HLABEL="" ;;
-    osxkeychain) HLABEL="the macOS keychain (osxkeychain)" ;;
+    osxkeychain) HLABEL="the macOS keychain" ;;
     *"gh auth git-credential"*) HLABEL="gh (gh auth setup-git)" ;;
     store|"store "*) HLABEL="a plain file on disk (store)" ;;
     cache|"cache "*) HLABEL="git's short-lived memory (cache)" ;;
@@ -510,7 +522,7 @@ if [ -n "$GIT" ]; then
     *) HLABEL="another helper (its text is not shown)" ;;
   esac
   HELPER=""
-  if [ -n "$HLABEL" ]; then say OK "git signs in to GitHub with $HLABEL (the nightly ledger copy pushes with it)"
+  if [ -n "$HLABEL" ]; then say OK "git is set up to use $HLABEL"
   else say WARN "git has no way to sign in to GitHub, so the nightly ledger copy can't push. Run: gh auth setup-git"; fi
 fi
 if command -v uv >/dev/null 2>&1; then
@@ -576,6 +588,8 @@ if [ ! -d "$REPO" ]; then
   say FAIL "No repo at $(tilde "$REPO")"
 elif [ -z "$GIT" ]; then
   say FAIL "Can't look at the repo without git"
+elif [ $GIT_OK -eq 0 ]; then
+  say FAIL "git cannot run here, so the check can't tell which commit this Mac has or whether a file that git tracks was changed: $GIT_FIX"
 elif [ $HAVE_REPO -eq 0 ]; then
   say FAIL "$(tilde "$REPO") is not a git checkout"
 else
@@ -587,7 +601,16 @@ else
     else say WARN "git fetch failed (no network, or not signed in); the numbers below are as of the last fetch"; fi
   fi
   BR="$("$GIT" -C "$REPO" symbolic-ref --short -q HEAD 2>/dev/null)"
-  HEAD_SHA="$("$GIT" -C "$REPO" rev-parse HEAD 2>/dev/null)"
+  HEAD_SHA="$("$GIT" -C "$REPO" rev-parse -q --verify HEAD 2>/dev/null)"
+  ST="$("$GIT" -C "$REPO" status --porcelain 2>/dev/null)"; ST_RC=$?
+  if [ -z "$HEAD_SHA" ] || [ $ST_RC -ne 0 ]; then
+    # git runs but can't read this repo (a folder that belongs to another user, a damaged .git): its silence
+    # is not "clean" and not a commit
+    HEAD_SHA=""
+    say FAIL "git runs, but it cannot read the repo at $(tilde "$REPO"), so the check can't tell which commit this Mac has or whether a file that git tracks was changed. To see why, run in Terminal: git -C $(tilde "$REPO") status. Then tell the hub"
+  fi
+fi
+if [ -n "$HEAD_SHA" ]; then
   if [ "$BR" = "main" ]; then
     say OK "On main, at ${HEAD_SHA:0:7}"
   elif [ "$ROLE" = "live" ]; then
@@ -595,7 +618,6 @@ else
   else
     say WARN "On ${BR:-no branch}, not main"
   fi
-  ST="$("$GIT" -C "$REPO" status --porcelain 2>/dev/null)"
   N_CH="$(printf '%s\n' "$ST" | grep -c '^[^?]')"
   N_UN="$(printf '%s\n' "$ST" | grep -c '^??')"
   if [ -z "$ST" ]; then
@@ -965,6 +987,13 @@ if [ -d "$REPO" ]; then
       } | awk -F'\t' -v OFS='\t' '$1 == "H" { h[$2] = $3; next } { s[$2] = $3; m[$2] = $4 }
                                   END { for (p in s) print "record", p, h[p], s[p], m[p] }' | LC_ALL=C sort)"
     [ -n "$RECORD_LINES" ] && RECORD_LINES="$RECORD_LINES$NL"
+    # a record shasum could not read has no hash: it goes into the manifest with an empty one, which a compare
+    # never takes for "the same"
+    UNREAD="$(printf '%s' "$RECORD_LINES" | awk -F'\t' '$1 == "record" && $3 == "" { print $2 }')"
+    if [ -n "$UNREAD" ]; then
+      say FAIL "Forward-test records that can't be read on this Mac: $(printf '%s\n' "$UNREAD" | grep -c .). The check can't fingerprint them, so no manifest or compare can vouch for them. Tell the hub. First ones:"
+      printf '%s\n' "$UNREAD" | head -n 3 | while IFS= read -r l; do more "$l"; done
+    fi
   fi
   if [ -n "$PAID_ROOTS" ]; then
     # too big to hash at every check (3 GB on day one, 16 GB with F4), so each file's size and time
@@ -1029,6 +1058,8 @@ if [ -n "$COMPARE" ]; then
       END {
         for (i = 1; i <= nor; i++) { p = rorder[i]
           if (!(p in crc)) { out("FAIL", "Record missing here: " p); rbad++ }
+          else if (ch[p] == "" || oh[p] == "") {
+            out("FAIL", "Record could not be read " (ch[p] == "" ? "here" : "on the other Mac") ", so it can'"'"'t be compared: " p); rbad++ }
           else if (ch[p] != oh[p]) { out("FAIL", "Record differs from the other Mac: " p " (sha256 here " substr(ch[p], 1, 12) ", there " substr(oh[p], 1, 12) ")"); rbad++ }
           else if (cm[p] != om[p]) out("WARN", "Record has the same content but another file time: " p " (copied without keeping times?)")
           else same++ }
@@ -1057,8 +1088,10 @@ if [ -n "$COMPARE" ]; then
           n = split(ckeys[p], a, ","); for (j = 1; j <= n; j++) if (a[j] != "" && index("," okeys[p] ",", "," a[j] ",") == 0)
             out("WARN", "Keys: " p "/.env has a value for " a[j] " here but not on the other Mac")
         }
-        if (ohead == "" || ohead == "none" || chead == "" || chead == "none")
-          out("WARN", "Can'"'"'t tell whether the two repos are at the same commit (no git on one of them)")
+        if (chead == "" || chead == "none")
+          out("FAIL", "Can'"'"'t tell whether the two repos are at the same commit: git could not read the repo on this Mac (see \"The repo\" above)")
+        else if (ohead == "" || ohead == "none")
+          out("FAIL", "Can'"'"'t tell whether the two repos are at the same commit: the other Mac'"'"'s manifest has none, because git could not read the repo there. Make git work there, write its manifest again and compare again")
         else if (ohead != chead)
           out("FAIL", "The repo is at another commit here (" substr(chead, 1, 7) ") than on the other Mac (" substr(ohead, 1, 7) "), so this Mac would run other code. Run git pull --ff-only on both Macs, then write the other Mac'"'"'s manifest again and compare again (ops/MOVE_TO_NEW_MAC.md)")
         if (nor && !rbad) out("OK", "Records: all " nor " forward-test records are here, the same byte for byte as on the other Mac")

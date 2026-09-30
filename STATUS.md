@@ -18,6 +18,8 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 ## Forward tests (the scoreboard)
 
+The live Mac (the one that runs the scheduled jobs): the MacBook Air.
+
 | Rule | Scored from | Signals so far | Decision |
 |---|---|---|---|
 | NFL Rule B: early wind under ([`STRATEGY.md`](nfl-weather/STRATEGY.md)) | Week 5, Oct 8, 2026 | 0 | After Week 18 of 2026 if 40 signals settle in the 2026 regular season; otherwise once, after the 2027 regular season, on 2026 and 2027 pooled (amendments 4 and 5): keep only if average CLV > 0 with a 95% interval above zero. Until then the scorer prints an interim read. *Amendment 6 (Sep 29), readings 1 to 11:* void and pending bets (1, 2); the first final decision is written down and stands, and a lost record is restored from its nightly copy (3); a keep or a drop in 2026 is the decision, and an inconclusive 2026 result is decided once more after the 2027 regular season, on both seasons pooled (6); a postponed game that signals again is graded on the listing that matches its kickoff (9); "before kickoff" is the earlier of the row's and the schedule's kickoff (10); fewer than 20 primary closes make a decision inconclusive (11). *Amendment 7 (Sep 29):* the 95% interval is the wider of the plain one and one grouped by game day, and the nightly copy of the record never loses a line (item 8). |
@@ -117,6 +119,8 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
 10. **A second disk for a backup of the paid data (due Thu Oct 1, 2026, before the pull).** The laptop has no backup of any kind: no Time Machine destination is set (checked Sep 29). Paid data can't be re-created without paying again, and the plan already asks for an encrypted backup outside git ([`odds-api-credits.md`](strategy-research/odds-api-credits.md), "Before you buy", item 6); nothing carries it out yet. An external drive (roughly $60 to $150 for 1 to 2 TB; your purchase), or the Mac Studio over the network, will do. The backup step itself is being written as its own pull request (Sep 29). Why: the [model-layer memo](strategy-research/model-layer-memo-2026-09-29.md), D5.
 
 11. **The multiple-testing bar: one count for everything, or a separate bar for a small registered family of tests (no deadline; before the 2027 rules are written).** Would you accept a separate bar for a small family of tests registered in advance (for a family of 10, p < 0.005), confirmed on the sealed 2026 season and a forward test, as the plan review proposed? If not, the single bar stands at 0.05 divided by the running count (288 today, p < 0.000174) and rises with every test, only closing-line value can ever pass it, and the list of ideas worth testing gets shorter, for rules as well as for models ([memo, question 3](strategy-research/model-layer-memo-2026-09-29.md#9-questions-for-the-owner)).
+
+12. **Move to the Mac Studio (due Wed Sep 30, 2026).** Follow [`ops/MOVE_TO_NEW_MAC.md`](ops/MOVE_TO_NEW_MAC.md#route-a-one-way-the-move-the-owner-makes-on-wednesday-september-30), "Route A, one way". Until the hub is told otherwise the laptop is the live Mac.
 
 ## Research sweep (Sep 28)
 

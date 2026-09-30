@@ -106,6 +106,7 @@ class FakeMac:
         self.forbidden = tmp / "forbidden.log"
         self.ac_sleep, self.laptop, self.autorestart, self.free_kb = 0, False, "1", 400_000_000
         self.tz = "America/Los_Angeles"
+        self.git = "real"         # "cannot run": no git runs; "cannot read": git runs but can't read the repo
         self.build_repo()
         self.build_home()
         (self.launchd / "loaded").mkdir(parents=True)
@@ -281,6 +282,16 @@ echo "gh $*" >> "{f}"; exit 1''',
             "xcode-select": f'[ "$1" = "-p" ] && {{ echo /Library/Developer/CommandLineTools; exit 0; }}; '
                             f'echo "xcode-select $*" >> "{f}"; exit 1',
         }
+        if self.git == "cannot run":
+            # what Apple's git does until the Xcode license is agreed to: a request on stderr, exit 69
+            stubs["git"] = ('echo "You have not agreed to the Xcode license agreements. Please run '
+                            "'sudo xcodebuild -license' from within a Terminal window to review and agree to the "
+                            'Xcode and Apple SDKs license." >&2; exit 69')
+        elif self.git == "cannot read":
+            # git runs, but refuses this repo (as it does for a folder that belongs to another user)
+            stubs["git"] = ('case "$1" in --version|config) exec /usr/bin/git "$@" ;; esac\n'
+                            "echo \"fatal: detected dubious ownership in repository at '$2'\" >&2; exit 128")
+        (self.stubs / "git").unlink(missing_ok=True)
         for name, body in stubs.items():
             write(self.stubs / name, "#!/bin/bash\n" + body + "\n", 0o755)
         lt = self.tmp / "localtime"
@@ -507,18 +518,19 @@ def test_no_key_value_reaches_the_output_or_the_manifest(mac, tmp_path):
     assert "keys\tnfl-weather\tODDS_API_KEY,NTFY_TOPIC" in text.splitlines()
     assert "keys\tcfb-weather\tODDS_API_KEY,CFBD_API_KEY,NTFY_TOPIC" in text.splitlines()
     assert "gh is signed in to GitHub as fakeuser" in runs[0].stdout
-    assert "OK   git signs in to GitHub with another helper (its text is not shown)" in runs[0].stdout
+    assert "OK   git is set up to use another helper (its text is not shown)" in runs[0].stdout.splitlines()
     assert "echo username" not in runs[0].stdout
     assert "OK   ODDS_API_KEY is the same in all 3 .env files, as each project reads it" in runs[0].stdout
 
 
-@pytest.mark.parametrize("helper,label", [("osxkeychain", "the macOS keychain (osxkeychain)"),
+@pytest.mark.parametrize("helper,label", [("osxkeychain", "the macOS keychain"),
                                           ("!/opt/homebrew/bin/gh auth git-credential", "gh (gh auth setup-git)"),
                                           ("store --file /tmp/x", "a plain file on disk (store)")])
 def test_the_sign_in_helper_is_shown_as_a_label(mac, helper, label):
+    # a helper being set up says nothing about whether a sign-in is stored there, so the line claims no more
     write(mac.home / ".gitconfig", f'[credential "https://github.com"]\n\thelper = "{helper}"\n')
     r = mac.run("--role", "live")
-    assert f"OK   git signs in to GitHub with {label} (the nightly ledger copy pushes with it)" in r.stdout
+    assert f"OK   git is set up to use {label}" in r.stdout.splitlines()
     assert "/opt/homebrew/bin/gh auth" not in r.stdout and "/tmp/x" not in r.stdout
 
 
@@ -800,6 +812,85 @@ def test_a_linked_data_folder_fails(mac, tmp_path):
     assert any(l.startswith("FAIL ~/.cache/value-finder is a link to another place") for l in lines(r, "FAIL"))
 
 
+def test_a_record_that_cannot_be_read_fails_and_is_never_called_the_same(mac, tmp_path):
+    rec = "nfl-weather/data/forward/closes.csv"
+    write(mac.repo / rec, "slot_utc,game_id\n")
+    laptop_manifest = tmp_path / "laptop.manifest"
+    assert mac.run("--role", "live", "--manifest", str(laptop_manifest)).returncode == 0
+    studio = mac.copy_to(tmp_path)
+    studio_manifest = tmp_path / "studio.manifest"
+    (studio.repo / rec).chmod(0o000)
+    try:
+        r = studio.run("--role", "standby", "--compare", str(laptop_manifest))
+        studio.run("--role", "standby", "--manifest", str(studio_manifest))
+    finally:
+        (studio.repo / rec).chmod(0o644)
+    assert r.returncode == 1
+    fails = lines(r, "FAIL")
+    assert any(l.startswith("FAIL Forward-test records that can't be read on this Mac: 1. The check can't "
+                            "fingerprint them") for l in fails)
+    assert f"       {rec}" in r.stdout.splitlines()
+    assert f"FAIL Record could not be read here, so it can't be compared: {rec}" in fails
+    assert "OK   Records: all" not in r.stdout and "OK   Same as the manifest" not in r.stdout
+    # the manifest keeps the line, with no hash; compared on the other Mac, it is not "the same" either
+    assert f"record\t{rec}\t\t" in studio_manifest.read_text()
+    r = mac.run("--role", "live", "--compare", str(studio_manifest))
+    assert r.returncode == 1
+    assert f"FAIL Record could not be read on the other Mac, so it can't be compared: {rec}" in lines(r, "FAIL")
+    assert "OK   Records: all" not in r.stdout
+
+
+# -- git that can't run, or can't read the repo -------------------------------------------------------------
+def summary_fails(r: subprocess.CompletedProcess) -> int:
+    return int(re.search(r"Summary: \d+ OK, \d+ WARN, (\d+) FAIL\.", r.stdout).group(1))
+
+
+def test_a_git_that_cannot_run_fails_and_its_silence_is_never_clean(mac, tmp_path):
+    # the new Mac before the Xcode license is agreed to: git is there, prints a request and exits
+    laptop_manifest = tmp_path / "laptop.manifest"
+    assert mac.run("--role", "live", "--manifest", str(laptop_manifest)).returncode == 0
+    studio = mac.copy_to(tmp_path)
+    studio.git = "cannot run"
+    for args in (["--role", "standby"], ["--role", "standby", "--compare", str(laptop_manifest)]):
+        r = studio.run(*args)
+        assert r.returncode == 1, r.stdout
+        fails = lines(r, "FAIL")
+        fix = ("open Terminal, run 'git --version', and follow what macOS asks (to install the developer tools, or to "
+               "agree to the Xcode license). Then run this check again")
+        assert f"FAIL git cannot run here: {fix}" in fails                                  # under "Tools"
+        assert ("FAIL git cannot run here, so the check can't tell which commit this Mac has or whether a file that "
+                f"git tracks was changed: {fix}") in fails                                  # under "The repo"
+        assert "OK   Clean" not in r.stdout and "Nothing failed" not in r.stdout
+        assert "OK   On main" not in r.stdout and "OK   git is set up" not in r.stdout
+        assert summary_fails(r) == len(fails)                   # the summary counts every FAIL line
+    assert any(l.startswith("FAIL Can't tell whether the two repos are at the same commit: git could not read the "
+                            "repo on this Mac") for l in fails)
+    assert "OK   Same as the manifest" not in r.stdout
+    # its manifest has no commit, so a compare against it on the other Mac proves nothing about the code
+    studio_manifest = tmp_path / "studio.manifest"
+    studio.run("--role", "standby", "--manifest", str(studio_manifest))
+    assert "repo_head\tnone" in studio_manifest.read_text().splitlines()
+    r = mac.run("--role", "live", "--compare", str(studio_manifest))
+    assert r.returncode == 1
+    assert any(l.startswith("FAIL Can't tell whether the two repos are at the same commit: the other Mac's manifest "
+                            "has none") for l in lines(r, "FAIL"))
+
+
+def test_a_git_that_cannot_read_the_repo_fails(mac, tmp_path):
+    manifest = tmp_path / "laptop.manifest"
+    assert mac.run("--role", "live", "--manifest", str(manifest)).returncode == 0
+    mac.git = "cannot read"
+    r = mac.run("--role", "live", "--compare", str(manifest))
+    assert r.returncode == 1
+    fails = lines(r, "FAIL")
+    assert any(l.startswith("FAIL git runs, but it cannot read the repo at ~/code/value-finder, so the check can't "
+                            "tell which commit this Mac has") for l in fails)
+    assert "OK   Clean" not in r.stdout and "OK   On main" not in r.stdout
+    assert any(l.startswith("OK   git version ") for l in r.stdout.splitlines())
+    assert any(l.startswith("FAIL Can't tell whether the two repos are at the same commit") for l in fails)
+    assert summary_fails(r) == len(fails)
+
+
 # -- the check changes nothing --------------------------------------------------------------------------------
 def test_the_check_changes_nothing(mac, tmp_path):
     for proj in ("nfl-weather", "cfb-weather", "sharp-markets", "dashboard"):
@@ -958,8 +1049,47 @@ def test_the_page_copies_leave_out_what_git_holds_and_writes_in_progress():
         assert "--delete" not in c, c
 
 
-def test_hub_check_in_only_reports():
+LIVE_MAC_LINE = "The live Mac (the one that runs the scheduled jobs): "
+
+
+def test_the_hub_takes_the_role_from_this_macs_jobs_and_never_changes_a_job():
     hub = (REPO_ROOT / ".claude" / "commands" / "hub.md").read_text()
     line = next(l for l in hub.splitlines() if "ops/mac_check.sh" in l)
-    assert "never installs, reinstalls or unloads a job" in line
-    assert "origin/main" in line and "move" in line
+    assert "never from `STATUS.md`" in line and "launchctl list" in line
+    assert "never installs, loads, unloads or removes a job on its own" in line
+    assert "ask the owner which Mac is live" in line and "origin/main" in line
+    # the line the hub compares with is where the hub looks for it: in the "Forward tests" section of STATUS.md
+    assert f'"{LIVE_MAC_LINE.strip()} …" in the "Forward tests" section' in line
+    status = (REPO_ROOT / "STATUS.md").read_text()
+    section = status.split("\n## Forward tests", 1)[1].split("\n## ", 1)[0]
+    found = [l for l in status.splitlines() if l.startswith(LIVE_MAC_LINE)]
+    assert len(found) == 1 and found[0] in section.splitlines(), found
+    assert found[0] == LIVE_MAC_LINE + "the MacBook Air."
+
+
+def test_the_one_way_route_keeps_the_owners_order():
+    text = PAGE.read_text()
+    start = text.index("\n### Route A, one way: the move the owner makes on Wednesday, September 30\n")
+    part = text[start:text.index("\n### Route B")]
+    steps = re.findall(r"^(\d+)\. \*\*", part, flags=re.M)
+    assert steps == [str(n) for n in range(1, 16)]
+    boxes = [b.strip() for b in re.findall(r"```\n(.*?)```", part, flags=re.S)]
+    check = "~/code/value-finder/ops/mac_check.sh "
+    installers = ["~/code/value-finder/nfl-weather/scripts/install_alerts.sh",
+                  "~/code/value-finder/cfb-weather/scripts/install_alerts.sh",
+                  "~/code/value-finder/ops/install_close_capture.sh", "~/code/value-finder/ops/install_ledger_sync.sh"]
+    order = (["tail -n 1 ~/code/value-finder/nfl-weather/data/forward/runs.csv", check + "--role live"]  # 1
+             + [i + " --remove" for i in installers] + [check + "--role standby"]                        # 2
+             + [check + "--role standby --manifest ~/laptop.manifest"]                                   # 3
+             + [check + "--role standby", "git --version", check + "--role standby"]                     # 5, 6
+             + [check + "--role standby --compare ~/laptop.manifest", check + "--role standby --tests"]   # 8, 9
+             + ["git -C ~/code/value-finder ls-remote origin refs/heads/ledgers"]                        # 10
+             + installers + [check + "--role live", check + "--role live", check + "--role standby"])   # 11-13
+    at = 0
+    for cmd in order:
+        assert cmd in boxes[at:], (cmd, boxes[at:])
+        at = boxes.index(cmd, at) + 1
+    # nothing installs a job before the compare and the tests, and the laptop gets nothing back after its check
+    first_install = min(boxes.index(i) for i in installers)
+    assert first_install > boxes.index(check + "--role standby --tests")
+    assert not [b for b in boxes[at:] if "install" in b]
