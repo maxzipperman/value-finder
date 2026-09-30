@@ -53,7 +53,9 @@ Every badge carries its word. The rules are `badge` and `strongest` in `vfdash/w
 
 Home opens with the live signals, one row each (the badge, the game, the kickoff, the rule, the number and price to
 take, a better number if a book logged one, and how long until kickoff), above the four numbers; with none it says
-"No signal is live." and when the next run is. The browser tab shows the count, "(1) Value Finder", on every screen.
+"No signal is live." and when the next run is. The browser tab shows how many games have a live signal, "(1) Value
+Finder", on every screen, as the Home tile and the menu-bar light count them; the panel has a row for each rule that
+signals, so when a game signals under Rule B and Rule HT its heading says both ("4 signals are live, on 3 games").
 The Board lists "Signals" and then "Everything else", each with its count, under a legend.
 
 The Signals screen lists every bet the scorers count, newest first, from each scorer's `--json` document (the same
@@ -75,7 +77,7 @@ than 2 settled bets each is a sentence instead. The totals and charts ignore the
 Before the first signal the screen says which rule starts when, worked out from `content/forward_tests.json` (the
 date in each test's `starts_text`, else its `starts_utc` in Eastern time). If a scorer fails, takes more than 60
 seconds or prints something that is not its document (not one JSON object with its report as "text" and its tests,
-each with an id, counts and bets; or more than 20 MB), the screen says so and lists, from the ledgers, the games whose
+each with an id, counts and bets, among them every test that scorer prints; or more than 20 MB), the screen says so and lists, from the ledgers, the games whose
 rows include a signal since their rule started, without results.
 
 ## Backtests: the research as charts

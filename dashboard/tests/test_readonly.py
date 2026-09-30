@@ -9,7 +9,7 @@ from pathlib import Path
 
 from conftest import ENDPOINTS, FakeRunner, Running, copy_content, make_home, make_root, make_store
 
-from vfdash import commands
+from vfdash import commands, data
 
 
 def state(*dirs: Path) -> dict:
@@ -46,14 +46,18 @@ def test_every_endpoint_changes_nothing(tmp_path):
 
 def stand_in_scorers(scorers: Path, folders: bool = True):
     """A stand-in for each project's scorer that, like the real ones (their config.py), creates its project's
-    folders when it is imported and they are missing, then prints its arguments as the text of a --json document."""
+    folders when it is imported and they are missing, then prints its arguments as the text of a --json document
+    (with its project's tests, none with a bet)."""
     for project in commands.PROJECTS:
         (scorers / project / ".venv" / "bin").mkdir(parents=True)
         os.symlink(sys.executable, scorers / project / ".venv" / "bin" / "python")
         (scorers / project / "scripts").mkdir()
+        tests = [{"id": i, "counts": {"signals": 0, "settled": 0, "pending": 0, "void": 0}, "bets": []}
+                 for i in data.TEST_IDS[project]]
         (scorers / project / "scripts" / "score_forward.py").write_text(
             "import sys, json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(__file__).resolve().parents[1]))\n"
-            "import helper\nprint(json.dumps({'text': 'args ' + json.dumps(sys.argv[1:]) + '\\n', 'tests': []}))\n")
+            "import helper\nprint(json.dumps({'text': 'args ' + json.dumps(sys.argv[1:]) + '\\n', "
+            f"'tests': {tests!r}}}))\n")
         (scorers / project / "helper.py").write_text(
             "from pathlib import Path\nROOT = Path(__file__).resolve().parent\n"
             f"for rel in {commands.SCORER_FOLDERS[project]!r}:\n    (ROOT / rel).mkdir(parents=True, exist_ok=True)\n")

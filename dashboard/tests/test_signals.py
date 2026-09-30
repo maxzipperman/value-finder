@@ -107,6 +107,43 @@ def test_the_panel_and_the_tab_title_as_drawn(root, home, tmp_path, when, n, tit
     assert draw(tmp_path, "#board", api.board(store))["doc_title"] == title
 
 
+def test_each_rules_count_toward_its_decision_is_what_it_registers(root, home):
+    """No "of the 40 it needs" for the NFL, whose rules are decided after the 2027 season on both seasons pooled when
+    2026 has fewer than 40; college football's wind rule needs 40 (or the end of the 2026 regular season, if later)."""
+    by = {r["id"]: r["summary"] for r in api.signals_screen(rich_store(root, home))["rules"]}
+    lean = by["nfl_lean"]["toward"]
+    assert lean.startswith("Toward its decision: ") and lean.endswith(
+        " settled so far. It is decided after Week 18 of 2026 if 40 settle in the 2026 regular season, and otherwise "
+        "after the 2027 regular season, on both seasons, where fewer than 40 is inconclusive. A lean is a watch: "
+        "logged and graded, never a bet.")
+    assert by["cfb_rule_b"]["toward"] == (f"Toward the decision: {by['cfb_rule_b']['settled']} of the 40 settled "
+                                          "signals it needs. It is decided after the 40th signal's kickoff or the end "
+                                          "of the 2026 regular season (Dec 12), whichever is later.")
+    assert by["cfb_rule_ht"]["toward"].endswith("It is decided once, after the 2027 season's title game; about 105 "
+                                                "bets are expected.")
+    assert not [r for r in by.values() if r and "of the 40 settled bets" in r["toward"]]
+
+
+def test_a_game_that_signals_under_two_rules(root, home, tmp_path):
+    """Ohio State at Michigan signals under Rule B and Rule HT on its newest row: the panel has a row for each rule
+    (4 signals), while the tab, the tile and the menu-bar light count games (3), and the heading says both."""
+    with (root / "cfb-weather" / "data" / "forward" / "ledger.csv").open("a") as f:
+        f.write(cfb_row("2026-10-02T14:30:14Z", "401000002", "Sat 10-10 15:30", "Ohio State", "Michigan", "SIGNAL",
+                        "SIGNAL", "2026-10-10 19:30:00+00:00", total="64.5") + "\n")
+    store = make_store(root, home, clock=Clock(datetime(2026, 10, 2, 17, 0, tzinfo=UTC)))
+    d = api.home(store)
+    assert len(d["live"]) == 4 and [s["rule"] for s in d["live"] if s["game_id"] == "401000002"] == [
+        "Wind rule (Rule B)", "High-total rule (Rule HT)"]
+    assert d["header"]["signals_live"] == d["numbers"]["signals_live"] == api.summary(store)["signals_live"] == 3
+    if NODE:
+        page = draw(tmp_path, "#home", d)
+        assert text(next(find(page, "h2"))) == "4 signals are live, on 3 games"
+        assert page["doc_title"] == "(3) Value Finder"
+        tile = next(x for x in find(page, "div", "tile") if text(x).startswith("Signals on the board"))
+        assert text(tile).startswith("Signals on the board3Games not yet kicked off with a Rule B or Rule HT signal, "
+                                     "each counted once.")
+
+
 # ------------------------------------------------------------------ the board: signals first, a legend, badges
 @needs_node
 def test_the_board_groups_signals_and_shows_the_legend(store, tmp_path):
@@ -150,7 +187,9 @@ def test_the_log_s_totals_against_hand_arithmetic(root, home):
     assert rb["clv"] == "Closing-line value: +0.50 points on average, over 3 bets with a close."
     assert rb["interval"] == (f"Registered 95% interval {MINUS}1.65 to +2.65, over 2 game days; it includes zero.")
     assert rb["sample"] == "3 settled bets, 1 waiting for a result, 1 void (not graded)"
-    assert rb["toward"] == "Toward the decision: 3 of the 40 settled bets it needs."
+    assert rb["toward"] == ("Toward the decision: 3 settled so far. It is decided after Week 18 of 2026 if 40 settle "
+                            "in the 2026 regular season, and otherwise after the 2027 regular season, on both seasons "
+                            "pooled.")                       # nfl-weather amendments 4 to 6: not "40 it needs"
     assert by["nfl_rule_b_backup"]["summary"]["units"] == "+0.91"
     assert by["nfl_rule_b_backup"]["summary"]["toward"].startswith("Not part of any decision")
     assert by["nfl_rule_b_backup"]["summary"]["decision"] == ""              # it never has one to come
@@ -541,12 +580,42 @@ def test_what_is_not_a_document_is_said_plainly(root, home, printed):
     assert t["groups"][0]["scorer"]["status"] == "not_document" and len(t["groups"][0]["scorer"]["error"]) <= 1200
 
 
+NOT_THE_DOCUMENT = ("The NFL scorer printed something that is not the report the dashboard reads (its --json "
+                    "document), so its read is not shown. Its ledger shows no game that has signalled since its rule "
+                    "started.")
+NO_BETS = {"signals": 0, "settled": 0, "pending": 0, "void": 0}
+
+
+@pytest.mark.parametrize("tests", [
+    [],                                                                     # no test at all
+    [{"id": "SOMETHING_ELSE", "counts": NO_BETS, "bets": []}],             # only an id the dashboard doesn't know
+    [{"id": "RULE_B", "counts": NO_BETS, "bets": []}]])                    # one of the scorer's three tests
+def test_a_document_without_its_tests_is_said_plainly(root, home, tests):
+    """A well-formed document that lacks the scorer's own tests is not read as "No rule has signalled yet" with
+    nothing said: it is not the scorer's document, the screen says so in plain words, and the ledgers are listed."""
+    printed = json.dumps({"text": "ledger rows: 1\n", "tests": tests})
+    assert data.read_document(printed, data.TEST_IDS["nfl-weather"]) is None
+    store = make_store(root, home, runner=FakeRunner(raw=printed))
+    d = api.signals_screen(store)
+    assert d["trouble"] == [NOT_THE_DOCUMENT]
+    assert api.tests_screen(store)["groups"][0]["scorer"]["status"] == "not_document"
+    for drawn in (d, api.home(store)):
+        assert "error" not in drawn
+
+
+def test_the_test_ids_a_document_must_hold_are_the_logs_rules():
+    assert {p: set(ids) for p, ids in data.TEST_IDS.items()} == {
+        p: {r["test"] for r in signals.LOG_RULES if r["project"] == p} for p in data.PROJECTS}
+
+
 def test_a_document_with_odd_fields_is_still_read(root, home):
     """Missing optional fields (no record, no interval, no decisions, a bet with only its outcome) are shown as not
     known; nothing breaks."""
     doc = {"text": "ledger rows: 1\n", "tests": [{"id": "RULE_B", "counts": {"signals": 1, "settled": 1, "pending": 0,
                                                                           "void": 0},
-                                                  "bets": [{"outcome": "won"}]}]}
+                                                  "bets": [{"outcome": "won"}]},
+                                                 {"id": "RULE_B_SECONDARY", "counts": NO_BETS, "bets": []},
+                                                 {"id": "MODEL_LEAN", "counts": NO_BETS, "bets": []}]}
     store = make_store(root, home, runner=FakeRunner(raw=json.dumps(doc)))
     d = api.signals_screen(store)
     assert d["trouble"] == [] and not any("could not be shown" in n for n in d["notes"])

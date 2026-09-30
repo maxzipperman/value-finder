@@ -196,14 +196,19 @@
       h("div", { class: "value" }, value), h("div", { class: "sub" }, sub || " "));
   }
 
-  // Every signal live on the board, one row each, above the four numbers; one quiet line when there is none.
+  // Every signal live on the board, one row each (one per rule: a game can signal under Rule B and Rule HT), above the
+  // four numbers; one quiet line when there is none. The tab, the tile and the menu-bar light count games, so the
+  // heading says how many games too when that differs: "4 signals are live, on 3 games".
   function livePanel(d) {
     const live = d.live || [];
     if (!live.length) {
       return h("section", { class: "live none", "aria-label": "Live signals" }, d.live_none || "No signal is live.");
     }
+    const games = new Set(live.map((s) => s.sport_key + " " + s.game_id)).size;
+    const head = (live.length === 1 ? "1 signal is live" : fmtInt(live.length) + " signals are live") +
+      (games !== live.length ? ", on " + fmtInt(games) + (games === 1 ? " game" : " games") : "");
     return h("section", { class: "live", "aria-label": "Live signals" },
-      h("header", null, h("h2", null, live.length === 1 ? "1 signal is live" : fmtInt(live.length) + " signals are live")),
+      h("header", null, h("h2", null, head)),
       h("ul", { class: "rows" }, live.map((s) => h("li", null,
         badge(s.badge),
         h("span", null, h("span", { class: "tag" }, s.sport), h("a", { href: "#game/" + encodeURIComponent(s.game_id) }, s.matchup),
@@ -217,7 +222,7 @@
   function drawHome(d) {
     const n = d.numbers || {};
     const tiles = h("div", { class: "tiles" },
-      tile("Signals on the board", fmtInt(n.signals_live), "Rule B and Rule HT, on games not yet kicked off. " +
+      tile("Signals on the board", fmtInt(n.signals_live), "Games not yet kicked off with a Rule B or Rule HT signal, each counted once. " +
         (n.leans_live ? "Model leans, which are watches, not signals: " + fmtInt(n.leans_live) + "."
           : "Model leans are watches and aren’t counted.")),
       tile("Games on the board", fmtInt(n.games_on_board), "Not yet kicked off, as the board lists them"),

@@ -122,12 +122,15 @@ def scrub_all(x):
 
 
 DOCUMENT_BYTES = 20_000_000       # a scorer's document is well under 1 MB for a season; anything this big is not one
+# The tests each scorer's document always holds (the scorers print every one, with or without bets)
+TEST_IDS = {"nfl-weather": ("RULE_B", "RULE_B_SECONDARY", "MODEL_LEAN"), "cfb-weather": ("RULE_B", "RULE_HT")}
 
 
-def read_document(stdout: str) -> dict | None:
+def read_document(stdout: str, test_ids=()) -> dict | None:
     """A scorer's --json document, or None when what it printed is not one: a single JSON object with the printed
-    report as text and a list of tests, each with its id, counts and bets. Something too big, nested too deeply to
-    read, or of the wrong shape is not a document."""
+    report as text and a list of tests, each with its id, counts and bets, among them every id in `test_ids` (the
+    scorer's own). Something too big, nested too deeply to read, of the wrong shape, or without its tests is not a
+    document."""
     if not isinstance(stdout, str) or len(stdout) > DOCUMENT_BYTES:
         return None
     try:
@@ -138,6 +141,8 @@ def read_document(stdout: str) -> dict | None:
             if not (isinstance(t, dict) and isinstance(t.get("id"), str) and isinstance(t.get("counts"), dict)
                     and isinstance(t.get("bets"), list) and all(isinstance(b, dict) for b in t["bets"])):
                 return None
+        if not set(test_ids) <= {t["id"] for t in doc["tests"]}:
+            return None
         return scrub_all(doc)
     except (TypeError, ValueError, RecursionError):
         return None
@@ -458,7 +463,7 @@ class Store:
             except Exception as e:                        # noqa: BLE001
                 res = Scored(project, "failed", error=f"{type(e).__name__}", ran_at=now)
             else:
-                doc = read_document(r.stdout) if r.ok else None
+                doc = read_document(r.stdout, TEST_IDS.get(project, ())) if r.ok else None
                 # as printed, except that anything like a key is blanked (and, when it is not the document, only
                 # its last 200,000 characters: a failed run's report is a few thousand)
                 out = doc["text"] if doc is not None else words.scrub((r.stdout or "")[-200_000:])

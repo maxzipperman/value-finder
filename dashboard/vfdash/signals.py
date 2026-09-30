@@ -27,20 +27,26 @@ LISTED = "The games that signalled are listed below from the ledgers, without re
 NONE_LISTED = "Its ledger shows no game that has signalled since its rule started."
 # The rules the log shows, in this order. "kind" is the badge the rule's bets carry when their game is live: a
 # signal, a signal at the NFL's backup price, or a watch (the model lean, which is logged and graded but never a bet).
+# "toward" is when each rule is decided, as its STRATEGY.md registers it (NFL amendments 4 to 6; college football
+# amendments 3 and 4, and Rule HT's decision), with the count of its settled bets so far.
 LOG_RULES = [
     {"id": "nfl_rule_b", "project": "nfl-weather", "sport_key": "nfl", "test": "RULE_B", "name": "NFL wind rule",
      "kind": "signal", "column": "rule_b", "content": "nfl_rule_b", "target": 40,
-     "toward": "Toward the decision: {settled} of the 40 settled bets it needs."},
+     "toward": "Toward the decision: {settled} settled so far. It is decided after Week 18 of 2026 if 40 settle in "
+               "the 2026 regular season, and otherwise after the 2027 regular season, on both seasons pooled."},
     {"id": "nfl_rule_b_backup", "project": "nfl-weather", "sport_key": "nfl", "test": "RULE_B_SECONDARY",
      "name": "NFL wind rule, backup price", "kind": "backup", "column": "rule_b", "content": "nfl_rule_b",
      "target": None, "toward": "Not part of any decision: a signal at the backup price is reported apart."},
     {"id": "nfl_lean", "project": "nfl-weather", "sport_key": "nfl", "test": "MODEL_LEAN", "name": "NFL model lean",
      "kind": "watch", "column": "lean", "content": "nfl_lean", "target": 40,
-     "toward": "Toward its decision: {settled} of the 40 settled leans it needs. A lean is a watch: logged and "
-               "graded, never a bet."},
+     "toward": "Toward its decision: {settled} settled so far. It is decided after Week 18 of 2026 if 40 settle in "
+               "the 2026 regular season, and otherwise after the 2027 regular season, on both seasons, where fewer "
+               "than 40 is inconclusive. A lean is a watch: logged and graded, never a bet."},
     {"id": "cfb_rule_b", "project": "cfb-weather", "sport_key": "cfb", "test": "RULE_B",
      "name": "College football wind rule", "kind": "signal", "column": "rule_b", "content": "cfb_rule_b",
-     "target": 40, "toward": "Toward the decision: {settled} of the 40 settled bets it needs."},
+     "target": 40, "toward": "Toward the decision: {settled} of the 40 settled signals it needs. It is decided "
+                             "after the 40th signal's kickoff or the end of the 2026 regular season (Dec 12), "
+                             "whichever is later."},
     {"id": "cfb_rule_ht", "project": "cfb-weather", "sport_key": "cfb", "test": "RULE_HT",
      "name": "College football high-total rule", "kind": "signal", "column": "rule_ht", "content": "cfb_rule_ht",
      "target": None, "toward": "Toward the decision: {settled} settled. It is decided once, after the 2027 season's "
