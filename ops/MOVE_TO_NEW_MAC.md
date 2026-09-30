@@ -233,7 +233,7 @@ This is the move you chose: Migration Assistant straight from the laptop, over a
 
 **What I could not test:** Migration Assistant itself; whether Setup Assistant lets you transfer with no network; how long the transfer takes; whether Homebrew (`uv`, `gh`), the developer tools and git's sign-in come across; and whether the Claude app on the Mac Studio shows the hub chat. The steps are built so that none of that can start the jobs on two Macs: the job files leave the laptop before the copy (step 2), and the Mac Studio is checked before it joins a network (step 5).
 
-1. **On the laptop, right after the 11:30 run has finished.** The last line of each `runs.csv` is that project's last run. Its time is in UTC, 7 hours ahead of Pacific: the 11:30 run shows as `18:30`.
+1. **On the laptop, at 11:40 or later, once the 11:30 run has finished.** The last line of each `runs.csv` is that project's last run. Its time is in UTC, 7 hours ahead of Pacific: the 11:30 run shows as `18:30`.
 
    ```
    tail -n 1 ~/code/value-finder/nfl-weather/data/forward/runs.csv
@@ -248,7 +248,7 @@ This is the move you chose: Migration Assistant straight from the laptop, over a
    ~/code/value-finder/ops/mac_check.sh --role live
    ```
 
-   What you should see: all four jobs `OK … loaded`, and no FAIL. The laptop gets a WARN for being a laptop; that's expected. In "Clock and power", **write down the timing line.** It reads like *"Next alert run 15:30 (in 3 h 55 min). Next kickoff in the ledgers Thu Oct 1, 5:00 PM, College: Western Kentucky at New Mexico State (in 29 h 25 min). A quiet time to move the jobs"*, and it tells you how long you have before the 15:30 run.
+   What you should see: all four jobs `OK … loaded`, and no FAIL. The laptop gets a WARN for being a laptop; that's expected. In "Clock and power", **write down the timing line.** It reads like *"Next alert run 15:30 (in 3 h 50 min). Next kickoff in the ledgers Thu Oct 1, 5:00 PM, College: Western Kentucky at New Mexico State (in 29 h 20 min). A quiet time to move the jobs"*, and it tells you how long you have before the 15:30 run.
    - If it doesn't end "A quiet time to move the jobs", stop and ask the hub.
    - If "The repo" says `Not clean` and the number before "changed" isn't 0, stop and ask the hub: the Mac Studio's compare (step 8) would fail on those files.
    - If "Jobs" lists paid-plan live uses (none were installed on September 29), write down the command it prints under *"To put back exactly these…"*. You run it on the Mac Studio in step 11, never on the laptop.
@@ -376,7 +376,7 @@ This is the move you chose: Migration Assistant straight from the laptop, over a
     ```
 
     If the banner doesn't show, allow Script Editor in System Settings > Notifications. The phone push is the one that matters.
-12. **On the Mac Studio, set it never to sleep.** In System Settings > Energy, turn on "Prevent automatic sleeping when the display is off" and "Start up automatically after a power failure". Then:
+12. **On the Mac Studio, set it never to sleep.** In System Settings > Energy, turn on "Prevent your Mac from automatically sleeping when the display is off" and "Start up automatically after a power failure". Then:
 
     ```
     ~/code/value-finder/ops/mac_check.sh --role live
@@ -411,7 +411,7 @@ Leave the laptop's copy of the data untouched for at least two weeks (section 6,
 
 - **Before step 11** (no installer has run on the Mac Studio), nothing on the Mac Studio has written a record, and the laptop's data is as step 3 left it. To go back, run on the laptop the four installers and the `--role live` check that section 7 gives under "if step 11 of the handover had not started", and tell the hub. Do it before the 7:30 run on Thursday at the latest. Leave the Mac Studio as step 5 left it, with no jobs.
 - **From step 11 on,** follow section 7 from the top. Copying the Mac Studio's records back needs Remote Login on the laptop (section 5, step 1).
-- **If the Mac Studio can't be used at all after step 11** (it won't start, or you can't log in), its jobs are stopped too: they run only while you are logged in on it. Put the jobs back on the laptop as above, and tell the hub. The Mac Studio's job files are still in place, and they start again at its next login. So the first thing after that login, run section 7's five `--remove` commands and its standby check, and tell the hub which records the Mac Studio may have written in between.
+- **If the Mac Studio can't be used at all after step 11** (it won't start, or you can't get past its lock screen), do NOT assume its jobs have stopped. They keep running as long as you are logged in on it, even behind a lock screen and with the display off, and a Mac Studio has no screen of its own to tell you. First make sure it is off: hold its power button until it shuts down, and leave it off. Only then put the jobs back on the laptop as above, and tell the hub. The Mac Studio's job files are still in place, and they start again the moment it is next logged in, so before it is ever logged in again, unplug its network cable and turn off its Wi-Fi if you can, and the first thing after that login, run section 7's five `--remove` commands and its standby check. Then tell the hub which records the Mac Studio may have written in between; the hub compares them before the laptop's records are trusted again.
 
 ### Route B: a clean setup
 
@@ -834,7 +834,7 @@ Every job should say `OK … loaded`. Open the Claude app, and tell the hub what
 
 ## 8. After the move
 
-- **Keep the Mac Studio awake.** In System Settings > Energy (called Energy Saver on older macOS), turn on "Prevent automatic sleeping when the display is off" and "Start up automatically after a power failure". The display may sleep; the Mac must not. These are your settings to change. The check warns when the Mac goes to sleep by itself, when it won't start again after a power cut, and when it can't read that setting.
+- **Keep the Mac Studio awake.** In System Settings > Energy (called Energy Saver on older macOS), turn on "Prevent your Mac from automatically sleeping when the display is off" and "Start up automatically after a power failure". The display may sleep; the Mac must not. These are your settings to change. The check warns when the Mac goes to sleep by itself, when it won't start again after a power cut, and when it can't read that setting.
 - **Log in after every restart.** The jobs run only while you are logged in. After a power cut or a macOS update, they wait at the login screen until you log in. To keep macOS from restarting by itself during the season: in System Settings > General > Software Update > Automatic Updates, turn off "Install macOS updates" and leave "Install Security Responses and system files" on.
 - **The dashboard and the menu-bar light** can go on the Mac Studio. The dashboard runs at <http://127.0.0.1:8787/>; the light's Swift comes with the Command Line Tools:
 

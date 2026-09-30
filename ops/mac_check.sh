@@ -372,7 +372,7 @@ if [ "$ROLE" = "live" ]; then
   elif [ "$AC_SLEEP" = "0" ]; then
     say OK "Never goes to sleep by itself"
   else
-    say WARN "Goes to sleep after ${AC_SLEEP:-?} min without use. In System Settings > Energy, turn on 'Prevent automatic sleeping when the display is off'"
+    say WARN "Goes to sleep after ${AC_SLEEP:-?} min without use. In System Settings > Energy, turn on 'Prevent your Mac from automatically sleeping when the display is off'"
   fi
   if [ "$AUTORESTART" = "0" ]; then
     say WARN "Will not start again by itself after a power cut ('Start up automatically after a power failure' in System Settings > Energy). After any restart, log in: the jobs run only while you are logged in"
