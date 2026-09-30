@@ -66,8 +66,16 @@ skipped when read and never copied by a restore.
 
 Each bet is graded at its ENTRY line and ENTRY price (profit in units, pushes return the stake), with
 closing-line value against the final nflverse total. Amendment 3 adds a secondary CLV against
-Pinnacle's total captured just before kickoff (data/forward/closes.csv). ROI is units won per bet
-placed; a push counts as a bet. Wind triggers that never became a signal (no price, price too high,
+Pinnacle's total captured just before kickoff (data/forward/closes.csv). Amendment 8, section 1: a bet
+uses a captured close only when it was captured 2 to 20 minutes (both inclusive, amendment 3's window as
+scripts/capture_close.py applies it) before the kickoff of the listing graded, the earlier of the kickoff
+on the listing's last row logged before kickoff and the kickoff in the schedule; among such captures of
+the game, the last in the file is taken. A game with a captured close outside that window has none for
+this listing: it is counted as missing, the scorer prints how many and which, and --list-excluded prints
+each refused capture. A capture of the game outside the window when another inside it is used is set
+aside: the scorer says how many when there are any, and --list-excluded prints each. The test's end is
+judged on the schedule's kickoff and season, as before (amendment 8, section 2). ROI is units won per
+bet placed; a push counts as a bet. Wind triggers that never became a signal (no price, price too high,
 outside the horizon) are counted, so coverage gaps can't quietly select winners.
 
     python scripts/fetch_data.py --skip-weather   # refresh schedule/lines/results
@@ -483,12 +491,21 @@ L = L.merge(g, on="game_id", how="left")
 L["in_schedule"] = L.in_schedule.eq(True)
 # Amendment 6, reading 10: "before kickoff" is before the earlier of the row's kickoff and the schedule's
 L["kick_first"] = L[["row_kick", "kick_utc"]].min(axis=1)
-# Amendment 3: the Pinnacle close captured just before kickoff (scripts/capture_close.py), secondary only
+# Amendment 3: the Pinnacle close captured just before kickoff (scripts/capture_close.py), secondary only. Amendment
+# 8, section 1: a capture is a listing's close only when it was captured inside that window before the listing's
+# kickoff (with_captured, below).
+CAP_WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))   # amendment 3; capture_close.py's WINDOW, inclusive
+CAP_REFUSED = "close captured outside the window for this listing (2 to 20 minutes before its kickoff)"
+CAP_ASIDE = "capture set aside: outside the window for this listing; another capture inside it is used"
 closes = ledger.parent / "closes.csv"
-cap = pd.read_csv(closes) if closes.exists() else pd.DataFrame(columns=["game_id", "book", "close_total"])
-cap = (cap[cap.book.eq("pinnacle")].dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
-       [["game_id", "close_total"]].rename(columns={"close_total": "cap_close"}))
-L = L.merge(cap, on="game_id", how="left")
+cap = pd.read_csv(closes, dtype={"game_id": str}) if closes.exists() else pd.DataFrame(
+    columns=["game_id", "kick_utc", "capture_utc", "book", "close_total"])
+cap = cap.reindex(columns=list(dict.fromkeys(["game_id", "kick_utc", "capture_utc", "book", "close_total"]
+                                             + list(cap.columns))))
+cap = cap.assign(_order=np.arange(len(cap)))                       # file order: the last is taken
+cap = cap[cap.book.eq("pinnacle")].dropna(subset=["close_total"])
+cap["close_total"] = pd.to_numeric(cap.close_total, errors="coerce")
+cap["cap_utc"] = pd.to_datetime(cap.capture_utc.astype(object), utc=True, errors="coerce", format="mixed")
 
 # What counts. Every excluded row is counted by its first failing reason.
 why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), ~L.in_schedule, L.kick_utc.isna(),
@@ -523,6 +540,12 @@ def listings(rows):
 
 
 L = listings(L)
+# Amendment 8, section 1: the kickoff of each listing, for its captured close: the `kick_first` (the earlier of the
+# row's kickoff and the schedule's) of the listing's last row logged before kickoff. Every row left in L was logged
+# before its own `kick_first` (`why`, above), so that row was logged before the schedule's kickoff, and the bound is
+# never later than it.
+LISTING_KICK = (L.sort_values(["snapshot_utc", "_row"], kind="stable")
+                .drop_duplicates(["game_id", "listing"], keep="last").set_index(["game_id", "listing"]).kick_first)
 
 
 def entries(rows):
@@ -541,8 +564,41 @@ def horizon_of(season):
     return None if pd.isna(k) else k
 
 
+def with_captured(b):
+    """Amendment 8, section 1: each bet's captured Pinnacle close, from its own listing. A capture counts only when
+    its capture time is 2 to 20 minutes (both inclusive) before the kickoff of the bet's listing (LISTING_KICK: the
+    earlier of the kickoff on the listing's last row logged before kickoff and the schedule's; amendment 6, reading
+    10); among those, the last in closes.csv is taken. Adds cap_kick (that kickoff) and cap_close (blank when none);
+    cap_refused: the game has a captured Pinnacle close, but none in that window for this listing, so this bet has
+    none (counted as missing); and cap_aside: how many of the game's Pinnacle captures outside the window were set
+    aside when one inside it is used."""
+    b = b.assign(cap_kick=LISTING_KICK.reindex(pd.MultiIndex.from_frame(b[["game_id", "listing"]])).set_axis(b.index))
+    k = b[["game_id", "cap_kick"]].rename_axis("_b").reset_index()
+    m = k.merge(cap[["game_id", "cap_utc", "close_total", "_order"]], on="game_id")
+    lead = m.cap_kick - m.cap_utc
+    inside = (lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1])
+    aside = (~inside).groupby(m._b).sum()
+    m = m[inside].sort_values("_order", kind="stable").drop_duplicates("_b", keep="last").set_index("_b")
+    out = b.assign(cap_close=m.close_total.reindex(b.index).astype(float))
+    return out.assign(cap_refused=out.cap_close.isna() & out.game_id.isin(cap.game_id),
+                      cap_aside=np.where(out.cap_close.notna(), aside.reindex(b.index).fillna(0), 0).astype(int))
+
+
+def outside(r, label):
+    """The Pinnacle captures of these bets' games outside the window for their listing, one line each
+    (--list-excluded)."""
+    c = r[["game_id", "row_kick", "cap_kick"]].merge(cap, on="game_id")
+    lead = c.cap_kick - c.cap_utc
+    c = c[~((lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1]))]
+    print(c.assign(excluded=label).rename(columns={
+        "row_kick": "row_kickoff", "cap_kick": "listing_kickoff", "kick_utc": "captured_for"})[
+        ["game_id", "row_kickoff", "listing_kickoff", "capture_utc", "captured_for", "close_total", "excluded"]]
+        .to_string(index=False))
+
+
 def grade(bets, side_col):
     """Outcome at the entry line and price."""
+    bets = with_captured(bets)
     under = bets[side_col] == "UNDER"
     entry = bets.total_line
     win = np.where(under, bets.total < entry, bets.total > entry)
@@ -650,6 +706,19 @@ def report(name, bets):
               f"(95% CI {clo:+.2f} to {chi:+.2f}); {len(settled) - cn} of {len(settled)} without a captured close")
     else:
         print(f"  secondary (amendment 3): no captured closes for these {len(settled)} bets")
+    r = settled[settled.cap_refused]              # amendment 8, section 1: counted and named, never dropped
+    if len(r):
+        print(f"  captured Pinnacle close refused for {len(r)} of these {len(settled)} bets: {CAP_REFUSED}; counted "
+              f"as missing ({', '.join(r.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(r, CAP_REFUSED)
+    a = settled[settled.cap_aside > 0]            # outside the window, while another capture inside it is used
+    if len(a):
+        print(f"  Pinnacle captures set aside for {len(a)} of these {len(settled)} bets: {int(a.cap_aside.sum())} "
+              f"outside the window for the listing, while another inside it is used "
+              f"({', '.join(a.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(a, CAP_ASIDE)
     print(settled[["game_id", "side", "line_src", "total_line", "close_total", "total", "clv_pts", "profit"]]
           .to_string(index=False))
     return settled

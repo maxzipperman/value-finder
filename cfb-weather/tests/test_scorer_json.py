@@ -78,8 +78,11 @@ def mixed():
          sched(203, 32, 32, kick="2026-10-24T23:30Z"),
          sched(204, np.nan, np.nan, completed=False, kick="2026-11-28T23:00Z"),
          sched(205, 30, 30, kick="2026-11-02T23:00Z")]
-    closes = [dict(game_id=102, close_total=45.5, line_src="pinnacle"), dict(game_id=201, close_total=64.5,
-                                                                             line_src="pinnacle")]
+    # captured 10 minutes before each game's kickoff, as closes.csv holds it (cfb-weather amendment 6)
+    closes = [dict(game_id=102, close_total=45.5, line_src="pinnacle", start_utc="2026-10-10T19:00:00Z",
+                   capture_utc="2026-10-10T18:50:00Z"),
+              dict(game_id=201, close_total=64.5, line_src="pinnacle", start_utc="2026-10-10T23:00:00Z",
+                   capture_utc="2026-10-10T22:50:00Z")]
     return rows, s, closes
 
 

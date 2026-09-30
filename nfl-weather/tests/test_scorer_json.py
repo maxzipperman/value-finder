@@ -84,9 +84,14 @@ def mixed():
                                                                           total=52, close=45.0),
              game("LU", "2026-10-18", week=7, total=41, close=45.0), game("LO", "2026-10-25", week=8, total=50,
                                                                       close=43.0)]
-    closes = [dict(game_id="W1", book="pinnacle", close_total=43.0), dict(game_id="L1", book="pinnacle",
-                                                                           close_total=42.5),
-              dict(game_id="W1", book="draftkings", close_total=43.5)]
+    # captured 10 minutes before each game's kickoff, as closes.csv holds it (nfl-weather amendment 8)
+    kick = {g["game_id"]: pd.Timestamp(f"{g['gameday']} {g['gametime']}", tz="America/New_York").tz_convert("UTC")
+            for g in games}
+    stamp = lambda gid: dict(kick_utc=kick[gid].strftime("%Y-%m-%dT%H:%M:%SZ"),                   # noqa: E731
+                             capture_utc=(kick[gid] - pd.Timedelta(minutes=10)).strftime("%Y-%m-%dT%H%MZ"))
+    closes = [dict(game_id="W1", book="pinnacle", close_total=43.0, **stamp("W1")),
+              dict(game_id="L1", book="pinnacle", close_total=42.5, **stamp("L1")),
+              dict(game_id="W1", book="draftkings", close_total=43.5, **stamp("W1"))]
     return rows, games + filler(2026), closes
 
 

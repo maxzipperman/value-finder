@@ -12,10 +12,21 @@
 
 What counts (amendment 3): rows written under a registered rules version, logged before kickoff, for
 games from Oct 1, 2026 through the 2027 season's title game (a game dated from Feb 1, 2028 never
-counts, whatever its season label; amendment 4). "Before kickoff" is before the earlier of the kickoff
-on the row and the kickoff in the schedule (amendment 4, reading 11). Rows outside that are counted by
-reason, never silently dropped; --list-excluded prints each one. ROI is units won per bet placed; a push
-counts as a bet. A game is graded only once the schedule marks it completed.
+counts, whatever its season label; amendment 4). The test's end is judged on the kickoff on the row and
+on the game's kickoff in the schedule: a row counts only if both are before Feb 1, 2028 (amendment 6,
+section 2; with no kickoff in the schedule, the row's alone, as before). "Before kickoff" is before the
+earlier of the kickoff on the row and the kickoff in the schedule (amendment 4, reading 11). Rows outside
+that are counted by reason, never silently dropped; --list-excluded prints each one. ROI is units won per
+bet placed; a push counts as a bet. A game is graded only once the schedule marks it completed.
+
+The captured close (amendment 6, section 1): a bet uses a close from closes.csv only when it was captured
+2 to 20 minutes (both inclusive, amendment 2's window as scripts/capture_close.py applies it) before the
+kickoff of the listing graded: the earlier of the kickoff on the listing's last row logged before kickoff
+and the kickoff in the schedule. Among such captures of the game, the last in the file is taken. A game
+with a captured close outside that window has none for this listing: it is counted as missing, the scorer
+prints how many and which, and --list-excluded prints each refused capture. A capture of the game outside
+the window when another inside it is used is set aside: the scorer says how many when there are any, and
+--list-excluded prints each.
 
 Listings (amendment 4, reading 10): a game's rows are grouped by the kickoff on each row, so a game that
 is postponed and signals again is two listings. Each listing has its own entry (and, for Rule B, its own
@@ -493,9 +504,12 @@ L = L.merge(s[["game_id", "sched_kick"]], on="game_id", how="left")
 # Amendment 4, reading 11: "before kickoff" is before the earlier of the row's kickoff and the schedule's
 L["kick_first"] = L[["start_utc", "sched_kick"]].min(axis=1)
 
-# What counts. Every excluded row is counted by its first failing reason.
+# What counts. Every excluded row is counted by its first failing reason. Amendment 6, section 2: the test's end
+# is judged on the row's kickoff and on the schedule's (a missing schedule kickoff is NaT, and NaT >= TEST_END is
+# False, so such a row is judged on its own kickoff alone, as before).
 why = np.select([~L.rules_version.isin(REGISTERED_VERSIONS), L.start_utc.isna(), L.start_utc < FIRST_KICK,
-                 ~L.season.isin(TEST_SEASONS) | (L.start_utc >= TEST_END), L.snapshot_utc >= L.kick_first],
+                 ~L.season.isin(TEST_SEASONS) | (L.start_utc >= TEST_END) | (L.sched_kick >= TEST_END),
+                 L.snapshot_utc >= L.kick_first],
                 ["unregistered rules version", "no kickoff time in the row", "before Oct 1, 2026",
                  "after the 2027 season", "logged at or after kickoff"], "")
 print(f"ledger rows: {len(L)}; in the test: {int((why == '').sum())}")
@@ -525,6 +539,12 @@ def listings(rows):
 
 
 L = listings(L)
+# Amendment 6, section 1: the kickoff of each listing, for its captured close: the `kick_first` (the earlier of the
+# row's kickoff and the schedule's) of the listing's last row logged before kickoff. Every row left in L was logged
+# before its own `kick_first` (`why`, above), so that row was logged before the schedule's kickoff when the schedule
+# has one, and the bound is never later than it.
+LISTING_KICK = (L.sort_values(["snapshot_utc", "_row"], kind="stable")
+                .drop_duplicates(["game_id", "listing"], keep="last").set_index(["game_id", "listing"]).kick_first)
 
 
 def interim(name, when, tests):
@@ -722,23 +742,82 @@ last = L.dropna(subset=["mkt_total"])
 quotes = last[is_price(last.mkt_under)]                             # amendment 4: a total with a valid under price
 last = quotes.sort_values("snapshot_utc", kind="stable").drop_duplicates(["game_id", "listing"], keep="last")
 # Amendment 2: the close captured 2-20 minutes before kickoff (scripts/capture_close.py). Secondary and
-# descriptive, and Rule B's primary close when no later quote was logged (amendment 4).
+# descriptive, and Rule B's primary close when no later quote was logged (amendment 4). Amendment 6, section 1:
+# a capture is this listing's close only when it was captured inside that window before this listing's kickoff.
+CAP_WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))   # amendment 2; capture_close.py's WINDOW, inclusive
+CAP_REFUSED = "close captured outside the window for this listing (2 to 20 minutes before its kickoff)"
+CAP_ASIDE = "capture set aside: outside the window for this listing; another capture inside it is used"
 cap_path = path.parent / "closes.csv"
-cap = (pd.read_csv(cap_path).dropna(subset=["close_total"]).drop_duplicates("game_id", keep="last")
-       if cap_path.exists() else pd.DataFrame(columns=["game_id", "close_total", "line_src"]))
-cap_src = pd.Series(cap["line_src"].fillna("").astype(str).values if "line_src" in cap else "",
-                    index=pd.to_numeric(cap.game_id), dtype=str)
-cap = pd.Series(cap.close_total.values, index=pd.to_numeric(cap.game_id), dtype=float)
+cap = pd.read_csv(cap_path) if cap_path.exists() else pd.DataFrame(columns=["capture_utc", "game_id", "line_src",
+                                                                             "close_total"])
+cap = cap.reindex(columns=list(dict.fromkeys(["capture_utc", "game_id", "start_utc", "line_src", "close_total"]
+                                             + list(cap.columns))))
+cap = cap.assign(_order=np.arange(len(cap))).dropna(subset=["close_total"])     # file order: the last is taken
+cap["game_id"] = pd.to_numeric(cap.game_id)
+cap["close_total"] = pd.to_numeric(cap.close_total, errors="coerce")
+cap["cap_utc"] = pd.to_datetime(cap.capture_utc.astype(object), utc=True, errors="coerce", format="mixed")
+
+
+def with_captured(b):
+    """Amendment 6, section 1: each bet's captured close, from its own listing. A capture counts only when its
+    capture time is 2 to 20 minutes (both inclusive) before the kickoff of the bet's listing (LISTING_KICK: the
+    earlier of the kickoff on the listing's last row logged before kickoff and the schedule's; amendment 4, reading
+    11); among those, the last in closes.csv is taken. Adds cap_kick (that kickoff), cap_total, cap_src and cap_utc
+    (blank when none); cap_refused: the game has a captured close, but none in that window for this listing, so this
+    bet has none (counted as missing); and cap_aside: how many of the game's captures outside the window were set
+    aside when one inside it is used."""
+    b = b.assign(cap_kick=LISTING_KICK.reindex(pd.MultiIndex.from_frame(b[["game_id", "listing"]])).set_axis(b.index))
+    k = b[["game_id", "cap_kick"]].rename_axis("_b").reset_index()
+    m = k.merge(cap[["game_id", "cap_utc", "close_total", "line_src", "_order"]], on="game_id")
+    lead = m.cap_kick - m.cap_utc
+    inside = (lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1])
+    aside = (~inside).groupby(m._b).sum()
+    m = (m[inside].sort_values("_order", kind="stable").drop_duplicates("_b", keep="last").set_index("_b"))
+    out = b.assign(cap_total=m.close_total.reindex(b.index).astype(float),
+                   cap_src=m.line_src.reindex(b.index).fillna("").astype(str),
+                   cap_utc=m.cap_utc.reindex(b.index))
+    return out.assign(cap_refused=out.cap_total.isna() & out.game_id.isin(cap.game_id),
+                      cap_aside=np.where(out.cap_total.notna(), aside.reindex(b.index).fillna(0), 0).astype(int))
+
+
+def outside(r, label):
+    """The captures of these bets' games outside the window for their listing, one line each (--list-excluded)."""
+    c = r[["game_id", "listing", "start_utc", "cap_kick"]].merge(cap, on="game_id", suffixes=("", "_captured"))
+    lead = c.cap_kick - c.cap_utc
+    c = c[~((lead >= CAP_WINDOW[0]) & (lead <= CAP_WINDOW[1]))]
+    print(c.assign(excluded=label).rename(columns={
+        "start_utc": "row_kickoff", "cap_kick": "listing_kickoff", "start_utc_captured": "captured_for"})[
+        ["game_id", "row_kickoff", "listing_kickoff", "capture_utc", "captured_for", "close_total", "excluded"]]
+        .to_string(index=False))
+
+
+def refused(df, label):
+    """Amendment 6, section 1: the bets whose game has a captured close outside the window for their listing,
+    counted and named; --list-excluded prints each capture refused. Captures set aside (outside the window, while
+    another inside it is used) are counted and named when there are any, and --list-excluded prints each."""
+    r = df[df.cap_refused]
+    if len(r):
+        print(f"  captured close refused for {len(r)} of these {len(df)} {label}: {CAP_REFUSED}; counted as missing "
+              f"({', '.join(r.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(r, CAP_REFUSED)
+    a = df[df.cap_aside > 0]
+    if len(a):
+        print(f"  captures set aside for {len(a)} of these {len(df)} {label}: {int(a.cap_aside.sum())} outside the "
+              f"window for the listing, while another inside it is used ({', '.join(a.game_id.astype(str))})")
+        if args.list_excluded:
+            outside(a, CAP_ASIDE)
 
 
 def secondary(df, label):
     """Prints the secondary CLV; returns its numbers, as printed, for --json."""
-    m, lo, hi, n = mean_ci(df.mkt_total - df.game_id.map(cap))
+    m, lo, hi, n = mean_ci(df.mkt_total - df.cap_total)
     if not n:
         print(f"  secondary (amendment 2): no captured closes for these {len(df)} {label}")
-        return m, lo, hi, n
-    print(f"  secondary (amendment 2): mean CLV vs the captured close {m:+.2f} "
-          f"(95% CI {lo:+.2f} to {hi:+.2f}); {len(df) - n} of {len(df)} {label} without a captured close")
+    else:
+        print(f"  secondary (amendment 2): mean CLV vs the captured close {m:+.2f} "
+              f"(95% CI {lo:+.2f} to {hi:+.2f}); {len(df) - n} of {len(df)} {label} without a captured close")
+    refused(df, label)
     return m, lo, hi, n
 
 
@@ -754,10 +833,11 @@ later = (later[later.snapshot_utc > later.entry_utc].sort_values("snapshot_utc",
 bets = bets.merge(later[["game_id", "listing", "mkt_total", "snapshot_utc", "line_src", "_row"]].rename(
     columns={"mkt_total": "close_total", "snapshot_utc": "close_utc", "line_src": "close_src", "_row": "close_row"}),
     on=["game_id", "listing"], how="left")
-use_cap = bets.close_total.isna() & bets.game_id.map(cap).notna()
+bets = with_captured(bets)                          # amendment 6, section 1: the capture of this listing only
+use_cap = bets.close_total.isna() & bets.cap_total.notna()
 bets["close_from"] = np.where(bets.close_total.notna(), "later quote", np.where(use_cap, "captured close", "none"))
-bets.loc[use_cap, "close_total"] = bets.game_id.map(cap)[use_cap]
-bets["close_src"] = np.where(use_cap, "captured close (" + bets.game_id.map(cap_src).fillna("").astype(str) + ")",
+bets.loc[use_cap, "close_total"] = bets.cap_total[use_cap]
+bets["close_src"] = np.where(use_cap, "captured close (" + bets.cap_src + ")",
                              bets.close_src.fillna("none").astype(str))
 bets = settle(bets)
 done = bets[bets.status.eq("settled")].copy()
@@ -882,7 +962,8 @@ if len(done):
 
 # ---------------------------------------------------------------- Rule HT (amendment 1)
 ht = last[(last.start_utc >= HT_FIRST_KICK)] if "rule_ht" in last else last.iloc[0:0]
-ht = settle(ht[ht.rule_ht == "SIGNAL"]) if len(ht) else ht.assign(status="", void="", total=np.nan)
+ht = (settle(with_captured(ht[ht.rule_ht == "SIGNAL"])) if len(ht)     # amendment 6: this listing's capture only
+      else ht.assign(status="", void="", total=np.nan))
 ht_done = ht[ht.status.eq("settled")].copy()
 win, push = ht_done.total < ht_done.mkt_total, ht_done.total == ht_done.mkt_total
 ht_done["profit"] = np.where(push, 0, np.where(win, american_to_profit(ht_done.mkt_under), -1.0))
@@ -1013,7 +1094,7 @@ def json_bet(i, b, t, rule):
         outcome = "push" if t["push"][i] else "won" if t["win"][i] else "lost"
     kick = b["sched_kick"] if pd.notna(b["sched_kick"]) else b["start_utc"]
     has_close = rule == "RULE_B" and settled and pd.notna(b["close_total"])
-    captured = cap.get(b["game_id"]) if settled else None
+    captured = b.get("cap_total") if settled else None       # this listing's own capture (amendment 6)
     return {"game_id": json_id(b["game_id"]), "away_team": json_text(b.get("away_team")),
             "home_team": json_text(b.get("home_team")), "kickoff_utc": json_time(kick),
             "entry_row_kickoff_utc": json_time(b["start_utc"]), "side": "UNDER",
