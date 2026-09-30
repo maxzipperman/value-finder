@@ -339,6 +339,8 @@ pre.plain { font-family: inherit; font-size: 13.5px; line-height: 1.55; backgrou
 .bt-plot .sdot.small { stroke-width: 1; }
 .bt-plot .whisker { fill: none; stroke-width: 1.5; }
 .bt-plot .sline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.bt-plot .sline.s-ink, .bt-plot .sline.s-ink2 { stroke-width: 1.5; }
+.bt-plot .sline.s-ink2 { stroke-dasharray: 5 3; }
 .bt-plot .sbar { stroke: none; }
 .bt-plot .cross { stroke: var(--text-3); stroke-width: 1; }
 .bt-plot .rowhot { fill: var(--wash); }
@@ -363,6 +365,7 @@ pre.plain { font-family: inherit; font-size: 13.5px; line-height: 1.55; backgrou
 .btchart .serieskey i.s-o3 { background: var(--o3); }
 .btchart .serieskey i.s-ink { background: var(--text-2); }
 .btchart .serieskey i.s-ink2 { background: var(--text-3); }
+.btchart .serieskey i.k-line.s-ink2 { background: none; height: 0; border-top: 2px dashed var(--text-3); }
 .btchart .serieskey i.k-ref { width: 16px; height: 0; border-top: 1.5px solid var(--text-2); }
 .btchart .serieskey i.k-ref.r-pooled, .btchart .serieskey i.k-ref.r-line { border-top: 1px dashed var(--text-3); }
 .btchart .serieskey i.k-ref.r-bar { border-top-color: var(--text); }

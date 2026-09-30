@@ -1045,7 +1045,7 @@
       const off = xk === "category" && di >= 0 && dn > 1 ? (di - (dn - 1) / 2) * Math.min(12, band / (dn + 1)) : 0;
       if (s.mark === "line") {
         if (pts.length > 1) add("path", { class: "sline " + cls, d: pts.map((p, i) => (i ? "L" : "M") + xOf(p[0]).toFixed(1) + "," + y(p[1]).toFixed(1)).join(" ") });
-        if (pts.length <= 40) for (const p of pts) add("circle", { class: "sdot small " + cls, cx: xOf(p[0]), cy: y(p[1]), r: 2.5 });
+        if (xk === "category" && pts.length <= 40) for (const p of pts) add("circle", { class: "sdot small " + cls, cx: xOf(p[0]), cy: y(p[1]), r: 2.5 });
         const e = pts[pts.length - 1];
         if (e && xk === "time") {
           add("circle", { class: "sdot " + cls, cx: xOf(e[0]), cy: y(e[1]), r: 4 });
