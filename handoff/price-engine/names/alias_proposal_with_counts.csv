@@ -1,0 +1,41 @@
+normalized_feed_name,school,group,why,games_2020_25_with_fbs
+umass minutemen,Massachusetts,A verified feed name,2026 feed spelling; unresolved when the raw team files are absent,64
+miami redhawks,Miami (OH),B wrong even with raw files,prefix rule gives Miami (FL),69
+miami ohio redhawks,Miami (OH),B wrong even with raw files,prefix rule gives Miami (FL),69
+miamiohio redhawks,Miami (OH),B wrong even with raw files,hyphenated form; unresolved,69
+louisiana monroe warhawks,UL Monroe,B wrong even with raw files,prefix rule gives Louisiana (Lafayette),70
+louisianamonroe warhawks,UL Monroe,B wrong even with raw files,hyphenated form; unresolved,70
+ulmonroe warhawks,UL Monroe,B wrong even with raw files,hyphenated form; unresolved,70
+louisianalafayette ragin cajuns,Louisiana,B wrong even with raw files,hyphenated form; unresolved,75
+north carolina state wolfpack,NC State,B wrong even with raw files,prefix rule gives North Carolina,74
+southern california trojans,USC,B wrong even with raw files,prefix rule gives Southern (Jaguars),70
+mississippi rebels,Ole Miss,B wrong even with raw files,unresolved,74
+texas el paso miners,UTEP,B wrong even with raw files,prefix rule gives Texas,68
+ut san antonio roadrunners,UTSA,B wrong even with raw files,unresolved,76
+nevada las vegas rebels,UNLV,B wrong even with raw files,prefix rule gives Nevada,72
+alabama birmingham blazers,UAB,B wrong even with raw files,prefix rule gives Alabama,69
+southeastern louisiana lions,SE Louisiana,B wrong even with raw files,unresolved,9
+tennesseemartin skyhawks,UT Martin,B wrong even with raw files,hyphenated form; unresolved,9
+albany great danes,UAlbany,B wrong even with raw files,unresolved,6
+citadel bulldogs,The Citadel,B wrong even with raw files,unresolved,8
+saint francis pa red flash,St. Francis (PA),B wrong even with raw files,"unresolved (team_info calls it Saint Francis, the score table St. Francis (PA))",7
+saint francis red flash,St. Francis (PA),B wrong even with raw files,unresolved (same reason),7
+tarleton texans,Tarleton State,B wrong even with raw files,unresolved,4
+se missouri state redhawks,Southeast Missouri State,B wrong even with raw files,unresolved,5
+appalachian state mountaineers,App State,C only without raw files,unresolved without team_info,74
+southern mississippi golden eagles,Southern Miss,C only without raw files,prefix rule gives Southern (Jaguars),71
+connecticut huskies,UConn,C only without raw files,unresolved,62
+houston baptist huskies,Houston Christian,C only without raw files,prefix rule gives Houston (Cougars),9
+texas amcommerce lions,East Texas A&M,C only without raw files,prefix rule gives Texas,4
+dixie state trailblazers,Utah Tech,C only without raw files,unresolved,3
+central florida knights,UCF,C only without raw files,unresolved,71
+southern methodist mustangs,SMU,C only without raw files,prefix rule gives Southern (Jaguars),75
+texas christian horned frogs,TCU,C only without raw files,prefix rule gives Texas,73
+louisiana state tigers,LSU,C only without raw files,prefix rule gives Louisiana,74
+brigham young cougars,BYU,C only without raw files,unresolved,74
+tennessee martin skyhawks,UT Martin,C only without raw files,prefix rule gives Tennessee,9
+arkansas pine bluff golden lions,Arkansas-Pine Bluff,C only without raw files,prefix rule gives Arkansas,5
+san diego st aztecs,San Diego State,C only without raw files,prefix rule gives San Diego (Toreros),70
+ohio st buckeyes,Ohio State,D only if the feed ever abbreviates State,"prefix rule gives Ohio, even with raw files",73
+iowa st cyclones,Iowa State,D only if the feed ever abbreviates State,"prefix rule gives Iowa, even with raw files",74
+utah st aggies,Utah State,D only if the feed ever abbreviates State,"prefix rule gives Utah, even with raw files",69
