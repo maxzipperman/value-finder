@@ -351,7 +351,7 @@ def test_empty_data_prints_the_message_and_stops(tmp_path, capsys, monkeypatch):
 def _row(**kw):
     base = dict(primary=True, hypothesis="H1", bets=500, clv_pin_n=500, clv_pin_cents=1.5, clv_pin_p=1e-5, roi_hi=0.05,
                 clv_pin_wo_top_book=1.2, clv_pin_wo_best_season=1.1, seasons_counted=6, seasons_positive=5,
-                clv_pin_fresh_pin=1.0, clv_pin_ev_below_10=1.3, clv_own_cents=0.4)
+                seasons_20_closes=6, graded=480, clv_pin_fresh_pin=1.0, clv_pin_ev_below_10=1.3, clv_own_cents=0.4)
     return {**base, **kw}
 
 

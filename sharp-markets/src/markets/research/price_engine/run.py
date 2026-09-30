@@ -86,9 +86,9 @@ def _commit() -> str:
         return "unknown"
 
 
-RESULT_COLS = ["variant", "bets", "clv_pin_n", "games", "ev_entry_pct", "clv_pin_expected", "clv_pin_cents",
+RESULT_COLS = ["variant", "bets", "clv_pin_n", "graded", "games", "ev_entry_pct", "clv_pin_expected", "clv_pin_cents",
                "clv_pin_se", "clv_pin_p", "clv_pin_pts", "clv_own_cents", "clv_own_pts", "seasons_positive",
-               "seasons_counted", "top_book", "win_rate", "roi", "roi_lo", "roi_hi", "decision"]
+               "seasons_counted", "seasons_20_closes", "top_book", "win_rate", "roi", "roi_lo", "roi_hi", "decision"]
 MOVED_COLS = ["variant", "bets", "clv_pin_n", "clv_pin_same_n", "clv_pin_cents_same", "clv_pin_moved_n",
               "clv_pin_cents_moved", "clv_pin_cents", "clv_pin_pts"]
 
@@ -109,7 +109,12 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
             "cell near it means the flags held their value to the close; well below it, Pinnacle moved toward the "
             "retail price. `clv_own_*` is the same against the entry book's own close. Points (`*_pts`) are for "
             "spreads and totals only, and need no conversion between numbers. ROI is flat one-unit bets at the price "
-            "taken, pushes left out; its interval is 95%. Standard errors are clustered by game.", ""]
+            "taken, pushes left out; its interval is 95%. Standard errors are clustered by game. `graded` is how "
+            "many bets have a final score that won or lost: a primary cell with fewer than 100 cannot act "
+            "(amendment 1, item 4). A2's seasons (amendment 1, item 1): `seasons_counted` have 20 or more bets, "
+            "`seasons_20_closes` have 20 or more bets with a Pinnacle close, and `seasons_positive` are counted "
+            "seasons with 20 or more closes and mean CLV above zero. `top_book` lists every book tied for the most "
+            "bets (amendment 1, item 3).", ""]
     moved = results[results.market.isin(["spreads", "totals"]) & results.primary]
     body = ["## Results, one row per variant", "", table(results, RESULT_COLS),
             "## Closes at another number (primary spread and total cells)", "",

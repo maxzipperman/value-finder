@@ -480,7 +480,7 @@ def test_a7_cfb_matching(tmp_path):
 def _act_row(**kw):
     base = dict(primary=True, hypothesis="H1", bets=500, clv_pin_n=500, clv_pin_cents=1.5, clv_pin_p=1e-5, roi_hi=0.05,
                 clv_pin_wo_top_book=1.2, clv_pin_wo_best_season=1.1, seasons_counted=6, seasons_positive=5,
-                clv_pin_fresh_pin=1.0, clv_pin_ev_below_10=1.3, clv_own_cents=0.4)
+                seasons_20_closes=6, graded=480, clv_pin_fresh_pin=1.0, clv_pin_ev_below_10=1.3, clv_own_cents=0.4)
     return base | kw
 
 
@@ -493,6 +493,8 @@ FIELDS_EXPECTED = {   # field set to NaN -> the verdict the registration's words
     "seasons_positive": "inconclusive",
     "clv_pin_fresh_pin": "inconclusive",
     "clv_pin_ev_below_10": "inconclusive",
+    "seasons_20_closes": "inconclusive",                          # amendment 1, item 1
+    "graded": engine.TOO_FEW_RESULTS,                             # amendment 1, item 4
 }
 
 
@@ -514,10 +516,15 @@ def test_a9_missing_blend_and_own_close():
     assert engine.decide(_act_row(clv_own_cents=math.nan), 1.0) == "act: paper forward test"   # H1: reported only
 
 
-def test_a9_gap_a_missing_roi_interval_never_kills():
-    """K2 needs the ROI interval. With no matched scores it is NaN, and the cell can still 'act'. The registration
-    keeps unscored games for CLV, so this follows its words, but nothing flags that K2 was never tested."""
-    assert engine.decide(_act_row(roi_hi=math.nan), 1.0) == "act: paper forward test"
+def test_a9_no_matched_scores_cannot_act():
+    """Amendment 1, item 4 (defect D3, turned round). K2 needs the ROI interval; with no matched scores it is NaN and
+    K2 cannot fire. Before, such a cell could still 'act'; now fewer than 100 bets with a final score that won or
+    lost give 'inconclusive: too few results to check the return'."""
+    assert engine.decide(_act_row(roi_hi=math.nan, graded=0), 1.0) == engine.TOO_FEW_RESULTS
+    assert engine.decide(_act_row(graded=99), 1.0) == engine.TOO_FEW_RESULTS
+    assert engine.decide(_act_row(graded=100), 1.0) == "act: paper forward test"
+    # a kill still wins: K1 with no results is a kill, not "inconclusive"
+    assert engine.decide(_act_row(graded=0, clv_pin_cents=-0.1), 1.0).startswith("kill: CLV at or below zero")
     # reachable: 150 bets with a Pinnacle close and no final score at all
     k = T("2024-09-08T17:00Z")
     g = pd.DataFrame(dict(event_id=[f"g{i}" for i in range(150)], season=[str(2020 + i % 5) for i in range(150)],
@@ -528,7 +535,7 @@ def test_a9_gap_a_missing_roi_interval_never_kills():
     g["clv_pin_cents"] = 2.0 + (np.arange(150) % 7) / 10
     row = engine.summarize(H1_TOT, g) | {"primary": True}
     assert row["graded"] == 0 and math.isnan(row["roi_hi"])
-    assert engine.decide(row, 1.0) == "act: paper forward test"
+    assert engine.decide(row, 1.0) == engine.TOO_FEW_RESULTS
 
 
 def test_a9_unreachable_nan_counts_would_skip_too_few():
@@ -564,22 +571,33 @@ def _registered_a2(g):
     return len(counted) >= 3 and int((counted.clv > 0).sum()) >= len(counted) - 1
 
 
-def test_finding2_code_is_stricter_in_one_direction():
+def _code_a2_before(g):
+    """The code's reading before amendment 1: seasons with 20 or more bets WITH A PINNACLE CLOSE."""
+    by = g.groupby("season").clv_pin_cents.agg(["mean", "count"])
+    counted = by[by["count"] >= 20]
+    return len(counted) >= 3 and int((counted["mean"] > 0).sum()) >= len(counted) - 1
+
+
+def test_finding2_a_season_with_20_bets_but_fewer_than_20_closes_is_counted_and_not_above_zero():
+    """Amendment 1, item 1 (defect D2, turned round). 2022 has 22 bets (counted) but 18 Pinnacle closes, so it is not
+    above zero; and only 2 seasons have 20 or more closes. Before, the code left 2022 out and failed A2 on 2 seasons
+    counted; the registered sentence alone would have passed. Now A2 fails: the stricter of the two."""
     g, row = _cell([("2020", 50, 50, 2.0), ("2021", 50, 50, 2.0), ("2022", 22, 18, 2.0)])
-    assert _registered_a2(g) is True
-    assert (row["seasons_counted"], row["seasons_positive"]) == (2, 2)
-    assert engine.decide(row, 1.0) == "inconclusive"                # the registered sentence would allow "act"
+    assert _registered_a2(g) is True and _code_a2_before(g) is False
+    assert (row["seasons_counted"], row["seasons_20_closes"], row["seasons_positive"]) == (3, 2, 2)
+    assert engine.a2(row) is False and engine.decide(row, 1.0) == "inconclusive"
 
 
-def test_finding2_code_is_looser_in_the_other_direction():
-    """Two seasons with many bets but few Pinnacle closes, both negative: the registered sentence counts them and
-    fails A2 (two negative seasons); the code leaves them out and passes."""
+def test_finding2_seasons_with_many_bets_but_few_closes_are_counted():
+    """Amendment 1, item 1 (defect D2, turned round). Two seasons with 30 bets but 15 Pinnacle closes: counted, and
+    not above zero. Before, the code left them out and the cell could 'act'; the registered sentence failed it.
+    Now A2 fails."""
     g, row = _cell([("2020", 40, 40, 3.0), ("2021", 40, 40, 3.0), ("2022", 40, 40, 3.0),
                     ("2023", 30, 15, -1.0), ("2024", 30, 15, -1.0)])
-    assert _registered_a2(g) is False
-    assert (row["seasons_counted"], row["seasons_positive"]) == (3, 3)
+    assert _registered_a2(g) is False and _code_a2_before(g) is True
+    assert (row["seasons_counted"], row["seasons_20_closes"], row["seasons_positive"]) == (5, 3, 3)
     assert row["clv_pin_cents"] > 0 and row["clv_pin_wo_best_season"] > 0 and row["clv_pin_n"] >= 100
-    assert engine.decide(row, 1.0) == "act: paper forward test"
+    assert engine.a2(row) is False and engine.decide(row, 1.0) == "inconclusive"
 
 
 # ================================================================ finding 3: prefix school matching
@@ -666,13 +684,18 @@ def test_the_batch_boundary_no_longer_matters(tmp_path):
 
 
 # ================================================================ unregistered tie: the book with the most bets
-def test_observation_a_tie_for_the_most_bets_is_broken_by_row_order():
+def test_a_tie_for_the_most_bets_removes_each_tied_book_in_turn():
+    """Amendment 1, item 3 (defect D4, turned round). 60 DraftKings bets at +3 and 60 FanDuel bets at -1. Before, row
+    order picked the book removed and K3 killed in one order only. Now both tied books are removed in turn, the
+    lower mean left counts, and K3 kills in either order."""
     g, _ = _cell([("2020", 40, 40, 1.0), ("2021", 40, 40, 1.0), ("2022", 40, 40, 1.0)])
     g["book"] = ["draftkings"] * 60 + ["fanduel"] * 60
     g["clv_pin_cents"] = [3.0] * 60 + [-1.0] * 60
     a, b = engine.summarize(H1_TOT, g), engine.summarize(H1_TOT, g.iloc[::-1])
-    assert (a["top_book"], b["top_book"]) == ("draftkings", "fanduel")
-    assert a["clv_pin_wo_top_book"] < 0 < b["clv_pin_wo_top_book"]      # K3 kills one order and not the other
+    assert a["top_book"] == b["top_book"] == "draftkings+fanduel"
+    assert a["clv_pin_wo_top_book"] == b["clv_pin_wo_top_book"] == pytest.approx(-1.0)
+    for r in (a, b):
+        assert "one book carries it" in engine.decide(r | {"primary": True, "clv_pin_p": 1e-6}, 1.0)
 
 
 # ================================================================ finding 4: the coarse 9-day cut
