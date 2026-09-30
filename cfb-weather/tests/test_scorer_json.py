@@ -159,7 +159,9 @@ def test_the_document_text_is_the_printed_report(tmp_path, name):
 def scorer_before_json():
     """The scorer as it was before --json was added, from git: the parent of the commit that added it (HEAD, before
     that commit is made). None when git can't show it, or when the scorer has changed since that commit (a later
-    amendment), so the comparison would no longer be like for like."""
+    amendment), so the comparison would no longer be like for like. A later commit whose message has the line
+    "Scorer-Report: unchanged" (it changes only the --json document) doesn't count: were the report changed after all,
+    this test would fail, never pass."""
     rel = "cfb-weather/scripts/score_forward.py"
     git = ["git", "-C", str(ROOT)]
     try:
@@ -169,8 +171,9 @@ def scorer_before_json():
             return None
         commits = added.stdout.split()
         if commits:
-            later = subprocess.run(git + ["log", "--format=%H", f"{commits[-1]}..HEAD", "--",
-                                          "scripts/score_forward.py"], capture_output=True, text=True, timeout=60)
+            later = subprocess.run(git + ["log", "--format=%H", "--invert-grep", "--grep=^Scorer-Report: unchanged$",
+                                          f"{commits[-1]}..HEAD", "--", "scripts/score_forward.py"],
+                                   capture_output=True, text=True, timeout=60)
             if later.returncode or later.stdout.split():
                 return None
             ref = f"{commits[-1]}^"
@@ -347,6 +350,33 @@ def test_a_recorded_decision(tmp_path):
         "recorded", "KEEP", "KEEP", 41)
     assert d["recorded"]["decided_utc"] == "2026-12-21T00:00:00Z"
     assert (js / "decisions.csv").read_bytes() == (plain / "decisions.csv").read_bytes()
+
+
+def test_a_recorded_decision_whose_numbers_hold_nan(tmp_path):
+    """A recorded decision whose numbers hold a NaN (this scorer writes a missing number as null, but a record is read
+    as written, and a NaN is a number to it): every later --json run still prints one valid JSON document, with the
+    NaN as null, and its text is the plain run's report, byte for byte."""
+    folder = forty_one(tmp_path / "t")
+    rec = run(SCORER, folder, "2026-12-21", "--test-record")
+    assert rec.returncode == 0, rec.stderr
+    record = folder / "decisions.csv"
+    text, k = re.subn(r'(""grouped_half_width"": )[-0-9.e]+', r"\1NaN", record.read_text())
+    assert k == 1
+    record.write_text(text)
+    plain = run(SCORER, folder, "2027-01-10")
+    js = run(SCORER, folder, "2027-01-10", "--json")
+    assert plain.returncode == js.returncode == 0, js.stderr
+
+    def refuse(token):
+        raise ValueError(f"{token} is not JSON")
+
+    doc = json.loads(js.stdout, parse_constant=refuse)                      # strict JSON: no NaN or Infinity
+    assert doc["text"] == plain.stdout and "Decision record:" in plain.stdout
+    d = doc["tests"][0]["decisions"][0]
+    assert (d["status"], d["recorded"]["verdict"]) == ("recorded", "KEEP")
+    assert d["recorded"]["numbers"]["grouped_half_width"] is None
+    assert isinstance(d["recorded"]["numbers"]["plain_half_width"], float)
+    assert record.read_text() == text                                        # nothing more written
 
 
 def test_json_with_now_never_records(tmp_path):

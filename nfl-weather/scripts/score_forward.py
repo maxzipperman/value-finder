@@ -779,8 +779,10 @@ def json_decision(rule, did, name, status, verdict, start, rec=None):
         return
     d = {"id": did, "name": name, "status": status, "verdict": verdict, "text": REPORT.getvalue()[start:]}
     if rec is not None:
+        # a recorded number that is NaN or infinite (json.dumps writes it; JSON has no such value) is null here
+        numbers = json.loads(rec.numbers, parse_constant=lambda _: None)
         d["recorded"] = {"verdict": rec.verdict, "decided_utc": rec.decided_utc, "horizon_utc": rec.horizon_utc,
-                         "n_bets": int(rec.n_bets), "numbers": json.loads(rec.numbers), "from": origin(did)[2:] or None}
+                         "n_bets": int(rec.n_bets), "numbers": numbers, "from": origin(did)[2:] or None}
     if status == "final":
         d["written"] = JSON["written"].get(did, False)
     JSON["decisions"].setdefault(rule, []).append(d)

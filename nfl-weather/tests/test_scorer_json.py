@@ -161,7 +161,9 @@ def test_the_document_text_is_the_printed_report(tmp_path, name):
 def scorer_before_json():
     """The scorer as it was before --json was added, from git: the parent of the commit that added it (HEAD, before
     that commit is made). None when git can't show it, or when the scorer has changed since that commit (a later
-    amendment), so the comparison would no longer be like for like."""
+    amendment), so the comparison would no longer be like for like. A later commit whose message has the line
+    "Scorer-Report: unchanged" (it changes only the --json document) doesn't count: were the report changed after all,
+    this test would fail, never pass."""
     rel = "nfl-weather/scripts/score_forward.py"
     git = ["git", "-C", str(ROOT)]
     try:
@@ -171,8 +173,9 @@ def scorer_before_json():
             return None
         commits = added.stdout.split()
         if commits:
-            later = subprocess.run(git + ["log", "--format=%H", f"{commits[-1]}..HEAD", "--",
-                                          "scripts/score_forward.py"], capture_output=True, text=True, timeout=60)
+            later = subprocess.run(git + ["log", "--format=%H", "--invert-grep", "--grep=^Scorer-Report: unchanged$",
+                                          f"{commits[-1]}..HEAD", "--", "scripts/score_forward.py"],
+                                   capture_output=True, text=True, timeout=60)
             if later.returncode or later.stdout.split():
                 return None
             ref = f"{commits[-1]}^"
@@ -345,6 +348,43 @@ def test_a_recorded_decision(tmp_path):
         "recorded", "KEEP", "KEEP", 40)
     assert d["recorded"]["decided_utc"] == "2027-01-20T00:00:00Z" and "FINAL: KEEP" in d["text"]
     assert (js / "decisions.csv").read_bytes() == (plain / "decisions.csv").read_bytes()    # nothing more written
+
+
+def no_close_in_the_second_half(folder):
+    """40 Rule B signals in the 2026 regular season; the 20 from Week 11 on have no nflverse close, so the recorded
+    decision's mean CLV for Weeks 12-18 is NaN (json.dumps writes it; JSON has no such value)."""
+    rows, games = [], []
+    for i in range(40):
+        wk = 5 + i * 13 // 40
+        gid = f"2026_{wk:02d}_G{i}"
+        rows.append(row(gid, wk_day(2026, wk), wx_wind=17, total_line=43.0))
+        games.append(game(gid, wk_day(2026, wk), season=2026, week=wk, total=40 if i % 3 else 47,
+                          close=42.0 + (i % 4) * 0.5 if i < 20 else np.nan))
+    return write(folder, rows, games + filler(2026))
+
+
+def test_a_recorded_decision_whose_numbers_hold_nan(tmp_path):
+    """After a decision is recorded with a NaN among its numbers, every later --json run still prints one valid JSON
+    document: the NaN is null there, and the report is printed as before (its text is the plain run's, byte for
+    byte)."""
+    folder = no_close_in_the_second_half(tmp_path / "t")
+    rec = run(SCORER, folder, "2027-01-21", "--test-record")
+    assert rec.returncode == 0, rec.stderr
+    assert '""Weeks 12-18"": NaN' in (folder / "decisions.csv").read_text()
+    written = (folder / "decisions.csv").read_bytes()
+    plain = run(SCORER, folder, "2027-01-25")
+    js = run(SCORER, folder, "2027-01-25", "--json")
+    assert plain.returncode == js.returncode == 0, js.stderr
+
+    def refuse(token):
+        raise ValueError(f"{token} is not JSON")
+
+    doc = json.loads(js.stdout, parse_constant=refuse)                      # strict JSON: no NaN or Infinity
+    assert doc["text"] == plain.stdout and "nan" in plain.stdout
+    d = doc["tests"][0]["decisions"][0]
+    assert (d["status"], d["recorded"]["verdict"]) == ("recorded", d["verdict"])
+    assert d["recorded"]["numbers"]["by_part"] == {"Weeks 12-18": None, "Weeks 5-11": 0.25}
+    assert (folder / "decisions.csv").read_bytes() == written              # nothing more written
 
 
 def test_json_with_now_never_records(tmp_path):
