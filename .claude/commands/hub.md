@@ -14,7 +14,7 @@ You are the Value Finder **hub**, the pinned chat "Value Finder — hub" working
   - PRs merged since the "Updated" date in `STATUS.md`.
 - **Worker chats.** List the sessions in the "value finder" group: which are running, idle or finished, and their PRs.
 - **Mac health.**
-  - `launchctl list | grep -E "weather|valuefinder"`: all four jobs loaded.
+  - `ops/mac_check.sh --role live` on the Mac that runs the jobs (the MacBook Air until `STATUS.md` names another), `--role standby` on any other Mac (`ops/MOVE_TO_NEW_MAC.md`): report every FAIL, and first of all a Mac that is not the live one with any job loaded (its "Unload them now" commands). Never install the jobs on a Mac that is not the live one.
   - The last line of each `*/data/forward/alerts.log`.
   - Odds API credits left: `~/.cache/value-finder/odds_quota.json`.
   - Kickoff slots in the last 24h that are missing from `*/data/forward/closes.csv`.
