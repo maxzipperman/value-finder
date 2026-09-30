@@ -942,12 +942,14 @@ INTERRUPTED = "interrupted"
 
 
 def summary_line(client: BulkClient, stopped, fetched: int | None = None, credits: int | None = None,
-                 errors: int = 0, cached_404: int | None = None) -> str:
+                 errors: int = 0, cached_404: int | None = None, retry_404: bool = False) -> str:
     """The line every run ends with: this pull's calls fetched and credits, the run's credits, the balance, how many
-    calls got an error answer (not saved, so a rerun asks for them again), and how many are cached 404s."""
+    calls got an error answer (not saved, so a rerun asks for them again; with --retry-404, a cached 404 asked again
+    keeps its 404, so only a rerun with --retry-404 does), and how many are cached 404s."""
     fetched = client.fetched if fetched is None else fetched
     credits = client.counted if credits is None else credits
-    errs = f" ({errors:,} answered with an error and not saved; a rerun asks again)" if errors else ""
+    again = "a rerun with --retry-404 asks again" if retry_404 else "a rerun asks again"
+    errs = f" ({errors:,} answered with an error and not saved; {again})" if errors else ""
     n404 = "" if cached_404 is None else f", cached 404s {cached_404:,}"
     return (f"  {'stopped' if stopped else 'done'}: {fetched:,} fetched{errs}, credits {credits:,} "
             f"(this run {client.counted:,}), remaining {_n(client.remaining)}{n404}")
@@ -1016,7 +1018,7 @@ def run_calls(client: BulkClient, calls: list[Call], label: str = "", *, skip_sp
     _log_stale(client, stale0, label)
     errors = sum(c.key in client.not_saved for c in todo)
     n404 = None if interrupted else sum(client.cached_status(c) == 404 for c in calls)
-    print(summary_line(client, stopped, fetched, spent, errors, n404), flush=True)
+    print(summary_line(client, stopped, fetched, spent, errors, n404, retry_404), flush=True)
     return {"calls": len(calls), "todo": len(todo), "fetched": fetched, "spent": spent,
             "run_fetched": client.fetched, "run_spent": client.counted, "remaining": client.remaining,
             "stopped": stopped, "interrupted": interrupted, "rerun": rerun, "errors": errors, "skipped": skipped,

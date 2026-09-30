@@ -2716,7 +2716,8 @@ def test_a_cached_404_asked_again_and_answered_with_an_error_shows_on_the_summar
                                                                                        capsys):
     """Review of cc14201, finding A5: with --retry-404, a cached 404 asked again and answered 500 kept its 404 (as it
     should) but was left off the pull's line, which said only `cached 404s 2`; only a WARNING showed the 500. The
-    line now counts it like any error answer; a 404 asked again that is still a 404 is not an error."""
+    line now counts it like any error answer, and says only a rerun with --retry-404 asks again, since the 404 is
+    kept (review of the fix, finding 4); a 404 asked again that is still a 404 is not an error."""
     from markets import http
     monkeypatch.setattr(http.time, "sleep", lambda s: None)
     calls, raw = _nfl_calls(cfg, 2), tmp_path / "raw"
@@ -2730,7 +2731,7 @@ def test_a_cached_404_asked_again_and_answered_with_an_error_shows_on_the_summar
     run(Gone({"ev0"}))
     res, out = run(Gone({"ev0"}, fail=True), retry_404=True)
     assert res["errors"] == 2 and res["cached_404"] == 2
-    assert "done: 2 fetched (2 answered with an error and not saved; a rerun asks again), credits 0" in out
+    assert "done: 2 fetched (2 answered with an error and not saved; a rerun with --retry-404 asks again)" in out
     res, out = run(Gone({"ev0"}), retry_404=True)
     assert res["errors"] == 0 and "answered with an error" not in out and res["cached_404"] == 2
 
