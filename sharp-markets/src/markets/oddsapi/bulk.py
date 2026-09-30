@@ -441,6 +441,20 @@ def _envelope(body: str) -> dict:
             "n": 1 if isinstance(data, dict) else len(data or [])}
 
 
+def _interpret(call: Call, status: int, body: str) -> tuple[int, dict] | None:
+    """An answer's documented cost and its envelope (the manifest's snapshot fields), or None for an HTTP 200 whose body
+    can't be interpreted: not JSON, or JSON whose `data` (or what is inside it) isn't what the API sends, a number say.
+    An error answer's documented cost is 0 whatever its body holds, and an envelope it can't give is left blank."""
+    b = _json(body)
+    try:
+        if status == 200 and not (isinstance(b, list) or isinstance(b, dict)
+                                  and isinstance(b.get("data"), (list, dict, type(None)))):
+            return None
+        return documented_cost(call, status, body), _envelope(body)
+    except Exception:                    # noqa: BLE001 - whatever a body holds, its answer is counted
+        return None if status == 200 else (0, {})
+
+
 def _cost(value, up: bool = True) -> int | None:
     """A billing header as whole credits: `x-requests-last` with a fraction rounded up, `x-requests-remaining`
     (up=False) rounded down. None when it is missing, not a number, negative or not finite: "unknown", never zero."""
@@ -466,7 +480,8 @@ def _credits(n: int) -> str:
 
 
 class _Unusable(Exception):
-    """A billed HTTP 200 whose body can't be used (not JSON). Raised inside the cache's fetch, so it isn't cached."""
+    """A billed HTTP 200 whose body can't be interpreted (_interpret). Raised inside the cache's fetch, so it isn't
+    cached."""
 
 
 DISK_HELP = "Free some space (docs/ODDS5M_DAY_ONE.md, Before buying, step 2), then rerun."
@@ -485,7 +500,9 @@ class _Sending:
 
 
 def _latched(method):
-    """A client method whose first Stop (or Ctrl-C) the client keeps, so that it refuses every later attempt."""
+    """A client method whose first stop the client keeps, so that it refuses every later attempt with it: a Stop,
+    Ctrl-C, or any other error (a full disk, a bug), which becomes the Stop its STOPPED line gives once the attempt it
+    cut short is counted (BulkClient._count_out)."""
     @functools.wraps(method)
     def wrapper(self, *a, **k):
         try:
@@ -493,7 +510,21 @@ def _latched(method):
         except (Stop, KeyboardInterrupt) as e:
             self.stopped = self.stopped or (e if isinstance(e, Stop) else Stop(f"{INTERRUPTED} (Ctrl-C)", rerun=True))
             raise
+        except Exception as e:           # noqa: BLE001 - a full disk or a bug ends the run as a Stop does
+            if self.stopped is None:
+                self._count_out()
+                self.stopped = _as_stop(e)
+            raise self.stopped from None
     return wrapper
+
+
+def _as_stop(e: Exception) -> Stop:
+    """The Stop for an error that isn't one: a full disk, or a bug (its traceback is logged, key blanked)."""
+    if isinstance(e, OSError):
+        return Stop(f"a file could not be read or written ({e.strerror or e}): is the disk full? The call that was out "
+                    f"is not cached, so a rerun asks again. {DISK_HELP}", rerun=True)
+    log.error("the run stopped on an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
+    return Stop(f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: {scrub(e)})")
 
 
 class BulkClient:
@@ -560,6 +591,16 @@ class BulkClient:
         self.unanswered += call.expected
         self._sent = False
 
+    def _count_out(self) -> None:
+        """An error other than a Stop cut an attempt short (_latched): an answer that came back and wasn't counted counts
+        the larger of what it reported and its upper bound; a request still out, its upper bound."""
+        if self._answer is not None:
+            (call, f, retrying), self._answer = self._answer, None
+            self.counted += max(_cost(f.headers.get("x-requests-last")) or 0, call.expected)
+            self.fetched += not retrying
+        elif self._sent and self._out is not None:
+            self._no_answer(self._out)
+
     def _saw_balance(self, left: int) -> None:
         if self.start is None or left - self.last_seen > self.margin:   # library use with no key check, or credits added
             if self.start is not None:
@@ -603,20 +644,27 @@ class BulkClient:
 
     def _get(self, url: str, params: dict, call: Call | None = None):
         """One GET with the key added; for a paid `call`, each retry goes through `_retrying`, and a network failure
-        that outlasts the retries counts its upper bound and stops the run. Error text never holds the key."""
+        that outlasts the retries, or any other error the session raises with the request out, counts its upper bound
+        and stops the run. Error text never holds the key."""
         try:
             return http_get(_Sending(self), url, {**params, "apiKey": self._key()}, self.limiter,
                             max_retries=self.max_retries,
                             before_retry=None if call is None else (lambda why, r: self._retrying(call, why, r)))
         except requests.RequestException as e:
-            maybe = ""
-            if call is not None:
-                self._no_answer(call)
-                maybe = (f" It may still have been billed, so its upper bound, {_credits(call.expected)}, is counted to "
-                         "the end of the run; the rerun's key check reads the true balance.")
-            raise CircuitBreaker(
-                f"no answer from the Odds API after the retries ({type(e).__name__}: {scrub(e)}). Nothing was cached "
-                f"for this call, so a rerun asks again.{maybe}", rerun=True) from None
+            why, rerun = (f"no answer from the Odds API after the retries ({type(e).__name__}: {scrub(e)}). Nothing was "
+                          "cached for this call, so a rerun asks again."), True
+        except Exception as e:
+            if isinstance(e, (Stop, OSError)) or not self._sent:
+                raise                    # not the session's: a Stop from _retrying, the cache, or a bug of ours
+            log.error("the request raised an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
+            why, rerun = (f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: "
+                          f"{scrub(e)}). It came from sending the request, which got no answer."), False
+        self._sent = False
+        if call is not None:
+            self._no_answer(call)
+            why += (f" It may still have been billed, so its upper bound, {_credits(call.expected)}, is counted to the "
+                    "end of the run; the rerun's key check reads the true balance.")
+        raise CircuitBreaker(why, rerun=rerun)
 
     def _fetched(self, r) -> Fetched:
         """A response as it is kept: header values scrubbed, and the body with the key itself blanked and nothing else
@@ -670,7 +718,7 @@ class BulkClient:
     def fetch(self, call: Call, refetch: bool = False) -> dict:
         """The stored record for this call (cache first; `refetch`, --retry-404, asks a cached call again and keeps the
         answer only if it is a 200). Raises Stop before or after a call that must end the run. A billed response that
-        can't be kept (a 200 that isn't JSON, a full disk) is counted, logged, not cached, and stops the run."""
+        can't be kept (a 200 it can't interpret, a full disk) is counted, logged, not cached, and stops the run."""
         if refetch or not self.is_cached(call):
             self._precheck(call)
         sent: list[Fetched] = []
@@ -679,7 +727,7 @@ class BulkClient:
             f = self._fetched(self._get(call.url, dict(call.params), call))
             self._answer, self._sent = (call, f, False), False
             sent.append(f)
-            if f.status == 200 and not isinstance(_json(f.body), (dict, list)):
+            if f.status == 200 and _interpret(call, f.status, f.body) is None:
                 raise _Unusable
             return f
 
@@ -690,10 +738,8 @@ class BulkClient:
                                           fetch=fetch, cache_statuses=(200,) if refetch else self.cache_statuses,
                                           refresh=refetch)
         except _Unusable:
-            self._account(call, self._record(call, sent[-1]),
-                          problem=f"the API answered HTTP 200 with a body that is not JSON "
-                                  f"({scrub(sent[-1].body)[:120]!r}). It was not cached, so a rerun asks again.")
-            raise                        # not reached: _account raises CircuitBreaker when given a problem
+            self._account(call, self._record(call, sent[-1]))
+            raise                        # not reached: _account stops the run on a 200 it can't interpret
         except OSError as e:
             if not sent:
                 raise CircuitBreaker(f"the cache could not be read ({e.strerror or e}). Nothing was fetched.",
@@ -762,13 +808,14 @@ class BulkClient:
         raw_last, raw_left = (None if v is None else scrub(v) for v in (h.get("x-requests-last"),
                                                                          h.get("x-requests-remaining")))
         last, left = _cost(raw_last), _cost(raw_left, up=False)
-        documented = documented_cost(call, status, body)
+        read = _interpret(call, status, body)      # None: a 200 whose documented cost can't be worked out
+        documented, env_ = read or (call.expected, {})
         cost = call.expected if last is None else max(last, documented)
-        env_, p = _envelope(body), dict(call.params)
+        p = dict(call.params)
         row = {"pull": call.pull, "sport": call.sport, "source": call.source, "path": call.path,
                "event_id": call.event_id, "requested_ts": iso(call.at), "returned_ts": env_.get("timestamp", ""),
                "previous_ts": env_.get("previous_timestamp", ""), "next_ts": env_.get("next_timestamp", ""),
-               "markets": p.get("markets", ""), "books": p.get("bookmakers", ""), "n_events": env_["n"],
+               "markets": p.get("markets", ""), "books": p.get("bookmakers", ""), "n_events": env_.get("n"),
                "expected_credits": call.expected, "credits_last": last, "remaining": left, "http_status": status,
                "sha256": hashlib.sha256(body.encode()).hexdigest(), "cache_key": rec["cache_key"], "sealed": call.sealed}
         # One statement, so a Ctrl-C comes before it (interrupted() counts the answer) or after it (the answer is
@@ -788,8 +835,14 @@ class BulkClient:
                        + f" could not be written ({e.strerror or e}): is the disk full? {DISK_HELP}")
         self._unlogged = None
         above = last is not None and last > call.expected
+        if read is None:                 # a 200 it can't interpret: fetch raised _Unusable, so the cache didn't keep it
+            kind = "a body that is not JSON" if _json(body) is None else "JSON it cannot read"
+            problem = (f"the API answered HTTP 200 with {kind} ({scrub(body)[:120]!r}). It was not cached, so a rerun "
+                       "asks again." + (f" {problem}" if problem else ""))
         if problem:
-            billed = _credits(cost) if last is not None else f"its upper bound, {_credits(call.expected)}"
+            billed = f"its upper bound, {_credits(call.expected)}" if last is None else _credits(cost)
+            if read is None and last is not None:
+                billed += ", the larger of what it reported and its upper bound"
             raise CircuitBreaker(f"{where}: {problem} It counted {billed} (x-requests-last {raw_last!r})"
                                  + (f", more than its upper bound of {call.expected}" if above else "") + ".",
                                  rerun=not above)
@@ -878,13 +931,8 @@ def _stopped_by(client: BulkClient, e: BaseException) -> tuple[str, bool]:
     """What follows `STOPPED:` (key blanked) for anything a fetch raised, and whether a rerun is next (Stop.rerun)."""
     if isinstance(e, KeyboardInterrupt):
         return f"{INTERRUPTED} (Ctrl-C). {client.interrupted()} A rerun resumes from the cache.", True
-    if isinstance(e, Stop):
-        return scrub(e), e.rerun
-    if isinstance(e, OSError):
-        return (f"a file could not be read or written ({e.strerror or e}): is the disk full? The call that was out is "
-                f"not cached, so a rerun asks again. {DISK_HELP}"), True
-    log.error("the run stopped on an unexpected error:\n%s", scrub("".join(traceback.format_exception(e))))
-    return f"unexpected error, probably a bug; tell the hub before rerunning ({type(e).__name__}: {scrub(e)})", False
+    stop = e if isinstance(e, Stop) else _as_stop(e)
+    return scrub(stop), stop.rerun
 
 
 def _log_stale(client: BulkClient, stale0: int, label: str) -> None:

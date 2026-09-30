@@ -733,7 +733,8 @@ def test_a_full_disk_or_a_body_that_is_not_json_stops_with_the_summary(cfg, tmp_
                 r.text = "<html>busy</html>"
             return r
     res = bulk.run_calls(client(tmp_path / "b", Html()), _one_call(cfg))
-    assert "body that is not JSON" in res["stopped"] and res["spent"] == 20
+    # its documented cost can't be worked out, so it counts the larger of the 20 it reported and its upper bound, 60
+    assert "body that is not JSON" in res["stopped"] and res["spent"] == 60
     assert not list((tmp_path / "b/raw").rglob("*.parquet"))                          # not cached: a rerun asks again
     out = capsys.readouterr().out
     assert out.count("STOPPED:") == 2 and out.count("stopped: 1 fetched") == 2
@@ -2347,14 +2348,14 @@ def test_ctrl_c_inside_the_accounting_of_an_answer_counts_it_once_with_one_manif
     the answer is counted once, at what it cost, it has exactly one manifest row, and the line says so."""
     n = [0]
     if where == "before its count":
-        envelope = bulk._envelope
+        account = bulk.BulkClient._account
 
-        def patched(body):
+        def patched(self, *a, **k):
             n[0] += 1
             if n[0] == 3:
                 raise KeyboardInterrupt
-            return envelope(body)
-        monkeypatch.setattr(bulk, "_envelope", patched)
+            return account(self, *a, **k)
+        monkeypatch.setattr(bulk.BulkClient, "_account", patched)
     elif where == "between its count and its row":
         saw = bulk.BulkClient._saw_balance
 
@@ -2542,3 +2543,114 @@ def test_ctrl_c_while_a_retried_answer_is_accounted_counts_it_at_what_it_cost_wi
     assert res["interrupted"] and api.paid == 1 and c.counted == 20 and c.unanswered == 0
     assert [(r["http_status"], r["credits_last"]) for r in rows] == [("500", "20")]
     assert "had come back, so it is counted at what it cost, 20 credits, and a rerun buys it again." in res["stopped"]
+
+
+# ---------------------------------------------------------------- review of cc14201 (Sep 30)
+def test_any_other_error_the_session_raises_counts_the_attempt_and_stops_the_client(cfg, tmp_path, caplog):
+    """Review of cc14201, finding A2: a session that raised something other than a network error `requests` knows
+    (here a RuntimeError) ended the run as "unexpected error", but the attempt counted nothing and the client took
+    the next call. Now the attempt counts its upper bound to the end of the run (rule 2), the run stops, and the
+    client refuses every later attempt with that stop. At the key check nothing is counted, and it stops the same."""
+    class Raises(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            if not url.endswith("/sports") and len(self.calls) == 2:            # the second paid call
+                self.calls.append((url, dict(params)))
+                raise RuntimeError(f"urllib3 surprise {params['apiKey']}")
+            return super().get(url, params, timeout)
+
+    calls = _nfl_calls(cfg)                                                     # upper bound 60, billed 20
+    api = Raises()
+    c = client(tmp_path, api)
+    c.account()
+    res = bulk.run_calls(c, calls)
+    assert res["stopped"].startswith("unexpected error, probably a bug; tell the hub before rerunning (RuntimeError: "
+                                     "urllib3 surprise REDACTED)") and not res["rerun"]
+    assert "its upper bound, 60 credits, is counted to the end of the run" in res["stopped"]
+    assert c.counted == 20 + 60 and c.unanswered == 60 and res["fetched"] == 1
+    with pytest.raises(bulk.Stop) as ei:
+        c.fetch(calls[2])
+    assert ei.value is c.stopped and len(api.calls) == 3 and c.counted == 80
+    assert "SECRETKEY" not in caplog.text
+
+    class AtTheKeyCheck(FakeOddsApi):
+        def get(self, url, params=None, timeout=None):
+            raise RuntimeError("no")
+    k = client(tmp_path / "k", AtTheKeyCheck())
+    with pytest.raises(bulk.CircuitBreaker, match=r"unexpected error, probably a bug.*RuntimeError: no"):
+        k.account()
+    assert k.counted == 0 and k.stopped is not None
+
+
+class Garbled(FakeOddsApi):
+    """Answers the second paid call with an HTTP 200 whose body is `body`, reported at the usual 20 credits."""
+
+    def __init__(self, body, **kw):
+        super().__init__(**kw)
+        self.body = body
+
+    def get(self, url, params=None, timeout=None):
+        r = super().get(url, params, timeout)
+        if len(self.calls) == 3:                                                # the key check, then two paid calls
+            r.text = self.body
+        return r
+
+
+@pytest.mark.parametrize("body", [{"timestamp": "2024-09-01T00:15:00Z", "data": 5}, {"data": "abc"},
+                                  {"data": {"id": "ev1", "bookmakers": 5}}])
+def test_a_200_it_cannot_interpret_counts_its_upper_bound_gets_its_row_and_stops(cfg, tmp_path, capsys, body):
+    """Review of cc14201, finding A2: a 200 whose JSON `data` is a number was cached and then crashed the accounting
+    (`_envelope`), so it counted nothing, a rerun found it cached and never counted it, and the client took the next
+    call. Now a 200 whose body can't be interpreted counts the larger of what it reported and its upper bound (its
+    documented cost can't be worked out), gets its manifest row, isn't cached, and stops the run with a plain STOPPED
+    line; the client refuses every later attempt."""
+    calls = _nfl_calls(cfg)                                                     # upper bound 60, billed 20
+    api = Garbled(json.dumps(body))
+    c = client(tmp_path, api)
+    c.account()
+    res = bulk.run_calls(c, calls)
+    assert res["stopped"].startswith(f"{calls[1].path} at {bulk.iso(calls[1].at)}: the API answered HTTP 200 with "
+                                     "JSON it cannot read") and res["rerun"]
+    assert ("It counted 60 credits, the larger of what it reported and its upper bound (x-requests-last '20')."
+            in res["stopped"])
+    assert c.counted == 20 + 60 and res["fetched"] == 2
+    rows = [r for r in csv.DictReader(c.manifest.open()) if r["pull"] != "account"]
+    assert [(r["http_status"], r["credits_last"]) for r in rows] == [("200", "20"), ("200", "20")]
+    assert c.is_cached(calls[0]) and not c.is_cached(calls[1])                  # a rerun asks again
+    assert "STOPPED: " in capsys.readouterr().out
+    with pytest.raises(bulk.Stop) as ei:
+        c.fetch(calls[2])
+    assert ei.value is c.stopped and len(api.calls) == 3
+
+
+@pytest.mark.parametrize("where", ["saving the answer", "reading the cache"])
+def test_any_other_error_in_a_fetch_counts_what_came_back_and_stops_the_client(cfg, tmp_path, monkeypatch, where):
+    """Review of cc14201, finding A2: every stop latches the client, not only a Stop or Ctrl-C. An error that isn't
+    one (a bug while the answer is saved, a cache that can't be read) stops the run with the STOPPED line it gives,
+    after an answer that had come back is counted, at the larger of what it reported and its upper bound; and the
+    client refuses every later attempt with that stop, even once the cause is gone."""
+    from markets import cache as cache_mod
+    calls = _nfl_calls(cfg)
+    api = FakeOddsApi()
+    c = client(tmp_path, api)
+    c.account()
+    c.fetch(calls[0])                                                           # 20 counted
+
+    def fail(*a, **k):
+        raise ValueError("a bug") if where == "saving the answer" else PermissionError(13, "Permission denied")
+    if where == "saving the answer":
+        monkeypatch.setattr(cache_mod, "write_record", fail)
+    else:
+        monkeypatch.setattr(c.cache, "lookup", fail)
+    with pytest.raises(bulk.Stop) as ei:
+        c.fetch(calls[1])
+    assert ei.value is c.stopped
+    if where == "saving the answer":
+        assert str(c.stopped).startswith("unexpected error, probably a bug; tell the hub before rerunning (ValueError")
+        assert c.counted == 20 + 60 and c.fetched == 2 and len(api.calls) == 3
+    else:
+        assert str(c.stopped).startswith("a file could not be read or written (Permission denied)")
+        assert c.counted == 20 and len(api.calls) == 2
+    monkeypatch.undo()
+    with pytest.raises(bulk.Stop) as again:
+        c.fetch(calls[2])
+    assert again.value is c.stopped and len(api.calls) == (3 if where == "saving the answer" else 2)
