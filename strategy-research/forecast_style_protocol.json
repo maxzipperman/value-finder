@@ -1,0 +1,40 @@
+{
+  "id": "forecast-style-2026-09-30-v1",
+  "status": "setup recorded before new hypothesis results; retrospective discovery only",
+  "latest_season": 2025,
+  "project_count_before": 288,
+  "specifications_added": 6,
+  "project_count_at_setup": 294,
+  "target": "final total points minus consensus closing total; diagnostic benchmark, not an entry price",
+  "decision": "19:30 America/Los_Angeles on the day before kickoff's America/New_York date",
+  "mos_publication_lag_hours": 5,
+  "style_reporting_lag_hours": 48,
+  "style_prior_games": 4,
+  "style_min_prior_games": 3,
+  "style_same_season_only": true,
+  "style_stat": "pass_rate_sit",
+  "minimum_prior_seasons": 5,
+  "minimum_train_games": 300,
+  "minimum_test_games": 25,
+  "ridge_penalty": 10.0,
+  "standardization": "training means and population standard deviations only; intercept unpenalized",
+  "seed": 20260930,
+  "bootstrap_draws": 10000,
+  "models": [
+    {"id": "NFL_REV_BASE", "sport": "nfl", "cohort": "revision", "features": ["wind1"]},
+    {"id": "NFL_REV_DELTA", "sport": "nfl", "cohort": "revision", "features": ["wind1", "revision"]},
+    {"id": "CFB_REV_BASE", "sport": "cfb", "cohort": "revision", "features": ["wind1"]},
+    {"id": "CFB_REV_DELTA", "sport": "cfb", "cohort": "revision", "features": ["wind1", "revision"]},
+    {"id": "NFL_STYLE_ADD", "sport": "nfl", "cohort": "style", "features": ["wind1", "style"]},
+    {"id": "NFL_STYLE_INTERACTION", "sport": "nfl", "cohort": "style", "features": ["wind1", "style", "wind_style"]}
+  ],
+  "comparisons": [
+    {"id": "NFL_REVISION", "control": "NFL_REV_BASE", "candidate": "NFL_REV_DELTA"},
+    {"id": "CFB_REVISION", "control": "CFB_REV_BASE", "candidate": "CFB_REV_DELTA"},
+    {"id": "NFL_OFFENSIVE_STYLE", "control": "NFL_STYLE_ADD", "candidate": "NFL_STYLE_INTERACTION"}
+  ],
+  "primary_metric": "mean across validation seasons of the paired per-game squared-error improvement; every season has equal weight",
+  "inference": "two-sided Student t on validation-season mean improvements; report raw p and p times the project count, capped at 1; minimum five validation seasons",
+  "bootstrap": "95% diagnostic interval: resample seasons, then entire Eastern game days within each sampled season; not a second selection gate",
+  "interpretation": "shortlist only; existing historical seasons are not untouched confirmation; no live-rule changes, ROI claims, model selection, or 2026 evaluation"
+}
