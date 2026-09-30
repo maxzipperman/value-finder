@@ -159,6 +159,9 @@ def test_a_game_with_no_time_below_the_threshold_gets_no_notice(tmp_path, monkey
 
 
 # ------------------------------------------------------------------ the scorer
+LAST_UNTIMED = "its last quote was logged with no kickoff time set, and would have signalled"
+
+
 def row(gid, kick, snap, **kw):
     kick = pd.Timestamp(kick)
     base = dict(rules_version="cfb-v3-2026-09-28", game_id=gid,
@@ -207,7 +210,7 @@ def test_a_game_whose_time_is_set_late_enters_at_its_last_quote_with_a_time(tmp_
     assert "1 signals at the last quote before kickoff, 1 settled, 0 pending, 0 void" in out
     assert "record 0-1-0" in out and "units -1.00" in out
     assert "excluded from Rule HT, logged with no kickoff time set (amendment 6): 3 quotes" in out
-    assert "not a bet, never logged with a kickoff time set before kickoff; its last quote would have signalled: 0" in out
+    assert "not a bet, its last quote was logged with no kickoff time set, and would have signalled: 0" in out
 
 
 def test_a_game_never_logged_with_a_time_is_not_a_bet_and_is_counted(tmp_path):
@@ -219,7 +222,7 @@ def test_a_game_never_logged_with_a_time_is_not_a_bet_and_is_counted(tmp_path):
     assert "1 signals at the last quote before kickoff, 1 settled" in ht(out)
     assert "record 1-0-0" in ht(out)
     assert "excluded from Rule HT, logged with no kickoff time set (amendment 6): 2 quotes" in ht(out)
-    assert ("not a bet, never logged with a kickoff time set before kickoff; its last quote would have signalled: 1 (7)"
+    assert (f"not a bet, {LAST_UNTIMED}: 1 (7)"
             in ht(out))
     listed = [ln for ln in ht(out).splitlines() if "Rule HT: logged with no kickoff time set" in ln]
     assert len(listed) == 2 and all(" 7 " in ln for ln in listed)
@@ -229,7 +232,7 @@ def test_a_game_with_no_time_and_no_signal_is_counted_but_not_called_a_lost_bet(
     rows = [untimed(7, "2026-10-09T02:30Z", mkt_total=55.5, rule_ht="below_threshold")]
     out = ht(score(tmp_path, rows, [sched(7, 50)]))
     assert "0 signals" in out and "no kickoff time set (amendment 6): 1 quotes" in out
-    assert "its last quote would have signalled: 0" in out
+    assert "and would have signalled: 0" in out
 
 
 def test_rows_logged_before_amendment_6_are_known_by_what_they_carry(tmp_path):
@@ -243,7 +246,7 @@ def test_rows_logged_before_amendment_6_are_known_by_what_they_carry(tmp_path):
     out = ht(score(tmp_path, rows, [sched(1, 50), sched(2, 50), sched(3, 50, kick=late)]))
     assert "1 signals at the last quote before kickoff, 1 settled" in out and "record 1-0-0" in out
     assert "no kickoff time set (amendment 6): 2 quotes" in out
-    assert "its last quote would have signalled: 2 (1, 2)" in out
+    assert "and would have signalled: 2 (1, 2)" in out
 
 
 def test_rule_b_is_unchanged_by_amendment_6(tmp_path):
@@ -389,14 +392,15 @@ def test_an_eastern_standard_time_placeholder(tmp_path, schedule_kick):
     assert "1 signals at the last quote before kickoff, 1 settled, 0 pending, 0 void" in ht(out)
     assert "record 0-1-0" in ht(out)
     assert "no kickoff time set (amendment 6): 2 quotes" in ht(out)
-    assert "its last quote would have signalled: 0" in ht(out)
+    assert "and would have signalled: 0" in ht(out)
 
 
 def test_a_real_kickoff_more_than_24_hours_after_the_placeholder(tmp_path):
     """A known limit (section 3). Hawai'i-New Mexico, Oct 17, 2026, has no time set; its placeholder is 04:00 UTC Oct
     17. Set at 7:00 PM Hawaii time, the kickoff is 05:00 UTC Oct 18, 25 hours later, so the rows logged with the time
     are a second listing (amendment 4, section 10). That listing is graded as usual; the listing logged before the
-    time was set is counted as never logged with a kickoff time, although the game was: the count is spurious here."""
+    time was set is counted as a listing whose last quote was logged with no time set, although the game was
+    logged with one: the count is spurious here."""
     ph, hi = pd.Timestamp("2026-10-17T04:00:00Z"), pd.Timestamp("2026-10-18T05:00:00Z")
     rows = [row(9, ph, "2026-10-15T14:30Z", wx_src="time_tbd", rule_b="time_tbd", rule_ht="time_tbd"),
             row(9, ph, "2026-10-16T02:30Z", wx_src="time_tbd", rule_b="time_tbd", rule_ht="time_tbd"),
@@ -406,9 +410,55 @@ def test_a_real_kickoff_more_than_24_hours_after_the_placeholder(tmp_path):
     assert "1 signals at the last quote before kickoff, 1 settled, 0 pending, 0 void" in out
     assert "record 1-0-0" in out
     assert "no kickoff time set (amendment 6): 2 quotes" in out
-    assert "its last quote would have signalled: 1 (9)" in out                  # the spurious count
+    assert "and would have signalled: 1 (9)" in out                  # the spurious count
     # Set at 00:00 Eastern instead, the real kickoff reads as the placeholder: never eligible, and counted
     rows = [row(9, ph, "2026-10-15T14:30Z", wx_src="time_tbd", rule_b="time_tbd", rule_ht="time_tbd"),
             row(9, ph, "2026-10-16T02:30Z", mkt_total=66.5, rule_ht="time_tbd")]
     out = ht(score(tmp_path / "midnight", rows, [sched(9, 60, kick=ph)]))
-    assert "0 signals" in out and "its last quote would have signalled: 1 (9)" in out
+    assert "0 signals" in out and "and would have signalled: 1 (9)" in out
+
+
+# ------------------------------------------------------------------ the last quote is taken over every quote
+@pytest.mark.parametrize("case,rows,schedule", [
+    # A: a timed signal, then the time is unset again (the placeholder, the flag's weather source), below the line
+    ("A", [row(1, REAL_KICK, "2026-10-08T14:30Z", mkt_total=66.5),
+           row(1, PLACEHOLDER, "2026-10-09T14:30Z", mkt_total=60.5, rule_ht="below_threshold", wx_src="time_tbd")],
+     sched(1, 67)),
+    # A2: the same, with the placeholder in the schedule the scorer reads
+    ("A2", [row(1, REAL_KICK, "2026-10-08T14:30Z", mkt_total=66.5),
+            row(1, PLACEHOLDER, "2026-10-09T14:30Z", mkt_total=60.5, rule_ht="below_threshold", wx_src="time_tbd")],
+     sched(1, 67, kick=PLACEHOLDER, start_time_tbd=True)),
+    # B: the flag turns on at a real time (Oregon-UCLA style), and the flagged row is below the line
+    ("B", [row(1, REAL_KICK, "2026-10-08T14:30Z", mkt_total=66.5),
+           row(1, REAL_KICK, "2026-10-10T20:30Z", mkt_total=61.5, rule_ht="below_threshold", wx_src="time_tbd")],
+     sched(1, 60, start_time_tbd=True)),
+    # C: the flag turns on at a real time, and the flagged row would still signal, at a lower total
+    ("C", [row(1, REAL_KICK, "2026-10-08T14:30Z", mkt_total=68.5),
+           row(1, REAL_KICK, "2026-10-10T20:30Z", mkt_total=64.5, rule_ht="time_tbd", wx_src="time_tbd")],
+     sched(1, 66, start_time_tbd=True)),
+])
+def test_a_timed_signal_followed_by_an_untimed_quote_is_not_a_bet(tmp_path, case, rows, schedule):
+    """The third review's cases. The listing's last quote was logged with no kickoff time set, so it is not a bet; main
+    gives no bet on these rows either. Before this fix the untimed quote was skipped and the earlier timed signal
+    became the entry: a bet no alert was sent for, graded at a stale, higher total. The eligibility reading can cost a
+    bet, never add one."""
+    out = ht(score(tmp_path, rows, [schedule], "--list-excluded"))
+    assert "0 signals at the last quote before kickoff" in out
+    assert "no kickoff time set (amendment 6): 1 quotes" in out
+    assert f"not a bet, {LAST_UNTIMED}: {1 if case == 'C' else 0}" in out
+    if case == "C":
+        assert f"Rule HT, not a bet: {LAST_UNTIMED}" in out
+
+
+def test_the_stated_gap_a_placeholder_in_the_schedule_and_an_earlier_real_kickoff(tmp_path):
+    """The gap section 3 states (unchanged by the fix above). The rows say 7:30 PM Eastern; the game really kicked off
+    at noon Eastern; the schedule the scorer reads shows only the placeholder. A row logged at 3:00 PM Eastern is
+    before its own kickoff and the placeholder + 30 hours, so it counts: here the branch has lookahead that main
+    (which dropped every row after 00:00 Eastern) doesn't. The scorer lists the game as a completed placeholder game,
+    for the hub to check by hand before any decision."""
+    rows = [row(1, REAL_KICK, "2026-10-09T14:30Z", mkt_total=66.5, rule_b="SIGNAL"),
+            row(1, REAL_KICK, "2026-10-10T19:00Z", mkt_total=58.5, mkt_under=-105)]
+    out = score(tmp_path, rows, [sched(1, 60, kick=PLACEHOLDER, start_time_tbd=True)])
+    assert "logged at or after kickoff" not in out
+    assert f"{PH_LINE}, completed: 1 (1)" in out
+    assert "1 signals at the last quote before kickoff, 1 settled" in ht(out) and "record 0-1-0" in ht(out)  # 58.5

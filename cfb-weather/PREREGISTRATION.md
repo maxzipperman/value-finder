@@ -655,22 +655,22 @@ behave as amendments 1 to 5 say.
 
 Issue #69, found while building the dashboard (Sep 29): cfbfastR gives a game whose kickoff time isn't set yet a
 placeholder of midnight Eastern on its date, and the board took that placeholder as Rule HT's kickoff. This amendment
-reads Rule HT for such a game: **it is not eligible until its kickoff time is set.** For a game with a set time
-nothing changes: no trigger, threshold, price cap, stake or metric changes, and every such game that would have
-signalled before still signals. Rule B's trigger doesn't change. One reading applies to the grading of both rules:
-when the schedule the scorer reads shows the placeholder, "before kickoff" is bounded by the row's own kickoff and
-the placeholder + 30 hours instead of by the placeholder (section 2). It changes nothing for a game whose schedule
-shows a time. CFB Rule B's forward test began Oct 1, 2026, so by registration Rule B games may have been played; the
-reading affects one only if the schedule shows the placeholder for it, which the hub checks (above). The rules
-version stays `cfb-v3-2026-09-28`: the ledger's columns don't change, and a row logged under this amendment is told
-apart by its Rule HT status `time_tbd`, which no earlier row carries. Only `cfbweather/board.py` (one status),
-`scripts/alerts.py` (one notice) and `scripts/score_forward.py` (which rows are Rule HT quotes, and the
-before-kickoff bound for a placeholder in the schedule) change; none of the files shared with nfl-weather does.
-Where this amendment and any earlier text differ, this one applies; the last section lists every earlier sentence it
+reads Rule HT for such a game: **it is not eligible until its kickoff time is set.** For a game logged with a set time
+and without the time-not-set flag nothing changes: no trigger, threshold, price cap, stake or metric changes, and
+every such game that would have signalled before still signals. Rule B's trigger doesn't change. One reading applies
+to the grading of both rules: when the schedule the scorer reads shows the placeholder, "before kickoff" is bounded by
+the row's own kickoff and the placeholder + 30 hours instead of by the placeholder (section 2). It changes nothing for
+a game whose schedule shows a time. CFB Rule B's forward test began Oct 1, 2026, so by registration Rule B games may
+have been played; the reading affects one only if the schedule shows the placeholder for it, which the hub checks
+(above). The rules version stays `cfb-v3-2026-09-28`: the ledger's columns don't change, and a row logged under this
+amendment is told apart by its Rule HT status `time_tbd`, which no earlier row carries. Only `cfbweather/board.py`
+(one status), `scripts/alerts.py` (one notice) and `scripts/score_forward.py` (which rows are Rule HT quotes, and the
+before-kickoff bound for a placeholder in the schedule) change; none of the files shared with nfl-weather does. Where
+this amendment and any earlier text differ, this one applies; the last section lists every earlier sentence it
 changes, and the related ones it leaves as they are. To be registered by the hub on the owner's standing instruction
 of September 29, 2026 (the hub decides questions of how the tests are graded and reports them; money, and any rule's
-trigger, gate or price cap, stay the owner's). The owner can change any reading here by a dated amendment made
-before the first outcome it would affect.
+trigger, gate or price cap, stay the owner's). The owner can change any reading here by a dated amendment made before
+the first outcome it would affect.
 
 ### 1. What went wrong
 
@@ -679,35 +679,14 @@ before the first outcome it would affect.
   signal. Rule HT prices only the posted total and the under, so it could signal on such a game.
 * **The alert.** Rule HT alerts on the last scheduled run before kickoff (amendment 3, section 3). Before a midnight
   placeholder that is the 7:30 PM Pacific run the evening before the game, which told you to take that number.
-* **The entry.** The board shows only games that kick off after now, so it stops logging the game once the
-  placeholder has passed. The scorer's last logged quote before kickoff (before the earlier of the row's and the
-  schedule's kickoff, amendment 4, section 11) was then that evening's row: a number many hours before the game,
-  not the latest one, which is what the rule claims to bet.
-* **The same through the schedule.** The scorer also reads each game's kickoff from the schedule as it stands when
-  it scores. A schedule can still carry the placeholder after the game is played: Utah State–Robert Morris, played
-  Aug 31, 2024, is still flagged, at 00:00 Eastern, in the final schedule (section 4). Read as a kickoff, that
-  placeholder is "the earlier kickoff" (amendment 4, section 11), so every row logged on game day after 00:00
-  Eastern, with the real time set, would be dropped as logged at or after kickoff, and the entry would fall back to
-  a row from the evening before.
-
-### 2. The reading
-
-* **No kickoff time set.** A game has no kickoff time set when the schedule flags its start time as not set
-  (`start_time_tbd`, the same flag behind Rule B's `time_tbd`) or when its kickoff is exactly 00:00 Eastern, the
-  placeholder (`board.no_kickoff_time`). cfbfastR lists a real midnight-Eastern kickoff, a Hawaii night game, at
-  11:59 PM; in 2016–25 no game kicked off at 00:00 Eastern without the flag, and in the 2026 schedule as built on
-  Sep 28 all 320 flagged games sit at 00:00 Eastern and no other game does. That listing is a habit of the feed, not
-  a guarantee (section 3, known limits).
-* **Not eligible until its time is set.** A row logged while the game has no kickoff time set is not a Rule HT
-  quote. When such a game would otherwise signal, its Rule HT status is `time_tbd` (otherwise the status is what it
-  was: `below_threshold`, `no_price` or `price_too_high`).
-* **The alert.** A game with no kickoff time set gets no Rule HT alert. On the last scheduled run before its
-  placeholder (the run that used to alert), if it would otherwise signal, one notice says it is not eligible because
-  the schedule marks its kickoff time as not set, that there is no bet, and that if the time is set it is eligible
-  from the next run. It is sent once, and it is not counted as a signal in `data/forward/runs.csv`.
-* **The entry.** Rule HT's entry is the listing's last quote **logged with a kickoff time set**, before kickoff
-  (amendment 4, sections 5, 10 and 11). The scorer counts every Rule HT quote logged with no kickoff time set, and
-  `--list-excluded` prints each one; none is graded.
+* **The entry.** Rule HT's entry is the listing's last quote before kickoff (amendment 4, sections 5, 10 and 11),
+  **when it was logged with a kickoff time set**, and a bet when it is a signal. The last quote is taken over every
+  quote, timed or not. A listing whose last quote was logged with no kickoff time set is not a bet, even when an
+  earlier quote logged with a time signalled (the time was unset again, or the flag was turned on at a real time):
+  that earlier quote was not the latest number, and no alert was sent for it. The scorer counts every Rule HT quote
+  logged with no kickoff time set, and every listing whose last quote was logged with no kickoff time set and would
+  have signalled ("its last quote was logged with no kickoff time set, and would have signalled", with game ids);
+  `--list-excluded` prints the rows. None is graded.
 * **A placeholder in the schedule the scorer reads.** Here a placeholder is only a schedule kickoff at exactly 00:00
   Eastern, whether or not the flag is set. A flag on any other time leaves that time as the schedule's kickoff: it
   is still the best record of when the game began, and dropping it would let a row logged after a kickoff that moved
@@ -728,10 +707,10 @@ before the first outcome it would affect.
   and a kickoff later that day are less than 24 hours apart, so the rows before and after are one listing
   (amendment 4, section 10); a kickoff more than 24 hours after the placeholder (a Hawaii night game) is not
   (section 3, known limits).
-* **A time never set.** A game still without a time when its placeholder passes leaves the board, so it is never
-  logged with a time and is not a bet. The scorer counts it, with its game id, as "never logged with a kickoff time
-  set before kickoff; its last quote would have signalled". If its time is set after the placeholder has passed
-  (on game day), the game comes back on the next run and is eligible from then.
+* **A time never set.** A game still without a time when its placeholder passes leaves the board, so its last quote
+  was logged with no time set and it is not a bet. The scorer counts it, with its game id, as "its last quote was
+  logged with no kickoff time set, and would have signalled". If its time is set after the placeholder has passed (on
+  game day), the game comes back on the next run and is eligible from then.
 * **Rows logged before this amendment's code ran.** The board then logged such a row as `SIGNAL`. The scorer knows
   it by what the row itself carries: its weather source `time_tbd` (the schedule's flag, at an outdoor venue) or its
   kickoff at exactly 00:00 Eastern. A row logged under this amendment is also known by its status `time_tbd`. The
@@ -745,26 +724,31 @@ before the first outcome it would affect.
 
 ### 3. Why this reading
 
-* **Nothing from after the real kickoff, where the schedule shows it.** Whether a row counts depends only on what
-  that row carried when it was logged, and a row with a time counts only before the earlier of its kickoff and the
+* **Nothing from after the real kickoff, where the schedule shows it.** Whether a row counts depends only on what that
+  row carried when it was logged, and a row with a time counts only before the earlier of its kickoff and the
   schedule's (amendment 4, section 11), where the schedule's is any time but the placeholder, flagged or not. Where
   the schedule shows only the placeholder, nothing in it says when the game began, so the bound is the row's own
-  kickoff, and never later than the placeholder + 30 hours. The one gap: a game whose schedule shows the placeholder
-  after it was played (once in 2021–25, section 4) and that kicked off earlier than its rows said, on its date,
-  could have a row logged after the real kickoff count. Before this amendment the placeholder itself was the bound,
-  which dropped every game-day row instead (section 1).
+  kickoff, and never later than the placeholder + 30 hours. **The one gap**, where main is safer: a game whose
+  schedule shows the placeholder after it was played (once in 2021–25, section 4) and that kicked off before a counted
+  row's own kickoff could have a row logged after the real kickoff count, as Rule HT's entry or Rule B's close. Main
+  has no lookahead there, because it drops every row logged after 00:00 Eastern; this reading trades main's common
+  failure (a stale pre-game entry, section 1) for lookahead in this rare case. So the scorer lists every completed
+  game with the placeholder in the schedule by game id (section 2), and the hub checks each one by hand, against when
+  the game really kicked off, before any decision is made.
 * **Noon Eastern on the game's date** (the other reading the issue named) can. If a game's time is never set, the
   schedule's kickoff stays the placeholder, so nothing tells the scorer when the game really began. A game that
   kicked off before the last scheduled run before noon Eastern (7:30 AM Pacific, 10:30 AM Eastern; an early game
   abroad, say) would be alerted and graded at an in-play number. For an evening game, noon makes the entry 7 to 10
   hours early: the midnight problem, smaller.
 * **Leaving it as it is** grades a number from the evening before, and the alert tells you to bet it.
-* **What it costs.** A game whose time is set only after the last scheduled run before its real kickoff, or never,
-  is not a bet. Section 4 says what is known about how often; the ledger will measure it. Whether a game had a time
-  is fixed before the game, from what each row carried when it was logged, so the exclusion can't select on
-  outcomes. The eligibility reading can cost a bet, never add one. The schedule reading makes no game eligible: it
-  only lets a row logged with a time on game day, before its own kickoff, count as it would if the schedule showed
-  that time, and it voids exactly what the placeholder voided before.
+* **What it costs.** A game whose time is set only after the last scheduled run before its real kickoff, or never, is
+  not a bet, and neither is a listing whose time was unset again before its last quote. Section 4 says what is known
+  about how often; the ledger will measure it. Whether a quote had a time is fixed when it is logged, from what the
+  row carried, so the exclusion can't select on outcomes. The eligibility reading can cost a bet, never add one: a
+  listing is a bet only when its last quote, over every quote, is a signal logged with a time, so every bet under it
+  is one the same rows would make without it. The schedule reading only adds rows that main dropped as logged after
+  the placeholder (for Rule HT a later timed quote, which can become the entry; for Rule B a game-day signal or
+  close), and it voids exactly what the placeholder voided before.
 * **Known limits.**
   * A game whose flag stays set after it has a real time is not eligible either (its rows carry the flag). The
     committed tables show this once in 2016–25 (Oregon–UCLA, Nov 21, 2020, flagged with a 12:30 PM Pacific kickoff;
@@ -778,12 +762,13 @@ before the first outcome it would affect.
     04:00 UTC, Oct 17). If its time is set at 00:00 Eastern, it is not eligible, for good. If it is set at 7:00 PM
     Hawaii time (01:00 Eastern, 05:00 UTC Oct 18, 25 hours after the placeholder), the rows logged with that time
     are a second listing (amendment 4, section 10), graded as usual once the schedule shows that time; the rows
-    logged before it are a listing that was never logged with a time, and if its last quote would have signalled
-    the scorer counts the game as "never logged with a kickoff time set", although it was. If the schedule the
+    logged before it are a listing whose last quote was logged with no time set, and if that quote would have
+    signalled the scorer counts the game as "its last quote was logged with no kickoff time set", although the game
+    was logged with one. If the schedule the
     scorer reads still showed the placeholder, the timed listing's kickoff would be more than 24 hours from it and
     the bet void.
-  * So either way this reading can cost a bet, never add one, and the count of games never logged with a time can
-    include a game that was.
+  * So either way this reading can cost a bet, never add one, and the count of listings whose last quote had no time
+    set can include a game that was logged with one.
 
 ### 4. How often (issue #69, task 1)
 
@@ -807,7 +792,8 @@ before the first outcome it would affect.
     the scorer's count of ledger games whose schedule kickoff is the placeholder (section 2), which must show 0
     completed games, so that no known outcome is affected.
 * **So the rate is not measured yet.** The scorer will measure it from Week 6: it counts every Rule HT quote logged
-  with no kickoff time set, and every game never logged with one whose last quote would have signalled.
+  with no kickoff time set, and every listing whose last quote was logged with no time set and would have
+  signalled.
 
 **Variants.** This changes how a game is read, not a betting rule: 0 variants.
 
@@ -818,12 +804,13 @@ row named, as amendments 3 to 5 did.
 
 * Rule HT, "Trigger": "*Amendment 6 (DATE):* a game with no kickoff time set (cfbfastR's time-not-set flag, or its
   placeholder kickoff of 00:00 Eastern) is not eligible until its time is set."
-* Rule HT, "Entry": "*Amendment 6 (DATE):* the entry is the last quote logged with a kickoff time set; a game with
-  no time set gets no alert, only a notice on the last scheduled run before its placeholder that it isn't eligible,
-  and a game never logged with a time is not a bet (the scorer counts it)."
-* Rule HT, "Decision": "*Amendment 6 (DATE):* the entry is the last quote with a valid under price logged with a
-  kickoff time set; when the schedule shows cfbfastR's placeholder (00:00 Eastern), before kickoff is before the
-  row's kickoff and the placeholder + 30 hours."
+* Rule HT, "Entry": "*Amendment 6 (DATE):* the entry is the listing's last quote, when it was logged with a kickoff
+  time set; a listing whose last quote was logged with no time set is not a bet (the scorer counts it), and a game
+  with no time set gets no alert, only a notice on the last scheduled run before its placeholder that it isn't
+  eligible."
+* Rule HT, "Decision": "*Amendment 6 (DATE):* the entry is the last quote with a valid under price, when it was logged
+  with a kickoff time set; when the schedule shows cfbfastR's placeholder (00:00 Eastern), before kickoff is before
+  the row's kickoff and the placeholder + 30 hours."
 * Rule B, "Decision": "*Amendment 6 (DATE):* when the schedule shows cfbfastR's placeholder (00:00 Eastern), before
   kickoff (11) is before the row's kickoff and the placeholder + 30 hours; the check for moved games (1), the listing
   graded (10) and the game day still use the placeholder."
@@ -841,26 +828,29 @@ instead.
   kickoff." Amendment 2: "Rule HT (amendment 1) keeps its entry at the last logged quote before kickoff." Amendment
   3, section 3: "**The entry** is unchanged: the game's last logged quote before kickoff." Amendment 4, section 5:
   "Rule HT's entry is the game's last logged quote before kickoff in that sense (for each listing, section 10)." The
-  entry is the listing's last quote logged with a kickoff time set; a game never logged with one is not a bet
+  entry is the listing's last quote, when it was logged with a kickoff time set; otherwise the listing is not a bet
   (section 2).
 * `STRATEGY.md`, Rule HT, "Entry", the note of amendment 4: "a quote is a posted total with a valid under price, so a
   later row with no usable under price doesn't replace the entry." Amendment 4, section 5: "A **quote** is a posted
-  total with a valid under price (at or beyond 100 either side of zero, amendment 3, section 1)." For Rule HT a quote
-  is also one logged with a kickoff time set: a row logged with no time set is not a Rule HT quote, and doesn't
-  replace the entry either (section 2).
+  total with a valid under price (at or beyond 100 either side of zero, amendment 3, section 1)." Both stand: a
+  quote logged with no kickoff time set is still a quote, so it replaces the entry when it comes last. It is never
+  graded, and the listing is then not a bet (section 2).
 * `STRATEGY.md`, Rule HT, "Decision", the note of amendment 4: "the entry is the last quote with a valid under
-  price". The entry is the last quote with a valid under price logged with a kickoff time set (section 2).
+  price". The entry is the last quote with a valid under price, when it was logged with a kickoff time set;
+  otherwise the listing is not a bet (section 2).
 * Amendment 4, section 10: "For Rule HT, whose entry is the last quote (section 5), it is the listing's last quote,
-  when that quote is a signal." It is the listing's last quote logged with a kickoff time set, when that quote is a
-  signal; a listing with none is not a bet, and is counted when its last quote would have signalled (section 2).
+  when that quote is a signal." It is the listing's last quote, when that quote is a signal logged with a kickoff
+  time set; a listing whose last quote was logged with no time set is not a bet, and is counted when that quote
+  would have signalled (section 2).
 * `STRATEGY.md`, Rule HT, "Entry": "The alert fires on the last scheduled run before kickoff (*amendment 3* fixed the
   code to do exactly that; a quote logged by hand after it becomes the entry)." Amendment 3, section 3: "**The
   alert** now fires on the last scheduled run before kickoff, as `STRATEGY.md` always said." and "A quote logged by
   hand after the last scheduled run is a logged quote, so it becomes the entry." For a game with no kickoff time set
-  there is no Rule HT alert, only the notice that it is not eligible, and a quote logged by hand becomes the entry
-  only if it was logged with a kickoff time set (section 2).
+  there is no Rule HT alert, only the notice that it is not eligible; a quote logged by hand is the last quote as
+  before, and the entry only if it was logged with a kickoff time set (section 2).
 * Amendment 3, section 3: "**A missed run** (the Mac was asleep) leaves the previous logged quote as the entry." It
-  leaves the previous quote logged with a kickoff time set as the entry, and none if there is none (section 2).
+  leaves the previous logged quote as the last quote, and as the entry only if it was logged with a kickoff time
+  set; otherwise the listing is not a bet (section 2).
 * Amendment 4, section 11: "\"Before kickoff\" means before the earlier of the kickoff on the row and the kickoff in
   the schedule, in both scorers and for every use: which rows count, the entries, the last quotes and the
   later-quote closes." `STRATEGY.md`, Rule B, "Decision", the note of amendment 4: "\"before kickoff\" is before the

@@ -9,9 +9,10 @@
            kickoff, if that quote is a SIGNAL. A quote is a posted total with a valid under price
            (amendment 4). Graded on win rate and ROI at that price; the promotion test is one-sided
            against the break-even of the prices taken, with pushes left out of it. Amendment 6: a row
-           logged while the game had no kickoff time set (cfbfastR's midnight placeholder) is not a Rule HT
-           quote; those rows are counted, and --list-excluded prints each one. A game never logged with
-           a time is not a bet, and is counted when its last quote would have signalled.
+           logged while the game had no kickoff time set (cfbfastR's midnight placeholder) is never graded;
+           those rows are counted, and --list-excluded prints each one. It is still a quote, so a listing
+           whose last quote was logged with no time set is not a bet, and is counted when that quote would
+           have signalled.
 
 What counts (amendment 3): rows written under a registered rules version, logged before kickoff, for
 games from Oct 1, 2026 through the 2027 season's title game (a game dated from Feb 1, 2028 never
@@ -870,12 +871,17 @@ def logged_without_time(rows):
 
 
 NO_TIME = "logged with no kickoff time set (amendment 6)"
-HT_NOT_ELIGIBLE = "never logged with a kickoff time set before kickoff; its last quote would have signalled"
-# Amendment 6: a row logged with no kickoff time set is not a Rule HT quote. Rule HT's entry is each listing's last
-# quote logged with a time; a listing with none is not a bet, and is counted when its last quote would have signalled.
+HT_LAST_UNTIMED = "its last quote was logged with no kickoff time set, and would have signalled"
+# Amendment 6: Rule HT's entry is each listing's last quote (amendment 4, sections 5 and 10), when that quote was logged
+# with a kickoff time set. The last quote is taken over every quote, timed or not: a quote logged with no time set is
+# never graded, and it isn't skipped either, so a listing whose last quote has no time set is not a bet (an earlier
+# timed signal never becomes the entry). Those listings are counted when their last quote would have signalled.
 ht_all = quotes if "rule_ht" in quotes else quotes.iloc[0:0]
 untimed = logged_without_time(ht_all)
-last = ht_all[~untimed].sort_values("snapshot_utc", kind="stable").drop_duplicates(["game_id", "listing"], keep="last")
+last_any = (ht_all.assign(_untimed=untimed).sort_values("snapshot_utc", kind="stable")
+            .drop_duplicates(["game_id", "listing"], keep="last"))
+last = last_any[~last_any._untimed].drop(columns="_untimed")
+last_untimed = last_any[last_any._untimed & (last_any.start_utc >= HT_FIRST_KICK)].drop(columns="_untimed")
 ht = last[(last.start_utc >= HT_FIRST_KICK)]
 ht = settle(ht[ht.rule_ht == "SIGNAL"]) if len(ht) else ht.assign(status="", void="", total=np.nan)
 ht_done = ht[ht.status.eq("settled")].copy()
@@ -886,15 +892,15 @@ print(f"\nRULE_HT: {len(ht)} signals at the last quote before kickoff, ", end=""
 header(ht)
 no_time = ht_all[untimed & (ht_all.start_utc >= HT_FIRST_KICK).to_numpy()]
 if len(no_time):
-    never = (no_time.sort_values("snapshot_utc", kind="stable").drop_duplicates(["game_id", "listing"], keep="last")
-             .merge(last[["game_id", "listing"]], on=["game_id", "listing"], how="left", indicator=True))
-    never = never[never._merge.eq("left_only") & never.rule_ht.isin(["SIGNAL", "time_tbd"])]
+    never = last_untimed[last_untimed.rule_ht.isin(["SIGNAL", "time_tbd"])]
     print(f"  excluded from Rule HT, {NO_TIME}: {len(no_time)} quotes")
-    print(f"  not a bet, {HT_NOT_ELIGIBLE}: {len(never)}" + (f" ({', '.join(never.game_id.astype(str))})"
-                                                              if len(never) else ""))
+    print(f"  not a bet, {HT_LAST_UNTIMED}: {len(never)}" + (f" ({', '.join(never.game_id.astype(str))})"
+                                                               if len(never) else ""))
     if args.list_excluded:
         show = [c for c in ("snapshot_utc", "game_id", "kick_et", "start_utc", "rule_ht") if c in no_time]
         print(no_time[show].assign(excluded=f"Rule HT: {NO_TIME}").to_string(index=False))
+        if len(never):
+            print(never[show].assign(excluded=f"Rule HT, not a bet: {HT_LAST_UNTIMED}").to_string(index=False))
 
 
 def ht_numbers(d):
