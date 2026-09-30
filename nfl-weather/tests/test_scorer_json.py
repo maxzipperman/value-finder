@@ -3,6 +3,7 @@ nothing else; without it the scorer prints exactly what it printed before. Nothi
 recording changes: the document's "text" is the printed report, byte for byte, every number in it equals the number
 the report prints for the same thing, and a decision is recorded, or not, by the same rules."""
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -368,3 +369,58 @@ def test_json_with_now_never_records(tmp_path):
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout)["tests"][0]["decisions"][0]["written"] is False
     assert sorted(p.name for p in fwd.iterdir()) == ["ledger.csv"]
+
+
+# ------------------------------------------------------------------ the real clock, on a live layout
+FAKE_CLOCK = """import os, runpy, sys
+import pandas as pd
+FAKE = pd.Timestamp(os.environ["FAKE_NOW"], tz="UTC")
+pd.Timestamp.now = staticmethod(lambda tz=None: FAKE.tz_convert(tz) if tz is not None else FAKE.tz_localize(None))
+script, sys.argv = sys.argv[1], sys.argv[1:]
+runpy.run_path(script, run_name="__main__")
+"""
+
+
+def live_copy(base):
+    """A copy of this project laid out like the live checkout, outside any git repository (so no nightly copy): the
+    scorer and its package, its own ledger in data/forward (40 Rule B signals in 2026) and its default schedule,
+    data/raw/games.csv, refreshed an hour before the clock below."""
+    proj = base / "nfl-weather"
+    shutil.copytree(ROOT / "nflweather", proj / "nflweather", ignore=shutil.ignore_patterns("__pycache__"))
+    (proj / "scripts").mkdir()
+    shutil.copy(SCORER, proj / "scripts" / "score_forward.py")
+    forty(proj / "data" / "forward")
+    (proj / "data" / "raw").mkdir(parents=True)
+    games = (proj / "data" / "forward" / "games.csv").rename(proj / "data" / "raw" / "games.csv")
+    t = pd.Timestamp("2027-01-20T16:00", tz="UTC").timestamp()
+    os.utime(games, (t, t))
+    return proj
+
+
+def on_clock(tmp_path, now, proj, *extra):
+    """The scorer on its real-clock path (no --now, the default ledger and schedule), with the clock set to `now`."""
+    runner = tmp_path / "fakeclock.py"
+    runner.write_text(FAKE_CLOCK)
+    return subprocess.run([sys.executable, str(runner), str(proj / "scripts" / "score_forward.py"), *extra],
+                          capture_output=True, text=True, env={**os.environ, "FAKE_NOW": now})
+
+
+def test_a_real_clock_run_records_the_same_with_or_without_json(tmp_path):
+    """The live ledger on the real clock, after the horizon: the run with --json records exactly the line the run
+    without it records, says so in its document, and its text is that run's report. The next real run, with --json,
+    prints the recorded decision and writes nothing more."""
+    plain_proj, json_proj = live_copy(tmp_path / "plain"), live_copy(tmp_path / "json")
+    plain = on_clock(tmp_path, "2027-01-20T17:00:00", plain_proj)
+    js = on_clock(tmp_path, "2027-01-20T17:00:00", json_proj, "--json")
+    assert plain.returncode == js.returncode == 0, (plain.stderr, js.stderr)
+    doc = json.loads(js.stdout)
+    record = plain_proj / "data" / "forward" / "decisions.csv"
+    assert doc["text"] == plain.stdout and "recorded in decisions.csv on 2027-01-20T17:00:00Z" in plain.stdout
+    assert (json_proj / "data" / "forward" / "decisions.csv").read_bytes() == record.read_bytes()
+    assert doc["preview"] is False and doc["decision_record"] == {"written_by_this_run": True, "why_not": None}
+    assert [(d["status"], d["verdict"], d["written"]) for d in doc["tests"][0]["decisions"]] == [("final", "KEEP", True)]
+    later = on_clock(tmp_path, "2027-01-21T17:00:00", json_proj, "--json")
+    d = json.loads(later.stdout)
+    assert [(x["status"], x["verdict"]) for x in d["tests"][0]["decisions"]] == [("recorded", "KEEP")]
+    assert d["decision_record"]["written_by_this_run"] is False
+    assert (json_proj / "data" / "forward" / "decisions.csv").read_bytes() == record.read_bytes()
