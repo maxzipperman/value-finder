@@ -1,0 +1,61 @@
+season,week,start_utc,home_team,away_team,neutral_site,close_total,close_total_old,open_total,cfbd_median_total,cfbd_books,final_total,margin_under_close,under_close,under_open,home_spread,home_spread_old,in_screen_before,in_screen_now,status,game_id,era
+2006,6,2006-10-07 18:00:00+00:00,Air Force,Navy,False,50.5,50.5,,,,41.0,9.5,U,,-2.5,-2.5,True,True,in both,262802005,2006–15
+2006,10,2006-11-04 02:00:00+00:00,Army,Air Force,False,47.75,47.75,46.0,,,50.0,-2.25,O,O,5.0,5.0,True,True,in both,263070349,2006–15
+2006,14,2006-12-02 19:30:00+00:00,Navy,Army,False,50.0,50.0,,,,40.0,10.0,U,,-19.0,,False,True,"ADDED by rebuild: home_spread was missing, now filled",263362426,2006–15
+2007,5,2007-09-29 17:00:00+00:00,Navy,Air Force,False,56.0,56.0,,,,51.0,5.0,U,,-2.5,-2.5,True,True,in both,272722426,2006–15
+2007,10,2007-11-03 19:30:00+00:00,Air Force,Army,False,45.5,45.5,,,,40.0,5.5,U,,-17.0,-17.0,True,True,in both,273072005,2006–15
+2007,14,2007-12-01 17:00:00+00:00,Navy,Army,False,64.0,64.0,,,,41.0,23.0,U,,-13.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",273352426,2006–15
+2008,6,2008-10-04 20:00:00+00:00,Air Force,Navy,False,52.0,52.0,,,,60.0,-8.0,O,,-4.5,-4.5,True,True,in both,282782005,2006–15
+2008,10,2008-11-01 16:00:00+00:00,Army,Air Force,False,41.0,41.0,,,,23.0,18.0,U,,7.5,7.5,True,True,in both,283060349,2006–15
+2008,15,2008-12-06 17:00:00+00:00,Army,Navy,True,43.0,43.0,,,,34.0,9.0,U,,10.0,,False,True,"ADDED by rebuild: home_spread was missing, now filled",283410349,2006–15
+2009,5,2009-10-03 19:30:00+00:00,Navy,Air Force,False,48.0,48.0,,,,29.0,19.0,U,,-2.5,-2.5,True,True,in both,292762426,2006–15
+2009,10,2009-11-07 20:30:00+00:00,Air Force,Army,False,37.5,37.5,,,,42.0,-4.5,O,,-17.0,-17.0,True,True,in both,293112005,2006–15
+2009,15,2009-12-12 19:30:00+00:00,Navy,Army,True,41.5,41.5,,,,20.0,21.5,U,,-14.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",293462426,2006–15
+2010,5,2010-10-02 18:30:00+00:00,Air Force,Navy,False,50.0,50.0,,,,20.0,30.0,U,,-9.5,-9.5,True,True,in both,302752005,2006–15
+2010,10,2010-11-06 16:00:00+00:00,Army,Air Force,False,48.5,48.5,,,,64.0,-15.5,O,,6.5,6.5,True,True,in both,303100349,2006–15
+2010,15,2010-12-11 19:30:00+00:00,Army,Navy,True,52.5,52.5,,,,48.0,4.5,U,,7.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",303450349,2006–15
+2011,5,2011-10-01 16:00:00+00:00,Navy,Air Force,False,53.5,53.5,,,,69.0,-15.5,O,,-3.0,-3.0,True,True,in both,312742426,2006–15
+2011,10,2011-11-05 19:30:00+00:00,Air Force,Army,False,55.0,55.0,,,,38.0,17.0,U,,-16.5,-16.5,True,True,in both,313092005,2006–15
+2011,15,2011-12-10 19:30:00+00:00,Navy,Army,True,55.5,55.5,,,,48.0,7.5,U,,-7.0,,False,True,"ADDED by rebuild: home_spread was missing, now filled",313442426,2006–15
+2012,6,2012-10-06 15:30:00+00:00,Air Force,Navy,False,54.0,54.0,55.0,,,49.0,5.0,U,U,-9.0,-9.0,True,True,in both,322802005,2006–15
+2012,10,2012-11-03 16:00:00+00:00,Army,Air Force,False,62.5,62.5,61.5,,,62.0,0.5,U,O,7.0,7.0,True,True,in both,323080349,2006–15
+2012,15,2012-12-08 20:00:00+00:00,Army,Navy,True,56.0,56.0,56.5,,,30.0,26.0,U,U,7.0,,False,True,"ADDED by rebuild: home_spread was missing, now filled",323430349,2006–15
+2013,6,2013-10-05 15:30:00+00:00,Navy,Air Force,False,56.0,56.0,55.0,,,38.0,18.0,U,U,-13.5,-13.5,True,True,in both,332782426,2006–15
+2013,10,2013-11-02 16:00:00+00:00,Air Force,Army,False,54.0,54.0,55.0,,,70.0,-16.0,O,O,1.0,1.0,True,True,in both,333062005,2006–15
+2013,16,2013-12-14 20:00:00+00:00,Navy,Army,True,49.5,49.5,55.0,,,41.0,8.5,U,U,-13.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",333482426,2006–15
+2014,6,2014-10-04 19:30:00+00:00,Air Force,Navy,False,56.0,56.0,54.5,56.5,2.0,51.0,5.0,U,U,3.5,3.5,True,True,in both,400548205,2006–15
+2014,10,2014-11-01 15:30:00+00:00,Army,Air Force,False,54.0,54.0,58.0,55.0,2.0,29.0,25.0,U,U,3.5,3.5,True,True,in both,400548226,2006–15
+2014,16,2014-12-13 20:00:00+00:00,Army,Navy,True,55.5,55.5,58.0,55.0,2.0,27.0,28.5,U,U,16.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",400548461,2006–15
+2015,5,2015-10-03 19:30:00+00:00,Navy,Air Force,False,49.5,49.5,55.0,49.0,2.0,44.0,5.5,U,U,-4.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",400764876,2006–15
+2015,10,2015-11-07 20:30:00+00:00,Air Force,Army,False,50.0,50.0,52.5,50.25,2.0,23.0,27.0,U,U,-16.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",400760497,2006–15
+2015,15,2015-12-12 20:00:00+00:00,Navy,Army,True,50.5,50.5,53.5,51.5,2.0,38.0,12.5,U,U,-21.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",400760500,2006–15
+2016,5,2016-10-01 19:30:00+00:00,Air Force,Navy,False,50.5,50.5,51.0,49.75,2.0,42.0,8.5,U,U,-7.0,-7.0,True,True,in both,400869206,2016–20
+2016,10,2016-11-05 16:00:00+00:00,Army,Air Force,False,46.5,46.5,48.0,46.5,2.0,43.0,3.5,U,U,-1.0,-1.0,True,True,in both,400868918,2016–20
+2016,15,2016-12-10 20:00:00+00:00,Army,Navy,True,47.5,47.5,51.0,47.25,2.0,38.0,9.5,U,U,6.0,,False,True,"ADDED by rebuild: home_spread was missing, now filled",400868921,2016–20
+2017,6,2017-10-07 19:30:00+00:00,Navy,Air Force,False,53.5,53.5,52.5,53.5,3.0,93.0,-39.5,O,O,-9.5,-9.5,True,True,in both,400941815,2016–20
+2017,10,2017-11-04 19:30:00+00:00,Air Force,Army,False,54.5,54.5,62.0,54.5,3.0,21.0,33.5,U,U,-6.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",400934569,2016–20
+2017,15,2017-12-09 20:00:00+00:00,Navy,Army,True,44.0,44.0,51.0,44.0,3.0,27.0,17.0,U,U,-2.0,,False,True,"ADDED by rebuild: home_spread was missing, now filled",400934572,2016–20
+2018,6,2018-10-06 19:30:00+00:00,Air Force,Navy,False,47.0,47.0,49.5,47.0,4.0,42.0,5.0,U,U,2.5,2.5,True,True,in both,401019504,2016–20
+2018,10,2018-11-03 12:00:00+00:00,Army,Air Force,False,41.5,41.5,45.5,41.5,4.0,31.0,10.5,U,U,-4.5,-4.5,True,True,in both,401013373,2016–20
+2018,15,2018-12-08 20:00:00+00:00,Army,Navy,True,38.5,38.5,42.0,38.75,4.0,27.0,11.5,U,U,-7.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",401013376,2016–20
+2019,6,2019-10-05 19:30:00+00:00,Navy,Air Force,False,46.5,46.5,44.5,46.5,4.0,59.0,-12.5,O,O,3.0,3.0,True,True,in both,401117516,2016–20
+2019,10,2019-11-02 19:30:00+00:00,Air Force,Army,False,44.5,44.5,45.0,44.5,5.0,30.0,14.5,U,U,-17.0,-17.0,True,True,in both,401114331,2016–20
+2019,15,2019-12-14 20:00:00+00:00,Navy,Army,True,42.0,42.0,43.0,41.5,5.0,38.0,4.0,U,U,-11.5,,False,True,"ADDED by rebuild: home_spread was missing, now filled",401114335,2016–20
+2020,5,2020-10-03 22:00:00+00:00,Air Force,Navy,False,46.5,46.5,,46.5,5.0,47.0,-0.5,O,,6.5,6.5,True,True,in both,401212557,2016–20
+2020,15,2020-12-12 20:00:00+00:00,Army,Navy,True,35.5,35.5,,35.5,5.0,15.0,20.5,U,,-7.5,-7.5,True,True,in both,401207203,2016–20
+2020,16,2020-12-19 20:00:00+00:00,Army,Air Force,False,37.5,37.5,,37.5,5.0,17.0,20.5,U,,2.5,2.5,True,True,in both,401265699,2016–20
+2021,2,2021-09-11 19:30:00+00:00,Navy,Air Force,False,39.5,39.5,43.5,39.5,5.0,26.0,13.5,U,U,6.0,6.0,True,True,in both,401301004,2021–25
+2021,10,2021-11-06 15:30:00+00:00,Air Force,Army,True,37.5,37.5,37.5,37.5,4.0,35.0,2.5,U,U,-2.5,-2.5,True,True,in both,401310253,2021–25
+2021,15,2021-12-11 20:00:00+00:00,Army,Navy,False,35.5,35.5,36.0,35.5,4.0,30.0,5.5,U,U,7.0,7.0,True,True,in both,401301056,2021–25
+2022,5,2022-10-01 16:00:00+00:00,Air Force,Navy,False,38.0,38.0,38.0,38.0,4.0,23.0,15.0,U,U,-14.0,-14.0,True,True,in both,401415227,2021–25
+2022,10,2022-11-05 15:30:00+00:00,Army,Air Force,True,40.5,40.5,40.5,40.5,4.0,20.0,20.5,U,U,7.0,7.0,True,True,in both,401404141,2021–25
+2022,15,2022-12-10 20:00:00+00:00,Army,Navy,True,32.0,32.0,34.0,32.0,4.0,37.0,-5.0,O,O,2.5,2.5,True,True,in both,401404145,2021–25
+2023,8,2023-10-21 16:00:00+00:00,Navy,Air Force,False,34.0,34.0,37.25,34.0,3.0,23.0,11.0,U,U,11.0,11.0,True,True,in both,401531434,2021–25
+2023,10,2023-11-04 18:30:00+00:00,Air Force,Army,True,32.0,32.0,35.0,32.0,3.0,26.0,6.0,U,U,-18.0,-18.0,True,True,in both,401520361,2021–25
+2023,15,2023-12-09 20:00:00+00:00,Army,Navy,True,28.0,28.0,31.0,28.0,3.0,28.0,0.0,P,U,-2.0,-2.0,True,True,in both,401520445,2021–25
+2024,6,2024-10-05 16:00:00+00:00,Air Force,Navy,False,37.0,37.0,36.25,37.0,3.0,41.0,-4.0,O,O,10.0,10.0,True,True,in both,401643722,2021–25
+2024,10,2024-11-02 16:00:00+00:00,Army,Air Force,False,38.5,38.5,41.0,38.5,3.0,23.0,15.5,U,U,-18.0,-18.0,True,True,in both,401643746,2021–25
+2024,16,2024-12-14 20:00:00+00:00,Army,Navy,True,39.0,39.0,40.5,39.0,3.0,44.0,-5.0,O,O,-6.5,-6.5,True,True,in both,401645383,2021–25
+2025,6,2025-10-04 16:00:00+00:00,Navy,Air Force,False,51.0,51.0,49.0,51.0,3.0,65.0,-14.0,O,O,-13.5,-13.5,True,True,in both,401760381,2021–25
+2025,10,2025-11-01 16:00:00+00:00,Air Force,Army,False,48.5,48.5,49.5,48.5,3.0,37.0,11.5,U,U,1.5,1.5,True,True,in both,401760401,2021–25
+2025,16,2025-12-13 20:00:00+00:00,Navy,Army,True,37.75,37.75,38.5,38.0,3.0,33.0,4.75,U,U,-6.0,-6.0,True,True,in both,401762521,2021–25

@@ -37,7 +37,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 
 ## What the screen found
 
-109 bet variants, each at closing lines, flat −110, pushes excluded, seasons through 2025. The Bonferroni bar is p < 0.00046 and **nothing passes**, so read this as a ranking. A thesis ranks higher when it holds across eras, holds out of sample after its paper's window, and has a mechanism. Full table: [`output/screens.csv`](output/screens.csv).
+109 bet variants, each at closing lines, flat −110, pushes excluded, seasons through 2025. The Bonferroni bar is p < 0.00046 and **nothing passed when the screen was first run**. After #48 rebuilt the CFB games table, one row (academy vs academy → under) passes on the p-value alone; [see below](#service-academy-unders-on-the-rebuilt-table-added-september-30-2026-54). It is not evidence of an edge. Read this as a ranking. A thesis ranks higher when it holds across eras, holds out of sample after its paper's window, and has a mechanism. Full table: [`output/screens.csv`](output/screens.csv).
 
 ### Leads
 
@@ -64,7 +64,7 @@ What the evidence says about "proven" betting strategies, how the theses already
 | Fade turnover luck (+3 last game, or +1/game on the season) | 581–540, 466–473 | 51.8%, 49.6% | The market doesn't overreact to turnovers. |
 | CFB underdogs getting 21+, 28+, 35+ | 838–768 (21+, 2016–25) | 52.2% | Flips between eras. CFB spreads calibrate at slope 1.00 now. |
 | CFB underdogs, weeks 0–4 | 1222–1195 (2016–25) | 50.6% | Sinkey & Logan's (2009) overpriced favorites are gone. |
-| Service-academy games → under | 211–220 | 49.0% | Only academy vs academy works (29–13), and that's 2 games a year. |
+| Service-academy games → under | 295–293 (rebuilt table; 211–220 before) | 50.2% | Academy vs academy is 46–13–1, but 14 of the 17 games the rebuild added are Army–Navy, and all 17 went under. [Checked in #54](#service-academy-unders-on-the-rebuilt-table-added-september-30-2026-54). |
 
 ### Structure and timing (not bets)
 
@@ -133,6 +133,37 @@ What the evidence says about "proven" betting strategies, how the theses already
 - **Outlier-odds audit** (the research sweep's recommendation, after Clegg & Cartlidge 2024): the SBR close matches nflverse's own close exactly in 56–57% of games, and differs by 0.3 points on average. Only 6 rows differ by more than 3 points (4 spreads, 2 totals; listed by the script). Without them, every result is unchanged to the first decimal.
 - **Verdict: no edge at the close.** Moves reverse slightly, about as Moskowitz finds: fading a half-point move wins 50.5–50.8% before the vig. That is nowhere near the 52.4% the vig needs. H16a is dropped.
 - **Consequence for F4:** hourly history can't be justified by an outcome edge at the close. Only a reversal *before* the close (H16b, graded on CLV) could earn it; its gate is in [`odds-api-credits.md`](odds-api-credits.md#f4s-gate-h16b-reversal-before-the-close-added-september-29-2026-42).
+
+### Service-academy unders on the rebuilt table (added September 30, 2026, [#54](https://github.com/maxzipperman/value-finder/issues/54))
+
+After [#48](https://github.com/maxzipperman/value-finder/pull/48) rebuilt the CFB games table on the #36 spread fix, 37 of the screen's 109 rows moved (all CFB; every NFL row is unchanged), and "academy vs academy → under, 2006–25" went from 29–13 to **46–13–1 (77.9%, p = 0.000045)**. The screen was rerun on the committed tables (`screens.csv` and `screen.log` are the new ones; the 37 old and new rows are in [`academy_screen_row_changes.csv`](output/academy_screen_row_changes.csv)). The Kalshi step needs the Mac's raw cache, so it was skipped and `kalshi_ladder.csv` and the Kalshi fields of `summary.json` are untouched. All 59 games are in [`academy_games.csv`](output/academy_games.csv), made by [`academy_check.py`](academy_check.py); the log is [`academy_check.log`](output/academy_check.log). No 2026 game was read. Task 4 (the opener) is one new look at results: **variants 273 → 274, bar p < 0.000182**. Tasks 1 to 3 count 0.
+
+**Why the number moved: 17 games entered, and all 17 went under.**
+- The screen keeps only games with a nonzero consensus home spread. The old table had no spread for 17 academy games; the rebuild filled them in. No closing total changed (0 of the 43 games in both).
+- The 43 old games went 29–13–1. The 17 added games went **17–0**, mean closing total 49.6, mean final total 34.4.
+- 14 of the 17 are Army–Navy (played in December, often at a neutral site). Those were the games the old table had lost, so the rebuild recovered a dead-under sample, not a random one. Dropping the spread requirement gives the same 46–13–1, so no game is hidden by the filter now.
+
+**What it is made of.**
+- **Army–Navy:** 20 games, 17–2–1, mean close 44.9, mean final 34.2. **Air Force against Army or Navy:** 40 games, 29–11, mean close 47.2, mean final 40.9.
+- **Eras** (record at the close; closing total; mean margin under):
+
+| Era | Games | Under–over | Win % | p vs break-even | Mean close | Mean margin under | At the opener |
+|---|---|---|---|---|---|---|---|
+| 2006–15 | 30 | 24–6 | 80.0% | 0.0017 | 51.3 | 9.3 | 10–3 (13 openers) |
+| 2016–20 | 15 | 12–3 | 80.0% | 0.027 | 45.1 | 7.1 | 10–2 (12) |
+| 2021–25 | 15 | 10–4–1 | 71.4% | 0.12 | 37.9 | 5.2 | 11–4 (15) |
+| 2006–25 | 60 | 46–13–1 | 78.0% | 0.000045 | 46.4 | 7.7 | 31–9 (40), p = 0.001 |
+
+- **The closing total has fallen a lot** (51 to 38; Spearman with season −0.57), while all college totals barely moved (−0.06). The market has cut academy totals, and the margin under shrank with it, but the win rate is still 71% in the last five years.
+- **Second source:** the cfbd multi-book median exists for 36 games (2014–25). It differs from the table's close by 0.16 on average (2 games by a full point) and grades 28–7, the same as the table on those games. Pinnacle's total is in the table for 42 games: 33–8.
+- **Opener:** 31–9 on the 40 games with one, so the opener is not better or worse in any way this sample can show.
+
+**How I read it.**
+- **It clears the bar on the number, and I still don't believe it.** p = 0.000045 is below 0.000182. But the games come 3 a season, 14 of the added ones share one December rivalry, the p-value ignores that the academy angle was one of the public angles picked for the screen, and the 2021–25 era can't be told from break-even (p = 0.12).
+- **The mechanism is plausible but small:** option offenses run the clock and score below the total. The fall in the closing total is what a market learning it would look like; the margin under shrank with it.
+- **What would change my mind:** a pre-registered forward sample. There isn't enough history to do better. 60 games is already all of 2006–25.
+
+**2026 and a draft paper rule (the owner decides whether to register it).** Three academy-vs-academy games are left: Air Force–Navy, Army–Air Force and Army–Navy (Dec 12), per the issue; none was read here. A draft rule: *for each academy-vs-academy game, log the under at the closing total (Pinnacle first, else the consensus), flat 1 unit at −110, paper only, and decide nothing until 2030 or 30 forward games, whichever is later.* Expected reach: about 3 games a season. To tell a 70% rule from break-even (52.4%) at p < 0.05 takes about 45 games, which is 15 seasons at 3 a season, so the first honest read is around 2041; to clear the project's bar takes far more. So it is worth logging at no cost and not worth a decision this season. No `STRATEGY.md` or `PREREGISTRATION.md` was edited.
 
 ### What to expect this season (added September 28, 2026)
 

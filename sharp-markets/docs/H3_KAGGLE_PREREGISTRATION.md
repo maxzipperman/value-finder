@@ -59,6 +59,8 @@ The project's running count of variants tested goes from **273 to 287** with thi
 
 Season-by-season figures are shown only for that sign check. No p-value or standard error is computed for a season.
 
+*Note, September 29, 2026, added when this test merged, after its results were known. It corrects the project's count, not the rule above.* While this test was in review, another check (the academy check's opener grading, [#54](https://github.com/maxzipperman/value-finder/issues/54)) was counted on the main branch, taking the running count from 273 to 274 before this test's 14 were added. So the count after this test is **288**, not 287, and the bar is 0.05 / 288 = 0.0001736, which rounds to the same **0.000174**. No variant here came near either figure (the closest p was 0.032), so no verdict changes. The sentences above, the code and the report's figures are left as registered.
+
 ## 6. What is detectable
 
 Before any result is seen: with a bar of p < 0.000174, a variant passes (half the time) only when its measure is about **3.75 standard errors** from zero. For a win-or-lose bet near even money, the standard error is close to 0.5 divided by the square root of the number of bets, n. So the smallest effect the bar could detect is about **3.75 × 0.5 / √n**, in units of win chance:
