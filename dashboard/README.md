@@ -1,7 +1,8 @@
 # Dashboard: a local, read-only view on the Mac
 
 One page at <http://127.0.0.1:8787/> showing the forward tests, the board of upcoming games, the scheduled jobs,
-Thursday's pull and the research, from the files the jobs write. Paper only: it places no bet, changes no file
+Thursday's pull and the research (as a list and as charts), from the files the jobs write and the tables committed
+in the repo. Paper only: it places no bet, changes no file
 the jobs own, and listens on 127.0.0.1 only. Python standard library only; nothing is loaded from the internet.
 
 ```bash
@@ -10,6 +11,8 @@ ops/install_dashboard.sh                                        # run it at logi
 ops/install_dashboard.sh --print-plist                          # show the job file it would write; changes nothing
 ops/uninstall_dashboard.sh                                      # remove that
 uv run --project dashboard pytest -q                            # the tests
+nfl-weather/.venv/bin/python dashboard/tools/build_charts.py    # remake the Backtests charts (after research merges)
+nfl-weather/.venv/bin/python dashboard/tools/build_charts.py --check   # are they up to date? exit 1 if not
 ```
 
 `--root PATH` reads a copy of the repo instead of the checkout it lives in (for tests and rehearsals);
@@ -26,7 +29,7 @@ schedules), not from a `TZ` setting: `TZ=... uv run ...` in a rehearsal doesn't 
 ## Screens
 
 Home (`#home`), Signals (`#signals`, with `?sport=nfl|cfb&rule=<rule id>&result=won|lost|push|pending|void`),
-Board (`#board`, with `?sport=nfl|cfb&signals=1`), a game (`#game/<id>`), Forward tests (`#tests`), Jobs and
+Backtests (`#backtests`), Board (`#board`, with `?sport=nfl|cfb&signals=1`), a game (`#game/<id>`), Forward tests (`#tests`), Jobs and
 records (`#jobs`, and `#jobs/records` for `ops/RUN_RECORDS.md`), Thursday's pull (`#pull`) and Research
 (`#research`). Data refreshes every 60 seconds; the server re-reads the files at most every 30 seconds (and works
 out the board's rows at most once a minute from each read) and runs each scorer preview at most every 10 minutes.
@@ -75,11 +78,44 @@ seconds or prints something that is not its document (not one JSON object with i
 each with an id, counts and bets; or more than 20 MB), the screen says so and lists, from the ledgers, the games whose
 rows include a signal since their rule started, without results.
 
+## Backtests: the research as charts
+
+The Backtests screen draws the project's research as charts: why the wind rule exists and how it did on forecasts as
+issued, how good those forecasts are, how hard it is to prove anything, and other ideas tested. It opens with three
+sentences: what is here, that every chart is a backtest or simulation on past data and not a forward result, and
+which results in the evidence list, if any, have cleared the multiple-testing bar.
+
+- **Prepared, then only read.** The server uses the standard library and can't read parquet, so each chart's numbers
+  are prepared by `tools/build_charts.py`, run by hand from the repo root with a weather project's Python (it uses
+  pandas). It reads only committed outputs (a source that isn't tracked, or differs from its last commit, stops it)
+  and writes one small JSON file per chart to `content/charts/` and nowhere else. Each file names its source files,
+  their git blob hashes and the date each last changed, the write-up it illustrates, and its words: a title that says
+  what was found, one sentence on what the chart shows and one on what it doesn't, and the sample size. `--check`
+  compares what it would write with the committed files and exits 1 on any difference. When research that a chart
+  draws on merges, rerun the tool and commit the files; the tests also fail until then (each file's blob hashes are
+  checked against its sources, and every number is recomputed from them).
+- **Drawn as the page loads.** Whether each result clears the project's multiple-testing bar is worked out on every
+  load from STATUS.md's "Variants" bullet, as on the other screens. One chart is drawn by the server itself, because
+  both of its inputs change when research merges: every entry of `content/evidence.json` that has a p-value, placed
+  at that p-value on a logarithmic scale, with the bar as a line and each mark labelled with its sample size.
+- **Honest axes.** A win-rate axis starts at 40% or lower and draws break-even (52.4% at −110) as a line; every other
+  value axis includes zero, or is fixed (0 to 100% for a chance); nothing is cropped to make a small difference look
+  large. The charts use blue and orange, and one blue ramp for ordered cases; never the signal violet, and never the
+  green, amber or red kept for health. Every chart has a hover read-out of the exact numbers and a table of the same
+  numbers that opens beneath it.
+- **Missing or damaged files.** A chart file that is missing, empty, cut off, too large or not in the form the tool
+  writes is shown as one plain sentence in its place; the rest of the screen is drawn.
+- **Links.** Each source file and write-up is a link to its page on GitHub (the private repo; it opens for the owner,
+  signed in). It is only a link: the page loads nothing from it, or from anywhere but this Mac.
+- **Not charted.** College football's high-total rule season by season: no committed table holds its record by
+  season (only pooled records, which are on the Research screen). The screen says so in that chart's place.
+
 ## What it reads, and the only programs it starts
 
 Reads: `{nfl,cfb}-weather/data/forward/` `ledger.csv`, `runs.csv`, `closes.csv`, `alert_state.json`,
 `alerts.log` (its last 500 KB), `decisions.csv`, `fills.csv`; `STATUS.md`; `ops/RUN_RECORDS.md`;
-`sharp-markets/data/raw/_manifest/oddsapi_manifest.csv`; `dashboard/content/*.json`;
+`sharp-markets/data/raw/_manifest/oddsapi_manifest.csv`; `dashboard/content/*.json` and
+`dashboard/content/charts/*.json`;
 `~/.cache/value-finder/odds_quota.json` (only its time and balance fields, never the key's fingerprint);
 the schedule keys of the four jobs' files in `~/Library/LaunchAgents/`; the last line of
 `~/Library/Logs/valuefinder-closecapture.log` and `valuefinder-ledgersync.log`. It never opens a `.env` file.

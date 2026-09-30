@@ -6,7 +6,7 @@
   const main = document.getElementById("main");
   const stampEl = document.getElementById("stamp");
   const bannerEl = document.getElementById("banner");
-  const state = { openWaiting: new Set(), board: { sport: "all", signals: false },
+  const state = { openWaiting: new Set(), btOpen: new Set(), board: { sport: "all", signals: false },
     signals: { sport: "all", rule: "all", result: "all" }, last: null, seq: 0 };
   // The Signals screen's rules, as the server names them (vfdash/signals.py LOG_RULES), and its results.
   const LOG_RULES = { nfl_rule_b: "nfl", nfl_rule_b_backup: "nfl", nfl_lean: "nfl", cfb_rule_b: "cfb", cfb_rule_ht: "cfb" };
@@ -95,6 +95,7 @@
     home: { url: () => "/api/home", draw: drawHome, nav: "home" },
     signals: { url: () => "/api/signals", draw: drawSignals, nav: "signals",
       waiting: "Running both scorers as previews; this takes a few seconds the first time." },
+    backtests: { url: () => "/api/backtests", draw: drawBacktests, nav: "backtests" },
     board: { url: () => "/api/board", draw: drawBoard, nav: "board" },
     game: { url: (r) => "/api/game?id=" + encodeURIComponent(r.arg), draw: drawGame, nav: "board" },
     tests: { url: () => "/api/tests", draw: drawTests, nav: "tests",
@@ -834,11 +835,480 @@
       })))) : h("p", { class: "muted" }, "The evidence list is empty or could not be read."));
   }
 
+  // ------------------------------------------------------------------ backtests: the research as charts
+  // Every chart is drawn here as inline SVG from the numbers the server sends (prepared from committed tables by
+  // dashboard/tools/build_charts.py; nothing is loaded). Two layouts: "columns" (seasons, wind bands, totals or dates
+  // across, a value up) and "rows" (one row per case, a value across). The axis rules: a win-rate axis starts at 40% or
+  // lower and draws break-even (52.4% at −110); a value axis marked "zero" always includes zero, so a small difference
+  // never fills the chart; an axis with a fixed min or max keeps it. Hover shows the exact numbers, and each chart has
+  // a table of the same numbers that opens beneath it.
+  function pText(p) {
+    if (p < 1e-6) return "below 0.000001";
+    return p < 0.1 ? String(Number(p.toPrecision(3))) : p.toFixed(2);
+  }
+  function fmtV(v, ax, signed) {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    if (ax.kind === "p") return pText(v);
+    const s = Math.abs(v).toFixed(ax.digits === undefined ? 1 : ax.digits);
+    const zero = Number(s) === 0;
+    return (v < 0 && !zero ? "−" : signed && v > 0 && !zero ? "+" : "") + s + (ax.unit || "");
+  }
+  function tickText(v, ax) {
+    if (ax.log) return String(v);
+    const r = Math.round(v * 1e6) / 1e6;
+    return (r < 0 ? "−" + Math.abs(r) : String(r)) + (ax.unit === "%" ? "%" : "");
+  }
+  function niceTicks(lo, hi, want) {
+    const span = hi - lo || 1;
+    const raw = span / want;
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    let step = 10 * p;
+    for (const k of [1, 2, 2.5, 5, 10]) if (raw <= k * p) { step = k * p; break; }
+    const a = Math.floor(lo / step + 1e-9) * step, b = Math.ceil(hi / step - 1e-9) * step;
+    const ticks = [];
+    for (let i = 0; a + i * step <= b + step * 1e-6; i++) ticks.push(Math.round((a + i * step) * 1e6) / 1e6);
+    return { lo: a, hi: b, ticks };
+  }
+  // The value axis: its range and ticks, from the values, the reference lines and the chart's rules.
+  function valueAxis(ax, vals, refs) {
+    const all = vals.concat(refs).filter((v) => typeof v === "number" && Number.isFinite(v));
+    if (!all.length) all.push(0, 1);
+    if (ax.log) {
+      const lo = Math.floor(Math.log10(Math.min(...all, 0.5)) - 1e-9);
+      const ticks = [];
+      for (let e = 0; e >= lo; e--) ticks.push(Number("1e" + e));
+      return { log: true, lo: Number("1e" + lo), hi: 1, ticks, dLo: lo };
+    }
+    let lo = Math.min(...all), hi = Math.max(...all);
+    if (ax.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+    if (typeof ax.floor_at_most === "number") lo = Math.min(lo, ax.floor_at_most);
+    if (typeof ax.min === "number") lo = Math.min(ax.min, lo);
+    if (typeof ax.max === "number") hi = Math.max(ax.max, hi);
+    if (typeof ax.min_span === "number" && hi - lo < ax.min_span) hi = lo + ax.min_span;
+    if (!(hi > lo)) { lo -= 1; hi += 1; }
+    const t = niceTicks(lo, hi, 5);
+    if (typeof ax.min === "number" && ax.min === Math.min(...all, ax.min)) t.lo = ax.min;
+    if (typeof ax.max === "number" && ax.max === Math.max(...all, ax.max)) t.hi = ax.max;
+    t.ticks = t.ticks.filter((v) => v >= t.lo - 1e-9 && v <= t.hi + 1e-9);
+    return t;
+  }
+  function newSvg(W, H, label, kind, dom) {
+    const tmp = document.createElement("div");
+    tmp.insertAdjacentHTML("beforeend", "<svg></svg>");
+    const svg = tmp.querySelector("svg");
+    const NS = svg.namespaceURI;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("class", "plot");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", label);
+    svg.setAttribute("data-axis-kind", kind || "");
+    svg.setAttribute("data-axis-min", String(dom.lo));
+    svg.setAttribute("data-axis-max", String(dom.hi));
+    svg.style.height = H + "px";
+    const add = (tag, attrs, text, parent) => {
+      const e = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+      if (text !== undefined) e.textContent = text;
+      (parent || svg).append(e);
+      return e;
+    };
+    return { svg, add };
+  }
+  function seriesKey(series, refs) {
+    const items = (series.length > 1 ? series : []).map((s) =>
+      h("span", null, h("i", { class: "k-" + s.mark + " s-" + (s.color || "c1") }), s.name));
+    for (const r of refs || []) items.push(h("span", null, h("i", { class: "k-ref r-" + (r.role || "line") }), r.label));
+    return items.length ? h("div", { class: "serieskey" }, items) : "";
+  }
+  function tipBox(host) {
+    const tip = h("div", { class: "tip", hidden: true });
+    host.style.position = "relative";
+    host.append(tip);
+    return tip;
+  }
+  function placeTip(tip, host, svg, W, H, x, y, lines) {
+    tip.replaceChildren(h("b", null, lines[0]), ...lines.slice(1).map((l) => h("div", null, l)));
+    tip.hidden = false;
+    const box = svg.getBoundingClientRect();
+    const sx = box.width / W || 1, sy = box.height / H || 1;
+    tip.style.left = Math.min(Math.max(0, x * sx - 90), Math.max(0, box.width - 250)) + "px";
+    tip.style.top = Math.max(0, y * sy - 70) + "px";
+  }
+  // Reference lines (break-even, the pooled rate, zero, the project's bar): the line, and its value in the margin; the
+  // full words are in the key under the chart.
+  function refShort(r, ax) {
+    if (r.role === "zero") return "";
+    if (ax.kind === "p") return pText(r.value);
+    const v = Number(r.value.toFixed(ax.digits === undefined ? 1 : ax.digits));
+    return (v < 0 ? "−" + Math.abs(v) : String(v)) + (ax.unit === "%" ? "%" : "");
+  }
+  function refLines(add, refs, ax, from, to, pos, vertical) {
+    const placed = [];                                // [line position, label position] of the labels drawn so far
+    for (const r of refs) {
+      const p = pos(r.value);
+      const cls = "ref " + (r.role || "line");
+      const words = refShort(r, ax);
+      if (vertical) {
+        add("line", { class: cls, x1: p, x2: p, y1: from, y2: to, "data-value": r.value });
+        const near = placed.filter(([q]) => Math.abs(q - p) < 52).length;
+        if (words) add("text", { class: "reflabel", x: p, y: from - 6 - 12 * (near % 2), "text-anchor": "middle" }, words);
+        placed.push([p, 0]);
+      } else {
+        add("line", { class: cls, x1: from, x2: to, y1: p, y2: p, "data-value": r.value });
+        let ly = p + 4;
+        for (const [q, qy] of placed) if (Math.abs(ly - qy) < 12) ly = p < q ? qy - 12 : qy + 12;
+        if (words) { add("text", { class: "reflabel", x: to + 4, y: ly }, words); placed.push([p, ly]); }
+      }
+    }
+  }
+  function tipLine(s, p, ax, signed) {
+    if (s.sized) return s.name + ": " + fmtV(p[1], ax) + " (" + fmtInt(p[3]) + " of " + fmtInt(p[2]) + ")";
+    const bare = Object.assign({}, ax, { unit: ax.unit === "%" ? "%" : "" });
+    const iv = typeof p[2] === "number" && typeof p[3] === "number" ? " (" + fmtV(p[2], bare, signed) + " to " + fmtV(p[3], bare, signed) + ")" : "";
+    return s.name + ": " + fmtV(p[1], ax, signed) + iv;
+  }
+
+  // Seasons, wind bands, totals or dates across; a value up. An optional strip of counts (signals a season) sits
+  // under the plot on its own small scale, never on the value axis.
+  const withValues = (list) => (list || []).map((s) => Object.assign({}, s, {
+    points: (s.points || []).filter((p) => Array.isArray(p) && typeof p[1] === "number" && Number.isFinite(p[1])) }));
+  function drawColumns(host, pn, title) {
+    const W = Math.max(300, host.clientWidth || 600);
+    const series = withValues(pn.series), refs = pn.refs || [], ax = pn.y || {}, xk = (pn.x || {}).kind || "category";
+    const counts = pn.counts && (pn.counts.points || []).length ? pn.counts : null;
+    const m = { l: 50, r: refs.some((r) => r.role !== "zero") ? 46 : 14, t: 20, b: 26 };
+    const plotH = W < 520 ? 190 : 220, stripH = counts ? 54 : 0;
+    const H = m.t + plotH + stripH + m.b;
+    const vals = [];
+    for (const s of series) for (const p of s.points || []) {
+      vals.push(p[1]);
+      if (!s.sized && typeof p[2] === "number") vals.push(p[2], p[3]);
+    }
+    const dom = valueAxis(ax, vals, refs.map((r) => r.value));
+    const signed = dom.lo < 0;
+    const { svg, add } = newSvg(W, H, title, ax.kind, dom);
+    const y = (v) => m.t + (1 - (v - dom.lo) / (dom.hi - dom.lo)) * plotH;
+    const x0 = m.l, x1 = W - m.r;
+    let xOf, labels = [], band = 0, xsSorted = [];
+    if (xk === "category") {
+      labels = (pn.x.labels || []).map(String);
+      band = (x1 - x0) / Math.max(1, labels.length);
+      const idx = new Map(labels.map((l, i) => [l, i]));
+      xOf = (k) => x0 + band * ((idx.has(String(k)) ? idx.get(String(k)) : 0) + 0.5);
+    } else {
+      const xsAll = [];
+      for (const s of series) for (const p of s.points || []) xsAll.push(xk === "time" ? Date.parse(p[0]) : Number(p[0]));
+      let a = Math.min(...xsAll), b = Math.max(...xsAll);
+      if (xk === "number") { a -= 0.5; b += 0.5; }
+      if (!(b > a)) { a -= 1; b += 1; }
+      xOf = (k) => x0 + (((xk === "time" ? Date.parse(k) : Number(k)) - a) / (b - a)) * (x1 - x0);
+      xsSorted = [...new Set(xsAll)].sort((p, q) => p - q);
+      xOf.range = [a, b];
+    }
+    // grid and value ticks
+    for (const v of dom.ticks) {
+      add("line", { class: "axis", x1: x0, x2: x1, y1: y(v), y2: y(v) });
+      add("text", { class: "tick", x: x0 - 6, y: y(v) + 4, "text-anchor": "end" }, tickText(v, ax));
+    }
+    if (ax.label) add("text", { class: "axislabel", x: 0, y: 11 }, ax.label);
+    // x labels
+    const baseY = H - 8;
+    if (xk === "category") {
+      const widest = Math.max(...labels.map((l) => l.length)) * 6.6 + 6;
+      const every = Math.max(1, Math.ceil(widest / band));
+      labels.forEach((l, i) => { if (i % every === 0) add("text", { class: "tick", x: x0 + band * (i + 0.5), y: baseY, "text-anchor": "middle" }, l); });
+    } else if (xk === "time") {
+      const [a, b] = xOf.range;
+      const y0 = new Date(a).getUTCFullYear(), y1 = new Date(b).getUTCFullYear();
+      const every = Math.max(1, Math.ceil((y1 - y0 + 1) * 40 / (x1 - x0)));
+      for (let yr = y0; yr <= y1 + 1; yr++) {
+        const t = Date.UTC(yr, 0, 1);
+        if (t < a || t > b || (yr - y0) % every) continue;
+        const px = x0 + ((t - a) / (b - a)) * (x1 - x0);
+        add("line", { class: "axis", x1: px, x2: px, y1: m.t, y2: m.t + plotH });
+        add("text", { class: "tick", x: px, y: baseY, "text-anchor": "middle" }, String(yr));
+      }
+    } else {
+      const [a, b] = xOf.range;
+      const step = (pn.x && pn.x.step) || 5;
+      for (let v = Math.ceil(a / step) * step; v <= b; v += step) {
+        add("text", { class: "tick", x: xOf(v), y: baseY, "text-anchor": "middle" }, String(v));
+      }
+    }
+    refLines(add, refs, ax, x0, x1, y, false);
+    // marks
+    const dodged = series.filter((s) => s.mark !== "line");
+    series.forEach((s, si) => {
+      const cls = "s-" + (s.color || "c1");
+      const pts = s.points || [];
+      const di = dodged.indexOf(s), dn = dodged.length;
+      const off = xk === "category" && di >= 0 && dn > 1 ? (di - (dn - 1) / 2) * Math.min(12, band / (dn + 1)) : 0;
+      if (s.mark === "line") {
+        if (pts.length > 1) add("path", { class: "sline " + cls, d: pts.map((p, i) => (i ? "L" : "M") + xOf(p[0]).toFixed(1) + "," + y(p[1]).toFixed(1)).join(" ") });
+        if (pts.length <= 40) for (const p of pts) add("circle", { class: "sdot small " + cls, cx: xOf(p[0]), cy: y(p[1]), r: 2.5 });
+        const e = pts[pts.length - 1];
+        if (e && xk === "time") {
+          add("circle", { class: "sdot " + cls, cx: xOf(e[0]), cy: y(e[1]), r: 4 });
+          add("text", { class: "endlabel", x: xOf(e[0]) - 6, y: y(e[1]) - 8, "text-anchor": "end" }, fmtV(e[1], ax, signed));
+        }
+      } else if (s.mark === "bar") {
+        const bw = Math.max(3, Math.min(28, (band || 12) * 0.6 / Math.max(1, dn)));
+        for (const p of pts) {
+          const top = y(Math.max(0, p[1])), bot = y(Math.min(0, p[1]));
+          add("rect", { class: "sbar " + cls, x: xOf(p[0]) + off - bw / 2, y: top, width: bw, height: Math.max(1, bot - top), rx: 2 });
+        }
+      } else {
+        const nmax = s.sized ? Math.max(1, ...pts.map((p) => p[2] || 0)) : 1;
+        for (const p of pts) {
+          const cx = xOf(p[0]) + off;
+          if (!s.sized && typeof p[2] === "number" && typeof p[3] === "number") {
+            add("line", { class: "whisker " + cls, x1: cx, x2: cx, y1: y(p[2]), y2: y(p[3]) });
+          }
+          const r = s.sized ? 2 + 4.5 * Math.sqrt((p[2] || 0) / nmax) : 4;
+          add("circle", { class: "sdot " + cls, cx, cy: y(p[1]), r: r.toFixed(2), "data-value": p[1] });
+        }
+      }
+    });
+    // the counts strip
+    if (counts) {
+      const top = m.t + plotH + 20, hgt = stripH - 22;
+      const cmax = Math.max(1, ...counts.points.map((p) => p[1]));
+      add("text", { class: "tick", x: x0 - 6, y: top + 8, "text-anchor": "end" }, String(cmax));
+      add("text", { class: "axislabel", x: x0 - 6, y: top + hgt + 2, "text-anchor": "end" }, counts.name);
+      const bw = Math.max(2, Math.min(20, band * 0.5));
+      for (const p of counts.points) {
+        const hh = (p[1] / cmax) * hgt;
+        add("rect", { class: "sbar s-ink2", x: xOf(p[0]) - bw / 2, y: top + hgt - hh, width: bw, height: Math.max(1, hh), rx: 1 });
+      }
+    }
+    // hover
+    const cross = add("line", { class: "cross", x1: 0, x2: 0, y1: m.t, y2: m.t + plotH, visibility: "hidden" });
+    const tip = tipBox(host);
+    host.append(svg);
+    const hit = add("rect", { x: x0, y: 0, width: x1 - x0, height: H, fill: "transparent" });
+    const at = (px) => {
+      if (xk === "category") {
+        const i = Math.min(labels.length - 1, Math.max(0, Math.floor((px - x0) / band)));
+        return { key: labels[i], x: x0 + band * (i + 0.5) };
+      }
+      const [a, b] = xOf.range;
+      const want = a + ((px - x0) / (x1 - x0)) * (b - a);
+      let best = xsSorted[0];
+      for (const v of xsSorted) if (Math.abs(v - want) < Math.abs(best - want)) best = v;
+      return { key: best, x: x0 + ((best - a) / (b - a)) * (x1 - x0) };
+    };
+    hit.addEventListener("pointermove", (evt) => {
+      const box = svg.getBoundingClientRect();
+      const px = ((evt.clientX - box.left) / box.width) * W;
+      const spot = at(px);
+      const lines = [];
+      if (xk === "category") {
+        lines.push(String(spot.key));
+        for (const s of series) {
+          const p = (s.points || []).find((q) => String(q[0]) === String(spot.key));
+          if (p) lines.push(tipLine(s, p, ax, signed));
+        }
+        if (counts) {
+          const c = counts.points.find((q) => String(q[0]) === String(spot.key));
+          if (c) lines.push(counts.name + ": " + fmtInt(c[1]));
+        }
+        for (const t of (pn.tips || {})[spot.key] || []) lines.push(t);
+      } else if (xk === "time") {
+        lines.push(new Date(spot.key).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }));
+        for (const s of series) {
+          let p = null;
+          for (const q of s.points || []) { if (Date.parse(q[0]) <= spot.key) p = q; else break; }
+          if (p) lines.push(s.name + ": " + fmtV(p[1], ax, signed) + (Date.parse(p[0]) === spot.key && p[2] ? " · " + p[2] : ""));
+        }
+      } else {
+        lines.push(((pn.x.label || "") + " " + spot.key).trim());
+        for (const s of series) {
+          const p = (s.points || []).find((q) => Number(q[0]) === spot.key);
+          if (p) lines.push(tipLine(s, p, ax, signed));
+        }
+      }
+      cross.setAttribute("x1", spot.x); cross.setAttribute("x2", spot.x); cross.setAttribute("visibility", "visible");
+      placeTip(tip, host, svg, W, H, spot.x, m.t + 30, lines);
+    });
+    hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); tip.hidden = true; });
+  }
+
+  // One row per case, a value across: labels on the left (wrapped), bars or dots with intervals, reference lines
+  // standing up through every row, and a note (a sample size) beside each row's marks.
+  function wrapWords(text, chars) {
+    const out = [];
+    let cur = "";
+    for (const w of String(text).split(" ")) {
+      if (cur && (cur + " " + w).length > chars) { out.push(cur); cur = w; } else cur = cur ? cur + " " + w : w;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+  function drawRows(host, pn, title) {
+    const W = Math.max(300, host.clientWidth || 600);
+    const series = withValues(pn.series), refs = pn.refs || [], ax = pn.x || {}, rows = pn.rows || [];
+    const notes = pn.notes || {};
+    const LW = Math.min(Math.round(W * 0.42), 300);
+    const hasNotes = Object.keys(notes).length > 0;
+    const m = { l: LW + 12, r: hasNotes ? 76 : 16, t: 34, b: 36 };
+    const chars = Math.max(18, Math.floor((LW - 4) / 6.3));
+    const wrapped = rows.map((r) => wrapWords(r, chars));
+    const marks = series.length;
+    const rowH = wrapped.map((ls) => Math.max(15 * ls.length + 10, (series.some((s) => s.mark === "bar") ? 9 : 12) * marks + 12));
+    const H = m.t + rowH.reduce((a, b) => a + b, 0) + m.b;
+    const vals = [];
+    for (const s of series) for (const p of s.points || []) {
+      vals.push(p[1]);
+      if (typeof p[2] === "number") vals.push(p[2], p[3]);
+    }
+    const dom = valueAxis(ax, vals, refs.map((r) => r.value));
+    const signed = dom.lo < 0;
+    const { svg, add } = newSvg(W, H, title, ax.kind, dom);
+    const x0 = m.l, x1 = W - m.r;
+    const xOf = dom.log
+      ? (v) => x0 + ((ax.reverse ? -Math.log10(v) : Math.log10(v) - dom.dLo) / -dom.dLo) * (x1 - x0)
+      : (v) => x0 + ((v - dom.lo) / (dom.hi - dom.lo)) * (x1 - x0);
+    const plotBottom = H - m.b;
+    for (const v of dom.ticks) {
+      add("line", { class: "axis", x1: xOf(v), x2: xOf(v), y1: m.t, y2: plotBottom });
+      add("text", { class: "tick", x: xOf(v), y: plotBottom + 16, "text-anchor": "middle" }, tickText(v, ax));
+    }
+    if (ax.label) add("text", { class: "axislabel", x: x1, y: H - 1, "text-anchor": "end" }, ax.label);
+    const band = add("rect", { class: "rowhot", x: 0, y: 0, width: W, height: 0, visibility: "hidden" });
+    let top = m.t;
+    const bands = [];
+    rows.forEach((r, ri) => {
+      const hgt = rowH[ri];
+      bands.push([top, hgt, r]);
+      if (ri) add("line", { class: "rowline", x1: 0, x2: x1, y1: top, y2: top });
+      wrapped[ri].forEach((ln, li) => add("text", { class: "rowlabel", x: 0, y: top + 14 + li * 15 }, ln));
+      const step = (hgt - 12) / Math.max(1, marks);
+      let far = x0;
+      series.forEach((s, si) => {
+        const p = (s.points || []).find((q) => q[0] === r);
+        if (!p) return;
+        const cy = top + 6 + step * (si + 0.5);
+        const cls = "s-" + (s.color || "c1");
+        if (s.mark === "bar") {
+          const a = xOf(Math.max(dom.lo, Math.min(0, p[1]))), b = xOf(Math.max(0, p[1]));
+          add("rect", { class: "sbar " + cls, x: Math.min(a, b), y: cy - Math.min(4, step / 2 - 1), width: Math.max(1, Math.abs(b - a)), height: Math.max(2, Math.min(8, step - 2)), rx: 2, "data-value": p[1] });
+          far = Math.max(far, b);
+        } else {
+          if (typeof p[2] === "number" && typeof p[3] === "number") {
+            add("line", { class: "whisker " + cls, x1: xOf(p[2]), x2: xOf(p[3]), y1: cy, y2: cy });
+            far = Math.max(far, xOf(p[2]), xOf(p[3]));
+          }
+          add("circle", { class: "sdot " + cls, cx: xOf(p[1]), cy, r: 4.5, "data-value": p[1] });
+          far = Math.max(far, xOf(p[1]));
+        }
+      });
+      if (notes[r]) add("text", { class: "note", x: Math.min(far + 8, x1 + 4), y: top + hgt / 2 + 4 }, notes[r]);
+      top += hgt;
+    });
+    refLines(add, refs, ax, m.t, plotBottom, xOf, true);
+    const tip = tipBox(host);
+    host.append(svg);
+    const hit = add("rect", { x: 0, y: m.t, width: W, height: plotBottom - m.t, fill: "transparent" });
+    hit.addEventListener("pointermove", (evt) => {
+      const box = svg.getBoundingClientRect();
+      const py = ((evt.clientY - box.top) / box.height) * H;
+      const b = bands.find(([t, hh]) => py >= t && py < t + hh);
+      if (!b) return;
+      const lines = [b[2]];
+      for (const s of series) {
+        const p = (s.points || []).find((q) => q[0] === b[2]);
+        if (p) lines.push(tipLine(s, p, ax, signed));
+      }
+      if (notes[b[2]]) lines.push(notes[b[2]]);
+      for (const t of (pn.tips || {})[b[2]] || []) lines.push(t);
+      band.setAttribute("y", b[0]); band.setAttribute("height", b[1]); band.setAttribute("visibility", "visible");
+      placeTip(tip, host, svg, W, H, W * 0.55, b[0] + b[1], lines);
+    });
+    hit.addEventListener("pointerleave", () => { band.setAttribute("visibility", "hidden"); tip.hidden = true; });
+  }
+
+  function drawPlot(body, c) {
+    const plot = c.plot || {};
+    for (const pn of plot.panels || []) {
+      if (pn.name) body.append(h("h3", { class: "panelname" }, pn.name));
+      const host = h("div", { class: "bt-plot" });
+      body.append(host);
+      if (plot.layout === "rows") drawRows(host, pn, c.title);
+      else drawColumns(host, pn, c.title);
+      body.append(seriesKey(pn.series || [], pn.refs || []));
+    }
+  }
+
+  function btTable(c) {
+    const t = c.table || {};
+    const num = t.num || [];
+    const det = h("details", { class: "bt-table", open: state.btOpen.has(c.id) },
+      h("summary", null, "Show the numbers"),
+      h("div", { class: "tablewrap" }, h("table", null,
+        h("thead", null, h("tr", null, (t.columns || []).map((x, i) => h("th", { scope: "col", class: num[i] ? "num" : null }, x)))),
+        h("tbody", null, (t.rows || []).map((r) => h("tr", null, r.map((x, i) => h("td", { class: num[i] ? "num" : null }, x))))))),
+      t.note ? h("p", { class: "faint" }, t.note) : "");
+    det.addEventListener("toggle", () => { if (det.open) state.btOpen.add(c.id); else state.btOpen.delete(c.id); });
+    return det;
+  }
+
+  function fileLink(f) {
+    return f.url ? h("a", { href: f.url, target: "_blank", rel: "noreferrer noopener" }, f.path) : f.path;
+  }
+  function btWords(c) {
+    const src = (c.sources || []).map((s, i) => [i ? "; " : "", fileLink(s),
+      s.blob ? " (blob " + s.blob + ", changed " + s.changed + ")" : s.changed ? " (" + s.changed + ")" : ""]);
+    const ups = (c.writeups || []).map((w, i) => [i ? "; " : "", fileLink(w), w.section ? ", “" + w.section + "”" : ""]);
+    return h("div", { class: "bt-words" },
+      h("p", null, c.shows),
+      h("p", null, c.not_shows),
+      h("p", null, h("b", null, "Sample: "), String(c.sample).replace(/\.?$/, ".")),
+      (c.bar_lines || []).map((l) => h("p", { class: "bt-bar" + (c.clears ? " clears" : "") }, l)),
+      h("p", { class: "faint" }, (c.sources || []).length > 1 ? "Sources: " : "Source: ", src),
+      ups.length ? h("p", { class: "faint" }, "Write-up: ", ups) : "");
+  }
+
+  function drawBacktests(d) {
+    const out = h("div", null, h("h1", null, "Backtests"),
+      h("div", { class: "lede" }, (d.intro || []).map((s) => h("p", null, s))));
+    const todo = [];
+    for (const g of d.groups || []) {
+      out.append(h("h2", { class: "group" }, g.heading));
+      const grid = h("div", { class: "bt-grid" });
+      out.append(grid);
+      for (const c of g.charts || []) {
+        if (c.not_charted) {
+          grid.append(h("section", { class: "panel btchart", "data-chart": c.id }, h("div", { class: "body" }, h("p", { class: "muted" }, c.not_charted))));
+          continue;
+        }
+        if (c.missing) {
+          grid.append(h("section", { class: "panel btchart", "data-chart": c.id }, h("header", null, h("h2", null, c.name || c.id)),
+            h("div", { class: "body" }, h("p", { class: "muted" }, c.missing))));
+          continue;
+        }
+        const body = h("div", { class: "body" });
+        grid.append(h("section", { class: "panel btchart", "data-chart": c.id },
+          h("header", null, h("h2", null, c.title, h("span", { class: "scope" }, c.name))), body));
+        todo.push([body, c]);
+      }
+    }
+    main.replaceChildren(out);                        // in place first, so each chart can measure its width
+    for (const [body, c] of todo) {
+      try {
+        drawPlot(body, c);
+      } catch (e) {
+        body.append(h("p", { class: "muted" }, "This chart could not be drawn; its numbers are in the table below."));
+      }
+      body.append(btWords(c), btTable(c));
+    }
+    return out;
+  }
+
   // ------------------------------------------------------------------ start
   window.addEventListener("hashchange", () => load(false));
   let resizeTimer = null;
   window.addEventListener("resize", () => {
-    if (parseHash().screen !== "game") return;
+    if (!["game", "backtests"].includes(parseHash().screen)) return;
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => load(true), 250);
   });

@@ -196,6 +196,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/pull":
             with store.lock:
                 return self._json(200, api.pull(store))
+        if path == "/api/backtests":
+            with store.lock:
+                return self._json(200, api.backtests(store))
         if path == "/api/research":
             with store.lock:
                 return self._json(200, api.research(store))

@@ -422,7 +422,7 @@ def served(store):
 
 
 ENDPOINTS = ["/api/summary", "/api/home", "/api/board", "/api/game?id=2026_05_BUF_NE", "/api/game?id=401000002",
-             "/api/signals", "/api/tests", "/api/jobs", "/api/run-records", "/api/pull", "/api/research"]
+             "/api/signals", "/api/backtests", "/api/tests", "/api/jobs", "/api/run-records", "/api/pull", "/api/research"]
 
 
 def copy_content(dst: Path) -> Path:

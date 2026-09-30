@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, timedelta, timezone
 
+from . import backtests as backtests_mod
 from . import health as health_mod
 from . import signals as signals_mod
 from . import status_md, words
@@ -886,3 +887,15 @@ def research(store: Store) -> dict:
     header = scr.header("Newest entry", None)
     header["last_written"], header["last_written_utc"] = evidence_stamp(ev), None
     return scr.done({"header": header, "entries": ev, "variants": n, "bar": bar})
+
+
+def backtests(store: Store) -> dict:
+    """The Backtests screen: the research as charts, from the prepared chart files (vfdash/backtests.py)."""
+    scr = Screen(store)
+    payload = scr.part("charts", lambda: backtests_mod.build(scr), None) or {
+        "intro": [], "groups": [], "variants": None, "bar": None, "newest": None}
+    header = scr.header("Newest table", None)
+    header["last_written"] = (f"Charts from tables dated up to {payload['newest']}" if payload.get("newest")
+                              else "No chart file could be read")
+    header["last_written_utc"] = None
+    return scr.done({"header": header, **payload})

@@ -1,7 +1,9 @@
 // Draws one screen of the page (vfdash/static/app.js) from a saved JSON answer, with a small stand-in for the
 // browser, and prints what it drew as JSON: {tag, cls, kids} for elements and {text} for text. Tests only: it
 // reads the two files it is given and nothing else, and makes no network request.
-//   node render_page.mjs <app.js> <#hash> <answer.json>
+//   node render_page.mjs <app.js> <#hash> <answer.json> [hover]
+// With "hover", every element that listens for the pointer is also moved over at a few points, and what each
+// hover read-out then says is printed too, under "hovers".
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -14,7 +16,7 @@ class El extends Base {
   constructor(tag) { super(); this.tag = tag; this.className = ""; this.attrs = {}; this.style = {}; this.dataset = {}; }
   setAttribute(k, v) { this.attrs[k] = String(v); }
   removeAttribute(k) { delete this.attrs[k]; }
-  addEventListener() {}
+  addEventListener(type, fn) { (this.listeners ||= {})[type] = fn; }
   append(...kids) { for (const k of kids) this.kids.push(k instanceof Base ? k : new Text(k)); }
   replaceChildren(...kids) { this.kids = []; this.append(...kids); }
   set textContent(t) { this.kids = [new Text(t)]; }
@@ -42,5 +44,21 @@ vm.runInThisContext(readFileSync(appPath, "utf8"), { filename: "app.js" });
 await new Promise((r) => setTimeout(r, 50));
 const out = (n) => (n instanceof Text ? { text: n.text } : { tag: n.tag, cls: n.className, attrs: n.attrs,
   kids: n.kids.map(out) });
+// with "hover": move the pointer over every element that listens for it, and read each read-out it shows
+const hovers = [];
+if (process.argv[5] === "hover") {
+  const walk = (n, fn) => { if (n instanceof El) { fn(n); for (const k of n.kids) walk(k, fn); } };
+  const tips = [];
+  walk(byId.main, (n) => { if (n.className === "tip" || n.attrs.class === "tip") tips.push(n); });
+  walk(byId.main, (n) => {
+    const move = n.listeners && n.listeners.pointermove;
+    if (!move) return;
+    for (const f of [0.1, 0.5, 0.9]) {
+      move({ clientX: 640 * f, clientY: 190 * f });
+      for (const t of tips) if (t.hidden === false) hovers.push(t.textContent);
+      for (const t of tips) t.hidden = true;
+    }
+  });
+}
 // the main part of the page as drawn, and the browser tab's title
-process.stdout.write(JSON.stringify({ ...out(byId.main), doc_title: document.title }));
+process.stdout.write(JSON.stringify({ ...out(byId.main), doc_title: document.title, hovers }));

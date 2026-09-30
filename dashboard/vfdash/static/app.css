@@ -24,6 +24,13 @@
   --signal-ink: #ffffff;
   --signal-text: #6d3fc0;
   --signal-wash: #f4effc;
+  /* chart series (Backtests): blue and orange for two kinds of thing; one blue ramp, light to dark, for ordered
+     cases. Never violet (signals), and never green, amber or red (health and deadlines). */
+  --c1: #2a78d6;
+  --c2: #eb6834;
+  --o1: #86b6ef;
+  --o2: #2a78d6;
+  --o3: #104281;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -44,6 +51,11 @@
     --signal-ink: #17121f;
     --signal-text: #b9a3f7;
     --signal-wash: #2b2340;
+    --c1: #3987e5;
+    --c2: #d95926;
+    --o1: #1c5cab;
+    --o2: #3987e5;
+    --o3: #9ec5f4;
   }
 }
 :root[data-theme="dark"] {
@@ -63,6 +75,11 @@
   --signal-ink: #17121f;
   --signal-text: #b9a3f7;
   --signal-wash: #2b2340;
+  --c1: #3987e5;
+  --c2: #d95926;
+  --o1: #1c5cab;
+  --o2: #3987e5;
+  --o3: #9ec5f4;
 }
 
 * { box-sizing: border-box; }
@@ -293,3 +310,67 @@ pre.plain { font-family: inherit; font-size: 13.5px; line-height: 1.55; backgrou
   .tile { padding: 12px 12px 10px; }
   th, td { padding-right: 6px; }
 }
+
+/* Backtests: charts drawn by the page from tables committed in the repo */
+.lede p { margin: 0 0 6px; }
+.bt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr)); gap: 18px;
+  margin: 0 0 8px; align-items: start; }
+.bt-grid > .panel + .panel { margin-top: 0; }
+.btchart > header { display: block; }
+.btchart > header h2 { font-size: 15px; line-height: 1.35; }
+.btchart .scope { display: block; font-size: 12px; color: var(--text-3); font-weight: 400; margin-top: 3px; }
+.btchart .panelname { font-size: 13px; font-weight: 500; color: var(--text-2); margin: 12px 0 0; }
+.bt-plot { position: relative; margin-top: 8px; }
+.bt-plot svg.plot { display: block; width: 100%; overflow: visible; }
+.bt-plot .axis, .bt-plot .rowline { stroke: var(--line); stroke-width: 1; }
+.bt-plot .tick { fill: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.bt-plot .axislabel { fill: var(--text-2); font-size: 11px; }
+.bt-plot .rowlabel { fill: var(--text); font-size: 12px; }
+.bt-plot .note { fill: var(--text-2); font-size: 11px; }
+.bt-plot .ref { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 4 3; }
+.bt-plot .ref.breakeven { stroke: var(--text-2); stroke-width: 1.5; stroke-dasharray: none; }
+.bt-plot .ref.bar { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: none; }
+.bt-plot .ref.zero { stroke: var(--line-strong); stroke-width: 1.25; stroke-dasharray: none; }
+.bt-plot .reflabel, .bt-plot .endlabel { paint-order: stroke; stroke: var(--panel); stroke-width: 3px;
+  stroke-linejoin: round; }
+.bt-plot .reflabel { fill: var(--text-2); font-size: 11px; }
+.bt-plot .endlabel { fill: var(--text); font-size: 12px; font-weight: 600; }
+.bt-plot .sdot { stroke: var(--panel); stroke-width: 1.5; }
+.bt-plot .sdot.small { stroke-width: 1; }
+.bt-plot .whisker { fill: none; stroke-width: 1.5; }
+.bt-plot .sline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.bt-plot .sbar { stroke: none; }
+.bt-plot .cross { stroke: var(--text-3); stroke-width: 1; }
+.bt-plot .rowhot { fill: var(--wash); }
+.s-c1 { fill: var(--c1); stroke: var(--c1); }
+.s-c2 { fill: var(--c2); stroke: var(--c2); }
+.s-o1 { fill: var(--o1); stroke: var(--o1); }
+.s-o2 { fill: var(--o2); stroke: var(--o2); }
+.s-o3 { fill: var(--o3); stroke: var(--o3); }
+.s-ink { fill: var(--text-2); stroke: var(--text-2); }
+.s-ink2 { fill: var(--text-3); stroke: var(--text-3); }
+.btchart .serieskey { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--text-2);
+  margin: 6px 0 0; }
+.btchart .serieskey span { display: inline-flex; align-items: center; gap: 6px; }
+.btchart .serieskey i { display: inline-block; flex-shrink: 0; }
+.btchart .serieskey i.k-dot { width: 9px; height: 9px; border-radius: 50%; }
+.btchart .serieskey i.k-line { width: 16px; height: 2px; }
+.btchart .serieskey i.k-bar { width: 10px; height: 10px; border-radius: 2px; }
+.btchart .serieskey i.s-c1 { background: var(--c1); }
+.btchart .serieskey i.s-c2 { background: var(--c2); }
+.btchart .serieskey i.s-o1 { background: var(--o1); }
+.btchart .serieskey i.s-o2 { background: var(--o2); }
+.btchart .serieskey i.s-o3 { background: var(--o3); }
+.btchart .serieskey i.s-ink { background: var(--text-2); }
+.btchart .serieskey i.s-ink2 { background: var(--text-3); }
+.btchart .serieskey i.k-ref { width: 16px; height: 0; border-top: 1.5px solid var(--text-2); }
+.btchart .serieskey i.k-ref.r-pooled, .btchart .serieskey i.k-ref.r-line { border-top: 1px dashed var(--text-3); }
+.btchart .serieskey i.k-ref.r-bar { border-top-color: var(--text); }
+.btchart .serieskey i.k-ref.r-zero { border-top-color: var(--line-strong); }
+.bt-words { margin-top: 10px; }
+.bt-words p { font-size: 13px; color: var(--text-2); margin: 4px 0; }
+.bt-words p.faint { font-size: 12.5px; color: var(--text-3); }
+.bt-words p.bt-bar.clears { color: var(--text); font-weight: 500; }
+.bt-table > summary { cursor: pointer; color: var(--text-2); font-size: 13px; margin-top: 8px; }
+.bt-table .tablewrap { margin-top: 6px; max-height: 440px; overflow: auto; }
+.bt-table table { font-size: 12.5px; }
