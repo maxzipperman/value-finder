@@ -9,9 +9,7 @@ turned round here to assert the behaviour amendment 1 registers (sharp-markets/d
 """
 import json
 import math
-import os
 from collections import Counter
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -305,7 +303,9 @@ def test_a3_scores_never_return_2026(tmp_path):
                            kickoff=pd.to_datetime(["2026-09-13T17:00Z", "2026-09-12T19:00Z"]),
                            home=["Kansas City Chiefs", "Ohio State Buckeyes"], away=["Baltimore Ravens", "Oregon Ducks"]))
     got, why = outcomes.match(ev, nfl=outcomes.nfl_games(p), cfb=outcomes.cfb_games(c), cfb_raw=tmp_path)
-    assert got.empty and why == Counter({"nfl_no_game": 1, "cfb_no_game": 1})
+    # "Ohio State Buckeyes" resolves by the prefix rule when the team files are absent (the cloud), so the miss is
+    # logged under its own reason (amendment 1, item 8)
+    assert got.empty and why == Counter({"nfl_no_game": 1, "cfb_prefix_name_no_game": 1})
 
 
 def test_a3_the_score_readers_never_load_2026_rows(tmp_path, monkeypatch):
@@ -473,7 +473,7 @@ def test_a7_cfb_matching(tmp_path):
     assert (s.loc["reg", "home_score"], s.loc["reg", "away_score"]) == (1.0, 0.0)
     assert (s.loc["sec_title", "home_score"], s.loc["sec_title", "away_score"]) == (0.0, 2.0)   # reoriented
     assert s.loc["near30h", "home_score"] == 3.0
-    assert why == Counter({"cfb_no_game": 1, "cfb_team_name_unknown": 2})
+    assert why == Counter({"cfb_prefix_name_no_game": 1, "cfb_team_name_unknown": 2})     # amendment 1, item 8
 
 
 # ================================================================ A9 decide() with missing values
@@ -602,12 +602,16 @@ def test_finding2_seasons_with_many_bets_but_few_closes_are_counted():
 
 # ================================================================ finding 3: prefix school matching
 def test_finding3_prefix_matching():
+    """Amendment 1, item 8 (finding 3, turned round): the alias table is consulted before the prefix rule, so
+    "Miami RedHawks" is Miami (OH), not Miami (FL). A name no alias covers still goes by the prefix rule, and says
+    so."""
     schools = ["Miami", "Miami (OH)", "Ohio", "Ohio State", "Texas", "Texas A&M"]
     by_len = sorted(((outcomes.norm(s), s) for s in schools), key=lambda x: -len(x[0]))
-    assert outcomes._school("Miami RedHawks", {}, by_len) == "Miami"                   # wrong school
+    assert outcomes.resolve_cfb("Miami RedHawks", {}, by_len) == ("Miami (OH)", outcomes.ALIAS)
     assert outcomes._school("Miami (OH) RedHawks", {}, by_len) == "Miami (OH)"
     assert outcomes._school("Texas A&M Aggies", {}, by_len) == "Texas A&M"
-    assert outcomes._school("Ohio Bobcats", {}, by_len) == "Ohio"
+    assert outcomes.resolve_cfb("Ohio Bobcats", {}, by_len) == ("Ohio", outcomes.PREFIX)
+    assert outcomes.resolve_cfb("Ohio St Buckeyes", {}, by_len) == ("Ohio State", outcomes.ALIAS)   # not Ohio
 
 
 @pytest.mark.skipif(not any(CFBFASTR.glob("team_info_*.parquet")), reason="cfbfastR team files not on this machine")
@@ -622,13 +626,17 @@ def test_finding3_with_the_real_team_files():
 
 
 def test_finding3_a_wrong_school_gives_a_wrong_score_only_if_that_pair_played_within_36_hours(tmp_path):
+    """Amendment 1, item 8 (turned round): "Miami RedHawks" now finds Miami (OH)'s game through the alias table. A
+    made-up spelling the prefix rule sends to the wrong school still never takes another game's score, and its
+    miss is logged as a name problem, cfb_prefix_name_no_game, not as cfb_no_game."""
     cfb = pd.DataFrame(dict(season=[2024], start_utc=[T("2024-09-07T16:00Z")], home_team=["Miami (OH)"],
                             away_team=["Cincinnati"], home_score=[7.0], away_score=[30.0]))
-    ev = pd.DataFrame(dict(sport=[CFB], event_id=["e"], kickoff=[T("2024-09-07T16:00Z")], home=["Miami RedHawks"],
-                           away=["Cincinnati Bearcats"]))
-    got, why = outcomes.match(ev, cfb=pd.concat([cfb, cfb.assign(home_team="Miami", start_utc=T("2024-11-30T17:00Z"))]),
-                              cfb_raw=tmp_path)
-    assert got.empty and why == Counter({"cfb_no_game": 1})           # misnamed, but logged, not mis-scored
+    table = pd.concat([cfb, cfb.assign(home_team="Miami", start_utc=T("2024-11-30T17:00Z"))])
+    ev = pd.DataFrame(dict(sport=[CFB, CFB], event_id=["e", "made_up"], kickoff=[T("2024-09-07T16:00Z")] * 2,
+                           home=["Miami RedHawks", "Miami Blue Wings"], away=["Cincinnati Bearcats"] * 2))
+    got, why = outcomes.match(ev, cfb=table, cfb_raw=tmp_path)
+    assert list(zip(got.event_id, got.home_score, got.away_score)) == [("e", 7.0, 30.0)]
+    assert why == Counter({"cfb_prefix_name_no_game": 1})           # misnamed, but logged as such, not mis-scored
 
 
 # ================================================================ defect: two calls that return the same snapshot
@@ -676,7 +684,7 @@ def test_two_calls_returning_one_snapshot_keep_one_copy_and_count_the_other(tmp_
 def test_the_batch_boundary_no_longer_matters(tmp_path):
     """Amendment 1, item 2 (turned round): wherever the two calls fall in the call list, the snapshot is kept once."""
     kept = {}
-    for pad in (0, 49, 99):                    # 49 earlier calls put the pair across calls 49 and 50 of the old batching
+    for pad in (0, 49, 99):                    # 49 earlier calls: the pair fell across the old batches of 50
         cfg, calls, cache = _same_snapshot_cache(tmp_path / f"p{pad}", pad)
         q, drops = quotes.load_quotes(cfg, calls, cache)
         kept[pad] = (int((q.snap == T("2024-09-07T15:55Z")).sum()), drops["duplicate_snapshot"])

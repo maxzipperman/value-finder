@@ -46,8 +46,11 @@ def run(cfg: dict, calls: list, cache: RawCache, *, scores: pd.DataFrame | None 
     cl = engine.closes(q)
     events = q[["sport", "event_id", "kickoff", "home", "away"]].drop_duplicates(["sport", "event_id"])
     unmatched: Counter = Counter()
+    detail: dict = {}
     if scores is None:
-        scores, unmatched = outcomes.match(events, cfb_raw=cfb_raw)
+        scores, unmatched = outcomes.match(events, cfb_raw=cfb_raw, detail=detail)
+    out.update(names=detail.get("names"), cfb_team_files=detail.get("cfb_team_files"),
+               coverage=score_coverage(q, scores))
     graded = {}
     for v in engine.VARIANTS:
         graded[v.id] = engine.grade(engine.entries(sides, v), cl, scores).assign(variant=v.id)
@@ -55,6 +58,40 @@ def run(cfg: dict, calls: list, cache: RawCache, *, scores: pd.DataFrame | None 
                graded=graded, results=engine.results_table(graded), books=engine.by_book(graded),
                lag=engine.lag_frequency(q), calibration=engine.calibration(q, cl, scores))
     return out
+
+
+MIN_SCORE_SHARE = 0.95      # amendment 1, item 8: below this share of a season's games scored, the first page says so
+
+
+def score_coverage(q: pd.DataFrame, scores: pd.DataFrame) -> pd.DataFrame:
+    """Per sport and season: the games loaded, how many were matched to a final score, and the share."""
+    ev = q[["sport", "season", "event_id"]].drop_duplicates(["sport", "event_id"])
+    got = set(zip(scores.sport, scores.event_id)) if len(scores) else set()
+    ev = ev.assign(matched=[(s, e) in got for s, e in zip(ev.sport, ev.event_id)])
+    cov = ev.groupby(["sport", "season"]).agg(games=("event_id", "size"), matched=("matched", "sum")).reset_index()
+    cov["matched"] = cov.matched.astype(int)
+    cov["share"] = cov.matched / cov.games
+    cov["sport"] = cov.sport.map(LABEL)
+    return cov
+
+
+def _names_line(res: dict) -> str:
+    """Whether the college team files were found, and how many names needed the prefix rule or did not resolve."""
+    names = res.get("names")
+    if names is None:
+        return ("Team names: not resolved in this run (the scores were supplied with the input, as the fixture "
+                "does).")
+    files = res.get("cfb_team_files")
+    if files is None:
+        where = "no college game was loaded, so the college team files were not needed"
+    elif files:
+        where = f"the college team files (cfbfastR team_info) were found ({files} files)"
+    else:
+        where = ("the college team files (cfbfastR team_info) were NOT found: college names were resolved by the "
+                 "alias table, exact school names and the prefix rule only")
+    weak = names[names.how.isin([outcomes.PREFIX, outcomes.UNRESOLVED])]
+    return (f"Team names: {where}. {len(weak):,} distinct names resolved only by the prefix rule or not at all "
+            "(listed below the table of games with no final score).")
 
 
 def _fmt(x, nd=2) -> str:
@@ -97,8 +134,18 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
     n = len(results)
     head = ["# Price-engine backtest (F1)" + (" — SYNTHETIC FIXTURE, NOT DATA" if fixture else ""), "",
             f"Run {utcnow():%Y-%m-%d %H:%M} UTC from commit {_commit()}. Rules: `{PREREG}` "
-            "(registered September 29, 2026). Sealed 2026 seasons left out.", "",
-            f"**{DAILY_NOTE}**", "",
+            "(registered September 29, 2026; amendment 1, September 30, 2026). Sealed 2026 seasons left out.", "",
+            f"**{DAILY_NOTE}**", ""]
+    cov = res.get("coverage")
+    if cov is not None and len(cov) and (cov.share < MIN_SCORE_SHARE).any():
+        low = cov[cov.share < MIN_SCORE_SHARE]
+        head += [f"**Final scores: fewer than {MIN_SCORE_SHARE:.0%} of games were matched to a final score in "
+                 + ", ".join(f"{r.sport} {r.season} ({r.share:.1%}, {r.matched:,} of {r.games:,})"
+                             for r in low.itertuples(index=False))
+                 + ". Unmatched games are left out of the realized result (the ROI, K2 and the count of results "
+                 "that item 4 needs) and of the calibration table; see \"Final scores matched\" below "
+                 "(amendment 1, item 8).**", ""]
+    head += [_names_line(res), "",
             f"Variants tested: **{n}**. Running count with them: {engine.PRIOR_COUNT} before + {n} = "
             f"{engine.RUNNING_COUNT}; the bar is p < 0.05 / {engine.RUNNING_COUNT} = {engine.ALPHA:.6f} (one-sided, "
             "on CLV against Pinnacle's close).", "",
@@ -137,9 +184,18 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
                  "Quotes left out, by reason (a quote is one book's two-sided market at one snapshot; nothing is "
                  "dropped silently):", "",
                  table(pd.DataFrame(sorted(res["drops"].items()), columns=["reason", "quotes"]), ["reason", "quotes"]),
-                 "Games with no final score (kept for CLV, left out of the realized result):", "",
+                 "## Final scores matched, per sport and season (amendment 1, item 8)", "",
+                 table(res["coverage"], ["sport", "season", "games", "matched", "share"], 3)
+                 if res.get("coverage") is not None else "_(none)_\n",
+                 "Games with no final score (kept for CLV, left out of the realized result). "
+                 "`cfb_prefix_name_no_game`: a college name resolved only by the prefix rule and no game was found; "
+                 "`*_team_name_unknown`: a name did not resolve at all:", "",
                  table(pd.DataFrame(sorted(res.get("unmatched", {}).items()), columns=["reason", "games"]),
                        ["reason", "games"]),
+                 _names_line(res), "",
+                 table(res["names"][res["names"].how.isin([outcomes.PREFIX, outcomes.UNRESOLVED])]
+                       if res.get("names") is not None else pd.DataFrame(),
+                       ["sport", "name", "resolves_to", "how", "games"]),
                  "## Primary cells by book (issue #53: which books lag)", "",
                  table(res["books"], ["variant", "book", "bets", "clv_pin_cents", "clv_own_cents", "clv_pin_pts",
                                       "clv_own_pts", "roi"]),
