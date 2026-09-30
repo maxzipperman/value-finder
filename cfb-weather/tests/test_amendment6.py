@@ -134,6 +134,7 @@ def test_the_alert_says_a_game_with_no_time_is_not_eligible_then_alerts_once_its
     assert title == "CFB HIGH TOTAL 66.5, NOT ELIGIBLE (no kickoff time set): Southern Miss @ Troy Sat 10-10 ET"
     assert "not take a game until its kickoff time is set" in body.replace("doesn't", "does not")
     assert "No bet." in body and "UNDER" not in title
+    assert "the schedule has no kickoff time set for this game" in body and "placeholder" not in body
     # Game day: the time is set, and the last scheduled run before the real kickoff alerts as Rule HT always has
     set_clock(monkeypatch, last_run_before(REAL_KICK))
     timed = board_row(start_utc=REAL_KICK, kick_et="Sat 10-10 19:30", rule_ht="SIGNAL", lead_days=0)
@@ -188,9 +189,9 @@ def ht(out):
     return out.split("RULE_HT:")[1].split("Variants under")[0]
 
 
-def sched(gid, total, kick=REAL_KICK):
+def sched(gid, total, kick=REAL_KICK, **kw):
     return dict(game_id=gid, home_points=total - 30, away_points=30, completed=True,
-                start_date=pd.Timestamp(kick).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+                start_date=pd.Timestamp(kick).strftime("%Y-%m-%dT%H:%M:%S.000Z")) | kw
 
 
 def test_a_game_whose_time_is_set_late_enters_at_its_last_quote_with_a_time(tmp_path):
@@ -253,3 +254,85 @@ def test_rule_b_is_unchanged_by_amendment_6(tmp_path):
     out = score(tmp_path, rows, [sched(5, 40), sched(6, 40)])
     rb = out.split("RULE_B:")[1].split("RULE_HT:")[0]
     assert "1 signals, 1 settled" in rb and "mean CLV +1.00" in rb
+
+
+# ------------------------------------------------------------------ a placeholder in the schedule the scorer reads
+@pytest.mark.parametrize("schedule", [
+    dict(kick=PLACEHOLDER),                                 # 00:00 Eastern, no flag column
+    dict(kick=PLACEHOLDER, start_time_tbd=True),            # 00:00 Eastern and the flag, as cfbfastR writes it
+    dict(kick=REAL_KICK, start_time_tbd=True),              # a flag left set on a real time (Oregon-UCLA, 2020)
+])
+def test_a_placeholder_in_the_schedule_is_no_kickoff(tmp_path, schedule):
+    """The review's case: the schedule the scorer reads still carries the placeholder after the game was played, as
+    the final schedule does for Utah State-Robert Morris (Aug 31, 2024). Read as a kickoff, the placeholder (00:00
+    Eastern) was "the earlier kickoff", so the game-day row with the time set was dropped as logged at or after
+    kickoff and the entry fell back to the evening before (68.5, a win at 67). A placeholder is no schedule kickoff:
+    the entry is the game-day row, 64.5 at -105, a loss."""
+    rows = [untimed(1, "2026-10-08T14:30Z", mkt_total=70.5, rule_ht="time_tbd"),
+            row(1, REAL_KICK, "2026-10-09T14:30Z", mkt_total=69.5),                 # time set a day ahead
+            row(1, REAL_KICK, "2026-10-10T02:30Z", mkt_total=68.5),                 # the evening before
+            row(1, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5, mkt_under=-105)]  # game day, an hour before
+    out = score(tmp_path, rows, [sched(1, 67, **schedule)], "--list-excluded")
+    assert "logged at or after kickoff" not in out and "ledger rows: 4; in the test: 4" in out
+    assert "ledger games whose schedule kickoff is cfbfastR's placeholder, read as no schedule kickoff" in out
+    assert "1 signals at the last quote before kickoff, 1 settled, 0 pending, 0 void" in ht(out)
+    assert "record 0-1-0" in ht(out) and "units -1.00" in ht(out)
+    assert "no kickoff time set (amendment 6): 1 quotes" in ht(out)
+
+
+def test_a_schedule_with_a_time_is_read_as_before(tmp_path):
+    """The same rows against a schedule that shows the real time: nothing is read as a placeholder."""
+    rows = [row(1, REAL_KICK, "2026-10-10T02:30Z", mkt_total=68.5),
+            row(1, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5, mkt_under=-105),
+            row(1, REAL_KICK, "2026-10-10T23:45Z", mkt_total=60.5)]                  # after kickoff: dropped
+    out = score(tmp_path, rows, [sched(1, 67, start_time_tbd=False)])
+    assert "cfbfastR's placeholder" not in out.split("RULE_B:")[0]
+    assert "excluded, logged at or after kickoff: 1" in out
+    assert "record 0-1-0" in ht(out)
+
+
+def test_rule_b_reads_a_placeholder_in_the_schedule_as_no_kickoff_too(tmp_path):
+    """Rule B's close is the last quote logged after its entry and before kickoff; with the placeholder read as the
+    schedule's kickoff, the game-day close was dropped and the bet had no primary close."""
+    rows = [row(5, REAL_KICK, "2026-10-08T14:30Z", rule_b="SIGNAL", mkt_total=50.5, rule_ht="below_threshold"),
+            row(5, REAL_KICK, "2026-10-10T20:30Z", mkt_total=49.5, rule_ht="below_threshold")]
+    rb = score(tmp_path, rows, [sched(5, 40, kick=PLACEHOLDER, start_time_tbd=True)]).split("RULE_B:")[1]
+    assert "1 signals, 1 settled" in rb and "mean CLV +1.00" in rb
+
+
+@pytest.mark.parametrize("schedule_kick", ["2026-11-14T05:00:00Z", "2026-11-14T20:00:00Z"])
+def test_an_eastern_standard_time_placeholder(tmp_path, schedule_kick):
+    """After the clock change the placeholder is 05:00 UTC (00:00 EST). Rows logged at it are not Rule HT quotes,
+    whether the schedule the scorer reads still shows the placeholder or the real time (3:00 PM Eastern)."""
+    est, real = pd.Timestamp("2026-11-14T05:00:00Z"), pd.Timestamp("2026-11-14T20:00:00Z")
+    rows = [row(3, est, "2026-11-12T15:30Z", wx_src="time_tbd", rule_b="time_tbd", mkt_total=70.5),
+            row(3, est, "2026-11-14T03:30Z", wx_src="time_tbd", rule_b="time_tbd", mkt_total=70.5),  # evening before
+            row(3, real, "2026-11-14T15:30Z", mkt_total=64.5)]                                       # game day, timed
+    out = score(tmp_path, rows, [sched(3, 67, kick=schedule_kick)])
+    assert "logged at or after kickoff" not in out
+    assert "1 signals at the last quote before kickoff, 1 settled, 0 pending, 0 void" in ht(out)
+    assert "record 0-1-0" in ht(out)
+    assert "no kickoff time set (amendment 6): 2 quotes" in ht(out)
+    assert "its last quote would have signalled: 0" in ht(out)
+
+
+def test_a_real_kickoff_more_than_24_hours_after_the_placeholder(tmp_path):
+    """A known limit (section 3). Hawai'i-New Mexico, Oct 17, 2026, has no time set; its placeholder is 04:00 UTC Oct
+    17. Set at 7:00 PM Hawaii time, the kickoff is 05:00 UTC Oct 18, 25 hours later, so the rows logged with the time
+    are a second listing (amendment 4, section 10). That listing is graded as usual; the listing logged before the
+    time was set is counted as never logged with a kickoff time, although the game was: the count is spurious here."""
+    ph, hi = pd.Timestamp("2026-10-17T04:00:00Z"), pd.Timestamp("2026-10-18T05:00:00Z")
+    rows = [row(9, ph, "2026-10-15T14:30Z", wx_src="time_tbd", rule_b="time_tbd", rule_ht="time_tbd"),
+            row(9, ph, "2026-10-16T02:30Z", wx_src="time_tbd", rule_b="time_tbd", rule_ht="time_tbd"),
+            row(9, hi, "2026-10-17T14:30Z", mkt_total=67.5),
+            row(9, hi, "2026-10-18T02:30Z", mkt_total=66.5)]             # 7:30 PM Pacific, the last run before
+    out = ht(score(tmp_path, rows, [sched(9, 60, kick=hi)]))
+    assert "1 signals at the last quote before kickoff, 1 settled, 0 pending, 0 void" in out
+    assert "record 1-0-0" in out
+    assert "no kickoff time set (amendment 6): 2 quotes" in out
+    assert "its last quote would have signalled: 1 (9)" in out                  # the spurious count
+    # Set at 00:00 Eastern instead, the real kickoff reads as the placeholder: never eligible, and counted
+    rows = [row(9, ph, "2026-10-15T14:30Z", wx_src="time_tbd", rule_b="time_tbd", rule_ht="time_tbd"),
+            row(9, ph, "2026-10-16T02:30Z", mkt_total=66.5, rule_ht="time_tbd")]
+    out = ht(score(tmp_path / "midnight", rows, [sched(9, 60, kick=ph)]))
+    assert "0 signals" in out and "its last quote would have signalled: 1 (9)" in out

@@ -645,7 +645,8 @@ def game_fills(scr: Screen, project: str, game_id: str) -> list[dict]:
 
 
 FIRST_SEEN = {"ruleb": ("rule_b", "SIGNAL"), "ruleb_secondary": ("rule_b", "SIGNAL_SECONDARY"),
-              "leanUNDER": ("lean", "UNDER lean"), "leanOVER": ("lean", "OVER lean"), "ht": ("rule_ht", "SIGNAL")}
+              "leanUNDER": ("lean", "UNDER lean"), "leanOVER": ("lean", "OVER lean"), "ht": ("rule_ht", "SIGNAL"),
+              "ht_time_tbd": ("rule_ht", "time_tbd")}   # cfb-weather amendment 6 (draft)
 
 
 def game_alerts(scr: Screen, project: str, L, game_id: str, last: dict) -> dict:

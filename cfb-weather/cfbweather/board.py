@@ -117,7 +117,8 @@ def no_kickoff_time(tbd, start_utc):
     """Amendment 6: True where the game has no kickoff time set. cfbfastR gives such a game a placeholder of
     midnight Eastern on its date and flags it (start_time_tbd, the flag behind Rule B's "time_tbd"). Either one
     means no time: the flag, or a kickoff at exactly 00:00:00 Eastern. (A real midnight kickoff, a Hawaii night
-    game, is listed at 23:59; no FBS game in 2016-25 kicked off at 00:00 Eastern without the flag.)"""
+    game, is listed at 23:59; no FBS game in 2016-25 kicked off at 00:00 Eastern without the flag. That is a habit of
+    the feed, not a guarantee: 17 Hawai'i home games in 2006-14 did, and such a game would read as having no time.)"""
     start = pd.to_datetime(pd.Series(start_utc), utc=True)
     et = start.dt.tz_convert("America/New_York")
     midnight = et.dt.hour.eq(0) & et.dt.minute.eq(0) & et.dt.second.eq(0)

@@ -144,10 +144,9 @@ def game_alerts(r, game, now):
         out.append(("ht_time_tbd", f"CFB HIGH TOTAL {r.mkt_total:.1f}, NOT ELIGIBLE (no kickoff time set): "
                                    f"{r.away_team} @ {r.home_team} {r.kick_et[:9]} ET",
                     f"The total is at least {r.ht_threshold:.1f} and the under is {r.mkt_under:+.0f}, but the schedule "
-                    f"has no kickoff time for this game yet (the midnight shown is a placeholder). Rule HT doesn't "
-                    f"take a game until its kickoff time is set (cfb-weather amendment 6). No bet. If the time is "
-                    f"set, the game is eligible from the next run, and Rule HT alerts on the last scheduled run "
-                    f"before the real kickoff."))
+                    f"has no kickoff time set for this game. Rule HT doesn't take a game until its kickoff time is "
+                    f"set (cfb-weather amendment 6). No bet. If the time is set, the game is eligible from the next "
+                    f"run, and Rule HT alerts on the last scheduled run before the real kickoff."))
     if r.rule_b == "SIGNAL":
         shop = (f" Best under at this number: {r.best_under:+.0f} ({r.best_under_book})."
                 if pd.notna(r.best_under) and r.best_under > r.mkt_under else "")
