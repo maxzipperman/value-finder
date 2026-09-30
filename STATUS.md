@@ -20,7 +20,7 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 ## Forward tests (the scoreboard)
 
-The live Mac (the one that runs the scheduled jobs): the MacBook Air.
+The live Mac (the one that runs the scheduled jobs): the Mac Studio (since Sep 30, 2026, moved by ops/MOVE_TO_NEW_MAC.md, "Route A, one way"). The MacBook Air runs none of them.
 
 | Rule | Scored from | Signals so far | Decision |
 |---|---|---|---|

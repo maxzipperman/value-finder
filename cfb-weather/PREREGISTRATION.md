@@ -655,7 +655,7 @@ captured close; section 2 enforces amendment 4's test end (section 4). The rules
 `cfb-v3-2026-09-28`, because the board behaves exactly as before; only `scripts/score_forward.py` changes, and none
 of the files shared with nfl-weather does. Nfl-weather amendment 8 makes the same repair of the NFL scorer. Where
 this amendment and any earlier text differ, this one applies; the last section lists every earlier sentence it
-changes. To be registered by the hub on the owner's standing instruction of September 29, 2026 (the hub decides
+changes. Registered by the hub on the owner's standing instruction of September 29, 2026 (the hub decides
 questions of how the tests are graded and reports them; money, and any rule's trigger, gate or price cap, stay the
 owner's). The owner can change any reading here by a dated amendment made before the first outcome it would affect.
 

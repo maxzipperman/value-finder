@@ -823,7 +823,7 @@ end, checked the same way, already follows the schedule. The rules version stays
 behaves exactly as before; only `scripts/score_forward.py` changes, and none of the files shared with cfb-weather
 does. Cfb-weather amendment 6 makes the same repair of the college football scorer, where the captured close can be
 Rule B's primary close. Where this amendment and any earlier text differ, this one applies; the last section lists
-every earlier sentence it changes. To be registered by the hub on the owner's standing instruction of September 29,
+every earlier sentence it changes. Registered by the hub on the owner's standing instruction of September 29,
 2026 (the hub decides questions of how the tests are graded and reports them; money, and any rule's trigger, gate or
 price cap, stay the owner's). The owner can change any reading here by a dated amendment made before the first
 outcome it would affect.

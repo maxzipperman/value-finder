@@ -274,10 +274,13 @@ def norm(text):
     return " ".join(text.replace("**", "").replace("`", "").split())
 
 
-def test_amendment_6_is_a_dated_draft_that_repairs_registered_rules_and_quotes_what_it_replaces():
+def test_amendment_6_is_registered_and_repairs_registered_rules_and_quotes_what_it_replaces():
     whole = (ROOT / "PREREGISTRATION.md").read_text()
     head, text = whole.split("## Amendment 6 ")[0], whole.split("## Amendment 6 ")[1].split("\n## ")[0]
-    assert text.startswith("(registered 2026-09-30 Pacific, before ")        # registered by the hub, Sep 30
+    assert text.startswith("(registered 2026-09-30 Pacific, before the first eligible game on Oct 1, 2026, 5:00 PM Pacific)")
+    assert "by the merge of pull request 90" in text
+    assert "DRAFT, not registered" not in text
+    assert "To be registered by the hub" not in text
     t = norm(text)
     assert "This amendment repairs two registered rules and changes no threshold, gate or decision rule" in t
     assert "0 variants" in t and "on the day it was written it is 288, so the multiple-testing bar is p < 0.000174" in t
