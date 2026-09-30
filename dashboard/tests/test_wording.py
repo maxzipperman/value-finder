@@ -59,7 +59,7 @@ def test_college_football_is_written_out_in_every_sentence(root, home):
     (fwd / "decisions.csv").write_text("")                             # empty
     store = make_store(root, home)
     answers = [api.summary(store), api.home(store), api.board(store), api.jobs_screen(store), api.tests_screen(store),
-               api.research(store), api.game(store, "401000002")[1]]
+               api.research(store), api.game(store, "401000002")[1], api.signals_screen(store)]
     said = list(strings(answers))
     assert "The college football run record has 1 row logged later than now, which is left out; check the Mac's " \
            "clock." in said
@@ -69,6 +69,23 @@ def test_college_football_is_written_out_in_every_sentence(root, home):
     assert [s for s in said if re.search(r"\bCFB\b", s)] == []
     assert api.game(store, "401000002")[1]["game"]["sport"] == "College football"      # the game's header line
     assert {g["sport"] for g in api.board(store)["games"]} == {"NFL", "CFB"}           # the tag beside a game
+
+
+def test_the_new_screens_speak_plainly(root, home):
+    """Sentence case, no exclamation marks, "college football" in a sentence, and none of the scorer's own words
+    (FINAL, INTERIM, RULE_B, CLV) in what the Signals screen and Home's live panel say."""
+    from conftest import rich_store
+    store = rich_store(root, home)
+    panel = {k: v for k, v in api.home(store).items() if k.startswith("live")}      # Home's own words are the hub's
+    said = [s for s in strings([api.signals_screen(store), panel], skip=(
+        "sport", "id", "sport_key", "game_id", "text", "error", "log_line", "log_lines", "value", "rule", "result",
+        "badge", "kind", "rule_kind", "kick_utc", "logged_utc", "last_written_utc", "generated_utc", "health",
+        "bar")) if s]
+    assert not [s for s in said if "!" in s]
+    assert not [s for s in said if re.search(r"\bCFB\b|\bFINAL\b|\bINTERIM\b|RULE_B|RULE_HT|\bCLV\b", s)]
+    sentences = [s for s in said if " " in s and s.endswith(".")]
+    assert sentences and all(s[:1].isupper() or s[:1] in "+−0123456789" for s in sentences), [
+        s for s in sentences if not (s[:1].isupper() or s[:1] in "+−0123456789")]
 
 
 def test_the_evidence_list_writes_college_football_out():
@@ -85,7 +102,8 @@ def test_a_lean_the_model_never_ran_is_not_no_lean(root, home, src, said):
            nfl_row(LATE_NFL, "2026_05_LV_LAC", "2026-10-04", "16:05", "LV", "LAC", "not_outdoor" if src != "era5"
                    else "no_trigger", src=src, wind="" if src != "era5" else "8.1") + "\n")
     g = {g["game_id"]: g for g in api.board(make_store(root, home))["games"]}["2026_05_LV_LAC"]
-    assert g["rules"][1] == {"rule": "Model lean", "value": "", "words": said, "signal": False, "lean": False}
+    assert g["rules"][1] == {"rule": "Model lean", "value": "", "words": said, "signal": False, "lean": False,
+                             "badge": ""}
     assert words.status_words("lean", "UNDER lean", src) == "Leans under"           # a logged lean is as logged
 
 

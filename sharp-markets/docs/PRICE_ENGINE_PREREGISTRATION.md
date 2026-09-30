@@ -40,11 +40,11 @@ Both are "beat the close" rules: the bet is placed hours or days before kickoff,
 | Pull | F1 (`sharp-markets/config/odds5m.yaml`): featured markets, a snapshot at 16:00 UTC on each of the 7 days before each kickoff, plus each game's close (the last 5-minute grid point at least 5 minutes before kickoff). Every snapshot lists every game of that sport, so a game is also seen at every other game's close: on a college Saturday that is every half hour to few hours. |
 | Sports | NFL and college football, **analysed separately**. |
 | Markets | Full-game moneyline (h2h), spread and total. |
-| Seasons | 2020–2025, regular season and postseason. **2026 is sealed**: `bulk.load_rows` leaves it out, the backtest never asks for it, and it never loads 2026 scores (a test checks all three). |
+| Seasons | 2020–2025, regular season and postseason (see amendment 1). **2026 is sealed**: `bulk.load_rows` leaves it out, the backtest never asks for it, and it never loads 2026 scores (a test checks all three). |
 | Sharp books (the fair price) | Pinnacle; LowVig and BetOnline for the blend. |
 | Retail books (the flags) | DraftKings, FanDuel, BetMGM, Caesars (`williamhill_us`), Fanatics, BetRivers, ESPN BET: F1's ten books minus the three sharp ones. LowVig and BetOnline are never treated as retail. |
-| Window | Snapshots from 7 days before kickoff up to kickoff. Featured snapshots also list games further out; F1 wasn't built to cover them, so those quotes are dropped and counted. |
-| Final scores | The repo's processed game tables (nflverse and cfbfastR), 2020–25 only. A game with no matched score still counts for CLV and is left out of profit and loss, with its reason logged. |
+| Window | Snapshots from 7 days before kickoff up to kickoff. Featured snapshots also list games further out; F1 wasn't built to cover them, so those quotes are dropped and counted (see amendment 1). |
+| Final scores | The repo's processed game tables (nflverse and cfbfastR), 2020–25 only. A game with no matched score still counts for CLV and is left out of profit and loss, with its reason logged (see amendment 1). |
 
 ## 3. The fair price
 
@@ -69,15 +69,15 @@ Both are "beat the close" rules: the bet is placed hours or days before kickoff,
 | Flag | Rule | Versions |
 |---|---|---|
 | H1 | The retail side's EV against the fair price is **at least 1%, 2% or 3%**. These are the only three thresholds, and **2% is primary**. | Pinnacle (primary) and blend, for totals, spreads and moneylines, for NFL and CFB. |
-| H2 | A retail total **at least 1.0 point** on the good side of Pinnacle's total at the same snapshot, at **−115 or better** (decimal 1.87 or more). | Totals only, NFL and CFB. |
+| H2 | A retail total **at least 1.0 point** on the good side of Pinnacle's total at the same snapshot, at **−115 or better** (decimal 1.87 or more) (see amendment 1). | Totals only, NFL and CFB. |
 
-**H2's weakest flags are negative EV at Pinnacle's own price.** Take Pinnacle at 44.5, 1.95 / 1.95 (a fair 50%), and a retail under at 45.5 for −115. Under the registered conversion the under at 45.5 wins 52.4% of decided NFL bets and 52.2% of CFB bets. At −115 that is an EV of **−1.9% (NFL) and −2.3% (CFB)**; at −110 it is about even (+0.1% and −0.3%). A bigger gap or a better price turns it positive. So if Pinnacle is right, H2's minimum flags should show *negative* CLV against Pinnacle's close, about −1 cent, and H2 passes only if the average flag had value or the lagging books really do trail Pinnacle. Whether H2 should also require a non-negative EV at Pinnacle's price is owner decision 7.
+**H2's weakest flags are negative EV at Pinnacle's own price.** Take Pinnacle at 44.5, 1.95 / 1.95 (a fair 50%), and a retail under at 45.5 for −115. Under the registered conversion the under at 45.5 wins 52.4% of decided NFL bets and 52.2% of CFB bets. At −115 that is an EV of **−1.9% (NFL) and −2.3% (CFB)**; at −110 it is about even (+0.1% and −0.3%) (see amendment 1). A bigger gap or a better price turns it positive. So if Pinnacle is right, H2's minimum flags should show *negative* CLV against Pinnacle's close, about −1 cent, and H2 passes only if the average flag had value or the lagging books really do trail Pinnacle. Whether H2 should also require a non-negative EV at Pinnacle's price is owner decision 7.
 
 **No snapshot at or after kickoff is ever an entry.** A snapshot is dropped if it is at or after the kickoff it lists itself, or the kickoff listed in the game's latest snapshot, in-play snapshots included (kickoffs move). Tests check this, including a kickoff that moved earlier and one that moved later.
 
 ## 5. Entries: one bet per game, market and side
 
-For each variant, the bet on a game, market and side is the **first snapshot at which that side is flagged**, at the flagged retail book with the best EV. For H2 it goes to the biggest gap, then the best price. The price taken is that book's posted price at that snapshot. Later flags on the same side of the same game are not extra bets.
+For each variant, the bet on a game, market and side is the **first snapshot at which that side is flagged**, at the flagged retail book with the best EV. For H2 it goes to the biggest gap, then the best price (see amendment 1). The price taken is that book's posted price at that snapshot. Later flags on the same side of the same game are not extra bets.
 
 **Only snapshots more than 60 minutes before kickoff can be entries.** The close is what every bet is graded against. A flag first seen at the close would have a CLV equal to its own EV by construction, which is the circularity the plan review warned about, so the close is never an entry.
 
@@ -92,10 +92,10 @@ For each variant, the bet on a game, market and side is the **first snapshot at 
 | CLV against the entry book's own close, in cents | The same arithmetic against that book's own no-vig closing price. This is #53's check: did the lagging book move to where Pinnacle already was? It is condition A6 for H2 and reported for H1. |
 | CLV in points (spreads and totals) | Against Pinnacle's close and against the book's own close. Positive when the close moved toward the bet: a lower total for an under, a higher total for an over, a bigger number for the side taken on a spread. It needs no conversion, so the report prints it next to CLV in cents. |
 | What an efficient Pinnacle implies | For each bet, its EV at Pinnacle's price divided by the decimal price taken, in cents (about 1 cent for a 2% flag). The report prints the cell's average (`clv_pin_expected`) next to its CLV; section 7 explains why. |
-| Realized result at the price taken | Flat one-unit bets: win rate, ROI (pushes left out) and a 95% interval. |
+| Realized result at the price taken | Flat one-unit bets: win rate, ROI (pushes left out) and a 95% interval (see amendment 1). |
 | The close | A book's quote in its last snapshot before kickoff, only if that snapshot is within 60 minutes of kickoff. F1's close is 5 to 10 minutes before. A bet whose book, or Pinnacle, has no close is left out of that CLV column and counted: the report prints how many bets each cell graded (`clv_pin_n`) next to its bet count. |
 
-Standard errors are clustered by game throughout.
+Standard errors are clustered by game throughout (see amendment 1).
 
 **Spread closes at another number.** Spread lines move often: in the repo's SBR NFL data, only 18.4% of spreads close on their opening number (740 of 4,020 games, 2007–21). The first draft graded a spread bet only when Pinnacle closed on the bet's number. That left out most spread bets, and it left out exactly the ones where Pinnacle later moved to the retail book's side, the failure section 7 says this test catches. So a moved close is converted, with the same "only the mass between the numbers" rule as totals:
 
@@ -117,16 +117,16 @@ Each **primary cell** is judged on its own: H1 at the 2% threshold against Pinna
 **Kill: the idea is dropped for that cell** if any one of these holds:
 
 - K1. Mean CLV against Pinnacle's close is at or below zero.
-- K2. Realized ROI's 95% interval lies entirely below zero.
-- K3. With the book that has the most bets removed, mean CLV is at or below zero, or no bets are left. One book carries it.
+- K2. Realized ROI's 95% interval lies entirely below zero (see amendment 1).
+- K3. With the book that has the most bets removed, mean CLV is at or below zero, or no bets are left (see amendment 1). One book carries it.
 - K4. With the season that has the highest mean CLV removed, mean CLV is at or below zero, or no bets are left. One season carries it.
 
 **Act: this justifies a pre-registered paper forward test on the 2026 season** only if nothing kills the cell and all of these hold:
 
-- A1. Mean CLV against Pinnacle's close is above zero with **one-sided p < 0.05 / 271 = 0.000185**.
-- A2. At least 3 seasons have 20 or more bets, and CLV is above zero in all of those seasons but at most one.
+- A1. Mean CLV against Pinnacle's close is above zero with **one-sided p < 0.05 / 271 = 0.000185** (see amendment 1).
+- A2. At least 3 seasons have 20 or more bets, and CLV is above zero in all of those seasons but at most one (see amendment 1).
 - A3. CLV is above zero on the bets where Pinnacle's market was updated at least as recently as the retail book's. Where Pinnacle's quote is older than the book's, the gap may be Pinnacle being stale; either timestamp missing counts as stale.
-- A4. CLV is above zero on the bets with EV below 10%. The fattest prices are the ones a book is likeliest to void as obvious errors.
+- A4. CLV is above zero on the bets with EV below 10% (see amendment 1). The fattest prices are the ones a book is likeliest to void as obvious errors.
 - A5. H1 only: the blend version's 2% cell also has CLV above zero.
 - A6. H2 only: mean CLV against the lagging book's **own** close is above zero. Issue #53 asks that H2 be graded on exactly this: did the book that held the old number move to where Pinnacle already was? For H1 it is reported and decides nothing (owner decision 6).
 
@@ -193,7 +193,7 @@ Decided September 29, 2026, at registration, on the owner's standing instruction
 
 1. **Decide on CLV, with ROI as a veto, as in section 7.** This replaces the data-use plan's "ROI with a 95% interval above zero". The ROI rule would reject a true 2% edge about 9 times in 10 (section 9).
 2. **All 38 variants are counted; the running count is 271 and the bar is p < 0.000185.** Netting out the 9 price-engine variants the data-use plan already counted would give 262 and 0.000191. Counting all 38 is the conservative choice, and the two bars barely differ.
-3. **If a college football totals cell reaches "act", a paper forward test of that cell is registered for the 2026 season before its first eligible kickoff; otherwise the live log is descriptive only in 2026.** The plan review says both CFB 2026 slots are already taken (Rule B and Rule HT), but the live log costs no credits and no money, and a CLV test is decidable in a few hundred bets.
+3. **If a college football totals cell reaches "act", a paper forward test of that cell is registered for the 2026 season before its first eligible kickoff; otherwise the live log is descriptive only in 2026 (see amendment 1).** The plan review says both CFB 2026 slots are already taken (Rule B and Rule HT), but the live log costs no credits and no money, and a CLV test is decidable in a few hundred bets.
 4. **No money goes on this rule until a paper forward test of it has been decided.** This is the project's standing rule (CLAUDE.md). Only the owner can change it, by a dated amendment. A backtest pass earns a paper test, and under the repo's own rules real money waits for that test's decision. The earliest honest path to a real CFB bet is a pass on Oct 1–2, a paper test from mid-October, and a decision when its bet count is reached, which is likely late 2026 at the earliest and more likely 2027.
 5. **Books F1 never saw (Bovada, Hard Rock Bet) are logged and left out of every decision.** Bovada is also offshore, which is not one of the venues the owner named (US regulated books, Kalshi, Pinnacle).
 6. **Option (a): Pinnacle's close decides H1; the book's own close is reported for H1 and required for H2 (A6).** The data-use plan asked for CLV to the soft book's own close, because CLV to Pinnacle is "tautological when Pinnacle defines the flag"; this switches the main test to Pinnacle's close. The cost of that switch in numbers: if Pinnacle is right, a 2% flag is expected to show about 1.03 cents of CLV against Pinnacle's close (1.28 cents at 2.5%), and a cell of about 425 to 660 bets would pass A1 almost automatically (section 7). Option (a) catches the main failure, Pinnacle being the slow side. But a pass under (a) means less than it sounds: it says Pinnacle wasn't the slow side, not that Pinnacle's close is right. Not chosen:
@@ -256,6 +256,188 @@ If nothing reaches "act", the same log can still run descriptively. It supplies 
 
 - **Issue #53, task 1: measure the lag from the live logs** (how often a book sits a point off Pinnacle, how long the gap lasts on the poller's 10-minute grid, which books lag, and whether the lagging number beats the book's own close and Pinnacle's). **Blocked, for two reasons.** The live logs don't carry the fields yet: on September 29 neither live `data/forward/` folder has a `trigger_polls.csv`, and neither `ledger.csv` has the `ref_total`, `best_line` or `ev_best_line` columns that PR #50 added. And every one of those rows is 2026 data, which is sealed until a forward test is registered before its first eligible game. It can start once the alert jobs run the #50 code and a forward test (decision 3) is registered.
 - **Issue #53, task 2 (the F1 version)** waits for F1 (October 1). The code is ready.
+
+---
+
+## Amendment 1 (2026-09-30 Pacific, before any F1 data exists; nobody has seen an F1 price)
+
+**Who registers it.** The hub, on the owner's standing instruction of September 29, 2026. It is registered when the hub merges it, before the F1 pull on October 1, 2026.
+
+**Why.** On September 29, 2026 an outside audit looked at this engine (Gemini audit 3, as the owner pasted it: `notes/gemini-audit-3-as-pasted.md` on the `hub-briefs` branch), and the hub ran three checks of its own the same day, all under `handoff/price-engine/` on that branch:
+
+- **The claims check** (`the-audits-claims.json`): 55 tests on made-up data, from `claims/test_pe_mine.py`, each shown to fail on deliberately broken code. (The brief's count of 74 also counts the weather scorers' 19 tests, which are outside this amendment.) It found twelve defects, D1 to D12. The audit's own scripts mostly printed rather than tested (D12), so this amendment rests on the checker's tests, not on the audit's list of what held up.
+- **The names check** (`team-names.json`, with `names/alias_proposal.csv`): how the engine turns The Odds API's college team names into the schools in the score table.
+- **The full-size run** (`full-size-run.json`): the engine on a made-up cache the size and shape of F1.
+
+No F1 data exists and nobody has seen an F1 price, so nothing here was chosen by looking at a result.
+
+**Astra's audit 3** (`notes/astra-audit-3.md` on the `hub-briefs` branch), an independent audit of this amendment as it stood on September 29, 2026 (commit 8ce9b34), found that items 1 to 5 passed its own tests: A2's code agreed with its own arithmetic on 10,000 random made-up cells; the `--fixture` outputs matched the registered code's (`dropped.csv` byte for byte, the same bets, and every existing value of `results.csv`, beside item 1's new column); and staged runs attributed every changed number to an item, the quotes and bets to item 2, the final scores to item 8 and the rest to items 1 and 3. It found, as this amendment already says, that items 2 and 8 are not monotone. Two of its findings are fixed here: its finding 3 (the names-only preflight read the score columns and dropped games without a final score, so which events it matched depended on whether a result existed) in item 8, and its finding 4 (section 4's −115 example) in item 7.
+
+**What stays the same.** Still 38 variants, 8 of them deciding. The running count stays 271 and the bar p < 0.05 / 271 = 0.000185. (The higher counts in STATUS.md come from tests added after this registration. They don't move this test's bar.) No threshold, flag, entry rule or grading rule changes. What each item can do to a verdict:
+
+- **Items 1, 3 and 4** can only make a verdict harder to reach.
+- **Items 5, 6 and 7** change no result. Item 5 leaves the 2026 rows out as the file is read instead of just after, which changes no number. Items 6 and 7 write down readings and numbers already in force.
+- **Items 2 and 8** repair loading and matching. They add quotes and final scores that were wrongly lost, so a verdict can move in either direction, toward "act" as well as toward "kill". An adversarial review of this amendment built made-up cells where each repair turns "kill" into "act". Both repairs were made before any F1 data exists, so nobody can know which way they will move a verdict.
+- **Item 9** is a record, with no code.
+
+The hub's decision text of September 29 says that every decision "either states what the code already does, repairs loading, or makes a verdict HARDER to reach. None makes one easier." That last sentence is corrected here for items 2 and 8, and the hub confirms the correction when it registers this amendment.
+
+The tests for this amendment are `sharp-markets/tests/test_price_engine_amendment1.py`, plus the checker's tests, brought in as `sharp-markets/tests/test_price_engine_checks.py`. The checker's tests that asserted a defect are turned round to assert the repair.
+
+### Item 1. Which seasons count for A2 (defect D2). Code changed.
+
+A2 reads: "At least 3 seasons have 20 or more bets, and CLV is above zero in all of those seasons but at most one." That sentence counts every bet. The code counted only the bets that have a Pinnacle close. The checker built two made-up cells to show the two readings disagree. In one, the sentence passes a cell the code fails. In the other, the code passes a cell the sentence fails. From now on A2 uses the reading that satisfies both:
+
+- **A season is counted** when it has 20 or more bets.
+- **A counted season is above zero** only when 20 or more of its bets have a Pinnacle close and the mean CLV of those bets is above zero.
+- **A2 holds** when three things are true: at least 3 seasons are counted, at least 3 seasons have 20 or more bets with a Pinnacle close, and every counted season but at most one is above zero.
+
+A cell that passes this A2 passes both earlier readings. So nothing can pass now that either reading would have failed. The tests show this on the checker's two cells, on two cells of our own and on 400 random made-up cells.
+
+*Example.* 2020, 2021 and 2022 each have 50 bets, all with a Pinnacle close, at +2 cents. 2023 has 22 bets, and only 18 of them have a Pinnacle close. 2023 is counted, because it has 22 bets. It can't be above zero, because only 18 of its bets have a close. It is the one season A2 lets miss, so A2 holds. If 2024 looked like 2023 as well, that would be two misses, and A2 would fail. The checker's cell of 50, 50 and 22 bets (18 with a close) fails, because only 2 seasons have 20 or more closes.
+
+`results.csv` now prints `seasons_counted` (20 or more bets), `seasons_20_closes` (20 or more bets with a Pinnacle close) and `seasons_positive` (counted seasons above zero).
+
+### Item 2. Reading F1 (defect D1). Code changed.
+
+F1 is now read **one call at a time**. Before about September 18, 2022, The Odds API kept one snapshot every 10 minutes and answered each request with the latest snapshot at or before the requested time. So two F1 calls 5 minutes apart can get back the same snapshot. The code read 50 calls at a time and grouped each book's prices by game, snapshot, book and market. Two copies of one snapshot made a group of four prices instead of two, and the whole group was thrown away (logged as `*_not_two_outcomes`, the wrong reason). Whether that happened depended on where the batch of 50 happened to end.
+
+Now a snapshot that two calls returned is read once, wherever the two calls fall. The first call that returns a snapshot of a sport is read. Every quote of a later call that returns the same snapshot is counted once, as `duplicate_snapshot`, before any other reason. So no quote is counted twice: a second copy of a quote listed after its kickoff is not also counted as `at_or_after_kickoff`. The count `duplicate_snapshot_conflicting_price` is part of `duplicate_snapshot`, not a further drop: it counts the repeated quotes whose price differs from the copy kept, among quotes that pass the early checks (a repeated copy that differs only in kickoff or outcomes, or that is cut early, is not compared; F1 should never return two different copies of one snapshot).
+
+*Example.* On a college Saturday in 2021, the 16:00 UTC daily call and the 15:55 close call for the noon Eastern games can both get back the 15:55 snapshot (if the 10-minute grid sat at :x5; nobody knows which minute it sat on). Before, every game's prices in that snapshot were dropped: the noon games lost their close, and every other game lost that morning's entry snapshot. Now one copy is kept.
+
+*Proof that nothing else moves.* On input with no repeated snapshot, the loading repair alone (the registered code with only `quotes.py` replaced) gives `results.csv`, `dropped.csv` and `bets.parquet` byte for byte as the registered code does. That was checked on the engine's `--fixture`, on a made-up cache of 568 F1 calls from 2021 and 2024, and on the 242 calls after September 1, 2022 of the reviewer's made-up cache. With the whole amendment, `dropped.csv` and `bets.parquet` are still byte for byte the same on that input (with the alias table emptied for the reviewer's cache, whose made-up names need it: item 8 adds scores there). `results.csv` differs only in the columns items 1 and 3 change (`seasons_counted`, `top_book` and `clv_pin_wo_top_book`, plus the new `seasons_20_closes`), and no decision moved.
+
+On the reviewer's made-up cache of 380 calls, where 16 snapshots were each returned to two calls, the registered code dropped 22,406 groups as `*_not_two_outcomes` (each group held two copies of one quote). The repaired code keeps one copy and counts 27,827 quotes as `duplicate_snapshot`. That is every quote of every second copy, including the ones that would otherwise have been counted as listed after kickoff or as more than 7 days before it. Quotes read, counted call by call, equal quotes kept plus every drop reason (431,910 = 251,400 + 180,510), so no quote is counted twice. Time is about the same and memory goes down (item 9).
+
+### Item 3. K3 when books tie (defect D4). Code changed.
+
+K3 removes "the book that has the most bets". When two or more books tie for the most bets, each tied book is removed in turn. K3 kills if any one of those removals leaves the mean CLV at or below zero, or leaves no bets. As coded, "no bets" means no bet with a Pinnacle close, the same as for a single top book. `top_book` in `results.csv` lists every tied book, joined by "+". Before, the order of the rows decided which tied book was removed, so the verdict could depend on row order.
+
+*Example.* 60 DraftKings bets average +3 cents and 60 FanDuel bets average −1 cent. Removing DraftKings leaves −1, so K3 kills, whatever the row order. Before, one order killed the cell and the other did not.
+
+### Item 4. K2 needs results (defect D3). Code changed.
+
+K2 kills a cell when the 95% interval of its realized return lies entirely below zero. That needs final scores, and a cell with few or none could never be killed by K2. From now on, **a primary cell with fewer than 100 bets that have a final score cannot reach "act"**. Its verdict is "inconclusive: too few results to check the return". A bet counts toward the 100 only if it has a final score and won or lost. A push returns the stake and is left out, as it is in the return itself. `results.csv` already calls this count `graded`. **This is stricter than the hub's decision text**, which speaks of "bets with a final score": a push has a final score but is not counted here. Leaving pushes out can only make "act" harder to reach, and the hub confirms this reading when it registers the amendment. The kill rules K1 to K4 are checked first and still kill such a cell; this rule only stops it from acting. The report's main table now shows `graded` for every cell, with `pushes` beside it.
+
+*Example.* A cell has 150 bets, all with a Pinnacle close, but final scores were matched for only 40 of them. Before, K2 could fire on only those 40 results, and if it didn't, the cell could "act". Now it is "inconclusive: too few results to check the return".
+
+### Item 5. No 2026 row reaches the engine (defect D7). Code changed.
+
+Section 2 says the backtest "never loads 2026 scores". Before, three readers of the game tables read every row, 2026 included: the two score readers, which dropped the 2026 rows afterwards, and the reader of the spread margin table (`model.spread_pairs_from_tables`), which keeps only 1999 to 2019 (2006 to 2019 for college) and runs only when that frozen table is rebuilt. Now all three filter on the season as the file is read, so no 2026 row reaches the engine. (The file reader, pyarrow, may still decode a block of the file before it applies the filter; what it hands over holds no 2026 row.) The checks after the read stay as a second layer. Nothing from 2026 ever reached an output, before or now, and the frozen spread table's hashes are unchanged for both sports (a test).
+
+*Example.* A table with a 2024 row and a 2026 row: the reader receives only the 2024 row. The tests check all three readers, for the NFL and college football.
+
+### Item 6. What "act" means for a cell other than college football totals (the audit's finding 1). No code.
+
+Decision 3 names a college football totals cell because totals are the only market the live alert jobs log. For any other primary cell that reaches "act" (NFL totals, spreads or moneylines, NFL H2, or college spreads or moneylines), section 7 applies as written. The result justifies a paper forward test. That test must be registered before its first eligible game, and it needs a live log of that market. Starting such a log changes the alert jobs' Odds API call and what it costs in credits, and that is the owner's decision. Until a test is registered, nothing is logged toward a decision for that cell. No money goes on it in any case (decision 4).
+
+*Example.* NFL spreads reaches "act" on October 1. Nothing is bet. The hub may propose a paper forward test of NFL spreads, and the owner decides whether the alert job's call adds spreads to feed it.
+
+### Item 7. Numbers and rules the registration did not state (defects D5 and D8, the audit's finding 4). No code, except tests that pin them.
+
+Each row below was checked against the source code and `config/odds5m.yaml` for this amendment. These values are now fixed. Changing any of them is an amendment.
+
+| What | The rule, as coded |
+|---|---|
+| **Final scores, NFL** | The feed's team names become team codes through `config/teams/nfl.csv` and three older names: Washington Football Team and Washington Redskins are WAS, and Oakland Raiders is LV. The two teams must match, in either order. The score table's game day must be within 1 day of the kickoff's date in New York time, using the latest-listed kickoff. There must be exactly one such game; with none the game is logged as `nfl_no_game`, and with two or more as `nfl_ambiguous`. *Example:* a Sunday 8:20 PM Eastern game (01:20 UTC Monday) is matched to Sunday's game. |
+| **Final scores, college** | The two schools (item 8) must match, in either order, and the score table's start time must be within 36 hours of the latest-listed kickoff, 36 hours included. If more than one game qualifies, the nearest is used, and an exact tie goes to the one listed first in the table. *Example:* a game listed 30 hours from the table's start time is matched; one listed 40 hours away is not (`cfb_no_game`). Both sports: the scores are put on the feed's home and away sides. |
+| **The early cut at 9 days** | As each call is read, a quote is dropped if the kickoff listed in its own snapshot is more than 9 days after the snapshot (the 7-day window plus a 2-day margin, `COARSE_MARGIN`). This keeps memory small. After that, the exact rule applies: a quote more than 7 days before the latest-listed kickoff is dropped, and exactly 7 days is kept. *What the cut can drop:* a quote the exact rule would keep, when the game is later moved more than 2 days earlier. *Example:* a day-0 snapshot lists the kickoff on day 10, so it is cut. On day 1 the game moves to day 5, which makes the day-0 quote 5 days out, a quote the exact rule would keep. It is counted as `more_than_7_days_before_kickoff`. The cut only ever removes quotes, so it can't add lookahead. |
+| **Standard errors** | Game-clustered: SE = √(k/(k−1) × Σ over games of (the sum of that game's deviations from the mean)²) / n, for n bets in k games. The factor k/(k−1) is a small-sample correction. With fewer than 2 games there is no SE and no p, and an SE of exactly zero gives no p. |
+| **The one-sided p** | From the normal curve: p = 1 − Φ(mean / SE). A t distribution is not used. |
+| **The 95% return interval** | The mean return ± 1.96 game-clustered SEs of the per-bet profit. It needs at least 2 graded bets (and 2 games); otherwise it is empty and K2 can't fire. |
+| **Thresholds** | The flags are inclusive, with a tolerance of 1e-9: EV ≥ threshold − 1e-9, gap ≥ 1 point − 1e-9, and price ≥ 1 + 100/115 − 1e-9. The decision rules compare strictly: "above zero" means > 0, the bar means p < 0.000185, and K2 kills when the interval's upper end is < 0. A4's cut has no tolerance: its mean CLV is over the bets with an EV at entry below 10%, strictly (`ev_entry < 0.10`), and `bets_ev_10plus` counts the rest (`ev_entry ≥ 0.10`). With no bet below 10%, A4's mean is empty and A4 fails. |
+| **"−115 or better"** | A decimal price of 1 + 100/115 = 1.869565… or more. Section 4's "decimal 1.87" is rounded: 1.8696 counts and 1.8695 doesn't. Section 4's example EVs at −115, −1.9% (NFL) and −2.3% (CFB), come from the rounded price 1.87: at the exact price 1 + 100/115 the same win chances (52.44% NFL, 52.22% CFB) give −1.96% and −2.37%, which round to **−2.0% (NFL) and −2.4% (CFB)** (its −110 figures, +0.1% and −0.3%, stand). |
+| **H2's order, and ties** | At the first flagged snapshot, the bet goes to the flagged book with the biggest gap, then the best price, then the book whose key comes first in alphabetical order. The code ranks by one score, gap × 1000 + price. Totals move in half points, so two gaps differ by 0.5 or more, which is 500 in the score. So the score gives the same order as "gap, then price" as long as the smaller gap's decimal price is less than 500 above the other's. When the smaller gap's price is 500 or more above the other's it can fail (at exactly 500 with gaps 0.5 apart the scores tie and the book name decides), and the smaller gap goes first: a book 1 point off at a decimal price of 1002 (the auditor's case D8) ranks ahead of a book 1.5 points off at 1.95, because 1,000 + 1,002 = 2,002 is more than 1,500 + 1.95 = 1,501.95. The order stays as coded (a test pins it); a price that high is almost certainly an error. For H1, a tie on EV also goes to the book whose key comes first alphabetically. *Example:* FanDuel 1.5 points off at 1.87 beats DraftKings 1 point off at 2.10. |
+| **Batch size** | None. F1 is read one call at a time (item 2). |
+| **Minimums** | `MIN_BETS` = 100: bets, bets with a Pinnacle close, and (item 4) graded bets. `MIN_SEASON_BETS` = 20 (item 1). |
+| **Season windows** | Each game's season is the window below that contains the UTC date of its latest-listed kickoff, both end dates included. A game outside every window is left out and counted as `outside_season_windows`. The 2026 windows are sealed. The windows live in `config/odds5m.yaml`, and a test fails if they change there. |
+
+| Season | NFL window | College football window |
+|---|---|---|
+| 2020 | 2020-09-01 to 2021-02-15 | 2020-08-25 to 2021-01-15 |
+| 2021 | 2021-09-01 to 2022-02-20 | 2021-08-20 to 2022-01-15 |
+| 2022 | 2022-09-01 to 2023-02-20 | 2022-08-20 to 2023-01-15 |
+| 2023 | 2023-09-01 to 2024-02-15 | 2023-08-20 to 2024-01-15 |
+| 2024 | 2024-09-01 to 2025-02-15 | 2024-08-20 to 2025-01-25 |
+| 2025 | 2025-09-01 to 2026-02-15 | 2025-08-20 to 2026-01-25 |
+| 2026 (sealed) | 2026-09-01 to 2027-02-20 | 2026-08-20 to 2027-01-25 |
+
+### Item 8. College team names (the audit's finding 3, the names check). Code changed.
+
+The Odds API calls a college team "School Mascot", and the score table uses the school alone. Before, the engine found the school through cfbfastR's team files, which exist only in the Mac's live checkout. Failing that, it took the longest school name the feed's name starts with (the prefix rule). The prefix rule can pick the wrong school: "Miami RedHawks" went to Miami (Florida), not Miami (Ohio). And a game lost that way was logged as "no game", not as a name problem. Three changes:
+
+- **An alias table is consulted first**, before the team files and the prefix rule. Each row gives a feed spelling, written the way the engine normalizes it (lower case, with accents and punctuation removed, so "Miami (Ohio) RedHawks" becomes "miami ohio redhawks" and "Louisiana-Monroe" becomes "louisianamonroe"), and the school it means. It holds all 40 rows of the names check's proposal. Each school was checked by eye against the score table's spelling (`cfb-weather/data/processed/games.parquet`, 2020–25), and a test checks that every school is spelled as the table spells it. None was rejected.
+
+| Feed name (normalized) | School |
+|---|---|
+| umass minutemen | Massachusetts |
+| miami redhawks · miami ohio redhawks · miamiohio redhawks | Miami (OH) |
+| louisiana monroe warhawks · louisianamonroe warhawks · ulmonroe warhawks | UL Monroe |
+| louisianalafayette ragin cajuns | Louisiana |
+| north carolina state wolfpack | NC State |
+| southern california trojans | USC |
+| mississippi rebels | Ole Miss |
+| texas el paso miners | UTEP |
+| ut san antonio roadrunners | UTSA |
+| nevada las vegas rebels | UNLV |
+| alabama birmingham blazers | UAB |
+| southeastern louisiana lions | SE Louisiana |
+| tennesseemartin skyhawks · tennessee martin skyhawks | UT Martin |
+| albany great danes | UAlbany |
+| citadel bulldogs | The Citadel |
+| saint francis pa red flash · saint francis red flash | St. Francis (PA) |
+| tarleton texans | Tarleton State |
+| se missouri state redhawks | Southeast Missouri State |
+| appalachian state mountaineers | App State |
+| southern mississippi golden eagles | Southern Miss |
+| connecticut huskies | UConn |
+| houston baptist huskies | Houston Christian |
+| texas amcommerce lions | East Texas A&M |
+| dixie state trailblazers | Utah Tech |
+| central florida knights | UCF |
+| southern methodist mustangs | SMU |
+| texas christian horned frogs | TCU |
+| louisiana state tigers | LSU |
+| brigham young cougars | BYU |
+| arkansas pine bluff golden lions | Arkansas-Pine Bluff |
+| san diego st aztecs | San Diego State |
+| ohio st buckeyes | Ohio State |
+| iowa st cyclones | Iowa State |
+| utah st aggies | Utah State |
+
+- **Name problems are logged as name problems.** A college game for which no game is found, when a name was resolved by the prefix rule, is logged as `cfb_prefix_name_no_game`, not `cfb_no_game`. The reason mixes causes: the prefix rule may have picked the wrong school, or the name is right and the score table has no such game. Read it as "no game found; a name was resolved by the prefix rule". A name that resolves to nothing stays `cfb_team_name_unknown` (`nfl_team_name_unknown` for the NFL). The report now prints, for each sport and season, the share of games matched to a final score, with a line on its first page if any season is below 95%. It also says whether the college team files were present, and it lists every name resolved only by the prefix rule or not at all (names only). A game with no score still counts for CLV, as section 2 says. It is only left out of the realized return, K2, the count item 4 needs, and the calibration table.
+- **The names-only preflight is part of the engine**: `uv run python -m markets.research.price_engine.names_preflight --out <folder>`, run from `sharp-markets/`. It reads the schedules the probe saves (team names and kickoffs only), drops the 2026 and out-of-window games as it reads them, and runs the engine's own name and matching code with a row number planted in place of each score. So it reads no price and prints no score. It writes the names and how each resolved (prefix and unresolved rows first), the games it can't match and why, the top-division schools no name reaches, and the games that appear under two event ids. For every row of the alias table it also writes (`aliases.csv`) and, when cfbfastR's team files are present, prints the school the team files would give for the same name, so any disagreement with the alias table is seen on Thursday. The alias table is what the engine uses. It is tested on a made-up schedule and made-up team files. It reads the score tables through readers of its own, which take only the season, the date or kickoff and the two teams (and, for the list of top-division schools, the two divisions), with the same season filter applied as the file is read, and read no score column and drop no game for lacking a final score, so which event lands on which game can't depend on a result (Astra's audit 3, finding 3): a test runs it with the made-up scores present, empty and absent and gets the same files byte for byte, and a read spy shows that no score column is ever asked for.
+
+**The protocol, registered now.** On Thursday, after the probe has saved its schedules (team names and kickoffs only) and **before any F1 price is opened**, the hub runs the preflight. Any further alias comes only from its list of names, judged on names and schedules and never on a price or a result, and it is recorded in a dated note together with the list. The preflight also counts games that appear under two event ids. If they are more than 1 in 100 games, the hub decides what to do before any price is opened, and says so in the note.
+
+**A known limit.** Until then, a game listed under two event ids can give two bets, one under each id.
+
+*Example.* The feed lists "Miami RedHawks" at Cincinnati. Before, the prefix rule sent it to Miami (Florida), found no Miami (Florida) against Cincinnati game, and logged "no game", so the game lost its score. Now the alias table sends it to Miami (OH), and the score is found.
+
+### Item 9. Size (defect D9). No code.
+
+For the record: on September 29, 2026, a full-size run on a made-up cache of F1's shape (4,841 calls) took about 3 minutes and 7.6 GB on the Mac. A heavier version that also lists every FCS game took about 6 minutes and 12.3 GB. Both were before the loading repair. After the repair, the measurement was repeated in proportion on the cloud machine, taking the median of 3 runs each:
+
+- On the builder's made-up cache of 568 calls (about an eighth of F1), the registered code took 62.4 seconds and 1.66 GB of peak memory. The repaired code took 57.5 seconds and 1.30 GB: 8% less time and 22% less memory.
+- On the reviewer's made-up cache of 380 calls, with 16 repeated snapshots, the registered code took 17.6 seconds and 0.79 GB. The repaired code took 17.7 seconds and 0.70 GB: 1% more time and 12% less memory.
+
+So time is roughly unchanged, and memory goes down because the code holds one call's rows at a time instead of fifty. (Measured before the September 30 counting fix of item 2, the time changes were −12% and +5%.) The September 29 figures are therefore an upper bound for that made-up cache. They are not a forecast for Thursday: F1's real size is known only once it is pulled.
+
+### Known limits, stated and not repaired
+
+- **A game under two event ids** can give two bets, one under each id, until the hub decides (item 8).
+- **Home and away swapped between snapshots.** Nothing guards against the feed listing a game's teams one way at one snapshot and the other way at another. A bet's CLV would then be graded against the other side's close. And the final score goes on the game's first listing, so a swap before the entry would flip the bet's result. The report prints, for information only, how many games are listed with more than one (home, away) pair across their quotes (a swap, or a name spelled two ways). Nothing is excluded for it. Whether to exclude such games is the hub's decision. No code changed except that count.
+
+### What this amendment does not change
+
+- The count (38 variants, 8 deciding), the running count (271) and the bar (p < 0.000185).
+- The flags and their thresholds: EV of 1%, 2% or 3% with 2% primary; 1 point at −115 or better for H2.
+- The fair prices and the blend weights (0.55 / 0.30 / 0.15), the Shin de-vig, and the totals and spread conversions.
+- The entry rule (the first flagged snapshot, more than 60 minutes before both kickoffs), one bet per game, market and side, and the close (the last quote within 60 minutes of kickoff).
+- The CLV and return definitions, K1, K2's definition, K4, A1 and A3 to A6, and the 100-bet minimums for bets and for bets with a Pinnacle close.
+- The sealed 2026 seasons, and decision 4: no money until a paper forward test has been decided.
+- The weather projects and the alert jobs. The college Rule B alert's wording (defect D10) and the nightly publication (defect D11) are for the hub, outside this amendment.
 
 ---
 

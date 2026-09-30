@@ -143,6 +143,7 @@ Types: prices `DECIMAL(6,4)`, counts `DECIMAL(18,2)`, decimal odds `DECIMAL(8,4)
   - Primary: `pin_close_fair − entry_ask`, gross and net of fee.
   - Also: `pin_close_fair/entry_ask − 1`, and line-move CLV `pin_close_fair − fair_at_entry`.
   - The close is the last snapshot ≤ `commence_time`.
+  - *Note, September 29, 2026: the code takes the last snapshot strictly before `commence_time` (`<`, as `load_sharp` already did), since an outside audit (Astra, finding C5) showed that a snapshot taken at the scheduled start, possibly in-play, became the close. Snapshots at and after the start stay in `sharp_fair` and `analysis_1m` for the lead-lag analysis.*
 - **Other metrics:** EV, ROI and bet count. Breakdowns by edge bucket, minutes to tip (>24h, 6–24h, 2–6h, 90–120m, 30–90m, 0–30m), favorite/underdog, and B2B.
 - **Selection:** one entry per market per strategy variant (the first qualifying signal). Train runs through 2026-01-31; validate runs Feb 1 – Apr 12.
 - **H1:** `edge_vs_ask_net_of_fee ≥ θ`.

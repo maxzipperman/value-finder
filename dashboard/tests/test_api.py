@@ -76,7 +76,10 @@ def test_board(store):
     assert buf["forecast"] == "17 mph, 61°F"
     assert (buf["total"], buf["under"], buf["source"]) == ("44.5", "−108", "Pinnacle")
     assert buf["lean_chance"] == "52%" and buf["wind_value"] == "+10.4%"
-    assert buf["rules"][0] == {"rule": "Rule B", "value": "SIGNAL", "words": "Signal", "signal": True, "lean": False}
+    assert buf["rules"][0] == {"rule": "Rule B", "value": "SIGNAL", "words": "Signal", "signal": True, "lean": False,
+                               "badge": "signal"}
+    assert buf["badge"] == "signal" and by_id["2026_05_TEN_BAL"]["badge"] == "backup"
+    assert by_id["2026_05_ARI_NYG"]["badge"] == "watch"                  # a model lean is a watch, never a signal
     assert buf["best"] == "45.0 at −110 (FanDuel)"
     assert buf["days"] == 2
     assert by_id["2026_05_TEN_BAL"]["rules"][0]["words"] == "Signal at the backup price"
@@ -407,6 +410,20 @@ def test_half_written_files(root, home, tmp_path):
     assert any("alert record" in x for x in p["summary"]["problems"])
     assert p["game"][1]["alerts"]["note"]                                     # says the record couldn't be read
     assert p["research"]["entries"] == []
+
+
+def test_the_paper_fill_record_reads_with_and_without_the_size_columns(root, home):
+    """Issue #76: log_fill.py adds max_stake and note as the last two columns. The game page shows the same fill
+    from a file without them, from a widened file with the cells blank, and from one with them filled."""
+    fills = root / "nfl-weather" / "data" / "forward" / "fills.csv"
+    old = fills.read_text()
+    shown = {"when": "8:05 AM", "rule": "Rule B", "line": "44.5", "price": "−108", "book": "FanDuel"}
+    for text in (old,
+                 old.replace("book\n", "book,max_stake,note\n").replace("fanduel\n", "fanduel,,\n"),
+                 old.replace("book\n", "book,max_stake,note\n").replace("fanduel\n", 'fanduel,50,"took $50, no more"\n')):
+        fills.write_text(text)
+        status, d = api.game(make_store(root, home), "2026_05_BUF_NE")
+        assert status == 200 and d["fills"] == [shown]
 
 
 def test_widened_and_unknown_columns(root, home):

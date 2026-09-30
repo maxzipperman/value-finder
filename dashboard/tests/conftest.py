@@ -192,13 +192,135 @@ PRINT_OK = ("gui/501/x = {\n\tactive count = 0\n\tstate = not running\n\truns = 
             "\tenvironment = {\n\t\tODDS_API_KEY => " + PLIST_SECRET + "\n\t}\n}\n")
 
 
+# ---------------------------------------------------------------- the scorers' --json documents, as fixtures
+def bet(gid, away, home, kick, logged, line, price, src, outcome, close=None, close_src=None, close_from=None,
+        clv=None, final=None, units=None, void_reason=None, side="UNDER", assumed=False, captured=None):
+    """One bet as a scorer's document gives it."""
+    return {"game_id": gid, "away_team": away, "home_team": home, "kickoff_utc": kick, "entry_row_kickoff_utc": kick,
+            "side": side, "logged_utc": logged, "entry_line": line, "entry_price": price, "price_assumed": assumed,
+            "price_source": src, "close_line": close, "close_source": close_src, "close_from": close_from, "clv": clv,
+            "captured_close": captured, "clv_captured": None, "final_total": final, "outcome": outcome,
+            "void_reason": void_reason, "units": units, "ledger_row": 1, "listing": 0}
+
+
+def doc_test(tid, name, bets, decisions=(), interval=None, **extra):
+    """One test as a scorer's document gives it; its numbers worked out from its bets, as the scorer prints them."""
+    settled = [b for b in bets if b["outcome"] in ("won", "lost", "push")]
+    won = sum(b["outcome"] == "won" for b in settled)
+    pushed = sum(b["outcome"] == "push" for b in settled)
+    units = sum(b["units"] for b in settled)
+    clvs = [b["clv"] for b in settled if b["clv"] is not None]
+    void = [b for b in bets if b["outcome"] == "void"]
+    reasons = {}
+    for b in void:
+        reasons[b["void_reason"]] = reasons.get(b["void_reason"], 0) + 1
+    return {"id": tid, "name": name, "printed_as": tid, "decides": True,
+            "counts": {"signals": len(bets), "settled": len(settled),
+                       "pending": sum(b["outcome"] == "pending" for b in bets), "void": len(void)},
+            "void_reasons": reasons,
+            "record": {"won": won, "lost": len(settled) - won - pushed, "pushed": pushed} if settled else None,
+            "units": units if settled else None, "roi_percent": 100 * units / len(settled) if settled else None,
+            "graded_at_assumed_price": 0 if settled else None, "mean_clv": sum(clvs) / len(clvs) if clvs else None,
+            "n_clv": len(clvs) if settled else None, "interval": interval, "secondary_clv": None,
+            "decisions": list(decisions), "bets": bets} | extra
+
+
+def scorer_doc(project, text, tests):
+    return {"scorer": project, "generated_utc": "2026-10-02T17:00:00Z", "now": "2026-10-02T17:00:00Z", "preview": True,
+            "ledger": f"/repo/{project}/data/forward/ledger.csv", "text": text, "rows": {}, "excluded": {},
+            "decision_record": {"written_by_this_run": False, "why_not": "a run with --now is a preview"},
+            "tests": tests}
+
+
+INTERIM = {"id": "RULE_B:2026-27", "name": "Rule B", "status": "interim", "verdict": None,
+           "text": "  decision (Rule B): INTERIM read, decides nothing.\n"}
+# The default documents agree with the printed reports above (NFL_SCORE, CFB_SCORE)
+NFL_DOC = scorer_doc("nfl-weather", NFL_SCORE, [
+    doc_test("RULE_B", "Rule B", [
+        bet("2026_04_PIT_CLE", "PIT", "CLE", "2026-10-02T00:15:00Z", "2026-10-01T22:30:09Z", 38.5, -108.0, "pinnacle",
+            "won", close=38.0, close_src="nflverse schedule", clv=0.5, final=31.0, units=100 / 108),
+        bet("2026_05_KC_DEN", "KC", "DEN", "2026-10-04T20:25:00Z", "2026-10-01T22:30:09Z", 44.5, -108.0, "pinnacle",
+            "pending"),
+        bet("2026_05_BUF_NE", "BUF", "NE", "2026-10-04T17:00:00Z", "2026-10-02T14:30:07Z", 44.5, -108.0, "pinnacle",
+            "pending")], decisions=[INTERIM]),
+    doc_test("RULE_B_SECONDARY", "Rule B, backup price", [
+        bet("2026_05_TEN_BAL", "TEN", "BAL", "2026-10-04T17:00:00Z", "2026-10-02T14:30:07Z", 44.5, -108.0, "nflverse",
+            "pending")], decides=False),
+    doc_test("MODEL_LEAN", "Model lean", [])])
+CFB_DOC = scorer_doc("cfb-weather", CFB_SCORE, [
+    doc_test("RULE_B", "Rule B", [
+        bet("401000001", "Army", "Navy", "2026-10-02T16:00:00Z", "2026-10-02T14:30:14Z", 55.0, -109.0, "pinnacle",
+            "pending")]),
+    doc_test("RULE_HT", "Rule HT", [])])
+
+
+# A richer pair of documents, three weeks into the tests (Tue Oct 20, 2026): settled, pending and void bets on both
+# sports and both NFL prices, a lean, and Rule HT. Their numbers are worked out by hand in test_signals.py.
+LATER = datetime(2026, 10, 20, 17, 0, tzinfo=UTC)          # Tue Oct 20, 10:00 AM Pacific
+VOID_MOVED = "the game kicked off more than 24 hours from the kickoff on its entry row"
+VOID_OTHER = "another listing of this game is the one graded"
+RICH_NFL_DOC = scorer_doc("nfl-weather", "ledger rows: 40; in the test: 40\n", [
+    doc_test("RULE_B", "Rule B", [
+        bet("2026_06_BUF_NYJ", "BUF", "NYJ", "2026-10-11T17:00:00Z", "2026-10-09T14:30:07Z", 41.5, -108.0, "pinnacle",
+            "won", close=40.5, close_src="nflverse schedule", clv=1.0, final=37.0, units=100 / 108),
+        bet("2026_06_KC_DEN", "KC", "DEN", "2026-10-11T20:25:00Z", "2026-10-09T14:30:07Z", 44.0, -112.0, "pinnacle",
+            "lost", close=44.5, close_src="nflverse schedule", clv=-0.5, final=47.0, units=-1.0),
+        bet("2026_07_GB_CHI", "GB", "CHI", "2026-10-18T17:00:00Z", "2026-10-16T14:30:07Z", 39.0, -105.0, "pinnacle",
+            "push", close=38.0, close_src="nflverse schedule", clv=1.0, final=39.0, units=0.0),
+        bet("2026_08_SF_SEA", "SF", "SEA", "2026-10-25T20:05:00Z", "2026-10-20T14:30:07Z", 42.5, -110.0, "pinnacle",
+            "pending"),
+        bet("2026_06_MIA_CLE", "MIA", "CLE", "2026-10-13T00:15:00Z", "2026-10-09T14:30:07Z", 40.0, -110.0, "pinnacle",
+            "void", void_reason=VOID_MOVED)],
+        decisions=[INTERIM], interval={"low": -1.65, "high": 2.65, "n": 3, "game_days": 2, "plain_half_width": 1.9,
+                                       "grouped_half_width": 2.15}),
+    doc_test("RULE_B_SECONDARY", "Rule B, backup price", [
+        bet("2026_06_TEN_IND", "TEN", "IND", "2026-10-11T17:00:00Z", "2026-10-09T14:30:07Z", 43.5, -110.0, "nflverse",
+            "won", close=43.0, close_src="nflverse schedule", clv=0.5, final=40.0, units=100 / 110),
+        bet("2026_08_NYG_PHI", "NYG", "PHI", "2026-10-25T17:00:00Z", "2026-10-20T14:30:07Z", 45.0, None, "nflverse",
+            "pending", assumed=True)], decides=False),
+    doc_test("MODEL_LEAN", "Model lean", [
+        bet("2026_06_LV_LAC", "LV", "LAC", "2026-10-11T20:05:00Z", "2026-10-05T14:30:07Z", 47.5, -110.0, "pinnacle",
+            "won", close=48.0, close_src="nflverse schedule", clv=0.5, final=51.0, units=100 / 110, side="OVER")])])
+RICH_CFB_DOC = scorer_doc("cfb-weather", "ledger rows: 60; in the test: 60\n", [
+    doc_test("RULE_B", "Rule B", [
+        bet("401000101", "Iowa", "Wisconsin", "2026-10-03T16:00:00Z", "2026-10-01T14:30:14Z", 44.5, -109.0, "pinnacle",
+            "won", close=43.5, close_src="pinnacle", close_from="later quote", clv=1.0, final=30.0, units=100 / 109),
+        bet("401000102", "Army", "Navy", "2026-10-10T19:30:00Z", "2026-10-08T14:30:14Z", 38.5, -110.0, "draftkings",
+            "lost", close=39.0, close_src="captured close (pinnacle)", close_from="captured close", clv=-0.5,
+            final=45.0, units=-1.0),
+        bet("401000103", "Utah", "BYU", "2026-10-24T19:30:00Z", "2026-10-20T14:30:14Z", 47.0, -108.0, "pinnacle",
+            "pending"),
+        bet("401000104", "Duke", "Wake Forest", "2026-10-17T16:00:00Z", "2026-10-15T14:30:14Z", 51.0, -110.0,
+            "pinnacle", "void", void_reason=VOID_OTHER)]),
+    doc_test("RULE_HT", "Rule HT", [
+        bet("401000201", "Ohio State", "Michigan", "2026-10-10T19:30:00Z", "2026-10-10T14:30:14Z", 64.5, -110.0,
+            "pinnacle", "won", final=55.0, units=100 / 110, captured=63.5),
+        bet("401000202", "Texas", "Oklahoma", "2026-10-10T16:00:00Z", "2026-10-10T14:30:14Z", 66.0, -112.0,
+            "pinnacle", "lost", final=70.0, units=-1.0),
+        bet("401000203", "USC", "Oregon", "2026-10-24T23:00:00Z", "2026-10-20T14:30:14Z", 65.5, -110.0, "pinnacle",
+            "pending")])])
+
+
+def rich_store(root: Path, home: Path, runner=None, clock=None) -> Store:
+    """The fixtures three weeks on, with the rich documents; one college game (Utah at BYU, 401000103) is still to
+    kick off and its newest row is a Rule B signal."""
+    with (root / "cfb-weather" / "data" / "forward" / "ledger.csv").open("a") as f:
+        f.write(cfb_row("2026-10-20T14:30:14Z", "401000103", "Sat 10-24 15:30", "Utah", "BYU", "SIGNAL", "no_price",
+                        "2026-10-24 19:30:00+00:00", total="47.0") + "\n")
+    return make_store(root, home, clock=clock or Clock(LATER),
+                      runner=runner or FakeRunner(nfl_doc=RICH_NFL_DOC, cfb_doc=RICH_CFB_DOC))
+
+
 class FakeRunner:
-    """Answers the allowed commands with canned output and records every call."""
+    """Answers the allowed commands with canned output and records every call. A scorer answers with its --json
+    document (the printed report as its text); `scorer` says how it fails instead. With `raw` (for the NFL scorer
+    only) it prints exactly that, exits 0, and the college scorer answers as usual."""
 
     def __init__(self, listing=LIST_OK, scorer="ok", nfl_text=NFL_SCORE, cfb_text=CFB_SCORE,
-                 stderr="Traceback ...\nValueError: boom"):
+                 stderr="Traceback ...\nValueError: boom", nfl_doc=None, cfb_doc=None, raw=None):
         self.listing, self.scorer, self.nfl_text, self.cfb_text = listing, scorer, nfl_text, cfb_text
-        self.stderr = stderr
+        self.docs = {"nfl-weather": nfl_doc or NFL_DOC, "cfb-weather": cfb_doc or CFB_DOC}
+        self.stderr, self.raw = stderr, raw
         self.calls = []
         self.lock = threading.Lock()
 
@@ -212,8 +334,14 @@ class FakeRunner:
         if cmd[:2] == [commands.LAUNCHCTL, "print"]:
             return commands.Result(ok=True, stdout=PRINT_OK, code=0)
         if cmd[1] == commands.SCORER:
-            text = self.nfl_text if cwd.endswith("nfl-weather") else self.cfb_text
+            project = "nfl-weather" if cwd.endswith("nfl-weather") else "cfb-weather"
+            text = self.nfl_text if project == "nfl-weather" else self.cfb_text
+            if self.raw is not None and project == "nfl-weather":
+                return commands.Result(ok=True, stdout=self.raw, code=0, seconds=0.1)
             if self.scorer == "ok":
+                doc = dict(self.docs[project], text=text)
+                return commands.Result(ok=True, stdout=json.dumps(doc), code=0, seconds=0.1)
+            if self.scorer == "not_document":             # it ran, but printed its report, not the document
                 return commands.Result(ok=True, stdout=text, code=0, seconds=0.1)
             if self.scorer == "timeout":
                 return commands.Result(ok=False, stdout="ledger rows: 8", timed_out=True, seconds=60)
@@ -294,7 +422,7 @@ def served(store):
 
 
 ENDPOINTS = ["/api/summary", "/api/home", "/api/board", "/api/game?id=2026_05_BUF_NE", "/api/game?id=401000002",
-             "/api/tests", "/api/jobs", "/api/run-records", "/api/pull", "/api/research"]
+             "/api/signals", "/api/backtests", "/api/tests", "/api/jobs", "/api/run-records", "/api/pull", "/api/research"]
 
 
 def copy_content(dst: Path) -> Path:

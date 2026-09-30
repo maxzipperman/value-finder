@@ -5,7 +5,7 @@ Paper-only research pipeline: do Kalshi game-winner markets misprice relative to
 ## Setup
 ```bash
 uv sync
-cp .env.example .env   # add ODDS_API_KEY (and KAGGLE_* for the H3 dataset)
+cp .env.example .env   # add ODDS_API_KEY; the H3 dataset needs a Kaggle token (see .env.example)
 uv run pytest
 ```
 
@@ -18,9 +18,10 @@ uv run markets odds-plan --start 2026-01-05 --end 2026-01-11   # snapshot schedu
 uv run markets odds-pull --start 2026-01-05 --end 2026-01-11 --confirm --max-credits 8000
 uv run markets build                                           # raw -> DuckDB tables, matching, analysis grid
 uv run markets backtest --start 2026-01-05 --end 2026-01-11    # H1, H2, lead-lag -> reports/
-uv run markets h3-kaggle                                       # early H3 test on MGM splits
+uv run markets h3-kaggle                                       # H3: the registered test on BetMGM's NBA closing splits
 uv run markets odds5m plan                                     # 5M month: bulk multi-sport pulls (docs/ODDS5M_DAY_ONE.md)
-uv run markets odds5m full --pull day_one --confirm --max-credits 400000   # a group from config/odds5m.yaml; `all` is refused
+uv run markets odds5m full --pull F1 --confirm --max-credits 170000        # one pull at a time, as docs/ODDS5M_DAY_ONE.md lists them
+                                                               # (`--pull day_one` is refused: F3, in it, needs --seasons)
 uv run markets weather qualifying                              # heat triggers -> data/weather/heat_qualifying.csv (docs/HEAT_HYPOTHESES.md)
 ```
 
@@ -39,6 +40,15 @@ uv run markets weather qualifying                              # heat triggers -
 | `markets/research/` | Kaggle H3 study; H4a (Kalshi NFL totals vs wind); `price_engine/`, the F1 price-engine backtest |
 
 Data lands in `data/` (gitignored); DuckDB at `data/markets.duckdb`.
+
+## Betting splits, first test: H3 (issue #66, added September 29, 2026)
+
+**A null.** On BetMGM's NBA closing figures from a free Kaggle file (`caseydurfee/mgm-grand-nba-betting-data`, 2021-22 to January 31, 2026, about 5,500 games a market), none of the 14 registered variants passes the bar of p < 0.000174 with the same sign in 4 of 5 seasons. The variants were: backing the side with more of the money than of the tickets (by 5, 10 or 15 points), the same idea as a regression, and fading the side with 30% of the tickets or fewer. Measured against BetMGM's own closing price with the margin removed, none came near the bar. The closest was p = 0.032, about 185 times too large.
+
+- **Limits.** One retail book, not the market. Closing figures only, with no timestamps, so a line moving against the public can't be tested. The benchmark is BetMGM's own close, not Pinnacle's. The test could only detect effects of about 3 points of win chance or more in its biggest variants, so a small edge is not ruled out. NBA only. Games after January 31, 2026 (the Kalshi study's validation period) were left out, and no result after that date was computed. Three choices made after the file was downloaded are shown both ways in the report; none changes the finding.
+- **Files.** The registration, pushed before the download: [`docs/H3_KAGGLE_PREREGISTRATION.md`](docs/H3_KAGGLE_PREREGISTRATION.md). The report, with the checks on the file and the football candidates on Kaggle: [`reports/h3_kaggle_mgm.md`](reports/h3_kaggle_mgm.md). The code: `markets/research/kaggle_h3.py`; tests: `tests/test_kaggle_h3.py` (fake token, no network).
+- **The token.** `uv run markets h3-kaggle` reads the Kaggle token from `KAGGLE_API_TOKEN`, else `~/.kaggle/access_token` (refused unless only you can read it, mode 600), else `KAGGLE_USERNAME` and `KAGGLE_KEY` in `.env`. It goes with the first request only, to Kaggle's fixed API address on www.kaggle.com, and never on a redirect (Kaggle redirects downloads to a storage host); the download is cached under `data/raw/nba/kaggle_mgm/` with a `download.json` (time, size, sha256), and a rerun makes no request.
+- **Football.** Kaggle has one free NFL source in the same format (`caseydurfee/mgm-grand-nfl-betting-data`, 2021–25 regular seasons, not downloaded) and none for college football. Any football test needs its own registration first.
 
 ## Price-engine backtest on F1 (issues #8 and #53, added September 29, 2026)
 

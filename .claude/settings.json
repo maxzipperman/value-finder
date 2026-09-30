@@ -10,6 +10,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent|Task|Workflow",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/ops/hooks/cloud_first.py\"; [ -f \"$f\" ] && [ -r \"$f\" ] || exit 0; python3 \"$f\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

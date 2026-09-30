@@ -1,7 +1,8 @@
 """The only programs the dashboard can start, built from fixed lists.
 
 * each project's scorer, `scripts/score_forward.py`, always with `--now` (a preview, which can never
-  record a decision), run by that project's own Python with the project folder as the working directory;
+  record a decision) and `--json` (it prints its report and its graded bets as one JSON document), run by that
+  project's own Python with the project folder as the working directory;
 * `launchctl list`;
 * `launchctl print gui/<uid>/<label>` for the four scheduled jobs.
 
@@ -51,13 +52,14 @@ def folders_a_scorer_would_create(scorer_root: Path, project: str) -> list[str]:
 
 
 def scorer_command(scorer_root: Path, data_root: Path, project: str, now: datetime) -> tuple[list[str], str]:
-    """(command, working directory) for a scorer preview on `data_root`'s ledger at `now`."""
+    """(command, working directory) for a scorer preview on `data_root`'s ledger at `now`, printing its JSON
+    document (`--json`: the printed report as text, and each test's numbers and graded bets)."""
     if project not in PROJECTS:
         raise ValueError(f"no scorer for {project!r}")
     stamp = now.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     cmd = [str(scorer_python(scorer_root, project)), SCORER,
            "--ledger", str(data_root / project / "data" / "forward" / "ledger.csv"),
-           "--now", stamp]
+           "--now", stamp, "--json"]
     return cmd, str(scorer_root / project)
 
 
@@ -85,10 +87,10 @@ class Allowed:
         if len(cmd) == 3 and cmd[:2] == [LAUNCHCTL, "print"]:
             return cwd is None and cmd[2] in {f"gui/{os.getuid()}/{label}" for label in JOB_LABELS}
         for project in PROJECTS:
-            if (len(cmd) == 6 and cmd[0] == str(scorer_python(self.scorer_root, project)) and cmd[1] == SCORER
+            if (len(cmd) == 7 and cmd[0] == str(scorer_python(self.scorer_root, project)) and cmd[1] == SCORER
                     and cmd[2] == "--ledger"
                     and cmd[3] == str(self.data_root / project / "data" / "forward" / "ledger.csv")
-                    and cmd[4] == "--now" and NOW_FORMAT.match(cmd[5])
+                    and cmd[4] == "--now" and NOW_FORMAT.match(cmd[5]) and cmd[6] == "--json"
                     and cwd == str(self.scorer_root / project)):
                 return True
         return False

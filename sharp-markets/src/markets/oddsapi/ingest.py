@@ -4,12 +4,11 @@ from __future__ import annotations
 import logging
 from collections import Counter
 
-import requests
-
 from ..context import Context
 from ..games import Game
 from ..http import scrub
-from .client import BudgetExceeded, OddsApiClient, OddsApiError
+from .bulk import DISK_HELP, Stop, run_calls, started
+from .client import OddsApiClient
 from .schedule import credits_per_snapshot, describe, plan_snapshots, tier_label
 
 log = logging.getLogger(__name__)
@@ -32,22 +31,32 @@ def snapshot_plan(ctx: Context, games: list[Game], schedule: str) -> dict:
             "tiers": dict(tiers), "summary": describe(times), "bookmakers": books}
 
 
-def pull_snapshots(ctx: Context, plan: dict, max_credits: int, client: OddsApiClient | None = None) -> dict:
-    """Fetch the plan's uncached snapshots. A budget stop, a billing that can't be read, an error status or a network
-    failure ends the pull with `stopped` set (the reason, key blanked), never a traceback."""
+def _refused(why: str) -> dict:
+    why = scrub(why)                     # the reason can quote a header the key check got back
+    print(f"STOPPED before the first paid call, nothing spent: {why}", flush=True)
+    return {"fetched": 0, "credits_spent": 0, "remaining": None, "stopped": why}
+
+
+def pull_snapshots(ctx: Context, plan: dict, max_credits: int, client: OddsApiClient | None = None, *,
+                   floor: int = 0, alarm_margin: int | None = None) -> dict:
+    """Fetch the plan's uncached snapshots through the bulk puller's client and run loop (bulk.run_calls), so it
+    has the same protections as `markets odds5m`: the free key check first, the run budget and the floor before
+    every call and retry, fail-closed billing, a STOPPED line and a summary on every stop (Ctrl-C included), never
+    a traceback, and a manifest row per paid request (pull N0). `stopped` is the reason, key blanked, or None."""
     if plan["est_credits"] > max_credits:
-        raise BudgetExceeded(f"plan needs {plan['est_credits']} credits > --max-credits {max_credits}; nothing fetched")
-    client = client or OddsApiClient(ctx.sport, ctx.cache, max_credits=max_credits)
-    start, stopped = client.cache.http_requests, None
-    for i, t in enumerate(plan["todo"], 1):
+        return _refused(f"the plan needs {plan['est_credits']:,} credits, more than --max-credits {max_credits:,}")
+    client = client or OddsApiClient(ctx.sport, ctx.cache, max_credits=max_credits, floor=floor,
+                                     alarm_margin=alarm_margin)
+    calls = [client.call_for(sport_key=ctx.cfg.odds_sport_key, at=t, bookmakers=ctx.cfg.bookmakers,
+                             markets=ctx.cfg.odds_markets) for t in plan["todo"]]
+    if any(not client.is_cached(c) for c in calls):
         try:
-            client.historical_odds(sport_key=ctx.cfg.odds_sport_key, at=t, bookmakers=ctx.cfg.bookmakers,
-                                   markets=ctx.cfg.odds_markets)
-        except (BudgetExceeded, OddsApiError, requests.RequestException) as e:
-            stopped = f"{type(e).__name__}: {scrub(e)}"
-            break
-        if i % 50 == 0 or i == len(plan["todo"]):
-            log.info("odds snapshots %d/%d, credits spent %d, remaining %s", i, len(plan["todo"]),
-                     client.credits_spent, client.remaining)
-    return {"fetched": client.cache.http_requests - start, "credits_spent": client.credits_spent,
-            "remaining": client.remaining, "stopped": stopped}
+            info = client.account()
+        except Stop as e:
+            return _refused(str(e))
+        except OSError as e:
+            return _refused(f"a file could not be read or written ({e.strerror or e}): is the disk full? {DISK_HELP}")
+        started(client, info)
+    res = run_calls(client, calls, f"{client.sport} odds-pull (N0)")
+    return {"fetched": res["fetched"], "credits_spent": res["spent"], "remaining": res["remaining"],
+            "stopped": res["stopped"]}

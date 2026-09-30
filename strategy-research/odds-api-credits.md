@@ -78,6 +78,7 @@ Everything here has its outcomes on disk already, so analysis starts the same we
 - **F3 runs in two slices (September 29).** The Sep 28 decision had all 136,800 on day one. The research sweep found that a yardage line set at the median hits about 50% by construction, so the skew argument needs the line to sit above the median. The free pre-check and the pre-registration draft landed the same day (#41), so the first slice is on day one; posted lines aren't free, so the line-vs-median test runs on that slice and the rest follows only if it passes. The total is unchanged if it does.
 - **F4's incremental cost is 1,442,220, not 1,604,430.** Every F1 snapshot (the 16:00 UTC points and every close) lies on F4's hourly grid, and `bulk.py` caches by the same key; `tests/test_bulk.py` checks it.
 - **N1 is 486,440 = 10 × (49,398 − 754).** The Sep 28 figure of 478,530 also netted 791 "closes" that nothing in the month pulls (review C12). Honouring the gate costs nothing: the sample week's snapshots are the first 754 of N1's grid.
+- **These figures are estimates (note added September 29, 2026).** They were made before any schedule existed, on a time grid slightly different from the puller's: the estimator takes each close at kickoff, the puller at least five minutes before it. An outside audit (Astra, finding C6) recomputed F1 at 164,910 against the 162,210 above, and F4 net of F1 at 1,483,650 against 1,442,220. The published figures are left as they are. The numbers that bind on the day are the ones `markets odds5m plan` prints from the real schedules after the probe, and each command's `--max-credits` in the [day-one checklist](../sharp-markets/docs/ODDS5M_DAY_ONE.md), which are above the audit's figures (F1 170,000; F4 1,520,000).
 
 ### March 2027: the completions, and whatever the gates earned
 
@@ -89,6 +90,8 @@ Everything here has its outcomes on disk already, so analysis starts the same we
 | N2: NBA featured, daily plus every close, seasons other than 2025-26 (estimate) | 170,460 | Same |
 | F5: CFB alternate lines and team totals at T−24h and the close, 2023–26 | 221,880 (the team-totals slice at the close alone is 36,980) | Only if Rule HT's re-grade at Pinnacle's close (F1, 2020–25) keeps its win rate above the break-even of the prices; the team-totals slice is the part worth having |
 | F6: CFB props at the close, 2023–26 (upper bound; coverage is thin) | 147,920 | Only if #10 passes on NFL (F3) and a 30-credit probe finds CFB props at the close |
+
+*Note, September 29, 2026: the NHL's 2026-27 sealed window now starts September 28, because opening night was September 29 (the hub's decision, which also added three `/events` sweeps to the probe). So H1 covers the September 29–30 games as well: at most 810 more credits (27 more snapshots), within the estimate above, which is left as it is.*
 
 The plan size for March follows from the gates: 100K ($59) covers the completions and F5's team-totals slice; anything with H1, N2 or F4 needs 5M ($119).
 
