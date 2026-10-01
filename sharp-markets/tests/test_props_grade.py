@@ -1,0 +1,755 @@
+"""The props grader (markets.research.props_grade, issue #10) against mocked F3 event-odds answers. No network.
+
+The rule is nfl-weather/PREREGISTRATION_PROPS.md; each test names the section it pins."""
+import math
+import re
+from argparse import Namespace
+from collections import Counter
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+import requests
+
+from markets.cache import RawCache
+from markets.oddsapi import bulk
+from markets.research.props_grade import fixture, grade, lines as L, outcomes, registration, roster, stats
+from markets.research.props_grade import run as pg_run
+
+NFL = L.NFL
+
+
+@pytest.fixture(scope="module")
+def fx(tmp_path_factory):
+    tmp = tmp_path_factory.mktemp("props_grade")
+    f = fixture.build(tmp)
+    games = L.schedule(f.cfg, f.cache)
+    calls = L.f3_calls(f.cfg, games, now=fixture.NOW)
+    loaded = L.load(f.cfg, calls, f.cache, games)
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp / "report")
+    df, unmatched_games, pw = pg_run.join(loaded.rows, f.book, paths)
+    return f, calls, loaded, paths, df, pw
+
+
+def close_primary(df):
+    return df[(df.role == L.CLOSE) & df.market.isin(L.PRIMARY)]
+
+
+# ---------------------------------------------------------------- 2.5: the de-vig, known answers
+def test_power_devig_known_answer():
+    """q_over = 0.6 and q_under = 0.8 (decimal 1/0.6 and 1.25): k = 2 solves 0.36 + 0.64 = 1, so the under's
+    power-method probability is 0.64. The additive method gives 0.8 - 0.4/2 = 0.6, the multiplicative 0.8/1.4."""
+    assert stats.power_k(0.6, 0.8) == pytest.approx(2.0, abs=1e-12)
+    assert stats.devig_power(1 / 0.6, 1.25) == pytest.approx(0.64, abs=1e-12)
+    assert stats.devig_additive(1 / 0.6, 1.25) == pytest.approx(0.6, abs=1e-12)
+    assert stats.devig_multiplicative(1 / 0.6, 1.25) == pytest.approx(0.8 / 1.4, abs=1e-12)
+
+
+def test_power_devig_even_prices_and_an_arbitrage():
+    """Equal prices give 0.5 by every method. A pair whose implied probabilities sum below 1 needs k < 1."""
+    for d in (1.91, 1.87, 2.0):
+        assert stats.devig_power(d, d) == pytest.approx(0.5, abs=1e-12)
+        assert stats.devig_additive(d, d) == pytest.approx(0.5) and stats.devig_multiplicative(d, d) == 0.5
+    k = stats.power_k(1 / 2.1, 1 / 2.05)
+    assert k < 1 and (1 / 2.1) ** k + (1 / 2.05) ** k == pytest.approx(1, abs=1e-12)
+    p = stats.devig_power(1.87, 1.95)                 # the under is the longer price: below 0.5, sums to 1
+    q_o, q_u = 1 / 1.87, 1 / 1.95
+    k = stats.power_k(q_o, q_u)
+    assert p < 0.5 and q_o ** k + p == pytest.approx(1, abs=1e-12)
+
+
+# ---------------------------------------------------------------- 2.6: the two standard errors
+def test_clustered_se_is_the_registered_formula_not_cr1():
+    """Five lines in three games. Residuals win - p: game A +0.5 and -0.5 (sum 0), game B +0.4, game C +0.5 and
+    +0.6 (sum 1.1). Excess = 1.5/5 = 0.3. Clustered SE = sqrt(3/2 * (0 + 0.16 + 1.21)) / 5, NOT centred on the
+    excess (centring would give sqrt(3/2 * 0.62) / 5). Plain SE = sqrt(0.25+0.25+0.24+0.25+0.24) / 5. The p-value
+    decides from the larger SE, one-sided."""
+    df = pd.DataFrame({"event_id": ["A", "A", "B", "C", "C"], "win": [1, 0, 1, 1, 1],
+                       "p_power": [0.5, 0.5, 0.6, 0.5, 0.4], "p_add": 0.5, "p_mult": 0.5, "d_under": 2.0})
+    t = stats.excess_test(df)
+    se_game = math.sqrt(1.5 * 1.37) / 5
+    se_plain = math.sqrt(1.23) / 5
+    assert t["excess"] == pytest.approx(0.3)
+    assert t["se_game"] == pytest.approx(se_game) and t["se_game"] != pytest.approx(math.sqrt(1.5 * 0.62) / 5)
+    assert t["se_plain"] == pytest.approx(se_plain)
+    from scipy.stats import norm
+    assert t["p"] == pytest.approx(norm.sf(0.3 / max(se_game, se_plain)))
+    assert t["p_plain"] == pytest.approx(norm.sf(0.3 / se_plain)) and t["p"] > t["p_plain"]
+    assert t["roi"] == pytest.approx((4 * 1.0 - 1) / 5)             # four wins at 2.0, one loss
+    one_game = stats.excess_test(df[df.event_id == "A"])
+    assert math.isnan(one_game["se_game"]) and math.isnan(one_game["p"])   # one game: no clustered SE, no p
+
+
+# ---------------------------------------------------------------- 2.4: the main line and the tie rule
+def test_main_line_single_two_lines_and_the_tie_rule():
+    one = L.main_line([("Over", "55.5", "1.91"), ("Under", "55.5", "1.91")])
+    assert one["line"] == 55.5 and one["p_power"] == pytest.approx(0.5) and one["lines_listed"] == 1
+    two = L.main_line([("Over", "85.5", "1.91"), ("Under", "85.5", "1.91"), ("Over", "89.5", "1.70"),
+                       ("Under", "89.5", "2.15")])
+    assert two["line"] == 85.5 and two["lines_listed"] == 2         # the one closest to even
+    near = L.main_line([("Over", "49.5", "1.80"), ("Under", "49.5", "2.02"), ("Over", "50.5", "1.95"),
+                        ("Under", "50.5", "1.90")])
+    assert near["line"] == 50.5
+    mirror = [("Over", "49.5", "1.80"), ("Under", "49.5", "2.02"), ("Over", "50.5", "2.02"), ("Under", "50.5", "1.80")]
+    assert L.main_line(mirror) == L.TIE                              # equally close: excluded
+    assert L.main_line([("Over", "49.5", "1.91"), ("Under", "49.5", "1.91"), ("Over", "50.5", "1.91"),
+                        ("Under", "50.5", "1.91")]) == L.TIE
+
+
+def test_main_line_missing_prices():
+    assert L.main_line([("Over", "35.5", "1.91")]) == L.MISSING                       # no under
+    assert L.main_line([("Over", "35.5", "1.91"), ("Under", "35.5", None)]) == L.MISSING
+    assert L.main_line([("Over", "35.5", "1.0"), ("Under", "35.5", "1.91")]) == L.MISSING   # not above 1
+    assert L.main_line([("Over", None, "1.91"), ("Under", None, "1.91")]) == L.MISSING      # no point
+    assert L.main_line([("Over", "35.5", "1.91"), ("Under", "35.5", "1.91"), ("Under", "35.5", "1.80")]) == L.MISSING
+    # stricter reading: one usable line and one without an under -> the closest-to-even rule can't be applied
+    assert L.main_line([("Over", "35.5", "1.91"), ("Under", "35.5", "1.91"), ("Over", "40.5", "2.3")]) == L.MISSING
+    same_twice = L.main_line([("Over", "35.5", "1.91"), ("Under", "35.5", "1.91"), ("Under", "35.5", "1.91")])
+    assert same_twice["line"] == 35.5                                 # an identical repeat is one price
+
+
+# ---------------------------------------------------------------- 2.4: the book
+def test_book_rule_needs_80_percent_in_each_primary_market():
+    rec, rush = L.PRIMARY
+    assert L.choose_book({rec: (80, 100), rush: (8, 10)}) == L.PINNACLE
+    assert L.choose_book({rec: (80, 100), rush: (79, 100)}) == L.DRAFTKINGS
+    assert L.choose_book({rec: (100, 100), rush: (0, 0)}) == L.DRAFTKINGS     # no rushing line: doesn't clear
+    assert L.choose_book({rec: (0, 0), rush: (0, 0)}) is None
+
+
+def test_coverage_counts_f3a_close_player_games_before_matching(fx):
+    """Player-games are (event, description) at F3a's close, counted at any us10 book, unmatched names and games
+    the schedule can't match included; T-24h and the sealed game are not counted."""
+    f, calls, loaded, *_ = fx
+    rec, rush = L.PRIMARY
+    assert L.coverage(loaded.rows) == {rec: (2, 13), rush: (1, 10)}
+    assert L.choose_book(L.coverage(loaded.rows)) == L.DRAFTKINGS == f.book
+
+
+def test_no_line_at_the_chosen_book_is_never_filled_in(fx):
+    *_, df, _ = fx
+    ferguson = df[df.description == "Jake Ferguson"]
+    assert set(ferguson.status) == {L.NO_LINE} and ferguson.line.isna().all()        # Pinnacle's line is not used
+    assert (df[df.status == ""].book == L.DRAFTKINGS).all()
+
+
+# ---------------------------------------------------------------- 2.7: pushes, voids, matching, every exclusion
+def test_push_and_void(fx):
+    *_, df, _ = fx
+    c = close_primary(df).set_index("description")
+    assert c.loc["Mark Andrews", "status"] == L.PUSH and c.loc["Mark Andrews", "y"] == 40.0
+    assert c.loc["Rashee Rice", "status"] == L.VOID and c.loc["Rashee Rice", "player_id"] == "00-K2"
+    assert pd.isna(c.loc["Rashee Rice", "y"])
+    # a row with no carry is graded at 0 yards: the under wins
+    assert c.loc["Javonte Williams", "status"] == "" and c.loc["Javonte Williams", "y"] == 0.0
+    assert c.loc["Javonte Williams", "win"] == 1.0
+
+
+def test_unmatched_players(fx):
+    *_, df, _ = fx
+    c = close_primary(df).set_index("description")
+    assert (c.loc["Nobody Known", "status"], c.loc["Nobody Known", "detail"]) == (L.UNMATCHED, roster.NO_PLAYER)
+    assert (c.loc["Chris Smith", "status"], c.loc["Chris Smith", "detail"]) == (L.UNMATCHED, roster.SEVERAL)
+    assert c.loc["D.J. Moore", "player_id"] == "00-C1" and c.loc["A.J. Brown", "player_id"] == "00-P1"
+
+
+def test_every_exclusion_counted_by_reason(fx):
+    *_, df, _ = fx
+    close = Counter(df[df.role == L.CLOSE].status)
+    assert close == {"": 14, L.GAME: 3, L.MOVED: 2, L.NO_POINT: 1, L.NO_LINE: 1, L.MISSING: 1, L.TIE: 1,
+                     L.UNMATCHED: 2, L.VOID: 1, L.PUSH: 1}
+    t = grade.exclusions(df)
+    assert t.lines.sum() == (df.status != "").sum()                    # each excluded line counted once
+    assert set(t.reason.astype(str)) <= set(L.REASONS)
+
+
+def test_a_player_game_with_no_point_is_counted_not_dropped(fx, capsys, tmp_path):
+    """Review M2 (log, don't drop): "Pointless Guy" is quoted at two books with no point. He is not a player-game
+    (no line anywhere), so the coverage doesn't count him, but he is a row of the lines table, excluded under his
+    own reason at both snapshots, and listed by --list-excluded and in lines.csv."""
+    f, calls, loaded, paths, df, _ = fx
+    pg = df[df.description == "Pointless Guy"]
+    assert len(pg) == 2 and set(pg.status) == {L.NO_POINT} and set(pg.role) == {L.CLOSE, L.T24}
+    assert L.coverage(loaded.rows) == {L.PRIMARY[0]: (2, 13), L.PRIMARY[1]: (1, 10)}
+    t = grade.exclusions(df)
+    assert t[t.reason.astype(str) == L.NO_POINT].lines.sum() == 2
+    out = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path)
+    pg_run.grade_command(f.cfg, f.cache, out, book_recorded=f.book, list_excluded=True, now=fixture.NOW)
+    listing = capsys.readouterr().out.split("## Every excluded line")[1]
+    assert listing.count("Pointless Guy") == 2
+    csv = pd.read_csv(tmp_path / "lines.csv")
+    assert (csv[csv.description == "Pointless Guy"].excluded_for == L.NO_POINT).all()
+
+
+def test_kickoff_moved_before_the_close_only(fx):
+    """f3: nflverse's kickoff (12:00 ET = 16:00 UTC) is before the close requested at 16:55 UTC, so its close lines
+    are excluded; its T-24h lines, a day earlier, are graded."""
+    *_, df, _ = fx
+    f3 = df[df.event_id == "f3"]
+    assert set(f3[f3.role == L.CLOSE].status) == {L.MOVED}
+    assert set(f3[f3.role == L.T24].status) == {""}
+
+
+def test_a_snapshot_listing_its_own_kickoff_as_passed_is_excluded():
+    """No in-play price: a row whose snapshot is at or after the kickoff it lists itself is excluded (kickoff
+    moved), whatever nflverse says."""
+    ts = pd.Timestamp
+    pl = pd.DataFrame([{"event_id": "e", "label": "2025", "role": L.CLOSE, "kick": ts("2025-09-07T17:00Z"),
+                        "commence": ts("2025-09-07T16:50Z"), "snap": ts("2025-09-07T16:50Z"),
+                        "requested": ts("2025-09-07T16:50Z"), "home_team": "x", "away_team": "y",
+                        "market": L.PRIMARY[0], "description": "A B", "book": L.DRAFTKINGS, "status": "",
+                        "line": 10.5, "d_over": 1.91, "d_under": 1.91, "p_power": 0.5, "p_add": 0.5,
+                        "p_mult": 0.5, "lines_listed": 1}])
+    games = pd.DataFrame([{"event_id": "e", "game_id": "g", "season": 2025, "home": "KC", "away": "BAL",
+                           "kick_nflverse": ts("2025-09-07T17:00Z")}])
+    names = roster.NameMap(pd.DataFrame([(2025, "KC", "id1", "A B", "A", "A", "B")], columns=roster.COLUMNS))
+    pw = pd.DataFrame([{"season": 2025, "season_type": "REG", "game_id": "g", "player_id": "id1",
+                        **{c: 5 for c in outcomes.STAT.values()}}])
+    assert grade.assign(pl, games, names, pw).status.tolist() == [L.MOVED]
+    assert grade.assign(pl.assign(commence=ts("2025-09-07T17:00Z")), games, names, pw).status.tolist() == [""]
+
+
+# ---------------------------------------------------------------- the fixture season, hand-computed
+def test_fixture_season_reproduces_the_hand_computed_excess(fx):
+    """12 graded primary close lines, 8 under wins, eleven at 0.5 and Jackson's at 0.64:
+    (8 - 5.5 - 0.64) / 12 = 0.155."""
+    *_, df, _ = fx
+    g = close_primary(df)
+    g = g[g.status == ""]
+    t = stats.excess_test(g)
+    assert (t["n"], t["under_wins"], t["games"]) == (12, 8, 3)
+    assert t["excess"] == pytest.approx(fixture.EXCESS) == pytest.approx(0.155)
+    assert g.set_index("description").loc["Lamar Jackson", "p_power"] == pytest.approx(0.64, abs=1e-12)
+    assert g.set_index("description").loc["Derrick Henry", "line"] == 85.5         # the main of his two lines
+    pooled = grade.table(df, L.CLOSE, L.PRIMARY).set_index("scope").loc["pooled"]
+    assert pooled.excess == pytest.approx(0.155) and pooled.n == 12
+
+
+def test_readout_and_gate_by_hand(fx):
+    """Same-season medians over each player's three 2025 rows (the 2026 rows, 999 yards, are never read).
+    Receiving: line - median = -4.5, 5.5, 10.5, 5.5, 8.5, 10.5 (mean 6, 5 of 6 above); rushing: -4.5, 5.5, 10.5,
+    15.5, 5.5, 5.5 (mean 38/6, 5 of 6 above). The pooled excess is positive, so the gate passes."""
+    *_, df, pw = fx
+    ro = grade.readout(df, grade.season_medians(pw)).set_index("market")
+    rec, rush = L.PRIMARY
+    assert ro.loc[rec, "mean_line_minus_median"] == pytest.approx(6.0)
+    assert ro.loc[rush, "mean_line_minus_median"] == pytest.approx(38 / 6)
+    assert ro.loc[rec, "share_above"] == pytest.approx(5 / 6) == ro.loc[rush, "share_above"]
+    gate = grade.gate(df, ro.reset_index())
+    assert gate["read"] and gate["passes"] and gate["pooled"]["excess"] == pytest.approx(0.155)
+
+
+def test_gate_fails_on_any_one_condition(fx):
+    *_, df, pw = fx
+    ro = grade.readout(df, grade.season_medians(pw))
+    rec = L.PRIMARY[0]
+    half = ro.assign(share_above=np.where(ro.market == rec, 0.5, ro.share_above))       # exactly half: not "more"
+    assert not grade.gate(df, half)["passes"]
+    flipped = df.assign(win=np.where(df.status == "", 0.0, df.win))                      # every under loses
+    assert not grade.gate(flipped, ro)["passes"]
+    assert grade.gate(df[df.season != 2025], ro) == {"read": False, "why": "no graded 2025 line in the primary markets"}
+
+
+def test_secondary_t24_and_line_move(fx):
+    """At T-24h every receiving line is a point lower: the move to the close is +1 for each receiving pair, 0 for
+    rushing; the set needs a main line at both snapshots and reads no outcome."""
+    *_, df, _ = fx
+    mv = grade.line_move(df).set_index("scope")
+    rec, rush = L.PRIMARY
+    assert (mv.loc[rec, "pairs"], mv.loc[rec, "mean_move"], mv.loc[rec, "share_up"]) == (10, 1.0, 1.0)
+    assert (mv.loc[rush, "pairs"], mv.loc[rush, "mean_move"], mv.loc[rush, "share_same"]) == (6, 0.0, 1.0)
+    t24 = grade.table(df, L.T24, L.PRIMARY).set_index("scope").loc["pooled"]
+    assert t24.n == 15                                     # f3's T-24h lines count; its close lines don't
+
+
+def test_controls_have_no_p_value(fx):
+    *_, df, _ = fx
+    c = grade.controls(df)
+    assert set(c.scope) >= set(L.CONTROLS) and "p" in c.columns
+    out = pg_run.results_section(df, {}, pd.DataFrame(columns=["market", "season", "lines", "no_median",
+                                                               "mean_line_minus_median", "share_above"]),
+                                 registration.Bar(294, "unfilled", None, 294))
+    ctl = out[out.index(next(x for x in out if x.startswith("## Controls"))) + 2]
+    assert " p " not in f" {ctl} " and "excess" in ctl                # the controls' header row has no p column
+
+
+# ---------------------------------------------------------------- the seal
+def test_sealed_calls_are_never_read(fx, monkeypatch):
+    """The fixture's 2026 game is in the cache with absurd prices. Its calls are planned as sealed and never reach
+    bulk.load_rows; nothing of it reaches the join."""
+    f, calls, *_ = fx
+    sealed = [c for c in calls if c.sealed]
+    assert len(sealed) == 2 and {c.event_id for c in sealed} == {"s1"}
+    assert all(f.cache.lookup(c.cache_sport, c.source, c.key) for c in sealed)       # it is there to be read
+    seen, real = [], bulk.load_rows
+    monkeypatch.setattr(L.bulk, "load_rows", lambda cfg, cs, cache, **k: seen.extend(cs) or real(cfg, cs, cache, **k))
+    loaded = L.load(f.cfg, calls, f.cache, L.schedule(f.cfg, f.cache))
+    assert seen and not any(c.sealed for c in seen) and "s1" not in {c.event_id for c in seen}
+    assert loaded.sealed_calls == 2 and "s1" not in set(loaded.rows.event_id)
+    assert not (loaded.rows.price.astype(float) >= 50).any()
+
+
+def test_a_sealed_row_that_slips_through_is_refused_before_the_join(fx, monkeypatch):
+    """Layer three: a 2026 row returned for an unsealed call (whatever the reason) is refused and counted before
+    anything else sees it, by its sealed window and by its NFL season."""
+    f, calls, *_ = fx
+    open_call = next(c for c in calls if not c.sealed and c.event_id == "f1")
+    row = {"snapshot_ts": "2026-09-13T16:50:00Z", "requested_ts": "x", "odds_event_id": "f1",
+           "commence_time": "2026-09-13T17:00:00Z", "home_team": "Kansas City Chiefs", "away_team": "Buffalo Bills",
+           "bookmaker": "draftkings", "book_last_update": None, "market_key": L.PRIMARY[0], "market_last_update": None,
+           "outcome_name": "Under", "description": "Travis Kelce", "point": "5.5", "price_decimal": "50.0",
+           "origin": "historical", "sport": NFL, "pull": "F3"}
+    monkeypatch.setattr(L.bulk, "load_rows", lambda *a, **k: [row])
+    loaded = L.load(f.cfg, [open_call], f.cache, L.schedule(f.cfg, f.cache))
+    assert loaded.rows.empty and loaded.refused == {"game in a sealed season window": 1}
+    assert L.sealed_reason(f.cfg, pd.Timestamp("2027-03-05T00:00Z").to_pydatetime()) == \
+        "NFL season 2026 or later by the game's date"                 # outside every window, still refused
+    assert L.sealed_reason(f.cfg, pd.Timestamp("2026-02-08T23:30Z").to_pydatetime()) is None   # 2025's Super Bowl
+
+
+def test_outcome_and_schedule_reads_filter_2026_as_they_read(fx, monkeypatch):
+    """player_week and games.parquet both hold 2026 rows in the fixture (and in the repo). Every read passes the
+    season filter to the reader, names its columns (never a score), and receives no 2026 row."""
+    f, *_ = fx
+    reads, real = [], pd.read_parquet
+
+    def spy(path, *a, **k):
+        got = real(path, *a, **k)
+        reads.append((Path(path).name, k.get("columns"), k.get("filters"), set(got.season)))
+        return got
+    monkeypatch.setattr(pd, "read_parquet", spy)
+    pw = outcomes.player_week(f.player_week)
+    sched = outcomes.nfl_schedule(f.games)
+    assert set(pw.season) == {2025} and set(sched.season) == {2025} and not (pw[list(outcomes.STAT.values())] == 999).any().any()
+    assert [r[0] for r in reads] == ["player_week.parquet", "games.parquet"]
+    assert all(r[2] == outcomes.SEASON_FILTER and r[3] <= set(outcomes.SEASONS) for r in reads)
+    assert not any("score" in c or c in ("result", "total") for r in reads for c in r[1])
+    assert real(f.player_week).season.max() == 2026 and real(f.games).season.max() == 2026   # the filter did it
+
+
+def test_the_whole_fixture_run_calls_no_api_and_writes_its_report(fx, monkeypatch, capsys, tmp_path):
+    def no_network(*a, **k):
+        raise AssertionError("the grader made an HTTP request")
+    monkeypatch.setattr(requests.Session, "get", no_network)
+    monkeypatch.setattr(requests, "get", no_network)
+    f, *_ = fx
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path)
+    assert pg_run.grade_command(f.cfg, f.cache, paths, book_recorded=f.book, list_excluded=True, fixture=True,
+                                now=fixture.NOW) == 0
+    text = capsys.readouterr().out
+    assert "Gate: PASSES" in text and "Every excluded line" in text and "Rashee Rice" in text
+    assert "Not read: section 2.9 is read only on 2023-25; graded seasons: 2025" in text
+    assert "n_variants_tested: 1" in text and "bar p < 0.05 / " in text
+    lines_csv = pd.read_csv(tmp_path / "lines.csv")
+    assert len(lines_csv) == len(fx[4]) and (tmp_path / "report.md").exists()
+
+
+# ---------------------------------------------------------------- nothing to grade yet, and the stop before the note
+def test_empty_cache_prints_nothing_to_grade_yet(tmp_path, capsys):
+    cfg = fixture.config(tmp_path)
+    paths = pg_run.Paths(out=tmp_path / "out")
+    assert pg_run.grade_command(cfg, RawCache(tmp_path / "raw"), paths, now=fixture.NOW) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("No F3 data yet: no NFL schedule has been saved") and "Nothing to grade yet." in out
+    games = [bulk._label(cfg, {"id": "f1", "sport": NFL, "commence_time": fixture.t("2025-09-07T17:00:00Z"),
+                               "home_team": "A", "away_team": "B", "first_seen": None})]
+    bulk.save_schedule(tmp_path / "raw", NFL, games)
+    assert pg_run.grade_command(cfg, RawCache(tmp_path / "raw"), paths, now=fixture.NOW) == 0
+    assert "0 of F3's 2 planned 2023-25 calls are cached. Nothing to grade yet." in capsys.readouterr().out
+    assert not (tmp_path / "out").exists()
+
+
+def test_a_partial_f3a_is_flagged_next_to_the_book(tmp_path, monkeypatch, capsys):
+    """Review m3: with one 2025 close answer missing, step 1 flags F3a as partial on its own, next to the book (the
+    book is picked on F3a's coverage), apart from 2023-24's calls."""
+    f = fixture.build(tmp_path)
+    games = L.schedule(f.cfg, f.cache)
+    close = next(c for c in L.f3_calls(f.cfg, games, now=fixture.NOW)
+                 if c.event_id == "f4" and L.role_of(c, games["f4"]["commence_time"]) == L.CLOSE)
+    f.cache.lookup(close.cache_sport, close.source, close.key).unlink()
+    _no_outcome_reads(monkeypatch)
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path / "o")
+    assert pg_run.grade_command(f.cfg, RawCache(tmp_path / "raw"), paths, now=fixture.NOW) == 0
+    out = capsys.readouterr().out
+    book = out[out.index("## The book"):out.index("Book: ")]
+    assert "WARNING: F3a is partial: 1 of its planned calls are not cached (close: 1)" in book
+    assert "F3a (2025) is partial: 1 of its planned calls are not cached" in out
+
+
+def test_the_cli_on_this_checkout(monkeypatch, tmp_path, capsys):
+    """`markets props-grade` with an empty data folder (the cloud, or the Mac before F3a): exit 0."""
+    from markets import cli
+    monkeypatch.setattr(pg_run, "RawCache", lambda: RawCache(tmp_path / "raw"))
+    assert cli.main(["props-grade"]) == 0
+    assert "Nothing to grade yet." in capsys.readouterr().out
+
+
+def _no_outcome_reads(monkeypatch):
+    """Step 1 may read the roster (names only, review finding m7); never player_week, the schedule or the join."""
+    def boom(*a, **k):
+        raise AssertionError("an outcome or schedule table was read, or the join ran, before the book note")
+    for mod, name in ((outcomes, "player_week"), (outcomes, "nfl_schedule"), (outcomes, "match_events"),
+                      (grade, "assign")):
+        monkeypatch.setattr(mod, name, boom)
+
+
+def test_without_the_book_note_nothing_is_joined(fx, monkeypatch, capsys, tmp_path):
+    """2.4: the book is recorded in section 8 before any F3a row is joined to an outcome. Without --book-recorded
+    the command prints the coverage and the book and stops (exit 0); with the wrong book, or with no dated entry
+    recording it, it refuses (exit 1). No outcome or schedule table is read in any of these."""
+    f, *_ = fx
+    _no_outcome_reads(monkeypatch)
+    out_dir = tmp_path / "out"
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=out_dir)
+    run = lambda book, p=paths: pg_run.grade_command(f.cfg, f.cache, p, book_recorded=book, now=fixture.NOW)  # noqa
+    assert run(None) == 0
+    out = capsys.readouterr().out
+    assert "Pinnacle lists 2 of 13 player-games (15.4%)" in out and "Book: DraftKings" in out
+    assert "Stopped before any outcome is read" in out and "--book-recorded draftkings" in out
+    assert run("pinnacle") == 1 and "REFUSED: --book-recorded pinnacle" in capsys.readouterr().out
+    unnoted = pg_run.Paths(f.roster, f.games, f.player_week, f.status, _prereg_with(tmp_path / "reg"),
+                           check_git=False, out=out_dir)
+    assert run("draftkings", unnoted) == 1
+    assert "does not record DraftKings in a dated entry" in capsys.readouterr().out
+    assert not out_dir.exists()
+
+
+def test_step_one_lists_the_names_the_roster_does_not_match(fx, monkeypatch, capsys, tmp_path):
+    """Review m7: before any join, step 1 prints the prop names that match no player, or more than one, on either
+    team that season (names and counts only), so the roster can be fixed before the first join. It reads the roster
+    and the team table, never player_week or the schedule."""
+    f, *_ = fx
+    _no_outcome_reads(monkeypatch)
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path)
+    assert pg_run.grade_command(f.cfg, f.cache, paths, now=fixture.NOW) == 0
+    out = capsys.readouterr().out
+    section = out[out.index("## Names against the roster"):out.index("Stopped before any outcome is read")]
+    assert re.search(r"Nobody Known\s+no player of that name on either team\s+1", section)
+    assert re.search(r"Chris Smith\s+more than one player\s+1", section)
+    assert "Travis Kelce" not in section and "D.J. Moore" not in section and "5 names in 5 games" in section
+
+
+def test_an_uncommitted_registration_or_roster_is_refused(fx, monkeypatch, capsys, tmp_path):
+    """Review m1 and m8: the registration (with its book note) and the roster must both be committed unchanged at
+    HEAD; the refusal says which, in plain words."""
+    f, *_ = fx
+    _no_outcome_reads(monkeypatch)
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=True, out=tmp_path)
+    run = lambda: pg_run.grade_command(f.cfg, f.cache, paths, book_recorded="draftkings", now=fixture.NOW)  # noqa
+    assert run() == 1
+    out = capsys.readouterr().out
+    assert "REFUSED: the registration" in out and "not committed" in out
+    real = pg_run.committed
+    monkeypatch.setattr(pg_run, "committed", lambda p: (True, "committed in x") if p == f.prereg else real(p))
+    assert run() == 1 and "REFUSED: the roster" in capsys.readouterr().out
+    monkeypatch.setattr(pg_run, "committed",
+                        lambda p: (True, "committed in x") if p == f.prereg else (False, "has changes not committed"))
+    assert run() == 1
+    out = capsys.readouterr().out
+    assert "REFUSED: the roster" in out and "has changes not committed" in out and "is has" not in out
+    assert real(Path(bulk.CONFIG))[0] and real(roster.ROSTER)[0]          # committed, unchanged files pass
+
+
+def _prereg_with(where: Path, section8_text: str = "", before_8: str = "") -> Path:
+    """A copy of the registration whose section 8 is the registered placeholder plus `section8_text` (never the live
+    note), optionally with `before_8` written at the end of section 7."""
+    where.mkdir(parents=True, exist_ok=True)
+    body = registration.SECTION8_REGISTERED + ("\n\n" + section8_text if section8_text else "")
+    text = registration.with_section8(registration.PREREG.read_text(), body)
+    if before_8:
+        text = text.replace("## 8. Dated notes", before_8 + "\n\n## 8. Dated notes")
+    p = where / f"P{len(list(where.iterdir()))}.md"
+    p.write_text(text)
+    return p
+
+
+def test_section8_reader(tmp_path):
+    """Review m1: the note must be a dated entry in section 8 that says which book; a mention of the other book's
+    coverage doesn't name it, an HTML comment doesn't count, an undated or misplaced note doesn't count, and dated
+    entries naming both books name none. Every case is on a copy: the live note is never read here."""
+    placeholder = _prereg_with(tmp_path)
+    assert registration.noted_book(placeholder) == (None, "it holds only the placeholder")
+    assert registration.section8(placeholder) == ""
+    good = ("- **2026-10-01 (Pacific):** the book is DraftKings (Pinnacle lists 44 of 55 receiving player-games, "
+            "80.0%, and 20 of 35 rushing, 57.1%, at F3a's close), by the rule of 2.4.")
+    assert registration.noted_book(_prereg_with(tmp_path, good)) == ("draftkings", "")
+    assert registration.noted_book(_prereg_with(tmp_path, "- 2026-10-02: the book is **Pinnacle** (90% and 85%)."))[0] \
+        == "pinnacle"
+    undated = "- **October 1:** the book is DraftKings (Pinnacle lists 44 of 55)."
+    assert registration.noted_book(_prereg_with(tmp_path, undated))[0] is None
+    assert registration.noted_book(_prereg_with(tmp_path, "<!-- 2026-10-01: the book is Pinnacle -->"))[0] is None
+    assert registration.noted_book(_prereg_with(tmp_path, "- 2026-10-01: Pinnacle lists 44 of 55."))[0] is None
+    both = good + "\n- **2026-10-02:** the book is Pinnacle."
+    assert registration.noted_book(_prereg_with(tmp_path, both)) == (None, "its dated entries name both books")
+    elsewhere = _prereg_with(tmp_path, before_8="- 2026-10-01: the book is DraftKings.")
+    assert registration.noted_book(elsewhere)[0] is None                      # outside section 8
+    # the reviewer's case 5: a DraftKings note that mentions Pinnacle's figures never lets Pinnacle join
+    stop = pg_run.refusal("pinnacle", "pinnacle", registration.noted_book(_prereg_with(tmp_path, good)),
+                          pg_run.Paths(check_git=False))
+    assert stop and "does not record Pinnacle" in stop[0] and "it records DraftKings" in stop[0]
+
+
+SIMULATE = """
+import sys
+from argparse import Namespace
+from pathlib import Path
+
+import pytest
+
+from markets.research.props_grade import registration, run
+
+registration.PREREG = Path(sys.argv[1])          # the live registration, as it will be once the hub's note is in
+fixture_rc = run.main(Namespace(fixture=True, book_recorded=None, list_excluded=False, out=sys.argv[2]))
+tests_rc = pytest.main([sys.argv[3], "-q", "-o", "addopts=", "-p", "no:cacheprovider", "-k", "not simulated_live_note"])
+sys.exit(10 * int(fixture_rc) + int(tests_rc))
+"""
+
+
+@pytest.mark.parametrize("book", ["Pinnacle", "DraftKings"])
+def test_a_simulated_live_note_changes_no_props_test_and_not_the_fixture(book, tmp_path):
+    """Review N1: once the hub commits its section 8 note, `--fixture` and every props test must still pass. The live
+    file is never touched: a copy with the note appended stands in for it (registration.PREREG patched in a child
+    process), and the fixture and the whole props test file run against it."""
+    import subprocess
+    import sys
+    live = tmp_path / "PREREGISTRATION_PROPS.md"
+    live.write_text(registration.PREREG.read_text().rstrip("\n") + f"\n\n- **2026-10-01 (Pacific):** the book is "
+                    f"{book} (Pinnacle lists 44 of 55 receiving player-games, 80.0%, and 28 of 35 rushing, 80.0%, at "
+                    "F3a's close), by the rule of 2.4; recorded before any F3a row was joined to an outcome.\n")
+    test_file = Path(__file__)
+    done = subprocess.run([sys.executable, "-c", SIMULATE, str(live), str(tmp_path / "out"), str(test_file)],
+                          cwd=test_file.parents[1], capture_output=True, text=True, timeout=600)
+    assert done.returncode == 0, done.stdout[-3000:] + done.stderr[-3000:]
+    assert "Gate: PASSES" in done.stdout and " passed" in done.stdout and "failed" not in done.stdout
+
+
+# ---------------------------------------------------------------- the count and the bar
+HEADER = "- " + registration.FIELD + " " + registration.HEADER_REGISTERED      # the field as registered
+
+
+def _bar(tmp_path, header_line: str, status: str = "count went (0.05 / 200), (0.05 / 271), now (0.05 / 294).\n"):
+    (tmp_path / "STATUS.md").write_text(status)
+    (tmp_path / "P.md").write_text(header_line + "\n")
+    return registration.bar(tmp_path / "STATUS.md", tmp_path / "P.md")
+
+
+def test_bar_from_status_and_the_header(tmp_path):
+    """STATUS.md: the largest "0.05 / N" (294). The header as registered: unfilled, its illustration's 288 ignored.
+    A filled header with a larger count wins; a smaller one never lowers the bar."""
+    b = _bar(tmp_path, HEADER)
+    assert (b.status_count, b.header, b.header_count, b.count) == (294, "unfilled", None, 294)
+    assert b.alpha == pytest.approx(0.05 / 294)
+    b = _bar(tmp_path, "- **Count and bar at registration:** 300 (294 in STATUS.md + 6 run), p < 0.05 / 300")
+    assert (b.header, b.header_count, b.count) == ("filled", 300, 300)
+    b = _bar(tmp_path, "- **Count and bar at registration:** 280, p < 0.05 / 280")
+    assert (b.header, b.header_count, b.count) == ("filled", 280, 294)          # STATUS.md's is stricter
+    b = _bar(tmp_path, "- **Count and bar at registration:** two hundred")
+    assert (b.header, b.count) == ("unreadable", 294)
+    cut = HEADER.replace("; other registrations in flight add theirs.", "")   # edited, no new count
+    b = _bar(tmp_path, cut)
+    assert (b.header, b.header_count, b.count) == ("unreadable", None, 294)
+    assert _bar(tmp_path, cut, status="(0.05 / 200)\n").count == 288             # what it reads still counts
+    assert registration.bar(tmp_path / "none.md", tmp_path / "none.md").count is None
+
+
+def test_a_filled_count_is_read_wherever_it_is_written(tmp_path):
+    """Review m5 and its residual: a count written inside the placeholder's parentheses, after them, or in its
+    place is read; the placeholder untouched is unfilled. Two new counts are ambiguous and the largest is set
+    against STATUS.md's; nothing read ever lowers the bar below STATUS.md's 294."""
+    inside = HEADER.replace("*(the hub fills this in:", "*(the hub fills this in: 310 (0.05 / 310);")
+    b = _bar(tmp_path, inside)
+    assert (b.header, b.header_count, b.count) == ("filled", 310, 310)
+    after = HEADER + " **Filled October 1: 310, p < 0.05 / 310 = 0.000161.**"
+    b = _bar(tmp_path, after)
+    assert (b.header, b.header_count, b.count) == ("filled", 310, 310)
+    b = _bar(tmp_path, HEADER)
+    assert (b.header, b.count) == ("unfilled", 294)
+    both = HEADER + " Filled: 300 (0.05 / 300), or 320 with PR 99 (0.05 / 320)."
+    b = _bar(tmp_path, both)
+    assert (b.header, b.header_count, b.count) == ("ambiguous", 320, 320) and "not unambiguously" in b.lines()[1]
+    smaller = HEADER.replace("*(the hub fills this in:", "*(the hub fills this in: 250 (0.05 / 250);")
+    assert _bar(tmp_path, smaller).count == 294
+
+
+def test_bar_on_this_checkout():
+    """Whatever the hub writes into the live header, the count used is never below STATUS.md's (at least 294)."""
+    b = registration.bar()
+    assert b.status_count >= 294 and b.count >= b.status_count and b.alpha == pytest.approx(0.05 / b.count)
+
+
+# ---------------------------------------------------------------- 2.9
+def _graded(cells: dict, lines_per_game: int = 10) -> pd.DataFrame:
+    """cells: (season, market) -> (n, under wins), every p = 0.5."""
+    rows, gid = [], 0
+    for (season, market), (n, wins) in cells.items():
+        for i in range(n):
+            if i % lines_per_game == 0:
+                gid += 1
+            rows.append({"role": L.CLOSE, "status": "", "season": season, "market": market, "event_id": f"g{gid}",
+                         "win": float(i < wins), "p_power": 0.5, "p_add": 0.5, "p_mult": 0.5, "d_under": 1.91})
+    return pd.DataFrame(rows)
+
+
+def test_decision_act_drop_otherwise():
+    rec, rush = L.PRIMARY
+    strong = _graded({(s, m): (1000, 650) for s in grade.SEASONS for m in L.PRIMARY})
+    d = grade.decision(strong, 0.05 / 294)
+    assert d["read"] and d["condition_1"] and d["verdict"] == "Act" and len(d["checks"]) == 5
+    carried = _graded({**{(s, rec): (300, 180) for s in grade.SEASONS}, **{(s, rush): (300, 120) for s in grade.SEASONS}})
+    d = grade.decision(carried, 0.05 / 294)                    # pooled 0: and without receiving, below zero
+    assert d["verdict"] == "Drop"
+    one_market = _graded({**{(s, rec): (300, 165) for s in grade.SEASONS}, **{(s, rush): (300, 140) for s in grade.SEASONS}})
+    d = grade.decision(one_market, 0.05 / 294)                 # pooled above zero, receiving carries it
+    assert d["pooled"]["excess"] > 0 and d["without"][f"without {rec}"] <= 0 and d["verdict"] == "Drop"
+    modest = _graded({(s, m): (100, 55) for s in grade.SEASONS for m in L.PRIMARY})
+    d = grade.decision(modest, 0.05 / 294)
+    assert d["verdict"] == "Otherwise" and not d["condition_1"]
+    assert grade.decision(strong, None)["verdict"] == "Otherwise"        # no bar read: condition 1 can't be met
+    assert grade.decision(strong[strong.season != 2023], 0.05 / 294)["read"] is False
+
+
+def test_the_verdict_is_withheld_while_any_2023_25_call_is_uncached():
+    """Review M1: 2.9 is "read once, on 2023-25, after F3b is in and joined". With every season graded but calls of
+    2024 still uncached, the verdict is withheld with the counts and nothing is decided. Uncached sealed (2026)
+    calls never hold it back (they are never read)."""
+    strong = _graded({(s, m): (1000, 650) for s in grade.SEASONS for m in L.PRIMARY})
+    d = grade.decision(strong, 0.05 / 294, {"2024": 3, "2023": 0})
+    assert d["read"] is False and d["withheld"] and "3 planned 2023-25 calls are not cached (2024: 3)" in d["why"]
+    text = "\n".join(pg_run.decision_lines(d, registration.Bar(294, "unfilled", None, 294)))
+    assert text.startswith("Verdict withheld:") and "nothing is decided" in text and "Verdict: Act" not in text
+    assert grade.decision(strong, 0.05 / 294, {"2026": 5})["verdict"] == "Act"
+    assert grade.decision(strong, 0.05 / 294, {})["verdict"] == "Act"
+
+
+def test_one_season_carries_it():
+    """Review m9: pooled excess above zero, but without 2025 what remains is at or below zero: Drop."""
+    rec, rush = L.PRIMARY
+    cells = {(2025, m): (300, 210) for m in L.PRIMARY}
+    cells |= {(s, m): (300, 140) for s in (2023, 2024) for m in L.PRIMARY}
+    d = grade.decision(_graded(cells), 0.05 / 294)
+    assert d["pooled"]["excess"] > 0 and d["without"]["without 2025"] <= 0
+    assert d["carried"] == ["without 2025"] and d["verdict"] == "Drop"
+
+
+def test_a_market_with_no_graded_line_carries_nothing_so_drop():
+    """Review m2: receiving strong in every season and no rushing line at all. "Without receiving" leaves nothing;
+    the stricter reading counts that as carried, so the verdict is Drop, not Otherwise."""
+    rec = L.PRIMARY[0]
+    d = grade.decision(_graded({(s, rec): (1000, 650) for s in grade.SEASONS}), 0.05 / 294)
+    assert math.isnan(d["without"][f"without {rec}"]) and f"without {rec}" in d["carried"]
+    assert d["verdict"] == "Drop"
+
+
+# ---------------------------------------------------------------- 2.7: the roster
+def test_name_key():
+    k = roster.key
+    assert k("Amon-Ra St. Brown") == k("Amon-Ra St Brown") == k("amon ra st. brown") == "amonrastbrown"
+    assert k("D.J. Moore") == k("DJ Moore") and k("Kenneth Walker III") == k("Kenneth Walker")
+    assert k("Marvin Harrison Jr.") == k("Marvin Harrison") and k("Ja'Marr Chase") == "jamarrchase"
+    assert k("V") == "v" and k("") == ""
+
+
+def test_name_map_matching():
+    r = pd.DataFrame([(2025, "KC", "a", "Gabe Davis", "Gabriel", "Gabe", "Davis"),
+                      (2025, "BUF", "a", "Gabe Davis", "Gabriel", "Gabe", "Davis"),      # traded: same player
+                      (2025, "DET", "b", "Chris Smith", "Chris", "Chris", "Smith"),
+                      (2025, "CHI", "c", "Chris Smith", "Christopher", "Chris", "Smith"),
+                      (2025, "MIA", "", "No Id", "No", "No", "Id"),
+                      (2024, "KC", "d", "Old Name", "Old", "Old", "Name")], columns=roster.COLUMNS)
+    m = roster.NameMap(r)
+    assert m.match(2025, ("KC", "BUF"), "Gabriel Davis") == ("a", "")
+    assert m.match(2025, ("KC", "LV"), "Gabe Davis") == ("a", "")
+    assert m.match(2025, ("DET", "CHI"), "Chris Smith") == (None, roster.SEVERAL)
+    assert m.match(2025, ("DET", "GB"), "Chris Smith") == ("b", "")
+    assert m.match(2025, ("NYJ", "NE"), "Gabe Davis") == (None, roster.NO_PLAYER)      # not on either team
+    assert m.match(2025, ("KC", "BUF"), "Old Name") == (None, roster.NO_PLAYER)        # other season
+    assert m.match(2025, ("MIA", "NE"), "No Id") == (None, roster.NO_ID)
+    assert m.match(2025, ("KC", "BUF"), "Davis") == (None, roster.NO_PLAYER)          # never a last name alone
+
+
+def test_roster_reader_refuses_extra_columns_and_2026(tmp_path):
+    base = pd.DataFrame([(2025, "KC", "a", "A B", "A", "A", "B")], columns=roster.COLUMNS)
+    base.to_csv(tmp_path / "ok.csv", index=False)
+    assert len(roster.load(tmp_path / "ok.csv")) == 1
+    base.assign(receiving_yards=10).to_csv(tmp_path / "extra.csv", index=False)
+    with pytest.raises(SystemExit, match="expected exactly"):
+        roster.load(tmp_path / "extra.csv")
+    base.assign(season=2026).to_csv(tmp_path / "sealed.csv", index=False)
+    with pytest.raises(SystemExit, match="refused"):
+        roster.load(tmp_path / "sealed.csv")
+    with pytest.raises(SystemExit, match="2026 is sealed"):
+        roster._fetch(2026, tmp_path)
+
+
+def test_roster_reduce_keeps_only_the_map_columns():
+    weekly = pd.DataFrame({"season": [2025] * 4, "team": ["KC", "KC", "BUF", "GB"], "gsis_id": ["a", "a", "a", None],
+                           "full_name": ["A B"] * 4, "first_name": ["A"] * 4, "football_name": ["A"] * 4,
+                           "last_name": ["B"] * 4, "week": [1, 2, 9, 9], "status": ["ACT", "INA", "ACT", "ACT"]})
+    r = roster.reduce(weekly[roster.SOURCE_COLUMNS], 2025)
+    assert list(r.columns) == roster.COLUMNS and len(r) == 2 and set(r.team) == {"KC", "BUF"}    # no id: left out
+    with pytest.raises(SystemExit):
+        roster.reduce(weekly[roster.SOURCE_COLUMNS].assign(season=2026), 2025)
+
+
+def test_the_committed_roster():
+    """config/props/nfl_rosters_2023_2025.csv: the map's columns only, 2023-25 only, player ids in nflverse's form,
+    and a few real spellings resolve."""
+    r = roster.load()
+    assert list(r.columns) == roster.COLUMNS and set(r.season) == set(roster.SEASONS)
+    assert r.player_id.str.fullmatch(r"00-\d{7}").all()                 # every row has an nflverse id
+    assert set(r.team) == set(pd.read_csv(Path(L.__file__).parents[4] / "config/teams/nfl.csv").code)
+    m = roster.NameMap(r)
+    assert m.match(2025, ("PHI", "DAL"), "A.J. Brown")[0] == m.match(2025, ("PHI", "DAL"), "AJ Brown")[0] is not None
+    assert m.match(2025, ("DET", "GB"), "Amon-Ra St. Brown")[0] is not None
+    assert m.match(2025, ("SEA", "LA"), "Kenneth Walker")[0] is not None
+
+
+# ---------------------------------------------------------------- the snapshots and the schedule
+def test_close_and_t24_are_the_puller_snapshots(fx):
+    f, calls, *_ = fx
+    kick = fixture.t(fixture.GAMES["f1"][0])
+    f1 = sorted(c.at for c in calls if c.event_id == "f1")
+    assert f1 == [kick - pd.Timedelta(hours=24), kick - pd.Timedelta(minutes=5)]       # 17:00 kickoff: close 16:55
+    assert {L.role_of(c, kick) for c in calls if c.event_id == "f1"} == {L.CLOSE, L.T24}
+
+
+def test_nfl_season_by_date():
+    ts = lambda s: pd.Timestamp(s).to_pydatetime()       # noqa: E731
+    assert L.nfl_season(ts("2025-09-05T00:20Z")) == 2025 and L.nfl_season(ts("2026-02-09T00:30Z")) == 2025
+    assert L.nfl_season(ts("2026-09-10T00:20Z")) == 2026
+
+
+def test_event_matching_uses_team_names_and_the_date(fx):
+    f, *_ = fx
+    sched = outcomes.nfl_schedule(f.games)
+    ev = pd.DataFrame([{"event_id": "f1", "kick": pd.Timestamp("2025-09-07T17:00Z"), "home_team": "Kansas City Chiefs",
+                        "away_team": "Baltimore Ravens"},
+                       {"event_id": "x", "kick": pd.Timestamp("2025-09-20T17:00Z"), "home_team": "Kansas City Chiefs",
+                        "away_team": "Baltimore Ravens"},
+                       {"event_id": "y", "kick": pd.Timestamp("2025-09-07T17:00Z"), "home_team": "Nowhere Team",
+                        "away_team": "Baltimore Ravens"}])
+    m, why, missed = outcomes.match_events(ev, sched)
+    assert m.game_id.tolist() == ["2025_01_BAL_KC"] and m.kick_nflverse.iloc[0] == pd.Timestamp("2025-09-07T17:00Z")
+    assert missed == {"x": "no nflverse game", "y": "team name unknown"}
+
+
+def test_event_matching_is_one_to_one(fx):
+    """Review m4: two Odds API events a day apart that both match the same nflverse game would grade it twice; both
+    are left unmatched and counted."""
+    f, *_ = fx
+    sched = outcomes.nfl_schedule(f.games)
+    ev = pd.DataFrame([{"event_id": e, "kick": pd.Timestamp(k), "home_team": "Kansas City Chiefs",
+                        "away_team": "Baltimore Ravens"} for e, k in (("a", "2025-09-07T17:00Z"),
+                                                                      ("b", "2025-09-08T17:00Z"))]
+                      + [{"event_id": "c", "kick": pd.Timestamp("2025-09-07T20:25Z"),
+                          "home_team": "Philadelphia Eagles", "away_team": "Dallas Cowboys"}])
+    m, why, missed = outcomes.match_events(ev, sched)
+    assert m.event_id.tolist() == ["c"]
+    assert missed == {"a": outcomes.SHARED, "b": outcomes.SHARED} and why == {outcomes.SHARED: 2}
+
+
+def test_no_order_code_in_the_grader():
+    src = Path(L.__file__).parent
+    text = "\n".join(p.read_text() for p in src.glob("*.py"))
+    assert not re.search(r"\.(post|put|patch|delete)\(", text, flags=re.I)
