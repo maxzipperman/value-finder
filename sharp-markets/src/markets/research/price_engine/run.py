@@ -261,8 +261,9 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
 
 def _refused(exc) -> str:
     """The exit message for a refused --handoff run. Only a refusal raised before any of the bundle's code ran can
-    say no response was read; after that, the bundle's code has parsed responses, though nothing is reported."""
-    when = "before any response is read, nothing written" if exc.before_read else "nothing reported, nothing written"
+    say no response was parsed (the folder check reads and hashes the reused responses, but parses none); after that,
+    the bundle's code has parsed responses, though nothing is reported."""
+    when = "before any response is parsed, nothing written" if exc.before_read else "nothing reported, nothing written"
     return f"price-engine --handoff refused ({when}): {exc}"
 
 

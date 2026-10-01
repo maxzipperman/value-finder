@@ -7,6 +7,7 @@ validator and executor are small stand-ins with the checks the handoff relies on
 response, no 2026 data."""
 import dataclasses
 import hashlib
+import importlib.machinery
 import json
 import os
 import shutil
@@ -370,7 +371,7 @@ def test_the_command_reads_the_handoff_and_writes_the_report(made, tmp_path, mon
 def test_the_command_refuses_a_bad_bundle_and_bad_flag_combinations(made, tmp_path, monkeypatch):
     cfg, calls, cache, scores, bundle, runtime, root = made
     monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
-    with pytest.raises(SystemExit, match=r"refused \(before any response is read, nothing written\)"):
+    with pytest.raises(SystemExit, match=r"refused \(before any response is parsed, nothing written\)"):
         pe_run.main(Namespace(fixture=False, out=str(tmp_path / "o"), handoff=str(bundle), handoff_root="0" * 64,
                               handoff_runtime=None))
     # refused by the bundle's own checks, after its code started reading responses: no claim that none was read
@@ -401,7 +402,7 @@ def test_nothing_is_read_until_amendment_2_registers_a_root(made, monkeypatch, t
     with pytest.raises(handoff.HandoffRefused, match="amendment 2 is not registered"):
         handoff.load(bundle, root, cfg)
     monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
-    with pytest.raises(SystemExit, match=r"refused \(before any response is read, nothing written\): amendment 2 is "
+    with pytest.raises(SystemExit, match=r"refused \(before any response is parsed, nothing written\): amendment 2 is "
                                          "not registered"):
         pe_run.main(Namespace(fixture=False, out=str(tmp_path / "o"), handoff=str(bundle), handoff_root=root,
                               handoff_runtime=None))
@@ -598,7 +599,7 @@ def test_a_change_to_the_import_system_by_the_bundles_code_is_refused_and_put_ba
     root = refreeze(bundle, runtime, monkeypatch)
     before = {k: (getattr(sys, k), list(getattr(sys, k)) if k != "path_importer_cache" else dict(getattr(sys, k)))
               for k in IMPORT_CHANGES}
-    with pytest.raises(handoff.HandoffRefused, match=rf"changed the import system \(sys\.{route}\)") as refused:
+    with pytest.raises(handoff.HandoffRefused, match=rf"changed the import system \(sys\.{route}[,;)]") as refused:
         handoff.load(bundle, root, cfg)
     assert not refused.value.before_read
     for k, (obj, held) in before.items():
@@ -632,4 +633,185 @@ def test_a_name_that_is_not_valid_utf8_is_refused(made, monkeypatch):
     _no_import(monkeypatch)
     with pytest.raises(handoff.HandoffRefused, match="not valid UTF-8") as refused:
         handoff.load(bundle, root, cfg)
+    assert refused.value.before_read
+
+
+
+def _with_validator_code(made, monkeypatch, code: str, files: dict | None = None):
+    """The made-up bundle with `code` appended to its frozen validator (and `files` added), re-frozen and registered."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    p = bundle / "validator.py"
+    p.write_text(p.read_text() + code)
+    for name, text in (files or {}).items():
+        (bundle / name).parent.mkdir(parents=True, exist_ok=True)
+        (bundle / name).write_text(text)
+    return cfg, bundle, refreeze(bundle, runtime, monkeypatch)
+
+
+# Each imports a module from a file in the bundle folder, other than through the handoff's frozen loader, and leaves
+# sys.path as it found it (the reviewer's probe A, and two variants).
+TEMPORARY_IMPORTS = {
+    "folder": ("import sys\n_b = str(Path(__file__).parent)\nsys.path.insert(0, _b)\nimport helper_mod\n"
+               "sys.path.remove(_b)\n", "helper_mod.py"),
+    "subfolder": ("import sys\n_b = str(Path(__file__).parent / 'lib')\nsys.path.insert(0, _b)\nimport helper_mod\n"
+                  "sys.path.remove(_b)\n", "lib/helper_mod.py"),
+    "by_file": ("import sys, importlib.util\n"
+                "_s = importlib.util.spec_from_file_location('helper_mod', Path(__file__).parent / 'helper_mod.py')\n"
+                "_m = importlib.util.module_from_spec(_s)\nsys.modules['helper_mod'] = _m\n_s.loader.exec_module(_m)\n",
+                "helper_mod.py"),
+}
+
+
+@pytest.mark.parametrize("how", list(TEMPORARY_IMPORTS))
+def test_a_module_imported_from_the_bundle_folder_for_a_moment_is_refused(made, monkeypatch, how):
+    """The folder put on sys.path only while one import runs leaves sys.path as it was, but the import searched the
+    folder (a path_importer_cache entry for it) and ran a file from disk rather than from the hashed bytes."""
+    code, name = TEMPORARY_IMPORTS[how]
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, code, {name: "X = 1\n"})
+    cache_before = dict(sys.path_importer_cache)
+    match = "an entry for the bundle folder" if how != "by_file" else r"sys\.modules, helper_mod loaded from the bundle"
+    with pytest.raises(handoff.HandoffRefused, match=match) as refused:
+        handoff.load(bundle, root, cfg)
+    assert "helper_mod loaded from the bundle folder" in str(refused.value) and not refused.value.before_read
+    assert "helper_mod" not in sys.modules
+    assert not [k for k in sys.path_importer_cache if handoff._under(k, bundle)]
+    assert all(sys.path_importer_cache.get(k, "missing") is v for k, v in cache_before.items())
+
+
+def test_the_bundles_frozen_modules_still_load_through_the_checks(made, monkeypatch):
+    """The modules the handoff serves are run by its frozen loader, so the check on sys.modules passes them."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    ran, real = [], handoff._FrozenLoader.exec_module
+
+    def spy(self, module):
+        ran.append(module.__name__)
+        return real(self, module)
+    monkeypatch.setattr(handoff._FrozenLoader, "exec_module", spy)
+    hcalls, hcache, info = handoff.load(bundle, root, cfg)
+    assert sorted(ran) == ["cache_handoff", "executor", "validator"] and info["calls"] == len(calls)
+
+
+def test_a_replaced_import_function_is_refused_and_put_back(made, monkeypatch):
+    import builtins
+    before = builtins.__import__
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, (
+        "import builtins\n_o = builtins.__import__\n"
+        "def _imp(*a, **k): return _o(*a, **k)\nbuiltins.__import__ = _imp\n"))
+    with pytest.raises(handoff.HandoffRefused, match=r"import system \(builtins\.__import__\)"):
+        handoff.load(bundle, root, cfg)
+    assert builtins.__import__ is before
+
+
+def test_a_file_finder_pointed_at_the_bundle_folder_is_refused_and_put_back(made, monkeypatch, tmp_path):
+    """The reviewer's probe B: a FileFinder already in sys.path_importer_cache, for a folder on sys.path, made to
+    look in the bundle folder, so a file swapped in after the check would be imported later."""
+    target = next(k for k, v in sys.path_importer_cache.items()
+                  if type(v) is importlib.machinery.FileFinder and k in sys.path)
+    finder, path = sys.path_importer_cache[target], sys.path_importer_cache[target].path
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, (
+        f"import sys\n_f = sys.path_importer_cache[{target!r}]\n_f.path = str(Path(__file__).parent)\n"
+        "_f.invalidate_caches()\n"))
+    with pytest.raises(handoff.HandoffRefused, match="the folder of a FileFinder"):
+        handoff.load(bundle, root, cfg)
+    assert sys.path_importer_cache[target] is finder and finder.path == path
+    marker = tmp_path / "MARKER"
+    (bundle / "swapped_later.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+    with pytest.raises(ModuleNotFoundError):
+        __import__("swapped_later")
+    assert not marker.exists()
+
+
+def test_a_thread_left_running_by_the_bundles_code_is_refused(made, monkeypatch):
+    import threading
+    before = set(threading.enumerate())
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, (
+        "import threading, time\n"
+        "threading.Thread(target=time.sleep, args=(0.5,), name='bundle-thread', daemon=True).start()\n"))
+    try:
+        with pytest.raises(handoff.HandoffRefused, match=r"left 1 thread\(s\) running \(bundle-thread\)"):
+            handoff.load(bundle, root, cfg)
+    finally:
+        for t in set(threading.enumerate()) - before:
+            t.join(5)
+
+
+def test_an_exit_by_the_bundles_code_is_a_refusal_and_an_interrupt_is_not(made, monkeypatch):
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, "raise SystemExit('bundle says bye')\n")
+    with pytest.raises(handoff.HandoffRefused, match="the bundle's handoff refused: SystemExit: bundle says bye") as r:
+        handoff.load(bundle, root, cfg)
+    assert not r.value.before_read
+    p = bundle / "validator.py"
+    p.write_text(p.read_text().replace("raise SystemExit('bundle says bye')", "raise KeyboardInterrupt"))
+    root = refreeze(bundle, made[5], monkeypatch)
+    with pytest.raises(KeyboardInterrupt):
+        handoff.load(bundle, root, cfg)
+    assert not [k for k in sys.modules if k in ("validator", "executor", "cache_handoff")]
+
+
+def test_a_deleted_import_route_is_refused_and_everything_is_put_back(made, monkeypatch):
+    """The reviewer's probe E: `del sys.path_hooks` broke the restore, leaving the bundle's modules loaded."""
+    hooks, meta = sys.path_hooks, list(sys.meta_path)
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, "import sys\ndel sys.path_hooks\n")
+    sys.modules["validator"] = marker = type(sys)("validator")      # an unrelated module of the same name, set aside
+    try:
+        with pytest.raises(handoff.HandoffRefused, match=r"import system \(sys\.path_hooks, deleted\)"):
+            handoff.load(bundle, root, cfg)
+        assert sys.path_hooks is hooks and sys.modules["validator"] is marker
+    finally:
+        sys.modules.pop("validator", None)
+        if not hasattr(sys, "path_hooks"):
+            sys.path_hooks = hooks
+    assert not [k for k in sys.modules if k in ("executor", "cache_handoff")]
+    assert len(sys.meta_path) == len(meta) and all(a is b for a, b in zip(sys.meta_path, meta))
+
+
+def test_invalidating_the_import_caches_is_not_a_change(made, monkeypatch):
+    """importlib.invalidate_caches() deletes the None and relative-path entries of sys.path_importer_cache; Python
+    makes them again when needed, so that is not refused, and they are put back."""
+    monkeypatch.setitem(sys.path_importer_cache, "/no/such/folder/for/the/handoff/test", None)
+    monkeypatch.setitem(sys.path_importer_cache, "relative-folder-for-the-handoff-test", None)
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, "import importlib\nimportlib.invalidate_caches()\n")
+    handoff.load(bundle, root, cfg)
+    assert sys.path_importer_cache["/no/such/folder/for/the/handoff/test"] is None
+    assert sys.path_importer_cache["relative-folder-for-the-handoff-test"] is None
+
+
+def test_an_import_change_during_a_failed_check_names_both(made, monkeypatch):
+    cfg, bundle, root = _with_validator_code(made, monkeypatch, (
+        "import sys\nsys.path.insert(0, str(Path(__file__).parent))\nraise ValueError('the bundle check failed')\n"))
+    with pytest.raises(handoff.HandoffRefused, match=r"import system \(sys\.path[;)].*the run had already been "
+                                                     r"refused \(the bundle's handoff refused: ValueError: the bundle "
+                                                     r"check failed\)"):
+        handoff.load(bundle, root, cfg)
+    assert str(bundle) not in sys.path
+
+
+@pytest.mark.parametrize("how", ["chmod", "scandir", "read"])
+def test_a_folder_or_file_that_cannot_be_listed_or_read_is_refused_before_any_code_runs(made, monkeypatch, how):
+    import errno
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    reuse = bundle / "reuse"
+    if how == "chmod":
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            pytest.skip("running as root, a folder's permissions do not stop it being listed")
+        os.chmod(reuse, 0)
+    elif how == "scandir":
+        real = os.scandir
+
+        def scandir(path="."):
+            if Path(path).name == "reuse":
+                raise PermissionError(errno.EACCES, "Permission denied", str(path))
+            return real(path)
+        monkeypatch.setattr(handoff.os, "scandir", scandir)
+    else:
+        def fdopen(*a, **k):
+            raise OSError(errno.EIO, "Input/output error")
+        monkeypatch.setattr(handoff.os, "fdopen", fdopen)
+    _no_import(monkeypatch)
+    try:
+        with pytest.raises(handoff.HandoffRefused, match="cannot list" if how != "read" else "cannot read .*EIO|"
+                           "cannot read .*Input/output error") as refused:
+            handoff.load(bundle, root, cfg)
+    finally:
+        os.chmod(reuse, 0o755)
     assert refused.value.before_read
