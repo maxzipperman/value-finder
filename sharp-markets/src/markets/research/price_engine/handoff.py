@@ -10,8 +10,8 @@ What this module does, and nothing else:
      in at registration (with the amendment's root blank), and `--handoff-root` must equal it.
   1. It reads the bundle folder file by file, refusing any symbolic link (to a file or a folder) and anything that
      is not a regular file or a folder, and checks every file against its own FREEZE.json, and the root of those
-     hashes against the pinned root. Any changed, missing or extra file (a `__pycache__` folder included) refuses
-     the run here, before any code in the folder runs and before any response is read.
+     hashes against the pinned root. Any changed, missing or extra file (a `__pycache__` folder included), or a
+     name that is not valid UTF-8, refuses the run here, before any code in the folder runs and before any response is read.
   2. It imports the bundle's frozen `cache_handoff.py` (it is never copied into the engine) and calls
      `build_handoff(bundle, root, runtime)`, which runs the bundle's own validator over the whole bundle, requires a
      completed recent slice and an outcome-blind coverage report, and checks every paid response and receipt and
@@ -19,7 +19,8 @@ What this module does, and nothing else:
   3. `as_calls(handoff, bulk.Call)` gives one `bulk.Call` per priority-1 request, each checked to have the cache key
      the manifest recorded, and `ReadOnlyCache(handoff, runtime/data/raw)` finds each response (the 12 reused ones
      in the bundle's `reuse/`, the paid ones in the runtime cache), re-checking its hash on every lookup. It cannot
-     fetch or write. A response that changes after loading refuses the run (HandoffRefused), as in step 1.
+     fetch or write. A response that changes, disappears or cannot be read after loading refuses the run
+     (HandoffRefused) when it is looked up.
   4. Each call's `sealed` flag is set from the config's season windows at the call's requested time; `as_calls`
      leaves every call unsealed. The legacy plan marks a call sealed when any game it serves kicks off in a sealed
      window, but the manifest does not name every call's games (its evening decision slots name none), so the
@@ -38,14 +39,25 @@ is not put on `sys.path`, and a finder placed first on `sys.meta_path` serves on
 `cache_handoff` imports, directly or through them), each only if its file is in FREEZE.json, compiled from the bytes
 that were hashed in step 1. So a file swapped between the check and the import is never run, and nothing in the
 folder can shadow another module (a `pyarrow` or `json` in the bundle is never imported; everything outside
-`BUNDLE_MODULES` resolves as it would without the bundle). No bytecode is written. The folder is checked against
-FREEZE.json again afterwards, so the bundle's code writing into it refuses the run.
+`BUNDLE_MODULES` resolves as it would without the bundle). No bytecode is written. `sys.path`, `sys.meta_path`,
+`sys.path_hooks` and `sys.path_importer_cache` are put back as they were once the bundle's code has loaded, and a
+change the bundle's code made to any of them refuses the run, so it cannot leave an import route behind (a
+`sys.path` entry for the folder would let a later import run a file swapped in after the check). New
+`sys.path_importer_cache` entries that Python's own path finder makes for folders an import searched are expected:
+they are dropped, not refused. The folder is checked against FREEZE.json again afterwards, so the bundle's code
+writing into it refuses the run, and so does a change to the runtime's spending ledger.
 
-What remains is not a sandbox, and nothing here makes an unreviewed root safe. The bundle's code can read and write
-any file this process can (the re-check covers only the folder), and the network block is partial:
-`socket.socket.connect`, `socket.create_connection` and `socket.getaddrinfo` raise while it runs, but `connect_ex`,
-`sendto`, a subprocess or a C extension are not blocked. Setting modules of the same name aside and restoring them
-afterwards is bookkeeping so the engine's own imports are untouched, not isolation.
+What remains is not a sandbox, and nothing here makes an unreviewed root safe. The bundle's code runs in this
+process, so it could patch the engine, the engine's own checks included (`verify_frozen`, `bulk.is_sealed`, this
+module): every guarantee above depends on the code review behind the registered root. It can read and write any file
+this process can (the re-check covers only the folder and the ledger). The bundle's code and `bulk.load_rows` read
+data again by path after the hash check, so a file swapped and put back before the re-check is not seen; that needs a
+concurrent local writer, who could edit the engine anyway. The network block is partial, and covers only the
+loading: `socket.socket.connect`, `socket.create_connection` and `socket.getaddrinfo` raise while the bundle's code
+loads (`build_handoff`, `as_calls` and `ReadOnlyCache(...)`), but `connect_ex`, `sendto`, a subprocess or a C
+extension are not blocked. The bundle's `ReadOnlyCache.lookup` runs later, inside `run()`, outside that block; today
+it does no I/O beyond hashing the response. Setting modules of the same name aside and restoring them afterwards is
+bookkeeping so the engine's own imports are untouched, not isolation.
 """
 from __future__ import annotations
 
@@ -60,7 +72,9 @@ import re
 import socket
 import stat
 import sys
+import zipimport
 from contextlib import contextmanager
+from copy import copy
 from pathlib import Path
 
 from ...oddsapi import bulk
@@ -78,7 +92,14 @@ REGISTERED_ROOT: str | None = None
 
 
 class HandoffRefused(RuntimeError):
-    """The bundle (or what it bought) did not verify; nothing was read from it."""
+    """The bundle (or what it bought) did not verify, and the run stops with nothing reported and nothing written.
+
+    `before_read` is True only for a refusal raised before any of the bundle's code runs (the registration, the
+    frozen-folder check and the spending ledger's first read), so before any response is read. Every later one
+    (the bundle's own checks, the re-checks after its code has run, a response that changed on lookup) is False:
+    by then the bundle's code has parsed responses."""
+
+    before_read = False
 
 
 def _canonical(value) -> bytes:
@@ -103,7 +124,8 @@ def _read_regular(path: Path) -> bytes:
 
 def _walk(bundle: Path) -> dict[str, bytes]:
     """Every file under `bundle` by its relative path, read once. Refuses any symbolic link, to a file or a folder,
-    anywhere in the bundle, and any entry that is neither a regular file nor a folder (a FIFO, a socket, a device)."""
+    anywhere in the bundle, any entry that is neither a regular file nor a folder (a FIFO, a socket, a device), and
+    any name that is not valid UTF-8 (no frozen root can cover it: the canonical JSON of the hash map is UTF-8)."""
     out: dict[str, bytes] = {}
 
     def visit(folder: Path, rel: str) -> None:
@@ -111,6 +133,10 @@ def _walk(bundle: Path) -> dict[str, bytes]:
             entries = sorted(it, key=lambda e: e.name)
         for e in entries:
             name = f"{rel}{e.name}"
+            try:
+                name.encode("utf-8")
+            except UnicodeEncodeError:
+                raise HandoffRefused(f"the bundle holds a name that is not valid UTF-8, {name!r}") from None
             if e.is_symlink():
                 raise HandoffRefused(f"the bundle holds a symbolic link, {name}: a frozen bundle holds only regular "
                                      "files and folders")
@@ -188,7 +214,7 @@ class _FrozenLoader(importlib.abc.Loader):
 
 
 class _FrozenFinder(importlib.abc.MetaPathFinder):
-    """First on sys.meta_path while the bundle's code runs: answers for BUNDLE_MODULES only, from the frozen bytes."""
+    """First on sys.meta_path while the bundle's code loads: answers for BUNDLE_MODULES only, from the frozen bytes."""
 
     def __init__(self, bundle: Path, sources: dict[str, bytes]):
         self.bundle, self.sources = bundle, sources
@@ -208,12 +234,46 @@ def _no_network(*_a, **_k):
     raise HandoffRefused("the bundle's code tried to open a network connection; the handoff reads only")
 
 
+def _import_state() -> dict:
+    """The import system's routes: each object (in case it is rebound) and a copy of what it holds."""
+    return {name: (getattr(sys, name), copy(getattr(sys, name)))
+            for name in ("path", "meta_path", "path_hooks", "path_importer_cache")}
+
+
+def _restore_import_state(before: dict, finder) -> list[str]:
+    """Put sys.path, sys.meta_path, sys.path_hooks and sys.path_importer_cache back as `before` holds them (the
+    original objects, with their original contents), and name each one the bundle's code changed. `finder` is the
+    handoff's own, expected first on sys.meta_path. New path_importer_cache entries of the kinds Python's path finder
+    makes itself (a FileFinder or zipimporter, or None, for a folder an import searched) are dropped, not reported."""
+    changed = []
+    for name, (obj, held) in before.items():
+        now = getattr(sys, name)
+        if name == "path_importer_cache":
+            same = now is obj and all(k in now and now[k] is v for k, v in held.items()) and all(
+                v is None or type(v) in (importlib.machinery.FileFinder, zipimport.zipimporter)
+                for k, v in now.items() if k not in held)
+        else:
+            expected = [finder, *held] if name == "meta_path" else held
+            same = now is obj and len(now) == len(expected) and all(a is b for a, b in zip(now, expected))
+        if not same:
+            changed.append(f"sys.{name}")
+        setattr(sys, name, obj)
+        if isinstance(obj, dict):
+            obj.clear()
+            obj.update(held)
+        else:
+            obj[:] = held
+    return changed
+
+
 @contextmanager
 def _bundle_code(bundle: Path, sources: dict[str, bytes]):
-    """The bundle's frozen modules importable for the duration, nothing written, the main connection calls blocked."""
+    """The bundle's frozen modules importable for the duration, nothing written, the main connection calls blocked,
+    and the import system as it was afterwards (a change the bundle's code made to it refuses the run)."""
     finder = _FrozenFinder(bundle, sources)
     set_aside = {k: sys.modules.pop(k) for k in list(sys.modules) if k.split(".")[0] in BUNDLE_MODULES}
     saved = (sys.dont_write_bytecode, socket.socket.connect, socket.create_connection, socket.getaddrinfo)
+    imports = _import_state()
     sys.dont_write_bytecode = True
     sys.meta_path.insert(0, finder)
     socket.socket.connect = socket.create_connection = socket.getaddrinfo = _no_network
@@ -222,15 +282,19 @@ def _bundle_code(bundle: Path, sources: dict[str, bytes]):
     finally:
         sys.dont_write_bytecode = saved[0]
         socket.socket.connect, socket.create_connection, socket.getaddrinfo = saved[1:]
-        sys.meta_path[:] = [f for f in sys.meta_path if f is not finder]
+        changed = _restore_import_state(imports, finder)
         for k in [k for k in sys.modules if k.split(".")[0] in BUNDLE_MODULES]:
             sys.modules.pop(k)
         sys.modules.update(set_aside)
+        if changed:
+            raise HandoffRefused(f"the bundle's code changed the import system ({', '.join(changed)}); "
+                                 "it was put back as it was")
 
 
 class _RefusingCache:
-    """The bundle's ReadOnlyCache, with a response that changed after loading refusing the run (HandoffRefused)
-    instead of surfacing as a bare ValueError. Everything else is the bundle's object."""
+    """The bundle's ReadOnlyCache, with a response that changed, disappeared or cannot be read after loading refusing
+    the run (HandoffRefused) instead of surfacing as a bare ValueError or OSError. Everything else is the bundle's
+    object. Its lookup runs inside `run()`, outside `_bundle_code`'s network block and import-system check."""
 
     def __init__(self, cache):
         self._cache = cache
@@ -240,6 +304,9 @@ class _RefusingCache:
             return self._cache.lookup(sport, source, key)
         except ValueError as exc:
             raise HandoffRefused(f"a response changed after the handoff was loaded ({exc})") from None
+        except OSError as exc:
+            raise HandoffRefused(f"a response could not be read after the handoff was loaded "
+                                 f"({type(exc).__name__}: {exc.strerror or exc})") from None
 
     def __getattr__(self, name):
         return getattr(self._cache, name)
@@ -256,13 +323,17 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
     """(calls, cache, info) for `run(cfg, calls, cache)`, from a verified bundle and its completed runtime."""
     bundle = Path(bundle).resolve()
     runtime = Path(runtime).resolve() if runtime else bundle.parent / RUNTIME_DEFAULT
-    if not re.fullmatch(r"[0-9a-f]{64}", root or ""):
-        raise HandoffRefused("--handoff-root must be the bundle's 64-character sha256 root, as the hub approved it")
-    _check_registered(root)
-    root, sources = _verify(bundle, root)
-    if "cache_handoff" not in sources:
-        raise HandoffRefused("the frozen bundle has no cache_handoff.py")
-    ledger_sha = _ledger_sha(runtime)
+    try:                                # before any of the bundle's code runs, so before any response is read
+        if not re.fullmatch(r"[0-9a-f]{64}", root or ""):
+            raise HandoffRefused("--handoff-root must be the bundle's 64-character sha256 root, as the hub approved it")
+        _check_registered(root)
+        root, sources = _verify(bundle, root)
+        if "cache_handoff" not in sources:
+            raise HandoffRefused("the frozen bundle has no cache_handoff.py")
+        ledger_sha = _ledger_sha(runtime)
+    except HandoffRefused as exc:
+        exc.before_read = True
+        raise
     with _bundle_code(bundle, sources):
         try:
             module = importlib.import_module("cache_handoff")

@@ -259,6 +259,13 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
     return "\n".join(head + body)
 
 
+def _refused(exc) -> str:
+    """The exit message for a refused --handoff run. Only a refusal raised before any of the bundle's code ran can
+    say no response was read; after that, the bundle's code has parsed responses, though nothing is reported."""
+    when = "before any response is read, nothing written" if exc.before_read else "nothing reported, nothing written"
+    return f"price-engine --handoff refused ({when}): {exc}"
+
+
 def main(args) -> int:
     bundle = getattr(args, "handoff", None)
     if bundle and args.fixture:
@@ -279,14 +286,14 @@ def main(args) -> int:
             calls, cache, info = handoff.load(bundle, getattr(args, "handoff_root", None), cfg,
                                               getattr(args, "handoff_runtime", None))
         except handoff.HandoffRefused as exc:
-            raise SystemExit(f"price-engine --handoff refused (no price read, nothing written): {exc}") from None
+            raise SystemExit(_refused(exc)) from None
         print(f"F1 as pulled (football archive bundle {info['bundle_root_sha256']}): {info['calls']:,} calls, "
               f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked "
               "(amendment 2)")
         try:
             res = run(cfg, calls, cache)
-        except handoff.HandoffRefused as exc:       # a response changed after loading
-            raise SystemExit(f"price-engine --handoff refused (no price read, nothing written): {exc}") from None
+        except handoff.HandoffRefused as exc:       # a response changed, or became unreadable, after loading
+            raise SystemExit(_refused(exc)) from None
         res["handoff"] = info
         out_dir = Path(args.out) if args.out else REPORTS_DIR / "price_engine"
     else:

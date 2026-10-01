@@ -266,8 +266,9 @@ def test_a_bundle_whose_hashes_do_not_verify_is_refused_before_any_code_runs(mad
     else:
         next((bundle / "reuse").iterdir()).unlink()
     _no_import(monkeypatch)
-    with pytest.raises(handoff.HandoffRefused, match="differ from its FREEZE.json"):
+    with pytest.raises(handoff.HandoffRefused, match="differ from its FREEZE.json") as refused:
         handoff.load(bundle, root, cfg)
+    assert refused.value.before_read
 
 
 def test_a_root_other_than_the_pinned_one_is_refused(made, monkeypatch):
@@ -308,8 +309,9 @@ def test_the_bundles_own_checks_still_refuse(made, change):
         p.write_text(json.dumps({**json.loads(p.read_text()), "outcomes_joined": True}))
     else:
         ledger_path.write_text(json.dumps({**ledger, "bundle_root_sha256": "e" * 64}))
-    with pytest.raises(handoff.HandoffRefused, match="the bundle's handoff refused: ValueError"):
+    with pytest.raises(handoff.HandoffRefused, match="the bundle's handoff refused: ValueError") as refused:
         handoff.load(bundle, root, cfg)
+    assert not refused.value.before_read          # the bundle's code had started reading responses
 
 
 def test_a_changed_response_after_loading_is_refused_on_lookup(made):
@@ -368,8 +370,14 @@ def test_the_command_reads_the_handoff_and_writes_the_report(made, tmp_path, mon
 def test_the_command_refuses_a_bad_bundle_and_bad_flag_combinations(made, tmp_path, monkeypatch):
     cfg, calls, cache, scores, bundle, runtime, root = made
     monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
-    with pytest.raises(SystemExit, match=r"refused \(no price read"):
+    with pytest.raises(SystemExit, match=r"refused \(before any response is read, nothing written\)"):
         pe_run.main(Namespace(fixture=False, out=str(tmp_path / "o"), handoff=str(bundle), handoff_root="0" * 64,
+                              handoff_runtime=None))
+    # refused by the bundle's own checks, after its code started reading responses: no claim that none was read
+    p = runtime / "coverage-report.json"
+    p.write_text(json.dumps({**json.loads(p.read_text()), "outcomes_joined": True}))
+    with pytest.raises(SystemExit, match=r"refused \(nothing reported, nothing written\): the bundle's handoff"):
+        pe_run.main(Namespace(fixture=False, out=str(tmp_path / "o"), handoff=str(bundle), handoff_root=root,
                               handoff_runtime=None))
     with pytest.raises(SystemExit, match="alternatives"):
         pe_run.main(Namespace(fixture=True, out=None, handoff=str(bundle), handoff_root=root, handoff_runtime=None))
@@ -393,7 +401,8 @@ def test_nothing_is_read_until_amendment_2_registers_a_root(made, monkeypatch, t
     with pytest.raises(handoff.HandoffRefused, match="amendment 2 is not registered"):
         handoff.load(bundle, root, cfg)
     monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
-    with pytest.raises(SystemExit, match=r"refused \(no price read, nothing written\): amendment 2 is not registered"):
+    with pytest.raises(SystemExit, match=r"refused \(before any response is read, nothing written\): amendment 2 is "
+                                         "not registered"):
         pe_run.main(Namespace(fixture=False, out=str(tmp_path / "o"), handoff=str(bundle), handoff_root=root,
                               handoff_runtime=None))
     assert not (tmp_path / "o").exists()
@@ -525,16 +534,18 @@ def verify(folder, expected_root=None, check_cache=False):
 """)
     root = refreeze(bundle, runtime, monkeypatch)
     match = "differ from its FREEZE.json: changed 1" if target == "protocol.json" else "spending-ledger.json changed"
-    with pytest.raises(handoff.HandoffRefused, match=match):
+    with pytest.raises(handoff.HandoffRefused, match=match) as refused:
         handoff.load(bundle, root, cfg)
+    assert not refused.value.before_read          # the same check as before the code ran, but after it
 
 
 def test_a_missing_spending_ledger_is_refused_before_any_code_runs(made, monkeypatch):
     cfg, calls, cache, scores, bundle, runtime, root = made
     (runtime / "spending-ledger.json").unlink()
     _no_import(monkeypatch)
-    with pytest.raises(handoff.HandoffRefused, match="no readable spending-ledger.json"):
+    with pytest.raises(handoff.HandoffRefused, match="no readable spending-ledger.json") as refused:
         handoff.load(bundle, root, cfg)
+    assert refused.value.before_read
 
 
 def test_the_command_refuses_a_response_changed_after_loading(made, tmp_path, monkeypatch):
@@ -548,7 +559,77 @@ def test_the_command_refuses_a_response_changed_after_loading(made, tmp_path, mo
         return real_run(c, k, h, scores=scores)
     monkeypatch.setattr(pe_run, "run", tamper_then_run)
     out = tmp_path / "out"
-    with pytest.raises(SystemExit, match=r"refused \(no price read, nothing written\): a response changed after"):
+    with pytest.raises(SystemExit, match=r"refused \(nothing reported, nothing written\): a response changed after"):
         pe_run.main(Namespace(fixture=False, out=str(out), handoff=str(bundle), handoff_root=root,
                               handoff_runtime=str(runtime)))
     assert not out.exists()
+
+
+def test_a_response_deleted_after_loading_is_refused_on_lookup(made):
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    hcalls, hcache, _ = handoff.load(bundle, root, cfg)
+    hcache.lookup(hcalls[-1].cache_sport, hcalls[-1].source, hcalls[-1].key).unlink()
+    with pytest.raises(handoff.HandoffRefused, match="could not be read after the handoff was loaded "
+                                                     r"\(FileNotFoundError") as refused:
+        pe_run.run(cfg, hcalls, hcache, scores=scores)
+    assert not refused.value.before_read
+
+
+# Each changes one route of the import system from the bundle's frozen validator, while its code loads.
+IMPORT_CHANGES = {
+    "path": "import sys\nsys.path.insert(0, str(Path(__file__).parent))\n",     # what executor.vendor_imports does
+    "meta_path": ("import sys, importlib.abc\nclass _Finder(importlib.abc.MetaPathFinder):\n"
+                  "    def find_spec(self, *a, **k): return None\nsys.meta_path.append(_Finder())\n"),
+    "path_hooks": "import sys\nsys.path_hooks.insert(0, lambda p: (_ for _ in ()).throw(ImportError()))\n",
+    "path_importer_cache": ("import sys, importlib.abc\nclass _Finder(importlib.abc.PathEntryFinder):\n"
+                            "    def find_spec(self, *a, **k): return None\n"
+                            "sys.path_importer_cache[str(Path(__file__).parent)] = _Finder()\n"),
+}
+
+
+@pytest.mark.parametrize("route", list(IMPORT_CHANGES))
+def test_a_change_to_the_import_system_by_the_bundles_code_is_refused_and_put_back(made, monkeypatch, tmp_path, route):
+    """A frozen module that leaves an import route behind (the reviewer's case: the bundle folder inserted at the
+    front of sys.path, as the real executor.vendor_imports does) is refused, and the route is put back, so a file
+    swapped into the folder afterwards is never imported."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    p = bundle / "validator.py"
+    p.write_text(p.read_text() + IMPORT_CHANGES[route])
+    root = refreeze(bundle, runtime, monkeypatch)
+    before = {k: (getattr(sys, k), list(getattr(sys, k)) if k != "path_importer_cache" else dict(getattr(sys, k)))
+              for k in IMPORT_CHANGES}
+    with pytest.raises(handoff.HandoffRefused, match=rf"changed the import system \(sys\.{route}\)") as refused:
+        handoff.load(bundle, root, cfg)
+    assert not refused.value.before_read
+    for k, (obj, held) in before.items():
+        now = getattr(sys, k)
+        assert now is obj
+        if k == "path_importer_cache":
+            assert all(now.get(key, "missing") is v for key, v in held.items())
+        else:
+            assert len(now) == len(held) and all(a is b for a, b in zip(now, held))
+    assert str(bundle) not in sys.path and handoff._FrozenFinder not in map(type, sys.meta_path)
+    marker = tmp_path / "MARKER"
+    (bundle / "swapped_in.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+    with pytest.raises(ModuleNotFoundError):
+        __import__("swapped_in")
+    assert not marker.exists() and "swapped_in" not in sys.modules
+
+
+def test_a_name_that_is_not_valid_utf8_is_refused(made, monkeypatch):
+    """A FREEZE.json can list a file name that is not valid UTF-8 (by its surrogate escape); no root can cover it."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    raw = os.fsencode(bundle / "reuse") + b"/bad\xff.json"
+    try:
+        with open(raw, "wb") as f:
+            f.write(b"{}")
+    except OSError:
+        pytest.skip("this file system refuses names that are not valid UTF-8")
+    name = "reuse/" + os.fsdecode(b"bad\xff.json")
+    cert = json.loads((bundle / "FREEZE.json").read_text())
+    cert["file_sha256"][name] = hashlib.sha256(b"{}").hexdigest()
+    (bundle / "FREEZE.json").write_text(json.dumps(cert))         # ensure_ascii: the lone surrogate as \\udcff
+    _no_import(monkeypatch)
+    with pytest.raises(handoff.HandoffRefused, match="not valid UTF-8") as refused:
+        handoff.load(bundle, root, cfg)
+    assert refused.value.before_read
