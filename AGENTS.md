@@ -11,3 +11,15 @@
 - **Keep your work in the repo, not in a private folder.** Plans, protocols, request lists, simulations and reviews go on a branch (the lab's is `research/expanded-local-lab`), so the hub can see them. A file left untracked in the live checkout blocks the hub's checks: put it on a branch instead.
 - **Tell the hub what you're doing.** Open the pull request (draft is fine) when you start, not when you finish. Long notes for the hub can go on the `hub-briefs` branch under `notes/`.
 - **Spend tokens like the owner's money.** The owner's rule is cloud first for anything that needs only git.
+
+## The Codex–hub arrangement (the owner, September 30, 2026)
+
+Codex and the Claude hub coordinate **only through GitHub pull requests and their comments.**
+
+- **Roles.** Codex executes API requests. The Claude hub coordinates, and approves the exact paid request list and the credit budget before any paid run. This arrangement authorizes no spending by itself.
+- **Before a paid run, Codex** checks the caches and any overlapping purchase, and posts in the pull request: the exact request list (with its file hash) and the credit budget. **The hub approves with a comment** of the form `APPROVED paid run: list <sha256>, budget <N> credits, commit <sha>`. A run may start only after that comment, only for that list and budget, and only from that commit.
+- **After a run, Codex reports in the pull request:** credits spent (counted and from the balance header), coverage, results, and every failure or stop.
+- **Agreement to merge.** Neither assistant merges until both have explicitly agreed on the pull request's **current head commit**, each with a comment of the form `AGREE <full commit sha>`. Any new commit voids earlier agreement; both agree again on the new head.
+- **Who merges.** The Claude hub performs every merge that affects rules, registrations, money, scorers or the live jobs. Other merges may be done by either assistant once both have agreed on the current commit.
+- **Check-ins.** Each assistant reviews the relevant pull requests, comments and approvals about every 45 minutes and responds in the pull request when action is needed.
+- **Codex works from an isolated checkout** and leaves `~/code/value-finder` (the live checkout) and the scheduled jobs untouched.
