@@ -895,3 +895,12 @@ Run it: `nfl-weather/.venv/bin/python strategy-research/screen.py` from the repo
 - [nflverse data schedule](https://nflreadr.nflverse.com/articles/nflverse_data_schedule.html)
 
 Weather-market papers (Borghesi 2007 and 2008, Paul 2017) are covered in [`../thesis-research/nfl-weather-thesis-review.md`](../thesis-research/nfl-weather-thesis-review.md).
+
+
+## Forecast revisions and offensive style setup (September 30, 2026)
+
+At the owner’s request, six fixed specifications are recorded before new hypothesis results: a latest-MOS-wind baseline and a revision model for each sport, plus two NFL passing-style models with and without a wind interaction. Controls count too: 288 + 6 committed = **294**, p < 0.000170 for new studies. Existing registrations’ frozen counts are unchanged.
+
+The outcome-blind input check passed on 4,251 NFL and 12,501 CFB forecast pairs, with 3,135 NFL games also having the required lagged style features. Seventeen synthetic checks passed. **No real historical model result yet.** The fixed runner uses earlier seasons to predict the next season and never reads a 2026 row into the study. Previously explored historical seasons are not fresh confirmation. Closing totals are a diagnostic benchmark, not forecast-time entry prices, so this does not claim executable ROI.
+
+See [`FORECAST_STYLE_SETUP.md`](FORECAST_STYLE_SETUP.md), the six-model [`protocol`](forecast_style_protocol.json), [`runner`](forecast_style.py), and [`tests`](tests/test_forecast_style.py). Default mode is an outcome-blind preflight. Historical fitting needs an explicit run flag, the reviewed protocol hash, and the current project count. Nothing in the live rules changes.

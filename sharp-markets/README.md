@@ -39,7 +39,7 @@ uv run markets weather qualifying                              # heat triggers -
 | `markets/fees.py`, `markets/devig.py` | Kalshi fee model, de-vig + multi-book blend |
 | `markets/build/` | DuckDB loaders, matching, SQL views |
 | `markets/analysis/` | fills, CLV, H1, H2, lead-lag, reports |
-| `markets/research/` | Kaggle H3 study; H4a (Kalshi NFL totals vs wind); `price_engine/`, the F1 price-engine backtest |
+| `markets/research/` | Kaggle H3 study; H4a (Kalshi NFL totals vs wind); `price_engine/`, the F1 price-engine backtest; `props_grade/`, the grader for the registered props test on F3 (#10) |
 
 Data lands in `data/` (gitignored); DuckDB at `data/markets.duckdb`.
 
@@ -76,3 +76,12 @@ Data lands in `data/` (gitignored); DuckDB at `data/markets.duckdb`.
   - that the variant count equals the rows in the results table, and the draft states the same count and bar as the code.
 - **New dependencies.** The package imports the weather projects' pricing module, so `sharp-markets` now depends on pandas, scipy and statsmodels. The first `uv run` after pulling installs them.
 - **F1's resolution.** F1 sees each game at 16:00 UTC daily and, on busy days, at other games' closes. Gaps that last minutes are mostly missed, and every run says so.
+
+## Props grader on F3 (issue #10, added October 1, 2026)
+
+`uv run markets props-grade` grades the registered props test ([`nfl-weather/PREREGISTRATION_PROPS.md`](../nfl-weather/PREREGISTRATION_PROPS.md), registered September 30, 2026) on F3's cached event-odds answers. Before F3a exists it prints that there is nothing to grade yet and stops (exit 0). `--fixture` runs it end to end on a synthetic fixture (not data). It adds no variant: it implements the one already in the running count.
+
+- **Two steps on data day.** Without `--book-recorded`, it reads F3 (sealed 2026 calls never read), prints the coverage of each primary market at F3a's close and the book the rule picks (Pinnacle only if it lists at least 80% of player-games in each primary market, else DraftKings), flags a partial F3a next to the book, lists the prop names the roster doesn't match (names and counts only), and stops before any outcome or schedule table is read. The hub adds a dated entry to the registration's section 8 ("YYYY-MM-DD: the book is DraftKings", with the two coverage figures) and commits it. Then `--book-recorded <book>` joins and prints the report: every exclusion by reason (`--list-excluded` lists them), the excess under rate at the power-method close with both standard errors and the p-value from the larger, the additive and multiplicative figures, ROI, the controls (no p-value), the readout against the same-season median, T-24h and the line move, the F3b gate on 2025, and the decision of 2.9 once 2023–25 are all in and every 2023–25 call is cached (withheld, with the counts, before that), with the count and bar read from `STATUS.md` and the registration's header at run time. It refuses the join if the book named isn't the rule's, if no dated entry in section 8 records it, or if the registration or the roster isn't committed unchanged.
+- **Inputs.** Outcomes from `nfl-weather/data/processed/player_week.parquet` and kickoffs from `games.parquet` (`gameday`, `gametime`; no score column), both filtered to 2023–25 as they are read. Players are matched through `config/props/nfl_rosters_2023_2025.csv`: nflverse's weekly rosters for 2023–25 reduced to one row per player, team, season and spelling, with no outcome column; `uv run python -m markets.research.props_grade.roster` rebuilds it (GET only, GitHub; 2026 refused).
+- **Output.** `reports/props_grade/report.md`, and every line with its grade or exclusion in `reports/props_grade/lines.csv` (gitignored).
+- **Tests.** `tests/test_props_grade.py`, on mocked F3 answers: known-answer de-vigs, the clustered SE (not centred), the main-line tie rule and missing prices, pushes and voids, every exclusion reason, the book rule at 80%, the seal (sealed calls never read, a slipped 2026 row refused before the join, 2026 never read from the outcome tables), the stop before the book note, the empty-cache message, and a fixture season that reproduces a hand-computed excess of 0.155.
