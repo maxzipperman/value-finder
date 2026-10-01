@@ -8,6 +8,7 @@ response, no 2026 data."""
 import dataclasses
 import hashlib
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -27,6 +28,9 @@ from markets.research.price_engine import run as pe_run
 
 HERE = Path(__file__).resolve().parent
 FROZEN = HERE / "frozen" / "football_archive_cache_handoff.py.frozen"
+# FROZEN_SHA256 and BRANCH_FILE pin v4's cache_handoff.py as frozen today (its hash in the bundle's FREEZE.json, and
+# where it is on the research branch). A re-freeze of the bundle that changes cache_handoff.py must update the
+# .frozen copy, FROZEN_SHA256 and, for a new bundle folder, BRANCH_FILE together.
 FROZEN_SHA256 = "0692338c1eb02db7f542cf1bcda6bf76d9042fc11a16466bdd5c5d7349693cb0"   # FREEZE.json, v4 root 09c29ac0...
 BRANCH_FILE = ("origin/research/football-archive-v4:strategy-research/football_archive/acquisition/"
                "football-archive-v4/cache_handoff.py")
@@ -141,10 +145,21 @@ def fx(tmp_path_factory):
     return cfg, calls, cache, scores
 
 
+def refreeze(bundle: Path, runtime: Path, monkeypatch) -> str:
+    """Re-freeze a bundle changed on purpose: its new root in FREEZE.json, the runtime's records and the registration."""
+    root = freeze(bundle)
+    for f in ("spending-ledger.json", "coverage-report.json"):
+        v = json.loads((runtime / f).read_text())
+        (runtime / f).write_text(json.dumps({**v, "bundle_root_sha256": root}))
+    monkeypatch.setattr(handoff, "REGISTERED_ROOT", root)
+    return root
+
+
 @pytest.fixture
-def made(fx, tmp_path):
+def made(fx, tmp_path, monkeypatch):
     cfg, calls, cache, scores = fx
     bundle, runtime, root = make_bundle(tmp_path, calls, cache)
+    monkeypatch.setattr(handoff, "REGISTERED_ROOT", root)     # as the hub fills it in when it registers amendment 2
     return cfg, calls, cache, scores, bundle, runtime, root
 
 
@@ -164,6 +179,7 @@ def test_the_handoff_gives_the_same_quotes_as_the_calls_handed_in(made):
     hcalls, hcache, info = handoff.load(bundle, root, cfg)
     assert [c.key for c in hcalls] == [c.key for c in calls]
     assert info["calls"] == len(calls) and info["reused"] == REUSED and info["bundle_root_sha256"] == root
+    assert info["spending_ledger_sha256"] == _sha(runtime / "spending-ledger.json")
     direct = pe_run.run(cfg, calls, cache, scores=scores)
     via = pe_run.run(cfg, hcalls, hcache, scores=scores)
     pd.testing.assert_frame_equal(via["quotes"], direct["quotes"])
@@ -224,7 +240,8 @@ def test_no_snapshot_at_or_after_kickoff_and_no_entry_inside_the_last_hour(made)
 def _no_import(monkeypatch):
     def refuse(*a, **k):
         raise AssertionError("the bundle's code was imported")
-    monkeypatch.setattr(handoff.importlib.util, "spec_from_file_location", refuse)
+    monkeypatch.setattr(handoff._FrozenLoader, "exec_module", refuse)
+    monkeypatch.setattr(handoff.importlib, "import_module", refuse)
 
 
 @pytest.mark.parametrize("change", ["reuse_byte", "code_byte", "manifest_byte", "extra_file", "pycache", "missing_file"])
@@ -256,8 +273,12 @@ def test_a_bundle_whose_hashes_do_not_verify_is_refused_before_any_code_runs(mad
 def test_a_root_other_than_the_pinned_one_is_refused(made, monkeypatch):
     cfg, calls, cache, scores, bundle, runtime, root = made
     _no_import(monkeypatch)
+    with pytest.raises(handoff.HandoffRefused, match="not the root registered"):
+        handoff.load(bundle, "0" * 64, cfg)
+    monkeypatch.setattr(handoff, "REGISTERED_ROOT", "0" * 64)       # registered and pinned, but not this bundle's
     with pytest.raises(handoff.HandoffRefused, match="not the pinned"):
         handoff.load(bundle, "0" * 64, cfg)
+    monkeypatch.setattr(handoff, "REGISTERED_ROOT", root)
     for bad in (None, "", root[:63], root.upper()):
         with pytest.raises(handoff.HandoffRefused, match="64-character"):
             handoff.load(bundle, bad, cfg)
@@ -296,7 +317,7 @@ def test_a_changed_response_after_loading_is_refused_on_lookup(made):
     hcalls, hcache, _ = handoff.load(bundle, root, cfg)
     p = hcache.lookup(hcalls[-1].cache_sport, hcalls[-1].source, hcalls[-1].key)
     p.write_bytes(p.read_bytes() + b"x")
-    with pytest.raises(ValueError, match="Changed response bytes"):
+    with pytest.raises(handoff.HandoffRefused, match="changed after the handoff was loaded.*Changed response bytes"):
         pe_run.run(cfg, hcalls, hcache, scores=scores)
 
 
@@ -315,14 +336,11 @@ def test_nothing_is_written_into_the_bundle_and_nothing_of_it_stays_loaded(made)
     assert socket.getaddrinfo is not handoff._no_network and socket.socket.connect is not handoff._no_network
 
 
-def test_the_bundles_code_cannot_open_a_connection(made):
+def test_the_bundles_code_cannot_open_a_connection(made, monkeypatch):
     cfg, calls, cache, scores, bundle, runtime, root = made
     p = bundle / "cache_handoff.py"
     p.write_text(p.read_text() + "\nimport socket\nsocket.create_connection(('127.0.0.1', 9))\n")
-    root = freeze(bundle)
-    for f in ("spending-ledger.json", "coverage-report.json"):
-        v = json.loads((runtime / f).read_text())
-        (runtime / f).write_text(json.dumps({**v, "bundle_root_sha256": root}))
+    root = refreeze(bundle, runtime, monkeypatch)
     with pytest.raises(handoff.HandoffRefused, match="network"):
         handoff.load(bundle, root, cfg)
 
@@ -338,7 +356,11 @@ def test_the_command_reads_the_handoff_and_writes_the_report(made, tmp_path, mon
     printed = capsys.readouterr().out
     assert f"{len(calls):,} calls, {REUSED} of them reused" in printed and "variants tested: 38" in printed
     report = (out / "report.md").read_text()
-    assert f"Bundle root `{root}`" in report and "amendment 2, a DRAFT" in report
+    assert f"Bundle root `{root}`" in report and "(amendment 2)" in report
+    assert f"spending ledger `{_sha(runtime / 'spending-ledger.json')}`" in report
+    assert f"**{pe_run.DAILY_NOTE} {pe_run.HANDOFF_NOTE}**" in report
+    assert "evening decision slots" in pe_run.HANDOFF_NOTE and "27 of the legacy plan's close" in pe_run.HANDOFF_NOTE
+    assert pe_run.HANDOFF_NOTE in printed
     real_run(cfg, calls, cache, scores=scores)["results"].to_csv(tmp_path / "direct.csv", index=False)
     assert (out / "results.csv").read_bytes() == (tmp_path / "direct.csv").read_bytes()
 
@@ -362,3 +384,171 @@ def test_the_cli_has_the_options():
     assert out.returncode == 0, out.stderr
     for flag in ("--handoff BUNDLE", "--handoff-root SHA256", "--handoff-runtime DIR", "--fixture"):
         assert flag in out.stdout
+
+
+def test_nothing_is_read_until_amendment_2_registers_a_root(made, monkeypatch, tmp_path):
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    _no_import(monkeypatch)
+    monkeypatch.setattr(handoff, "REGISTERED_ROOT", None)       # as merged: the hub fills it in at registration
+    with pytest.raises(handoff.HandoffRefused, match="amendment 2 is not registered"):
+        handoff.load(bundle, root, cfg)
+    monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
+    with pytest.raises(SystemExit, match=r"refused \(no price read, nothing written\): amendment 2 is not registered"):
+        pe_run.main(Namespace(fixture=False, out=str(tmp_path / "o"), handoff=str(bundle), handoff_root=root,
+                              handoff_runtime=None))
+    assert not (tmp_path / "o").exists()
+
+
+def test_the_registered_root_is_unset_until_the_hub_registers_amendment_2():
+    # the file as committed (tests monkeypatch the attribute): the hub sets it when it registers amendment 2, and then
+    # updates this test with it
+    assert "\nREGISTERED_ROOT: str | None = None\n" in Path(handoff.__file__).read_text()
+
+
+def _evil_package(where: Path, name: str, marker: Path) -> Path:
+    (where / name).mkdir(parents=True)
+    (where / name / "__init__.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\ndef verify(*a, **k): return {{}}\n")
+    return where / name
+
+
+@pytest.mark.parametrize("kind", ["dir_package", "dir_shadowing_pyarrow", "dir_in_reuse", "file_same_bytes",
+                                  "file_extra"])
+def test_a_symbolic_link_anywhere_in_the_bundle_is_refused_before_any_code_runs(made, monkeypatch, tmp_path, kind):
+    """A linked folder is not descended by a glob and a linked file hashes as its target; both are refused outright."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    marker, evil = tmp_path / "MARKER", tmp_path / "evil"
+    if kind == "dir_package":           # a package named like a bundle module wins over validator.py on sys.path
+        os.symlink(_evil_package(evil, "validator", marker), bundle / "validator", target_is_directory=True)
+    elif kind == "dir_shadowing_pyarrow":
+        os.symlink(_evil_package(evil, "pyarrow", marker), bundle / "pyarrow", target_is_directory=True)
+    elif kind == "dir_in_reuse":
+        os.symlink(_evil_package(evil, "more", marker), bundle / "reuse" / "more", target_is_directory=True)
+    elif kind == "file_same_bytes":     # the hash matches, since reading follows the link; still refused
+        evil.mkdir()
+        shutil.copyfile(bundle / "validator.py", evil / "validator.py")
+        (bundle / "validator.py").unlink()
+        os.symlink(evil / "validator.py", bundle / "validator.py")
+    else:
+        evil.mkdir()
+        (evil / "x.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+        os.symlink(evil / "x.py", bundle / "sitecustomize.py")
+    _no_import(monkeypatch)
+    with pytest.raises(handoff.HandoffRefused, match="symbolic link"):
+        handoff.load(bundle, root, cfg)
+    with pytest.raises(handoff.HandoffRefused, match="symbolic link"):
+        handoff.verify_frozen(bundle, root)
+    assert not marker.exists()
+
+
+def test_an_entry_that_is_not_a_regular_file_or_folder_is_refused(made, monkeypatch):
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("no FIFOs here")
+    os.mkfifo(bundle / "reuse" / "pipe")
+    _no_import(monkeypatch)
+    with pytest.raises(handoff.HandoffRefused, match="not a regular file or a folder"):
+        handoff.load(bundle, root, cfg)
+
+
+def test_a_freeze_certificate_below_the_top_level_is_refused(made, monkeypatch):
+    """The validator leaves every FREEZE.json out of its hash map, so a nested one would be an unhashed file."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    (bundle / "reuse" / "FREEZE.json").write_text("{}")
+    _no_import(monkeypatch)
+    with pytest.raises(handoff.HandoffRefused, match="FREEZE.json below its top level"):
+        handoff.load(bundle, root, cfg)
+
+
+def test_a_frozen_package_in_the_bundle_cannot_shadow_pyarrow_or_the_standard_library(made, monkeypatch, tmp_path):
+    """Even frozen into FREEZE.json (so the root covers them), a bundle's `pyarrow/` and `json.py` are never imported:
+    only the bundle modules the handoff needs are served, and everything else resolves as it would without it."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    import pyarrow
+    import pyarrow.parquet
+    marker = tmp_path / "MARKER"
+    _evil_package(bundle, "pyarrow", marker)
+    (bundle / "pyarrow" / "parquet.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+    (bundle / "json.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+    root = refreeze(bundle, runtime, monkeypatch)
+    before = {k: sys.modules[k] for k in ("pyarrow", "pyarrow.parquet", "json")}
+    hcalls, hcache, info = handoff.load(bundle, root, cfg)
+    assert info["calls"] == len(calls) and not marker.exists()
+    assert all(sys.modules[k] is v for k, v in before.items())
+    assert not Path(pyarrow.parquet.__file__).is_relative_to(bundle)
+
+
+def test_a_bundle_module_missing_from_the_frozen_set_is_not_found_elsewhere(made, monkeypatch, tmp_path):
+    """The real validator imports builder. A `builder` on sys.path outside the bundle is never used for it."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    marker, elsewhere = tmp_path / "MARKER", tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "builder.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+    monkeypatch.syspath_prepend(str(elsewhere))
+    p = bundle / "validator.py"
+    p.write_text(p.read_text().replace("import hashlib, json", "import hashlib, json\nimport builder"))
+    root = refreeze(bundle, runtime, monkeypatch)
+    with pytest.raises(handoff.HandoffRefused, match="ModuleNotFoundError: builder.py is not in the frozen bundle"):
+        handoff.load(bundle, root, cfg)
+    assert not marker.exists() and "builder" not in sys.modules
+
+
+def test_a_file_swapped_after_the_check_is_never_run(made, monkeypatch, tmp_path):
+    """The bundle's modules run from the bytes that were hashed, not from the folder, so a swap between the check
+    and the import runs nothing (and the re-check afterwards refuses the run)."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    marker, real = tmp_path / "MARKER", handoff._verify
+
+    def check_then_swap(b, r):
+        out = real(b, r)
+        (bundle / "cache_handoff.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+        return out
+    monkeypatch.setattr(handoff, "_verify", check_then_swap)
+    # the frozen cache_handoff.py ran (its validator then saw the swap); the swapped-in file did not
+    with pytest.raises(handoff.HandoffRefused, match="the bundle's handoff refused: ValueError: Frozen file set"):
+        handoff.load(bundle, root, cfg)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("target", ["protocol.json", "../" + handoff.RUNTIME_DEFAULT + "/spending-ledger.json"])
+def test_a_write_by_the_bundles_code_is_caught_by_the_recheck(made, monkeypatch, target):
+    """A stand-in validator that passes its own check and then appends one byte to a bundle file (or to the
+    runtime's spending ledger): the check after the bundle's code has run refuses the run."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    p = bundle / "validator.py"
+    p.write_text(p.read_text() + f"""
+_verify = verify
+def verify(folder, expected_root=None, check_cache=False):
+    out = _verify(folder, expected_root, check_cache)
+    p = Path(folder) / {target!r}
+    p.write_bytes(p.read_bytes() + b" ")
+    return out
+""")
+    root = refreeze(bundle, runtime, monkeypatch)
+    match = "differ from its FREEZE.json: changed 1" if target == "protocol.json" else "spending-ledger.json changed"
+    with pytest.raises(handoff.HandoffRefused, match=match):
+        handoff.load(bundle, root, cfg)
+
+
+def test_a_missing_spending_ledger_is_refused_before_any_code_runs(made, monkeypatch):
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    (runtime / "spending-ledger.json").unlink()
+    _no_import(monkeypatch)
+    with pytest.raises(handoff.HandoffRefused, match="no readable spending-ledger.json"):
+        handoff.load(bundle, root, cfg)
+
+
+def test_the_command_refuses_a_response_changed_after_loading(made, tmp_path, monkeypatch):
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
+    real_run = pe_run.run
+
+    def tamper_then_run(c, k, h):
+        p = h.lookup(k[-1].cache_sport, k[-1].source, k[-1].key)
+        p.write_bytes(p.read_bytes() + b"x")
+        return real_run(c, k, h, scores=scores)
+    monkeypatch.setattr(pe_run, "run", tamper_then_run)
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit, match=r"refused \(no price read, nothing written\): a response changed after"):
+        pe_run.main(Namespace(fixture=False, out=str(out), handoff=str(bundle), handoff_root=root,
+                              handoff_runtime=str(runtime)))
+    assert not out.exists()

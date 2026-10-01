@@ -443,7 +443,7 @@ So time is roughly unchanged, and memory goes down because the code holds one ca
 
 ## Amendment 2 (DRAFT, not registered; written 2026-10-01, before any F1 price exists)
 
-**Status: DRAFT.** Nothing in this section is in force until the hub dates it, registers it and merges it. When it does, the hub fills in the two blanks marked ⟨hub⟩ and answers the open question on seasons below. It was written on October 1, 2026, before the football archive bundle's paid run. No F1 price exists yet. As far as the bundle's records show, the only historical football price responses bought so far are the probe's 24, 12 of which are reused below. The bundle's checks read them for billing and snapshot timing, and the price engine has read none of them.
+**Status: DRAFT.** Nothing in this section is in force until the hub dates it, registers it and merges it. When it does, the hub fills in the two blanks marked ⟨hub⟩, sets `REGISTERED_ROOT` in `src/markets/research/price_engine/handoff.py` to the same root in the same commit, and answers the open question on seasons below. Until `REGISTERED_ROOT` is set, the engine refuses every `--handoff` run. It was written on October 1, 2026, before the football archive bundle's paid run. No F1 price exists yet. As far as the bundle's records show, the only historical football price responses bought so far are the probe's 24, 12 of which are reused below. The bundle's checks read them for billing and snapshot timing, and the price engine has read none of them.
 
 **Who registers it.** The hub, before the engine reads any F1 price through `--handoff`.
 
@@ -488,9 +488,9 @@ So 2,391 + 382 = 2,773, the bundle's priority-1 count. All 920 daily, 1,454 clos
 
 **Why they differ.** The bundle matches games to a canonical schedule and cleans up listings on purpose. The 27 absent calls are not a list to buy, and buying them is not proposed. Each of those 27 was some game's close slot under the legacy listings. Under the registered rules, such a game's close is then any other snapshot that lists it in its last 60 minutes before kickoff. With none, its bets have no Pinnacle close: they still count as bets, not in `clv_pin_n`.
 
-**Seasons.** The bundle's 2020–22 slice is priority 2 (2,267 calls, 68,010 credits). It is gated separately, and `build_handoff` reads priority 1 only. So F1 as pulled covers 2023–25, three of section 2's six seasons. With three seasons, A2 can pass only if all three count. Fewer seasons can move a verdict either way: there are fewer bets for the 100-bet minimums, and a season that might have failed A2 is gone.
+**Seasons.** The bundle's 2020–22 slice is priority 2 (2,267 calls, 68,010 credits). It is gated separately, and `build_handoff` reads priority 1 only. So F1 as pulled covers 2023–25, three of section 2's six seasons. With three seasons, A2 can pass only if all three count. Fewer seasons can move a verdict either way: there are fewer bets for the 100-bet minimums, and a season that might have failed A2 is gone. They also lower A1's power, not only the minimums: section 7 puts a cell that passes A1 with 80% power at about 425 bets (flags averaging 2.5% EV) to 660 (2%), and with half the seasons fewer cells reach that.
 
-**Open for the hub, before registering:** whether the backtest is run and decided on 2023–25 alone, or waits for 2020–22. If 2020–22 is bought, reading it is a further dated amendment, made before any of its prices is seen.
+**Open for the hub, before registering:** whether the backtest is run and decided on 2023–25 alone, or waits for 2020–22. The choice is made once, when the hub registers this amendment, before any F1 price is read, and it is not revisited after. If the hub decides on 2023–25, that verdict stands: a later run on 2020–22, or on 2020–25, is a separate test, counted as one in the running count and judged against its own bar, and it cannot overturn or rescue the 2023–25 verdict. If the hub waits, nothing is decided on 2023–25 alone. Either way, if 2020–22 is bought, reading it is a further dated amendment, made before any of its prices is seen.
 
 ### How the engine reads it
 
@@ -502,17 +502,17 @@ uv run markets price-engine --handoff <bundle folder> --handoff-root <the approv
 
 `--handoff-runtime` defaults to `football-acquisition-runtime` next to the bundle folder, where the v4 executor writes. The code is `src/markets/research/price_engine/handoff.py`. It does five things:
 
-1. **It checks the folder before running any of it.** Reading the bundle runs its code, so every file is first hashed and checked against the bundle's `FREEZE.json`. The root of those hashes is checked against `--handoff-root`. Any changed, missing or extra file stops the run before any code from the folder runs and before any response is read. A `__pycache__` folder counts as an extra file.
-2. **It runs the bundle's own handoff.** It imports the frozen `cache_handoff.py` from that folder. The engine keeps no copy of it. `build_handoff` then runs the bundle's own validator. It needs a completed recent slice and a coverage report with no outcomes joined. It checks every paid response and receipt, and every reused response in `reuse/`, against its recorded hash.
+1. **It checks the folder before running any of it.** Reading the bundle runs its code. So `--handoff-root` must first equal the root registered with this amendment (`REGISTERED_ROOT`). Then every file in the folder is read once, hashed and checked against the bundle's `FREEZE.json`, and the root of those hashes is checked against `--handoff-root`. A symbolic link anywhere in the folder, to a file or to a folder, stops the run, as does anything that is not a regular file or a folder. So do any changed, missing or extra file. All of this happens before any code from the folder runs and before any response is read. A `__pycache__` folder counts as an extra file.
+2. **It runs the bundle's own handoff.** It runs the frozen `cache_handoff.py`, and the bundle modules it imports (`validator`, `builder`, `executor`, `price_eligibility`), from the bytes hashed in step 1. It does not import them from the folder, which never goes on Python's import path. The engine keeps no copy of them. No other module is taken from the bundle: a bundle file named like a library or a standard module (`pyarrow`, `json`) is never imported. `build_handoff` then runs the bundle's own validator. It needs a completed recent slice and a coverage report with no outcomes joined. It checks every paid response and receipt, and every reused response in `reuse/`, against its recorded hash.
 3. **It turns the manifest into calls.** `as_calls` gives one `bulk.Call` per priority-1 request. Each must have the cache key the manifest recorded. `ReadOnlyCache` finds each response and re-checks its hash on every read: the 12 reused ones in the bundle's `reuse/`, and the bought ones in the runtime's cache. It cannot fetch or write.
-4. **It marks sealed calls.** A call requested inside a sealed season window is marked sealed, as the legacy plan marks its own. This can only leave rows out.
+4. **It marks sealed calls.** A call is marked sealed when its requested time is inside a sealed season window. The legacy plan instead marks a call sealed when any game it serves kicks off in a sealed window. The manifest does not name every call's games (its evening decision slots name none), so the requested time stands in. For this bundle the two agree: no priority-1 call is sealed either way. The flag matters only for a row whose own game time is in no season window, and it can only leave rows out.
 5. **It hands over to the registered code.** The calls and the cache go to the registered `run(cfg, calls, cache)` unchanged.
 
-While the bundle's code runs, bytecode writing is off and any network connection raises an error. Afterwards the folder is checked against `FREEZE.json` again.
+While the bundle's code runs, bytecode writing is off and the usual ways of opening a network connection raise an error. Afterwards the folder is checked against `FREEZE.json` again, and the runtime's `spending-ledger.json` against its hash from before; a change to either stops the run. A response that changes after loading also stops the run, with nothing written.
 
-The command plans nothing, buys nothing and makes no API call. `report.md` adds one line naming the bundle root, the request set and how many calls were reused. Without `--handoff` the command is unchanged: on `--fixture`, `results.csv`, `dropped.csv` and `bets.parquet` are byte for byte the same as main's.
+The command plans nothing, buys nothing and makes no API call. `report.md` adds one line naming the bundle root, the request set, the coverage report's and the spending ledger's hashes, and how many calls were reused. Its note on what F1 sees also says that F1 as pulled adds the evening decision slots and lacks 27 of the legacy closes. Without `--handoff` the command is unchanged: on `--fixture`, `results.csv`, `dropped.csv` and `bets.parquet` are byte for byte the same as main's.
 
-**One limit, stated.** The bundle must be the frozen folder the hub approved, pinned by its root. The check in step 1 makes sure the code that runs is byte for byte the code that root names. It cannot make a different root safe. The 24 probe files in `reuse/` are gitignored, so a fresh clone is refused (24 files missing) until `restore_local_reuse.py` has put them back on the Mac.
+**One limit, stated.** The bundle must be the frozen folder the hub approved and registered, pinned by its root. The check in step 1, and running the modules from the bytes it hashed, make sure the code that runs is byte for byte the code that root names. Safety rests on that root and on the review of its code. The run is not sandboxed: the bundle's code runs inside the engine's process, can read and write any file the engine can, and the network block covers the usual calls, not every one. Nothing here can make a different or unreviewed root safe. The 24 probe files in `reuse/` are gitignored, so a fresh clone is refused (24 files missing) until `restore_local_reuse.py` has put them back on the Mac.
 
 ### The extra snapshots are snapshots like any other
 
@@ -549,9 +549,12 @@ The command plans nothing, buys nothing and makes no API call. `report.md` adds 
 - the 12 reused responses are found in `reuse/`;
 - calls in the sealed 2026 windows give no row of a 2026-season game, even when they are handed over unsealed;
 - no quote at or after kickoff is kept, and no entry is inside the last hour;
-- one changed byte in the frozen folder, or an extra, missing or `__pycache__` file, or another root, is refused before any of the bundle's code runs;
+- one changed byte in the frozen folder, or an extra, missing or `__pycache__` file, or another root, or a root not registered, is refused before any of the bundle's code runs;
+- a symbolic link in the folder, to a file or a folder, or an entry that is neither a file nor a folder, is refused before any code runs, and a bundle's own `pyarrow` or `json` is never imported, even when frozen;
+- a file swapped after the check is never run, and the bundle's code writing into the folder or the spending ledger is caught by the check after it;
 - the bundle's own checks still refuse a changed paid response or receipt, an incomplete run or a joined outcome;
-- nothing is written into the bundle, nothing of it stays loaded, and its code cannot open a connection.
+- nothing is written into the bundle, nothing of it stays loaded, and its code cannot open a connection the usual way;
+- a response changed after loading stops the command with nothing written.
 
 ---
 

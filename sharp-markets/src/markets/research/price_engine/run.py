@@ -36,6 +36,10 @@ DAILY_NOTE = ("F1 sees each game at 16:00 UTC on each of the 7 days before kicko
               "other game's close (each snapshot lists every game). A price gap shows up only if it is open at one "
               "of those moments, so gaps that last minutes, the kind Kaunitz et al. found with minute data and "
               "issue #53 describes, are mostly missed, and nothing here says how long any gap lasted.")
+HANDOFF_NOTE = ("Read through --handoff (amendment 2), F1 is the football archive bundle's priority-1 manifest, not the "
+                "legacy plan: it also sees each game at the weather study's evening decision slots (19:30 Pacific on "
+                "the evening before each game day) and at a few alternate closes, and 27 of the legacy plan's close "
+                "snapshots for 2023-25 are absent, so those games' closes come from other snapshots, or there is none.")
 PREREG = "sharp-markets/docs/PRICE_ENGINE_PREREGISTRATION.md"
 
 
@@ -146,18 +150,23 @@ MOVED_COLS = ["variant", "bets", "clv_pin_n", "clv_pin_same_n", "clv_pin_cents_s
               "clv_pin_cents_moved", "clv_pin_cents", "clv_pin_pts"]
 
 
+def _note(res: dict) -> str:
+    return f"{DAILY_NOTE} {HANDOFF_NOTE}" if res.get("handoff") else DAILY_NOTE
+
+
 def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
     n = len(results)
     head = ["# Price-engine backtest (F1)" + (" — SYNTHETIC FIXTURE, NOT DATA" if fixture else ""), "",
             f"Run {utcnow():%Y-%m-%d %H:%M} UTC from commit {_commit()}. Rules: `{PREREG}` "
             "(registered September 29, 2026; amendment 1, September 30, 2026). Sealed 2026 seasons left out.", "",
-            f"**{DAILY_NOTE}**", ""]
+            f"**{_note(res)}**", ""]
     if res.get("handoff"):
         h = res["handoff"]
         head += [f"F1 as pulled: the football archive bundle's priority-1 manifest, read through `--handoff` "
-                 f"(amendment 2, a DRAFT until the hub registers it). Bundle root `{h['bundle_root_sha256']}`, request "
-                 f"set `{h['request_set_sha256']}`, coverage report `{h['coverage_report_sha256']}`; "
-                 f"{h['calls']:,} calls, {h['reused']:,} of them reused from the bundle's `reuse/`.", ""]
+                 f"(amendment 2). Bundle root `{h['bundle_root_sha256']}`, request set `{h['request_set_sha256']}`, "
+                 f"coverage report `{h['coverage_report_sha256']}`, spending ledger "
+                 f"`{h['spending_ledger_sha256']}`; {h['calls']:,} calls, {h['reused']:,} of them reused from the "
+                 "bundle's `reuse/`.", ""]
     cov = res.get("coverage")
     if cov is not None and len(cov) and (cov.share < MIN_SCORE_SHARE).any():
         low = cov[cov.share < MIN_SCORE_SHARE]
@@ -273,8 +282,11 @@ def main(args) -> int:
             raise SystemExit(f"price-engine --handoff refused (no price read, nothing written): {exc}") from None
         print(f"F1 as pulled (football archive bundle {info['bundle_root_sha256']}): {info['calls']:,} calls, "
               f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked "
-              "(amendment 2, DRAFT until the hub registers it)")
-        res = run(cfg, calls, cache)
+              "(amendment 2)")
+        try:
+            res = run(cfg, calls, cache)
+        except handoff.HandoffRefused as exc:       # a response changed after loading
+            raise SystemExit(f"price-engine --handoff refused (no price read, nothing written): {exc}") from None
         res["handoff"] = info
         out_dir = Path(args.out) if args.out else REPORTS_DIR / "price_engine"
     else:
@@ -310,7 +322,7 @@ def main(args) -> int:
     with pd.option_context("display.width", 200, "display.max_columns", 20, "display.max_rows", 100):
         print(results[["variant", "bets", "clv_pin_n", "clv_pin_expected", "clv_pin_cents", "clv_pin_p", "clv_pin_pts",
                        "clv_own_cents", "roi", "decision"]].to_string(index=False))
-    print(DAILY_NOTE)
+    print(_note(res))
     print(f"variants tested: {len(results)} (rows in results.csv); running count {engine.RUNNING_COUNT}, "
           f"bar p < {engine.ALPHA:.6f}")
     print(f"wrote {out_dir}/report.md and results.csv")
