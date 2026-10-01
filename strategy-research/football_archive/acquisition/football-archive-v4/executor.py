@@ -404,7 +404,7 @@ def run(bundle,root,authorization, runtime, key=None, fake_session=None, checkpo
         remember_secret(key)
         session=GuardedSession(fake_session or new_session(),ledger,[r for r in m['requests'] if r['priority']==1]);session.ledger_key=key
         cache=RawCache(runtime/'data/raw')
-        client=BulkClient(cache,max_credits=ledger.state['slice_cap']-ledger.reserved(),floor=cfg['budgets']['account_reserve_floor'],max_retries=0,session=session,api_key=key,rate_per_sec=4,alarm_margin=cfg['billing_reconciliation']['bulk_client_alarm_margin_credits'])
+        client=BulkClient(cache,max_credits=ledger.state['slice_cap']-ledger.reserved(),floor=cfg['budgets']['account_reserve_floor'],max_retries=0,session=session,api_key=key,rate_per_sec=30,alarm_margin=cfg['billing_reconciliation']['bulk_client_alarm_margin_credits'])
         if fake_session: client.limiter.wait=lambda:None
         ledger.checkpoint=checkpoint
         account=client.account();ledger.account(integer(account['used']),integer(account['remaining']))
