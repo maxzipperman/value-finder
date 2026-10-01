@@ -8,6 +8,11 @@ pipeline on a small synthetic fixture instead (nothing in it is data). Once F1 i
   reports/price_engine/report.md     the write-up: results, decisions under the registered rule, books, lag, calibration
   reports/price_engine/bets.parquet  every bet with its grading (gitignored)
   reports/price_engine/dropped.csv   what was left out, by reason
+
+`--handoff <bundle> --handoff-root <sha256>` reads F1 as pulled by the football archive bundle instead of planning
+the legacy F1 call set (issue #101; amendment 2, a DRAFT until the hub registers it). See handoff.py: the bundle's
+code runs, so the folder is verified against its FREEZE.json and the pinned root before anything in it is imported.
+Everything after loading is the same `run(cfg, calls, cache)`.
 """
 from __future__ import annotations
 
@@ -147,6 +152,12 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
             f"Run {utcnow():%Y-%m-%d %H:%M} UTC from commit {_commit()}. Rules: `{PREREG}` "
             "(registered September 29, 2026; amendment 1, September 30, 2026). Sealed 2026 seasons left out.", "",
             f"**{DAILY_NOTE}**", ""]
+    if res.get("handoff"):
+        h = res["handoff"]
+        head += [f"F1 as pulled: the football archive bundle's priority-1 manifest, read through `--handoff` "
+                 f"(amendment 2, a DRAFT until the hub registers it). Bundle root `{h['bundle_root_sha256']}`, request "
+                 f"set `{h['request_set_sha256']}`, coverage report `{h['coverage_report_sha256']}`; "
+                 f"{h['calls']:,} calls, {h['reused']:,} of them reused from the bundle's `reuse/`.", ""]
     cov = res.get("coverage")
     if cov is not None and len(cov) and (cov.share < MIN_SCORE_SHARE).any():
         low = cov[cov.share < MIN_SCORE_SHARE]
@@ -240,6 +251,11 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
 
 
 def main(args) -> int:
+    bundle = getattr(args, "handoff", None)
+    if bundle and args.fixture:
+        raise SystemExit("price-engine: --handoff and --fixture are alternatives; give one")
+    if not bundle and (getattr(args, "handoff_root", None) or getattr(args, "handoff_runtime", None)):
+        raise SystemExit("price-engine: --handoff-root and --handoff-runtime need --handoff")
     if args.fixture:
         tmp = Path(tempfile.mkdtemp(prefix="price-engine-fixture-"))
         from .fixture import build
@@ -247,6 +263,20 @@ def main(args) -> int:
         print(f"SYNTHETIC FIXTURE (not data), in {tmp}")
         res = run(cfg, calls, cache, scores=scores)
         out_dir = Path(args.out) if args.out else tmp / "report"
+    elif bundle:
+        from . import handoff
+        cfg = bulk.load_config()
+        try:
+            calls, cache, info = handoff.load(bundle, getattr(args, "handoff_root", None), cfg,
+                                              getattr(args, "handoff_runtime", None))
+        except handoff.HandoffRefused as exc:
+            raise SystemExit(f"price-engine --handoff refused (no price read, nothing written): {exc}") from None
+        print(f"F1 as pulled (football archive bundle {info['bundle_root_sha256']}): {info['calls']:,} calls, "
+              f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked "
+              "(amendment 2, DRAFT until the hub registers it)")
+        res = run(cfg, calls, cache)
+        res["handoff"] = info
+        out_dir = Path(args.out) if args.out else REPORTS_DIR / "price_engine"
     else:
         cfg, cache = bulk.load_config(), RawCache()
         calls = f1_calls(cfg, cache)

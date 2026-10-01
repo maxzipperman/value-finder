@@ -441,6 +441,120 @@ So time is roughly unchanged, and memory goes down because the code holds one ca
 
 ---
 
+## Amendment 2 (DRAFT, not registered; written 2026-10-01, before any F1 price exists)
+
+**Status: DRAFT.** Nothing in this section is in force until the hub dates it, registers it and merges it. When it does, the hub fills in the two blanks marked ⟨hub⟩ and answers the open question on seasons below. It was written on October 1, 2026, before the football archive bundle's paid run. No F1 price exists yet. As far as the bundle's records show, the only historical football price responses bought so far are the probe's 24, 12 of which are reused below. The bundle's checks read them for billing and snapshot timing, and the price engine has read none of them.
+
+**Who registers it.** The hub, before the engine reads any F1 price through `--handoff`.
+
+**Why.** Section 2 describes F1 as the pull in `config/odds5m.yaml`, planned by `bulk.plan_calls` from the probe's saved schedules. Call that the legacy F1 plan. On September 30, 2026 the owner decided that the first big download is the research lab's football archive bundle (PR 99), not the legacy F1 step, and that no other plan may buy the same calls (STATUS.md, "Paid data"). The bundle's request list is not the legacy plan's, and the registered command can't read it (issue #101). This amendment says what F1 is now, how the engine reads it, and that nothing else changes.
+
+### What F1 is
+
+**F1 as pulled is the bundle's priority-1 manifest.** That is the priority-1 rows of `request-manifest.json` in the frozen folder `strategy-research/football_archive/acquisition/football-archive-v4`, on branch `research/football-archive-v4`. It is not the legacy F1 plan.
+
+- **What it holds.** 2,773 featured snapshots, NFL and college football, seasons 2023–25. Each covers moneyline, spread and total at the same ten books as before, in one region and decimal odds, and costs 30 credits.
+- **Where they come from.** 2,761 are bought by the bundle's run (82,830 credits). The other 12 are probe responses already bought, kept in the bundle's `reuse/` folder.
+- **By purpose.**
+
+| Purpose | Snapshots |
+|---|---:|
+| Daily, 16:00 UTC | 920 |
+| A game's close: the provider's kickoff minus 5 minutes, floored to the 5-minute grid (the legacy rule) | 1,454 |
+| Both of the above | 1 |
+| A close and an alternate close | 15 |
+| An alternate close only | 14 |
+| An evening decision slot only | 369 |
+| **Total** | **2,773** |
+
+- **Pinned by.** The bundle's frozen root and its request-set hash, as the hub approves them on PR 99: root ⟨hub⟩, request set ⟨hub⟩. At this writing the v4 root is `09c29ac0e003c50595581e74345ffc0838a85c55c7b28aa14d61b83799e5ccd2` and the request set is `63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b`. The hub's decision on PR 99 asks for an executor repair and a new freeze, so the root will change. The request rows are not meant to.
+
+### How it differs from the legacy plan, in numbers
+
+| 2023–25 | Snapshots |
+|---|---:|
+| Legacy F1 plan | 2,418 |
+| In both | 2,391 |
+| Legacy only, absent from the bundle | 27 (NFL 9, college 18; all close slots, none at 16:00) |
+| Bundle only | 382: 368 evening decision slots and 14 alternate closes |
+
+So 2,391 + 382 = 2,773, the bundle's priority-1 count. All 920 daily, 1,454 close, 1 daily-and-close and 15 close-and-alternate snapshots are in the legacy plan, along with 1 of the 369 decision slots, which falls on a legacy slot.
+
+**Where the numbers come from.**
+
+- **Codex's comment on PR 99** (October 1, 2026) gives them first. Codex ran `bulk.plan_calls(..., "F1", ...)` on the probe's two saved schedule files, on the Mac, and lists the 27 absent calls.
+- **Reproduced in the cloud for this draft.** The draft rebuilt the schedules from the bundle's committed `provider-observations.json`, which holds the probe's `/events` sightings, using main's `bulk.build_schedule`. It then ran main's `bulk.plan_calls` with seasons 2023–25 and a cutoff of 2026-09-30 UTC, and compared cache keys. The counts above came out exactly, and so did the same 27 timestamps.
+- **For 2020–25** the same method gives Codex's other row: 4,626 legacy, 4,360 in both, 266 legacy only and 692 bundle only (664 decision slots and 28 alternate closes).
+
+**Why they differ.** The bundle matches games to a canonical schedule and cleans up listings on purpose. The 27 absent calls are not a list to buy, and buying them is not proposed. Each of those 27 was some game's close slot under the legacy listings. Under the registered rules, such a game's close is then any other snapshot that lists it in its last 60 minutes before kickoff. With none, its bets have no Pinnacle close: they still count as bets, not in `clv_pin_n`.
+
+**Seasons.** The bundle's 2020–22 slice is priority 2 (2,267 calls, 68,010 credits). It is gated separately, and `build_handoff` reads priority 1 only. So F1 as pulled covers 2023–25, three of section 2's six seasons. With three seasons, A2 can pass only if all three count. Fewer seasons can move a verdict either way: there are fewer bets for the 100-bet minimums, and a season that might have failed A2 is gone.
+
+**Open for the hub, before registering:** whether the backtest is run and decided on 2023–25 alone, or waits for 2020–22. If 2020–22 is bought, reading it is a further dated amendment, made before any of its prices is seen.
+
+### How the engine reads it
+
+From `sharp-markets/`:
+
+```bash
+uv run markets price-engine --handoff <bundle folder> --handoff-root <the approved root> [--handoff-runtime <runtime folder>]
+```
+
+`--handoff-runtime` defaults to `football-acquisition-runtime` next to the bundle folder, where the v4 executor writes. The code is `src/markets/research/price_engine/handoff.py`. It does five things:
+
+1. **It checks the folder before running any of it.** Reading the bundle runs its code, so every file is first hashed and checked against the bundle's `FREEZE.json`. The root of those hashes is checked against `--handoff-root`. Any changed, missing or extra file stops the run before any code from the folder runs and before any response is read. A `__pycache__` folder counts as an extra file.
+2. **It runs the bundle's own handoff.** It imports the frozen `cache_handoff.py` from that folder. The engine keeps no copy of it. `build_handoff` then runs the bundle's own validator. It needs a completed recent slice and a coverage report with no outcomes joined. It checks every paid response and receipt, and every reused response in `reuse/`, against its recorded hash.
+3. **It turns the manifest into calls.** `as_calls` gives one `bulk.Call` per priority-1 request. Each must have the cache key the manifest recorded. `ReadOnlyCache` finds each response and re-checks its hash on every read: the 12 reused ones in the bundle's `reuse/`, and the bought ones in the runtime's cache. It cannot fetch or write.
+4. **It marks sealed calls.** A call requested inside a sealed season window is marked sealed, as the legacy plan marks its own. This can only leave rows out.
+5. **It hands over to the registered code.** The calls and the cache go to the registered `run(cfg, calls, cache)` unchanged.
+
+While the bundle's code runs, bytecode writing is off and any network connection raises an error. Afterwards the folder is checked against `FREEZE.json` again.
+
+The command plans nothing, buys nothing and makes no API call. `report.md` adds one line naming the bundle root, the request set and how many calls were reused. Without `--handoff` the command is unchanged: on `--fixture`, `results.csv`, `dropped.csv` and `bets.parquet` are byte for byte the same as main's.
+
+**One limit, stated.** The bundle must be the frozen folder the hub approved, pinned by its root. The check in step 1 makes sure the code that runs is byte for byte the code that root names. It cannot make a different root safe. The 24 probe files in `reuse/` are gitignored, so a fresh clone is refused (24 files missing) until `restore_local_reuse.py` has put them back on the Mac.
+
+### The extra snapshots are snapshots like any other
+
+**What they are.**
+
+- **The 368 decision slots** are the weather study's forecast-decision times: 19:30 Pacific on the evening before each game day. That is 02:30 UTC in summer time and 03:30 UTC in winter.
+- **The 14 alternate closes** are 5 minutes before the kickoff in the independent schedule, floored to the grid. They exist only for games whose independent schedule disagrees with the provider's kickoff by more than 5 minutes.
+
+**How the rules treat them.** Every snapshot lists every game of its sport, and the registered rules apply to these as to any other snapshot:
+
+- A game's quote is dropped if the snapshot is at or after either kickoff, or more than 7 days before it.
+- An entry needs both kickoffs to be more than 60 minutes away.
+- The first flagged snapshot is the entry.
+- A book's close is its last quote before kickoff, if it is within 60 minutes of kickoff.
+
+**Alternate closes at or after kickoff.** 11 of the bundle's priority-1 alternate-close requests are at or after the provider's kickoff of their game: the 5 alternate-close-only ones counted in the table and 6 that are also another game's close. That game's quotes in them are dropped as `at_or_after_kickoff`. Other games listed in the same snapshot are judged the same way, on their own kickoffs.
+
+**What the engine ignores.** The bundle's own price-eligibility labels (`price_eligibility.py`, `ELIGIBILITY.md`) play no part here, including the "known first play" rule that PR 99's review flagged as lookahead. The engine never reads them. Only its registered rules decide.
+
+**What they can change.** The extra snapshots can make an entry earlier: a flag first seen at an evening slot is entered there. They can also give a game a bet it would not otherwise have. The 27 absent calls can leave a bet without a close. Nobody can know which way this moves a verdict. It is fixed here before any F1 price exists.
+
+*Example.* A college game kicks off on Saturday at 23:30 UTC. Legacy F1 sees it at 16:00 UTC on each of the 7 days before, at every other college game's close that day, and at its own close at 23:25. The bundle adds Friday's decision slot, Saturday 02:30 UTC (19:30 Pacific on Friday), 21 hours before kickoff. If DraftKings' total is first flagged at 02:30, that is the bet, at DraftKings' 02:30 price. It is graded against Pinnacle's close exactly as before. A decision slot 40 minutes before some other game's kickoff is never an entry for that game. It is that book's close only if no later snapshot before kickoff lists the game.
+
+### What this amendment does not change
+
+- **The count and the bar.** 38 variants, 8 of them deciding. The running count stays **271**, and the bar stays **p < 0.05 / 271 = 0.000185**. Reading F1 from the bundle adds no variant. (The higher counts in STATUS.md come from tests added after this registration, as amendment 1 says.)
+- **The rules.** Every flag and threshold, the fair prices and blend weights, the conversions, the entry and close rules, CLV and the return, K1 to K4, A1 to A6, the minimums and the season windows.
+- **The sealed 2026 seasons.** The bundle holds no call in a sealed window (its January–February 2026 calls are the 2025 postseason, inside the 2025 windows), and its validator refuses a sealed one. The engine's filters apply anyway, and a test plants calls in the sealed 2026 windows in a made-up bundle and gets no row of a 2026-season game.
+- **Decision 4.** No money until a paper forward test has been decided.
+
+**Tests.** `sharp-markets/tests/test_price_engine_handoff.py`, on a made-up bundle written from the engine's synthetic fixture, with the bundle's frozen `cache_handoff.py` (`tests/frozen/football_archive_cache_handoff.py.frozen`, checked against its hash in `FREEZE.json`). They check that:
+
+- reading through `--handoff` gives the same quotes, drops, results and bets as handing over the calls directly;
+- the 12 reused responses are found in `reuse/`;
+- calls in the sealed 2026 windows give no row of a 2026-season game, even when they are handed over unsealed;
+- no quote at or after kickoff is kept, and no entry is inside the last hour;
+- one changed byte in the frozen folder, or an extra, missing or `__pycache__` file, or another root, is refused before any of the bundle's code runs;
+- the bundle's own checks still refuse a changed paid response or receipt, an incomplete run or a joined outcome;
+- nothing is written into the bundle, nothing of it stays loaded, and its code cannot open a connection.
+
+---
+
 ## The one-line command
 
 From `sharp-markets/`, after F1 is pulled ([`docs/ODDS5M_DAY_ONE.md`](ODDS5M_DAY_ONE.md), step 5):

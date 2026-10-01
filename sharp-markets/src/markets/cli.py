@@ -296,6 +296,16 @@ def main(argv: list[str] | None = None) -> None:
     pe.add_argument("--fixture", action="store_true", help="run on a synthetic fixture instead (nothing in it is data)")
     pe.add_argument("--out", default=None, help="output folder (default reports/price_engine; a scratch folder with "
                     "--fixture)")
+    pe.add_argument("--handoff", metavar="BUNDLE", default=None,
+                    help="read F1 as pulled by the football archive bundle (its frozen folder, e.g. strategy-research/"
+                    "football_archive/acquisition/football-archive-v4) instead of planning legacy F1; issue #101, "
+                    "amendment 2 (DRAFT). Reading it runs the folder's code, so every file is first checked against "
+                    "its FREEZE.json and --handoff-root, and any difference refuses the run")
+    pe.add_argument("--handoff-root", metavar="SHA256", default=None,
+                    help="with --handoff (required): the bundle's frozen root, as the hub approved it")
+    pe.add_argument("--handoff-runtime", metavar="DIR", default=None,
+                    help="with --handoff: the bundle executor's runtime folder (its spending ledger, coverage report "
+                    "and data/raw); default football-acquisition-runtime next to the bundle folder")
     pe.set_defaults(fn=cmd_price_engine)
 
     pg = sub.add_parser("props-grade", help="the registered props test on F3, issue #10 "
