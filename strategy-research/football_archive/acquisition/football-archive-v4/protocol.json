@@ -1,0 +1,240 @@
+{
+  "protocol_id": "football-archive-v4",
+  "scope": "Outcome-blind acquisition, matching and price eligibility; no new strategy, outcome join or hypothesis test is authorized by this protocol.",
+  "registration_timing": "Narrow prospective executor billing repair after v3 review; request set, eligibility and research rules unchanged.",
+  "seasons": [
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "excluded_research_seasons": [
+    2026
+  ],
+  "sports": [
+    "americanfootball_nfl",
+    "americanfootball_ncaaf"
+  ],
+  "markets": [
+    "h2h",
+    "spreads",
+    "totals"
+  ],
+  "book_panel": [
+    "pinnacle",
+    "lowvig",
+    "betonlineag",
+    "draftkings",
+    "fanduel",
+    "betmgm",
+    "williamhill_us",
+    "fanatics",
+    "betrivers",
+    "espnbet"
+  ],
+  "budgets": {
+    "first_tranche_cumulative_credits": 250000,
+    "completed_probe_credits_included": 1687,
+    "broader_cumulative_ceiling": 4440000,
+    "day_one_cumulative_ceiling": 400000,
+    "account_reserve_floor": 531630,
+    "automatic_retries": 0,
+    "require_durable_attempt_reservation_and_process_lock": true,
+    "reset_or_restart_must_not_reset_authorized_budget": true,
+    "execution_authorization": "Preparation only. The hub must give its go-ahead for this exact committed request list and the owner must approve its scoped authorization before any paid send."
+  },
+  "metadata_reads": {
+    "season_filter_applied_in_reader": [
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "allowed_nfl_game_columns": [
+      "game_id",
+      "season",
+      "game_type",
+      "gameday",
+      "gametime",
+      "home_team",
+      "away_team",
+      "neutral"
+    ],
+    "allowed_cfb_game_columns": [
+      "game_id",
+      "season",
+      "start_utc",
+      "home_team",
+      "away_team",
+      "home_id",
+      "away_id",
+      "home_division",
+      "away_division",
+      "neutral_site",
+      "tbd"
+    ],
+    "allowed_mos_timing_columns": [
+      "game_id",
+      "season",
+      "start_utc",
+      "home_team",
+      "away_team"
+    ],
+    "prohibited_columns": "Scores, profits, winner/cover/push labels, final weather, closing lines and current-game performance features.",
+    "hash_projected_historical_metadata_only": true
+  },
+  "team_identity": {
+    "nfl": "Exact checked team-name/code aliases from the existing NFL team table, with Washington Football Team mapped to WAS.",
+    "cfb": "Explicit rename exceptions followed by longest exact normalized school-name token prefix; normalization folds accents and punctuation and treats & as and. No fuzzy name matching. Materialize every resolved provider alias and source school ID in the frozen bundle.",
+    "ambiguous_alias": "Quarantine; no outcome-based or price-based tie-breaking.",
+    "preserve_home_away_and_neutral_site_flags": true
+  },
+  "canonical_game_matching": {
+    "key": "Sport, season, normalized unordered team pair and one uniquely matched external game ID.",
+    "kickoff_tolerance_hours": 24,
+    "candidate_rule": "For a provider observation, require exactly one external metadata game with the same sport, season and team pair whose scheduled kickoff differs by at most 24 hours. Multiple candidates, unknown aliases or no candidate are quarantined with reasons; do not transitively chain time-near records or widen the tolerance.",
+    "source_nfl_game_types": [
+      "REG",
+      "WC",
+      "DIV",
+      "CON",
+      "SB",
+      "POST"
+    ],
+    "source_cfb_universe": "All uniquely matched games listed under the historical featured NCAAF sport, with division flags retained. FBS-only or other registered study subsets must be explicit downstream.",
+    "provider_ids": "Retain all matched IDs and all historical observations, including rejected observations and reasons.",
+    "provider_id_conflict": "If observations map one provider ID to more than one canonical game, quarantine that ID in full; do not reassign it after observing prices or outcomes.",
+    "canonical_close_listing": "Latest returned provider snapshot observed strictly before BOTH its stated kickoff and the independent scheduled kickoff. Break ties by newer listing first-observed time, then smaller absolute kickoff discrepancy, then provider ID. A first-observed time is only a tie-breaker and not proof of publication or odds availability.",
+    "entry_schedule": "Bind exact provider ID and canonical game to immutable observation/response available by decision time. Quarantine simultaneous conflicting versions for the quoted listing; no provider-ID-order resolution.",
+    "no_valid_pregame_listing": "Quarantine; do not select a post-start listing as a substitute.",
+    "external_nfl_source_population": "The frozen external NFL index is played-game metadata, not a complete historical opportunity schedule. Provider-observed opportunities, including unmatched listings, remain a separate denominator."
+  },
+  "request_schedule": {
+    "daily": "16:00 UTC once per sport/time during each canonical game's seven-day pregame window, plus its close proxy; union requests across games.",
+    "close_request": "Floor the selected provider kickoff minus five minutes to the five-minute UTC request grid.",
+    "close_label": "pregame_close_proxy",
+    "close_timing": "Record requested time, returned snapshot time, market/book update time, provider kickoff, independent scheduled kickoff and actual-play timestamp when verified. Do not claim a universally exact T-5 or T-10 observation.",
+    "mos_entry": "19:30 America/Los_Angeles on the local date preceding the game's original replay kickoff date in America/New_York; preserve the original 665 distinct slots, including daylight-saving changes.",
+    "mos_markets": [
+      "h2h",
+      "spreads",
+      "totals"
+    ],
+    "legacy_close_reconciliation": "Match each legacy close timestamp to projected replay timing metadata and canonical games; record equal/grid-equivalent, provider-kickoff revision, absent provider coverage, ambiguous metadata or no valid pregame listing. Never purchase an unmatched legacy close merely because it was in the old list. Quarantined reasons remain explicit.",
+    "first_observed": "Label event discovery first_observed_by_two_day_sweep, not first_listed or first_price. Fewer than two days before kickoff is a coverage stratum, not automatic evidence that earlier odds did not exist.",
+    "alternate_close": "For all 54 v2 games with schedule disagreement over five minutes, retain provider-anchor candidate and add floor(final independent schedule minus five minutes) candidate. Union exact sport/time/market/book cache identities and preserve all candidate mappings; final schedule used for acquisition only."
+  },
+  "price_row_eligibility": {
+    "quote_basis": "Exact provider game ID mapped to one canonical game, bookmaker, market, side, line and offered price; no interpolated prices or silent substitutions.",
+    "returned_snapshot_at_or_before_requested_time": true,
+    "maximum_snapshot_lag_seconds": 600,
+    "quote_timestamp_preference": [
+      "market.last_update",
+      "bookmaker.last_update"
+    ],
+    "maximum_quote_age_at_snapshot_seconds": 900,
+    "maximum_quote_age_at_requested_decision_seconds": 1500,
+    "age_lower_bound_seconds": 0,
+    "missing_or_future_quote_timestamp": "Ineligible for primary price grading; retained with reason, never imputed from snapshot time.",
+    "decision_preplay_guard": "Require the decision and snapshot to precede the independent scheduled start and the latest schedule known at that decision. Missing as-of schedule or material unresolved kickoff conflict means quarantine for primary grading.",
+    "close_primary_guard": "Require the returned close snapshot to precede the earlier of selected provider and independent scheduled start, with lead time 5 through 20 minutes relative to the provider anchor. A kickoff discrepancy greater than five minutes is diagnostic-only until independent actual-play timing is resolved. Certification as pre-actual-play requires an independently verified actual-play timestamp.",
+    "missing_reference": "Pinnacle is required for the primary reference CLV diagnostic at both entry and close. Missing Pinnacle produces an explicit exclusion; own-book movement is a separately labeled descriptive result, not a replacement primary endpoint.",
+    "missing_book_or_market": "Record missingness; do not replace the chosen book with whichever later looks best.",
+    "forecast_availability": "Use decision-time forecast vintages. Runtime plus the existing assumed publication delay is labeled assumed availability, not proven dissemination. Verified-publication and assumed-publication analyses are kept distinct.",
+    "postponements": "Preserve original attempted decisions; a separately labeled paper-replay listing void applies when verified eventual kickoff differs from as-of kickoff by more than 24 hours. Multiple-listing policy remains study-specific; no automatic re-entry or erasure. Do not infer every bookmaker settlement from this rule.",
+    "fills": "Historical quotations are not verified fills. Baseline quote diagnostics cannot establish executable profit. Stress delays at 5, 15, 30 and 60 minutes using actual observed quotes in the required time window; missing follow-up quotes are unavailable or inconclusive, never carried forward or interpolated.",
+    "stakes": [
+      50,
+      100
+    ],
+    "execution_universe": "Only a preregistered basket of books simultaneously accessible in one jurisdiction may support pooled execution claims. Until that basket is verified, report book-specific results; Pinnacle/LowVig/BetOnline remain references, not assumed domestic execution venues.",
+    "settlement": "Exact line, side, price, pushes, cancellations/voids and overtime treatment must follow the relevant bookmaker rules. No scored-return analysis until settlement mappings are registered and verified.",
+    "clv": "Report line movement and price movement separately. Do not convert different totals/spreads to monetary EV without a registered calibrated distribution and push treatment.",
+    "status_contract": {
+      "scheduled_pregame_eligible": "Passes identity, schedule and freshness guards; may remain an uncertified scheduled proxy.",
+      "actual_play_certified": "Independent first-play evidence for this canonical game proves snapshot and, for entry, decision/execution preceded play. Known actual play overrides scheduled timing.",
+      "conflicted_or_ineligible": "Rule failed or material timing conflict unresolved."
+    },
+    "independent_schedule": "Without independently proven version availability, final independent schedule is a retrospective safety check only, never an entry feature.",
+    "actual_play_evidence": "Canonical-game-bound evidence with utc, source_id and independent=true. Missing evidence never certifies, but does not alone invalidate an otherwise scheduled-pregame eligible proxy.",
+    "close_selection": {
+      "partition": [
+        "canonical_game_id",
+        "book",
+        "market",
+        "side"
+      ],
+      "rule": "Evaluate all frozen candidate rows. If eligible candidates exist, select latest returned snapshot, then freshest quote timestamp, then lexicographically smallest immutable quote_id. Unresolved equally timed contradictory kickoff observations are quarantined. Never rank by line, odds, CLV, result or profit. No eligible candidate means missing primary close, with all diagnostics retained.",
+      "known_actual_play": "First-play evidence overrides scheduled starts; close snapshot must lead verified first play by 5 through 20 minutes when available; otherwise relative to the exact quoted provider kickoff with independent scheduled safety guard."
+    },
+    "sides": "Totals: Over/Under only. Spreads/h2h: resolved canonical team key that belongs to the exact response event; never join by generic home/away position."
+  },
+  "purchase_order_and_gates": {
+    "first": [
+      2023,
+      2024,
+      2025
+    ],
+    "second": [
+      2020,
+      2021,
+      2022
+    ],
+    "before_older_slice": "Stop unconditionally after priority 1. Require outcome-blind coverage by specified strata, all opportunity/exclusion accounting and a separate recorded owner acceptance tied to report hash and bundle root before any older purchase. This v4 executor only accepts priority 1.",
+    "mandatory_halt": "Billing mismatch, unreadable billing/balance, credential exposure, reserve/budget breach, missing returned timestamps, response hash mismatch, unresolved canonical ambiguity entering a primary sample, or incomplete coverage accounting. Require documented resolution before continuing.",
+    "recent_slice_is_not_a_profit_gate": true,
+    "live_rule_gate": "MOS evening slots do not validate the live Open-Meteo rule. Standard-time 02:30 UTC slots and the 1-to-3-day/four-alert-time panel are deferred until a separate prospectively registered forecast-availability, alert-time, eligibility, execution-delay and capped-request protocol exists. Existing expansion gates remain in force or require an explicit prospective amendment."
+  },
+  "analysis_registration_gate": {
+    "historical_trial_count_floor": 314,
+    "existing_historical_grades_unchanged": true,
+    "no_outcome_joins_before_coverage_report": true,
+    "no_new_model_scoring_under_this_acquisition_protocol": true,
+    "before_new_price_study": "Register its hypotheses/directions, endpoints, chronological design, cohort, variants, selection steps, valid inference and multiplicity policy, economic criteria and execution stresses. Validate realistic full-search nulls before using a prospective shortlist policy. Six purchased seasons cannot silently reuse a five-training/five-validation-season requirement.",
+    "holdout": "Keep the designated 2026 football season sealed; new historical prices for already explored games are not independent confirmation. Audit actual non-exposure before declaring any holdout untouched."
+  },
+  "bundle_freeze": {
+    "algorithm": "SHA-256",
+    "canonical_json": "UTF-8 JSON, sorted keys, compact separators, no NaN",
+    "root": "SHA-256 of sorted relative filename-to-byte-digest map, excluding only FREEZE.json. Includes protocol, inputs, metadata, registry, request list, candidate maps, sources, execution dependencies, portable tests and rehearsal evidence. Execution status/ledgers live outside bundle.",
+    "protocol_before_builder": "The builder verifies and records the protocol byte digest before reading matching metadata or constructing requests. Any rule or request change requires a new version and root hash.",
+    "verification_before_execution": true
+  },
+  "opportunity_accounting": {
+    "universe": "All provider IDs observed in frozen historical sweeps, supplemented by returned purchase snapshots; not proof of all listings ever offered.",
+    "canonical_population": "Matched played-game population is reported separately; no silent inner joins.",
+    "unmatched": "Keep separate IDs, candidate other-ID matches, supporting evidence and unresolved status. No extra unmatched close purchase under v3 without a new frozen request amendment.",
+    "counts": "Report provider IDs, canonical games, intended decisions, timestamp slots, pairs, voids and exclusion reasons separately."
+  },
+  "execution_contract": {
+    "authorization": "Require separate approved owner artifact and hub_go_ahead evidence, both bound to the exact bundle root and request_set_sha256. The hub coordinates the one Paid data list in STATUS.md. No artifact created by the builder authorizes spending.",
+    "acceptance": "No send outside authorized allowlist or without durable budget reservation; no automatic resend of unresolved attempt; conservative accounting and halt when billing cannot be reconciled. No guarantee about provider billing or unrelated key activity.",
+    "persistence": "Process lock; fsync file and directory before send; immutable response/hash evidence before ledger completion. Pending or stopped ledger refuses automatic continuation; separately audited reconciliation required.",
+    "billing": "Within one documented epoch: cumulative highest-used and lowest-remaining counters, compared with cumulative reconciled own bills. Reserve the peak positive external discrepancy once; tolerate bounded stale headers without double-counting catch-up. Use the lower of observed remaining and baseline minus own bills/external debit for reserve protection.",
+    "dependencies": "Freeze wrapper, validator, coverage and eligibility plus vendored BulkClient/cache/HTTP/settings/normalize dependency source. Record external runtime distribution versions and enforce the frozen runtime lock.",
+    "cache": "Frozen probe reuse hashes must match. Missing/changed reused cache halts; no automatic replacement purchase. Paid resumed cache requires completed ledger hash, not cache existence alone.",
+    "retry": "Zero client and adapter retries; redirects prohibited."
+  },
+  "billing_reconciliation": {
+    "shared_usage_margin_credits": 100,
+    "counter_lag_tolerance_credits": 100,
+    "bulk_client_alarm_margin_credits": 5000,
+    "bulk_margin_basis": "Existing headers.analyze recommendation: max(5000, 2 * probe measured answer lateness * 30). Wrapper independently applies stricter 100-credit cumulative unexplained-usage and lag guards.",
+    "baseline": "Require approved reconciliation input, hashed into run manifest. Capture fresh used/remaining from the first free check or use an explicit documented baseline. Local probe/attempt budgets never reset.",
+    "pre_run_usage": "An explicit documented pre-run other-usage debit is permitted. Otherwise conservatively reserve all current-period used credits as additional budget debit, even where that double-counts this probe. Do not infer zero unrelated usage from a counter reset.",
+    "tracking": "Within one documented epoch: cumulative highest-used and lowest-remaining counters, compared with cumulative reconciled own bills. Reserve the peak positive external discrepancy once; tolerate bounded stale headers without double-counting catch-up. Use the lower of observed remaining and baseline minus own bills/external debit for reserve protection.",
+    "reset": "Initial reset may be adopted by approved reconciliation; in-run large used regression or remaining rise halts. Account-only recovery requires an explicit new reconciliation; unknown paid attempts cannot be cleared or resent.",
+    "recovery": "Approve an account-only reconciliation to resume when no paid attempt is pending. A pending attempt may only be reconciled offline from an exact hash-pinned cached response under an explicit owner note, retaining conservative debit and all evidence. No automatic resend.",
+    "jobs": "Do not pause forward-test jobs or inspect sealed signal logs. Bounded shared-key usage is accounted for; exceeding margin halts. Use a quiet window when available; no claimed guarantee of exclusivity."
+  },
+  "cache_handoff": {
+    "raw_layout": "runtime/data/raw/{sport}/oddsapi/hist_odds/{date}/{cache_key}.parquet; same cache key, schema and byte format as sharp-markets RawCache",
+    "reused_responses": "24 frozen reuse files remain in the bundle; an analysis adapter must include those paths together with completed paid responses.",
+    "reader_gate": "cache_handoff.py exposes the exact completed recent list and both paid/reused response paths to the existing price-engine run(cfg,calls,cache) interface. Stock CLI replans legacy F1; the hub must approve this manifest-driven integration and the analysis registration before grading. Never run legacy F1 again to populate a second cache.",
+    "scope": "No cache publication, price-engine run, outcome joins or graded research under this acquisition protocol."
+  }
+}

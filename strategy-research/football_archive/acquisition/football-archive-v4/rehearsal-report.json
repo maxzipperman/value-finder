@@ -1,0 +1,62 @@
+{
+  "status": "passed",
+  "tests_passed": 110,
+  "tests_failed": 0,
+  "network_disabled": true,
+  "live_API_calls": 0,
+  "real_credential_reads": 0,
+  "outcome_joins": 0,
+  "sealed_season_reads": 0,
+  "all_24_probe_bodies_replayed": true,
+  "transport": "fake session through unchanged vendored BulkClient; synthetic billing headers/key; actual sanitized probe bodies",
+  "static_validation": "Exact v3 request rows and eligibility preserved; full joint root, allowlist, both phase costs, MOS slots, alternate closes and opportunity accounting checked.",
+  "dynamic_test_scope": "One-request temporary fixtures isolate executor and read-only reader behavior; not a 2,761-call production-throughput rehearsal.",
+  "billing_cases": [
+    "monthly reset at approved initial baseline",
+    "shared-key positive usage within 100 credits",
+    "external excess halt",
+    "bounded stale headers and catch-up",
+    "asymmetric counter lag",
+    "100-credit boundaries",
+    "unreadable or excessive bills",
+    "durable reservations before send",
+    "no automatic resend",
+    "approved stopped-ledger-hash account recovery",
+    "offline exact-hash saved-response reconciliation"
+  ],
+  "authorization_cases": [
+    "draft owner approval rejected",
+    "missing hub approval rejected",
+    "draft hub approval rejected",
+    "wrong hub root rejected",
+    "wrong hub request-list hash rejected",
+    "all rejected before key read or transport"
+  ],
+  "reader_cases": [
+    "exact manifest to existing Call/cache reader interface",
+    "paid response and receipt hashes verified",
+    "recent completion and outcome-blind report required",
+    "changed response rejected",
+    "fetch/write interface prohibited"
+  ],
+  "acceptance": "No send outside approved allowlist or without durable reservation; no automatic resend of an unresolved attempt; conservative accounting and halt on unreconciled billing.",
+  "vendored_sources_byte_identical_to_repo": [
+    "oddsapi/bulk.py",
+    "cache.py",
+    "http.py",
+    "settings.py",
+    "oddsapi/normalize.py"
+  ],
+  "source_sha256": {
+    "protocol.json": "2eddc6ab40fd159f0225fcf73399f41e7b4d8e1f8835c18f16a79e3ef6d06ee9",
+    "builder.py": "a6e2040ff64a6e4feff19d4ab7e5f3432b5cc76efcb8a66e74f92845118a0f03",
+    "executor.py": "9722e6577aec07482fdbd070fd4f3df8a26653db131b0776017e6c842658df9f",
+    "validator.py": "beaf4e242cb5b1982b6978e14e128e97556cc109f12177c356c1dd6fe36b7847",
+    "coverage_report.py": "d6b524fc786487777499b94a6baf3d89064894867dc1aa3311565324122e0fce",
+    "price_eligibility.py": "e473ec14fa2073ab9e8829b0053be50618100338077e66e2a3b21ebbfd5feabe",
+    "cache_handoff.py": "0692338c1eb02db7f542cf1bcda6bf76d9042fc11a16466bdd5c5d7349693cb0",
+    "test_v4.py": "f06a718efd2d8f1af4db9d0fae977e2c1f7e2cd0423b045d046320edeec5ca64"
+  },
+  "interpreter_path": "/Users/maxzipperman/code/value-finder/sharp-markets/.venv/bin/python",
+  "completed_utc": "2026-10-01T04:26:27.227525+00:00"
+}

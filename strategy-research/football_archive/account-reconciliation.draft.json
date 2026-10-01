@@ -1,0 +1,13 @@
+{
+  "status": "draft",
+  "bundle_root_sha256": "09c29ac0e003c50595581e74345ffc0838a85c55c7b28aa14d61b83799e5ccd2",
+  "baseline_mode": "capture_first_free_check",
+  "used": null,
+  "remaining": null,
+  "pre_run_other_usage_budget_debit": null,
+  "reason": "Use a current account baseline rather than the old probe balance; handle initial monthly reset and shared paid-key usage.",
+  "owner_note": "DRAFT: approval would permit capture from the first zero-credit check; without a documented prior-usage debit, reserve all current-period used credits conservatively in addition to the probe.",
+  "account_only_recovery": false,
+  "shared_usage_margin_credits": 100,
+  "counter_lag_tolerance_credits": 100
+}
