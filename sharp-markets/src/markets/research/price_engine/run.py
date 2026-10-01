@@ -8,6 +8,11 @@ pipeline on a small synthetic fixture instead (nothing in it is data). Once F1 i
   reports/price_engine/report.md     the write-up: results, decisions under the registered rule, books, lag, calibration
   reports/price_engine/bets.parquet  every bet with its grading (gitignored)
   reports/price_engine/dropped.csv   what was left out, by reason
+
+`--handoff <bundle> --handoff-root <sha256>` reads F1 as pulled by the football archive bundle instead of planning
+the legacy F1 call set (issue #101; amendment 2, a DRAFT until the hub registers it). See handoff.py: the bundle's
+code runs, so the folder is verified against its FREEZE.json and the pinned root before anything in it is imported.
+Everything after loading is the same `run(cfg, calls, cache)`.
 """
 from __future__ import annotations
 
@@ -31,6 +36,10 @@ DAILY_NOTE = ("F1 sees each game at 16:00 UTC on each of the 7 days before kicko
               "other game's close (each snapshot lists every game). A price gap shows up only if it is open at one "
               "of those moments, so gaps that last minutes, the kind Kaunitz et al. found with minute data and "
               "issue #53 describes, are mostly missed, and nothing here says how long any gap lasted.")
+HANDOFF_NOTE = ("Read through --handoff (amendment 2), F1 is the football archive bundle's priority-1 manifest, not the "
+                "legacy plan: it also sees each game at the weather study's evening decision slots (19:30 Pacific on "
+                "the evening before each game day) and at a few alternate closes, and 27 of the legacy plan's close "
+                "snapshots for 2023-25 are absent, so those games' closes come from other snapshots, or there is none.")
 PREREG = "sharp-markets/docs/PRICE_ENGINE_PREREGISTRATION.md"
 
 
@@ -141,12 +150,46 @@ MOVED_COLS = ["variant", "bets", "clv_pin_n", "clv_pin_same_n", "clv_pin_cents_s
               "clv_pin_cents_moved", "clv_pin_cents", "clv_pin_pts"]
 
 
+def _note(res: dict) -> str:
+    return f"{DAILY_NOTE} {HANDOFF_NOTE}" if res.get("handoff") else DAILY_NOTE
+
+
+def _check_missing_reasons(info: dict) -> None:
+    """Every accepted_missing reason in `info`, counted or listed, is one the bundle's executor can record
+    (handoff.MISSING_REASONS), so nothing else reaches the output line or report.md."""
+    from .handoff import check_missing_reasons
+    check_missing_reasons(list(info.get("accepted_missing_reasons") or {})
+                          + [m.get("reason") for m in info.get("accepted_missing_requests") or []])
+
+
+def _missing_line(info: dict) -> str:
+    """The calls the bundle's run accepted as missing (amendment 2): absent data, counted here, never fetched."""
+    _check_missing_reasons(info)
+    n = info.get("accepted_missing", 0)
+    reasons = ", ".join(f"{k} {v:,}" for k, v in (info.get("accepted_missing_reasons") or {}).items())
+    return (f"{n:,} accepted as missing by the bundle's run (absent data: no response, no row read, never fetched"
+            + (f"; by reason: {reasons}" if reasons else "") + ")")
+
+
 def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
     n = len(results)
     head = ["# Price-engine backtest (F1)" + (" — SYNTHETIC FIXTURE, NOT DATA" if fixture else ""), "",
             f"Run {utcnow():%Y-%m-%d %H:%M} UTC from commit {_commit()}. Rules: `{PREREG}` "
             "(registered September 29, 2026; amendment 1, September 30, 2026). Sealed 2026 seasons left out.", "",
-            f"**{DAILY_NOTE}**", ""]
+            f"**{_note(res)}**", ""]
+    if res.get("handoff"):
+        h = res["handoff"]
+        head += [f"F1 as pulled: the football archive bundle's priority-1 manifest, read through `--handoff` "
+                 f"(amendment 2). Bundle root `{h['bundle_root_sha256']}`, request set `{h['request_set_sha256']}`, "
+                 f"coverage report `{h['coverage_report_sha256']}`, spending ledger "
+                 f"`{h['spending_ledger_sha256']}`; {h['calls']:,} calls, {h['reused']:,} of them reused from the "
+                 f"bundle's `reuse/`; {_missing_line(h)}.", ""]
+        if h.get("accepted_missing_requests"):     # their reasons were checked by _missing_line(h), above
+            head += ["Accepted as missing by the bundle's run, by request id (the manifest's `request_id`, as the hub's "
+                     "approval on PR 99 names it), with its reason and cache key:", ""]
+            head += [f"- `{m['request_id'] or 'no request id'}`: {m['reason']}, cache key `{m['cache_key']}`"
+                     for m in h["accepted_missing_requests"]]
+            head += [""]
     cov = res.get("coverage")
     if cov is not None and len(cov) and (cov.share < MIN_SCORE_SHARE).any():
         low = cov[cov.share < MIN_SCORE_SHARE]
@@ -239,7 +282,20 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
     return "\n".join(head + body)
 
 
+def _refused(exc) -> str:
+    """The exit message for a refused --handoff run. Only a refusal raised before any of the bundle's code ran can
+    say no response was parsed (the folder check reads and hashes the reused responses, but parses none); after that,
+    the bundle's code has parsed responses, though nothing is reported."""
+    when = "before any response is parsed, nothing written" if exc.before_read else "nothing reported, nothing written"
+    return f"price-engine --handoff refused ({when}): {exc}"
+
+
 def main(args) -> int:
+    bundle = getattr(args, "handoff", None)
+    if bundle and args.fixture:
+        raise SystemExit("price-engine: --handoff and --fixture are alternatives; give one")
+    if not bundle and (getattr(args, "handoff_root", None) or getattr(args, "handoff_runtime", None)):
+        raise SystemExit("price-engine: --handoff-root and --handoff-runtime need --handoff")
     if args.fixture:
         tmp = Path(tempfile.mkdtemp(prefix="price-engine-fixture-"))
         from .fixture import build
@@ -247,6 +303,25 @@ def main(args) -> int:
         print(f"SYNTHETIC FIXTURE (not data), in {tmp}")
         res = run(cfg, calls, cache, scores=scores)
         out_dir = Path(args.out) if args.out else tmp / "report"
+    elif bundle:
+        from . import handoff
+        cfg = bulk.load_config()
+        try:
+            calls, cache, info = handoff.load(bundle, getattr(args, "handoff_root", None), cfg,
+                                              getattr(args, "handoff_runtime", None))
+            missing = _missing_line(info)           # refuses a reason the bundle's executor cannot record
+        except handoff.HandoffRefused as exc:
+            raise SystemExit(_refused(exc)) from None
+        print(f"F1 as pulled (football archive bundle {info['bundle_root_sha256']}): {info['calls']:,} calls, "
+              f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked; "
+              f"{missing}{'; request ids in report.md' if info.get('accepted_missing') else ''} "
+              "(amendment 2)")
+        try:
+            res = run(cfg, calls, cache)
+        except handoff.HandoffRefused as exc:       # a response changed, or became unreadable, after loading
+            raise SystemExit(_refused(exc)) from None
+        res["handoff"] = info
+        out_dir = Path(args.out) if args.out else REPORTS_DIR / "price_engine"
     else:
         cfg, cache = bulk.load_config(), RawCache()
         calls = f1_calls(cfg, cache)
@@ -280,7 +355,7 @@ def main(args) -> int:
     with pd.option_context("display.width", 200, "display.max_columns", 20, "display.max_rows", 100):
         print(results[["variant", "bets", "clv_pin_n", "clv_pin_expected", "clv_pin_cents", "clv_pin_p", "clv_pin_pts",
                        "clv_own_cents", "roi", "decision"]].to_string(index=False))
-    print(DAILY_NOTE)
+    print(_note(res))
     print(f"variants tested: {len(results)} (rows in results.csv); running count {engine.RUNNING_COUNT}, "
           f"bar p < {engine.ALPHA:.6f}")
     print(f"wrote {out_dir}/report.md and results.csv")
