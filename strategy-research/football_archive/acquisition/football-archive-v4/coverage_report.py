@@ -60,10 +60,14 @@ def build_report(bundle,runtime,read_record):
     aliases={(a['sport'],a['provider_name']):a['canonical_team_key'] for a in json.loads((bundle/'aliases.json').read_text())}
     intended,events,quote_quality,strata=[],[],Counter(),defaultdict(Counter)
     all_grades={}; raw_quote_ages=[]
-    source_rows={};close_requests=defaultdict(set)
+    source_rows={};missing_requests=[];close_requests=defaultdict(set)
     for c in json.loads((bundle/'close-candidates.json').read_text()):close_requests[c['canonical_game_id']].add(c['request_id'])
     for r in manifest['requests']:
         if r['priority']!=1:continue
+        attempt=ledger['attempts'].get(r['request_id'],{})
+        if r['max_new_credits'] and attempt.get('status')=='missing':
+            missing_requests.append({'request_id':r['request_id'],'reason':attempt['missing_reason'],'reserved_credits':attempt['reserved_credits']})
+            source_rows[r['request_id']]=(r,[]);continue
         path=bundle/r['cache_source'] if r['max_new_credits']==0 else Path(ledger['attempts'][r['request_id']]['response_path'])
         rec=read_record(path);event_status,ids=normalize_response(catalog,r,rec,aliases);events.extend(event_status);source_rows[r['request_id']]=(r,ids)
     # Evaluate after collecting responses so equal-timestamp conflicts remain visible.
@@ -138,6 +142,7 @@ def build_report(bundle,runtime,read_record):
        'identity_and_opportunity_accounting':Counter(r['status'] for r in registry),'quote_quality_and_exclusions':dict(quote_quality),
        'valid_reference_pairs':sum(p['status']=='valid_entry_close_pair' and p['primary_reference'] for p in pair_records)},
        'alternate_close_plan':json.loads((bundle/'alternate-close-summary.json').read_text()),
+       'accepted_missing_requests':missing_requests,
        'request_purpose_coverage':[{'request_id':r['request_id'],'purposes':r['purposes'],'canonical_game_ids':r['canonical_game_ids']} for r,_ in source_rows.values()],
        'intended_slot_book_market_accounting':intended,'quote_age_and_exclusion_records':raw_quote_ages,'returned_events_including_unmatched':events,
        'provider_observed_opportunity_registry':registry,'all_quotes_and_eligibility_source_bindings':[{'quote':q,'entry_eligibility':all_grades[qid]} for qid,q in catalog['quotes'].items()],

@@ -39,6 +39,14 @@ def build_handoff(bundle, root, runtime):
                 raise ValueError('Reused response not reconciled')
         else:
             attempt = ledger['attempts'].get(row['request_id'], {})
+            if attempt.get('status') == 'missing':
+                receipt=runtime/'receipts'/f"{row['request_id']}.json"
+                if sha(receipt)!=attempt['receipt_sha256']:raise ValueError('Changed missing receipt')
+                if attempt.get('response_path') and sha(Path(attempt['response_path']))!=attempt['response_sha256']:
+                    raise ValueError('Changed missing source')
+                entries.append({'request':row,'status':'accepted_missing','reason':attempt['missing_reason'],
+                                'response_path':None,'response_sha256':None})
+                continue
             if attempt.get('status') != 'completed':
                 raise ValueError('Paid response not completed')
             path, digest = Path(attempt['response_path']), attempt['response_sha256']
@@ -76,6 +84,7 @@ class ReadOnlyCache:
         self.offline = True
         self.index = {}
         for entry in handoff['entries']:
+            if entry.get('status')=='accepted_missing':continue
             row = entry['request']; key = row['sport'], row['source'], row['cache_key']
             if key in self.index:
                 raise ValueError('Duplicate handoff cache identity')

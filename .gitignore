@@ -5,6 +5,7 @@
 
 # local environments, caches
 .venv/
+.venv-*/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -25,3 +26,9 @@ sharp-markets/reference/
 
 # thesis PDF stays local; the text version is in thesis/
 *.pdf
+
+# Acquisition state and receipts contain paid raw bodies; never publish them.
+**/football-acquisition-runtime/
+**/football-acquisition-state/
+strategy-research/football_archive/**/spending-ledger.json
+strategy-research/football_archive/**/receipts/

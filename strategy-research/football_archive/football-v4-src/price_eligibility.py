@@ -133,9 +133,8 @@ def evaluate(protocol, row, catalog, horizon='entry'):
             if horizon == 'entry' and execution >= actual: reasons.append('execution_not_before_actual_play')
             eventual_delta = abs((actual-provider).total_seconds())
             result['paper_listing_status'] = 'postponed_over_24h_void' if eventual_delta > 86400 else 'within_24h_no_void_inferred'
-        else:
-            if not scheduled_ok: reasons.append('not_in_scheduled_pregame_window')
-            if conflict: reasons.append('unresolved_material_kickoff_conflict')
+        if not scheduled_ok: reasons.append('not_in_scheduled_pregame_window')
+        if conflict: reasons.append('unresolved_material_kickoff_conflict')
         if horizon == 'close' and not 300 <= lead <= 1200:
             reasons.append('close_proxy_not_in_valid_pregame_window')
         result['eligible'] = not reasons

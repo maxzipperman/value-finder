@@ -77,7 +77,9 @@ def verify(folder,expected_root=None,check_cache=False):
     if hashlib.sha256(canonical(parent3['file_sha256'])).hexdigest()!='d5c441c2ddcd71a107476dd9731d1c2b11bcbbd08733870152d8075b5db65e9a':raise ValueError('v3 origin root mismatch')
     if actual['v3-origin-request-manifest.json']!=parent3['file_sha256']['request-manifest.json']:raise ValueError('v3 request provenance changed')
     if rows!=json.loads((folder/'v3-origin-request-manifest.json').read_text())['requests']:raise ValueError('Reviewed request set changed')
-    if actual['price_eligibility.py']!=parent3['file_sha256']['price_eligibility.py']:raise ValueError('Reviewed eligibility changed')
+    amendment=json.loads((folder/'eligibility-amendment.json').read_text())
+    if amendment['original_eligibility_sha256']!=parent3['file_sha256']['price_eligibility.py'] or amendment['new_eligibility_sha256']!=actual['price_eligibility.py']:raise ValueError('Eligibility amendment not bound')
+    if m.get('request_list_sha256')!=actual['request-list.csv']:raise ValueError('Request CSV hash not bound')
     if cfg['billing_reconciliation']['shared_usage_margin_credits']!=100 or cfg['billing_reconciliation']['counter_lag_tolerance_credits']!=100:raise ValueError('Unreviewed billing tolerances')
     return {'bundle_root_sha256':root,'manifest_requests':len(rows),'new_paid_requests':sum(r['max_new_credits']>0 for r in rows),
             'new_credits':sum(costs.values()),'phase_credits':costs,'all_MOS_slots_preserved':True,'all_observed_opportunities_retained':True,

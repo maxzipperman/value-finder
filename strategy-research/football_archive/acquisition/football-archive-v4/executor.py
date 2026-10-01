@@ -8,6 +8,8 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import re
+import subprocess
 from pathlib import Path
 import sys
 
@@ -42,6 +44,92 @@ def current_runtime():
 class Halt(RuntimeError): pass
 
 
+RUNTIME_BASE = Path.home()/'Library/Application Support/ValueFinder/football-acquisition-state'
+LIVE_CHECKOUT = Path.home()/'code/value-finder'
+
+
+def runtime_path(root):
+    if not re.fullmatch('[a-f0-9]{64}', root): raise Halt('Invalid frozen root')
+    path = (RUNTIME_BASE/root).resolve()
+    if path.is_relative_to(LIVE_CHECKOUT.resolve()) or any((p/'.git').exists() for p in (path,*path.parents)):
+        raise Halt('Acquisition runtime must be outside every git checkout')
+    return path
+
+
+def execution_context(bundle, root, runtime):
+    if Path(bundle).resolve().is_relative_to(LIVE_CHECKOUT.resolve()):
+        raise Halt('Execution from the live checkout is prohibited')
+    if Path(runtime).resolve() != runtime_path(root):
+        raise Halt('Only the fixed root-keyed runtime is allowed')
+
+
+def checkout_commit(bundle):
+    try:
+        git='/Library/Developer/CommandLineTools/usr/bin/git' if Path('/Library/Developer/CommandLineTools/usr/bin/git').is_file() else 'git'
+        return subprocess.check_output([git,'-C',str(bundle),'rev-parse','HEAD'],text=True,stderr=subprocess.DEVNULL).strip()
+    except (subprocess.CalledProcessError, OSError):
+        raise Halt('Execution requires the approved git checkout') from None
+
+
+def validate_authorization(authorization, manifest, root, commit=None):
+    cap = manifest['new_credits_by_priority']['1']
+    if (authorization.get('status')!='approved' or authorization.get('bundle_root_sha256')!=root
+        or authorization.get('priority')!=1 or authorization.get('max_new_credits')!=cap
+        or not authorization.get('human_authorization_evidence')):
+        raise Halt('Missing exact recent-slice authorization')
+    hub=authorization.get('hub_go_ahead',{});approved_commit=authorization.get('execution_commit','')
+    expected=(f"APPROVED paid run: list {manifest['request_list_sha256']}, request-set {manifest['request_set_sha256']}, "
+              f"budget {cap} credits, commit {approved_commit}")
+    if (hub.get('status')!='approved' or hub.get('bundle_root_sha256')!=root
+        or hub.get('request_set_sha256')!=manifest['request_set_sha256']
+        or hub.get('request_list_sha256')!=manifest['request_list_sha256']
+        or hub.get('budget_credits')!=cap or hub.get('commit')!=approved_commit
+        or not re.fullmatch('[a-f0-9]{40}',approved_commit)
+        or (commit is not None and commit!=approved_commit)
+        or not re.fullmatch(r'https://github\.com/maxzipperman/value-finder/pull/99#issuecomment-[0-9]+',hub.get('comment_url',''))
+        or expected not in hub.get('comment_body','').splitlines()):
+        raise Halt('Hub go-ahead must bind CSV, request set, budget, current commit and approval comment')
+
+
+def verify_live_hub_comment(authorization):
+    hub=authorization['hub_go_ahead'];cid=hub['comment_url'].rsplit('-',1)[-1]
+    try:
+        comment=json.loads(subprocess.check_output(['gh','api',f'repos/maxzipperman/value-finder/issues/comments/{cid}'],text=True))
+    except (OSError,subprocess.CalledProcessError,ValueError):
+        raise Halt('Cannot verify hub approval comment through GitHub') from None
+    if (comment.get('html_url')!=hub['comment_url'] or comment.get('body')!=hub['comment_body']
+        or comment.get('user',{}).get('login')!='maxzipperman'):
+        raise Halt('GitHub hub approval comment differs from recorded evidence')
+
+
+def validate_reconciliation(reconciliation,root):
+    if (not reconciliation or reconciliation.get('status')!='approved' or reconciliation.get('bundle_root_sha256')!=root
+        or reconciliation.get('baseline_mode') not in ('capture_first_free_check','explicit')
+        or not reconciliation.get('reason') or not reconciliation.get('owner_note')
+        or type(reconciliation.get('max_baseline_used')) is not int or reconciliation['max_baseline_used']<0
+        or reconciliation.get('billing_period_utc')!=datetime.now(timezone.utc).strftime('%Y-%m')):
+        raise Halt('Approved documented account reconciliation required')
+    return reconciliation
+
+
+def register_runtime(runtime, root, authorization):
+    """A separate durable marker survives deletion of the root's runtime folder."""
+    registrations=RUNTIME_BASE/'registrations';registrations.mkdir(parents=True,exist_ok=True)
+    marker=registrations/(root+'.json')
+    identity={'bundle_root_sha256':root,'authorization_sha256':hashlib.sha256(canonical(authorization)).hexdigest(),
+              'runtime_path':str(Path(runtime).resolve())}
+    lock=(registrations/'registration.lock').open('a')
+    try:
+        fcntl.flock(lock,fcntl.LOCK_EX)
+        if marker.exists():
+            if json.loads(marker.read_text())!=identity:raise Halt('Runtime registration approval differs; never reset')
+            if not (Path(runtime)/'spending-ledger.json').exists():raise Halt('Registered runtime ledger missing; never recreate')
+        else:
+            if (Path(runtime)/'spending-ledger.json').exists():raise Halt('Ledger without central registration; inspect')
+            atomic(marker,identity)
+    finally:lock.close()
+
+
 class Ledger:
     """Reservations persist at their upper bound even when a response costs less."""
     def __init__(self, folder, protocol, manifest, root, authorization, probe, reconciliation=None):
@@ -49,20 +137,11 @@ class Ledger:
         self.path = self.folder/'spending-ledger.json'
         self.protocol, self.manifest, self.root = protocol, manifest, root
         cap = manifest['new_credits_by_priority']['1']
-        if (authorization.get('status') != 'approved' or authorization.get('bundle_root_sha256') != root or authorization.get('priority') != 1
-            or authorization.get('max_new_credits') != cap or not authorization.get('human_authorization_evidence')):
-            raise Halt('Missing exact recent-slice authorization')
-        hub = authorization.get('hub_go_ahead', {})
-        if (hub.get('status') != 'approved' or hub.get('bundle_root_sha256') != root
-            or hub.get('request_set_sha256') != manifest['request_set_sha256'] or not hub.get('evidence')):
-            raise Halt('Hub go-ahead for the exact request list required')
+        validate_authorization(authorization,manifest,root)
         if probe.get('pending') or probe.get('stopped') or sum(a['counted_credits'] for a in probe['attempts']) != 1687 or probe['reserved_credits'] != 1687:
             raise Halt('Probe accounting cannot be seeded')
         reconciliation = reconciliation or authorization.get('account_reconciliation')
-        if (not reconciliation or reconciliation.get('status')!='approved' or reconciliation.get('bundle_root_sha256')!=root
-            or reconciliation.get('baseline_mode') not in ('capture_first_free_check','explicit')
-            or not reconciliation.get('reason') or not reconciliation.get('owner_note')):
-            raise Halt('Approved documented account reconciliation required')
+        validate_reconciliation(reconciliation,root)
         self.reconciliation=reconciliation
         self.reconciliation_sha256=hashlib.sha256(canonical(reconciliation)).hexdigest()
         self.authorization_sha256 = hashlib.sha256(canonical(authorization)).hexdigest()
@@ -84,23 +163,24 @@ class Ledger:
                               'other_usage_reserved':0,'status':'prepared'}
                 atomic(marker,{'bundle_root_sha256':root,'probe_credits':1687})
                 self.save()
-            self.validate_state()
+            self.validate_state(check_floor=False)
             if self.state['pending']:
                 raise Halt('Pending paid attempt: offline hash-pinned cached-response reconciliation only; never resend')
             if self.state['stopped']:
                 if (not reconciliation.get('account_only_recovery') or reconciliation.get('prior_ledger_sha256')!=sha(self.path)
-                    or any(a['status']!='completed' for a in self.state['attempts'].values())):
+                    or any(a['status'] not in ('completed','missing') for a in self.state['attempts'].values())):
                     raise Halt('Stopped ledger requires explicit account-only recovery; pending attempts cannot be cleared')
                 self.state['reconciliation_history'].append({'prior_ledger_sha256':sha(self.path),'reconciliation_sha256':self.reconciliation_sha256,'reason':'approved account-only recovery; budgets retained'})
-                self.state['stopped']=None;self.state['epoch']=None;self.save()
+                self.state['stopped']=None;self.state['epoch']=None;self.state['provider_used']=None;self.state['provider_remaining']=None;self.save()
             if self.state['epoch'] is None and reconciliation['baseline_mode']=='explicit':
                 self.adopt_baseline(integer(reconciliation.get('used')),integer(reconciliation.get('remaining')))
             if self.state.get('active_reconciliation_sha256') not in (None,self.reconciliation_sha256) and self.state['epoch'] is not None:
                 raise Halt('Changed reconciliation requires explicit account-only recovery')
+            self.budget_check(0)
         except BaseException:
             self.lock.close(); raise
 
-    def validate_state(self):
+    def validate_state(self,check_floor=True):
         allowed = {r['request_id']:r for r in self.manifest['requests'] if r['priority']==1 and r['max_new_credits']}
         if self.state['probe_credits'] != 1687 or self.state['slice_cap'] != self.manifest['new_credits_by_priority']['1']:
             raise Halt('Ledger budget baseline changed')
@@ -109,25 +189,26 @@ class Ledger:
                 raise Halt('Attempt differs from authorized allowlist')
         if self.state['pending'] and self.state['pending'] not in self.state['attempts']:
             raise Halt('Pending attempt missing from ledger')
-        self.budget_check(0)
+        self.budget_check(0,check_floor=check_floor)
 
     def close(self): self.lock.close()
     def save(self): atomic(self.path,self.state)
     def halt(self, reason):
         self.state['stopped']=reason; self.state['status']='halted'; self.save()
     def reserved(self): return sum(a['reserved_credits'] for a in self.state['attempts'].values())
-    def budget_check(self, extra):
+    def budget_check(self, extra, check_floor=True):
         budgets = self.protocol['budgets']; total=self.state['probe_credits']+self.state['other_usage_reserved']+self.reserved()+extra
         if self.reserved()+extra > self.state['slice_cap']: raise Halt('Recent-slice credit ceiling')
         for name in ('first_tranche_cumulative_credits','day_one_cumulative_ceiling','broader_cumulative_ceiling'):
             if total > budgets[name]: raise Halt('Cumulative budget exceeded: '+name)
-        if self.state['provider_remaining'] is not None and self.conservative_remaining()-extra < budgets['account_reserve_floor']: raise Halt('Account reserve floor')
+        if check_floor and self.state['provider_remaining'] is not None and self.conservative_remaining()-extra < budgets['account_reserve_floor']: raise Halt('Account reserve floor')
 
     def billed(self):
-        return sum(a.get('billed_credits',0) for a in self.state['attempts'].values() if a['status']=='completed')
+        return sum(a.get('billed_credits',0) for a in self.state['attempts'].values() if a['status'] in ('completed','missing'))
 
     def adopt_baseline(self,used,remaining):
         if min(used,remaining)<0: raise Halt('Invalid baseline')
+        if used>self.reconciliation['max_baseline_used']:raise Halt('Approved max_baseline_used exceeded; never adopt a spent balance')
         explicit=self.reconciliation.get('pre_run_other_usage_budget_debit')
         debit=used if explicit is None else integer(explicit)
         self.state['other_usage_reserved']=max(self.state['other_usage_reserved'],debit)
@@ -187,10 +268,10 @@ class Ledger:
         self.state['attempts'][row['request_id']]={'reserved_credits':row['max_new_credits'],'status':'pending','cache_key':row['cache_key']}
         self.state['pending']=row['request_id']; self.state['status']='running'; self.save()
 
-    def observe_headers(self,headers):
+    def observe_headers(self,headers,status=None):
         rid=self.state['pending']
         safe={k:headers.get(k) for k in ('x-requests-last','x-requests-used','x-requests-remaining')}
-        a=self.state['attempts'][rid];a['observed_billing_headers']=safe
+        a=self.state['attempts'][rid];a['observed_billing_headers']=safe;a['observed_http_status']=status
         try:
             last=integer(safe['x-requests-last']);used=integer(safe['x-requests-used']);left=integer(safe['x-requests-remaining'])
             a['reserved_credits']=max(a['reserved_credits'],last)
@@ -271,8 +352,11 @@ class GuardedSession:
         if any(secret in response.text or any(secret in str(v) for v in response.headers.values()) for secret in forms):
             raise Halt('Credential exposure in response; halt before persisting')
         if self.ledger.state['pending']:
-            self.ledger.observe_headers(response.headers)
-        elif integer(response.headers.get('x-requests-last')) != 0:
+            self.ledger.observe_headers(response.headers,response.status_code)
+        else:
+            self.ledger.state['free_account_attempt'].update(status='received',billing_headers={k:response.headers.get(k) for k in ('x-requests-last','x-requests-used','x-requests-remaining')})
+            self.ledger.save()
+        if not self.ledger.state['pending'] and integer(response.headers.get('x-requests-last')) != 0:
             self.ledger.state['other_usage_reserved'] += integer(response.headers.get('x-requests-last'))
             self.ledger.save()
             raise Halt('Free account check unexpectedly billed')
@@ -294,10 +378,15 @@ def vendor_imports(bundle,runtime):
 def run(bundle,root,authorization, runtime, key=None, fake_session=None, checkpoint=lambda _:None, reconciliation=None):
     from validator import verify
     bundle=Path(bundle); runtime=Path(runtime)
+    execution_context(bundle,root,runtime)
     verify(bundle,root,check_cache=True)
     if current_runtime()!=json.loads((bundle/'runtime-lock.json').read_text()): raise Halt('External runtime differs from frozen lock')
     cfg=json.loads((bundle/'protocol.json').read_text());m=json.loads((bundle/'request-manifest.json').read_text())
     probe=json.loads((bundle/'probe-spending-ledger.json').read_text())
+    validate_authorization(authorization,m,root,checkout_commit(bundle))
+    if fake_session is None:verify_live_hub_comment(authorization)
+    validate_reconciliation(reconciliation or authorization.get('account_reconciliation'),root)
+    register_runtime(runtime,root,authorization)
     ledger=Ledger(runtime,cfg,m,root,authorization,probe,reconciliation=reconciliation)
     client=None
     try:
@@ -315,7 +404,7 @@ def run(bundle,root,authorization, runtime, key=None, fake_session=None, checkpo
         atomic(runtime/'account-baseline.json',{'reconciliation_sha256':ledger.reconciliation_sha256,'numeric_baseline':ledger.state['epoch'],'latest_free_check':ledger.state['accounts'][-1]})
         atomic(runtime/'run-manifest.json',{'account_baseline_sha256':sha(runtime/'account-baseline.json'),'bundle_root_sha256':root,'authorization_sha256':ledger.authorization_sha256,
                'reconciliation_sha256':ledger.reconciliation_sha256,'reconciliation':ledger.reconciliation,
-               'adopted_account_baseline':ledger.state['epoch'],'interpreter_path':sys.executable,'interpreter_realpath':str(Path(sys.executable).resolve()),
+               'execution_commit':authorization['execution_commit'],'adopted_account_baseline':ledger.state['epoch'],'interpreter_path':sys.executable,'interpreter_realpath':str(Path(sys.executable).resolve()),
                'source_sha256':json.loads((bundle/'FREEZE.json').read_text())['file_sha256'], 'runtime':current_runtime(),
                'scope':'priority 1 only; outcomes prohibited; unconditional stop before priority 2'})
         for row in m['requests']:
@@ -329,6 +418,10 @@ def run(bundle,root,authorization, runtime, key=None, fake_session=None, checkpo
             cached=cache.lookup(row['sport'],row['source'],row['cache_key'])
             if attempt:
                 receipt=runtime/'receipts'/f"{row['request_id']}.json"
+                if attempt['status']=='missing':
+                    if sha(receipt)!=attempt['receipt_sha256']:raise Halt('Missing-response receipt changed')
+                    if attempt.get('response_path') and sha(Path(attempt['response_path']))!=attempt['response_sha256']:raise Halt('Missing-response source changed')
+                    continue
                 if attempt['status']!='completed' or cached is None or sha(cached)!=attempt['response_sha256'] or sha(receipt)!=attempt['receipt_sha256']:
                     raise Halt('Completed response evidence changed or missing; no repurchase')
                 continue
@@ -359,7 +452,8 @@ def run(bundle,root,authorization, runtime, key=None, fake_session=None, checkpo
 def reconcile_cached_response(bundle,root,authorization,reconciliation,runtime):
     from validator import verify
     verify(bundle,root,check_cache=True)
-    bundle,runtime=Path(bundle),Path(runtime);path=runtime/'spending-ledger.json'
+    bundle,runtime=Path(bundle),Path(runtime);execution_context(bundle,root,runtime);path=runtime/'spending-ledger.json'
+    validate_authorization(authorization,json.loads((bundle/'request-manifest.json').read_text()),root,checkout_commit(bundle))
     if authorization.get('status')!='approved' or reconciliation.get('status')!='approved' or reconciliation.get('bundle_root_sha256')!=root:
         raise Halt('Approved root-bound reconciliation required')
     resolution=reconciliation.get('pending_response_resolution',{})
@@ -388,20 +482,95 @@ def reconcile_cached_response(bundle,root,authorization,reconciliation,runtime):
     finally:lock.close()
 
 
+def accept_as_missing(bundle,root,authorization,reconciliation,runtime):
+    """Hub-approved terminal missing result; no resend, no reduced reservation."""
+    from validator import verify
+    verify(bundle,root,check_cache=True)
+    bundle,runtime=Path(bundle),Path(runtime);execution_context(bundle,root,runtime)
+    manifest=json.loads((bundle/'request-manifest.json').read_text())
+    validate_authorization(authorization,manifest,root,checkout_commit(bundle))
+    path=runtime/'spending-ledger.json';lock=(runtime/'acquisition.lock').open('a')
+    try:
+        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);state=json.loads(path.read_text())
+        resolution=reconciliation.get('missing_response_resolution',{});rid=state['pending']
+        prior=sha(path);hub=resolution.get('hub_go_ahead',{});commit=authorization['execution_commit']
+        reason=resolution.get('reason');expected=(f"APPROVED missing response: root {root}, request {rid}, "
+            f"ledger {prior}, commit {commit}, reason {reason}")
+        if (state['bundle_root_sha256']!=root or state['authorization_sha256']!=hashlib.sha256(canonical(authorization)).hexdigest()
+            or reconciliation.get('status')!='approved' or reconciliation.get('bundle_root_sha256')!=root
+            or reconciliation.get('prior_ledger_sha256')!=prior or rid is None or resolution.get('request_id')!=rid
+            or not resolution.get('owner_note') or hub.get('status')!='approved' or hub.get('commit')!=commit
+            or not re.fullmatch(r'https://github\.com/maxzipperman/value-finder/pull/99#issuecomment-[0-9]+',hub.get('comment_url',''))
+            or expected not in hub.get('comment_body','').splitlines()):
+            raise Halt('Hub approval must bind missing request, reason, ledger hash and current commit')
+        row=next(r for r in manifest['requests'] if r['request_id']==rid)
+        attempt=state['attempts'][rid]
+        if row['priority']!=1 or not row['max_new_credits'] or attempt['status']!='pending':raise Halt('Not a pending recent paid attempt')
+        files=list((runtime/'data/raw'/row['sport']/row['source']).glob('*/'+row['cache_key']+'.parquet'))
+        record=None;source=None;digest=None
+        if len(files)>1:raise Halt('Ambiguous missing-response cache evidence')
+        if files:
+            import pyarrow.parquet as pq
+            source=files[0];digest=sha(source)
+            if resolution.get('response_sha256')!=digest:raise Halt('Missing-response source hash differs')
+            record=pq.read_table(source).to_pylist()[0]
+            if (record['cache_key']!=row['cache_key'] or record['sport']!=row['sport'] or record['source']!=row['source']
+                or record['url']!='https://api.the-odds-api.com/v4'+row['path'] or json.loads(record['params_json'])!=row['params']):
+                raise Halt('Missing-response request identity mismatch')
+            if reason=='http_404':
+                if record['http_status']!=404:raise Halt('Not a cached 404')
+            elif reason=='snapshot_lag':
+                from price_eligibility import timestamp
+                if record['http_status']!=200:raise Halt('Not a lagged HTTP 200')
+                try:
+                    lag=(timestamp(row['requested_utc'])-timestamp(json.loads(record['body'])['timestamp'])).total_seconds()
+                except (ValueError,TypeError,KeyError):raise Halt('No readable lag evidence') from None
+                if lag<=json.loads((bundle/'protocol.json').read_text())['price_row_eligibility']['maximum_snapshot_lag_seconds']:
+                    raise Halt('Snapshot lag not beyond the frozen limit')
+            else:raise Halt('Saved response is not an approved missing category')
+            headers=json.loads(record['headers_json'])
+        else:
+            if reason!='http_5xx' or not 500<=attempt.get('observed_http_status',0)<600:
+                raise Halt('No saved response or observed 5xx evidence')
+            if resolution.get('attempt_sha256')!=hashlib.sha256(canonical(attempt)).hexdigest():
+                raise Halt('Uncached failure evidence hash differs')
+            headers=attempt.get('observed_billing_headers',{})
+        last=integer(headers.get('x-requests-last'))
+        integer(headers.get('x-requests-used'));integer(headers.get('x-requests-remaining'))
+        if last>row['max_new_credits'] or attempt['reserved_credits']>row['max_new_credits']:
+            raise Halt('Overcharge requires investigation, not missing-response acceptance')
+        receipt=runtime/'receipts'/f'{rid}.json'
+        atomic(receipt,{'request_id':rid,'status':'accepted_missing','reason':reason,'response_sha256':digest,
+                       'observed_billing_headers':headers,'reconciliation':reconciliation})
+        attempt.update(status='missing',missing_reason=reason,billed_credits=last,response_path=str(source.resolve()) if source else None,
+                       response_sha256=digest,receipt_sha256=sha(receipt))
+        state['pending']=None;state['stopped']='Fresh approved account baseline required after missing-response acceptance'
+        state['status']='missing_reconciled_requires_approved_account_baseline'
+        state['reconciliation_history'].append({'prior_ledger_sha256':prior,'reconciliation_sha256':hashlib.sha256(canonical(reconciliation)).hexdigest(),
+                                               'reason':'accepted as missing; no resend or lowered reservation'})
+        atomic(path,state)
+        return {'status':state['status'],'new_API_calls':0,'request_id':rid,'reservation_preserved':attempt['reserved_credits']}
+    finally:lock.close()
+
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--root',required=True);parser.add_argument('--confirm',action='store_true')
-    parser.add_argument('--authorization');parser.add_argument('--key-file');parser.add_argument('--reconciliation');parser.add_argument('--reconcile-only',action='store_true');a=parser.parse_args()
+    parser.add_argument('--authorization');parser.add_argument('--key-file');parser.add_argument('--reconciliation');parser.add_argument('--reconcile-only',action='store_true');parser.add_argument('--accept-missing',action='store_true');a=parser.parse_args()
     bundle=Path(__file__).resolve().parent
     from validator import verify
     result=verify(bundle,a.root,check_cache=True)
-    if a.reconcile_only:
+    if a.reconcile_only or a.accept_missing:
         if not a.authorization or not a.reconciliation:raise SystemExit('Approved authorization and reconciliation required')
-        print(json.dumps(reconcile_cached_response(bundle,a.root,json.loads(Path(a.authorization).read_text()),json.loads(Path(a.reconciliation).read_text()),bundle.parent/'football-acquisition-runtime'),indent=2));return
+        authorization=json.loads(Path(a.authorization).read_text());reconciliation=json.loads(Path(a.reconciliation).read_text())
+        verify_live_hub_comment(authorization)
+        if a.accept_missing:verify_live_hub_comment({'hub_go_ahead':reconciliation['missing_response_resolution']['hub_go_ahead']})
+        operation=accept_as_missing if a.accept_missing else reconcile_cached_response
+        print(json.dumps(operation(bundle,a.root,authorization,reconciliation,runtime_path(a.root)),indent=2));return
     if not a.confirm:
         print(json.dumps({'status':'offline preflight; no credential reads or API calls',**result},indent=2));return
     if not a.authorization or not a.key_file or not a.reconciliation: raise SystemExit('Separate exact authorization, account reconciliation and key-file required')
     authorization=json.loads(Path(a.authorization).read_text())
-    runtime=bundle.parent/'football-acquisition-runtime'  # stable across restarts; no alternate live ledger
+    runtime=runtime_path(a.root)  # outside every checkout; fixed by root
     if Path(a.key_file).resolve().is_relative_to(bundle): raise SystemExit('Credentials cannot be placed in immutable bundle')
     def key():
         from dotenv import dotenv_values

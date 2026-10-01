@@ -15,3 +15,5 @@ Offline executor preflight: `python -B executor.py --root PINNED_ROOT`. Live exe
 The runtime lock pins Python and HTTP/parquet distributions. All imported market-client source is vendored and hashed. Raw runtime responses, receipts and ledgers live outside this immutable bundle.
 A provider monthly reset or other key activity halts for reconciliation; it cannot reset local budget or enable another send.
 The executor stops before older seasons. Coverage report publication is not approval to purchase older seasons.
+
+Historical reference only. This exported copy redacts local workspace paths; the original reviewed certificate is retained. Its new export root does not authorize execution. Use the repaired v4 after fresh hub approval.

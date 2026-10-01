@@ -1,7 +1,7 @@
 {
   "status": "draft",
-  "bundle_root_sha256": "09c29ac0e003c50595581e74345ffc0838a85c55c7b28aa14d61b83799e5ccd2",
-  "protocol_sha256": "2eddc6ab40fd159f0225fcf73399f41e7b4d8e1f8835c18f16a79e3ef6d06ee9",
+  "bundle_root_sha256": "410289fee0b6a82ef2857e5898566a3c94e870e876a0c670b897cf224260c5c4",
+  "protocol_sha256": "3e120d7216412b9dfbf1ae993c07ca5be6a5ca2b7d3219544805323af93b3568",
   "request_set_sha256": "63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b",
   "priority": 1,
   "seasons": [
@@ -13,11 +13,17 @@
   "human_authorization_evidence": null,
   "hub_go_ahead": {
     "status": "draft",
-    "bundle_root_sha256": "09c29ac0e003c50595581e74345ffc0838a85c55c7b28aa14d61b83799e5ccd2",
+    "bundle_root_sha256": "410289fee0b6a82ef2857e5898566a3c94e870e876a0c670b897cf224260c5c4",
+    "request_list_sha256": "81d557cffc1a57c6fb7547cc3be319158745c985bbc746513bda039a7c972910",
     "request_set_sha256": "63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b",
-    "evidence": null
+    "budget_credits": 82830,
+    "commit": null,
+    "comment_url": null,
+    "comment_body": null
   },
   "stop_after": "priority 1; outcome-blind coverage before any older purchase or grading",
   "older_slice_authorized": false,
-  "notes": "This draft authorizes no credential read or API call. Approval must record the owner evidence and the hub go-ahead for this exact list."
+  "notes": "Draft only. Fill current full execution commit and authenticated hub approval comment, then record owner evidence after that approval. No credentials or API calls authorized.",
+  "request_list_sha256": "81d557cffc1a57c6fb7547cc3be319158745c985bbc746513bda039a7c972910",
+  "execution_commit": null
 }

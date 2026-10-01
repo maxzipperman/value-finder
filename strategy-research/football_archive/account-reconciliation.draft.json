@@ -1,13 +1,15 @@
 {
   "status": "draft",
-  "bundle_root_sha256": "09c29ac0e003c50595581e74345ffc0838a85c55c7b28aa14d61b83799e5ccd2",
+  "bundle_root_sha256": "410289fee0b6a82ef2857e5898566a3c94e870e876a0c670b897cf224260c5c4",
   "baseline_mode": "capture_first_free_check",
   "used": null,
   "remaining": null,
   "pre_run_other_usage_budget_debit": null,
   "reason": "Use a current account baseline rather than the old probe balance; handle initial monthly reset and shared paid-key usage.",
-  "owner_note": "DRAFT: approval would permit capture from the first zero-credit check; without a documented prior-usage debit, reserve all current-period used credits conservatively in addition to the probe.",
+  "owner_note": "DRAFT: hub must supply max_baseline_used for the approved billing period and current account. Capture mode may then adopt the first free-check baseline. Unspecified prior usage is reserved conservatively in addition to probe debits.",
   "account_only_recovery": false,
   "shared_usage_margin_credits": 100,
-  "counter_lag_tolerance_credits": 100
+  "counter_lag_tolerance_credits": 100,
+  "max_baseline_used": null,
+  "billing_period_utc": "2026-10"
 }

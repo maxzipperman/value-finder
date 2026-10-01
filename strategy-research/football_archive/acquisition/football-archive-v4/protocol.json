@@ -1,7 +1,7 @@
 {
   "protocol_id": "football-archive-v4",
   "scope": "Outcome-blind acquisition, matching and price eligibility; no new strategy, outcome join or hypothesis test is authorized by this protocol.",
-  "registration_timing": "Narrow prospective executor billing repair after v3 review; request set, eligibility and research rules unchanged.",
+  "registration_timing": "Hub-requested refreeze on 2026-10-01 before any bulk purchase: request rows and strategy registrations unchanged; execution safeguards and exclusion-only schedule eligibility repaired after review, without outcomes.",
   "seasons": [
     2020,
     2021,
@@ -156,11 +156,11 @@
     "clv": "Report line movement and price movement separately. Do not convert different totals/spreads to monetary EV without a registered calibrated distribution and push treatment.",
     "status_contract": {
       "scheduled_pregame_eligible": "Passes identity, schedule and freshness guards; may remain an uncertified scheduled proxy.",
-      "actual_play_certified": "Independent first-play evidence for this canonical game proves snapshot and, for entry, decision/execution preceded play. Known actual play overrides scheduled timing.",
+      "actual_play_certified": "Passes mandatory scheduled/provider timing and freshness plus independent proof it preceded actual play. Later-known actual play can only exclude, never admit.",
       "conflicted_or_ineligible": "Rule failed or material timing conflict unresolved."
     },
     "independent_schedule": "Without independently proven version availability, final independent schedule is a retrospective safety check only, never an entry feature.",
-    "actual_play_evidence": "Canonical-game-bound evidence with utc, source_id and independent=true. Missing evidence never certifies, but does not alone invalidate an otherwise scheduled-pregame eligible proxy.",
+    "actual_play_evidence": "Independent canonical-game-bound first-play evidence may only exclude or certify already scheduled-pregame eligible rows. It never overrides provider/independent schedule checks to admit a decision or execution at or after either scheduled kickoff.",
     "close_selection": {
       "partition": [
         "canonical_game_id",
@@ -169,7 +169,7 @@
         "side"
       ],
       "rule": "Evaluate all frozen candidate rows. If eligible candidates exist, select latest returned snapshot, then freshest quote timestamp, then lexicographically smallest immutable quote_id. Unresolved equally timed contradictory kickoff observations are quarantined. Never rank by line, odds, CLV, result or profit. No eligible candidate means missing primary close, with all diagnostics retained.",
-      "known_actual_play": "First-play evidence overrides scheduled starts; close snapshot must lead verified first play by 5 through 20 minutes when available; otherwise relative to the exact quoted provider kickoff with independent scheduled safety guard."
+      "known_actual_play": "Snapshot must satisfy the 5\u201320 minute provider close proxy window and independent scheduled safety check. Known actual first play additionally requires its 5\u201320 minute window; it never rescues an ineligible scheduled row."
     },
     "sides": "Totals: Over/Under only. Spreads/h2h: resolved canonical team key that belongs to the exact response event; never join by generic home/away position."
   },
@@ -211,13 +211,14 @@
     "counts": "Report provider IDs, canonical games, intended decisions, timestamp slots, pairs, voids and exclusion reasons separately."
   },
   "execution_contract": {
-    "authorization": "Require separate approved owner artifact and hub_go_ahead evidence, both bound to the exact bundle root and request_set_sha256. The hub coordinates the one Paid data list in STATUS.md. No artifact created by the builder authorizes spending.",
+    "authorization": "Approved owner artifact plus authenticated hub PR #99 comment, bound to CSV hash, exact request-set hash, 82,830-credit cap, frozen root and current full git commit. Owner evidence is recorded after the hub comment. New commits invalidate approval.",
     "acceptance": "No send outside authorized allowlist or without durable budget reservation; no automatic resend of unresolved attempt; conservative accounting and halt when billing cannot be reconciled. No guarantee about provider billing or unrelated key activity.",
-    "persistence": "Process lock; fsync file and directory before send; immutable response/hash evidence before ledger completion. Pending or stopped ledger refuses automatic continuation; separately audited reconciliation required.",
+    "persistence": "Fixed absolute root-keyed runtime outside every git checkout, separate durable registration marker, process lock and durable reservations. Ledger/folder deletion never silently recreates spending capacity. No automatic resend of any attempted request; missing terminal records retain upper-bound debit.",
     "billing": "Within one documented epoch: cumulative highest-used and lowest-remaining counters, compared with cumulative reconciled own bills. Reserve the peak positive external discrepancy once; tolerate bounded stale headers without double-counting catch-up. Use the lower of observed remaining and baseline minus own bills/external debit for reserve protection.",
     "dependencies": "Freeze wrapper, validator, coverage and eligibility plus vendored BulkClient/cache/HTTP/settings/normalize dependency source. Record external runtime distribution versions and enforce the frozen runtime lock.",
     "cache": "Frozen probe reuse hashes must match. Missing/changed reused cache halts; no automatic replacement purchase. Paid resumed cache requires completed ledger hash, not cache existence alone.",
-    "retry": "Zero client and adapter retries; redirects prohibited."
+    "retry": "Zero client and adapter retries; redirects prohibited.",
+    "recovery": "Structural/cumulative budget checks precede approved recovery; replace the stopped account epoch before enforcing its floor. Preserve all probe, attempt and external debits. Saved-response reconciliation requires exact hash. Accept-as-missing requires hub comment bound to root, request, stopped ledger, reason and current commit, and exact cache/observed failure evidence; it never resends or lowers reservations."
   },
   "billing_reconciliation": {
     "shared_usage_margin_credits": 100,
@@ -229,10 +230,12 @@
     "tracking": "Within one documented epoch: cumulative highest-used and lowest-remaining counters, compared with cumulative reconciled own bills. Reserve the peak positive external discrepancy once; tolerate bounded stale headers without double-counting catch-up. Use the lower of observed remaining and baseline minus own bills/external debit for reserve protection.",
     "reset": "Initial reset may be adopted by approved reconciliation; in-run large used regression or remaining rise halts. Account-only recovery requires an explicit new reconciliation; unknown paid attempts cannot be cleared or resent.",
     "recovery": "Approve an account-only reconciliation to resume when no paid attempt is pending. A pending attempt may only be reconciled offline from an exact hash-pinned cached response under an explicit owner note, retaining conservative debit and all evidence. No automatic resend.",
-    "jobs": "Do not pause forward-test jobs or inspect sealed signal logs. Bounded shared-key usage is accounted for; exceeding margin halts. Use a quiet window when available; no claimed guarantee of exclusivity."
+    "jobs": "Do not pause forward-test jobs or inspect sealed signal logs. Bounded shared-key usage is accounted for; exceeding margin halts. Use a quiet window when available; no claimed guarantee of exclusivity.",
+    "max_baseline_used": "Mandatory hub-approved nonnegative ceiling. Fresh adopted baseline above it halts before any paid reservation. Hub supplies the number at approval time; never infer it from the existing paid usage.",
+    "billing_period_utc": "Approved YYYY-MM UTC period required; old-period approval cannot initialize or resume a run."
   },
   "cache_handoff": {
-    "raw_layout": "runtime/data/raw/{sport}/oddsapi/hist_odds/{date}/{cache_key}.parquet; same cache key, schema and byte format as sharp-markets RawCache",
+    "raw_layout": "~/Library/Application Support/ValueFinder/football-acquisition-state/<frozen-root>/data/raw/{sport}/oddsapi/hist_odds/{date}/{cache_key}.parquet; fixed across clones and outside all git checkouts",
     "reused_responses": "24 frozen reuse files remain in the bundle; an analysis adapter must include those paths together with completed paid responses.",
     "reader_gate": "cache_handoff.py exposes the exact completed recent list and both paid/reused response paths to the existing price-engine run(cfg,calls,cache) interface. Stock CLI replans legacy F1; the hub must approve this manifest-driven integration and the analysis registration before grading. Never run legacy F1 again to populate a second cache.",
     "scope": "No cache publication, price-engine run, outcome joins or graded research under this acquisition protocol."

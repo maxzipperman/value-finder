@@ -1,39 +1,47 @@
-# Football archive v4: review before spending
+# Football archive v4: repaired for PR #99 review
 
-LOCAL-BECAUSE: raw-data: verification replays the 24 sanitized probe responses available only on this Mac and checks the pinned sharp-markets interpreter.
+LOCAL-BECAUSE: raw-data: validation replays 24 sanitized probe responses available only on this Mac. All preparation and tests use an isolated checkout and its own Python environment.
 
-Proposed repair for issue #98. The reviewed v3 request rows are exactly preserved, including all 665 MOS slots and the 28 new alternate closes. Price eligibility is byte-identical to v3. The new root includes billing reconciliation, explicit hub approval checks, purpose coverage and a read-only cache handoff.
+- Root: `410289fee0b6a82ef2857e5898566a3c94e870e876a0c670b897cf224260c5c4`.
+- Exact CSV SHA256: `81d557cffc1a57c6fb7547cc3be319158745c985bbc746513bda039a7c972910`.
+- Request-set SHA256: `63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b`.
+- Recent 2023–25: **82,830 credits**, 2,761 paid requests plus 12 reused responses.
+- Older 2020–22: **68,010 credits**, separately gated and unsupported by this executor.
+- Research purchases with the probe: **152,527 credits**. Other account usage remains an additional conservative debit against cumulative ceilings.
 
-- V4 root: `09c29ac0e003c50595581e74345ffc0838a85c55c7b28aa14d61b83799e5ccd2`.
-- Exact request-set hash: `63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b`.
-- First slice, 2023–25: **82,830 new credits**, 2,761 new requests plus 12 reused responses.
-- Older slice, 2020–22: **68,010 credits**, separately gated and unsupported by this executor.
-- Research purchases including the completed probe: **152,527 credits**. Shared/pre-run usage is reserved additionally against the existing cumulative ceilings; it does not enlarge the request list.
+## Six review repairs
 
-## What changed
+1. Account-only recovery validates structure and preserved debits first, adopts the approved replacement baseline, then checks the reserve floor. The stopped ledger hash must match.
+2. State is fixed outside all checkouts at `~/Library/Application Support/ValueFinder/football-acquisition-state/<root>`. A separate registration marker detects deleted runtime folders. The runner refuses the live checkout. Every approved reconciliation requires a current billing period and hub-supplied `max_baseline_used`; a fresh checkout cannot silently adopt a spent balance.
+3. Provider and scheduled kickoff checks remain mandatory. Final first-play evidence can only exclude or certify an already eligible quote, never admit a quote using hindsight. Eligibility and protocol are bound under the same root.
+4. Hub approval binds the exact CSV, request set, budget, full execution commit and approval-comment URL/body. Live execution authenticates the GitHub comment before reading a key. Owner evidence must be recorded after hub approval.
+5. Exact-ledger, exact-request hub approval can accept a cached 404, an excessively lagged snapshot, or an evidenced uncached 5xx as missing. The reservation remains; no automatic resend occurs. Unreadable bills, overcharges and timeouts remain unresolved. Missing requests stay in coverage denominators and the reader manifest. A fresh approved account baseline is still required after resolution.
+6. Runtime ledgers/receipts are ignored. Both v3 and v4 input-provenance files use logical local references. The historical v3 export is explicitly redacted and has its own certificate; the original reviewed certificate is preserved. The original local v3 was not changed.
 
-The runner adopts an approved current baseline, records its numeric counters and reconciliation hash, and preserves the probe and every attempted-request reservation across resets. It reserves cumulative positive external usage once, tolerates up to 100 credits of counter lag and up to 100 of shared usage, and stops beyond those limits. Cumulative high/low counters prevent catch-up from being charged twice; stale balances cannot create spending capacity. The client keeps the probe-derived repo margin A30=5,000, while the wrapper's limits are stricter.
+Request rows, all 665 three-market MOS slots and all 28 new alternate closes are unchanged. The F1 comparison in the earlier PR report therefore still applies. A30 remains 5,000; shared usage and counter lag each have a 100-credit bound.
 
-Restart recovery is explicit. A stopped account-only run requires approval bound to the stopped ledger hash. An unresolved paid attempt can be reconciled only against an existing exact-hash saved response, offline; it is never automatically resent. Missing responses and overcharges stay stopped. The runtime manifest records the interpreter and every frozen source digest.
+## Verification
 
-Both the owner's root-bound authorization and the hub's exact-list go-ahead are checked before any credential read or transport. The [authorization draft](authorization.draft.json) and [account reconciliation draft](account-reconciliation.draft.json) authorize nothing as saved. Approving capture mode permits the first free check to establish the numerical baseline; an unspecified prior-usage debit conservatively reserves all current-period used credits, potentially double-counting the probe. No current balance was read during preparation.
+**142 offline tests passed against the final sealed bundle**, plus its offline executor preflight and full validator with all reused-cache hashes. The client remains unchanged. The isolated interpreter is `.venv-football-archive/bin/python` in this review checkout: Python 3.12.11, with the frozen runtime versions. No live environment was modified.
 
-## Cache handoff
+The rehearsal uses temporary one-request execution fixtures plus full static manifest validation; it is not a 2,761-call throughput test. No new API calls, real key reads, outcome joins or sealed-season reads occurred. Raw parquet fixtures remain local and ignored. Restore them with `restore_local_reuse.py --from-bundle /path/to/verified/local/bundle`, which checks exact hashes without a purchase.
 
-The paid runtime uses the sharp-markets RawCache layout, schema and key algorithm. Its root is `acquisition/football-acquisition-runtime/data/raw`. Twelve recent probe responses remain in the immutable bundle's `reuse/` directory. **Stock `markets price-engine` replans the legacy F1 list and will not automatically see all these inputs.** Never rerun the legacy F1 paid download to fill a second cache.
+Offline preflight: run the isolated interpreter with `-B acquisition/football-archive-v4/executor.py --root 410289fee0b6a82ef2857e5898566a3c94e870e876a0c670b897cf224260c5c4` from this directory. Run the frozen `test_v4.py` with pytest plugin autoload and cache disabled.
 
-The frozen [cache_handoff.py](acquisition/football-archive-v4/cache_handoff.py) reads only after recent completion and outcome-blind coverage. `build_handoff(bundle, root, runtime)` verifies the response and receipt hashes, includes paid and reused paths, and returns the exact recent manifest. `as_calls(handoff, markets.oddsapi.bulk.Call)` and `ReadOnlyCache(handoff, runtime/'data/raw')` supply the existing price-engine `run(cfg, calls, cache)` reader interface without moving data or replanning purchases. The handoff cannot fetch or write. The hub must approve this integration and the analysis registration before grading; no scorer or outcome loader ran here.
+## Approval artifacts and run window
 
-## Verification and portability
+[authorization.draft.json](authorization.draft.json) and [account-reconciliation.draft.json](account-reconciliation.draft.json) authorize nothing. The execution commit and hub baseline ceiling remain unset intentionally. After review, the authenticated hub comment must contain:
 
-**110 offline checks pass**, including all 24 sanitized probe bodies through the unchanged vendored market client, durable failure/restart cases, shared/lag/reset accounting, exact hub approval gates and the read-only handoff. The full frozen validator checks the pinned root with reused-cache validation. Runtime versions match `/Users/maxzipperman/code/value-finder/sharp-markets/.venv/bin/python`. The vendor client/cache/HTTP/settings/normalizer remain byte-identical to the repo.
+`APPROVED paid run: list 81d557cffc1a57c6fb7547cc3be319158745c985bbc746513bda039a7c972910, request-set 63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b, budget 82830 credits, commit <full current SHA>`
 
-This is a functional offline rehearsal using one-request temporary execution fixtures and separate full static validation; it is not a 2,761-request production-throughput rehearsal. No new API requests, real credentials, outcome joins or sealed 2026 data were read. No live jobs were changed or paused.
+A missing-response approval additionally binds the root, request, stopped ledger, commit and reason; see the frozen BILLING-REPAIR.md and executor for the exact format. Do not edit a frozen bundle to add approvals: runtime artifacts are separate.
 
-Raw response parquet files remain local and gitignored. A fresh clone needs the original 24 probe fixtures. `restore_local_reuse.py --from-bundle /path/to/verified/local/bundle` restores only matching frozen hashes without an API call. Then use the pinned interpreter with `-B` to run `executor.py --root 09c29ac0e003c50595581e74345ffc0838a85c55c7b28aa14d61b83799e5ccd2` for an offline preflight, and `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -B -m pytest -q -p no:cacheprovider test_v4.py` inside the frozen v4 folder. Source and metadata are committed; paid raw payloads are not.
+Proposed window, subject to hub resumption and approval: **Friday October 2, 15:00–15:30 UTC (08:00–08:30 PDT)**. No alert job is scheduled inside that window. Expected shared usage is zero alerts plus one credit per due close-capture slot; the hub must confirm whether any kickoff slot is due. The no-kickoff condition has not been checked against sealed 2026 data here. An extension across 18:30 UTC adds approximately 2–4 alert credits. The 30-minute window is a proposal, not a throughput guarantee or scheduled run. No jobs were paused.
 
-## Report for the hub
+## Reader integration and stop gate
 
-Review v4 and the draft files against the Paid data entry in STATUS.md. Confirm no overlapping legacy F1 purchase, approve the exact list and owner artifact, confirm the cache handoff contract, and choose a run window. Existing jobs may remain active within the 100-credit shared-usage bound; excess activity stops acquisition. Any job pause is the hub's responsibility. Stop after 2023–25 for the outcome-blind report before buying older seasons or joining results. Backup readiness remains a hub execution check under the existing paid-data plan.
+[PR #102](https://github.com/maxzipperman/value-finder/pull/102) owns the registered price-engine integration. Its default runtime path must match the fixed global root above, or its explicit `--handoff-runtime` must point there. Its tests should cover the updated adapter's accepted-missing entries, which have no response path. `as_calls` retains those requests and `ReadOnlyCache` returns no data without fetching.
 
-**READY FOR THE HUB**: offline repair, immutable v4 root, committed exact list and draft approval files are ready for review. **Spending remains unauthorized** until the hub's exact-list go-ahead and owner approval are recorded. This worker will not merge or start a paid run.
+Before acquisition, the hub checks overlap, backup readiness and the registered reader, approves the exact current commit/list/budget and baseline ceiling; the owner then completes authorization evidence. The hub was paused at the latest review, so this refreeze awaits review when it resumes. No merge or spending approval is implied by this repair.
+
+**READY FOR THE HUB:** review this repaired root and current PR head. Stop after 2023–25 for the outcome-blind coverage report. Older seasons and strategy grading remain gated.

@@ -24,7 +24,23 @@ sys.addaudithook(deny_network)
 
 def policy(root,mode='explicit'):
     return {'status':'approved','bundle_root_sha256':root,'baseline_mode':mode,'used':1687,'remaining':4998313,
-            'reason':'synthetic known baseline','owner_note':'SYNTHETIC TEST ONLY; no real permission','pre_run_other_usage_budget_debit':0}
+            'reason':'synthetic known baseline','owner_note':'SYNTHETIC TEST ONLY; no real permission','pre_run_other_usage_budget_debit':0,'max_baseline_used':1700,'billing_period_utc':datetime.now(timezone.utc).strftime('%Y-%m')}
+
+
+@pytest.fixture(autouse=True)
+def isolated_runtime(tmp_path,monkeypatch):
+    monkeypatch.setattr(executor,'RUNTIME_BASE',tmp_path/'global-state')
+
+
+def approved(root,manifest):
+    commit='b'*40;cap=manifest['new_credits_by_priority']['1']
+    body=(f"APPROVED paid run: list {manifest['request_list_sha256']}, request-set {manifest['request_set_sha256']}, "
+          f"budget {cap} credits, commit {commit}")
+    return {'status':'approved','bundle_root_sha256':root,'priority':1,'max_new_credits':cap,
+            'human_authorization_evidence':'SYNTHETIC OWNER ONLY','execution_commit':commit,'account_reconciliation':policy(root),
+            'hub_go_ahead':{'status':'approved','bundle_root_sha256':root,'request_set_sha256':manifest['request_set_sha256'],
+                'request_list_sha256':manifest['request_list_sha256'],'budget_credits':cap,'commit':commit,
+                'comment_url':'https://github.com/maxzipperman/value-finder/pull/99#issuecomment-1','comment_body':body}}
 
 
 @pytest.fixture
@@ -94,9 +110,10 @@ def test_missing_actual_preserves_scheduled_proxy(cfg):
     assert g['eligible'] and g['status']=='scheduled_pregame_eligible' and not g['actual_play_certified']
 
 
-def test_actual_start_overrides_scheduled_start(cfg):
+def test_later_actual_start_cannot_admit_scheduled_late_decision(cfg):
     row,cat=quote_context(actual='2023-10-01T17:30:00Z',requested='2023-10-01T17:05:00Z',returned='2023-10-01T17:00:00Z')
-    g=eligibility.evaluate(cfg,row,cat);assert g['eligible'] and g['actual_play_certified'] and not g['scheduled_pregame_eligible']
+    g=eligibility.evaluate(cfg,row,cat);assert not g['eligible'] and not g['actual_play_certified'] and not g['scheduled_pregame_eligible']
+    assert 'not_in_scheduled_pregame_window' in g['reasons']
 
 
 def test_conflict_without_actual_is_diagnostic(cfg):
@@ -193,8 +210,7 @@ def test_grid_midnight_and_dst():
 
 def ledger_inputs(cfg):
     m=json.loads((HERE/'request-manifest.json').read_text());probe=json.loads((HERE/'probe-spending-ledger.json').read_text())
-    root='a'*64;auth={'bundle_root_sha256':root,'priority':1,'max_new_credits':m['new_credits_by_priority']['1'],'human_authorization_evidence':'SYNTHETIC TEST ONLY','status':'approved','account_reconciliation':policy(root)}
-    auth['hub_go_ahead']={'status':'approved','bundle_root_sha256':root,'request_set_sha256':m['request_set_sha256'],'evidence':'SYNTHETIC HUB APPROVAL ONLY'}
+    root='a'*64;auth=approved(root,m)
     return m,probe,root,auth
 
 
@@ -276,7 +292,9 @@ class FakeSession:
         if self.mode=='echo':body=body.replace('"data":', '"echo":"SYNTHETIC_KEY_ONLY", "data":')
         if self.mode=='future':
             d=json.loads(body);d['timestamp']='2099-01-01T00:00:00Z';body=json.dumps(d)
-        return FakeResponse(body,headers,500 if self.mode=='http500' else 200)
+        if self.mode=='lag':
+            d=json.loads(body);d['timestamp']=builder.iso(builder.ts(d['timestamp'])-timedelta(minutes=20));body=json.dumps(d)
+        return FakeResponse(body,headers,500 if self.mode=='http500' else 404 if self.mode=='http404' else 200)
     def close(self):pass
 
 
@@ -299,9 +317,9 @@ def tiny_bundle(cfg,tmp_path,monkeypatch):
         'data':[{'id':'p','commence_time':builder.iso(at+timedelta(minutes=10)),'home_team':'Team A','away_team':'Team B',
                  'bookmakers':[{'key':'pinnacle','last_update':builder.iso(snap),'markets':[{'key':'totals','last_update':builder.iso(snap),
                             'outcomes':[{'name':'Under','point':44.5,'price':1.91}]}]}]}]})
-    root='a'*64;auth={'bundle_root_sha256':root,'priority':1,'max_new_credits':30,'human_authorization_evidence':'SYNTHETIC TEST ONLY','status':'approved','account_reconciliation':policy(root)}
-    auth['hub_go_ahead']={'status':'approved','bundle_root_sha256':root,'request_set_sha256':m['request_set_sha256'],'evidence':'SYNTHETIC HUB APPROVAL ONLY'}
-    return b,root,auth,tmp_path/'runtime',body
+    root='a'*64;auth=approved(root,m)
+    monkeypatch.setattr(executor,'checkout_commit',lambda _:auth['execution_commit'])
+    return b,root,auth,executor.runtime_path(root),body
 
 
 def test_wrapper_completion_and_resume(tiny_bundle):
@@ -381,7 +399,7 @@ def test_runtime_lock_blocks_before_key_read(tiny_bundle):
 def test_wrong_root_blocks_before_key_read(tmp_path):
     reads=[];fake=FakeSession('{}')
     with pytest.raises(ValueError,match='root'):
-        executor.run(HERE,'0'*64,{},tmp_path,key=lambda:reads.append(True),fake_session=fake)
+        executor.run(HERE,'0'*64,{},executor.runtime_path('0'*64),key=lambda:reads.append(True),fake_session=fake)
     assert not reads and not fake.calls
 
 
@@ -566,3 +584,170 @@ def test_cache_handoff_refuses_unverified_inputs(tiny_bundle,change):
     else:
         p=next((run/'data/raw').rglob('*.parquet'));p.write_bytes(p.read_bytes()+b'changed')
     with pytest.raises(ValueError):cache_handoff.build_handoff(b,r,run)
+
+
+def test_recovery_replaces_stale_floor_before_budget_check(cfg,tmp_path):
+    m,p,r,a=ledger_inputs(cfg);rec=policy(r);floor=cfg['budgets']['account_reserve_floor']
+    rec['remaining']=floor+50
+    l=executor.Ledger(tmp_path,cfg,m,r,a,p,reconciliation=rec)
+    try:
+        with pytest.raises(executor.Halt):l.account(1747,floor-10)
+        l.halt('synthetic reserve floor stop');old=l.state['other_usage_reserved']
+    finally:l.close()
+    recovery=policy(r);recovery.update(used=0,remaining=5000000,account_only_recovery=True,prior_ledger_sha256=executor.sha(tmp_path/'spending-ledger.json'))
+    l=executor.Ledger(tmp_path,cfg,m,r,a,p,reconciliation=recovery)
+    try:
+        assert l.state['provider_remaining']==5000000 and l.state['other_usage_reserved']==old and l.state['probe_credits']==1687
+        l.budget_check(30)
+    finally:l.close()
+
+
+def test_fresh_checkout_shares_ledger_without_rebuy(tiny_bundle,tmp_path):
+    import shutil
+    b,r,a,run,body=tiny_bundle
+    executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=FakeSession(body))
+    second=tmp_path/'fresh-checkout';shutil.copytree(b,second)
+    f2=FakeSession(body);f2.used=1717;f2.remaining=4998283
+    executor.run(second,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=f2)
+    assert len(f2.calls)==1 and f2.calls[0].endswith('/sports')
+
+
+def test_alternate_runtime_refused_before_key(tiny_bundle,tmp_path):
+    b,r,a,run,body=tiny_bundle;reads=[];fake=FakeSession(body)
+    with pytest.raises(executor.Halt,match='fixed root-keyed'):
+        executor.run(b,r,a,tmp_path/'other-checkout',key=lambda:reads.append(True),fake_session=fake)
+    assert not reads and not fake.calls
+
+
+def test_deleted_runtime_folder_refused_by_global_marker(tiny_bundle):
+    import shutil
+    b,r,a,run,body=tiny_bundle
+    executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=FakeSession(body));shutil.rmtree(run)
+    reads=[];fake=FakeSession(body)
+    with pytest.raises(executor.Halt,match='Registered runtime ledger missing'):
+        executor.run(b,r,a,run,key=lambda:reads.append(True),fake_session=fake)
+    assert not reads and not fake.calls
+
+
+def test_deleted_entire_store_cannot_adopt_spent_balance(tiny_bundle):
+    import shutil
+    b,r,a,run,body=tiny_bundle;a['account_reconciliation']=policy(r,'capture_first_free_check')
+    executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=FakeSession(body));shutil.rmtree(executor.RUNTIME_BASE)
+    fake=FakeSession(body);fake.used=1717;fake.remaining=4998283
+    with pytest.raises(executor.Halt,match='max_baseline_used'):
+        executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=fake)
+    assert len(fake.calls)==1 and fake.calls[0].endswith('/sports')
+
+
+def test_live_checkout_and_git_runtime_refused(tiny_bundle,monkeypatch,tmp_path):
+    b,r,a,run,body=tiny_bundle;reads=[];fake=FakeSession(body)
+    monkeypatch.setattr(executor,'LIVE_CHECKOUT',b)
+    with pytest.raises(executor.Halt,match='live checkout'):
+        executor.run(b,r,a,run,key=lambda:reads.append(True),fake_session=fake)
+    assert not reads and not fake.calls
+    git=tmp_path/'repo';(git/'.git').mkdir(parents=True);monkeypatch.setattr(executor,'RUNTIME_BASE',git/'state')
+    with pytest.raises(executor.Halt,match='outside every git'):executor.runtime_path(r)
+
+
+@pytest.mark.parametrize('field,value',[('request_list_sha256','0'*64),('budget_credits',999999999),('commit','not-a-commit'),('comment_url','https://example.com/comment'),('comment_body','x')])
+def test_strict_hub_approval_fields_refused_before_key(tiny_bundle,field,value):
+    b,r,a,run,body=tiny_bundle;a['hub_go_ahead'][field]=value;reads=[];fake=FakeSession(body)
+    with pytest.raises(executor.Halt,match='Hub go-ahead'):
+        executor.run(b,r,a,run,key=lambda:reads.append(True),fake_session=fake)
+    assert not reads and not fake.calls
+
+
+def test_new_checkout_commit_invalidates_paid_approval(tiny_bundle,monkeypatch):
+    b,r,a,run,body=tiny_bundle;monkeypatch.setattr(executor,'checkout_commit',lambda _:'c'*40)
+    reads=[];fake=FakeSession(body)
+    with pytest.raises(executor.Halt,match='current commit'):
+        executor.run(b,r,a,run,key=lambda:reads.append(True),fake_session=fake)
+    assert not reads and not fake.calls
+
+
+@pytest.mark.parametrize('horizon',['entry','close'])
+def test_actual_play_is_only_an_additional_exclusion(cfg,horizon):
+    row,cat=quote_context();before=eligibility.evaluate(cfg,row,cat,horizon)
+    assert before['eligible']
+    cat['actual_play']['g']={'canonical_game_id':'g','utc':'2023-10-01T16:49:00Z','source_id':'independent','independent':True}
+    assert not eligibility.evaluate(cfg,row,cat,horizon)['eligible']
+    # Late decision/snapshot remains rejected even when actual play was much later.
+    row,cat=quote_context(actual='2023-10-01T17:30:00Z',requested='2023-10-01T17:05:00Z',returned='2023-10-01T17:00:00Z')
+    assert not eligibility.evaluate(cfg,row,cat,horizon)['eligible']
+
+
+def missing_policy(root,auth,runtime,reason,response=None):
+    state=json.loads((runtime/'spending-ledger.json').read_text());rid=state['pending'];prior=executor.sha(runtime/'spending-ledger.json')
+    resolution={'request_id':rid,'reason':reason,'owner_note':'SYNTHETIC accepted missing only',
+        'hub_go_ahead':{'status':'approved','commit':auth['execution_commit'],'comment_url':'https://github.com/maxzipperman/value-finder/pull/99#issuecomment-2',
+            'comment_body':f"APPROVED missing response: root {root}, request {rid}, ledger {prior}, commit {auth['execution_commit']}, reason {reason}"}}
+    if response is not None:resolution['response_sha256']=executor.sha(response)
+    else:resolution['attempt_sha256']=hashlib.sha256(executor.canonical(state['attempts'][rid])).hexdigest()
+    return {'status':'approved','bundle_root_sha256':root,'prior_ledger_sha256':prior,'missing_response_resolution':resolution}
+
+
+@pytest.mark.parametrize('mode,reason',[('http500','http_5xx'),('http404','http_404'),('lag','snapshot_lag')])
+def test_approved_missing_can_continue_without_resend(tiny_bundle,mode,reason):
+    import cache_handoff
+    b,r,a,run,body=tiny_bundle;fake=FakeSession(body,mode)
+    with pytest.raises(executor.Halt):executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=fake)
+    cached=list((run/'data/raw').rglob('*.parquet'));rec=missing_policy(r,a,run,reason,cached[0] if cached else None)
+    executor.accept_as_missing(b,r,a,rec,run)
+    state=json.loads((run/'spending-ledger.json').read_text());rid=rec['missing_response_resolution']['request_id']
+    assert state['attempts'][rid]['status']=='missing' and state['attempts'][rid]['reserved_credits']==30
+    recovery=policy(r,'capture_first_free_check');recovery.update(max_baseline_used=1717,account_only_recovery=True,prior_ledger_sha256=executor.sha(run/'spending-ledger.json'))
+    resume=FakeSession(body);resume.used=1717;resume.remaining=4998283
+    executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=resume,reconciliation=recovery)
+    assert len(resume.calls)==1 and resume.calls[0].endswith('/sports')
+    coverage=json.loads((run/'coverage-report.json').read_text())
+    assert coverage['all_recent_requests_completed'] and coverage['accepted_missing_requests'][0]['reason']==reason
+    assert all(x['status']=='missing_quote' for x in coverage['intended_slot_book_market_accounting'])
+    handoff=cache_handoff.build_handoff(b,r,run)
+    assert handoff['entries'][0]['status']=='accepted_missing' and handoff['entries'][0]['response_path'] is None
+
+
+@pytest.mark.parametrize('change',['draft','wrong_ledger','wrong_request','wrong_comment','wrong_source'])
+def test_missing_response_requires_exact_hub_approval(tiny_bundle,change):
+    b,r,a,run,body=tiny_bundle
+    with pytest.raises(executor.Halt):executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=FakeSession(body,'lag'))
+    saved=next((run/'data/raw').rglob('*.parquet'));rec=missing_policy(r,a,run,'snapshot_lag',saved)
+    if change=='draft':rec['status']='draft'
+    elif change=='wrong_ledger':rec['prior_ledger_sha256']='0'*64
+    elif change=='wrong_request':rec['missing_response_resolution']['request_id']='wrong'
+    elif change=='wrong_comment':rec['missing_response_resolution']['hub_go_ahead']['comment_body']='x'
+    else:rec['missing_response_resolution']['response_sha256']='0'*64
+    with pytest.raises(executor.Halt):executor.accept_as_missing(b,r,a,rec,run)
+    assert json.loads((run/'spending-ledger.json').read_text())['pending'] is not None
+
+
+@pytest.mark.parametrize('change',['missing_ceiling','negative_ceiling','old_period'])
+def test_reconciliation_policy_refused_before_key(tiny_bundle,change):
+    b,r,a,run,body=tiny_bundle;rec=a['account_reconciliation']
+    if change=='missing_ceiling':rec.pop('max_baseline_used')
+    elif change=='negative_ceiling':rec['max_baseline_used']=-1
+    else:rec['billing_period_utc']='2000-01'
+    reads=[];fake=FakeSession(body)
+    with pytest.raises(executor.Halt,match='reconciliation'):
+        executor.run(b,r,a,run,key=lambda:reads.append(True),fake_session=fake)
+    assert not reads and not fake.calls
+
+
+@pytest.mark.parametrize('mode',['timeout','overcharge','bad_billing','future'])
+def test_unknown_failures_and_overcharges_cannot_be_accepted_missing(tiny_bundle,mode):
+    b,r,a,run,body=tiny_bundle
+    with pytest.raises(executor.Halt):executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=FakeSession(body,mode))
+    saved=list((run/'data/raw').rglob('*.parquet'))
+    rec=missing_policy(r,a,run,'snapshot_lag' if saved else 'http_5xx',saved[0] if saved else None)
+    with pytest.raises(executor.Halt):executor.accept_as_missing(b,r,a,rec,run)
+    assert json.loads((run/'spending-ledger.json').read_text())['pending'] is not None
+
+
+@pytest.mark.parametrize('change',['url','body','author'])
+def test_live_hub_evidence_must_match_github(tiny_bundle,monkeypatch,change):
+    b,r,a,run,body=tiny_bundle;hub=a['hub_go_ahead']
+    comment={'html_url':hub['comment_url'],'body':hub['comment_body'],'user':{'login':'maxzipperman'}}
+    if change=='url':comment['html_url']='https://example.com'
+    elif change=='body':comment['body']='reviewing, not approved'
+    else:comment['user']['login']='another-account'
+    monkeypatch.setattr(executor.subprocess,'check_output',lambda *args,**kwargs:json.dumps(comment))
+    with pytest.raises(executor.Halt,match='GitHub'):executor.verify_live_hub_comment(a)
