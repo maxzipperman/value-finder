@@ -5,6 +5,7 @@ evening's quote. Tests for the board's gate, the alert and the scorer, on a game
 whose time is never set; and, for a schedule that still shows the placeholder once the game is completed, the
 scorer's verified kickoff (kickoff_verifications.csv), its quarantine of a game with none, and the FINAL it withholds
 meanwhile."""
+import os
 import runpy
 import shutil
 import subprocess
@@ -368,6 +369,29 @@ def test_a_verification_never_replaces_a_time_the_schedule_shows(tmp_path):
     assert "logged at or after kickoff" not in out and "record 0-1-0" in ht(out)
 
 
+def test_a_verification_for_a_game_not_in_the_schedule_is_named_as_such(tmp_path):
+    """A verified game that is in the ledger but missing from the schedule is named for what it is, not as a game whose
+    schedule doesn't show the placeholder."""
+    rows = [row(1, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5), row(5, REAL_KICK, "2026-10-10T22:30Z")]
+    out = score(tmp_path, rows, [sched(1, 67, kick=PLACEHOLDER)], *verified(tmp_path, (1, REAL_KICK), (5, REAL_KICK)))
+    assert "kickoff verifications not used, the game is not in the schedule (amendment 7): 1 (5)" in out
+    assert "the schedule doesn't show the placeholder" not in out
+    assert f"{PH_LINE}, completed, kickoff verified: 1 (1)" in out
+
+
+def test_a_byte_order_mark_makes_the_verification_file_unreadable_and_is_named(tmp_path):
+    """The bytes are read as they are (a live run checks them against the committed file), so a byte-order mark is not
+    skipped: the file verifies nothing, and the scorer names the mark rather than a header it can't see."""
+    rows = [row(1, REAL_KICK, "2026-10-09T14:30Z")]
+    v = verified(tmp_path / "v", (1, REAL_KICK))
+    (tmp_path / "v" / "v.csv").write_bytes(b"\xef\xbb\xbf" + (tmp_path / "v" / "v.csv").read_bytes())
+    out = score(tmp_path, rows, [sched(1, 50, kick=PLACEHOLDER)], *v)
+    assert ("kickoff verifications: v.csv is unreadable (ValueError: it starts with a byte-order mark (BOM, the bytes "
+            "EF BB BF); save it as UTF-8 without one)") in out
+    assert "first line is not the header" not in out
+    assert f"{PH_LINE}, completed, no verified kickoff (quarantined, not graded): 1 (1)" in out
+
+
 @pytest.mark.parametrize("line,why", [
     ("1,2026-10-10 16:00,box score,2026-10-12,\n", "game 1: a kickoff that is not a UTC time"),
     ("1,2026-10-10T16:00:00Z,,2026-10-12,\n", "game 1: no source"),
@@ -375,8 +399,8 @@ def test_a_verification_never_replaces_a_time_the_schedule_shows(tmp_path):
     ("x,2026-10-10T16:00:00Z,box score,2026-10-12,\n", "a game id that is not a number"),
     ("1,2026-10-10T16:00:00Z,box score,2026-10-12,a,b\n", "line 2 has 6 fields, not 5"),
     ("1,2026-10-10T16:00:00Z,box score\n", "line 2 has 3 fields, not 5"),
-    ("1,2026-10-10T16:00:00Z,box score,2026-11-21,\n", "game 1: verified_on 2026-11-21 is after this run's date "
-                                                         "(2026-11-20)")])
+    ("1,2026-10-10T16:00:00Z,box score,2026-11-21,\n", "game 1: verified_on 2026-11-21 is after this run's UTC "
+                                                         "date (2026-11-20)")])
 def test_a_damaged_verification_file_verifies_nothing(tmp_path, line, why):
     """A bad line, a line with the wrong number of fields, or a verification dated after the run's clock makes the
     whole file unreadable: every completed placeholder game stays quarantined, and the scorer says why."""
@@ -861,6 +885,97 @@ def test_the_live_record_waits_for_the_committed_verification(tmp_path):
     assert pd.read_csv(fwd / "decisions.csv").decision_id.tolist() == ["CFB_RULE_B"]
 
 
+SWAP_AFTER_READ = """import os, pathlib, runpy, sys
+import pandas as pd
+FAKE = pd.Timestamp(os.environ["FAKE_NOW"], tz="UTC")
+pd.Timestamp.now = staticmethod(lambda tz=None: FAKE.tz_convert(tz) if tz is not None else FAKE.tz_localize(None))
+target, new = pathlib.Path(os.environ["SWAP_PATH"]).resolve(), pathlib.Path(os.environ["SWAP_TO"]).read_bytes()
+read_bytes = pathlib.Path.read_bytes
+def swap(self):                       # the file is edited on disk the moment after the scorer has read it
+    data = read_bytes(self)
+    if self.resolve() == target:
+        target.write_bytes(new)
+    return data
+pathlib.Path.read_bytes = swap
+script, sys.argv = sys.argv[1], sys.argv[1:]
+runpy.run_path(script, run_name="__main__")
+"""
+
+
+def live_41(tmp_path, placeholder=True):
+    """The live project of the test above: 41 Rule B signals, the horizon passed; game 1 at the placeholder."""
+    import test_readings as R
+    rows, s = R.rb_signals(41)
+    if placeholder:
+        s[0] = s[0] | {"start_date": "2026-10-03T04:00:00.000Z"}              # game 1, Oct 3: the placeholder
+    proj = R.live_project(tmp_path, "cfb-weather", rows, s, "2026-12-20T16:00")
+    verified(tmp_path / "elsewhere", (1, "2026-10-03T19:00:00Z"))
+    return R, proj, proj / "data" / "forward", proj / "scripts" / "score_forward.py"
+
+
+@pytest.mark.parametrize("committed", ["header only", "game 1 verified"])
+def test_the_verification_bytes_checked_are_the_bytes_parsed(tmp_path, committed):
+    """The review of Oct 1: the scorer checked the file's bytes against the committed version, then opened the path
+    again to parse it, so an edit made in between decided the live record. The file is now read once. Here the file
+    on disk is replaced the moment after that read: what is parsed is still what was checked, the committed file."""
+    R, proj, fwd, scorer = live_41(tmp_path)
+    header = (proj / "kickoff_verifications.csv").read_bytes()
+    edited = (tmp_path / "elsewhere" / "v.csv").read_bytes()
+    if committed == "game 1 verified":
+        R.commit_verifications(proj, edited)
+        edited = header
+    (tmp_path / "edit.csv").write_bytes(edited)
+    runner = tmp_path / "swap.py"
+    runner.write_text(SWAP_AFTER_READ)
+    out = subprocess.run([sys.executable, str(runner), str(scorer)], capture_output=True, text=True,
+                         env={**os.environ, "FAKE_NOW": "2026-12-20T17:00",
+                              "SWAP_PATH": str(proj / "kickoff_verifications.csv"),
+                              "SWAP_TO": str(tmp_path / "edit.csv")}).stdout
+    assert (proj / "kickoff_verifications.csv").read_bytes() == edited          # the edit was made during the run
+    if committed == "header only":         # the edit verifies game 1, but the bytes checked and parsed don't
+        assert f"{PH_LINE}, completed, no verified kickoff (quarantined, not graded): 1 (1)" in out
+        assert WITHHELD in rb(out) and "FINAL:" not in rb(out) and not (fwd / "decisions.csv").exists()
+    else:                                  # the edit drops the verification; the committed bytes are parsed
+        assert f"{PH_LINE}, completed, kickoff verified: 1 (1)" in out
+        assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:00:00Z" in rb(out)
+        assert pd.read_csv(fwd / "decisions.csv").decision_id.tolist() == ["CFB_RULE_B"]
+
+
+def test_line_endings_alone_are_named_when_the_file_differs_from_its_committed_version(tmp_path):
+    """The committed file has LF line endings and the file on disk CRLF: it reads the same, but its bytes differ, so
+    nothing is recorded, and the scorer says the difference is only the line endings."""
+    R, proj, fwd, scorer = live_41(tmp_path)
+    R.commit_verifications(proj, (tmp_path / "elsewhere" / "v.csv").read_bytes())
+    lf = (proj / "kickoff_verifications.csv").read_bytes()
+    (proj / "kickoff_verifications.csv").write_bytes(lf.replace(b"\n", b"\r\n"))
+    out = R.on_clock(tmp_path, "2026-12-20T17:00", scorer).stdout
+    assert f"{PH_LINE}, completed, kickoff verified: 1 (1)" in out and "FINAL: KEEP" in rb(out)
+    assert ("not recorded: kickoff_verifications.csv differs from its committed version (git show "
+            "HEAD:./kickoff_verifications.csv); the file on disk differs from the committed version only in line "
+            "endings, and the live record is written only from the committed file: commit the change, or restore the "
+            "file, and run the scorer again.") in rb(out)
+    assert not (fwd / "decisions.csv").exists()
+    (proj / "kickoff_verifications.csv").write_bytes(lf + b"2,2026-10-04T19:00:00Z,box score,2026-10-12,\n")
+    out = R.on_clock(tmp_path, "2026-12-20T17:05", scorer).stdout
+    assert "differs from its committed version" in rb(out) and "only in line endings" not in out
+
+
+def test_a_folder_in_place_of_the_verification_file_fails_closed_and_the_scores_print(tmp_path):
+    """A folder where kickoff_verifications.csv should be: no verification is used, the live run records nothing and
+    says why, and the scores are printed as usual (the scorer doesn't crash)."""
+    R, proj, fwd, scorer = live_41(tmp_path, placeholder=False)
+    (proj / "kickoff_verifications.csv").unlink()
+    (proj / "kickoff_verifications.csv").mkdir()
+    r = R.on_clock(tmp_path, "2026-12-20T17:00", scorer)
+    assert r.returncode == 0, r.stderr
+    assert ("kickoff verifications: kickoff_verifications.csv is unreadable (IsADirectoryError: Is a directory); no "
+            "verified kickoff is used") in r.stdout
+    assert "41 signals, 41 settled" in rb(r.stdout) and "FINAL: KEEP" in rb(r.stdout)
+    assert ("not recorded: kickoff_verifications.csv can't be read (IsADirectoryError: Is a directory), and the live "
+            "record is written only from the committed file.") in rb(r.stdout)
+    assert not (fwd / "decisions.csv").exists()
+
+
 # ------------------------------------------------------------------ a game not yet completed holds the FINAL too
 OPEN_HELD = ("FINAL withheld: 1 game not yet completed, with the placeholder in the schedule and a signal, awaits its "
              "result (1) (amendment 7)")
@@ -930,3 +1045,66 @@ def test_the_json_document_carries_the_games_not_yet_completed_that_hold_a_final
     h = next(t for t in doc["tests"] if t["id"] == "RULE_HT")
     assert h["final_withheld"] == ["1"] and h["decisions"][0]["final_withheld"] == ["1"]
     assert OPEN_HELD in h["decisions"][0]["text"]
+
+
+# ------------------------------------------------------------------ a quarantined game and Rule B's horizon
+def bowl(gid, ph, kick):
+    """A completed game whose schedule still shows the placeholder `ph`, with one Rule B signal row carrying `kick`."""
+    import test_readings as R
+    k = pd.Timestamp(kick)
+    return ([R.row(gid, k, k - pd.Timedelta(days=2), rule_b="SIGNAL", mkt_total=50.5),
+             R.row(gid, k, k - pd.Timedelta(hours=3), mkt_total=49.5)], R.sched(gid, 20, 20, kick=ph))
+
+
+DEC20_PH, DEC12_PH = pd.Timestamp("2026-12-20T05:00:00Z"), pd.Timestamp("2026-12-12T05:00:00Z")   # 00:00 EST
+BOWL_HELD = "FINAL withheld: 1 completed game awaits kickoff verification (99)"
+
+
+def test_a_quarantined_bowl_after_rule_bs_horizon_doesnt_hold_it(tmp_path):
+    """The review of Oct 1: 41 signals settled by Dec 12 (the horizon is the end of the regular season, Dec 13 08:00
+    UTC), and a Dec 20 bowl, completed, still on the placeholder, with a Rule B signal. The bowl can't enter the
+    decision, so it doesn't hold it: the FINAL is printed and recorded on the 41. It stays quarantined, and holds Rule
+    B's FINAL no more than a game not yet completed after the horizon does."""
+    import test_readings as R
+    rows, s = R.rb_signals(41)
+    extra, sb = bowl(99, DEC20_PH, "2026-12-20T20:00Z")
+    f = tmp_path / "t"
+    out = score(f, rows + extra, s + [sb], "--now", "2026-12-21T12:00", "--test-record")
+    assert f"{PH_LINE}, completed, no verified kickoff (quarantined, not graded): 1 (99)" in out
+    assert f"excluded, {QUARANTINED}: 2" in out
+    assert "FINAL withheld" not in rb(out) and "FINAL: KEEP, on the 41 signals" in rb(out)
+    assert pd.read_csv(f / "decisions.csv").decision_id.tolist() == ["CFB_RULE_B"]
+
+
+@pytest.mark.parametrize("ph,kick", [(DEC12_PH, "2026-12-12T20:00Z"),       # placeholder and rows before the horizon
+                                     (DEC20_PH, "2026-12-12T20:00Z"),       # a row's kickoff before it
+                                     (DEC20_PH, "2026-12-13T08:00Z")])      # a row's kickoff at the horizon itself
+def test_a_quarantined_game_on_or_before_rule_bs_horizon_holds_it(tmp_path, ph, kick):
+    """The earlier of the placeholder and the kickoffs the signal rows carry is on or before the horizon (Dec 13 08:00
+    UTC): the game could enter the decision, so the FINAL is withheld and nothing is recorded."""
+    import test_readings as R
+    rows, s = R.rb_signals(41)
+    extra, sb = bowl(99, ph, kick)
+    f = tmp_path / "t"
+    out = score(f, rows + extra, s + [sb], "--now", "2026-12-21T12:00", "--test-record")
+    assert BOWL_HELD in rb(out) and "INTERIM read" in rb(out) and "FINAL:" not in rb(out)
+    assert not (f / "decisions.csv").exists()
+
+
+def test_with_fewer_than_40_settled_a_quarantined_game_always_holds_rule_b(tmp_path):
+    """With 39 settled signals there is no horizon yet, so any quarantined game with a Rule B signal could enter the
+    decision: the Dec 20 bowl holds it, before the test's end and after it, when the decision would otherwise be a
+    FINAL INCONCLUSIVE. Verified, the bowl is the 40th signal, and the decision is made on the 40 with it."""
+    import test_readings as R
+    rows, s = R.rb_signals(39)
+    extra, sb = bowl(99, DEC20_PH, "2026-12-20T20:00Z")
+    f = tmp_path / "t"
+    out = score(f, rows + extra, s + [sb], "--now", "2026-12-21T12:00", "--test-record")
+    assert BOWL_HELD in rb(out) and "FINAL:" not in rb(out)
+    out = score(f, rows + extra, s + [sb], "--now", "2028-03-01", "--test-record")
+    assert BOWL_HELD in rb(out) and "FINAL:" not in rb(out)
+    assert "CFB_RULE_B" not in (pd.read_csv(f / "decisions.csv").decision_id.tolist()
+                                if (f / "decisions.csv").exists() else [])
+    out = score(tmp_path / "v", rows + extra, s + [sb], "--now", "2028-03-01", "--test-record",
+                *verified(tmp_path / "v", (99, "2026-12-20T20:00:00Z")))
+    assert "FINAL withheld" not in rb(out) and "FINAL: KEEP, on the 40 signals" in rb(out)

@@ -433,7 +433,7 @@ def live_copy(base):
     t = pd.Timestamp("2026-12-21T16:00", tz="UTC").timestamp()
     os.utime(season, (t, t))
     from test_readings import commit_verifications
-    commit_verifications(proj, (ROOT / "kickoff_verifications.csv").read_bytes())
+    commit_verifications(proj, (ROOT / "kickoff_verifications.csv").read_bytes(), within=base)
     return proj
 
 

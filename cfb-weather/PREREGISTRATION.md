@@ -890,25 +890,30 @@ can change any reading here by a dated amendment made before the first outcome i
     `--list-excluded` prints its rows (the teams, when each row was logged and the kickoff it carried) and the game's
     captures in `closes.csv` (when each was taken and the kickoff it was taken for), with no price and no result, for
     the hub to verify the kickoff against.
-  * **No final decision while a game is quarantined.** While a quarantined game has a signal for a rule (a row the
-    board logged as that rule's `SIGNAL`), the scorer prints no FINAL decision for that rule and records none: it
-    prints the interim read and "FINAL withheld: N completed games await kickoff verification", with their game ids.
-    A game not yet completed holds it the same way (below), named as "N games not yet completed, with the
-    placeholder in the schedule and a signal, await their result". This adds to amendment 4, section 2: no decision
-    is final while a game it could change is quarantined or not yet completed in this way, as while a bet is
-    pending. The scorer enforces it where a decision is written down (amendment 4, section 3) as well as where
-    it is printed, and `--json` carries it. A decision already recorded stands (amendment 4, section 3). A rule the
-    game has no signal for is not held, since none of its grades can change through that game, and the other games'
-    grades and interim reads are as they would be without it. The hold covers a game that becomes completed with the
-    placeholder after registration as much as one before.
+  * **No final decision while a game is quarantined.** While a quarantined game has a signal for a rule (a row the board
+    logged as that rule's `SIGNAL`) that could enter the rule's decision, the scorer prints no FINAL decision for that
+    rule and records none: it prints the interim read and "FINAL withheld: N completed games await kickoff
+    verification", with their game ids. For Rule HT, decided once after the 2027 season's title game, every such signal
+    could enter it. For Rule B, a quarantined game holds the decision only when the earlier of its placeholder and the
+    kickoffs its Rule B signal rows carry is on or before the decision's horizon, or, while fewer than 40 signals have
+    settled (so the horizon is not yet known), always: the same test as for a game not yet completed (below). A
+    quarantined game after the horizon can't enter the decision, which counts only the signals that kicked off by then,
+    so it doesn't hold it. A game not yet completed holds it the same way (below), named as "N games not yet completed,
+    with the placeholder in the schedule and a signal, await their result". This adds to amendment 4, section 2: no
+    decision is final while a game it could change is quarantined or not yet completed in this way, as while a bet is
+    pending. The scorer enforces it where a decision is written down (amendment 4, section 3) as well as where it is
+    printed, and `--json` carries it. A decision already recorded stands (amendment 4, section 3). A rule the game has
+    no signal for, or (Rule B) none that could enter the decision, is not held, since the decision can't change through
+    that game, and the other games' grades and interim reads are as they would be without it. The hold covers a game
+    that becomes completed with the placeholder after registration as much as one before.
   * **A game not yet completed,** with no verified kickoff, keeps the placeholder as its kickoff, as before this
     amendment: a row logged after the placeholder doesn't count, and nothing of the game is graded until it is
     completed. Once it is completed, it is graded with its verified kickoff, or quarantined. Because the rows it
     doesn't count yet may count then, while it has a signal for a rule it holds that rule's final decision, as a
     quarantined game does, until it is completed or until 30 days after the later of its placeholder and the latest
     kickoff its signal rows carry pass with no score, when a bet on it is void (amendment 4, section 1); for Rule B,
-    only if its placeholder or the kickoff on one of its signal rows is on or before the decision's horizon (with
-    fewer than 40 settled signals, always).
+    only when the earlier of its placeholder and the kickoffs its Rule B signal rows carry is on or before the
+    decision's horizon (while fewer than 40 signals have settled, always).
 
   When any ledger game has the placeholder in the schedule, the scorer prints how many, in three counts with their
   game ids: completed with a verified kickoff, completed without one (quarantined), and not yet played;
@@ -922,13 +927,17 @@ can change any reading here by a dated amendment made before the first outcome i
   lists, never by a price or a result: the verification says when the game began, the same whatever any bet did. A
   wrong line is corrected in place, with a note, before any decision that uses it is recorded; after that the record
   stands (amendment 4, section 3). A file that can't be read (a line without exactly its 5 fields, a kickoff that
-  isn't a UTC time, a blank source, a `verified_on` that isn't a date or is after the run's date, a game listed twice)
-  is used for nothing, so every completed game with the placeholder stays quarantined, and the scorer says so. A
-  verification is used only where the schedule shows the placeholder; where it shows a time, that time is the kickoff,
-  and the scorer names the verification it didn't use, as it names one for a game not in the ledger. Only the
-  committed file decides the live record: a run that reads another file records nothing, and so does a run on the live
-  ledger whose `kickoff_verifications.csv` differs from the committed one (`git show HEAD:`), or when git can't show
-  the committed one.
+  isn't a UTC time, a blank source, a `verified_on` that isn't a date or is after the run's UTC date, a game listed
+  twice, a byte-order mark at its start, which the scorer names rather than skips, or a path that isn't a readable
+  file) is used for nothing, so every completed game with the placeholder stays quarantined, and the scorer says so
+  and prints the scores. A verification is used only where the schedule shows the placeholder; where it shows a time,
+  that time is the kickoff, and the scorer names the verification it didn't use ("the schedule doesn't show the
+  placeholder for the game"), as it names one for a game not in the schedule ("the game is not in the schedule") and
+  one for a game not in the ledger. Only the committed file decides the live record: a run that reads another file
+  records nothing, and so does a run on the live ledger whose `kickoff_verifications.csv` differs from the committed
+  one (`git show HEAD:`; when only the line endings differ, the scorer says so), or can't be read, or when git can't
+  show the committed one. The scorer reads the file once: the bytes it checks against the committed version are the
+  bytes it parses, so an edit made while it runs decides nothing.
 * **The captured close (a reading of amendment 6, section 1).** Amendment 6 counts a captured close for a listing
   only when it was captured 2 to 20 minutes before "the earlier of the kickoff on the listing's last row logged
   before kickoff and the kickoff in the schedule: the bound amendment 4, section 11 gives "before kickoff"", and says
@@ -996,8 +1005,9 @@ can change any reading here by a dated amendment made before the first outcome i
   the same rows would make without it, graded on the same listing. The schedule reading costs more. A completed game
   with the placeholder in the schedule and no verified kickoff is graded for neither rule, where main grades it against
   the placeholder (for Rule HT the quote from the evening before; for Rule B an entry and a close from before 00:00
-  Eastern), and while it is quarantined, the final decision of each rule it has a signal for waits; so does the final
-  decision a game not yet completed in the same state could change, until it is completed or void. That is the cost
+  Eastern), and while it is quarantined, the final decision of each rule it has a signal for waits (for Rule B, when
+  the game could enter it: section 2); so does the final decision a game not yet completed in the same state could
+  change, until it is completed or void. That is the cost
   of failing closed, and a verification ends it. Once the hub records the kickoff, the game is graded by the registered
   rules as any game whose schedule shows its time: rows main dropped as logged after the placeholder count when they
   were logged before the real kickoff (for Rule HT a later timed quote, which can become the entry; for Rule B a
@@ -1031,7 +1041,8 @@ can change any reading here by a dated amendment made before the first outcome i
     capture taken in play be the close. The hub records the source beside each kickoff, from a source other than the
     ledger and the schedule; getting it right is the hub's responsibility, as the decision record is.
   * **A kickoff no source gives.** A completed game whose kickoff can't be verified stays quarantined, and the final
-    decision of each rule it has a signal for waits. Only a dated amendment can release it.
+    decision of each rule it has a signal for waits (for Rule B, when the game could enter it: section 2). Only a
+    dated amendment can release it.
   * **A real kickoff at 00:00 Eastern in the schedule** reads as the placeholder, so a completed game that kicked off
     then is quarantined until the hub verifies it (at 00:00 Eastern); then it is graded as usual. (For Rule HT its rows
     carried the midnight, so it is not eligible either way.)
@@ -1077,10 +1088,14 @@ placeholder, the evening before, is refused or set aside; one in the last 2 minu
 minutes before is refused; a postponed game's later listing never takes the close captured for the earlier one. For the
 final decision: after the test's end, a rule held by a quarantined game records nothing while another rule is recorded,
 and the held rule is recorded once the kickoff is verified; a quarantine leaves a rule it has no signal for exactly as
-it was; for each rule, a game not yet completed whose signal rows were logged after the placeholder holds the FINAL
-until it is completed and verified (and Rule HT's no longer once it is void; Rule B's not when it is after the horizon);
-`--json` carries both as printed. On the live ledger (in a git repository, as the live checkout is), a verification not
-yet committed records nothing, and the committed one records. All inputs are synthetic; no 2026 price or result is read.
+it was; a quarantined bowl game after Rule B's horizon doesn't hold Rule B, one on or before it does, and with fewer
+than 40 settled signals one always does; for each rule, a game not yet completed whose signal rows were logged after
+the placeholder holds the FINAL until it is completed and verified (and Rule HT's no longer once it is void; Rule B's
+not when it is after the horizon); `--json` carries both as printed. On the live ledger (in a git repository, as the
+live checkout is), a verification not yet committed records nothing, and the committed one records; the file is read
+once, so an edit made after it is read decides nothing; line endings that differ from the committed file's are named and
+record nothing; a folder in the file's place verifies nothing and records nothing, and the scores still print. A
+byte-order mark makes the file unreadable, and is named. All inputs are synthetic; no 2026 price or result is read.
 
 ### 5. Notes for `STRATEGY.md`
 
@@ -1100,8 +1115,9 @@ row named, as amendments 3 to 6 did.
 * Rule B, "Decision": "*Amendment 7 (DATE):* when the schedule shows cfbfastR's placeholder (00:00 Eastern), the
   game's kickoff for every reading (moved games (1), the listing graded (10), before kickoff (11), the game day, the
   test's end and the captured close of amendment 6) is the one the hub verified by hand (`kickoff_verifications.csv`);
-  a completed game with none is not graded, and holds the final decision while it has a signal, as does such a game
-  not yet completed that could enter the decision, until it is completed or void."
+  a completed game with none is not graded; it holds the final decision while it has a signal that could enter it,
+  as does such a game not yet completed, until it is completed or void (one could enter it when the earlier of its
+  placeholder and its signal rows' kickoffs is on or before the horizon, or, before 40 signals have settled, always)."
 
 ### What this amendment replaces
 
@@ -1148,8 +1164,10 @@ instead.
   kickoff, and a completed game with none is quarantined (section 2). A schedule kickoff at any other time, flagged or
   not, is read as before, and so is the placeholder of a game not yet completed.
 * Amendment 4, section 2: "No decision is final while any bet that kicked off on or before the decision's horizon is
-  pending." Nor is a decision final while a quarantined game has a signal for its rule, or while a game not yet
-  completed, with the placeholder in the schedule and no verified kickoff, has one that could enter it (section 2).
+  pending." Nor is a decision final while a game with the placeholder in the schedule and no verified kickoff,
+  completed (quarantined) or not yet completed, has a signal for its rule that could enter it: for Rule HT, any
+  signal; for Rule B, a signal on a game where the earlier of its placeholder and the kickoffs its Rule B signal rows
+  carry is on or before the decision's horizon, or any signal while fewer than 40 have settled (section 2).
 * Amendment 6, section 1: "That kickoff is the earlier of the kickoff on the listing's last row logged before kickoff
   and the kickoff in the schedule: the bound amendment 4, section 11 gives "before kickoff"." When the schedule's
   kickoff is the placeholder, the kickoff in the schedule is the verified kickoff, and a quarantined game has no

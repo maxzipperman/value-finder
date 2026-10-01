@@ -232,27 +232,35 @@ def test_reading_9_amendment_4_quotes_the_models_own_numbers():
 
 
 # ================================================================== the review of this amendment (Sep 29)
-def project(tmp_path, name="proj"):
+def project(tmp_path, name="proj", within=None):
     """A copy of the scorer and its package, so a test can use a data/forward/ folder of its own and never
-    touch the real one."""
+    touch the real one. Its kickoff_verifications.csv is committed in a git repository under `within` (default
+    `tmp_path`): commit_verifications."""
     proj = tmp_path / name
     shutil.copytree(ROOT / "cfbweather", proj / "cfbweather", ignore=shutil.ignore_patterns("__pycache__"))
     (proj / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "score_forward.py", proj / "scripts" / "score_forward.py")
     (proj / "data" / "forward").mkdir(parents=True)
-    commit_verifications(proj, (ROOT / "kickoff_verifications.csv").read_bytes())
+    commit_verifications(proj, (ROOT / "kickoff_verifications.csv").read_bytes(), within or tmp_path)
     return proj
 
 
-def commit_verifications(proj, data):
+def commit_verifications(proj, data, within=None):
     """cfb-weather amendment 7 (draft): a live run records only from the committed kickoff_verifications.csv, so the
-    project's copy sits in a git repository (its parent folder, as the live checkout's is) with the file committed."""
+    project's copy sits in a git repository (its parent folder, as the live checkout's is) with the file committed.
+    The repository is one the test made at or under `within` (default: the project's parent), or a new one at the
+    project's parent: git looks for it no higher than `within` (GIT_CEILING_DIRECTORIES), so a test never commits into
+    a repository that holds pytest's temporary folder, and the root is asserted to be under `within`."""
+    within = Path(within or proj.parent).resolve()
     (proj / "kickoff_verifications.csv").write_bytes(data)
-    inside = subprocess.run(["git", "-C", str(proj), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
-    top = Path(inside.stdout.strip()) if inside.returncode == 0 else proj.parent   # a repository it is already in
+    inside = subprocess.run(["git", "-C", str(proj), "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+                            env={**os.environ, "GIT_CEILING_DIRECTORIES": str(within.parent)})
+    top = Path(inside.stdout.strip()) if inside.returncode == 0 else proj.parent   # a repository the test made
     if inside.returncode != 0:
         git(top, "init", "-q")
-    path = str((proj / "kickoff_verifications.csv").relative_to(top))
+    top = top.resolve()
+    assert top.is_relative_to(within) and git(top, "rev-parse", "--show-toplevel") == str(top), (top, within)
+    path = str((proj / "kickoff_verifications.csv").resolve().relative_to(top))
     git(top, "add", path)
     git(top, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "kickoff verifications", "--", path)
 
@@ -783,7 +791,7 @@ def test_reading_3_while_the_record_is_missing_every_run_on_the_live_ledger_prin
     (fwd / "decisions.csv").unlink()
     season_file(proj, 2026, s, "2026-12-18T16:00")                            # 3 days old at the next run
     pd.DataFrame(s).to_csv(tmp_path / "sched.csv", index=False)
-    worker = project(repo / "worker", "cfb-weather")                          # a worker's copy of the scorer
+    worker = project(repo / "worker", "cfb-weather", within=repo)             # a worker's copy, in the same repository
     for script, args in ((scorer, ()), (worker / "scripts" / "score_forward.py",
                                         ("--ledger", str(fwd / "ledger.csv"), "--schedule", str(tmp_path / "sched.csv")))):
         out = on_clock(tmp_path, "2026-12-21T17:00", script, *args).stdout

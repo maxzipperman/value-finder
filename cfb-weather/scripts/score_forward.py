@@ -29,9 +29,14 @@ the hub) holds an independently verified kickoff for the game, that kickoff is t
 every rule here: before kickoff, the captured close's window, moved games, the listing graded, the game day
 and the test's end. A completed game with the placeholder and no verified kickoff is quarantined: none of its
 rows is graded, for either rule ("completed game, schedule shows the placeholder and no verified kickoff is
-recorded"), --list-excluded prints its rows with their kickoffs and its captures with the times they were
-taken, and no FINAL decision of a rule it has a signal for is printed or recorded while it is quarantined
-("FINAL withheld"). A game not yet completed keeps the placeholder as its kickoff, as before.
+recorded"), and --list-excluded prints its rows with their kickoffs and its captures with the times they were
+taken. A game not yet completed keeps the placeholder as its kickoff, as before, so its rows logged after the
+placeholder don't count yet. Either kind of game, while it has a signal for a rule, holds that rule's FINAL
+decision: none is printed or recorded ("FINAL withheld"). A quarantined game holds it until its kickoff is verified;
+a game not yet completed, until it is completed (then it is graded or quarantined) or, with no score 30 days after the
+later of its placeholder and the latest kickoff its signal rows carry, void. For Rule B, a game holds it only if it
+could enter the decision: always while fewer than 40 signals have settled; after that, only when the earlier of its
+placeholder and the kickoffs its signal rows carry is on or before the horizon.
 
 The captured close (amendment 6, section 1): a bet uses a close from closes.csv only when it was captured
 2 to 20 minutes (both inclusive, amendment 2's window as scripts/capture_close.py applies it) before the
@@ -52,12 +57,12 @@ when the schedule still shows no score 30 days after that kickoff; a void bet is
 graded. It is pending while it has no score.
 
 The decisions are computed here and labelled. A decision is FINAL once its horizon has passed and no
-bet that kicked off by then is pending, and no quarantined game has a signal for its rule (amendment 7, a
-draft: "FINAL withheld", and write_down refuses too). A Rule B decision with fewer than 20 bets that have a primary
-close is INCONCLUSIVE (amendment 4, reading 12). The first FINAL is written down, and every later run
-prints that record; if a fresh computation on the same horizon would now differ, it prints both and the
-recorded one stands. Before that the script prints an interim read, which shows the numbers and decides
-nothing.
+bet that kicked off by then is pending, and no game holds it (amendment 7, a draft, above: a quarantined or not yet
+completed game with the placeholder and a signal that could enter it; "FINAL withheld", and write_down refuses too).
+A Rule B decision with fewer than 20 bets that have a primary close is INCONCLUSIVE (amendment 4, reading 12). The
+first FINAL is written down, and every later run prints that record; if a fresh computation on the same horizon would
+now differ, it prints both and the recorded one stands. Before that the script prints an interim read, which shows the
+numbers and decides nothing.
 
 Rule B's 95% interval of mean CLV (amendment 5, reading 1) is the wider of two, over the n signals with a primary
 close and their plain mean m: the plain half-width t(0.975, n - 1) x sd / sqrt(n), and the grouped half-width
@@ -67,20 +72,21 @@ gives none; G days). The interval is m plus or minus the larger. With fewer than
 is no interval and the decision is INCONCLUSIVE. The scorer prints which of the two is the wider, and both; the
 record keeps the interval, both half-widths and G. Rule HT is graded on results and doesn't change.
 
-Who writes a decision down (amendment 4, section 3): a run on the live ledger (data/forward/ledger.csv),
-on the real clock, reading the default cfbfastR schedule whose current-season file was refreshed in the
-last 2 days, writes data/forward/decisions.csv. The scorer is live only when its data/forward folder,
-with links resolved, is inside its own project folder. A run with --now is a preview: it records
-nothing, and shows a recorded decision only if it was made by the preview's date. A run on another
-ledger kept in data/forward/ (the rewrite's backup copy) neither reads nor writes a record. A copy of
-this scorer in another folder (a worker's worktree) reads the live record but never writes it. A test
-ledger kept anywhere else writes decisions.csv beside itself (a --now run on it only with --test-record,
-which exists for tests). A lost live record is restored from its copy on the ledgers branch, never
-decided again: while the file is missing, every run on the live ledger reads the copy, a real run restores
-the file from it, and any other run prints the copy's decisions as recorded. A copy that is there but
-damaged stops recording, as a damaged file does. One run at a time writes, under a file lock, and a
-damaged record (a half-written line, a line without its 10 fields, numbers a later run can't print, a time
-with no time zone) stops recording without stopping the scores.
+Who writes a decision down (amendment 4, section 3): a run on the live ledger (data/forward/ledger.csv), on the real
+clock, reading the default cfbfastR schedule whose current-season file was refreshed in the last 2 days, and the
+default kickoff_verifications.csv whose bytes are its committed version's (git show HEAD:; an edit not yet
+committed, a file git can't show or one that can't be read records nothing; amendment 7, a draft), writes
+data/forward/decisions.csv. The verification file is read once: the bytes checked are the bytes parsed. The scorer
+is live only when its data/forward folder, with links resolved, is inside its own project folder. A run with --now
+is a preview: it records nothing, and shows a recorded decision only if it was made by the preview's date. A run on
+another ledger kept in data/forward/ (the rewrite's backup copy) neither reads nor writes a record. A copy of this
+scorer in another folder (a worker's worktree) reads the live record but never writes it. A test ledger kept
+anywhere else writes decisions.csv beside itself (a --now run on it only with --test-record, which exists for
+tests). A lost live record is restored from its copy on the ledgers branch, never decided again: while the file is
+missing, every run on the live ledger reads the copy, a real run restores the file from it, and any other run prints
+the copy's decisions as recorded. A copy that is there but damaged stops recording, as a damaged file does. One run
+at a time writes, under a file lock, and a damaged record (a half-written line, a line without its 10 fields,
+numbers a later run can't print, a time with no time zone) stops recording without stopping the scores.
 
 Amendment 5, reading 3: in a damaged record, every decision whose line can still be read on its own is
 printed as recorded, never as a fresh FINAL. A decision that a decisions.csv still in place is missing, while
@@ -223,24 +229,47 @@ else:
     NOT_RECORDED = ""
 
 
+VER_PATH = Path(args.verifications) if args.verifications else VERIFIED
+
+
+def read_once(p):
+    """Amendment 7 (draft): the verification file's bytes, read once (None when there is no file), and why they can't
+    be read ("" when they can). These same bytes are checked against the committed file and parsed; the path is never
+    opened again, so an edit made while the scorer runs decides nothing."""
+    try:
+        return p.read_bytes(), ""
+    except FileNotFoundError:
+        return None, ""
+    except OSError as e:                                                # a directory, no permission: fail closed
+        return None, f"{type(e).__name__}: {e.strerror or e}"
+
+
+VER_BYTES, VER_UNREAD = read_once(VER_PATH)
+
+
 def uncommitted_verifications():
-    """Amendment 7 (draft): only the committed kickoff_verifications.csv decides the live record. "" when the file's
-    bytes are those of `git show HEAD:` for it; otherwise why not, and the live run records nothing: an edit not yet
-    committed, a file missing on disk or from HEAD, or git that can't show it."""
+    """Amendment 7 (draft): only the committed kickoff_verifications.csv decides the live record. "" when the bytes read
+    from it (VER_BYTES, the bytes the scorer parses) are those of `git show HEAD:` for it; otherwise why not, and the
+    live run records nothing: an edit not yet committed, a file missing on disk or from HEAD, a file that can't be read,
+    or git that can't show it. A live run reads no other file (--verifications records nothing, above)."""
     try:
         r = subprocess.run(["git", "-C", str(ROOT), "show", f"HEAD:./{VERIFIED.name}"], capture_output=True, timeout=60)
     except (OSError, subprocess.SubprocessError) as e:
         return (f"git can't be run to check {VERIFIED.name} against its committed version ({type(e).__name__}), and "
                 "the live record is written only from the committed file")
-    disk = VERIFIED.read_bytes() if VERIFIED.exists() else None
     if r.returncode != 0:
         why = (r.stderr.decode(errors="replace").strip().splitlines() or ["no reason given"])[0]
         return (f"git can't show the committed {VERIFIED.name} ({why}), and the live record is written only from the "
                 "committed file")
-    if disk != r.stdout:
-        return (f"{VERIFIED.name} differs from its committed version (git show HEAD:./{VERIFIED.name}), and the "
-                "live record is written only from the committed file: commit the change, or restore the file, and run "
-                "the scorer again")
+    if VER_UNREAD:
+        return (f"{VERIFIED.name} can't be read ({VER_UNREAD}), and the live record is written only from the committed "
+                "file")
+    if VER_BYTES != r.stdout:
+        eol = VER_BYTES is not None and VER_BYTES.replace(b"\r\n", b"\n") == r.stdout.replace(b"\r\n", b"\n")
+        return (f"{VERIFIED.name} differs from its committed version (git show HEAD:./{VERIFIED.name})"
+                + ("; the file on disk differs from the committed version only in line endings" if eol else "")
+                + ", and the live record is written only from the committed file: commit the change, or restore the "
+                "file, and run the scorer again")
     return ""
 
 
@@ -560,17 +589,22 @@ if "completed" in S:        # the feed scores a game that was never played 0-0: 
 s = s.drop_duplicates("game_id")
 
 
-def read_verifications(p):
+def read_verifications(data, unread):
     """Amendment 7 (draft): the kickoffs the hub verified by hand, as (game id -> kickoff in UTC, "") or (none, why the
-    file can't be read). Each line is game_id, kickoff_utc (a UTC time ending in Z), source (where it was verified: not
-    the ledger, not the schedule), verified_on (a date) and note. A missing file holds no verification. A file that
-    can't be read, in whole or in any line, is used for nothing, so every completed game with the placeholder stays
-    quarantined: a bad line never becomes a kickoff."""
+    file can't be read), parsed from `data`, the bytes read once (read_once); `unread` is why they couldn't be read.
+    Each line is game_id, kickoff_utc (a UTC time ending in Z), source (where it was verified: not the ledger, not the
+    schedule), verified_on (a date, by UTC) and note. A missing file holds no verification. A file that can't be read,
+    in whole or in any line, is used for nothing, so every completed game with the placeholder stays quarantined: a bad
+    line never becomes a kickoff. A byte-order mark is named, not skipped: the bytes must be the committed ones."""
     none = pd.Series(dtype="datetime64[ns, UTC]")
-    if not p.exists():
+    if unread:
+        return none, unread
+    if data is None:
         return none, ""
     try:
-        with open(p, newline="", encoding="utf-8") as fh:
+        if data.startswith(b"\xef\xbb\xbf"):
+            raise ValueError("it starts with a byte-order mark (BOM, the bytes EF BB BF); save it as UTF-8 without one")
+        with io.StringIO(data.decode("utf-8"), newline="") as fh:
             lines = [(i, f) for i, f in enumerate(csv.reader(fh, strict=True), start=1) if f]
         if not lines or lines[0][1] != VERIFIED_COLS:
             raise ValueError(f"its first line is not the header {','.join(VERIFIED_COLS)}")
@@ -590,7 +624,7 @@ def read_verifications(p):
             if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", r.verified_on):
                 raise ValueError(f"game {r.game_id}: a verified_on that is not a date ({r.verified_on!r})")
             if pd.Timestamp(r.verified_on).date() > NOW.date():
-                raise ValueError(f"game {r.game_id}: verified_on {r.verified_on} is after this run's date "
+                raise ValueError(f"game {r.game_id}: verified_on {r.verified_on} is after this run's UTC date "
                                  f"({NOW:%Y-%m-%d})")
         twice = v.game_id[v.game_id.astype(int).duplicated()]
         if len(twice):
@@ -600,10 +634,9 @@ def read_verifications(p):
     return pd.Series(pd.to_datetime(v.kickoff_utc, utc=True).to_numpy(), index=v.game_id.astype(int).to_numpy()), ""
 
 
-ver_path = Path(args.verifications) if args.verifications else VERIFIED
-VER, ver_broken = read_verifications(ver_path)
+VER, ver_broken = read_verifications(VER_BYTES, VER_UNREAD)
 if ver_broken:
-    print(f"kickoff verifications: {ver_path.name} is unreadable ({ver_broken}); no verified kickoff is used, so every "
+    print(f"kickoff verifications: {VER_PATH.name} is unreadable ({ver_broken}); no verified kickoff is used, so every "
           "completed game whose schedule shows the placeholder is quarantined (amendment 7)")
 s["sched_listed"] = s.sched_kick                    # as the schedule lists it, the placeholder included
 s["sched_verified"] = s.sched_placeholder & s.game_id.isin(VER.index)
@@ -626,9 +659,10 @@ if args.list_excluded and len(PH_GAMES):
           .rename(columns={"sched_listed": "schedule_kickoff", "sched_played": "completed",
                            "sched_verified": "verified", "sched_kick": "verified_kickoff"}).to_string(index=False))
 unused = L[L.game_id.isin(VER.index) & ~L.sched_placeholder.eq(True)].drop_duplicates("game_id")
-if len(unused):
-    print(f"kickoff verifications not used, the schedule doesn't show the placeholder for the game (amendment 7): "
-          f"{len(unused)} ({', '.join(unused.game_id.astype(str))})")
+for what, g in (("the schedule doesn't show the placeholder for the game", unused[unused.game_id.isin(s.game_id)]),
+                ("the game is not in the schedule", unused[~unused.game_id.isin(s.game_id)])):
+    if len(g):
+        print(f"kickoff verifications not used, {what} (amendment 7): {len(g)} ({', '.join(g.game_id.astype(str))})")
 stray = sorted(set(VER.index) - set(L.game_id))
 if stray:
     print(f"kickoff verifications not used, the game is not in the ledger (amendment 7): {len(stray)} "
@@ -655,7 +689,8 @@ if args.list_excluded and (why != "").any():
     print(L.assign(excluded=why)[why != ""][["snapshot_utc", "game_id", "rules_version", "rule_b", "excluded"]]
           .to_string(index=False))
 # Amendment 7 (draft): a quarantined game holds back the FINAL decision of each rule it has a signal for (a row it
-# would grade or enter from), until its kickoff is verified. A rule it has no signal for can't change through it.
+# would grade or enter from), until its kickoff is verified; for Rule B, only if it could enter the decision (below,
+# once the horizon is known). A rule it has no signal for can't change through it.
 Q = L[why == QUARANTINED]
 
 
@@ -678,10 +713,21 @@ waiting_game = (np.isin(why, ["", "logged at or after kickoff"]) & L.sched_place
                 & ~L.sched_played.eq(True).to_numpy() & ~L.sched_verified.eq(True).to_numpy())
 
 
-def open_games(rows):
-    g = rows.groupby("game_id").agg(first=("start_utc", "min"), last=("start_utc", "max"), ph=("sched_listed", "first"))
-    g = g[NOW < pd.concat([g["last"], g.ph], axis=1).max(axis=1) + NO_RESULT]
+def kickoffs(rows):
+    """Per game: the earliest and latest kickoff its rows carry, and its placeholder (as the schedule lists it)."""
+    return rows.groupby("game_id").agg(first=("start_utc", "min"), last=("start_utc", "max"),
+                                       ph=("sched_listed", "first"))
+
+
+def earliest(g):
+    """Per game: the earlier of the earliest kickoff its rows carry and its placeholder."""
     return pd.concat([g["first"], g.ph], axis=1).min(axis=1)
+
+
+def open_games(rows):
+    g = kickoffs(rows)
+    g = g[NOW < pd.concat([g["last"], g.ph], axis=1).max(axis=1) + NO_RESULT]
+    return earliest(g)
 
 
 OPEN = {rule: open_games(signals(L[waiting_game], rule)) for rule in ("Rule B", "Rule HT")}
@@ -742,8 +788,8 @@ def interim(name, when, tests):
 
 
 def withheld(rule):
-    """Amendment 7 (draft): why no FINAL decision of this rule is printed or recorded while a game it has a signal for
-    is quarantined, or not yet completed with the placeholder in the schedule and no verified kickoff."""
+    """Amendment 7 (draft): why no FINAL decision of this rule is printed or recorded while a game holds it: one with a
+    signal that could enter it, quarantined, or not yet completed with the placeholder and no verified kickoff."""
     parts = []
     for ids, what in (([g for g in HELD[rule] if g not in OPEN[rule].index], "completed game{s} await{v} kickoff "
                        "verification ({ids}): the schedule shows the placeholder and no verified kickoff is recorded "
@@ -879,13 +925,13 @@ def write_down(did, rule, horizon, horizon_utc, verdict, nums, rows):
     """Append a decision the first time it is FINAL, with the positions of the ledger rows that entered it (1 is
     the first row after the header: the entry rows, and for Rule B the later quotes used as closes) and their
     fingerprint. Under the file lock the record is read again first, so two runs at once write one row. A run
-    that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/, an unreadable
-    record) says why instead."""
+    that may not record (a --now preview, a stale schedule, a copy of the ledger in data/forward/, a verification
+    file that isn't the committed one, an unreadable record, a game holding the decision) says why instead."""
     JSON["written"][did] = False
     if NOT_RECORDED:
         print(f"    not recorded: {NOT_RECORDED}.")
         return
-    if HELD[rule]:          # amendment 7 (draft): never while a game it has a signal for is quarantined
+    if HELD[rule]:          # amendment 7 (draft): never while a game holds it (HELD: a signal that could enter it)
         print(f"    not recorded: {withheld(rule)}.")
         return
     positions = sorted({int(r) + 1 for r in rows})
@@ -1124,11 +1170,15 @@ def entered(dec):
 
 
 rec = recorded(RB_ID)
-# Amendment 7 (draft): a game not yet completed holds Rule B's decision only if it could enter it: with fewer than 40
-# settled signals, any; after that, one whose placeholder or a signal row's kickoff is on or before the horizon
+# Amendment 7 (draft): a game holds Rule B's decision only if it could enter it, whether it is quarantined or not yet
+# completed: with fewer than 40 settled signals, any game with a signal; after that, one where the earlier of its
+# placeholder and the kickoffs its signal rows carry is on or before the horizon. (Rule HT is decided once, after the
+# title game, so every such game with a Rule HT signal holds it.)
 RB_H = max(done.sort_values("start_utc").start_utc.iloc[ENOUGH - 1], REG_END_2026) if len(done) >= ENOUGH else None
-OPEN["Rule B"] = OPEN["Rule B"][OPEN["Rule B"] <= RB_H] if RB_H is not None else OPEN["Rule B"]
-HELD["Rule B"] = sorted(set(signals(Q, "Rule B").game_id.unique().tolist()) | set(OPEN["Rule B"].index.tolist()))
+Q_RB = earliest(kickoffs(signals(Q, "Rule B")))
+OPEN["Rule B"], Q_RB = ((OPEN["Rule B"][OPEN["Rule B"] <= RB_H], Q_RB[Q_RB <= RB_H]) if RB_H is not None
+                        else (OPEN["Rule B"], Q_RB))
+HELD["Rule B"] = sorted(set(Q_RB.index.tolist()) | set(OPEN["Rule B"].index.tolist()))
 JSON["quarantine"]["final_withheld"]["Rule B"] = HELD["Rule B"]
 JSON["quarantine"]["not_yet_completed"]["Rule B"] = sorted(OPEN["Rule B"].index.tolist())
 if not len(done):       # amendment 7 (draft): a quarantine prints the interim read even with nothing settled
