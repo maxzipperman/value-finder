@@ -157,11 +157,29 @@ def test_unmatched_players(fx):
 def test_every_exclusion_counted_by_reason(fx):
     *_, df, _ = fx
     close = Counter(df[df.role == L.CLOSE].status)
-    assert close == {"": 14, L.GAME: 3, L.MOVED: 2, L.NO_LINE: 1, L.MISSING: 1, L.TIE: 1, L.UNMATCHED: 2,
-                     L.VOID: 1, L.PUSH: 1}
+    assert close == {"": 14, L.GAME: 3, L.MOVED: 2, L.NO_POINT: 1, L.NO_LINE: 1, L.MISSING: 1, L.TIE: 1,
+                     L.UNMATCHED: 2, L.VOID: 1, L.PUSH: 1}
     t = grade.exclusions(df)
     assert t.lines.sum() == (df.status != "").sum()                    # each excluded line counted once
     assert set(t.reason.astype(str)) <= set(L.REASONS)
+
+
+def test_a_player_game_with_no_point_is_counted_not_dropped(fx, capsys, tmp_path):
+    """Review M2 (log, don't drop): "Pointless Guy" is quoted at two books with no point. He is not a player-game
+    (no line anywhere), so the coverage doesn't count him, but he is a row of the lines table, excluded under his
+    own reason at both snapshots, and listed by --list-excluded and in lines.csv."""
+    f, calls, loaded, paths, df, _ = fx
+    pg = df[df.description == "Pointless Guy"]
+    assert len(pg) == 2 and set(pg.status) == {L.NO_POINT} and set(pg.role) == {L.CLOSE, L.T24}
+    assert L.coverage(loaded.rows) == {L.PRIMARY[0]: (2, 13), L.PRIMARY[1]: (1, 10)}
+    t = grade.exclusions(df)
+    assert t[t.reason.astype(str) == L.NO_POINT].lines.sum() == 2
+    out = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path)
+    pg_run.grade_command(f.cfg, f.cache, out, book_recorded=f.book, list_excluded=True, now=fixture.NOW)
+    listing = capsys.readouterr().out.split("## Every excluded line")[1]
+    assert listing.count("Pointless Guy") == 2
+    csv = pd.read_csv(tmp_path / "lines.csv")
+    assert (csv[csv.description == "Pointless Guy"].excluded_for == L.NO_POINT).all()
 
 
 def test_kickoff_moved_before_the_close_only(fx):
@@ -342,6 +360,23 @@ def test_empty_cache_prints_nothing_to_grade_yet(tmp_path, capsys):
     assert not (tmp_path / "out").exists()
 
 
+def test_a_partial_f3a_is_flagged_next_to_the_book(tmp_path, monkeypatch, capsys):
+    """Review m3: with one 2025 close answer missing, step 1 flags F3a as partial on its own, next to the book (the
+    book is picked on F3a's coverage), apart from 2023-24's calls."""
+    f = fixture.build(tmp_path)
+    games = L.schedule(f.cfg, f.cache)
+    close = next(c for c in L.f3_calls(f.cfg, games, now=fixture.NOW)
+                 if c.event_id == "f4" and L.role_of(c, games["f4"]["commence_time"]) == L.CLOSE)
+    f.cache.lookup(close.cache_sport, close.source, close.key).unlink()
+    _no_outcome_reads(monkeypatch)
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path / "o")
+    assert pg_run.grade_command(f.cfg, RawCache(tmp_path / "raw"), paths, now=fixture.NOW) == 0
+    out = capsys.readouterr().out
+    book = out[out.index("## The book"):out.index("Book: ")]
+    assert "WARNING: F3a is partial: 1 of its planned calls are not cached (close: 1)" in book
+    assert "F3a (2025) is partial: 1 of its planned calls are not cached" in out
+
+
 def test_the_cli_on_this_checkout(monkeypatch, tmp_path, capsys):
     """`markets props-grade` with an empty data folder (the cloud, or the Mac before F3a): exit 0."""
     from markets import cli
@@ -351,17 +386,18 @@ def test_the_cli_on_this_checkout(monkeypatch, tmp_path, capsys):
 
 
 def _no_outcome_reads(monkeypatch):
+    """Step 1 may read the roster (names only, review finding m7); never player_week, the schedule or the join."""
     def boom(*a, **k):
-        raise AssertionError("an outcome, schedule or roster table was read before the book note")
+        raise AssertionError("an outcome or schedule table was read, or the join ran, before the book note")
     for mod, name in ((outcomes, "player_week"), (outcomes, "nfl_schedule"), (outcomes, "match_events"),
-                      (roster, "load"), (grade, "assign")):
+                      (grade, "assign")):
         monkeypatch.setattr(mod, name, boom)
 
 
 def test_without_the_book_note_nothing_is_joined(fx, monkeypatch, capsys, tmp_path):
     """2.4: the book is recorded in section 8 before any F3a row is joined to an outcome. Without --book-recorded
-    the command prints the coverage and the book and stops (exit 0); with the wrong book, or with no note naming
-    it, it refuses (exit 1). No outcome, schedule or roster table is read in any of these."""
+    the command prints the coverage and the book and stops (exit 0); with the wrong book, or with no dated entry
+    recording it, it refuses (exit 1). No outcome or schedule table is read in any of these."""
     f, *_ = fx
     _no_outcome_reads(monkeypatch)
     paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path)
@@ -373,22 +409,79 @@ def test_without_the_book_note_nothing_is_joined(fx, monkeypatch, capsys, tmp_pa
     assert run("pinnacle") == 1 and "REFUSED: --book-recorded pinnacle" in capsys.readouterr().out
     unnoted = pg_run.Paths(f.roster, f.games, f.player_week, f.status, registration.PREREG, check_git=False,
                            out=tmp_path)
-    assert run("draftkings", unnoted) == 1 and "has no dated note naming DraftKings" in capsys.readouterr().out
+    assert run("draftkings", unnoted) == 1
+    assert "does not record DraftKings in a dated entry" in capsys.readouterr().out
     assert not list(tmp_path.iterdir())
 
 
-def test_an_uncommitted_roster_is_refused(fx, monkeypatch, capsys, tmp_path):
+def test_step_one_lists_the_names_the_roster_does_not_match(fx, monkeypatch, capsys, tmp_path):
+    """Review m7: before any join, step 1 prints the prop names that match no player, or more than one, on either
+    team that season (names and counts only), so the roster can be fixed before the first join. It reads the roster
+    and the team table, never player_week or the schedule."""
+    f, *_ = fx
+    _no_outcome_reads(monkeypatch)
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path)
+    assert pg_run.grade_command(f.cfg, f.cache, paths, now=fixture.NOW) == 0
+    out = capsys.readouterr().out
+    section = out[out.index("## Names against the roster"):out.index("Stopped before any outcome is read")]
+    assert re.search(r"Nobody Known\s+no player of that name on either team\s+1", section)
+    assert re.search(r"Chris Smith\s+more than one player\s+1", section)
+    assert "Travis Kelce" not in section and "D.J. Moore" not in section and "5 names in 5 games" in section
+
+
+def test_an_uncommitted_registration_or_roster_is_refused(fx, monkeypatch, capsys, tmp_path):
+    """Review m1 and m8: the registration (with its book note) and the roster must both be committed unchanged at
+    HEAD; the refusal says which, in plain words."""
     f, *_ = fx
     _no_outcome_reads(monkeypatch)
     paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=True, out=tmp_path)
-    assert pg_run.grade_command(f.cfg, f.cache, paths, book_recorded="draftkings", now=fixture.NOW) == 1
-    assert "REFUSED: the roster" in capsys.readouterr().out
-    assert pg_run.roster_committed(Path(bulk.CONFIG))[0]               # a committed, unchanged file passes
+    run = lambda: pg_run.grade_command(f.cfg, f.cache, paths, book_recorded="draftkings", now=fixture.NOW)  # noqa
+    assert run() == 1
+    out = capsys.readouterr().out
+    assert "REFUSED: the registration" in out and "not committed" in out
+    real = pg_run.committed
+    monkeypatch.setattr(pg_run, "committed", lambda p: (True, "committed in x") if p == f.prereg else real(p))
+    assert run() == 1 and "REFUSED: the roster" in capsys.readouterr().out
+    monkeypatch.setattr(pg_run, "committed",
+                        lambda p: (True, "committed in x") if p == f.prereg else (False, "has changes not committed"))
+    assert run() == 1
+    out = capsys.readouterr().out
+    assert "REFUSED: the roster" in out and "has changes not committed" in out and "is has" not in out
+    assert real(Path(bulk.CONFIG))[0] and real(registration.PREREG)[0]      # committed, unchanged files pass
 
 
-def test_section8_reader():
-    assert registration.book_noted(registration.PREREG) == set()      # the registration as committed: placeholder
+def _prereg_with(tmp_path, section8_text: str, before_8: str = "") -> Path:
+    text = registration.PREREG.read_text()
+    if before_8:
+        text = text.replace("## 8. Dated notes", before_8 + "\n\n## 8. Dated notes")
+    p = tmp_path / f"P{len(list(tmp_path.iterdir()))}.md"
+    p.write_text(text.rstrip("\n") + "\n\n" + section8_text + "\n")
+    return p
+
+
+def test_section8_reader(tmp_path):
+    """Review m1: the note must be a dated entry in section 8 that says which book; a mention of the other book's
+    coverage doesn't name it, an HTML comment doesn't count, an undated or misplaced note doesn't count, and dated
+    entries naming both books name none."""
+    assert registration.noted_book(registration.PREREG) == (None, "it holds only the placeholder")
     assert registration.section8(registration.PREREG) == ""
+    good = ("- **2026-10-01 (Pacific):** the book is DraftKings (Pinnacle lists 44 of 55 receiving player-games, "
+            "80.0%, and 20 of 35 rushing, 57.1%, at F3a's close), by the rule of 2.4.")
+    assert registration.noted_book(_prereg_with(tmp_path, good)) == ("draftkings", "")
+    assert registration.noted_book(_prereg_with(tmp_path, "- 2026-10-02: the book is **Pinnacle** (90% and 85%)."))[0] \
+        == "pinnacle"
+    undated = "- **October 1:** the book is DraftKings (Pinnacle lists 44 of 55)."
+    assert registration.noted_book(_prereg_with(tmp_path, undated))[0] is None
+    assert registration.noted_book(_prereg_with(tmp_path, "<!-- 2026-10-01: the book is Pinnacle -->"))[0] is None
+    assert registration.noted_book(_prereg_with(tmp_path, "- 2026-10-01: Pinnacle lists 44 of 55."))[0] is None
+    both = good + "\n- **2026-10-02:** the book is Pinnacle."
+    assert registration.noted_book(_prereg_with(tmp_path, both)) == (None, "its dated entries name both books")
+    elsewhere = _prereg_with(tmp_path, "", before_8="- 2026-10-01: the book is DraftKings.")
+    assert registration.noted_book(elsewhere)[0] is None                      # outside section 8
+    # the reviewer's case 5: a DraftKings note that mentions Pinnacle's figures never lets Pinnacle join
+    stop = pg_run.refusal("pinnacle", "pinnacle", registration.noted_book(_prereg_with(tmp_path, good)),
+                          pg_run.Paths(check_git=False))
+    assert stop and "does not record Pinnacle" in stop[0] and "it records DraftKings" in stop[0]
 
 
 # ---------------------------------------------------------------- the count and the bar
@@ -396,11 +489,15 @@ def test_bar_from_status_and_the_header(tmp_path):
     status = tmp_path / "STATUS.md"
     status.write_text("count went (0.05 / 200) then **271** (0.05 / 271), now p < 0.000170 (0.05 / 294).\n")
     prereg = tmp_path / "P.md"
-    unfilled = ("- **Count and bar at registration:** *(the hub fills this in: ...)* As of writing, for "
-                "illustration: 274 ... = 288, p < 0.05 / 288 = 0.000174\n")
+    unfilled = ("- **Count and bar at registration:** *(the hub fills this in: the bar is p < 0.05 / that count.)* "
+                "As of writing, for illustration: 274 ... = 288, p < 0.05 / 288 = 0.000174; other registrations in "
+                "flight add theirs.\n")
     prereg.write_text(unfilled)
     b = registration.bar(status, prereg)
     assert (b.status_count, b.header, b.header_count, b.count) == (294, "unfilled", None, 294)
+    prereg.write_text(unfilled.replace("; other registrations in flight add theirs.", ""))   # illustration cut short
+    b = registration.bar(status, prereg)
+    assert (b.header, b.header_count, b.count) == ("filled", 288, 294)          # read, and never loosens the bar
     assert b.alpha == pytest.approx(0.05 / 294)
     prereg.write_text("- **Count and bar at registration:** 300 (294 in STATUS.md + 6 run), p < 0.05 / 300\n")
     assert registration.bar(status, prereg).count == 300                          # the larger count
@@ -410,6 +507,25 @@ def test_bar_from_status_and_the_header(tmp_path):
     prereg.write_text("- **Count and bar at registration:** two hundred\n")
     assert registration.bar(status, prereg).header == "unreadable"
     assert registration.bar(tmp_path / "none.md", tmp_path / "none.md").count is None
+
+
+def test_a_filled_count_is_read_even_with_the_placeholder_left_on_the_line(tmp_path):
+    """Review m5: if the hub appends the count instead of replacing the placeholder, it is still read; the
+    placeholder's own "0.05 / that count" and the illustration's 288 are not. Two different counts: ambiguous, the
+    larger is set against STATUS.md's."""
+    status = tmp_path / "STATUS.md"
+    status.write_text("(0.05 / 294)\n")
+    line = next(ln for ln in registration.PREREG.read_text().splitlines() if registration.FIELD in ln)
+    prereg = tmp_path / "P.md"
+    prereg.write_text(line + " **Filled October 1: 310, p < 0.05 / 310 = 0.000161.**\n")
+    b = registration.bar(status, prereg)
+    assert (b.header, b.header_count, b.count) == ("filled", 310, 310)
+    prereg.write_text(line + " Filled: 300 (0.05 / 300), or 320 with PR 99 (0.05 / 320).\n")
+    b = registration.bar(status, prereg)
+    assert (b.header, b.header_counts, b.count) == ("ambiguous", (300, 320), 320)
+    assert "not unambiguously" in b.lines()[1]
+    prereg.write_text(line + "\n")
+    assert registration.bar(status, prereg).header == "unfilled"
 
 
 def test_bar_on_this_checkout():
@@ -447,6 +563,38 @@ def test_decision_act_drop_otherwise():
     assert d["verdict"] == "Otherwise" and not d["condition_1"]
     assert grade.decision(strong, None)["verdict"] == "Otherwise"        # no bar read: condition 1 can't be met
     assert grade.decision(strong[strong.season != 2023], 0.05 / 294)["read"] is False
+
+
+def test_the_verdict_is_withheld_while_any_2023_25_call_is_uncached():
+    """Review M1: 2.9 is "read once, on 2023-25, after F3b is in and joined". With every season graded but calls of
+    2024 still uncached, the verdict is withheld with the counts and nothing is decided. Uncached sealed (2026)
+    calls never hold it back (they are never read)."""
+    strong = _graded({(s, m): (1000, 650) for s in grade.SEASONS for m in L.PRIMARY})
+    d = grade.decision(strong, 0.05 / 294, {"2024": 3, "2023": 0})
+    assert d["read"] is False and d["withheld"] and "3 planned 2023-25 calls are not cached (2024: 3)" in d["why"]
+    text = "\n".join(pg_run.decision_lines(d, registration.Bar(294, "unfilled", None, 294)))
+    assert text.startswith("Verdict withheld:") and "nothing is decided" in text and "Verdict: Act" not in text
+    assert grade.decision(strong, 0.05 / 294, {"2026": 5})["verdict"] == "Act"
+    assert grade.decision(strong, 0.05 / 294, {})["verdict"] == "Act"
+
+
+def test_one_season_carries_it():
+    """Review m9: pooled excess above zero, but without 2025 what remains is at or below zero: Drop."""
+    rec, rush = L.PRIMARY
+    cells = {(2025, m): (300, 210) for m in L.PRIMARY}
+    cells |= {(s, m): (300, 140) for s in (2023, 2024) for m in L.PRIMARY}
+    d = grade.decision(_graded(cells), 0.05 / 294)
+    assert d["pooled"]["excess"] > 0 and d["without"]["without 2025"] <= 0
+    assert d["carried"] == ["without 2025"] and d["verdict"] == "Drop"
+
+
+def test_a_market_with_no_graded_line_carries_nothing_so_drop():
+    """Review m2: receiving strong in every season and no rushing line at all. "Without receiving" leaves nothing;
+    the stricter reading counts that as carried, so the verdict is Drop, not Otherwise."""
+    rec = L.PRIMARY[0]
+    d = grade.decision(_graded({(s, rec): (1000, 650) for s in grade.SEASONS}), 0.05 / 294)
+    assert math.isnan(d["without"][f"without {rec}"]) and f"without {rec}" in d["carried"]
+    assert d["verdict"] == "Drop"
 
 
 # ---------------------------------------------------------------- 2.7: the roster
@@ -540,6 +688,21 @@ def test_event_matching_uses_team_names_and_the_date(fx):
     m, why, missed = outcomes.match_events(ev, sched)
     assert m.game_id.tolist() == ["2025_01_BAL_KC"] and m.kick_nflverse.iloc[0] == pd.Timestamp("2025-09-07T17:00Z")
     assert missed == {"x": "no nflverse game", "y": "team name unknown"}
+
+
+def test_event_matching_is_one_to_one(fx):
+    """Review m4: two Odds API events a day apart that both match the same nflverse game would grade it twice; both
+    are left unmatched and counted."""
+    f, *_ = fx
+    sched = outcomes.nfl_schedule(f.games)
+    ev = pd.DataFrame([{"event_id": e, "kick": pd.Timestamp(k), "home_team": "Kansas City Chiefs",
+                        "away_team": "Baltimore Ravens"} for e, k in (("a", "2025-09-07T17:00Z"),
+                                                                      ("b", "2025-09-08T17:00Z"))]
+                      + [{"event_id": "c", "kick": pd.Timestamp("2025-09-07T20:25Z"),
+                          "home_team": "Philadelphia Eagles", "away_team": "Dallas Cowboys"}])
+    m, why, missed = outcomes.match_events(ev, sched)
+    assert m.event_id.tolist() == ["c"]
+    assert missed == {"a": outcomes.SHARED, "b": outcomes.SHARED} and why == {outcomes.SHARED: 2}
 
 
 def test_no_order_code_in_the_grader():

@@ -31,6 +31,7 @@ GAME_COLS = ["game_id", "season", "game_type", "gameday", "gametime", "home_team
 STAT = {"player_reception_yds": "receiving_yards", "player_rush_yds": "rushing_yards",
         "player_pass_yds": "passing_yards", "player_receptions": "receptions"}
 PW_COLS = ["season", "season_type", "game_id", "player_id", *STAT.values()]
+SHARED = "nflverse game matched by more than one event"
 
 
 def nfl_schedule(path: Path = GAMES) -> pd.DataFrame:
@@ -51,16 +52,19 @@ def player_week(path: Path = PLAYER_WEEK) -> pd.DataFrame:
     return w[w.season.isin(SEASONS)].reset_index(drop=True)
 
 
+def team_code(name) -> str | None:
+    """An Odds API team name -> its nflverse code (config/teams/nfl.csv, then the price engine's extra names)."""
+    return load_teams("nfl").from_name(name) or EXTRA_NFL.get(norm(name))
+
+
 def match_events(events: pd.DataFrame, games: pd.DataFrame) -> tuple[pd.DataFrame, Counter, dict]:
     """events: event_id, kick (the schedule's), home_team, away_team (Odds API names). Each is matched to the one
     nflverse game with the same two teams whose Eastern date is within a day of the kickoff (as the price engine
-    matches NFL games). Returns event_id, game_id, season, home, away, kick_nflverse for the matched events, the
-    unmatched count by reason, and event_id -> reason for the unmatched ones."""
-    teams = load_teams("nfl")
-
-    def code(name):
-        return teams.from_name(name) or EXTRA_NFL.get(norm(name))
-
+    matches NFL games). The match is one to one: an event matching more than one game, and every event matching a
+    game that another event also matches, is left unmatched and counted. Returns event_id, game_id, season, home,
+    away, kick_nflverse for the matched events, the unmatched count by reason, and event_id -> reason for the
+    unmatched ones."""
+    code = team_code
     idx: dict[frozenset, list] = {}
     for r in games.itertuples(index=False):
         idx.setdefault(frozenset((r.home_team, r.away_team)), []).append(r)
@@ -80,5 +84,11 @@ def match_events(events: pd.DataFrame, games: pd.DataFrame) -> tuple[pd.DataFram
                       else "no nflverse kickoff time")
         why[reason] += 1
         missed[e.event_id] = reason
+    # one to one: an nflverse game claimed by more than one event would be graded twice; every such event is out
+    claims = Counter(r[1] for r in out)
+    for r in [r for r in out if claims[r[1]] > 1]:
+        why[SHARED] += 1
+        missed[r[0]] = SHARED
+    out = [r for r in out if claims[r[1]] == 1]
     cols = ["event_id", "game_id", "season", "home", "away", "kick_nflverse"]
     return pd.DataFrame(out, columns=cols), why, missed

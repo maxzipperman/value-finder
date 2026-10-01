@@ -14,6 +14,8 @@ point at least 5 minutes before it; or T-24h, the grid point at or before 24 hou
 
 Player-games (2.4). A player-game is (event id, the `description` as returned), in one market at one snapshot,
 present when any `us10` book lists a line for it under the market key itself (F3 asks for no `_alternate` key).
+A name whose rows carry no point at any book is not a player-game under that definition, so it is not in the
+coverage; it is still kept as a row and excluded under its own reason, NO_POINT (log, don't drop).
 
 The book (2.4). In each primary market, at F3a's close snapshots (the 2025 season), the player-games with a line
 at Pinnacle over the player-games with a line at any us10 book. Pinnacle only if it reaches 80% in EACH primary
@@ -54,13 +56,14 @@ TIE_TOL = 1e-9
 # exclusion reasons (2.7), in the order a player-game is given the first that applies
 GAME = "game not matched to nflverse's schedule"
 MOVED = "kickoff moved before the snapshot"
+NO_POINT = "no line (no point) at any us10 book"
 NO_LINE = "no line at the chosen book"
 MISSING = "missing price"
 TIE = "two equally close main lines"
 UNMATCHED = "unmatched player"
 VOID = "void (player didn't play)"
 PUSH = "push"
-REASONS = (GAME, MOVED, NO_LINE, MISSING, TIE, UNMATCHED, VOID, PUSH)
+REASONS = (GAME, MOVED, NO_POINT, NO_LINE, MISSING, TIE, UNMATCHED, VOID, PUSH)
 
 ROW_COLS = ["event_id", "label", "role", "kick", "commence", "snap", "requested", "home_team", "away_team", "book",
             "market", "description", "side", "point", "price"]
@@ -220,16 +223,15 @@ LINE_COLS = ["event_id", "label", "role", "kick", "commence", "snap", "requested
 
 
 def player_lines(rows: pd.DataFrame, book: str) -> pd.DataFrame:
-    """One row per player-game, market and snapshot that any us10 book lists: the chosen book's main line, or the
-    reason it has none (`status`: "" for a main line, else NO_LINE, MISSING or TIE)."""
+    """One row per player name, market and snapshot in the rows: the chosen book's main line, or the reason it has
+    none (`status`: "" for a main line, else NO_POINT, NO_LINE, MISSING or TIE)."""
     if rows.empty:
         return pd.DataFrame(columns=LINE_COLS)
     groups: dict[tuple, list] = {}
     cols = [rows[c].tolist() for c in ("event_id", "role", "market", "description", "book", "side", "point", "price")]
     for i, (eid, role, market, desc, b, side, point, price) in enumerate(zip(*cols)):
         groups.setdefault((eid, role, market, desc), []).append((i, b, side, point, price))
-    keys = [k for k in sorted(groups, key=lambda k: tuple(map(str, k)))   # no book lists a line: not a player-game
-            if not all(point is None or pd.isna(point) for *_, point, _ in groups[k])]
+    keys = sorted(groups, key=lambda k: tuple(map(str, k)))
     meta = ["label", "kick", "commence", "snap", "requested", "home_team", "away_team"]   # the same within a call
     firsts = rows.iloc[[groups[k][0][0] for k in keys]][meta].to_dict("records")
     out = []
@@ -237,6 +239,9 @@ def player_lines(rows: pd.DataFrame, book: str) -> pd.DataFrame:
         g = groups[(eid, role, market, desc)]
         base = {"event_id": eid, "role": role, "market": market, "description": desc, "book": book, **first}
         at = [(side, point, price) for _, b, side, point, price in g if b == book]
-        got = NO_LINE if not at else main_line(at)
+        if all(point is None or pd.isna(point) for *_, point, _ in g):
+            got = NO_POINT                                 # no book lists a line: counted, never dropped
+        else:
+            got = NO_LINE if not at else main_line(at)
         out.append({**base, "status": got} if isinstance(got, str) else {**base, "status": "", **got})
     return pd.DataFrame(out).reindex(columns=LINE_COLS)

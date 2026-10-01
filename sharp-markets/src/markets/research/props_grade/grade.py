@@ -18,6 +18,7 @@ is descriptive, as registered.
 """
 from __future__ import annotations
 
+import math
 from collections import Counter
 
 import numpy as np
@@ -171,13 +172,27 @@ def gate(graded: pd.DataFrame, ro: pd.DataFrame) -> dict:
             "markets": {m: excess_test(g[g.market == m]) for m in L.PRIMARY}}
 
 
-def decision(graded: pd.DataFrame, alpha: float | None) -> dict:
-    """Section 2.9, read only when 2023, 2024 and 2025 all have graded primary lines at the close."""
+def decision(graded: pd.DataFrame, alpha: float | None, uncached: dict | None = None) -> dict:
+    """Section 2.9: "Read once, on 2023-25, after F3b is in and joined." So it is read only when 2023, 2024 and 2025
+    all have graded primary lines at the close AND no unsealed 2023-25 F3 call is uncached (`uncached`: season label
+    -> planned calls not in the cache). Until then the verdict is withheld and nothing is decided; the tables are
+    still reported.
+
+    "Carries it" (Drop): with one market or one season removed, the pooled excess of what remains is at or below
+    zero. When nothing remains (a primary market with no graded line at all), the stricter reading applies: the
+    other market carries it, so Drop."""
     g = graded[(graded.role == L.CLOSE) & (graded.status == "") & graded.market.isin(L.PRIMARY)]
     have = sorted(int(s) for s in g.season.dropna().unique())
     if not set(SEASONS) <= set(have):
         return {"read": False, "why": f"section 2.9 is read only on 2023-25; graded seasons: "
                                       f"{', '.join(map(str, have)) or 'none'}"}
+    missing = {s: int(n) for s, n in sorted((uncached or {}).items()) if s in {str(x) for x in SEASONS} and n}
+    if missing:
+        return {"read": False, "withheld": True,
+                "why": f"F3 is not all in: {sum(missing.values()):,} planned 2023-25 calls are not cached ("
+                       + ", ".join(f"{s}: {n:,}" for s, n in missing.items()) + "). Section 2.9 is read once, "
+                       "\"after F3b is in and joined\", so the verdict is withheld and nothing is decided; the tables "
+                       "above are reported as they stand"}
     pooled = excess_test(g)
     cond1 = bool(alpha is not None and pooled["p"] < alpha)
     checks = {}
@@ -190,10 +205,11 @@ def decision(graded: pd.DataFrame, alpha: float | None) -> dict:
     without = {f"without {m}": excess_test(g[g.market != m])["excess"] for m in L.PRIMARY}
     without |= {f"without {s}": excess_test(g[g.season != s])["excess"] for s in SEASONS}
     act = cond1 and all(ok for *_, ok in checks.values())
-    drop = pooled["excess"] <= 0 or any(v <= 0 for v in without.values())
+    carried = [k for k, v in without.items() if math.isnan(v) or v <= 0]       # nothing left: carried (stricter)
+    drop = pooled["excess"] <= 0 or bool(carried)
     verdict = "Act" if act else "Drop" if drop else "Otherwise"
     return {"read": True, "pooled": pooled, "condition_1": cond1, "checks": checks, "without": without,
-            "act": act, "drop": bool(drop), "verdict": verdict}
+            "carried": carried, "act": act, "drop": bool(drop), "verdict": verdict}
 
 
 def summary_counts(df: pd.DataFrame) -> Counter:

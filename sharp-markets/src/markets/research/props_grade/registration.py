@@ -5,15 +5,20 @@ bar at registration" is the bar the Act condition uses; the brief for this grade
 from STATUS.md at run time and printed". Both are read and printed:
   * STATUS.md: the running count is the largest N in any "0.05 / N" there (the count only rises, and each step of
     it is written as "p < ... (0.05 / N)").
-  * the header field: unfilled while it still holds the "(the hub fills this in" placeholder (its "for
-    illustration" figures are then ignored); when filled, the largest N in a "0.05 / N" on that line.
+  * the header field: the italic placeholder "(the hub fills this in ...)" and the "As of writing, for
+    illustration: ... add theirs." sentence are set aside, and every "0.05 / N" left on the line is read, whether
+    or not the placeholder is still there. None left: unfilled (placeholder present) or unreadable. One N: filled.
+    More than one: ambiguous, and the largest is taken.
 The stricter applies: the larger count, so the smaller bar (p < 0.05 / count). The count adds nothing for this
 grader: it implements the one variant already in the running count.
 
 The book note (section 8). "The resulting book, with the two coverage figures, is recorded after the F3a pull, and
-before any F3a row is joined to an outcome, in a dated note (section 8)." `book_noted` reads section 8 and says
-whether a note other than the placeholder is there and which books it names. `markets props-grade` joins nothing to
-an outcome unless the hub passes --book-recorded with the book the rule picks AND section 8 names that book.
+before any F3a row is joined to an outcome, in a dated note (section 8)." `noted_book` reads section 8, HTML
+comments and the italic placeholder set aside, and returns the book of its dated entries: an entry (a paragraph or
+list item) that carries a date (YYYY-MM-DD) and says "the book is Pinnacle" or "the book is DraftKings". Other
+mentions of a book's name (the coverage figures, "Pinnacle lists ...") don't count. Dated entries naming both books
+name none. `markets props-grade` joins nothing to an outcome unless the hub passes --book-recorded with the book the
+rule picks, section 8 records that same book, and the registration file is committed unchanged.
 """
 from __future__ import annotations
 
@@ -28,6 +33,10 @@ PREREG_REL = "nfl-weather/PREREGISTRATION_PROPS.md"
 _BAR = re.compile(r"0\.05\s*/\s*(\d[\d,]*)")
 FIELD = "**Count and bar at registration:**"
 PLACEHOLDER = "(the hub fills this in"
+_PLACEHOLDER = re.compile(r"\*?\(the hub fills this in.*?\)\*?", re.S)
+_ILLUSTRATION = re.compile(r"As of writing, for illustration:.*?add theirs\.", re.S)
+_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+_BOOK_IS = re.compile(r"\bthe book is\W{0,4}(pinnacle|draft\s*kings)\b", re.I)
 BOOK_NAMES = {"pinnacle": "Pinnacle", "draftkings": "DraftKings"}
 
 
@@ -38,9 +47,10 @@ def _counts(text: str) -> list[int]:
 @dataclass
 class Bar:
     status_count: int | None
-    header: str                   # "unfilled", "filled", "missing" or "unreadable"
-    header_count: int | None
+    header: str                   # "unfilled", "filled", "ambiguous", "missing" or "unreadable"
+    header_count: int | None      # the largest N read from the header field
     count: int | None             # the one used: the larger of the two
+    header_counts: tuple = ()     # every N read from the header field
 
     @property
     def alpha(self) -> float | None:
@@ -53,6 +63,8 @@ class Bar:
         h = {"unfilled": "unfilled (it still holds the hub's placeholder; its illustration figures are ignored)",
              "missing": "not found in the registration file",
              "unreadable": "filled, but no \"0.05 / N\" on it could be read",
+             "ambiguous": f"filled, but not unambiguously: it reads {', '.join(map(str, self.header_counts))}; the "
+                          f"largest, {self.header_count}, is set against STATUS.md's",
              "filled": f"{self.header_count}, bar p < {0.05 / self.header_count:.6f}" if self.header_count else ""}
         used = (f"Used, the stricter (the larger count): {self.count}, bar p < 0.05 / {self.count} = {self.alpha:.6f}"
                 if self.count else "Used: none could be read, so section 2.9's condition 1 cannot be met")
@@ -61,19 +73,27 @@ class Bar:
                 "the header field. This grader adds no variant: it implements the 1 already in the running count."]
 
 
+def header_counts(line: str) -> tuple[str, list[int]]:
+    """(state, counts) for the header field's line: see the module docstring."""
+    rest = line.split(FIELD, 1)[1]
+    placeholder = PLACEHOLDER in rest
+    rest = _ILLUSTRATION.sub("", _PLACEHOLDER.sub("", rest))
+    counts = sorted(set(_counts(rest)))
+    if not counts:
+        return ("unfilled" if placeholder else "unreadable"), []
+    return ("filled" if len(counts) == 1 else "ambiguous"), counts
+
+
 def bar(status: Path = STATUS, prereg: Path = PREREG) -> Bar:
     sc = max(_counts(status.read_text()), default=None) if status.exists() else None
-    header, hc = "missing", None
+    header, hcs = "missing", []
     if prereg.exists():
         line = next((ln for ln in prereg.read_text().splitlines() if FIELD in ln), None)
         if line is not None:
-            if PLACEHOLDER in line:
-                header = "unfilled"
-            else:
-                hc = max(_counts(line.split(FIELD, 1)[1]), default=None)
-                header = "filled" if hc else "unreadable"
+            header, hcs = header_counts(line)
+    hc = max(hcs, default=None)
     used = max([c for c in (sc, hc) if c], default=None)
-    return Bar(sc, header, hc, used)
+    return Bar(sc, header, hc, used, tuple(hcs))
 
 
 def section8(prereg: Path = PREREG) -> str:
@@ -88,7 +108,19 @@ def section8(prereg: Path = PREREG) -> str:
     return "\n".join(body).strip()
 
 
-def book_noted(prereg: Path = PREREG) -> set[str]:
-    """The books section 8's note names (by key: pinnacle, draftkings); empty while only the placeholder is there."""
-    note = section8(prereg).lower().replace(" ", "")
-    return {k for k in BOOK_NAMES if k in note}
+def noted_book(prereg: Path = PREREG) -> tuple[str | None, str]:
+    """(the book section 8's dated entries record, "") or (None, why there is none); see the module docstring."""
+    text = re.sub(r"<!--.*?-->", "", section8(prereg), flags=re.S)
+    blocks = [b for b in re.split(r"\n\s*\n|\n(?=\s*[-*] )", text) if b.strip()]
+    if not blocks:
+        return None, "it holds only the placeholder"
+    named = set()
+    for b in blocks:
+        books = {re.sub(r"\s", "", x.lower()) for x in _BOOK_IS.findall(b)}
+        if books and _DATE.search(b):
+            named |= books
+    if not named:
+        return None, "it has no dated entry (YYYY-MM-DD) saying \"the book is Pinnacle\" or \"the book is DraftKings\""
+    if len(named) > 1:
+        return None, "its dated entries name both books"
+    return named.pop(), ""

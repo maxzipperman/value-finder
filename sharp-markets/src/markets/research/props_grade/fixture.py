@@ -16,7 +16,8 @@ player-games):
   f3 BUF-MIA nflverse's kickoff is an hour before the schedule's, so before the close: every close line is
              "kickoff moved" (the T-24h lines are not).
   f4 DET-CHI St. Brown (loses), "D.J. Moore" against the roster's "DJ Moore" (wins), "Chris Smith" on both rosters
-             (more than one player: unmatched); Gibbs (wins), Swift (loses).
+             (more than one player: unmatched); Gibbs (wins), Swift (loses); "Pointless Guy" quoted with no point
+             at any book (not a player-game: no line anywhere; excluded and counted, never dropped).
   f5 GB-MIN  not in the nflverse schedule table (game not matched); its T-24h answer is a cached 404.
   s1 a 2026 game with absurd prices: sealed, never read.
 The 12 graded primary lines at the close: 8 under wins against 11 probabilities of 0.5 and one of 0.64, so the
@@ -81,7 +82,8 @@ DK = {
     "f3": [(RUSH, "James Cook", [(70.5, *EVEN)]), (REC, "Tyreek Hill", [(75.5, *EVEN)])],
     "f4": [(REC, "Amon-Ra St. Brown", [(80.5, *EVEN)]), (REC, "D.J. Moore", [(55.5, *EVEN)]),
            (REC, "Chris Smith", [(20.5, *EVEN)]),
-           (RUSH, "Jahmyr Gibbs", [(75.5, *EVEN)]), (RUSH, "D'Andre Swift", [(55.5, *EVEN)])],
+           (RUSH, "Jahmyr Gibbs", [(75.5, *EVEN)]), (RUSH, "D'Andre Swift", [(55.5, *EVEN)]),
+           (RUSH, "Pointless Guy", [(None, *EVEN)])],
     "f5": [(REC, "Justin Jefferson", [(85.5, *EVEN)]), (RUSH, "Josh Jacobs", [(70.5, *EVEN)]),
            (PASS, "Jordan Love", [(230.5, *EVEN)])],
     "s1": [(REC, "Travis Kelce", [(5.5, 1.01, 50.0)]), (RUSH, "James Cook", [(5.5, 1.01, 50.0)])],
@@ -176,7 +178,7 @@ def body(gid: str, at: datetime, role: str) -> dict:
     shift = -1.0 if role == "T-24h" else 0.0                 # every receiving line a point lower at T-24h
     books: dict[str, dict[str, list]] = {}
     for market, name, quotes in DK[gid]:
-        q = [(p + shift if market == REC else p, o, u) for p, o, u in quotes]
+        q = [(p + shift if market == REC and p is not None else p, o, u) for p, o, u in quotes]
         for b in ("draftkings", "fanduel"):
             books.setdefault(b, {}).setdefault(market, []).extend(_outcomes(name, q))
         if (gid, name, market) in PINNACLE_ALSO:

@@ -5,15 +5,18 @@ grader on a small synthetic fixture instead (nothing in it is data). Once F3a is
 step 5), the steps are:
 
   1. `uv run markets props-grade`
-     Outcome-blind. Reads F3's cached answers (sealed calls never read), prints what loaded, each primary market's
-     coverage at F3a's close and the book the rule of 2.4 picks, then stops: no outcome, schedule or roster table
-     is read. The hub records the book and the two coverage figures in a dated note in section 8 of the
-     registration and commits it.
+     Outcome-blind. Reads F3's cached answers (sealed calls never read), prints what loaded (a partial F3a is
+     flagged on its own), each primary market's coverage at F3a's close and the book the rule of 2.4 picks, and the
+     prop names that don't match the committed roster (names and counts; the roster and the team table are the only
+     other files read). Then it stops: no outcome or schedule table is read. The hub records the book in a dated
+     entry in section 8 of the registration ("the book is DraftKings", with the date and the two coverage figures)
+     and commits it.
   2. `uv run markets props-grade --book-recorded draftkings` (or pinnacle)
-     Refused unless the book named is the one the rule picks AND section 8 names it, and unless the roster
-     (config/props/nfl_rosters_2023_2025.csv) is committed unchanged. Then it joins and prints the full report:
-     exclusions by reason, the primary test at the close, controls, the readout, T-24h and the line move, the F3b
-     gate (section 3) and, once 2023-25 are all in, the decision of 2.9 with the count and bar read at run time.
+     Refused unless the book named is the one the rule picks, a dated entry in section 8 records that same book,
+     and both the registration and the roster (config/props/nfl_rosters_2023_2025.csv) are committed unchanged.
+     Then it joins and prints the full report: exclusions by reason, the primary test at the close, controls, the
+     readout, T-24h and the line move, the F3b gate (section 3) and, once 2023-25 are all in and every 2023-25 call
+     is cached, the decision of 2.9 with the count and bar read at run time (withheld, with the counts, before that).
      `--list-excluded` also prints every excluded line. The report goes to reports/props_grade/report.md and every
      line, graded or excluded, to reports/props_grade/lines.csv (gitignored).
 
@@ -48,7 +51,7 @@ class Paths:
     player_week: Path = outcomes.PLAYER_WEEK
     status: Path = registration.STATUS
     prereg: Path = registration.PREREG
-    check_git: bool = True                 # the roster must be committed unchanged (off for the fixture)
+    check_git: bool = True                 # registration and roster committed unchanged (off for the fixture)
     out: Path = field(default_factory=lambda: REPORTS_DIR / "props_grade")
 
 
@@ -83,8 +86,8 @@ def _commit(path: Path | None = None) -> str:
         return ""
 
 
-def roster_committed(path: Path) -> tuple[bool, str]:
-    """(committed and unchanged, what to print)."""
+def committed(path: Path) -> tuple[bool, str]:
+    """(committed and unchanged at HEAD, what to print)."""
     try:
         tracked = subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], capture_output=True,
                                  cwd=registration.REPO, timeout=10).returncode == 0
@@ -141,13 +144,14 @@ def grade_command(cfg: dict, cache: RawCache, paths: Paths, *, book_recorded: st
         return 0
     cov = L.coverage(loaded.rows)
     book = L.choose_book(cov)
-    say(*book_section(cov, book))
+    f3a_missing = uncached(loaded, roles=True).get(L.F3A, {})
+    say(*book_section(cov, book, f3a_missing))
     if book is None:
         say("F3a (the 2025 season) has no close-snapshot line in either primary market, so the book can't be chosen. "
             "Nothing to grade.")
         return 0
-    noted = registration.book_noted(paths.prereg)
-    stop = refusal(book, book_recorded, noted, paths)
+    say(*names_section(loaded.rows, paths.roster))
+    stop = refusal(book, book_recorded, registration.noted_book(paths.prereg), paths)
     if stop:
         say(*stop)
         return 0 if book_recorded is None else 1
@@ -155,11 +159,11 @@ def grade_command(cfg: dict, cache: RawCache, paths: Paths, *, book_recorded: st
     df, unmatched_games, pw = join(loaded.rows, book, paths)        # only after the book note
     ro = grade.readout(df, grade.season_medians(pw))
     b = registration.bar(paths.status, paths.prereg)
-    committed = roster_committed(paths.roster)[1] if paths.check_git else "not checked (fixture)"
-    say(f"Roster (2.7): {paths.roster.name}, SHA-256 {sha256(paths.roster)[:16]}..., {committed}. Outcomes: "
+    state = committed(paths.roster)[1] if paths.check_git else "not checked (fixture)"
+    say(f"Roster (2.7): {paths.roster.name}, SHA-256 {sha256(paths.roster)[:16]}..., {state}. Outcomes: "
         f"{paths.player_week.name}, kickoffs: {paths.games.name} (gameday and gametime, US Eastern), both read for "
         "2023-25 only.", "")
-    say(*results_section(df, unmatched_games, ro, b))
+    say(*results_section(df, unmatched_games, ro, b, uncached(loaded), f3a_missing))
     if list_excluded:
         say(*excluded_listing(df))
     paths.out.mkdir(parents=True, exist_ok=True)
@@ -183,29 +187,71 @@ def join(rows: pd.DataFrame, book: str, paths: Paths) -> tuple[pd.DataFrame, dic
     return grade.assign(pl, matched, names, pw), unmatched_games, pw
 
 
-def refusal(book: str, recorded: str | None, noted: set[str], paths: Paths) -> list[str] | None:
-    """Why the join can't run yet (nothing joined to an outcome before the section 8 note), or None."""
+def refusal(book: str, recorded: str | None, noted: tuple[str | None, str], paths: Paths) -> list[str] | None:
+    """Why the join can't run yet (nothing joined to an outcome before the section 8 note), or None. `noted` is
+    registration.noted_book: (the book section 8's dated entries record, or None, and why not)."""
     name = registration.BOOK_NAMES[book]
     where = f"section 8 of {registration.PREREG_REL}"
+    note, why = noted
     if recorded is None:
-        state = (f"it names {', '.join(registration.BOOK_NAMES[k] for k in sorted(noted))}" if noted
-                 else "it holds only the placeholder")
+        state = f"it records {registration.BOOK_NAMES[note]}" if note else why
         return ["Stopped before any outcome is read: the book has to be recorded first (2.4: \"recorded after the "
                 "F3a pull, and before any F3a row is joined to an outcome, in a dated note (section 8)\").",
-                f"Next: record {name} and the two coverage figures above in a dated note in {where} (now {state}), "
-                f"commit it, then rerun with --book-recorded {book}."]
+                f"Next: add a dated entry to {where} saying \"the book is {name}\", with the two coverage figures "
+                f"above (now {state}); commit it; then rerun with --book-recorded {book}."]
     if recorded != book:
         return [f"REFUSED: --book-recorded {recorded}, but the rule of 2.4 picks {name} on F3a's coverage. Nothing "
                 "was joined to an outcome."]
-    if book not in noted:
-        return [f"REFUSED: {where} has no dated note naming {name}. Record it and commit it first. Nothing was "
-                "joined to an outcome."]
+    if note != book:
+        state = f"it records {registration.BOOK_NAMES[note]}" if note else why
+        return [f"REFUSED: {where} does not record {name} in a dated entry (\"the book is {name}\"): {state}. "
+                "Nothing was joined to an outcome."]
     if paths.check_git:
-        ok, why = roster_committed(paths.roster)
-        if not ok:
-            return [f"REFUSED: the roster {paths.roster} is {why}; 2.7 needs it committed before the first join. "
-                    "Nothing was joined to an outcome."]
+        for what, path in (("the registration", paths.prereg), ("the roster", paths.roster)):
+            ok, state = committed(path)
+            if not ok:
+                return [f"REFUSED: {what} ({path}): {state}. The book note and the roster must be committed before "
+                        "the first join (2.4, 2.7). Nothing was joined to an outcome."]
     return None
+
+
+def uncached(ld: L.Loaded, roles: bool = False) -> dict:
+    """Planned, unsealed calls not in the cache, by season label (and by snapshot, with `roles`)."""
+    out: dict = {}
+    for (label, role, answer), n in ld.status.items():
+        if answer == "not cached":
+            if roles:
+                out.setdefault(label, {})
+                out[label][role] = out[label].get(role, 0) + n
+            else:
+                out[label] = out.get(label, 0) + n
+    return out
+
+
+def names_section(rows: pd.DataFrame, roster_path: Path) -> list[str]:
+    """2.7's name match, before any join: the prop names that map to no player, or to more than one, on either team
+    that season. Reads the roster and the team table only (no outcome, schedule or score), so the hub can review the
+    name map, and fix the roster by a dated amendment, before the first join."""
+    names = roster.NameMap(roster.load(roster_path))
+    pg = rows[rows.point.notna()][["event_id", "label", "home_team", "away_team", "description"]].drop_duplicates()
+    bad: dict[tuple[str, str], set] = {}
+    total = 0
+    for r in pg.itertuples(index=False):
+        if not str(r.label).isdigit():
+            continue
+        total += 1
+        _, why = names.match(int(r.label), (outcomes.team_code(r.home_team), outcomes.team_code(r.away_team)),
+                             r.description)
+        if why:
+            bad.setdefault((r.description, why), set()).add(r.event_id)
+    t = pd.DataFrame([(n, w, len(e)) for (n, w), e in bad.items()], columns=["name", "why", "games"])
+    t = t.sort_values(["games", "name"], ascending=[False, True])
+    out = ["## Names against the roster (2.7), before any join", "",
+           f"(Game, player name) pairs in F3's lines: {total:,}; not matched to exactly one rostered player on either "
+           f"team that season: {len(t):,} names in {int(t.games.sum()) if len(t) else 0:,} games. Names and counts "
+           "only: the roster is not an outcome table. A fix to the roster is a dated amendment made before the "
+           "first join (2.7)."]
+    return out + (text_table(t, ["name", "why", "games"]) if len(t) else []) + [""]
 
 
 def loaded_section(ld: L.Loaded, calls: list) -> list[str]:
@@ -217,9 +263,14 @@ def loaded_section(ld: L.Loaded, calls: list) -> list[str]:
            "", f"Rows refused as sealed after loading, before any join: {sum(ld.refused.values()):,}"
            + (f" ({dict(ld.refused)})" if ld.refused else "") + f"; left out by bulk.load_rows: "
            f"{sum(ld.left_out.values()):,}" + (f" ({dict(ld.left_out)})" if ld.left_out else "") + "."]
-    missing = sum(n for (_, _, k), n in ld.status.items() if k == "not cached")
-    if missing:
-        out.append(f"A partial pull: {missing:,} planned calls are not cached; the results cover only what is.")
+    missing = uncached(ld)
+    if missing.get(L.F3A):
+        out.append(f"F3a (2025) is partial: {missing[L.F3A]:,} of its planned calls are not cached; everything below "
+                   "covers only what is.")
+    f3b = {s: n for s, n in sorted(missing.items()) if s != L.F3A}
+    if f3b:
+        out.append("2023-24 (F3b, bought only through the gate): planned calls not cached: "
+                   + ", ".join(f"{s} {n:,}" for s, n in f3b.items()) + ".")
     if ld.skipped:
         out.append("Rows not read, by reason: " + "; ".join(f"{k} {v:,}" for k, v in sorted(ld.skipped.items())) + ".")
     for role, (med, mx) in sorted(ld.lag_minutes.items()):
@@ -233,8 +284,16 @@ def loaded_section(ld: L.Loaded, calls: list) -> list[str]:
     return out + [""]
 
 
-def book_section(cov: dict, book: str | None) -> list[str]:
+def partial_f3a(missing: dict) -> str:
+    return (f"WARNING: F3a is partial: {sum(missing.values()):,} of its planned calls are not cached ("
+            + ", ".join(f"{r}: {n:,}" for r, n in sorted(missing.items())) + ").")
+
+
+def book_section(cov: dict, book: str | None, f3a_missing: dict | None = None) -> list[str]:
     out = ["## The book (2.4), from F3a's close-snapshot coverage", ""]
+    if f3a_missing:
+        out += [partial_f3a(f3a_missing) + " The book below is picked on the close snapshots cached so far; record "
+                "it in section 8 only once F3a is complete.", ""]
     for m, (num, den) in cov.items():
         share = f"{num / den:.1%}" if den else "-"
         out.append(f"  {m}: Pinnacle lists {num:,} of {den:,} player-games ({share})")
@@ -249,7 +308,8 @@ COLS = ["scope", "n", "games", "under_wins", "under_rate", "mean_p", "excess", "
         "excess_additive", "excess_multiplicative"]
 
 
-def results_section(df: pd.DataFrame, unmatched_games, ro: pd.DataFrame, b: registration.Bar) -> list[str]:
+def results_section(df: pd.DataFrame, unmatched_games, ro: pd.DataFrame, b: registration.Bar,
+                    missing: dict | None = None, f3a_missing: dict | None = None) -> list[str]:
     out = ["## Exclusions (2.7), every line counted once under the first reason that applies", ""]
     out += text_table(grade.exclusions(df), ["role", "market", "reason", "lines"])
     graded = df[df.status == ""]
@@ -290,11 +350,13 @@ def results_section(df: pd.DataFrame, unmatched_games, ro: pd.DataFrame, b: regi
     out += ["", "Line move, close minus T-24h, for primary player-games with a main line at the book at both:"]
     out += text_table(grade.line_move(df), ["scope", "pairs", "mean_move", "share_up", "share_down", "share_same"], 3)
     out += ["", "## The F3b gate (section 3), on the 2025 season", ""]
+    if f3a_missing:
+        out += [partial_f3a(f3a_missing) + " The gate below reads only the cached calls.", ""]
     out += gate_lines(grade.gate(df, ro))
     out += ["", "## The count and the bar (2.9, section 4), read at run time", ""]
     out += ["  " + x for x in b.lines()]
     out += ["", "## Decision (2.9)", ""]
-    out += decision_lines(grade.decision(df, b.alpha), b)
+    out += decision_lines(grade.decision(df, b.alpha, missing), b)
     out += ["", "2026 is sealed: not read. It is opened once, for every hypothesis registered by then, under the "
             "criteria of 2.2.", ""]
     return out
@@ -317,6 +379,8 @@ def gate_lines(g: dict) -> list[str]:
 
 
 def decision_lines(d: dict, b: registration.Bar) -> list[str]:
+    if d.get("withheld"):
+        return [f"Verdict withheld: {d['why']}."]
     if not d["read"]:
         return [f"Not read: {d['why']}. The F3a read on 2025 alone decides only the F3b purchase (section 3)."]
     p = d["pooled"]
@@ -324,8 +388,8 @@ def decision_lines(d: dict, b: registration.Bar) -> list[str]:
            f"{'met' if d['condition_1'] else 'not met'}.", "Condition 2, five checks (positive excess, p < 0.01):"]
     out += [f"  {'pass' if ok else 'FAIL'}  {k}: excess {_f(e, 4)}, p {_f(pv, 4)}" for k, (e, pv, ok) in
             d["checks"].items()]
-    out.append("Carries it (Drop): the pooled excess with one market or one season removed: "
-               + "; ".join(f"{k} {_f(v, 4)}" for k, v in d["without"].items()) + ".")
+    out.append("Carries it (Drop): the pooled excess with one market or one season removed (- = nothing left, "
+               "which counts as carried): " + "; ".join(f"{k} {_f(v, 4)}" for k, v in d["without"].items()) + ".")
     out.append(f"Verdict: {d['verdict']}.")
     return out
 
