@@ -8,4 +8,4 @@ Please reconcile these **20 additional trials** with the project's global count.
 
 No model passed the project's adjusted significance threshold in this batch. The objective was paired scoring-error improvement relative to closing totals, not executable entry prices, CLV, or ROI. 2026 was excluded at the parquet reader boundary. Historical seasons remain discovery, and no live rule changed.
 
-The pending market-response stage should reuse your planned F1/historical totals pulls. No additional API calls, purchases, or scheduled jobs were made. This note has not been sent to the other chat automatically.
+The pending market-response stage should reuse your planned F1/historical totals pulls. No additional API calls, purchases, or scheduled jobs were made. Coordination was confirmed with the other chat after verifying the user's explicit coordination request. This registration PR is owned by the expanded-research chat.
