@@ -1,9 +1,10 @@
 """F1 as pulled: the football archive bundle's priority-1 manifest, read through `--handoff` (issue #101).
 
-`uv run markets price-engine --handoff <bundle> --handoff-root <sha256>` reads F1 from what the football archive
-bundle (strategy-research/football_archive/acquisition/football-archive-v4 on the research/football-archive-v4
-branch, PR 99) bought and reused, instead of planning the legacy F1 call set from saved schedules. Amendment 2 to
-docs/PRICE_ENGINE_PREREGISTRATION.md (a DRAFT until the hub registers it) says why and what differs.
+`uv run markets price-engine --handoff <bundle> --handoff-root <sha256> [--handoff-runtime <dir>]` reads F1 from what
+the football archive bundle (strategy-research/football_archive/acquisition/football-archive-v4 on the
+research/football-archive-v4 branch, PR 99) bought and reused, instead of planning the legacy F1 call set from saved
+schedules. Amendment 2 to docs/PRICE_ENGINE_PREREGISTRATION.md (a DRAFT until the hub registers it) says why and
+what differs.
 
 What this module does, and nothing else:
   0. It refuses every run until amendment 2 is registered: `REGISTERED_ROOT` below is None until the hub fills it
@@ -17,12 +18,18 @@ What this module does, and nothing else:
   2. It imports the bundle's frozen `cache_handoff.py` (it is never copied into the engine) and calls
      `build_handoff(bundle, root, runtime)`, which runs the bundle's own validator over the whole bundle, requires a
      completed recent slice and an outcome-blind coverage report, and checks every paid response and receipt and
-     every reused response in `reuse/` against its recorded hash.
-  3. `as_calls(handoff, bulk.Call)` gives one `bulk.Call` per priority-1 request, each checked to have the cache key
-     the manifest recorded, and `ReadOnlyCache(handoff, runtime/data/raw)` finds each response (the 12 reused ones
-     in the bundle's `reuse/`, the paid ones in the runtime cache), re-checking its hash on every lookup. It cannot
-     fetch or write. A response that changes, disappears or cannot be read after loading refuses the run
-     (HandoffRefused) when it is looked up.
+     every reused response in `reuse/` against its recorded hash. The runtime is the v4 executor's fixed folder,
+     `RUNTIME_BASE/<root>` (`~/Library/Application Support/ValueFinder/football-acquisition-state/<root>`), unless
+     `--handoff-runtime` names another.
+  3. `as_calls(handoff, bulk.Call)` gives one `bulk.Call` per priority-1 request, in manifest order, each checked to
+     have the cache key the manifest recorded, and `ReadOnlyCache(handoff, runtime/data/raw)` finds each response
+     (the 12 reused ones in the bundle's `reuse/`, the paid ones in the runtime cache), re-checking its hash on every
+     lookup. It cannot fetch or write. A response that changes, disappears or cannot be read after loading refuses
+     the run (HandoffRefused) when it is looked up. A paid request the bundle's run accepted as missing (a terminal
+     failure the hub approved, entry status `accepted_missing`, no response path or hash) keeps its call and its
+     place, and its lookup gives no response, so `bulk.load_rows` reads no row from it: it is absent data, counted
+     in the report, never fetched. A lookup that gives no response for any other call, or a response for one marked
+     missing, refuses the run.
   4. Each call's `sealed` flag is set from the config's season windows at the call's requested time; `as_calls`
      leaves every call unsealed. The legacy plan marks a call sealed when any game it serves kicks off in a sealed
      window, but the manifest does not name every call's games (its evening decision slots name none), so the
@@ -39,9 +46,9 @@ after reviewing that root's code, registers it in `REGISTERED_ROOT`, and step 1 
 for byte the code that root names. Concretely, the bundle's modules are never imported from the folder: the folder
 is not put on `sys.path`, and a finder placed first on `sys.meta_path` serves only `BUNDLE_MODULES` (the modules
 `cache_handoff` imports, directly or through them), each only if its file is in FREEZE.json, compiled from the bytes
-that were hashed in step 1. So a file swapped between the check and the import is never run, and nothing in the
-folder can shadow another module (a `pyarrow` or `json` in the bundle is never imported; everything outside
-`BUNDLE_MODULES` resolves as it would without the bundle). No bytecode is written.
+that were hashed in step 1. So none of the bundle's modules is run from a file swapped between the check and the
+import, and nothing in the folder can shadow another module (a `pyarrow` or `json` in the bundle is never imported;
+everything outside `BUNDLE_MODULES` resolves as it would without the bundle). No bytecode is written.
 
 Once the bundle's code has loaded, these are checked and put back as they were, and a change to any of them refuses
 the run: the four import routes (`sys.path`, `sys.meta_path`, `sys.path_hooks`, `sys.path_importer_cache`,
@@ -86,17 +93,22 @@ import stat
 import sys
 import threading
 import zipimport
+from collections import Counter
 from contextlib import contextmanager
 from copy import copy
 from pathlib import Path
 
 from ...oddsapi import bulk
 
-RUNTIME_DEFAULT = "football-acquisition-runtime"     # the v4 executor's runtime folder, next to the bundle folder
+# The v4 executor's fixed runtime (executor.RUNTIME_BASE / root, outside every git checkout): its spending ledger,
+# receipts, coverage report and data/raw. --handoff-runtime defaults to it, for the --handoff-root given.
+RUNTIME_BASE = "~/Library/Application Support/ValueFinder/football-acquisition-state"
 FREEZE = "FREEZE.json"
 LEDGER = "spending-ledger.json"
-# The bundle's modules the handoff runs: cache_handoff imports validator and executor; validator imports builder;
-# executor.validate_response imports price_eligibility. Only these are served, and only from the frozen bytes.
+# The bundle's modules the handoff runs: cache_handoff.build_handoff imports validator and executor;
+# validator.verify imports builder (and executor); executor.validate_response imports price_eligibility. Only these
+# are served, and only from the frozen bytes. (coverage_report and the vendored archive_markets package are imported
+# only by the executor's paid run, never on this path.)
 BUNDLE_MODULES = ("cache_handoff", "validator", "builder", "executor", "price_eligibility")
 
 # The bundle root amendment 2 registers. None until the hub registers the amendment: the hub fills it in at
@@ -440,20 +452,31 @@ def _bundle_code(bundle: Path, sources: dict[str, bytes]):
 
 class _RefusingCache:
     """The bundle's ReadOnlyCache, with a response that changed, disappeared or cannot be read after loading refusing
-    the run (HandoffRefused) instead of surfacing as a bare ValueError or OSError. Everything else is the bundle's
-    object. Its lookup runs inside `run()`, outside `_bundle_code`'s network block and import-system check."""
+    the run (HandoffRefused) instead of surfacing as a bare ValueError or OSError. `missing` holds the (sport, source,
+    cache key) of each call the handoff marks `accepted_missing`: the bundle's lookup must give no response for
+    those (the engine then reads no row from them), and must give one for every other call; either way round
+    refuses the run. Everything else is the bundle's object. Its lookup runs inside `run()`, outside `_bundle_code`'s
+    network block and import-system check."""
 
-    def __init__(self, cache):
-        self._cache = cache
+    def __init__(self, cache, missing=frozenset()):
+        self._cache, self._missing = cache, frozenset(missing)
 
     def lookup(self, sport, source, key):
         try:
-            return self._cache.lookup(sport, source, key)
+            found = self._cache.lookup(sport, source, key)
         except ValueError as exc:
             raise HandoffRefused(f"a response changed after the handoff was loaded ({exc})") from None
         except OSError as exc:
             raise HandoffRefused(f"a response could not be read after the handoff was loaded "
                                  f"({type(exc).__name__}: {exc.strerror or exc})") from None
+        if (sport, source, key) in self._missing:
+            if found is not None:
+                raise HandoffRefused(f"the handoff marks {sport}/{key} accepted_missing, yet its cache gave a response")
+            return None
+        if found is None:
+            raise HandoffRefused(f"the handoff's cache gave no response for {sport}/{key}, which it does not mark "
+                                 "accepted_missing")
+        return found
 
     def __getattr__(self, name):
         return getattr(self._cache, name)
@@ -466,13 +489,26 @@ def _ledger_sha(runtime: Path) -> str:
         raise HandoffRefused(f"the runtime folder {runtime} has no readable {LEDGER}") from None
 
 
+def _entry_ok(entry: dict) -> bool:
+    """A handoff entry is a response (no status, a path and a hash) or accepted_missing (no path, no hash)."""
+    if entry.get("status") == "accepted_missing":
+        return entry.get("response_path") is None and entry.get("response_sha256") is None
+    return entry.get("status") is None and entry.get("response_path") is not None
+
+
+def default_runtime(root: str) -> Path:
+    """The v4 executor's fixed runtime folder for `root`: RUNTIME_BASE/<root>, `~` expanded."""
+    return Path(RUNTIME_BASE).expanduser() / root
+
+
 def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict]:
-    """(calls, cache, info) for `run(cfg, calls, cache)`, from a verified bundle and its completed runtime."""
+    """(calls, cache, info) for `run(cfg, calls, cache)`, from a verified bundle and its completed runtime (by default
+    `default_runtime(root)`)."""
     bundle = Path(bundle).resolve()
-    runtime = Path(runtime).resolve() if runtime else bundle.parent / RUNTIME_DEFAULT
     try:                                # before any of the bundle's code runs, so before any response is parsed
         if not re.fullmatch(r"[0-9a-f]{64}", root or ""):
             raise HandoffRefused("--handoff-root must be the bundle's 64-character sha256 root, as the hub approved it")
+        runtime = (Path(runtime).expanduser() if runtime else default_runtime(root)).resolve()
         _check_registered(root)
         root, sources = _verify(bundle, root)
         if "cache_handoff" not in sources:
@@ -495,12 +531,22 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
     verify_frozen(bundle, root)         # nothing was written into the bundle while its code ran
     if _ledger_sha(runtime) != ledger_sha:
         raise HandoffRefused(f"the runtime's {LEDGER} changed while the handoff was read")
-    if handoff.get("bundle_root_sha256") != root or len(calls) != len(handoff["entries"]):
+    entries = handoff["entries"]
+    if (handoff.get("bundle_root_sha256") != root or len(calls) != len(entries)
+            or any(c.key != e["request"]["cache_key"] for c, e in zip(calls, entries))):
         raise HandoffRefused("the handoff does not describe the pinned bundle")
+    missing = [e for e in entries if e.get("status") == "accepted_missing"]
+    odd = [e for e in entries if not _entry_ok(e)]
+    if odd:
+        raise HandoffRefused(f"the handoff has an entry that is neither a response with its path nor accepted_missing "
+                             f"without one (status {odd[0].get('status')!r}; {len(odd)} such)")
     calls = [dataclasses.replace(c, sealed=bulk.is_sealed(cfg, c.sport, c.at)) for c in calls]
-    reused = sum(Path(e["response_path"]).is_relative_to(bundle / "reuse") for e in handoff["entries"])
+    reused = sum(e["response_path"] is not None and Path(e["response_path"]).is_relative_to(bundle / "reuse")
+                 for e in entries)
     info = {"bundle": str(bundle), "runtime": str(runtime), "bundle_root_sha256": root,
             "request_set_sha256": handoff.get("request_set_sha256"),
             "coverage_report_sha256": handoff.get("coverage_report_sha256"), "spending_ledger_sha256": ledger_sha,
-            "calls": len(calls), "reused": reused}
-    return calls, _RefusingCache(cache), info
+            "calls": len(calls), "reused": reused, "accepted_missing": len(missing),
+            "accepted_missing_reasons": dict(sorted(Counter(str(e.get("reason")) for e in missing).items()))}
+    keys = {(e["request"]["sport"], e["request"]["source"], e["request"]["cache_key"]) for e in missing}
+    return calls, _RefusingCache(cache, keys), info

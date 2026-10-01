@@ -154,6 +154,14 @@ def _note(res: dict) -> str:
     return f"{DAILY_NOTE} {HANDOFF_NOTE}" if res.get("handoff") else DAILY_NOTE
 
 
+def _missing_line(info: dict) -> str:
+    """The calls the bundle's run accepted as missing (amendment 2): absent data, counted here, never fetched."""
+    n = info.get("accepted_missing", 0)
+    reasons = ", ".join(f"{k} {v:,}" for k, v in (info.get("accepted_missing_reasons") or {}).items())
+    return (f"{n:,} accepted as missing by the bundle's run (absent data: no response, no row read, never fetched"
+            + (f"; by reason: {reasons}" if reasons else "") + ")")
+
+
 def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
     n = len(results)
     head = ["# Price-engine backtest (F1)" + (" — SYNTHETIC FIXTURE, NOT DATA" if fixture else ""), "",
@@ -166,7 +174,7 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
                  f"(amendment 2). Bundle root `{h['bundle_root_sha256']}`, request set `{h['request_set_sha256']}`, "
                  f"coverage report `{h['coverage_report_sha256']}`, spending ledger "
                  f"`{h['spending_ledger_sha256']}`; {h['calls']:,} calls, {h['reused']:,} of them reused from the "
-                 "bundle's `reuse/`.", ""]
+                 f"bundle's `reuse/`; {_missing_line(h)}.", ""]
     cov = res.get("coverage")
     if cov is not None and len(cov) and (cov.share < MIN_SCORE_SHARE).any():
         low = cov[cov.share < MIN_SCORE_SHARE]
@@ -289,8 +297,8 @@ def main(args) -> int:
         except handoff.HandoffRefused as exc:
             raise SystemExit(_refused(exc)) from None
         print(f"F1 as pulled (football archive bundle {info['bundle_root_sha256']}): {info['calls']:,} calls, "
-              f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked "
-              "(amendment 2)")
+              f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked; "
+              f"{_missing_line(info)} (amendment 2)")
         try:
             res = run(cfg, calls, cache)
         except handoff.HandoffRefused as exc:       # a response changed, or became unreadable, after loading

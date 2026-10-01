@@ -304,8 +304,9 @@ def main(argv: list[str] | None = None) -> None:
     pe.add_argument("--handoff-root", metavar="SHA256", default=None,
                     help="with --handoff (required): the bundle's frozen root, as the hub approved it")
     pe.add_argument("--handoff-runtime", metavar="DIR", default=None,
-                    help="with --handoff: the bundle executor's runtime folder (its spending ledger, coverage report "
-                    "and data/raw); default football-acquisition-runtime next to the bundle folder")
+                    help="with --handoff: the bundle executor's runtime folder (its spending ledger, receipts, "
+                    "coverage report and data/raw); default the executor's fixed runtime, ~/Library/Application "
+                    "Support/ValueFinder/football-acquisition-state/<--handoff-root>")
     pe.set_defaults(fn=cmd_price_engine)
 
     pg = sub.add_parser("props-grade", help="the registered props test on F3, issue #10 "
