@@ -194,7 +194,7 @@ def load_quotes(cfg: dict, calls: list, cache) -> tuple[pd.DataFrame, Counter]:
     q["kickoff"] = pd.to_datetime([latest[(s, e)][1] for s, e in zip(q.sport, q.event_id)], utc=True)
     late = (q.snap >= q.kickoff) | (q.snap >= q.commence)
     drops["at_or_after_kickoff"] += int(late.sum())
-    far = ~late & (q.kickoff - q.snap > WINDOW)
+    far = ~late & ((q.kickoff - q.snap > WINDOW) | (q.commence - q.snap > WINDOW))
     drops["more_than_7_days_before_kickoff"] += int(far.sum())
     q = q[~late & ~far].copy()
     labels = {}
@@ -208,4 +208,71 @@ def load_quotes(cfg: dict, calls: list, cache) -> tuple[pd.DataFrame, Counter]:
     outside = ~sealed & (q.season == "")
     drops["outside_season_windows"] += int(outside.sum())
     q = q[~sealed & ~outside]
+    q = quarantine_identity(q, drops, cache)
     return q[COLUMNS].reset_index(drop=True), drops
+
+
+def quarantine_identity(q: pd.DataFrame, drops: Counter, cache) -> pd.DataFrame:
+    """Outcome-blind identity gate before any fair-price or entry/close join.
+
+    A handoff supplies the frozen provider-to-canonical bindings and team aliases. Ambiguous/unbound
+    listings, multiple provider IDs for one canonical game and changed orientation are excluded as
+    whole partitions. The legacy path conservatively quarantines same-team listings within 36 hours.
+    No price, result or inferred home advantage resolves an identity conflict.
+    """
+    if q.empty:
+        return q
+    q = q.copy()
+    bindings = getattr(cache, "canonical_event_map", None)
+    aliases = getattr(cache, "canonical_team_aliases", {})
+    if bindings is not None:
+        identity = [bindings.get((s, e)) for s, e in zip(q.sport, q.event_id)]
+        unbound = pd.Series([x is None for x in identity], index=q.index)
+        drops["unbound_or_ambiguous_canonical_game"] += int(unbound.sum())
+        q = q[~unbound].copy()
+        q["_game"] = [x for x in identity if x is not None]
+        for col in ("home", "away"):
+            q["_" + col] = [aliases.get((s, n)) for s, n in zip(q.sport, q[col])]
+        unknown = q._home.isna() | q._away.isna() | (q._home == q._away)
+        game_teams = getattr(cache, "canonical_game_teams", None)
+        if game_teams is not None:
+            mismatch = pd.Series([frozenset((h, a)) != game_teams.get(g)
+                                  for g, h, a in zip(q._game, q._home, q._away)], index=q.index)
+            unknown |= mismatch
+        drops["unresolved_canonical_team"] += int(unknown.sum())
+        q = q[~unknown].copy()
+    else:
+        # Legacy fixtures/caches have no canonical inventory. Never merge by names alone: a rematch
+        # more than 36 hours away stays a different game; ambiguous near listings are excluded.
+        q["_game"] = q.event_id
+        q["_home"] = q.home.str.strip().str.casefold()
+        q["_away"] = q.away.str.strip().str.casefold()
+        listings = q[["sport", "event_id", "kickoff", "_home", "_away"]].drop_duplicates()
+        near = set()
+        pairs = {}
+        for s, eid, kick, home, away in listings.itertuples(index=False, name=None):
+            key = (s, tuple(sorted((home, away))))
+            for other, at in pairs.get(key, []):
+                if other != eid and abs(kick - at) <= timedelta(hours=36):
+                    near.update(((s, eid), (s, other)))
+            pairs.setdefault(key, []).append((eid, kick))
+        bad = pd.Series([(s, e) in near for s, e in zip(q.sport, q.event_id)], index=q.index)
+        drops["multiple_provider_ids_for_game"] += int(bad.sum())
+        q = q[~bad].copy()
+    if q.empty:
+        return q
+    groups = q.groupby(["sport", "_game"])
+    multiple = groups.event_id.transform("nunique") > 1
+    drops["multiple_provider_ids_for_game"] += int(multiple.sum())
+    q = q[~multiple].copy()
+    if q.empty:
+        return q
+    orientation = q[["sport", "_game", "_home", "_away"]].drop_duplicates()
+    changed = set(orientation.groupby(["sport", "_game"]).size().loc[lambda x: x > 1].index)
+    bad = pd.Series([(s, g) in changed for s, g in zip(q.sport, q._game)], index=q.index)
+    drops["changed_team_orientation"] += int(bad.sum())
+    q = q[~bad].copy()
+    # Every remaining canonical partition has exactly one provider ID and a stable team-side order.
+    # Canonical game identity now keys entries, fair references, closes and outcome joins consistently.
+    q["event_id"] = q._game
+    return q

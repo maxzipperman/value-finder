@@ -100,6 +100,7 @@ from copy import copy
 from pathlib import Path
 
 from ...oddsapi import bulk
+from . import archive_adapter
 
 # The v4 executor's fixed runtime (executor.RUNTIME_BASE / root, outside every git checkout): its spending ledger,
 # receipts, coverage report and data/raw. --handoff-runtime defaults to it, for the --handoff-root given.
@@ -551,9 +552,20 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
     with _bundle_code(bundle, sources):
         try:
             module = importlib.import_module("cache_handoff")
-            handoff = module.build_handoff(bundle, root, runtime)
+            if root == archive_adapter.ACQUIRED_ROOT:
+                # The immutable paid bundle remains unchanged. This explicitly reviewed analysis
+                # adapter uses the same frozen validator/response checks and audited completion hash,
+                # replacing only its unbounded report materialization and cache hashing.
+                validator = importlib.import_module("validator")
+                executor = importlib.import_module("executor")
+                handoff = archive_adapter.build_handoff(
+                    bundle, root, runtime, verify=validator.verify, validate_response=executor.validate_response)
+            else:
+                handoff = module.build_handoff(bundle, root, runtime)
             calls = module.as_calls(handoff, bulk.Call)
-            cache = module.ReadOnlyCache(handoff, runtime / "data" / "raw")
+            cache = (archive_adapter.ReadOnlyCache(handoff, runtime / "data" / "raw", bundle)
+                     if root == archive_adapter.ACQUIRED_ROOT
+                     else module.ReadOnlyCache(handoff, runtime / "data" / "raw"))
         except HandoffRefused:
             raise
         except (Exception, SystemExit) as exc:  # the bundle's own checks (ValueError, its Halt, a missing ledger
