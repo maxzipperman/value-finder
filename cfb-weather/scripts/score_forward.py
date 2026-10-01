@@ -223,6 +223,31 @@ else:
     NOT_RECORDED = ""
 
 
+def uncommitted_verifications():
+    """Amendment 7 (draft): only the committed kickoff_verifications.csv decides the live record. "" when the file's
+    bytes are those of `git show HEAD:` for it; otherwise why not, and the live run records nothing: an edit not yet
+    committed, a file missing on disk or from HEAD, or git that can't show it."""
+    try:
+        r = subprocess.run(["git", "-C", str(ROOT), "show", f"HEAD:./{VERIFIED.name}"], capture_output=True, timeout=60)
+    except (OSError, subprocess.SubprocessError) as e:
+        return (f"git can't be run to check {VERIFIED.name} against its committed version ({type(e).__name__}), and "
+                "the live record is written only from the committed file")
+    disk = VERIFIED.read_bytes() if VERIFIED.exists() else None
+    if r.returncode != 0:
+        why = (r.stderr.decode(errors="replace").strip().splitlines() or ["no reason given"])[0]
+        return (f"git can't show the committed {VERIFIED.name} ({why}), and the live record is written only from the "
+                "committed file")
+    if disk != r.stdout:
+        return (f"{VERIFIED.name} differs from its committed version (git show HEAD:./{VERIFIED.name}), and the "
+                "live record is written only from the committed file: commit the change, or restore the file, and run "
+                "the scorer again")
+    return ""
+
+
+if not NOT_RECORDED and IS_LIVE:
+    NOT_RECORDED = uncommitted_verifications()
+
+
 # ---------------------------------------------------------------- the decision record (amendment 4, reading 3)
 # What a recorded decision must hold for a later run to print it (null where there is no number, as for an
 # interval on one bet). A Rule B record made at the end of the test with fewer than 40 holds only its count.
@@ -545,10 +570,14 @@ def read_verifications(p):
     if not p.exists():
         return none, ""
     try:
-        v = pd.read_csv(p, dtype=str, keep_default_na=False)
-        if list(v.columns) != VERIFIED_COLS:
-            raise ValueError(f"its columns are not {', '.join(VERIFIED_COLS)}")
-        v = v.apply(lambda c: c.str.strip())
+        with open(p, newline="", encoding="utf-8") as fh:
+            lines = [(i, f) for i, f in enumerate(csv.reader(fh, strict=True), start=1) if f]
+        if not lines or lines[0][1] != VERIFIED_COLS:
+            raise ValueError(f"its first line is not the header {','.join(VERIFIED_COLS)}")
+        for i, f in lines[1:]:
+            if len(f) != len(VERIFIED_COLS):
+                raise ValueError(f"line {i} has {len(f)} fields, not {len(VERIFIED_COLS)}")
+        v = pd.DataFrame([f for _, f in lines[1:]], columns=VERIFIED_COLS, dtype=str).apply(lambda c: c.str.strip())
         for r in v.itertuples():
             if not re.fullmatch(r"[0-9]+", r.game_id):
                 raise ValueError(f"a game id that is not a number ({r.game_id!r})")
@@ -560,7 +589,9 @@ def read_verifications(p):
                 raise ValueError(f"game {r.game_id}: no source")
             if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", r.verified_on):
                 raise ValueError(f"game {r.game_id}: a verified_on that is not a date ({r.verified_on!r})")
-            pd.Timestamp(r.verified_on)
+            if pd.Timestamp(r.verified_on).date() > NOW.date():
+                raise ValueError(f"game {r.game_id}: verified_on {r.verified_on} is after this run's date "
+                                 f"({NOW:%Y-%m-%d})")
         twice = v.game_id[v.game_id.astype(int).duplicated()]
         if len(twice):
             raise ValueError(f"game {twice.iloc[0]} is listed more than once")
@@ -598,6 +629,10 @@ unused = L[L.game_id.isin(VER.index) & ~L.sched_placeholder.eq(True)].drop_dupli
 if len(unused):
     print(f"kickoff verifications not used, the schedule doesn't show the placeholder for the game (amendment 7): "
           f"{len(unused)} ({', '.join(unused.game_id.astype(str))})")
+stray = sorted(set(VER.index) - set(L.game_id))
+if stray:
+    print(f"kickoff verifications not used, the game is not in the ledger (amendment 7): {len(stray)} "
+          f"({', '.join(map(str, stray))})")
 # Amendment 4, reading 11: "before kickoff" is before the earlier of the row's kickoff and the schedule's (for a
 # placeholder, the verified kickoff; amendment 7)
 L["kick_first"] = L[["start_utc", "sched_kick"]].min(axis=1)
@@ -622,11 +657,39 @@ if args.list_excluded and (why != "").any():
 # Amendment 7 (draft): a quarantined game holds back the FINAL decision of each rule it has a signal for (a row it
 # would grade or enter from), until its kickoff is verified. A rule it has no signal for can't change through it.
 Q = L[why == QUARANTINED]
-HELD = {"Rule B": sorted(Q[Q.rule_b.astype(str).eq("SIGNAL")].game_id.unique().tolist()) if "rule_b" in Q else [],
-        "Rule HT": sorted(Q[Q.rule_ht.astype(str).eq("SIGNAL") & (Q.start_utc >= HT_FIRST_KICK)].game_id.unique()
-                          .tolist()) if "rule_ht" in Q else []}
+
+
+def signals(rows, rule):
+    """The rows a rule could grade or enter from: Rule B's SIGNAL rows; Rule HT's, from Week 6."""
+    if rule == "Rule B":
+        return rows[rows.rule_b.astype(str).eq("SIGNAL")] if "rule_b" in rows else rows.iloc[0:0]
+    return rows[rows.rule_ht.astype(str).eq("SIGNAL") & (rows.start_utc >= HT_FIRST_KICK)] if "rule_ht" in rows \
+        else rows.iloc[0:0]
+
+
+# A game not yet completed whose schedule shows the placeholder, with no verified kickoff, holds them too: its rows
+# logged after the placeholder don't count yet ("logged at or after kickoff"), and once it is completed and verified
+# they may, so a decision made now could differ from one made then. It holds a rule while it has a signal row for it
+# (one excluded for no earlier reason than the kickoff), until it is completed (then it is graded or quarantined) or,
+# with no score, 30 days after the later of its placeholder and the latest kickoff its signal rows carry, when a bet on
+# it is void (amendment 4, section 1, as settle() applies it). OPEN[rule]: such games, and the earliest of their
+# placeholder and their signal rows' kickoffs (Rule B's decision is held only by a game that could enter it).
+waiting_game = (np.isin(why, ["", "logged at or after kickoff"]) & L.sched_placeholder.eq(True).to_numpy()
+                & ~L.sched_played.eq(True).to_numpy() & ~L.sched_verified.eq(True).to_numpy())
+
+
+def open_games(rows):
+    g = rows.groupby("game_id").agg(first=("start_utc", "min"), last=("start_utc", "max"), ph=("sched_listed", "first"))
+    g = g[NOW < pd.concat([g["last"], g.ph], axis=1).max(axis=1) + NO_RESULT]
+    return pd.concat([g["first"], g.ph], axis=1).min(axis=1)
+
+
+OPEN = {rule: open_games(signals(L[waiting_game], rule)) for rule in ("Rule B", "Rule HT")}
+HELD = {rule: sorted(set(signals(Q, rule).game_id.unique().tolist()) | set(OPEN[rule].index.tolist()))
+        for rule in ("Rule B", "Rule HT")}
 JSON["quarantine"] = {"reason": QUARANTINED, "games": sorted(Q.game_id.unique().tolist()), "rows": len(Q),
-                      "final_withheld": HELD}
+                      "final_withheld": HELD,
+                      "not_yet_completed": {k: sorted(v.index.tolist()) for k, v in OPEN.items()}}
 if args.list_excluded and len(Q):
     # what the hub checks a game's real kickoff against: the teams, the kickoffs the rows carried and when each was
     # logged, and when each capture of the game was taken and for which kickoff (no price and no result)
@@ -679,11 +742,25 @@ def interim(name, when, tests):
 
 
 def withheld(rule):
-    """Amendment 7 (draft): why no FINAL decision of this rule is printed or recorded while a game is quarantined."""
-    k, ids = len(HELD[rule]), ", ".join(map(str, HELD[rule]))
-    return (f"FINAL withheld: {k} completed game{'s' if k != 1 else ''} await{'' if k != 1 else 's'} kickoff "
-            f"verification ({ids}): the schedule shows the placeholder and no verified kickoff is recorded in "
-            f"kickoff_verifications.csv (amendment 7)")
+    """Amendment 7 (draft): why no FINAL decision of this rule is printed or recorded while a game it has a signal for
+    is quarantined, or not yet completed with the placeholder in the schedule and no verified kickoff."""
+    parts = []
+    for ids, what in (([g for g in HELD[rule] if g not in OPEN[rule].index], "completed game{s} await{v} kickoff "
+                       "verification ({ids}): the schedule shows the placeholder and no verified kickoff is recorded "
+                       "in kickoff_verifications.csv"),
+                      ([g for g in HELD[rule] if g in OPEN[rule].index], "game{s} not yet completed, with the "
+                       "placeholder in the schedule and a signal, await{v} {its} result ({ids})")):
+        if ids:
+            k = len(ids)
+            parts.append(f"{k} " + what.format(s="s" if k != 1 else "", v="" if k != 1 else "s",
+                                               its="their" if k != 1 else "its", ids=", ".join(map(str, ids))))
+    return "FINAL withheld: " + "; ".join(parts) + " (amendment 7)"
+
+
+def waits_for(rule):
+    """What a decision whose horizon has passed, with nothing pending, waits for (amendment 7, draft)."""
+    return ("kickoff verification." if not any(g in OPEN[rule].index for g in HELD[rule]) else
+            "the games named below (amendment 7).")
 
 
 def mean_ci(x):
@@ -1047,6 +1124,13 @@ def entered(dec):
 
 
 rec = recorded(RB_ID)
+# Amendment 7 (draft): a game not yet completed holds Rule B's decision only if it could enter it: with fewer than 40
+# settled signals, any; after that, one whose placeholder or a signal row's kickoff is on or before the horizon
+RB_H = max(done.sort_values("start_utc").start_utc.iloc[ENOUGH - 1], REG_END_2026) if len(done) >= ENOUGH else None
+OPEN["Rule B"] = OPEN["Rule B"][OPEN["Rule B"] <= RB_H] if RB_H is not None else OPEN["Rule B"]
+HELD["Rule B"] = sorted(set(signals(Q, "Rule B").game_id.unique().tolist()) | set(OPEN["Rule B"].index.tolist()))
+JSON["quarantine"]["final_withheld"]["Rule B"] = HELD["Rule B"]
+JSON["quarantine"]["not_yet_completed"]["Rule B"] = sorted(OPEN["Rule B"].index.tolist())
 if not len(done):       # amendment 7 (draft): a quarantine prints the interim read even with nothing settled
     m, lo, n = np.nan, np.nan, 0
 if len(done) or rec is not None or HELD["Rule B"]:     # a recorded decision prints even when nothing is settled now
@@ -1091,7 +1175,7 @@ if len(done) or rec is not None or HELD["Rule B"]:     # a recorded decision pri
                 horizon is None and NOW >= TEST_END and not (pending.start_utc < TEST_END).any()):
             # amendment 7 (draft): only a quarantine holds a decision whose horizon has passed with nothing pending
             when = (f"Its horizon has passed: {label(horizon)}. " if horizon is not None else
-                    "The test has ended. ") + "The decision waits for kickoff verification."
+                    "The test has ended. ") + "The decision waits for " + waits_for("Rule B")
         interim("Rule B", when, {"mean CLV > 0": m > 0, "95% interval above zero": lo > 0,
                                  f"{ENOUGH} settled signals": len(done) >= ENOUGH,
                                  f"at least {MIN_CLOSES} with a primary close": n >= MIN_CLOSES})
@@ -1213,7 +1297,7 @@ if len(ht_done) or rec is not None or HELD["Rule HT"]:     # a recorded decision
                 f"{'s' if waiting != 1 else ''}." if NOW >= TEST_END else
                 "The decision comes once, after the 2027 season's title game (January 2028).")
         if NOW >= TEST_END and not waiting:    # amendment 7 (draft): only a quarantine holds it then
-            when = "The title game has passed; the decision waits for kickoff verification."
+            when = "The title game has passed; the decision waits for " + waits_for("Rule HT")
         interim("Rule HT", when, {"one-sided p < 0.05": p < 0.05, "ROI > 0": nums["roi"] > 0})
         json_decision("Rule HT", HT_ID, HT_HORIZON, "interim", None, json_start)
 if len(ht_done):
@@ -1349,7 +1433,9 @@ def json_document():
                            "games": [json_id(g) for g in JSON["quarantine"]["games"]],
                            "rows": int(JSON["quarantine"]["rows"]),
                            "final_withheld": {k: [json_id(g) for g in v]
-                                              for k, v in JSON["quarantine"]["final_withheld"].items()}},
+                                              for k, v in JSON["quarantine"]["final_withheld"].items()},
+                           "not_yet_completed": {k: [json_id(g) for g in v]          # holding a FINAL, not quarantined
+                                                 for k, v in JSON["quarantine"]["not_yet_completed"].items()}},
             "decision_record": {"written_by_this_run": any(JSON["written"].values()),
                                 "why_not": NOT_RECORDED or None},
             "tests": [json_test("RULE_B", "Rule B, wind under", "Rule B"),

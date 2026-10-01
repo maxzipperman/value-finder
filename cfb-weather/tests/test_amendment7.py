@@ -320,14 +320,16 @@ def test_a_completed_placeholder_game_is_quarantined_until_its_kickoff_is_verifi
 
 def test_a_placeholder_game_not_yet_played_keeps_the_placeholder_and_is_not_quarantined(tmp_path):
     """A game not yet completed is not graded anyway. Its schedule kickoff stays the placeholder, as on main: a row
-    logged after it is logged at or after kickoff. It is not quarantined, and no FINAL is withheld for it."""
+    logged after it is logged at or after kickoff. It is not quarantined; while it has a signal, it holds the FINAL of
+    that rule (below), and says so as a game not yet completed."""
     rows = [row(1, REAL_KICK, "2026-10-09T14:30Z", rule_b="SIGNAL", mkt_total=66.5),
             row(1, REAL_KICK, "2026-10-10T20:30Z", mkt_total=64.5)]
     out = score(tmp_path, rows, [sched(1, 50, kick=PLACEHOLDER, start_time_tbd=True, completed=False)],
                 "--now", "2026-10-20")
     assert f"{PH_LINE}, not yet played: 1 (1)" in out
     assert f"{PH_LINE}, completed, no verified kickoff (quarantined, not graded): 0" in out
-    assert QUARANTINED not in out and "FINAL withheld" not in out and "excluded, logged at or after kickoff: 1" in out
+    assert QUARANTINED not in out and "awaits kickoff verification" not in out
+    assert "excluded, logged at or after kickoff: 1" in out and OPEN_HELD in rb(out) and OPEN_HELD in ht(out)
     assert "1 signals, 0 settled, 1 pending" in rb(out) and "0 settled, 1 pending" in ht(out)
 
 
@@ -356,25 +358,33 @@ def test_a_flag_on_a_real_time_keeps_that_time_as_the_schedule_kickoff(tmp_path)
 
 def test_a_verification_never_replaces_a_time_the_schedule_shows(tmp_path):
     """A verified kickoff is used only where the schedule shows the placeholder. Where it shows a time, that time is the
-    kickoff, and the scorer names the verification it didn't use."""
+    kickoff, and the scorer names the verification it didn't use; it names one for a game not in the ledger too."""
     rows = [row(1, REAL_KICK, "2026-10-10T02:30Z", mkt_total=68.5),
             row(1, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5, mkt_under=-105)]
-    out = score(tmp_path, rows, [sched(1, 67)], *verified(tmp_path, (1, "2026-10-10T16:00:00Z")))
+    out = score(tmp_path, rows, [sched(1, 67)], *verified(tmp_path, (1, "2026-10-10T16:00:00Z"), (99, REAL_KICK)))
+    assert "kickoff verifications not used, the game is not in the ledger (amendment 7): 1 (99)" in out
     assert ("kickoff verifications not used, the schedule doesn't show the placeholder for the game (amendment 7): "
             "1 (1)") in out
     assert "logged at or after kickoff" not in out and "record 0-1-0" in ht(out)
 
 
-@pytest.mark.parametrize("line", ["1,2026-10-10 16:00,box score,2026-10-12,\n",       # no Z: not a UTC time
-                                  "1,2026-10-10T16:00:00Z,,2026-10-12,\n",              # no source
-                                  "1,2026-10-10T16:00:00Z,box score,2026-10-12,\n" * 2,  # twice
-                                  "x,2026-10-10T16:00:00Z,box score,2026-10-12,\n"])    # not a game id
-def test_a_damaged_verification_file_verifies_nothing(tmp_path, line):
+@pytest.mark.parametrize("line,why", [
+    ("1,2026-10-10 16:00,box score,2026-10-12,\n", "game 1: a kickoff that is not a UTC time"),
+    ("1,2026-10-10T16:00:00Z,,2026-10-12,\n", "game 1: no source"),
+    ("1,2026-10-10T16:00:00Z,box score,2026-10-12,\n" * 2, "game 1 is listed more than once"),
+    ("x,2026-10-10T16:00:00Z,box score,2026-10-12,\n", "a game id that is not a number"),
+    ("1,2026-10-10T16:00:00Z,box score,2026-10-12,a,b\n", "line 2 has 6 fields, not 5"),
+    ("1,2026-10-10T16:00:00Z,box score\n", "line 2 has 3 fields, not 5"),
+    ("1,2026-10-10T16:00:00Z,box score,2026-11-21,\n", "game 1: verified_on 2026-11-21 is after this run's date "
+                                                         "(2026-11-20)")])
+def test_a_damaged_verification_file_verifies_nothing(tmp_path, line, why):
+    """A bad line, a line with the wrong number of fields, or a verification dated after the run's clock makes the
+    whole file unreadable: every completed placeholder game stays quarantined, and the scorer says why."""
     rows = [row(1, REAL_KICK, "2026-10-09T14:30Z")]
     tmp_path.mkdir(parents=True, exist_ok=True)
     (tmp_path / "v.csv").write_text("game_id,kickoff_utc,source,verified_on,note\n" + line)
     out = score(tmp_path, rows, [sched(1, 50, kick=PLACEHOLDER)], "--verifications", str(tmp_path / "v.csv"))
-    assert "kickoff verifications: v.csv is unreadable (ValueError: " in out
+    assert f"kickoff verifications: v.csv is unreadable (ValueError: {why}" in out
     assert f"{PH_LINE}, completed, no verified kickoff (quarantined, not graded): 1 (1)" in out
     assert f"excluded, {QUARANTINED}: 1" in out
 
@@ -611,7 +621,8 @@ def test_the_json_document_carries_the_quarantine_as_printed(tmp_path):
     doc = json.loads(score(tmp_path, rows, s, "--json"))
     assert doc["text"] == score(tmp_path, rows, s)
     assert doc["quarantine"] == {"reason": QUARANTINED, "games": ["1"], "rows": 2,
-                                 "final_withheld": {"Rule B": ["1"], "Rule HT": []}}
+                                 "final_withheld": {"Rule B": ["1"], "Rule HT": []},
+                                 "not_yet_completed": {"Rule B": [], "Rule HT": []}}
     assert doc["excluded"][QUARANTINED] == 2
     assert doc["placeholder_games"] == {"completed_verified": [], "quarantined": ["1"], "not_yet_played": []}
     b, h = (next(t for t in doc["tests"] if t["id"] == i) for i in ("RULE_B", "RULE_HT"))
@@ -818,10 +829,11 @@ def test_a_quarantine_holds_only_the_rules_it_has_a_signal_for(tmp_path):
 
 
 def test_the_live_record_waits_for_the_committed_verification(tmp_path):
-    """On the live ledger, on the real clock: a Rule B decision whose horizon has passed, with one of its 41 signals on
-    a game the schedule still shows at the placeholder. Nothing is recorded while the game is quarantined; a run that
-    reads another verification file records nothing either; once the project's own kickoff_verifications.csv holds
-    the game's kickoff, the decision is recorded."""
+    """On the live ledger, on the real clock (the project in a git repository, as the live checkout is): a Rule B
+    decision whose horizon has passed, with one of its 41 signals on a game the schedule still shows at the placeholder.
+    Nothing is recorded while the game is quarantined; a run that reads another verification file records nothing
+    either; nor does a run while the project's kickoff_verifications.csv holds the kickoff as an edit not yet
+    committed (the game is graded, but the record waits). Once that edit is committed, the decision is recorded."""
     import test_readings as R
     rows, s = R.rb_signals(41)
     s[0] = s[0] | {"start_date": "2026-10-03T04:00:00.000Z"}                  # game 1, Oct 3: the placeholder
@@ -835,8 +847,86 @@ def test_the_live_record_waits_for_the_committed_verification(tmp_path):
     out = R.on_clock(tmp_path, "2026-12-20T17:05", scorer, *other).stdout
     assert "FINAL: KEEP" in rb(out) and not (fwd / "decisions.csv").exists()
     assert ("not recorded: the live record is written only from the committed kickoff_verifications.csv.") in rb(out)
-    shutil.copy(tmp_path / "elsewhere" / "v.csv", proj / "kickoff_verifications.csv")
+    shutil.copy(tmp_path / "elsewhere" / "v.csv", proj / "kickoff_verifications.csv")       # edited, not committed
+    out = R.on_clock(tmp_path, "2026-12-20T17:08", scorer).stdout
+    assert f"{PH_LINE}, completed, kickoff verified: 1 (1)" in out and "FINAL: KEEP" in rb(out)
+    assert ("not recorded: kickoff_verifications.csv differs from its committed version (git show "
+            "HEAD:./kickoff_verifications.csv), and the live record is written only from the committed file: commit "
+            "the change, or restore the file, and run the scorer again.") in rb(out)
+    assert not (fwd / "decisions.csv").exists()
+    R.commit_verifications(proj, (tmp_path / "elsewhere" / "v.csv").read_bytes())
     out = R.on_clock(tmp_path, "2026-12-20T17:10", scorer).stdout
     assert f"{PH_LINE}, completed, kickoff verified: 1 (1)" in out
     assert "FINAL: KEEP" in rb(out) and "recorded in decisions.csv on 2026-12-20T17:10:00Z" in rb(out)
     assert pd.read_csv(fwd / "decisions.csv").decision_id.tolist() == ["CFB_RULE_B"]
+
+
+# ------------------------------------------------------------------ a game not yet completed holds the FINAL too
+OPEN_HELD = ("FINAL withheld: 1 game not yet completed, with the placeholder in the schedule and a signal, awaits its "
+             "result (1) (amendment 7)")
+
+
+def test_a_game_not_yet_completed_holds_rule_hts_final(tmp_path):
+    """The second review's case (h1). After the title game, Rule HT's other bets are settled; game 1's schedule still
+    shows the placeholder and the game isn't marked completed, and its only rows, logged on game day with the real time,
+    are logged after the placeholder. They don't count yet, so nothing is pending, but once the game is completed and
+    verified they do: the FINAL waits, and nothing is recorded. When the game is completed and verified, the FINAL is
+    recorded on both bets. With no score 30 days after its kickoff (void under amendment 4), it no longer holds."""
+    ph, rk = pd.Timestamp("2028-01-10T05:00:00Z"), pd.Timestamp("2028-01-11T01:00:00Z")   # 00:00 EST; 8:00 PM EST
+    rows = [row(2, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5),
+            row(1, rk, "2028-01-10T18:00Z", mkt_total=70.5), row(1, rk, "2028-01-10T23:00Z", mkt_total=70.5)]
+    waiting = [sched(2, 50), sched(1, 60, kick=ph) | dict(home_points=None, away_points=None, completed=False)]
+    f = tmp_path / "t"
+    out = score(f, rows, waiting, "--now", "2028-02-02", "--test-record")
+    assert f"{PH_LINE}, not yet played: 1 (1)" in out and "excluded, logged at or after kickoff: 2" in out
+    assert "1 signals at the last quote before kickoff, 1 settled, 0 pending" in ht(out)
+    assert ("The title game has passed; the decision waits for the games named below (amendment 7)." in ht(out)
+            and OPEN_HELD in ht(out) and "FINAL:" not in ht(out))
+    assert not (f / "decisions.csv").exists()
+    out = score(f, rows, [sched(2, 50), sched(1, 60, kick=ph)], "--now", "2028-02-03", "--test-record",
+                *verified(f, (1, rk)))
+    assert "FINAL: STAY ON PAPER" in ht(out) and "on 2 bets: record 2-0-0" in ht(out)
+    assert pd.read_csv(f / "decisions.csv").decision_id.tolist() == ["CFB_RULE_HT"]
+    out = score(tmp_path / "late", rows, waiting, "--now", "2028-02-11", "--test-record")       # 31 days on
+    assert "FINAL withheld" not in out and "FINAL: STAY ON PAPER" in ht(out) and "on 1 bets" in ht(out)
+
+
+def test_a_game_not_yet_completed_holds_rule_bs_final_only_if_it_could_enter_it(tmp_path):
+    """The second review's case (h1b): 41 settled Rule B signals and the regular season over; game 99, on the last
+    Saturday, still shows the placeholder, isn't marked completed, and its signal and later quote were logged on game
+    day, after the placeholder. The FINAL waits; once the game is completed and verified, both rows count and the
+    decision is made on 42 signals. A game whose placeholder and rows are after the horizon doesn't hold it."""
+    import test_readings as R
+    rows, s = R.rb_signals(41)
+    ph, rk = pd.Timestamp("2026-12-12T05:00:00Z"), pd.Timestamp("2026-12-12T20:00:00Z")
+    extra = [R.row(99, rk, "2026-12-12T14:00Z", rule_b="SIGNAL", mkt_total=50.5),
+             R.row(99, rk, "2026-12-12T18:00Z", mkt_total=44.5)]
+    waiting = s + [R.sched(99, 20, 20, kick=ph) | dict(completed=False, home_points=None, away_points=None)]
+    f = tmp_path / "t"
+    out = score(f, rows + extra, waiting, "--now", "2026-12-13T12:00", "--test-record")
+    assert "41 signals, 41 settled, 0 pending" in rb(out) and "FINAL:" not in rb(out)
+    assert OPEN_HELD.replace("(1)", "(99)") in rb(out) and not (f / "decisions.csv").exists()
+    out = score(f, rows + extra, s + [R.sched(99, 20, 20, kick=ph)], "--now", "2026-12-14T12:00", "--test-record",
+                *verified(f, (99, rk)))
+    assert "FINAL: KEEP, on the 42 signals" in rb(out)
+    assert pd.read_csv(f / "decisions.csv").decision_id.tolist() == ["CFB_RULE_B"]
+    after = [R.row(99, rk + pd.Timedelta(days=7), "2026-12-19T14:00Z", rule_b="SIGNAL", mkt_total=50.5),
+             R.row(99, rk + pd.Timedelta(days=7), "2026-12-19T18:00Z", mkt_total=44.5)]
+    waiting = s + [R.sched(99, 20, 20, kick=ph + pd.Timedelta(days=7)) | dict(completed=False, home_points=None,
+                                                                              away_points=None)]
+    out = score(tmp_path / "after", rows + after, waiting, "--now", "2026-12-20T12:00", "--test-record")
+    assert "FINAL withheld" not in rb(out) and "FINAL: KEEP, on the 41 signals" in rb(out)
+
+
+def test_the_json_document_carries_the_games_not_yet_completed_that_hold_a_final(tmp_path):
+    import json
+    ph, rk = pd.Timestamp("2028-01-10T05:00:00Z"), pd.Timestamp("2028-01-11T01:00:00Z")
+    rows = [row(2, REAL_KICK, "2026-10-10T22:30Z", mkt_total=64.5), row(1, rk, "2028-01-10T18:00Z", mkt_total=70.5)]
+    waiting = [sched(2, 50), sched(1, 60, kick=ph) | dict(home_points=None, away_points=None, completed=False)]
+    doc = json.loads(score(tmp_path, rows, waiting, "--now", "2028-02-02", "--json"))
+    assert doc["quarantine"]["games"] == [] and doc["quarantine"]["not_yet_completed"] == {"Rule B": [],
+                                                                                           "Rule HT": ["1"]}
+    assert doc["quarantine"]["final_withheld"] == {"Rule B": [], "Rule HT": ["1"]}
+    h = next(t for t in doc["tests"] if t["id"] == "RULE_HT")
+    assert h["final_withheld"] == ["1"] and h["decisions"][0]["final_withheld"] == ["1"]
+    assert OPEN_HELD in h["decisions"][0]["text"]

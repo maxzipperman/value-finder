@@ -240,7 +240,21 @@ def project(tmp_path, name="proj"):
     (proj / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "score_forward.py", proj / "scripts" / "score_forward.py")
     (proj / "data" / "forward").mkdir(parents=True)
+    commit_verifications(proj, (ROOT / "kickoff_verifications.csv").read_bytes())
     return proj
+
+
+def commit_verifications(proj, data):
+    """cfb-weather amendment 7 (draft): a live run records only from the committed kickoff_verifications.csv, so the
+    project's copy sits in a git repository (its parent folder, as the live checkout's is) with the file committed."""
+    (proj / "kickoff_verifications.csv").write_bytes(data)
+    inside = subprocess.run(["git", "-C", str(proj), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    top = Path(inside.stdout.strip()) if inside.returncode == 0 else proj.parent   # a repository it is already in
+    if inside.returncode != 0:
+        git(top, "init", "-q")
+    path = str((proj / "kickoff_verifications.csv").relative_to(top))
+    git(top, "add", path)
+    git(top, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "kickoff verifications", "--", path)
 
 
 def run(script, *args):
