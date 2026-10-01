@@ -1,0 +1,422 @@
+{
+  "bundle_root_sha256": "4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d",
+  "ledger_sha256": "eb9e93e354babef2be73ddaa13ea6e2913c58eaaff706ed4e78aec1381636190",
+  "coverage_report_sha256": "adb6c303948a18de52b9213bc2afacf7886213598ac3d64e05d45b3f7919d3e3",
+  "coverage_report_bytes": 9939544295,
+  "attempt_status_counts": {
+    "completed": 2760,
+    "missing": 1
+  },
+  "paid_files_rehashed": 5522,
+  "reused": 12,
+  "new_credits_from_response_headers": 82830,
+  "reserved": 82830,
+  "provider_used": 84525,
+  "provider_remaining": 4915475,
+  "conservative_external_debit": 1695,
+  "older_slice": {
+    "requests": 2279,
+    "paid": 2267,
+    "reused": 12,
+    "credits": 68010
+  },
+  "snapshot_lag_seconds_histogram": {
+    "259": 172,
+    "260": 191,
+    "258": 161,
+    "256": 19,
+    "257": 80,
+    "261": 689,
+    "262": 1020,
+    "34459": 1,
+    "253": 1,
+    "263": 436,
+    "207": 1,
+    "252": 1,
+    "245": 1
+  },
+  "missing": [
+    {
+      "request_id": "4c2c73500385dab745397c76ff60d959f41d41d8652738ab5257a9046d06e894",
+      "requested_utc": "2023-10-15T16:00:00Z",
+      "returned_utc": "2023-10-15T06:25:41Z",
+      "next_snapshot_utc": "2023-10-15T21:20:41Z",
+      "lag_seconds": 34459.0,
+      "intended_game_ids": [
+        "americanfootball_ncaaf/2023/401520329",
+        "americanfootball_ncaaf/2023/401520330",
+        "americanfootball_ncaaf/2023/401520331",
+        "americanfootball_ncaaf/2023/401520332",
+        "americanfootball_ncaaf/2023/401520333",
+        "americanfootball_ncaaf/2023/401520334",
+        "americanfootball_ncaaf/2023/401520335",
+        "americanfootball_ncaaf/2023/401520336",
+        "americanfootball_ncaaf/2023/401520337",
+        "americanfootball_ncaaf/2023/401520338",
+        "americanfootball_ncaaf/2023/401520339",
+        "americanfootball_ncaaf/2023/401520340",
+        "americanfootball_ncaaf/2023/401520341",
+        "americanfootball_ncaaf/2023/401520342",
+        "americanfootball_ncaaf/2023/401520343",
+        "americanfootball_ncaaf/2023/401520344",
+        "americanfootball_ncaaf/2023/401524035",
+        "americanfootball_ncaaf/2023/401524036",
+        "americanfootball_ncaaf/2023/401524037",
+        "americanfootball_ncaaf/2023/401524038",
+        "americanfootball_ncaaf/2023/401525528",
+        "americanfootball_ncaaf/2023/401525529",
+        "americanfootball_ncaaf/2023/401525530",
+        "americanfootball_ncaaf/2023/401525531",
+        "americanfootball_ncaaf/2023/401525532",
+        "americanfootball_ncaaf/2023/401525867",
+        "americanfootball_ncaaf/2023/401525868",
+        "americanfootball_ncaaf/2023/401525869",
+        "americanfootball_ncaaf/2023/401525870",
+        "americanfootball_ncaaf/2023/401525871",
+        "americanfootball_ncaaf/2023/401525872",
+        "americanfootball_ncaaf/2023/401531341",
+        "americanfootball_ncaaf/2023/401531372",
+        "americanfootball_ncaaf/2023/401531382",
+        "americanfootball_ncaaf/2023/401531391",
+        "americanfootball_ncaaf/2023/401531397",
+        "americanfootball_ncaaf/2023/401531406",
+        "americanfootball_ncaaf/2023/401531434",
+        "americanfootball_ncaaf/2023/401531892",
+        "americanfootball_ncaaf/2023/401531893",
+        "americanfootball_ncaaf/2023/401531894",
+        "americanfootball_ncaaf/2023/401531895",
+        "americanfootball_ncaaf/2023/401531896",
+        "americanfootball_ncaaf/2023/401531897",
+        "americanfootball_ncaaf/2023/401532425",
+        "americanfootball_ncaaf/2023/401532426",
+        "americanfootball_ncaaf/2023/401532427",
+        "americanfootball_ncaaf/2023/401532428",
+        "americanfootball_ncaaf/2023/401532429",
+        "americanfootball_ncaaf/2023/401532430",
+        "americanfootball_ncaaf/2023/401532599",
+        "americanfootball_ncaaf/2023/401532600",
+        "americanfootball_ncaaf/2023/401532601",
+        "americanfootball_ncaaf/2023/401532602"
+      ],
+      "intended_book_market_cells": 1620,
+      "returned_stale_event_count": 1,
+      "coverage_rows": 1620,
+      "coverage_statuses": {
+        "missing_or_ineligible_entry": 1620
+      },
+      "targets_seen_elsewhere": 54
+    }
+  ],
+  "event_metadata": {
+    "returned_event_sightings": 123403,
+    "unbound_or_ambiguous_sightings": 3125,
+    "outside_recent_season_sightings": 1,
+    "outside_recent_season_2026": 1,
+    "unique_recent_provider_events": 3954,
+    "canonical_games_observed": 3471,
+    "canonical_games_with_multiple_observed_provider_ids": 223,
+    "events_with_multiple_kickoff_values": 3053,
+    "events_with_reversed_canonical_home_away": 27
+  },
+  "identity_examples": {
+    "multi_id_games": [
+      {
+        "canonical_game_id": "americanfootball_ncaaf/2023/401520183",
+        "provider_ids": [
+          "03fbc11d27130814769e6a04d38f4e8f",
+          "be209f5124cfde6b0917c1bcbdc68a75"
+        ]
+      },
+      {
+        "canonical_game_id": "americanfootball_ncaaf/2023/401520188",
+        "provider_ids": [
+          "13094ffdd64c593f0f42f414a02abb1f",
+          "f26e111f218a1e10eb7d2fb96c993c76"
+        ]
+      },
+      {
+        "canonical_game_id": "americanfootball_ncaaf/2023/401520194",
+        "provider_ids": [
+          "e09b6770e1913d6c2045334f07976bd0",
+          "f81a3f039181a04780a4f8ad02e91164"
+        ]
+      },
+      {
+        "canonical_game_id": "americanfootball_ncaaf/2023/401520201",
+        "provider_ids": [
+          "383ad36d1c20abb9b59efc47542ae4ea",
+          "8676868a7c6f9960e48bbbd5582d64df"
+        ]
+      },
+      {
+        "canonical_game_id": "americanfootball_ncaaf/2023/401520224",
+        "provider_ids": [
+          "709855eae2c6ca6702a15a866e5a508e",
+          "b7dc8d3be7bb9882bd1527770ef28e8c"
+        ]
+      }
+    ],
+    "swapped_events": [
+      {
+        "sport": "americanfootball_ncaaf",
+        "provider_id": "0cb311bcb3f68f8ae9e5647628fbb88f",
+        "canonical_orientations": [
+          [
+            "cfb:201",
+            "cfb:251"
+          ],
+          [
+            "cfb:251",
+            "cfb:201"
+          ]
+        ]
+      },
+      {
+        "sport": "americanfootball_ncaaf",
+        "provider_id": "0cbc1905f7a569ea38c6b21607df9e00",
+        "canonical_orientations": [
+          [
+            "cfb:120",
+            "cfb:2"
+          ],
+          [
+            "cfb:2",
+            "cfb:120"
+          ]
+        ]
+      },
+      {
+        "sport": "americanfootball_ncaaf",
+        "provider_id": "1803d7f4d655fb3f6d5f39fcfd893b96",
+        "canonical_orientations": [
+          [
+            "cfb:2579",
+            "cfb:259"
+          ],
+          [
+            "cfb:259",
+            "cfb:2579"
+          ]
+        ]
+      },
+      {
+        "sport": "americanfootball_ncaaf",
+        "provider_id": "1fa5e8103c9fcd79e79305c2884a880c",
+        "canonical_orientations": [
+          [
+            "cfb:2459",
+            "cfb:278"
+          ],
+          [
+            "cfb:278",
+            "cfb:2459"
+          ]
+        ]
+      },
+      {
+        "sport": "americanfootball_ncaaf",
+        "provider_id": "20740de7481ec1f20c2efbc30852f6c6",
+        "canonical_orientations": [
+          [
+            "cfb:2306",
+            "cfb:66"
+          ],
+          [
+            "cfb:66",
+            "cfb:2306"
+          ]
+        ]
+      }
+    ]
+  },
+  "coverage": {
+    "identity_and_opportunity_accounting": {
+      "matched": 6880,
+      "matched_no_valid_pregame_listing": 4,
+      "unmatched_observed_opportunity": 350
+    },
+    "quote_quality_and_exclusions": {
+      "conflicted_or_ineligible": 438746,
+      "invalid_offered_price": 3376,
+      "not_in_scheduled_pregame_window": 300398,
+      "quote_stale_at_snapshot": 124,
+      "scheduled_pregame_eligible": 3934454,
+      "unresolved_material_kickoff_conflict": 260446
+    },
+    "valid_reference_pairs": 192314
+  },
+  "coverage_strata_aggregates": {
+    "sport_season": {
+      "americanfootball_ncaaf|2023": {
+        "intended_entry_instruments": 170250,
+        "intended_instruments_with_valid_pair": 103284,
+        "quote_present": 107611,
+        "missing_quote": 62639
+      },
+      "americanfootball_ncaaf|2024": {
+        "intended_entry_instruments": 193830,
+        "intended_instruments_with_valid_pair": 121899,
+        "quote_present": 128260,
+        "missing_quote": 65570
+      },
+      "americanfootball_ncaaf|2025": {
+        "intended_entry_instruments": 191610,
+        "intended_instruments_with_valid_pair": 129462,
+        "quote_present": 137898,
+        "missing_quote": 53712
+      },
+      "americanfootball_nfl|2023": {
+        "intended_entry_instruments": 61380,
+        "intended_instruments_with_valid_pair": 48439,
+        "quote_present": 49764,
+        "missing_quote": 11616
+      },
+      "americanfootball_nfl|2024": {
+        "intended_entry_instruments": 61410,
+        "intended_instruments_with_valid_pair": 52422,
+        "quote_present": 53593,
+        "missing_quote": 7817
+      },
+      "americanfootball_nfl|2025": {
+        "intended_entry_instruments": 61410,
+        "intended_instruments_with_valid_pair": 57496,
+        "quote_present": 58972,
+        "missing_quote": 2438
+      }
+    },
+    "book": {
+      "betmgm": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 51979,
+        "quote_present": 54078,
+        "missing_quote": 19911
+      },
+      "betonlineag": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 55102,
+        "quote_present": 57667,
+        "missing_quote": 16322
+      },
+      "betrivers": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 58304,
+        "quote_present": 60943,
+        "missing_quote": 13046
+      },
+      "draftkings": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 59194,
+        "quote_present": 61517,
+        "missing_quote": 12472
+      },
+      "espnbet": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 44137,
+        "quote_present": 46029,
+        "missing_quote": 27960
+      },
+      "fanatics": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 15384,
+        "quote_present": 16711,
+        "missing_quote": 57278
+      },
+      "fanduel": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 61840,
+        "quote_present": 65121,
+        "missing_quote": 8868
+      },
+      "lowvig": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 53974,
+        "quote_present": 56524,
+        "missing_quote": 17465
+      },
+      "pinnacle": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 56803,
+        "quote_present": 58910,
+        "missing_quote": 15079
+      },
+      "williamhill_us": {
+        "intended_entry_instruments": 73989,
+        "intended_instruments_with_valid_pair": 56285,
+        "quote_present": 58598,
+        "missing_quote": 15391
+      }
+    },
+    "market": {
+      "h2h": {
+        "intended_entry_instruments": 246630,
+        "intended_instruments_with_valid_pair": 162983,
+        "quote_present": 171194,
+        "missing_quote": 75436
+      },
+      "spreads": {
+        "intended_entry_instruments": 246630,
+        "intended_instruments_with_valid_pair": 175326,
+        "quote_present": 182867,
+        "missing_quote": 63763
+      },
+      "totals": {
+        "intended_entry_instruments": 246630,
+        "intended_instruments_with_valid_pair": 174693,
+        "quote_present": 182037,
+        "missing_quote": 64593
+      }
+    },
+    "lead": {
+      "24_to_72h": {
+        "intended_entry_instruments": 217500,
+        "intended_instruments_with_valid_pair": 173450,
+        "quote_present": 179814,
+        "missing_quote": 37686
+      },
+      "MOS_slot_only": {
+        "intended_entry_instruments": 11070,
+        "intended_instruments_with_valid_pair": 9981,
+        "quote_present": 10091,
+        "missing_quote": 979
+      },
+      "over_72h": {
+        "intended_entry_instruments": 416400,
+        "intended_instruments_with_valid_pair": 251243,
+        "quote_present": 265225,
+        "missing_quote": 151175
+      },
+      "under_24h": {
+        "intended_entry_instruments": 94920,
+        "intended_instruments_with_valid_pair": 78328,
+        "quote_present": 80968,
+        "missing_quote": 13952
+      }
+    },
+    "first_observed": {
+      "first_observed_at_least_48h": {
+        "intended_entry_instruments": 707820,
+        "intended_instruments_with_valid_pair": 500380,
+        "quote_present": 523084,
+        "missing_quote": 184736
+      },
+      "first_observed_under_48h": {
+        "intended_entry_instruments": 21000,
+        "intended_instruments_with_valid_pair": 2641,
+        "quote_present": 2923,
+        "missing_quote": 18077
+      },
+      "not_inferred": {
+        "intended_entry_instruments": 11070,
+        "intended_instruments_with_valid_pair": 9981,
+        "quote_present": 10091,
+        "missing_quote": 979
+      }
+    }
+  },
+  "limitations": [
+    "No outcome joins or strategy grading",
+    "Metadata-only identities do not certify actual first-play time",
+    "Missing-slot effects measured on intended instruments, not hypothetical bets",
+    "Inherited opportunity registry spans 2020\u201325"
+  ]
+}
