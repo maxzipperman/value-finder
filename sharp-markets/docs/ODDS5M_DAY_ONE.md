@@ -199,8 +199,8 @@ then.
      - Then run `uv run markets price-engine`. It needs no credits, and it writes `reports/price_engine/report.md` and `results.csv`.
      - Report its eight primary verdicts to the hub.
    - **The props grader (#10), free, once F3a is in.** The rules are registered: [`nfl-weather/PREREGISTRATION_PROPS.md`](../../nfl-weather/PREREGISTRATION_PROPS.md), September 30, 2026 (PR 82).
-     - Run `uv run markets props-grade`. It reads no outcome: it prints each primary market's coverage at F3a's close and the book the rule picks, then stops.
-     - Record that book and its two coverage figures in a dated note in the registration's section 8 and commit it, before anything else.
+     - Run `uv run markets props-grade`. It reads no outcome: it prints each primary market's coverage at F3a's close and the book the rule picks (with a warning if F3a is partial), and the prop names the roster doesn't match, then stops. Send the unmatched names to the hub: a roster fix is a dated amendment made before the first join.
+     - Record that book and its two coverage figures in a dated entry in the registration's section 8 (`- **YYYY-MM-DD (Pacific):** the book is DraftKings (...)`) and commit it, before anything else.
      - Then run `uv run markets props-grade --book-recorded <book>`. It writes `reports/props_grade/report.md`. Report the F3b gate (section 3) to the hub; it is read by about October 20.
 6. **The NBA sample week (N0), 7,540 credits, through the NBA pipeline, not the bulk puller.** PLAN.md §8 step 3 requires it before any full season; the week's Kalshi candles and trades are already cached, and the snapshots land where N1 will look:
    ```bash
