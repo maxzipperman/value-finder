@@ -1,0 +1,33 @@
+code,name,aliases,kalshi_codes,espn_codes,conference
+ARI,Arizona Cardinals,Arizona,ARI,ARI,NFC
+ATL,Atlanta Falcons,Atlanta,ATL,ATL,NFC
+BAL,Baltimore Ravens,Baltimore,BAL,BAL,AFC
+BUF,Buffalo Bills,Buffalo,BUF,BUF,AFC
+CAR,Carolina Panthers,Carolina,CAR,CAR,NFC
+CHI,Chicago Bears,Chicago,CHI,CHI,NFC
+CIN,Cincinnati Bengals,Cincinnati,CIN,CIN,AFC
+CLE,Cleveland Browns,Cleveland,CLE,CLE,AFC
+DAL,Dallas Cowboys,Dallas,DAL,DAL,NFC
+DEN,Denver Broncos,Denver,DEN,DEN,AFC
+DET,Detroit Lions,Detroit,DET,DET,NFC
+GB,Green Bay Packers,Green Bay,GB,GB,NFC
+HOU,Houston Texans,Houston,HOU,HOU,AFC
+IND,Indianapolis Colts,Indianapolis,IND,IND,AFC
+JAX,Jacksonville Jaguars,Jacksonville,JAC,JAX,AFC
+KC,Kansas City Chiefs,Kansas City,KC,KC,AFC
+LA,Los Angeles Rams,LA Rams|L.A. Rams|LAR,LA|LAR,LAR,NFC
+LAC,Los Angeles Chargers,LA Chargers|L.A. Chargers,LAC,LAC,AFC
+LV,Las Vegas Raiders,Las Vegas,LV,LV,AFC
+MIA,Miami Dolphins,Miami,MIA,MIA,AFC
+MIN,Minnesota Vikings,Minnesota,MIN,MIN,NFC
+NE,New England Patriots,New England,NE,NE,AFC
+NO,New Orleans Saints,New Orleans,NO,NO,NFC
+NYG,New York Giants,,NYG,NYG,NFC
+NYJ,New York Jets,,NYJ,NYJ,AFC
+PHI,Philadelphia Eagles,Philadelphia,PHI,PHI,NFC
+PIT,Pittsburgh Steelers,Pittsburgh,PIT,PIT,AFC
+SEA,Seattle Seahawks,Seattle,SEA,SEA,NFC
+SF,San Francisco 49ers,San Francisco,SF,SF,NFC
+TB,Tampa Bay Buccaneers,Tampa Bay,TB,TB,NFC
+TEN,Tennessee Titans,Tennessee,TEN,TEN,AFC
+WAS,Washington Commanders,Washington,WAS,WSH,NFC

@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "tests_passed": 90,
+  "tests_failed": 0,
+  "network_disabled": true,
+  "live_API_calls": 0,
+  "real_credential_reads": 0,
+  "outcome_joins": 0,
+  "sealed_season_reads": 0,
+  "all_24_probe_bodies_replayed": true,
+  "transport": "fake session through vendored BulkClient with synthetic headers/key; actual sanitized probe bodies",
+  "static_validation": "Full exact allowlist, phase subtotals, MOS slots, close candidates, provider opportunity registry and parent metadata verified separately.",
+  "dynamic_test_scope": "One-request temporary fixtures isolate wrapper behavior; not a 2,761-request production-throughput rehearsal.",
+  "failure_cases": [
+    "after reservation",
+    "after transport",
+    "after response durability",
+    "after receipt durability",
+    "after completion",
+    "timeout",
+    "HTTP error",
+    "billing unreadable",
+    "overcharge",
+    "monthly reset",
+    "other key usage",
+    "missing/changed evidence",
+    "reserve and cumulative ceilings",
+    "unauthorized request",
+    "adapter retry",
+    "echoed synthetic key"
+  ],
+  "acceptance": "No send outside authorized allowlist or without durable reservation; no automatic resend of unresolved attempts; conservative accounting and halt on unreconciled billing.",
+  "source_sha256": {
+    "protocol.json": "5d71e32d7303eaab8bb995faa2b15f85043c65c524291121ccf15604eb27af88",
+    "builder.py": "eec425c9617a5028a05e0915827ad6525cc071b86312e7276bf09ba06dbc9c7a",
+    "executor.py": "de37628486803502d853aa7ce3ef41dbe2bf9f16982eefe9bba4dd2d2dffaa45",
+    "validator.py": "eed9d5f79e8cd12a4a565e104e482d2747ab3ecd22928a4e1800fe608d46ee29",
+    "coverage_report.py": "edf867bf9f905ad491543a175694c1f17833bf1070c72ccc212949c503693ee9",
+    "price_eligibility.py": "e473ec14fa2073ab9e8829b0053be50618100338077e66e2a3b21ebbfd5feabe",
+    "test_v3.py": "d19bc5327c6bc3d8afcc760cc3aa0b8b619f836024e0eec6297aea02ed40f91f"
+  },
+  "completed_utc": "2026-10-01T03:47:47.378412+00:00"
+}
