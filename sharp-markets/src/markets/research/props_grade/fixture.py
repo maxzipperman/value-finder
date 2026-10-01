@@ -226,12 +226,13 @@ def _player_week() -> pd.DataFrame:
 
 
 def _prereg(tmp: Path, book: str) -> Path:
-    """The registration as committed, with a section 8 note naming the fixture's book (only in the scratch copy)."""
-    text = registration.PREREG.read_text()
+    """A scratch copy of the registration whose section 8 is the registered placeholder plus the fixture's own dated
+    note naming its book. Whatever the hub writes into the live section 8 never reaches the fixture."""
     note = (f"- **2026-10-01 (fixture, not data):** the book is {registration.BOOK_NAMES[book]}, by the rule of "
             "section 2.4 on F3a's coverage at the close.")
     p = tmp / "PREREGISTRATION_PROPS.md"
-    p.write_text(text.rstrip("\n") + "\n\n" + note + "\n")
+    p.write_text(registration.with_section8(registration.PREREG.read_text(),
+                                            registration.SECTION8_REGISTERED + "\n\n" + note))
     return p
 
 

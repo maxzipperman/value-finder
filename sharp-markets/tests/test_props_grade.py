@@ -400,18 +400,19 @@ def test_without_the_book_note_nothing_is_joined(fx, monkeypatch, capsys, tmp_pa
     recording it, it refuses (exit 1). No outcome or schedule table is read in any of these."""
     f, *_ = fx
     _no_outcome_reads(monkeypatch)
-    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=tmp_path)
+    out_dir = tmp_path / "out"
+    paths = pg_run.Paths(f.roster, f.games, f.player_week, f.status, f.prereg, check_git=False, out=out_dir)
     run = lambda book, p=paths: pg_run.grade_command(f.cfg, f.cache, p, book_recorded=book, now=fixture.NOW)  # noqa
     assert run(None) == 0
     out = capsys.readouterr().out
     assert "Pinnacle lists 2 of 13 player-games (15.4%)" in out and "Book: DraftKings" in out
     assert "Stopped before any outcome is read" in out and "--book-recorded draftkings" in out
     assert run("pinnacle") == 1 and "REFUSED: --book-recorded pinnacle" in capsys.readouterr().out
-    unnoted = pg_run.Paths(f.roster, f.games, f.player_week, f.status, registration.PREREG, check_git=False,
-                           out=tmp_path)
+    unnoted = pg_run.Paths(f.roster, f.games, f.player_week, f.status, _prereg_with(tmp_path / "reg"),
+                           check_git=False, out=out_dir)
     assert run("draftkings", unnoted) == 1
     assert "does not record DraftKings in a dated entry" in capsys.readouterr().out
-    assert not list(tmp_path.iterdir())
+    assert not out_dir.exists()
 
 
 def test_step_one_lists_the_names_the_roster_does_not_match(fx, monkeypatch, capsys, tmp_path):
@@ -447,24 +448,29 @@ def test_an_uncommitted_registration_or_roster_is_refused(fx, monkeypatch, capsy
     assert run() == 1
     out = capsys.readouterr().out
     assert "REFUSED: the roster" in out and "has changes not committed" in out and "is has" not in out
-    assert real(Path(bulk.CONFIG))[0] and real(registration.PREREG)[0]      # committed, unchanged files pass
+    assert real(Path(bulk.CONFIG))[0] and real(roster.ROSTER)[0]          # committed, unchanged files pass
 
 
-def _prereg_with(tmp_path, section8_text: str, before_8: str = "") -> Path:
-    text = registration.PREREG.read_text()
+def _prereg_with(where: Path, section8_text: str = "", before_8: str = "") -> Path:
+    """A copy of the registration whose section 8 is the registered placeholder plus `section8_text` (never the live
+    note), optionally with `before_8` written at the end of section 7."""
+    where.mkdir(parents=True, exist_ok=True)
+    body = registration.SECTION8_REGISTERED + ("\n\n" + section8_text if section8_text else "")
+    text = registration.with_section8(registration.PREREG.read_text(), body)
     if before_8:
         text = text.replace("## 8. Dated notes", before_8 + "\n\n## 8. Dated notes")
-    p = tmp_path / f"P{len(list(tmp_path.iterdir()))}.md"
-    p.write_text(text.rstrip("\n") + "\n\n" + section8_text + "\n")
+    p = where / f"P{len(list(where.iterdir()))}.md"
+    p.write_text(text)
     return p
 
 
 def test_section8_reader(tmp_path):
     """Review m1: the note must be a dated entry in section 8 that says which book; a mention of the other book's
     coverage doesn't name it, an HTML comment doesn't count, an undated or misplaced note doesn't count, and dated
-    entries naming both books name none."""
-    assert registration.noted_book(registration.PREREG) == (None, "it holds only the placeholder")
-    assert registration.section8(registration.PREREG) == ""
+    entries naming both books name none. Every case is on a copy: the live note is never read here."""
+    placeholder = _prereg_with(tmp_path)
+    assert registration.noted_book(placeholder) == (None, "it holds only the placeholder")
+    assert registration.section8(placeholder) == ""
     good = ("- **2026-10-01 (Pacific):** the book is DraftKings (Pinnacle lists 44 of 55 receiving player-games, "
             "80.0%, and 20 of 35 rushing, 57.1%, at F3a's close), by the rule of 2.4.")
     assert registration.noted_book(_prereg_with(tmp_path, good)) == ("draftkings", "")
@@ -476,7 +482,7 @@ def test_section8_reader(tmp_path):
     assert registration.noted_book(_prereg_with(tmp_path, "- 2026-10-01: Pinnacle lists 44 of 55."))[0] is None
     both = good + "\n- **2026-10-02:** the book is Pinnacle."
     assert registration.noted_book(_prereg_with(tmp_path, both)) == (None, "its dated entries name both books")
-    elsewhere = _prereg_with(tmp_path, "", before_8="- 2026-10-01: the book is DraftKings.")
+    elsewhere = _prereg_with(tmp_path, before_8="- 2026-10-01: the book is DraftKings.")
     assert registration.noted_book(elsewhere)[0] is None                      # outside section 8
     # the reviewer's case 5: a DraftKings note that mentions Pinnacle's figures never lets Pinnacle join
     stop = pg_run.refusal("pinnacle", "pinnacle", registration.noted_book(_prereg_with(tmp_path, good)),
@@ -484,54 +490,92 @@ def test_section8_reader(tmp_path):
     assert stop and "does not record Pinnacle" in stop[0] and "it records DraftKings" in stop[0]
 
 
+SIMULATE = """
+import sys
+from argparse import Namespace
+from pathlib import Path
+
+import pytest
+
+from markets.research.props_grade import registration, run
+
+registration.PREREG = Path(sys.argv[1])          # the live registration, as it will be once the hub's note is in
+fixture_rc = run.main(Namespace(fixture=True, book_recorded=None, list_excluded=False, out=sys.argv[2]))
+tests_rc = pytest.main([sys.argv[3], "-q", "-o", "addopts=", "-p", "no:cacheprovider", "-k", "not simulated_live_note"])
+sys.exit(10 * int(fixture_rc) + int(tests_rc))
+"""
+
+
+@pytest.mark.parametrize("book", ["Pinnacle", "DraftKings"])
+def test_a_simulated_live_note_changes_no_props_test_and_not_the_fixture(book, tmp_path):
+    """Review N1: once the hub commits its section 8 note, `--fixture` and every props test must still pass. The live
+    file is never touched: a copy with the note appended stands in for it (registration.PREREG patched in a child
+    process), and the fixture and the whole props test file run against it."""
+    import subprocess
+    import sys
+    live = tmp_path / "PREREGISTRATION_PROPS.md"
+    live.write_text(registration.PREREG.read_text().rstrip("\n") + f"\n\n- **2026-10-01 (Pacific):** the book is "
+                    f"{book} (Pinnacle lists 44 of 55 receiving player-games, 80.0%, and 28 of 35 rushing, 80.0%, at "
+                    "F3a's close), by the rule of 2.4; recorded before any F3a row was joined to an outcome.\n")
+    test_file = Path(__file__)
+    done = subprocess.run([sys.executable, "-c", SIMULATE, str(live), str(tmp_path / "out"), str(test_file)],
+                          cwd=test_file.parents[1], capture_output=True, text=True, timeout=600)
+    assert done.returncode == 0, done.stdout[-3000:] + done.stderr[-3000:]
+    assert "Gate: PASSES" in done.stdout and " passed" in done.stdout and "failed" not in done.stdout
+
+
 # ---------------------------------------------------------------- the count and the bar
+HEADER = "- " + registration.FIELD + " " + registration.HEADER_REGISTERED      # the field as registered
+
+
+def _bar(tmp_path, header_line: str, status: str = "count went (0.05 / 200), (0.05 / 271), now (0.05 / 294).\n"):
+    (tmp_path / "STATUS.md").write_text(status)
+    (tmp_path / "P.md").write_text(header_line + "\n")
+    return registration.bar(tmp_path / "STATUS.md", tmp_path / "P.md")
+
+
 def test_bar_from_status_and_the_header(tmp_path):
-    status = tmp_path / "STATUS.md"
-    status.write_text("count went (0.05 / 200) then **271** (0.05 / 271), now p < 0.000170 (0.05 / 294).\n")
-    prereg = tmp_path / "P.md"
-    unfilled = ("- **Count and bar at registration:** *(the hub fills this in: the bar is p < 0.05 / that count.)* "
-                "As of writing, for illustration: 274 ... = 288, p < 0.05 / 288 = 0.000174; other registrations in "
-                "flight add theirs.\n")
-    prereg.write_text(unfilled)
-    b = registration.bar(status, prereg)
+    """STATUS.md: the largest "0.05 / N" (294). The header as registered: unfilled, its illustration's 288 ignored.
+    A filled header with a larger count wins; a smaller one never lowers the bar."""
+    b = _bar(tmp_path, HEADER)
     assert (b.status_count, b.header, b.header_count, b.count) == (294, "unfilled", None, 294)
-    prereg.write_text(unfilled.replace("; other registrations in flight add theirs.", ""))   # illustration cut short
-    b = registration.bar(status, prereg)
-    assert (b.header, b.header_count, b.count) == ("filled", 288, 294)          # read, and never loosens the bar
     assert b.alpha == pytest.approx(0.05 / 294)
-    prereg.write_text("- **Count and bar at registration:** 300 (294 in STATUS.md + 6 run), p < 0.05 / 300\n")
-    assert registration.bar(status, prereg).count == 300                          # the larger count
-    prereg.write_text("- **Count and bar at registration:** 288, p < 0.05 / 288\n")
-    b = registration.bar(status, prereg)
-    assert (b.header, b.header_count, b.count) == ("filled", 288, 294)            # STATUS.md's is stricter
-    prereg.write_text("- **Count and bar at registration:** two hundred\n")
-    assert registration.bar(status, prereg).header == "unreadable"
+    b = _bar(tmp_path, "- **Count and bar at registration:** 300 (294 in STATUS.md + 6 run), p < 0.05 / 300")
+    assert (b.header, b.header_count, b.count) == ("filled", 300, 300)
+    b = _bar(tmp_path, "- **Count and bar at registration:** 280, p < 0.05 / 280")
+    assert (b.header, b.header_count, b.count) == ("filled", 280, 294)          # STATUS.md's is stricter
+    b = _bar(tmp_path, "- **Count and bar at registration:** two hundred")
+    assert (b.header, b.count) == ("unreadable", 294)
+    cut = HEADER.replace("; other registrations in flight add theirs.", "")   # edited, no new count
+    b = _bar(tmp_path, cut)
+    assert (b.header, b.header_count, b.count) == ("unreadable", None, 294)
+    assert _bar(tmp_path, cut, status="(0.05 / 200)\n").count == 288             # what it reads still counts
     assert registration.bar(tmp_path / "none.md", tmp_path / "none.md").count is None
 
 
-def test_a_filled_count_is_read_even_with_the_placeholder_left_on_the_line(tmp_path):
-    """Review m5: if the hub appends the count instead of replacing the placeholder, it is still read; the
-    placeholder's own "0.05 / that count" and the illustration's 288 are not. Two different counts: ambiguous, the
-    larger is set against STATUS.md's."""
-    status = tmp_path / "STATUS.md"
-    status.write_text("(0.05 / 294)\n")
-    line = next(ln for ln in registration.PREREG.read_text().splitlines() if registration.FIELD in ln)
-    prereg = tmp_path / "P.md"
-    prereg.write_text(line + " **Filled October 1: 310, p < 0.05 / 310 = 0.000161.**\n")
-    b = registration.bar(status, prereg)
+def test_a_filled_count_is_read_wherever_it_is_written(tmp_path):
+    """Review m5 and its residual: a count written inside the placeholder's parentheses, after them, or in its
+    place is read; the placeholder untouched is unfilled. Two new counts are ambiguous and the largest is set
+    against STATUS.md's; nothing read ever lowers the bar below STATUS.md's 294."""
+    inside = HEADER.replace("*(the hub fills this in:", "*(the hub fills this in: 310 (0.05 / 310);")
+    b = _bar(tmp_path, inside)
     assert (b.header, b.header_count, b.count) == ("filled", 310, 310)
-    prereg.write_text(line + " Filled: 300 (0.05 / 300), or 320 with PR 99 (0.05 / 320).\n")
-    b = registration.bar(status, prereg)
-    assert (b.header, b.header_counts, b.count) == ("ambiguous", (300, 320), 320)
-    assert "not unambiguously" in b.lines()[1]
-    prereg.write_text(line + "\n")
-    assert registration.bar(status, prereg).header == "unfilled"
+    after = HEADER + " **Filled October 1: 310, p < 0.05 / 310 = 0.000161.**"
+    b = _bar(tmp_path, after)
+    assert (b.header, b.header_count, b.count) == ("filled", 310, 310)
+    b = _bar(tmp_path, HEADER)
+    assert (b.header, b.count) == ("unfilled", 294)
+    both = HEADER + " Filled: 300 (0.05 / 300), or 320 with PR 99 (0.05 / 320)."
+    b = _bar(tmp_path, both)
+    assert (b.header, b.header_count, b.count) == ("ambiguous", 320, 320) and "not unambiguously" in b.lines()[1]
+    smaller = HEADER.replace("*(the hub fills this in:", "*(the hub fills this in: 250 (0.05 / 250);")
+    assert _bar(tmp_path, smaller).count == 294
 
 
 def test_bar_on_this_checkout():
-    """STATUS.md's running count today is at least 294; the count used is never below it."""
+    """Whatever the hub writes into the live header, the count used is never below STATUS.md's (at least 294)."""
     b = registration.bar()
-    assert b.status_count >= 294 and b.count == max(c for c in (b.status_count, b.header_count) if c)
+    assert b.status_count >= 294 and b.count >= b.status_count and b.alpha == pytest.approx(0.05 / b.count)
 
 
 # ---------------------------------------------------------------- 2.9

@@ -5,10 +5,11 @@ bar at registration" is the bar the Act condition uses; the brief for this grade
 from STATUS.md at run time and printed". Both are read and printed:
   * STATUS.md: the running count is the largest N in any "0.05 / N" there (the count only rises, and each step of
     it is written as "p < ... (0.05 / N)").
-  * the header field: the italic placeholder "(the hub fills this in ...)" and the "As of writing, for
-    illustration: ... add theirs." sentence are set aside, and every "0.05 / N" left on the line is read, whether
-    or not the placeholder is still there. None left: unfilled (placeholder present) or unreadable. One N: filled.
-    More than one: ambiguous, and the largest is taken.
+  * the header field: compared with its text as registered (HEADER_REGISTERED, frozen from the registering
+    commit 18de5f6). Unchanged: unfilled. Changed in any way (a count written inside the placeholder's parentheses,
+    after them, or in its place): every "0.05 / N" on the line is read. One N besides the registered illustration's
+    288: filled. More than one: ambiguous, and the largest is taken. None besides the illustration's: unreadable.
+    Whatever the state, the count used is never smaller than any N read on a changed line, nor than STATUS.md's.
 The stricter applies: the larger count, so the smaller bar (p < 0.05 / count). The count adds nothing for this
 grader: it implements the one variant already in the running count.
 
@@ -23,6 +24,7 @@ rule picks, section 8 records that same book, and the registration file is commi
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -32,9 +34,18 @@ PREREG = REPO / "nfl-weather" / "PREREGISTRATION_PROPS.md"
 PREREG_REL = "nfl-weather/PREREGISTRATION_PROPS.md"
 _BAR = re.compile(r"0\.05\s*/\s*(\d[\d,]*)")
 FIELD = "**Count and bar at registration:**"
-PLACEHOLDER = "(the hub fills this in"
-_PLACEHOLDER = re.compile(r"\*?\(the hub fills this in.*?\)\*?", re.S)
-_ILLUSTRATION = re.compile(r"As of writing, for illustration:.*?add theirs\.", re.S)
+# the header field's text and section 8's body as registered (commit 18de5f6), frozen here so that the fixture and the
+# tests never depend on what the hub writes into the live file
+HEADER_REGISTERED = (
+    "*(the hub fills this in: the running count in STATUS.md at registration, plus variants already run but not yet "
+    "in STATUS.md; the bar is p < 0.05 / that count. Sections 2.9, 4 and 5 use this field.)* As of writing, for "
+    "illustration: 274 in STATUS.md on `main`, plus [PR 70](https://github.com/maxzipperman/value-finder/pull/70)'s H3 "
+    "test (14 variants, already run, PR open) = 288, p < 0.05 / 288 = 0.000174; other registrations in flight add "
+    "theirs.")
+SECTION8_REGISTERED = (
+    "*(After the F3a pull and before any F3a row is joined to an outcome: the book chosen by the rule in section 2.4, "
+    "with its two coverage figures, dated. It records the rule's output and changes nothing else.)*")
+_SECTION8 = re.compile(r"^(## 8\. Dated notes[ \t]*\n)(.*?)(?=^## |\Z)", re.M | re.S)
 _DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 _BOOK_IS = re.compile(r"\bthe book is\W{0,4}(pinnacle|draft\s*kings)\b", re.I)
 BOOK_NAMES = {"pinnacle": "Pinnacle", "draftkings": "DraftKings"}
@@ -60,9 +71,11 @@ class Bar:
         s = (f"STATUS.md at run time: running count {self.status_count} (the largest \"0.05 / N\" in it), bar "
              f"p < {0.05 / self.status_count:.6f}" if self.status_count else
              "STATUS.md at run time: no running count found (no \"0.05 / N\" in it)")
-        h = {"unfilled": "unfilled (it still holds the hub's placeholder; its illustration figures are ignored)",
+        h = {"unfilled": "unfilled (its text is the registered placeholder; its illustration figures are ignored)",
              "missing": "not found in the registration file",
-             "unreadable": "filled, but no \"0.05 / N\" on it could be read",
+             "unreadable": "changed, but no \"0.05 / N\" besides the registered illustration's could be read"
+                           + (f" (it reads {', '.join(map(str, self.header_counts))}, never used to lower the bar)"
+                              if self.header_counts else ""),
              "ambiguous": f"filled, but not unambiguously: it reads {', '.join(map(str, self.header_counts))}; the "
                           f"largest, {self.header_count}, is set against STATUS.md's",
              "filled": f"{self.header_count}, bar p < {0.05 / self.header_count:.6f}" if self.header_count else ""}
@@ -74,14 +87,15 @@ class Bar:
 
 
 def header_counts(line: str) -> tuple[str, list[int]]:
-    """(state, counts) for the header field's line: see the module docstring."""
-    rest = line.split(FIELD, 1)[1]
-    placeholder = PLACEHOLDER in rest
-    rest = _ILLUSTRATION.sub("", _PLACEHOLDER.sub("", rest))
-    counts = sorted(set(_counts(rest)))
-    if not counts:
-        return ("unfilled" if placeholder else "unreadable"), []
-    return ("filled" if len(counts) == 1 else "ambiguous"), counts
+    """(state, every count read) for the header field's line: see the module docstring."""
+    rest = line.split(FIELD, 1)[1].strip()
+    if rest == HEADER_REGISTERED:
+        return "unfilled", []
+    counts = _counts(rest)
+    new = Counter(counts) - Counter(_counts(HEADER_REGISTERED))       # the registered illustration's 288, once
+    if not new:
+        return "unreadable", sorted(set(counts))
+    return ("filled" if len(new) == 1 else "ambiguous"), sorted(set(counts))
 
 
 def bar(status: Path = STATUS, prereg: Path = PREREG) -> Bar:
@@ -91,9 +105,22 @@ def bar(status: Path = STATUS, prereg: Path = PREREG) -> Bar:
         line = next((ln for ln in prereg.read_text().splitlines() if FIELD in ln), None)
         if line is not None:
             header, hcs = header_counts(line)
-    hc = max(hcs, default=None)
-    used = max([c for c in (sc, hc) if c], default=None)
+    if header == "filled":
+        new = Counter(_counts(line.split(FIELD, 1)[1])) - Counter(_counts(HEADER_REGISTERED))
+        hc = next(iter(new))
+    else:
+        hc = max(hcs, default=None) if header == "ambiguous" else None
+    used = max([c for c in (sc, *hcs) if c], default=None)          # never smaller than any count read
     return Bar(sc, header, hc, used, tuple(hcs))
+
+
+def with_section8(text: str, body: str = SECTION8_REGISTERED) -> str:
+    """The registration's text with section 8's body replaced by `body` (by default the registered placeholder alone).
+    The fixture and the tests build their copies with it, so a note the hub commits never changes what they read."""
+    if not _SECTION8.search(text):
+        raise ValueError("the registration has no '## 8. Dated notes' section")
+    return _SECTION8.sub(lambda m: m.group(1) + "\n" + body.strip("\n") + "\n" + ("\n" if m.end() < len(text) else ""),
+                         text, count=1)
 
 
 def section8(prereg: Path = PREREG) -> str:
