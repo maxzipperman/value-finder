@@ -1,0 +1,10 @@
+[
+  {
+    "request_id": "8d79bd8e4962f6925030e7e22f9c41a5e5cf39f93158e2737b7109c9cce365c0",
+    "requested_utc": "2025-12-02T16:00:00Z",
+    "snapshot_utc": "2025-12-02T15:55:37Z",
+    "provider_id": "38f9a9237c998cf91210a3d8f7d59a7a",
+    "provider_kickoff": "2026-11-21T17:00:00Z",
+    "inferred_season": 2026
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "synthetic_checks": 6,
+  "later_kickoff_delay_cutoff_guard": "passes",
+  "later_earlier_kickoff_admits_previously_outside_7_day_row": {
+    "baseline_rows": 0,
+    "revised_first_entry": "2024-09-01 16:00:00+00:00",
+    "decision_time_lead_days": 8,
+    "latest_kickoff_lead_days": 6
+  },
+  "home_away_swap_retained": {
+    "entry_home": "H",
+    "close_home": "A",
+    "rows_retained": 2
+  },
+  "duplicate_ids_for_same_teams_and_kickoff": {
+    "entries": 2
+  },
+  "24_hour_old_quote_retained": {
+    "entries": 1
+  },
+  "unregistered_handoff_refused": true,
+  "trial_count_in_engine": 271,
+  "variants": 38,
+  "primary_variants": 8
+}
