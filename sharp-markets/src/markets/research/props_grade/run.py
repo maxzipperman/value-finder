@@ -267,10 +267,13 @@ def results_section(df: pd.DataFrame, unmatched_games, ro: pd.DataFrame, b: regi
             "## The primary test at the close (2.6): receiving and rushing yards pooled",
             "excess = under rate - mean power-method probability; p one-sided from the larger of the two SEs "
             "(plain, and clustered by game, not centred); roi at the under's price, one unit a line. The additive "
-            "and multiplicative columns are the excess with those de-vig methods, reported, not graded. Rows below "
-            "`pooled` are the checks and cells of 2.9, descriptive until 2.9 is read.", ""]
+            "and multiplicative columns are the excess with those de-vig methods, reported, not graded. The rows "
+            "for each season and each market are the five checks of 2.9, which decide nothing until 2.9 is read.", ""]
     close = grade.table(df, L.CLOSE, L.PRIMARY)
-    out += text_table(close, COLS, 4)
+    cells = close.scope.str.contains(", ")
+    out += text_table(close[~cells], COLS, 4)
+    out += ["", "Season x market cells, descriptive (the six-cell reading of 2.9 was rejected; no p-value):"]
+    out += text_table(close[cells], [c for c in COLS if c != "p"], 4)
     out += ["", f"Clustered SE over plain SE (pooled): {_f(close.se_ratio.iloc[0] if len(close) else None, 2)} "
             "(section 5: the within-game correlation, measured and reported, used for nothing).", "",
             "## Controls (2.3): passing yards and receptions, reported, never tested (no p-value)", ""]
