@@ -175,6 +175,12 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
                  f"coverage report `{h['coverage_report_sha256']}`, spending ledger "
                  f"`{h['spending_ledger_sha256']}`; {h['calls']:,} calls, {h['reused']:,} of them reused from the "
                  f"bundle's `reuse/`; {_missing_line(h)}.", ""]
+        if h.get("accepted_missing_requests"):
+            head += ["Accepted as missing by the bundle's run, by request id (the manifest's `request_id`, as the hub's "
+                     "approval on PR 99 names it), with its reason and cache key:", ""]
+            head += [f"- `{m['request_id'] or 'no request id'}`: {m['reason']}, cache key `{m['cache_key']}`"
+                     for m in h["accepted_missing_requests"]]
+            head += [""]
     cov = res.get("coverage")
     if cov is not None and len(cov) and (cov.share < MIN_SCORE_SHARE).any():
         low = cov[cov.share < MIN_SCORE_SHARE]
@@ -298,7 +304,8 @@ def main(args) -> int:
             raise SystemExit(_refused(exc)) from None
         print(f"F1 as pulled (football archive bundle {info['bundle_root_sha256']}): {info['calls']:,} calls, "
               f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked; "
-              f"{_missing_line(info)} (amendment 2)")
+              f"{_missing_line(info)}{'; request ids in report.md' if info.get('accepted_missing') else ''} "
+              "(amendment 2)")
         try:
             res = run(cfg, calls, cache)
         except handoff.HandoffRefused as exc:       # a response changed, or became unreadable, after loading

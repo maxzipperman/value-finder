@@ -28,8 +28,8 @@ What this module does, and nothing else:
      the run (HandoffRefused) when it is looked up. A paid request the bundle's run accepted as missing (a terminal
      failure the hub approved, entry status `accepted_missing`, no response path or hash) keeps its call and its
      place, and its lookup gives no response, so `bulk.load_rows` reads no row from it: it is absent data, counted
-     in the report, never fetched. A lookup that gives no response for any other call, or a response for one marked
-     missing, refuses the run.
+     in the report by reason and listed there by request id, never fetched. A lookup that gives no response for any
+     other call, or a response for one marked missing, refuses the run.
   4. Each call's `sealed` flag is set from the config's season windows at the call's requested time; `as_calls`
      leaves every call unsealed. The legacy plan marks a call sealed when any game it serves kicks off in a sealed
      window, but the manifest does not name every call's games (its evening decision slots name none), so the
@@ -496,9 +496,21 @@ def _entry_ok(entry: dict) -> bool:
     return entry.get("status") is None and entry.get("response_path") is not None
 
 
+def _expanded(path) -> Path:
+    """`path` with `~` expanded, refusing (HandoffRefused, not a bare RuntimeError) a `~user` that does not exist or a
+    home folder that cannot be determined."""
+    try:
+        return Path(path).expanduser()
+    except (RuntimeError, KeyError) as exc:
+        raise HandoffRefused(f"cannot expand ~ in the runtime folder {path} ({type(exc).__name__}: {exc})") from None
+
+
 def default_runtime(root: str) -> Path:
-    """The v4 executor's fixed runtime folder for `root`: RUNTIME_BASE/<root>, `~` expanded."""
-    return Path(RUNTIME_BASE).expanduser() / root
+    """The v4 executor's fixed runtime folder for `root`: RUNTIME_BASE/<root>, `~` expanded. Refuses a root that is
+    not 64 lowercase hex characters, so it can only name one folder below RUNTIME_BASE."""
+    if not isinstance(root, str) or not re.fullmatch(r"[0-9a-f]{64}", root):
+        raise HandoffRefused("--handoff-root must be the bundle's 64-character sha256 root, as the hub approved it")
+    return _expanded(RUNTIME_BASE) / root
 
 
 def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict]:
@@ -508,7 +520,11 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
     try:                                # before any of the bundle's code runs, so before any response is parsed
         if not re.fullmatch(r"[0-9a-f]{64}", root or ""):
             raise HandoffRefused("--handoff-root must be the bundle's 64-character sha256 root, as the hub approved it")
-        runtime = (Path(runtime).expanduser() if runtime else default_runtime(root)).resolve()
+        runtime = _expanded(runtime) if runtime else default_runtime(root)
+        try:
+            runtime = runtime.resolve()
+        except (RuntimeError, OSError) as exc:      # a symbolic-link loop, say
+            raise HandoffRefused(f"cannot resolve the runtime folder {runtime} ({type(exc).__name__}: {exc})") from None
         _check_registered(root)
         root, sources = _verify(bundle, root)
         if "cache_handoff" not in sources:
@@ -547,6 +563,9 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
             "request_set_sha256": handoff.get("request_set_sha256"),
             "coverage_report_sha256": handoff.get("coverage_report_sha256"), "spending_ledger_sha256": ledger_sha,
             "calls": len(calls), "reused": reused, "accepted_missing": len(missing),
-            "accepted_missing_reasons": dict(sorted(Counter(str(e.get("reason")) for e in missing).items()))}
+            "accepted_missing_reasons": dict(sorted(Counter(str(e.get("reason")) for e in missing).items())),
+            # each one by the manifest's request_id (what the hub's approval on PR 99 names), in manifest order
+            "accepted_missing_requests": [{"request_id": e["request"].get("request_id"), "reason": str(e.get("reason")),
+                                           "cache_key": e["request"]["cache_key"]} for e in missing]}
     keys = {(e["request"]["sport"], e["request"]["source"], e["request"]["cache_key"]) for e in missing}
     return calls, _RefusingCache(cache, keys), info

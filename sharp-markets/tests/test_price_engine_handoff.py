@@ -32,7 +32,9 @@ FROZEN = HERE / "frozen" / "football_archive_cache_handoff.py.frozen"
 # FROZEN_SHA256 and BRANCH_FILE pin v4's cache_handoff.py as frozen today (its hash in the bundle's FREEZE.json, and
 # where it is on the research branch). A re-freeze of the bundle that changes cache_handoff.py must update the
 # .frozen copy, FROZEN_SHA256 and, for a new bundle folder, BRANCH_FILE together.
-FROZEN_SHA256 = "abfc4035c8ac947c69e874ab22d75cbc1c2f3aef2ef0023f32efee9b809be8bf"   # FREEZE.json, v4 root 410289fe...
+# cache_handoff.py's sha256 as FREEZE.json lists it (file_sha256["cache_handoff.py"], v4 root 410289fe...), not the
+# hash of FREEZE.json itself
+FROZEN_SHA256 = "abfc4035c8ac947c69e874ab22d75cbc1c2f3aef2ef0023f32efee9b809be8bf"
 BRANCH_FILE = ("origin/research/football-archive-v4:strategy-research/football_archive/acquisition/"
                "football-archive-v4/cache_handoff.py")
 REUSED = 12
@@ -873,6 +875,9 @@ def test_an_accepted_missing_call_is_absent_data_counted_and_never_fetched(made_
     assert [c.key for c in hcalls] == [c.key for c in calls]
     assert info["calls"] == len(calls) and info["reused"] == REUSED and info["accepted_missing"] == 2
     assert info["accepted_missing_reasons"] == {"http_5xx": 1, "snapshot_lag": 1}
+    rows = json.loads((bundle / "request-manifest.json").read_text())["requests"]
+    assert info["accepted_missing_requests"] == [
+        {"request_id": rows[i]["request_id"], "reason": MISSING[i], "cache_key": calls[i].key} for i in sorted(MISSING)]
     for i in MISSING:
         assert hcache.lookup(hcalls[i].cache_sport, hcalls[i].source, hcalls[i].key) is None
     saved = [a["response_path"] for a in json.loads((runtime / "spending-ledger.json").read_text())["attempts"].values()
@@ -902,7 +907,15 @@ def test_the_command_counts_the_accepted_missing_calls(made_missing, tmp_path, m
                                  handoff_runtime=str(runtime))) == 0
     line = ("2 accepted as missing by the bundle's run (absent data: no response, no row read, never fetched; by "
             "reason: http_5xx 1, snapshot_lag 1)")
-    assert line in capsys.readouterr().out and line in (out / "report.md").read_text()
+    printed, report = capsys.readouterr().out, (out / "report.md").read_text()
+    assert line in printed and line in report
+    # report.md lists each one by the manifest's request_id, for the hub to match against its approvals; the
+    # command's own line stays short and points there
+    rows = json.loads((bundle / "request-manifest.json").read_text())["requests"]
+    for i in MISSING:
+        rid = rows[i]["request_id"]
+        assert f"- `{rid}`: {MISSING[i]}, cache key `{calls[i].key}`" in report and rid not in printed
+    assert f"{line}; request ids in report.md (amendment 2)" in printed
     real_run(cfg, [c for i, c in enumerate(calls) if i not in MISSING], cache,
              scores=scores)["results"].to_csv(tmp_path / "minus.csv", index=False)
     assert (out / "results.csv").read_bytes() == (tmp_path / "minus.csv").read_bytes()
@@ -970,3 +983,38 @@ def test_the_runtime_defaults_to_the_executors_fixed_folder(made, monkeypatch, t
     assert info["spending_ledger_sha256"] == _sha(fixed / "spending-ledger.json")
     with pytest.raises(handoff.HandoffRefused, match="no readable spending-ledger.json"):
         handoff.load(bundle, root, cfg, runtime)       # the explicit folder still wins
+
+
+@pytest.mark.parametrize("how", ["no such user", "no home"])
+def test_a_runtime_folder_whose_home_cannot_be_found_is_refused_before_any_code_runs(made, monkeypatch, tmp_path, how):
+    """`~nosuchuser/...` given, or the default folder with no home folder to expand `~` to: a HandoffRefused before
+    any of the bundle's code runs, not a bare RuntimeError."""
+    cfg, calls, cache, scores, bundle, runtime, root = made
+    _no_import(monkeypatch)
+    if how == "no such user":
+        given = "~no-such-user-value-finder-test/x"
+    else:
+        import pwd
+
+        def no_entry(*_a):
+            raise KeyError("no passwd entry")
+        monkeypatch.delenv("HOME", raising=False)
+        monkeypatch.setattr(pwd, "getpwuid", no_entry)
+        given = None
+        with pytest.raises(handoff.HandoffRefused, match="cannot expand ~"):
+            handoff.default_runtime(root)
+    with pytest.raises(handoff.HandoffRefused, match="cannot expand ~") as refused:
+        handoff.load(bundle, root, cfg, given)
+    assert refused.value.before_read
+    monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
+    with pytest.raises(SystemExit, match=r"refused \(before any response is parsed, nothing written\): cannot expand"):
+        pe_run.main(Namespace(fixture=False, out=str(tmp_path / "o"), handoff=str(bundle), handoff_root=root,
+                              handoff_runtime=given))
+    assert not (tmp_path / "o").exists()
+
+
+@pytest.mark.parametrize("root", ["", "0" * 63, "0" * 65, "A" * 64, "../" + "0" * 61, "0" * 64 + "/x", None])
+def test_the_default_runtime_refuses_a_root_that_is_not_a_sha256(root):
+    with pytest.raises(handoff.HandoffRefused, match="64-character sha256 root"):
+        handoff.default_runtime(root)
+    assert handoff.default_runtime("0" * 64).name == "0" * 64
