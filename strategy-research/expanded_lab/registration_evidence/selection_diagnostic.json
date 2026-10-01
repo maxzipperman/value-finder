@@ -1,0 +1,8 @@
+{
+  "status": "approximate_diagnostic_only",
+  "common_seasons": 15,
+  "comparisons": 23,
+  "draws": 100000,
+  "max_t_95": 3.037932394317589,
+  "warning": "Symmetry assumed. Not a full null refit, global multiple-testing replacement, or promotion criterion."
+}

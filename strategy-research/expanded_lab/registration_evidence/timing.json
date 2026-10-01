@@ -1,0 +1,6 @@
+{
+  "protocol_sha256": "5869f0088fac1f504c4feb244ce8a89bc0ae6acb56fd65a862bbc8903e9f30bd",
+  "preflight_run_utc": "2026-09-30T23:44:00.763675Z",
+  "first_historical_run_utc": "2026-09-30T23:44:09.854373Z",
+  "registration": "Local protocol and trial ledger existed before outcome access; repository publication occurs after the run. This is retrospective discovery, not a pre-outcome Git commit or fresh confirmation."
+}
