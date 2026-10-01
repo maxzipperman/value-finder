@@ -189,6 +189,11 @@ def cmd_price_engine(args) -> None:
     run.main(args)
 
 
+def cmd_props_grade(args) -> int:
+    from .research.props_grade import run
+    return run.main(args)
+
+
 def main(argv: list[str] | None = None) -> None:
     from .http import scrub_log_handlers
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -292,6 +297,17 @@ def main(argv: list[str] | None = None) -> None:
     pe.add_argument("--out", default=None, help="output folder (default reports/price_engine; a scratch folder with "
                     "--fixture)")
     pe.set_defaults(fn=cmd_price_engine)
+
+    pg = sub.add_parser("props-grade", help="the registered props test on F3, issue #10 "
+                        "(nfl-weather/PREREGISTRATION_PROPS.md); no API calls. Without --book-recorded it stops "
+                        "after the book's coverage, before any outcome is read")
+    pg.add_argument("--book-recorded", choices=["pinnacle", "draftkings"], default=None,
+                    help="the book recorded in the registration's section 8 note; must be the one the rule picks")
+    pg.add_argument("--list-excluded", action="store_true", help="also list every excluded line, with its reason")
+    pg.add_argument("--fixture", action="store_true", help="run on a synthetic fixture instead (nothing in it is data)")
+    pg.add_argument("--out", default=None, help="output folder (default reports/props_grade; a scratch folder with "
+                    "--fixture)")
+    pg.set_defaults(fn=cmd_props_grade)
 
     args = p.parse_args(argv)
     try:
