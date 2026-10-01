@@ -20,3 +20,12 @@ ALERT  WATCH edge +5 pts: NE @ BUF 10-04 13:00 ET
   forecasts: 13 stadium-days
 ALERT  WATCH model under: DET @ CAR 10-04 20:20 ET
        6 mph, 64°F, rain; total 50.5 (pinnacle); forecast 5d out; model P(under) 60% vs market 50%. Paper only (PREREGISTRATION.md). Timing: bet now; totals drift down before kickoff.
+  forecasts: 14 stadium-days
+ALERT  WATCH model under: GB @ TB 10-04 13:00 ET
+       9 mph, 89°F, rain; total 39.5 (pinnacle); forecast 4d out; model P(under) 58% vs market 50%. Paper only (PREREGISTRATION.md). Timing: bet now; totals drift down before kickoff.
+  forecasts: 14 stadium-days
+2026-09-30 18:30Z checked 12 outdoor games, nothing new
+  forecasts: 14 stadium-days
+2026-09-30 22:30Z checked 12 outdoor games, nothing new
+  forecasts: 14 stadium-days
+2026-10-01 02:30Z checked 12 outdoor games, nothing new
