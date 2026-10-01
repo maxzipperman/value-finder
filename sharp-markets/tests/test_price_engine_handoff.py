@@ -967,6 +967,58 @@ def test_an_entry_marked_missing_that_names_a_response_is_refused(made_missing, 
         load(bundle, root, cfg)
 
 
+BAD_REASONS = ["http_5xx\n- `forged`: http_404", "http_404 ", "http_418", "", None, 404]
+
+
+def test_the_missing_reasons_are_the_ones_the_bundles_executor_can_record():
+    """executor.accept_as_missing at 6112d70 records http_404 (a saved 404), snapshot_lag (a lagged HTTP 200) or
+    http_5xx (an observed 5xx), and halts on any other."""
+    assert handoff.MISSING_REASONS == ("http_404", "http_5xx", "snapshot_lag")
+
+
+@pytest.mark.parametrize("reason", BAD_REASONS)
+def test_an_accepted_missing_reason_the_executor_cannot_record_is_refused(fx, tmp_path, monkeypatch, reason):
+    """A reason with a newline (which would add a line to report.md) or any value outside the executor's three stops
+    the run before anything is reported or written."""
+    cfg, calls, cache, scores = fx
+    bundle, runtime, root = make_bundle(tmp_path, calls, cache, missing={24: reason})
+    monkeypatch.setattr(handoff, "REGISTERED_ROOT", root)
+    with pytest.raises(handoff.HandoffRefused, match="accepted_missing reason the bundle's executor cannot record"):
+        load(bundle, root, cfg)
+    monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit, match=r"nothing reported, nothing written\): .*cannot record"):
+        pe_run.main(Namespace(fixture=False, out=str(out), handoff=str(bundle), handoff_root=root,
+                              handoff_runtime=str(runtime)))
+    assert not out.exists()
+
+
+@pytest.mark.parametrize("reason", BAD_REASONS)
+def test_the_output_line_and_the_report_refuse_a_reason_the_executor_cannot_record(made_missing, monkeypatch,
+                                                                                  tmp_path, reason):
+    """The same check wherever the reason is printed: the command's output line (`_missing_line`) and report.md's
+    list by request id, even for an `info` that did not come from `handoff.load`."""
+    cfg, calls, cache, scores, bundle, runtime, root = made_missing
+    _, _, info = load(bundle, root, cfg)
+    counted = {**info, "accepted_missing_reasons": {**info["accepted_missing_reasons"], reason: 1}}
+    with pytest.raises(handoff.HandoffRefused, match="cannot record"):
+        pe_run._missing_line(counted)
+    listed = {**info, "accepted_missing_requests": [*info["accepted_missing_requests"][:1],
+                                                    {**info["accepted_missing_requests"][1], "reason": reason}]}
+    res = pe_run.run(cfg, [c for i, c in enumerate(calls) if i not in MISSING], cache, scores=scores)
+    pe_run.report({**res, "handoff": info}, res["results"], fixture=False)          # the real info reports
+    with pytest.raises(handoff.HandoffRefused, match="cannot record"):
+        pe_run.report({**res, "handoff": listed}, res["results"], fixture=False)
+    real_load = handoff.load
+    monkeypatch.setattr(handoff, "load", lambda *a: (*real_load(*a)[:2], counted))
+    monkeypatch.setattr(pe_run.bulk, "load_config", lambda: cfg)
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit, match="cannot record"):
+        pe_run.main(Namespace(fixture=False, out=str(out), handoff=str(bundle), handoff_root=root,
+                              handoff_runtime=str(runtime)))
+    assert not out.exists()
+
+
 def test_the_runtime_defaults_to_the_executors_fixed_folder(made, monkeypatch, tmp_path):
     """--handoff-runtime defaults to ~/Library/Application Support/ValueFinder/football-acquisition-state/<root>, the
     v4 executor's runtime for that root (`~` expanded)."""

@@ -29,7 +29,8 @@ What this module does, and nothing else:
      failure the hub approved, entry status `accepted_missing`, no response path or hash) keeps its call and its
      place, and its lookup gives no response, so `bulk.load_rows` reads no row from it: it is absent data, counted
      in the report by reason and listed there by request id, never fetched. A lookup that gives no response for any
-     other call, or a response for one marked missing, refuses the run.
+     other call, or a response for one marked missing, refuses the run, and so does a missing reason outside
+     MISSING_REASONS (the three the bundle's executor can record).
   4. Each call's `sealed` flag is set from the config's season windows at the call's requested time; `as_calls`
      leaves every call unsealed. The legacy plan marks a call sealed when any game it serves kicks off in a sealed
      window, but the manifest does not name every call's games (its evening decision slots name none), so the
@@ -114,6 +115,12 @@ BUNDLE_MODULES = ("cache_handoff", "validator", "builder", "executor", "price_el
 # The bundle root amendment 2 registers. None until the hub registers the amendment: the hub fills it in at
 # registration, together with the amendment's root blank marked ⟨hub⟩, and --handoff refuses every run until then.
 REGISTERED_ROOT: str | None = None
+
+# The reasons the v4 executor's accept_as_missing can record (executor.py at 6112d70): `http_404` (a saved 404),
+# `snapshot_lag` (a saved HTTP 200 whose snapshot lags too far) and `http_5xx` (an observed 5xx, nothing saved). Any
+# other reason, or one that is not exactly one of these strings (a newline, say, which would add a line to
+# report.md), refuses the run.
+MISSING_REASONS = ("http_404", "http_5xx", "snapshot_lag")
 
 
 class HandoffRefused(RuntimeError):
@@ -489,6 +496,14 @@ def _ledger_sha(runtime: Path) -> str:
         raise HandoffRefused(f"the runtime folder {runtime} has no readable {LEDGER}") from None
 
 
+def check_missing_reasons(reasons) -> None:
+    """Refuse (HandoffRefused) any accepted_missing reason that the bundle's executor cannot record."""
+    bad = [r for r in reasons if not (isinstance(r, str) and r in MISSING_REASONS)]
+    if bad:
+        raise HandoffRefused(f"the handoff gives an accepted_missing reason the bundle's executor cannot record, "
+                             f"{bad[0]!r} ({len(bad)} such; expected one of {', '.join(MISSING_REASONS)})")
+
+
 def _entry_ok(entry: dict) -> bool:
     """A handoff entry is a response (no status, a path and a hash) or accepted_missing (no path, no hash)."""
     if entry.get("status") == "accepted_missing":
@@ -556,6 +571,7 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
     if odd:
         raise HandoffRefused(f"the handoff has an entry that is neither a response with its path nor accepted_missing "
                              f"without one (status {odd[0].get('status')!r}; {len(odd)} such)")
+    check_missing_reasons(e.get("reason") for e in missing)
     calls = [dataclasses.replace(c, sealed=bulk.is_sealed(cfg, c.sport, c.at)) for c in calls]
     reused = sum(e["response_path"] is not None and Path(e["response_path"]).is_relative_to(bundle / "reuse")
                  for e in entries)
@@ -563,9 +579,9 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
             "request_set_sha256": handoff.get("request_set_sha256"),
             "coverage_report_sha256": handoff.get("coverage_report_sha256"), "spending_ledger_sha256": ledger_sha,
             "calls": len(calls), "reused": reused, "accepted_missing": len(missing),
-            "accepted_missing_reasons": dict(sorted(Counter(str(e.get("reason")) for e in missing).items())),
+            "accepted_missing_reasons": dict(sorted(Counter(e["reason"] for e in missing).items())),
             # each one by the manifest's request_id (what the hub's approval on PR 99 names), in manifest order
-            "accepted_missing_requests": [{"request_id": e["request"].get("request_id"), "reason": str(e.get("reason")),
+            "accepted_missing_requests": [{"request_id": e["request"].get("request_id"), "reason": e["reason"],
                                            "cache_key": e["request"]["cache_key"]} for e in missing]}
     keys = {(e["request"]["sport"], e["request"]["source"], e["request"]["cache_key"]) for e in missing}
     return calls, _RefusingCache(cache, keys), info

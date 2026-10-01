@@ -154,8 +154,17 @@ def _note(res: dict) -> str:
     return f"{DAILY_NOTE} {HANDOFF_NOTE}" if res.get("handoff") else DAILY_NOTE
 
 
+def _check_missing_reasons(info: dict) -> None:
+    """Every accepted_missing reason in `info`, counted or listed, is one the bundle's executor can record
+    (handoff.MISSING_REASONS), so nothing else reaches the output line or report.md."""
+    from .handoff import check_missing_reasons
+    check_missing_reasons(list(info.get("accepted_missing_reasons") or {})
+                          + [m.get("reason") for m in info.get("accepted_missing_requests") or []])
+
+
 def _missing_line(info: dict) -> str:
     """The calls the bundle's run accepted as missing (amendment 2): absent data, counted here, never fetched."""
+    _check_missing_reasons(info)
     n = info.get("accepted_missing", 0)
     reasons = ", ".join(f"{k} {v:,}" for k, v in (info.get("accepted_missing_reasons") or {}).items())
     return (f"{n:,} accepted as missing by the bundle's run (absent data: no response, no row read, never fetched"
@@ -175,7 +184,7 @@ def report(res: dict, results: pd.DataFrame, *, fixture: bool) -> str:
                  f"coverage report `{h['coverage_report_sha256']}`, spending ledger "
                  f"`{h['spending_ledger_sha256']}`; {h['calls']:,} calls, {h['reused']:,} of them reused from the "
                  f"bundle's `reuse/`; {_missing_line(h)}.", ""]
-        if h.get("accepted_missing_requests"):
+        if h.get("accepted_missing_requests"):     # their reasons were checked by _missing_line(h), above
             head += ["Accepted as missing by the bundle's run, by request id (the manifest's `request_id`, as the hub's "
                      "approval on PR 99 names it), with its reason and cache key:", ""]
             head += [f"- `{m['request_id'] or 'no request id'}`: {m['reason']}, cache key `{m['cache_key']}`"
@@ -300,11 +309,12 @@ def main(args) -> int:
         try:
             calls, cache, info = handoff.load(bundle, getattr(args, "handoff_root", None), cfg,
                                               getattr(args, "handoff_runtime", None))
+            missing = _missing_line(info)           # refuses a reason the bundle's executor cannot record
         except handoff.HandoffRefused as exc:
             raise SystemExit(_refused(exc)) from None
         print(f"F1 as pulled (football archive bundle {info['bundle_root_sha256']}): {info['calls']:,} calls, "
               f"{info['reused']:,} of them reused from the bundle's reuse/, every response hash-checked; "
-              f"{_missing_line(info)}{'; request ids in report.md' if info.get('accepted_missing') else ''} "
+              f"{missing}{'; request ids in report.md' if info.get('accepted_missing') else ''} "
               "(amendment 2)")
         try:
             res = run(cfg, calls, cache)
