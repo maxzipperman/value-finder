@@ -1,5 +1,7 @@
 # Hub review repairs
 
+The first provider account observation of each new or recovered epoch checks the approved max_baseline_used in both capture and explicit modes, before any paid reservation. Explicit proposed counters do not satisfy that check. The verified flag persists with the epoch, so intact-ledger resumption attributes already-counted acquisition normally instead of reapplying the initial ceiling to legitimate spending.
+
 1. Recovery separates structural/cumulative ledger validation from the stale account floor. An approved recovery bound to the stopped ledger hash clears the old epoch, adopts the approved current baseline, and enforces the floor and all ceilings before any paid reservation. No debit is erased.
 2. Runtime is an absolute, root-keyed global store outside every checkout. A second clone uses the same ledger; a separate central marker refuses reinitialization after ledger or root-folder deletion. Fresh account baselines must be at or below the hub-approved max_baseline_used and within its billing period. Execution from the live checkout or with any alternate runtime is refused.
 3. Independent actual play can only exclude a scheduled-pregame quote or certify one already eligible. It cannot admit a decision after the provider or independent scheduled kickoff.

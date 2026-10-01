@@ -213,6 +213,7 @@ class Ledger:
         debit=used if explicit is None else integer(explicit)
         self.state['other_usage_reserved']=max(self.state['other_usage_reserved'],debit)
         self.state['epoch']={'start_used':used,'start_remaining':remaining,'start_billed':self.billed(),
+                             'first_provider_observation_verified':False,
                              'used_highwater':used,'remaining_lowwater':remaining,'external_peak':0,
                              'prebaseline_other_debit':self.state['other_usage_reserved']}
         self.state['provider_used'],self.state['provider_remaining']=used,remaining
@@ -252,8 +253,14 @@ class Ledger:
         if type(used) is not int or type(remaining) is not int or min(used,remaining)<0:
             raise Halt('Unreadable account billing')
         if self.state['epoch'] is None:self.adopt_baseline(used,remaining)
-        else:self.measure_counters(used,remaining,self.billed()-self.state['epoch']['start_billed'])
+        else:
+            # Explicit counters are proposed evidence, not the first provider observation.
+            # Check their approval ceiling before treating any difference as shared usage.
+            if not self.state['epoch'].get('first_provider_observation_verified',False) and used>self.reconciliation['max_baseline_used']:
+                raise Halt('Approved max_baseline_used exceeded on first provider observation')
+            self.measure_counters(used,remaining,self.billed()-self.state['epoch']['start_billed'])
         self.budget_check(0)
+        self.state['epoch']['first_provider_observation_verified']=True
         self.state['accounts'].append({'used':used,'remaining':remaining,'utc':datetime.now(timezone.utc).isoformat()})
         self.state['free_account_attempt']={'status':'completed','reserved_credits':0,'used':used,'remaining':remaining}
         self.save()

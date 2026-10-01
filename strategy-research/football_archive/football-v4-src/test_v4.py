@@ -629,14 +629,38 @@ def test_deleted_runtime_folder_refused_by_global_marker(tiny_bundle):
     assert not reads and not fake.calls
 
 
-def test_deleted_entire_store_cannot_adopt_spent_balance(tiny_bundle):
+@pytest.mark.parametrize('mode',['explicit','capture_first_free_check'])
+def test_deleted_entire_store_cannot_adopt_spent_balance(tiny_bundle,mode):
     import shutil
-    b,r,a,run,body=tiny_bundle;a['account_reconciliation']=policy(r,'capture_first_free_check')
+    b,r,a,run,body=tiny_bundle;a['account_reconciliation']=policy(r,mode)
     executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=FakeSession(body));shutil.rmtree(executor.RUNTIME_BASE)
     fake=FakeSession(body);fake.used=1717;fake.remaining=4998283
     with pytest.raises(executor.Halt,match='max_baseline_used'):
         executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=fake)
     assert len(fake.calls)==1 and fake.calls[0].endswith('/sports')
+
+
+@pytest.mark.parametrize('mode',['explicit','capture_first_free_check'])
+def test_first_provider_observation_enforces_ceiling(tiny_bundle,mode):
+    b,r,a,run,body=tiny_bundle;a['account_reconciliation']=policy(r,mode)
+    fake=FakeSession(body);fake.used=1701;fake.remaining=4998299
+    with pytest.raises(executor.Halt,match='max_baseline_used'):
+        executor.run(b,r,a,run,key='SYNTHETIC_KEY_ONLY',fake_session=fake)
+    assert len(fake.calls)==1 and fake.calls[0].endswith('/sports')
+    state=json.loads((run/'spending-ledger.json').read_text())
+    assert state['stopped'] and not state['attempts']
+
+
+def test_explicit_epoch_ceiling_rechecked_after_account_recovery(cfg,tmp_path):
+    m,p,r,a=ledger_inputs(cfg)
+    l=executor.Ledger(tmp_path,cfg,m,r,a,p)
+    l.account(1687,4998313);l.halt('synthetic account-only stop');l.close()
+    recovery=policy(r);recovery.update(account_only_recovery=True,prior_ledger_sha256=executor.sha(tmp_path/'spending-ledger.json'))
+    l=executor.Ledger(tmp_path,cfg,m,r,a,p,reconciliation=recovery)
+    try:
+        with pytest.raises(executor.Halt,match='max_baseline_used'):l.account(1701,4998299)
+        assert not l.state['epoch']['first_provider_observation_verified'] and not l.state['attempts']
+    finally:l.close()
 
 
 def test_live_checkout_and_git_runtime_refused(tiny_bundle,monkeypatch,tmp_path):

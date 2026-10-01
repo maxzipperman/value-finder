@@ -2,7 +2,7 @@
 
 LOCAL-BECAUSE: raw-data: validation replays 24 sanitized probe responses available only on this Mac. All preparation and tests use an isolated checkout and its own Python environment.
 
-- Root: `410289fee0b6a82ef2857e5898566a3c94e870e876a0c670b897cf224260c5c4`.
+- Root: `4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d`.
 - Exact CSV SHA256: `81d557cffc1a57c6fb7547cc3be319158745c985bbc746513bda039a7c972910`.
 - Request-set SHA256: `63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b`.
 - Recent 2023–25: **82,830 credits**, 2,761 paid requests plus 12 reused responses.
@@ -22,11 +22,11 @@ Request rows, all 665 three-market MOS slots and all 28 new alternate closes are
 
 ## Verification
 
-**142 offline tests passed against the final sealed bundle**, plus its offline executor preflight and full validator with all reused-cache hashes. The client remains unchanged. The isolated interpreter is `.venv-football-archive/bin/python` in this review checkout: Python 3.12.11, with the frozen runtime versions. No live environment was modified.
+**146 offline tests passed against the final sealed bundle**, plus its offline executor preflight and full validator with all reused-cache hashes. The client remains unchanged. The isolated interpreter is `.venv-football-archive/bin/python` in this review checkout: Python 3.12.11, with the frozen runtime versions. No live environment was modified.
 
 The rehearsal uses temporary one-request execution fixtures plus full static manifest validation; it is not a 2,761-call throughput test. No new API calls, real key reads, outcome joins or sealed-season reads occurred. Raw parquet fixtures remain local and ignored. Restore them with `restore_local_reuse.py --from-bundle /path/to/verified/local/bundle`, which checks exact hashes without a purchase.
 
-Offline preflight: run the isolated interpreter with `-B acquisition/football-archive-v4/executor.py --root 410289fee0b6a82ef2857e5898566a3c94e870e876a0c670b897cf224260c5c4` from this directory. Run the frozen `test_v4.py` with pytest plugin autoload and cache disabled.
+Offline preflight: run the isolated interpreter with `-B acquisition/football-archive-v4/executor.py --root 4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d` from this directory. Run the frozen `test_v4.py` with pytest plugin autoload and cache disabled.
 
 ## Approval artifacts and run window
 
@@ -45,3 +45,5 @@ Proposed window, subject to hub resumption and approval: **Friday October 2, 15:
 Before acquisition, the hub checks overlap, backup readiness and the registered reader, approves the exact current commit/list/budget and baseline ceiling; the owner then completes authorization evidence. The hub was paused at the latest review, so this refreeze awaits review when it resumes. No merge or spending approval is implied by this repair.
 
 **READY FOR THE HUB:** review this repaired root and current PR head. Stop after 2023–25 for the outcome-blind coverage report. Older seasons and strategy grading remain gated.
+
+First-provider-observation repair (October 1): both explicit and capture baselines enforce the approved account ceiling against the first provider check of every new or recovered epoch, before a paid reservation. Verified epochs persist across intact-ledger resumption. Total-store deletion and first-observation-above-ceiling regressions cover both modes; explicit recovery is also covered. Hub review and renewed current-commit agreements are required before acquisition.
