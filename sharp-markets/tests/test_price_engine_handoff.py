@@ -32,7 +32,7 @@ FROZEN = HERE / "frozen" / "football_archive_cache_handoff.py.frozen"
 # FROZEN_SHA256 and BRANCH_FILE pin v4's cache_handoff.py as frozen today (its hash in the bundle's FREEZE.json, and
 # where it is on the research branch). A re-freeze of the bundle that changes cache_handoff.py must update the
 # .frozen copy, FROZEN_SHA256 and, for a new bundle folder, BRANCH_FILE together.
-# cache_handoff.py's sha256 as FREEZE.json lists it (file_sha256["cache_handoff.py"], v4 root 410289fe...), not the
+# cache_handoff.py's sha256 as FREEZE.json lists it (file_sha256["cache_handoff.py"], v4 root 4468a94c...), not the
 # hash of FREEZE.json itself
 FROZEN_SHA256 = "abfc4035c8ac947c69e874ab22d75cbc1c2f3aef2ef0023f32efee9b809be8bf"
 BRANCH_FILE = ("origin/research/football-archive-v4:strategy-research/football_archive/acquisition/"
@@ -843,7 +843,7 @@ def test_a_folder_or_file_that_cannot_be_listed_or_read_is_refused_before_any_co
     assert refused.value.before_read
 
 
-# ---------------------------------------------------------------- accepted_missing (PR 99's refreeze at 6112d70)
+# ---------------------------------------------------------------- accepted_missing (PR 99's refreeze at aba6005)
 # The decision slot at 02:30 UTC (an extra call), accepted as missing for snapshot lag with its rejected HTTP 200 left
 # in the runtime's raw cache, and a college close, accepted as missing for an HTTP 5xx with no response saved.
 MISSING = {36: "snapshot_lag", 24: "http_5xx"}
@@ -971,7 +971,7 @@ BAD_REASONS = ["http_5xx\n- `forged`: http_404", "http_404 ", "http_418", "", No
 
 
 def test_the_missing_reasons_are_the_ones_the_bundles_executor_can_record():
-    """executor.accept_as_missing at 6112d70 records http_404 (a saved 404), snapshot_lag (a lagged HTTP 200) or
+    """executor.accept_as_missing at aba6005 records http_404 (a saved 404), snapshot_lag (a lagged HTTP 200) or
     http_5xx (an observed 5xx), and halts on any other."""
     assert handoff.MISSING_REASONS == ("http_404", "http_5xx", "snapshot_lag")
 

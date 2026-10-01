@@ -116,7 +116,7 @@ BUNDLE_MODULES = ("cache_handoff", "validator", "builder", "executor", "price_el
 # registration, together with the amendment's root blank marked ⟨hub⟩, and --handoff refuses every run until then.
 REGISTERED_ROOT: str | None = None
 
-# The reasons the v4 executor's accept_as_missing can record (executor.py at 6112d70): `http_404` (a saved 404),
+# The reasons the v4 executor's accept_as_missing can record (executor.py at aba6005): `http_404` (a saved 404),
 # `snapshot_lag` (a saved HTTP 200 whose snapshot lags too far) and `http_5xx` (an observed 5xx, nothing saved). Any
 # other reason, or one that is not exactly one of these strings (a newline, say, which would add a line to
 # report.md), refuses the run.
