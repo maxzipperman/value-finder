@@ -1070,3 +1070,78 @@ def test_the_default_runtime_refuses_a_root_that_is_not_a_sha256(root):
     with pytest.raises(handoff.HandoffRefused, match="64-character sha256 root"):
         handoff.default_runtime(root)
     assert handoff.default_runtime("0" * 64).name == "0" * 64
+
+
+# PR 104: the analysis-side bounded adapter leaves the paid bundle unchanged.
+@pytest.mark.parametrize("fixture_name", ["made", "made_missing"])
+def test_bounded_adapter_preserves_the_exact_handoff_including_missing(request, fixture_name):
+    from markets.research.price_engine import archive_adapter
+    cfg, calls, cache, scores, bundle, runtime, root = request.getfixturevalue(fixture_name)
+    with handoff._bundle_code(bundle, handoff._verify(bundle, root)[1]):
+        import importlib
+        original = importlib.import_module("cache_handoff")
+        validator = importlib.import_module("validator")
+        executor = importlib.import_module("executor")
+        expected = original.build_handoff(bundle, root, runtime)
+        actual = archive_adapter.build_handoff(bundle, root, runtime, verify=validator.verify,
+            validate_response=executor.validate_response, report_sha=archive_adapter.sha(runtime / "coverage-report.json"))
+    assert actual == expected
+
+
+@pytest.mark.parametrize("field,value", [("outcomes_joined", True), ("outcomes_joined", 0),
+                                         ("all_recent_requests_completed", False),
+                                         ("bundle_root_sha256", "wrong")])
+def test_bounded_coverage_header_rejects_bad_completion(tmp_path, field, value):
+    from markets.research.price_engine import archive_adapter
+    path = tmp_path / "report.json"
+    body = {"bundle_root_sha256": "root", "outcomes_joined": False, "all_recent_requests_completed": True,
+            "large_unused_array": [{"q": 1}] * 1000}
+    body[field] = value
+    path.write_text(json.dumps(body))
+    with pytest.raises(ValueError, match="coverage header"):
+        archive_adapter.coverage_header(path, "root", archive_adapter.sha(path))
+
+
+def test_bounded_coverage_pins_bytes_and_refuses_symlink(tmp_path):
+    from markets.research.price_engine import archive_adapter
+    path = tmp_path / "report.json"
+    path.write_text('{"bundle_root_sha256":"root","outcomes_joined":false,"all_recent_requests_completed":true}')
+    digest = archive_adapter.sha(path)
+    assert archive_adapter.coverage_header(path, "root", digest) == digest
+    path.write_text(path.read_text()+" ")
+    with pytest.raises(ValueError, match="Changed"):
+        archive_adapter.coverage_header(path, "root", digest)
+    link = tmp_path / "link.json"
+    link.symlink_to(path)
+    with pytest.raises(OSError):
+        archive_adapter.sha(link)
+
+
+def test_canonical_context_marks_ambiguous_provider_bindings(tmp_path):
+    from markets.research.price_engine import archive_adapter
+    games = [{"sport": NFL, "canonical_game_id": gid, "team_keys": ["h", "a"], "provider_ids": ids}
+             for gid, ids in [("g1", ["unique", "ambiguous"]), ("g2", ["ambiguous"])]]
+    (tmp_path / "canonical-games.json").write_text(json.dumps(games))
+    (tmp_path / "aliases.json").write_text(json.dumps([{"sport": NFL, "provider_name": "H",
+                                                       "canonical_team_key": "h"}]))
+    bindings, aliases, teams = archive_adapter.canonical_context(tmp_path)
+    assert bindings[NFL, "unique"] == "g1" and bindings[NFL, "ambiguous"] is None
+    assert aliases[NFL, "H"] == "h" and teams["g1"] == frozenset(("h", "a"))
+
+
+def test_registered_handoff_dispatches_to_bounded_adapter_with_missing(made_missing, monkeypatch):
+    from markets.research.price_engine import archive_adapter
+    cfg, calls, cache, scores, bundle, runtime, root = made_missing
+    (bundle / "canonical-games.json").write_text("[]")
+    (bundle / "aliases.json").write_text("[]")
+    root = refreeze(bundle, runtime, monkeypatch)
+    monkeypatch.setattr(archive_adapter, "ACQUIRED_ROOT", root)
+    build = archive_adapter.build_handoff
+    digest = archive_adapter.sha(runtime / "coverage-report.json")
+    monkeypatch.setattr(archive_adapter, "build_handoff",
+                        lambda *a, **kw: build(*a, **kw, report_sha=digest))
+    hcalls, hcache, info = load(bundle, root, cfg)
+    assert isinstance(hcache._cache, archive_adapter.ReadOnlyCache)
+    assert len(hcalls) == len(calls) and info["accepted_missing"] == len(MISSING)
+    assert hcache.offline and hcache.canonical_event_map == {}
+    assert sum(hcache.lookup(c.cache_sport, c.source, c.key) is None for c in hcalls) == len(MISSING)

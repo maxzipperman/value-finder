@@ -15,8 +15,10 @@ What this module does, and nothing else:
      that is not valid UTF-8, or a file or folder that cannot be listed or read, refuses the run here, before any
      code in the folder runs and before any response is parsed (this step reads and hashes every file, the reused
      responses in `reuse/` included, but parses none of them).
-  2. It imports the bundle's frozen `cache_handoff.py` (it is never copied into the engine) and calls
-     `build_handoff(bundle, root, runtime)`, which runs the bundle's own validator over the whole bundle, requires a
+  2. It imports the bundle's frozen `cache_handoff.py` (it is never copied into the engine). For the acquired root,
+     Amendment 3's analysis-side archive_adapter streams the independently pinned completion report instead of
+     materializing it, using the frozen validator and response checks; other roots use the original bundle loader.
+     Either path runs the bundle's own validator over the whole bundle, requires a
      completed recent slice and an outcome-blind coverage report, and checks every paid response and receipt and
      every reused response in `reuse/` against its recorded hash. The runtime is the v4 executor's fixed folder,
      `RUNTIME_BASE/<root>` (`~/Library/Application Support/ValueFinder/football-acquisition-state/<root>`), unless
@@ -37,9 +39,9 @@ What this module does, and nothing else:
      requested time stands in. For this bundle the two agree: no priority-1 call is sealed either way. The flag
      only matters for a row whose own game time is in no season window, and it can only leave rows out.
 
-The calls and the cache then go to the registered `run(cfg, calls, cache)` unchanged: no threshold, flag, entry,
-grading or decision rule differs, and the registered filters (sealed seasons in `bulk.load_rows`, the snapshot at or
-after kickoff, the 7-day window, the 60-minute entry rule) apply to every snapshot exactly as they do to legacy F1.
+The calls and cache then go to `run(cfg, calls, cache)`. Amendment 3 adds canonical identity/orientation quarantine
+and fixes the exact seven-day cut to check both kickoff clocks. These population changes remain DRAFT while
+REGISTERED_ROOT is unset; they must be registered prospectively before any acquired-data strategy grading.
 
 Safety. The bundle folder holds Python code, and reading it runs that code inside this process, with this process's
 rights. What makes that acceptable is the pinned root and the review behind it: the hub approves one frozen root
@@ -100,6 +102,7 @@ from copy import copy
 from pathlib import Path
 
 from ...oddsapi import bulk
+from . import archive_adapter
 
 # The v4 executor's fixed runtime (executor.RUNTIME_BASE / root, outside every git checkout): its spending ledger,
 # receipts, coverage report and data/raw. --handoff-runtime defaults to it, for the --handoff-root given.
@@ -551,9 +554,20 @@ def load(bundle, root: str, cfg: dict, runtime=None) -> tuple[list, object, dict
     with _bundle_code(bundle, sources):
         try:
             module = importlib.import_module("cache_handoff")
-            handoff = module.build_handoff(bundle, root, runtime)
+            if root == archive_adapter.ACQUIRED_ROOT:
+                # The immutable paid bundle remains unchanged. This explicitly reviewed analysis
+                # adapter uses the same frozen validator/response checks and audited completion hash,
+                # replacing only its unbounded report materialization and cache hashing.
+                validator = importlib.import_module("validator")
+                executor = importlib.import_module("executor")
+                handoff = archive_adapter.build_handoff(
+                    bundle, root, runtime, verify=validator.verify, validate_response=executor.validate_response)
+            else:
+                handoff = module.build_handoff(bundle, root, runtime)
             calls = module.as_calls(handoff, bulk.Call)
-            cache = module.ReadOnlyCache(handoff, runtime / "data" / "raw")
+            cache = (archive_adapter.ReadOnlyCache(handoff, runtime / "data" / "raw", bundle)
+                     if root == archive_adapter.ACQUIRED_ROOT
+                     else module.ReadOnlyCache(handoff, runtime / "data" / "raw"))
         except HandoffRefused:
             raise
         except (Exception, SystemExit) as exc:  # the bundle's own checks (ValueError, its Halt, a missing ledger

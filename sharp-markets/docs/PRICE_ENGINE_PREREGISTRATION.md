@@ -587,3 +587,34 @@ uv run markets price-engine
 - **Before F1 exists,** it prints that there is nothing to backtest and stops.
 - **`--fixture`** runs the whole pipeline on a small synthetic fixture (not data), to check it works.
 - **No API calls.** It reads only what is cached, and it never touches the sealed seasons.
+
+
+## Amendment 3 proposal (DRAFT — PR 104 remediation, October 1, 2026)
+
+This proposal is not registered and enables no strategy result. Amendment 2's root remains unset.
+The completed acquisition remains under its original frozen root and all missing-slot denominators remain.
+
+Before any fair-price, entry, close or outcome join, the acquired handoff uses the frozen canonical
+provider bindings and team aliases. Unbound or ambiguous bindings, unresolved/mismatched team identities,
+multiple observed provider IDs for one canonical game, and changed home/away orientation are quarantined
+with quote-level exclusion counts. Remaining partitions use canonical game identity for all joins.
+No price or outcome resolves an identity conflict; spread signs are left as offered only when the
+home/away order is stable. The legacy loader conservatively quarantines same-team different-ID listings
+whose kickoffs are within 36 hours; games further apart remain distinct. All identity quarantine is
+retrospective exclusion, not a claim that a live bettor could know future corrections.
+
+The exact seven-day maximum applies to both the kickoff listed at decision time and the latest-listed
+safety-check kickoff. A later correction can exclude a quote, but cannot admit a previously out-of-window
+quote. The existing one-hour entry cutoff remains.
+
+For the audited acquired root, a reviewed analysis-side adapter replaces the frozen handoff's unbounded
+coverage JSON loading and file hashing. It checks the independently audited full coverage digest, streams
+its completion headers and checks the exact paid/reused manifest, receipts and response bytes. It uses
+the frozen validator and response checks; it does not edit/refreeze the completed acquisition or enable
+priority 2. The full coverage JSON remains provenance, not a strategy cohort.
+
+Still to register before any grading: three versus six seasons; the mapping between acquisition and
+analysis timing/staleness/close policies; the applicability of the existing count 271 versus the historical
+search floor 314; execution/settlement assumptions. The original 38 variants are not counted twice or
+retrospectively regraded by this repair. Changed prospective specifications must receive their stated
+trial accounting and bar at registration. No thresholds are chosen from results.
