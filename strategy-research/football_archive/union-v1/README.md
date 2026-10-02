@@ -43,6 +43,6 @@ Missing coverage gates F3b through its existing separate review; no new profitab
 
 ## Report for the hub
 
-Actual completed union has been validated read-only with both original offline approvals authenticated. Final packet/test review is in progress. Hub current-head agreements and a separate F3a paid approval remain required. No worker API calls, credentials, outcomes, runtime mutations or merge.
+Actual completed union has been validated read-only with both original offline approvals authenticated. The actual570-request packet is frozen and changed guards have36 passing focused checks (35 complete source/marker/bootstrap checks plus the final literal lock-mutation regression). Prior complete driver/policy/union evidence is reused per owner direction; a fresh repeated suite was stopped after60 passes and is not reported as complete. Main is reconciled. READY FOR THE HUB: current-head independent agreements and a separate F3a paid approval remain required. No worker API calls, credentials, outcomes, runtime mutations or merge.
 
 NOT READY pending final refreeze/tests/current-head review.

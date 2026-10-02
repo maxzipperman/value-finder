@@ -171,5 +171,5 @@ def test_v4_source_rechecked_under_lock_before_vendor_key_or_send(driver,monkeyp
     monkeypatch.setattr(epoch,'source_executor',capture)
     monkeypatch.setattr(driver[2],'vendor_imports',lambda *args:vendors.append(1))
     with pytest.raises(ValueError,match='Entire v4 bytes/root changed before import'):
-        run(driver,session,key=lambda:reads.append(1))
+        epoch.run(driver[0],driver[1],bundle,driver[4],key=lambda:reads.append(1),fake_session=session)
     assert captures==[False,True] and not marker.exists() and not vendors and not reads and not session.calls
