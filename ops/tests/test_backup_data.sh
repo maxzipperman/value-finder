@@ -767,6 +767,50 @@ swap_stopped() { [ -z "$SW" ] && [ -d "$F7/forward.restored" ] && grep -qx 'row 
 expect "  ... the swap stops when forward/ was made again in between, leaving both" swap_stopped
 chmod -R u+rwx "$R7"; rm -rf "$R7"
 
+# ---- audit #104: complete football runtime, central reservations, frozen reuse and approvals ---------------------------
+R8="$S/footballrepo"
+mkdir -p "$R8/nfl-weather" "$R8/cfb-weather" "$MNT/football"
+FS="$H/Library/Application Support/ValueFinder/football-acquisition-state"
+FE="$H/Library/Application Support/ValueFinder/football-acquisition-evidence"
+FA="$R8/strategy-research/football_archive/acquisition"
+for name in root/spending-ledger.json root/coverage-report.json root/receipts/r.pre.json root/receipts/r.json root/data/raw/a.parquet registrations/reservation.json; do
+  mk "$FS/$name" "synthetic-$name"
+done
+mk "$FS/root/.env" "ODDS_API_KEY=$KEY"
+mk "$FA/v4/FREEZE.json" 'synthetic freeze'
+mk "$FA/v4/reuse/probe.parquet" 'synthetic paid probe'
+mk "$FE/authorization.json" 'synthetic exact-list approval'
+mk "$FE/account-recovery.approved.json" 'synthetic reconciliation'
+mk "$FE/secret.txt" "$KEY"
+touch -t 202609010000 "$FS/root"/*json "$FS/registrations/reservation.json" "$FE"/*json
+FB="$MNT/football/value-finder-backup"
+run "football audit backup" 0 -- "$MNT/football" --repo "$R8"
+for name in root/spending-ledger.json root/coverage-report.json root/receipts/r.pre.json root/receipts/r.json root/data/raw/a.parquet registrations/reservation.json; do
+  expect "  ... preserves $name" cmp -s "$FS/$name" "$FB/home-state/football-acquisition-state/$name"
+done
+expect "  ... preserves the frozen bundle" cmp -s "$FA/v4/FREEZE.json" "$FB/strategy-research/football_archive/acquisition/v4/FREEZE.json"
+expect "  ... preserves ignored paid probe reuse" cmp -s "$FA/v4/reuse/probe.parquet" "$FB/strategy-research/football_archive/acquisition/v4/reuse/probe.parquet"
+expect "  ... preserves approval evidence" cmp -s "$FE/authorization.json" "$FB/home-state/football-acquisition-evidence/authorization.json"
+expect "  ... preserves recovery evidence" cmp -s "$FE/account-recovery.approved.json" "$FB/home-state/football-acquisition-evidence/account-recovery.approved.json"
+expect "  ... excludes runtime keys" [ ! -e "$FB/home-state/football-acquisition-state/root/.env" ]
+expect "  ... excludes evidence secrets" [ ! -e "$FB/home-state/football-acquisition-evidence/secret.txt" ]
+run "football audit backup check" 0 -- "$MNT/football" --repo "$R8" --check
+REST="$T/football-restored"
+mkdir -p "$REST"
+rsync -a "$FB/home-state/" "$REST/"
+expect "  ... scratch restore retains the central reservation" cmp -s "$FS/registrations/reservation.json" "$REST/football-acquisition-state/registrations/reservation.json"
+expect "  ... scratch restore retains the cumulative ledger" cmp -s "$FS/root/spending-ledger.json" "$REST/football-acquisition-state/root/spending-ledger.json"
+expect "  ... scratch restore retains the approved reconciliation" cmp -s "$FE/account-recovery.approved.json" "$REST/football-acquisition-evidence/account-recovery.approved.json"
+printf 'corrupt' > "$FB/home-state/football-acquisition-state/root/receipts/r.json"
+run "football changed receipt refuses check" 1 -- "$MNT/football" --repo "$R8" --check
+expect "  ... identifies receipt corruption" has "receipts/r.json"
+cp -p "$FS/root/receipts/r.json" "$FB/home-state/football-acquisition-state/root/receipts/r.json"
+rm "$FB/home-state/football-acquisition-state/registrations/reservation.json"
+run "football missing central marker refuses check" 1 -- "$MNT/football" --repo "$R8" --check
+expect "  ... identifies the missing marker" has "registrations/reservation.json"
+run "football relative state override refuses before copy" 2 FOOTBALL_ACQUISITION_STATE_DIR=relative -- "$MNT/football" --repo "$R8"
+expect "  ... explains the absolute path requirement" has "must be an absolute folder path"
+
 echo
 echo "$PASSED passed, $FAILED failed."
 [ "$FAILED" -eq 0 ]
