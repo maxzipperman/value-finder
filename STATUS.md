@@ -6,6 +6,8 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 **Cloud first (the owner's rule, Sep 29, 2026):** work that needs only what is in git goes to the cloud worker, on cloud session credits; local chats, agents and workflows are only for work that needs this Mac, and a hook blocks a local agent or workflow that doesn't say why ([`ops/CLOUD_FIRST.md`](ops/CLOUD_FIRST.md)).
 
+**Process (Oct 2, prospective):** [GOVERNANCE.md](GOVERNANCE.md) centralizes risk-tier review, reusable verification and compact handoffs. [Future tooling](ops/process/README.md) separates purchase identity from supporting provenance and validates preplanned recovery; completed freezes and current paid executors remain unchanged.
+
 ## Projects
 
 | Folder | Question | Where it stands | Next step |

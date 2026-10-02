@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "request_list_sha256": "6528d92066c6d822e599c8a0e3fcf19618d37a1e1f8c58e4c27386c87eacb870",
+  "requests": [
+    {
+      "id": "f07165b64216ae9a4988fc779b08f0dbe74750bd08a7504a6fb368cdc6c084d2",
+      "max_credits": 30
+    }
+  ],
+  "budget": {
+    "new_cap": 30,
+    "prior_reserved": 0,
+    "probe": 1687,
+    "other_usage": 0,
+    "cumulative_cap": 1717,
+    "reserve_floor": 100
+  },
+  "missing": {
+    "ids": [
+      "f07165b64216ae9a4988fc779b08f0dbe74750bd08a7504a6fb368cdc6c084d2"
+    ],
+    "http_status": 404,
+    "error_code": "EVENT_NOT_FOUND",
+    "last_cost": 0,
+    "retain_full_reservation": true,
+    "retain_denominator": true
+  },
+  "restart": {
+    "states": [
+      "clean_stopped",
+      "complete"
+    ],
+    "automatic_retries": 0,
+    "send_only_untouched": true,
+    "live_authority_required": true,
+    "global_lock_ledger_required": true
+  },
+  "coverage": {
+    "metric": "eligible_quote_pairs",
+    "minimum": 0.95,
+    "denominator": "all_planned_opportunities",
+    "halt_before_next_tranche": true,
+    "outcome_blind": true
+  }
+}

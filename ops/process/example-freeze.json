@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "scopes": [
+    "ops/process/example-stage"
+  ],
+  "files": {
+    "ops/process/example-stage/main.py": "executable",
+    "ops/process/example-stage/runtime.json": "dependency",
+    "ops/process/example-stage/requests.json": "requests",
+    "ops/process/example-stage/eligibility.json": "eligibility",
+    "ops/process/example-stage/policy.json": "policy",
+    "ops/process/example-stage/README.md": "documentation",
+    "ops/process/example-stage/tests/test_main.py": "test"
+  }
+}

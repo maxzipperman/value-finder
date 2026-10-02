@@ -28,24 +28,18 @@ Each project has its own virtual environment. Don't share environments or instal
 - **Grade on price.** Grade on CLV at the price actually taken. Rules that bet *at* the close are graded on win rate and ROI at that price instead (see #4).
 - **Secrets and data stay local.** API keys go in each project's `.env`, which is gitignored; `.env.example` holds the names only. Anything under `data/`, `.venv/`, parquet and DuckDB files are gitignored and must be re-creatable from scripts.
 - **Paid APIs are cache-first.** Odds API calls need an explicit credit budget. Reruns read the cache.
-- **One plan for every purchase (the owner's rule, Sep 30, 2026).** Every plan to spend paid credits or money lives in this repo, and the hub keeps the one list of what is bought next (`STATUS.md`, "Paid data"). A chat outside the hub (Codex, a cloud worker, another Claude chat) may propose a plan only as a pull request against that list; it never runs its own bulk download, keeps its own request list outside the repo, or spends on the paid key without the hub's go-ahead for that exact list. Before any paid run, check that no other plan covers the same calls.
+- **Purchases and coordination:** follow [GOVERNANCE.md](GOVERNANCE.md); STATUS.md holds the sole paid queue.
 - **Shared weather code.** `market.py`, `features.py`, `models.py`, `notify.py`, `quota.py` and `runlog.py` are copied between `nfl-weather` and `cfb-weather`. A change to one copy is made to both. Tests fail if `quota.py`, `runlog.py` or the pricing block of `market.py` differ.
 - **Frozen means a committed file.** The pricing cohorts (`*/data/processed/pricing_cohort.json`) have registered hashes, and every alert run checks them. Changing one needs a dated amendment.
 - **Log, don't drop.** Every alert run leaves a row in `data/forward/runs.csv`, finished or failed. Scorers count every excluded ledger row by reason and list them with `--list-excluded`. Error text is scrubbed of keys (`runlog.scrub`) before it is recorded or sent.
 - **The dashboard only reads.** `dashboard/` and `menubar/` never write to a project's data, never change a rule, and start nothing but the scorers in preview (`--now`) and `launchctl list` / `print`.
 
-## The hub
+## Coordination
 
-One chat manages the project: **Codex "hub chat"** (thread `01a0f4c8-b074-70a3-87be-07f4bdc156df`). The owner assigned this handoff October 1, 2026, recorded on PR #99. Claude chats and the auditor serve as workers. Work stays in isolated checkouts; the live checkout and scheduled jobs remain protected. The hub never archives itself.
-
-- **Cloud first (the owner's rule, September 29, 2026).** Work that needs only what is in git runs in the cloud, on cloud session credits: the hub sends the brief to the cloud worker. A local worker chat, a local agent or a local workflow is only for work that needs this Mac: its keys, its raw data, its scheduled jobs, its live checkout, its hardware, or a token in the home folder. When the hub starts anything locally it says which of those it is. The plan's own limits are kept for the hub. A hook enforces this ([`ops/CLOUD_FIRST.md`](ops/CLOUD_FIRST.md)).
-- **Codex coordination (the owner, Sep 30, 2026).** The Codex hub executes API requests within the owner’s scope and records exact request-list and credit-budget approval first. Coordination is only through pull requests and comments; nothing merges until both have commented `AGREE <sha>` on the current head, and the hub does every merge touching rules, registrations, money, scorers or live jobs. The full arrangement is in [`AGENTS.md`](AGENTS.md).
-- **`/hub`** runs one check-in. It covers status, deadlines, PRs, worker chats and Mac health, then does small Mac-only jobs itself and spawns workers for the rest. The rules are in `.claude/commands/hub.md`. A daily check-in runs at about 9 AM while the app is open.
-- **Workers get one issue each,** on their own branch, with one PR that links the issue.
-  - **The cloud worker** is one standing cloud chat (the hub finds it with `ListAgents`; its title changes with its latest task). It gets anything that only needs git, and uses cloud session credits. The hub sends it briefs with `SendMessage`. It merges its own analysis, docs and data PRs, but asks before touching rules, money or the alert jobs.
-  - **Local worker chats** get anything that needs the Mac's keys or raw data. Each one works in its own worktree. **Nothing but the hub works in `~/code/value-finder` itself, and nothing switches branches there**, because the launchd alert, close-capture and ledger jobs run whatever is checked out.
-- **Workers are cleaned up automatically.** The account setting "Auto-archive sessions when their pull request closes" archives each worker once its PR merges.
-- **A local worker chat reports back** through its PR and comments: the results and anything that failed.
+[GOVERNANCE.md](GOVERNANCE.md) is authoritative for the hub, review tiers,
+purchases/recovery, isolated execution and concise handoffs. Read it with this
+file and STATUS.md. `/hub` performs the operational check-in described in
+`.claude/commands/hub.md`; it grants no additional authority.
 
 ## Cloud sessions
 
