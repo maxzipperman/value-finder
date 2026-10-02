@@ -1,4 +1,4 @@
-"""Adverse offline ancestry and cross-store cache checks."""
+"""Outcome-blind N0 source, packet, ancestor and cache boundaries."""
 import json
 from pathlib import Path
 import sys
@@ -23,64 +23,100 @@ def write_ledger(root, state):
 @pytest.fixture
 def chain(tmp_path, monkeypatch):
     monkeypatch.setattr(stage, "RUNTIME_BASE", tmp_path)
-    parent = {"bundle_root_sha256": stage.SOURCE_ROOT, "pending": None, "stopped": None,
+    parent = {"bundle_root_sha256": stage.V4_ROOT, "pending": None, "stopped": None,
               "status": "recent_complete_stopped_before_older", "probe_credits": 1687,
               "other_usage_reserved": 5, "attempts": {"prior": {"reserved_credits": 30,
                   "status": "completed", "cache_key": "a" * 20}}, "cache_reuse": {}}
-    path = write_ledger(stage.SOURCE_ROOT, parent)
+    path = write_ledger(stage.V4_ROOT, parent)
     monkeypatch.setattr(stage, "RECENT_LEDGER_SHA256", stage.sha(path))
     child_root = "b" * 64
     child = {"bundle_root_sha256": child_root, "pending": None, "stopped": None,
-             "status": "event_epoch_complete", "probe_credits": 1687,
+             "status": "older_epoch_complete", "probe_credits": 1687,
              "other_usage_reserved": 35, "attempts": {}, "cache_reuse": {},
-             "predecessor_seed": {"root": stage.SOURCE_ROOT, "ledger_path": str(path),
+             "predecessor_seed": {"root": stage.V4_ROOT, "ledger_path": str(path),
                  "ledger_sha256": stage.sha(path), "probe_credits": 1687,
                  "cumulative_debit_without_probe": 35}}
     child_path = write_ledger(child_root, child)
     return path, child_path, child
 
 
-def test_child_must_carry_actual_parent_debit(chain):
+def test_exact_source_and_cache_identity():
+    manifest, rows = stage.source()
+    assert manifest["games"] == 56 and len(rows) == 754
+    assert sum(r["max_new_credits"] for r in rows) == 7540
+    assert {r["sport"] for r in rows} == {"nba"}
+    assert {r["source"] for r in rows} == {"oddsapi_hist"}
+    assert {r["odds_sport_key"] for r in rows} == {"basketball_nba"}
+    assert len({r["cache_key"] for r in rows}) == 754
+
+
+def test_candidate_packet_round_trip_and_tamper(chain, tmp_path, monkeypatch):
+    _, child_path, _ = chain
+    original_seed = stage.seed
+    monkeypatch.setattr(stage, "seed", lambda path, rows, **kwargs: original_seed(path, rows))
+    packet = tmp_path / "packet"
+    root = stage.prepare(child_path, packet)
+    manifest, rows, predecessor = stage.verify_packet(packet, root)
+    assert len(rows) == 754 and manifest["new_credits"] == 7540
+    assert predecessor["root"] == "b" * 64
+    altered = json.loads((packet / "requests.json").read_text())
+    altered[0]["max_new_credits"] = 0
+    stage.write(packet / "requests.json", altered)
+    with pytest.raises(ValueError, match="frozen root"):
+        stage.verify_packet(packet, root)
+
+
+def test_real_packet_requires_both_f2_partials_and_union(chain, tmp_path):
+    _, child_path, _ = chain
+    with pytest.raises(ValueError, match="Both exact partial F2"):
+        stage.prepare(child_path, tmp_path / "blocked-packet")
+
+
+def test_child_cannot_drop_real_parent_debit(chain):
     _, child_path, child = chain
     assert stage.seed(child_path, [])["cumulative_debit_without_probe"] == 35
     child["other_usage_reserved"] = 0
     stage.write(child_path, child)
-    with pytest.raises(ValueError, match="Child cumulative debit decreased"):
+    with pytest.raises(ValueError, match="Cumulative debit decreased"):
         stage.seed(child_path, [])
 
 
 @pytest.mark.parametrize("value", [-1, True])
-def test_negative_or_boolean_child_debit_rejected(chain, value):
+def test_negative_or_boolean_carry_rejected(chain, value):
     _, child_path, child = chain
     child["other_usage_reserved"] = value
     stage.write(child_path, child)
-    with pytest.raises(ValueError, match="Invalid ancestor accounting value"):
+    with pytest.raises(ValueError, match="unsettled"):
         stage.seed(child_path, [])
 
 
-def test_generator_preserves_ancestor_cache_key_check(chain):
+def test_generator_ancestor_cache_key_check(chain):
+    _, child_path, _ = chain
+    row = {"request_id": "new-request", "cache_key": "a" * 20}
+    with pytest.raises(ValueError, match="Ancestor cache overlap"):
+        stage.seed(child_path, (r for r in [row]))
+
+
+def test_pilot_cannot_be_final_n0_predecessor(chain):
     parent_path, _, _ = chain
-    paid = {"request_id": "new-request", "cache_key": "a" * 20}
-    with pytest.raises(ValueError, match="Ancestor cache would be repurchased"):
-        stage.seed(parent_path, (row for row in [paid]))
+    with pytest.raises(ValueError, match="completed older stage"):
+        stage.seed(parent_path, [])
 
 
-def test_external_raw_store_overlap_blocks_paid_row(tmp_path, monkeypatch):
-    external = tmp_path / "legacy-external-store"
-    row = {"request_id": "new-request", "sport": "americanfootball_nfl",
-           "source": "oddsapi/hist_odds", "cache_key": "c" * 20, "max_new_credits": 30}
-    folder = external / row["sport"] / row["source"] / "2022-12-31"
+def test_external_exact_cache_key_stops_preparation(tmp_path, monkeypatch):
+    row = stage.source()[1][0]
+    external = tmp_path / "external-nba-store"
+    folder = external / "nba/oddsapi_hist/2026-01-03"
     folder.mkdir(parents=True)
     (folder / (row["cache_key"] + ".parquet")).write_bytes(b"synthetic exact-key hit")
-    monkeypatch.setattr(stage, "raw_roots", lambda exclude_root=None: [str(external)])
-    with pytest.raises(ValueError, match="Existing exact paid cache key"):
-        stage.reconcile_cache([row], tmp_path)
+    monkeypatch.setattr(stage, "raw_roots", lambda own_root=None: [str(external)])
+    with pytest.raises(ValueError, match="Existing exact NBA paid cache"):
+        stage.reconcile([row])
 
 
 def test_cross_checkout_inventory_skips_nonexistent_self_store_and_finds_actual_peers(tmp_path, monkeypatch):
     checkout = tmp_path / "project/checkout"
-    checkout.mkdir(parents=True)
-    archive = tmp_path / "historical-contract"
+    archive = checkout / "strategy-research/football_archive"
     (archive / "followups/F2-pilot").mkdir(parents=True)
     (archive / "recovery-v1/F2-continuation").mkdir(parents=True)
     (archive / "recovery-v2/F2-second-continuation").mkdir(parents=True)
@@ -96,7 +132,6 @@ def test_cross_checkout_inventory_skips_nonexistent_self_store_and_finds_actual_
     global_raw = tmp_path / "global" / ("a" * 64) / "data/raw"
     global_raw.mkdir(parents=True)
     monkeypatch.setattr(stage, "REPO", checkout)
-    monkeypatch.setattr(stage, "ROOT", archive)
     monkeypatch.setattr(stage, "PROJECT", checkout.parent)
     monkeypatch.setattr(stage, "RUNTIME_BASE", tmp_path / "global")
     roots = set(stage.raw_roots())

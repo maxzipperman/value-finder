@@ -1,5 +1,6 @@
 """No-network adverse paths for the priority-2 compatibility bridge."""
 import importlib.util
+import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -124,6 +125,68 @@ def test_global_pending_epoch_blocks_new_root(tmp_path, monkeypatch):
         execute.global_settled("f" * 64)
 
 
+@pytest.mark.parametrize("tampered", ["executor.py", "validator.py"])
+def test_changed_v4_code_never_executes_before_freeze_check(tmp_path, monkeypatch, tampered):
+    bundle = tmp_path / "source"
+    bundle.mkdir()
+    for name in ("executor.py", "validator.py"):
+        (bundle / name).write_text("pass\n")
+    files = {name: hashlib.sha256((bundle / name).read_bytes()).hexdigest()
+             for name in ("executor.py", "validator.py")}
+    root = hashlib.sha256(stage.canonical(files)).hexdigest()
+    stage.write(bundle / "FREEZE.json", {"bundle_root_sha256": root, "file_sha256": files})
+    monkeypatch.setattr(stage, "SOURCE_ROOT", root)
+    monkeypatch.setattr(stage, "source", lambda *args: None)
+    marker = tmp_path / "untrusted-code-ran"
+    (bundle / tampered).write_text(f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n")
+    with pytest.raises(ValueError, match="before import"):
+        execute.source_executor(bundle)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize("change", ["extra", "missing", "symlink"])
+def test_v4_file_inventory_rejects_shape_changes(tmp_path, monkeypatch, change):
+    bundle = tmp_path / "source"
+    bundle.mkdir()
+    (bundle / "executor.py").write_text("pass\n")
+    files = {"executor.py": hashlib.sha256((bundle / "executor.py").read_bytes()).hexdigest()}
+    root = hashlib.sha256(stage.canonical(files)).hexdigest()
+    stage.write(bundle / "FREEZE.json", {"bundle_root_sha256": root, "file_sha256": files})
+    monkeypatch.setattr(stage, "SOURCE_ROOT", root)
+    if change == "extra":
+        (bundle / "extra.py").write_text("pass\n")
+    elif change == "missing":
+        (bundle / "executor.py").unlink()
+    else:
+        (bundle / "linked.py").symlink_to(bundle / "executor.py")
+    with pytest.raises(ValueError, match="source|before import"):
+        execute.verified_v4_bytes(bundle)
+
+
+def test_v4_loader_executes_verified_capture_after_file_changes(tmp_path, monkeypatch):
+    bundle = tmp_path / "source"
+    bundle.mkdir()
+    files = {"executor.py": b"CAPTURED = True\n", "builder.py": b"pass\n",
+             "price_eligibility.py": b"pass\n", "validator.py": b"def verify(*args, **kwargs): pass\n"}
+    for name, data in files.items():
+        (bundle / name).write_bytes(data)
+    marker = tmp_path / "reopened-untrusted-source"
+    original_verify = execute.verified_v4_bytes
+    def change_after_capture(path):
+        captured = original_verify(path)
+        (bundle / "executor.py").write_text(
+            f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n")
+        return captured
+    hashes = {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}
+    root = hashlib.sha256(stage.canonical(hashes)).hexdigest()
+    stage.write(bundle / "FREEZE.json", {"bundle_root_sha256": root, "file_sha256": hashes})
+    monkeypatch.setattr(stage, "SOURCE_ROOT", root)
+    monkeypatch.setattr(stage, "source", lambda *args: None)
+    monkeypatch.setattr(execute, "verified_v4_bytes", change_after_capture)
+    assert execute.source_executor(bundle).CAPTURED is True
+    assert not marker.exists()
+
+
 @pytest.mark.parametrize("crash_at", [None, "after_reservation"])
 def test_confirm_path_reserves_before_send_and_refuses_resend(tmp_path, monkeypatch, crash_at):
     from requests.adapters import HTTPAdapter
@@ -139,7 +202,7 @@ def test_confirm_path_reserves_before_send_and_refuses_resend(tmp_path, monkeypa
              "probe_credits": 1687, "cumulative_debit_without_probe": 85489}
     monkeypatch.setattr(stage, "RUNTIME_BASE", tmp_path)
     monkeypatch.setattr(stage, "verify_packet", lambda *args: (manifest, [row], prior))
-    monkeypatch.setattr(stage, "seed", lambda *args: prior)
+    monkeypatch.setattr(stage, "seed", lambda *args, **kwargs: prior)
     monkeypatch.setattr(execute, "source_executor", lambda *args: base)
     monkeypatch.setattr(execute, "checkout_clean", lambda *args: "b" * 40)
     monkeypatch.setattr(execute, "preflight_cache", lambda *args: None)
