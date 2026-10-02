@@ -8,24 +8,65 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
+import types
 
 import stage
 
 
+def verified_v4_bytes(bundle):
+    bundle = Path(bundle)
+    if bundle.is_symlink() or not bundle.is_dir():
+        raise ValueError("Frozen v4 bundle must be an ordinary directory")
+    def regular(path):
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise ValueError("Frozen v4 source permits regular files only")
+            with os.fdopen(fd, "rb", closefd=False) as handle:
+                return handle.read()
+        finally:
+            os.close(fd)
+    if any(p.is_symlink() for p in bundle.rglob("*")):
+        raise ValueError("Frozen v4 source contains a symlink")
+    captured = {str(p.relative_to(bundle)): regular(p) for p in bundle.rglob("*")
+                if p.is_file() and p.name != "FREEZE.json"}
+    files = {name: hashlib.sha256(data).hexdigest() for name, data in captured.items()}
+    cert = json.loads(regular(bundle / "FREEZE.json"))
+    root = hashlib.sha256(stage.canonical(files)).hexdigest()
+    if files != cert["file_sha256"] or root != cert["bundle_root_sha256"] or root != stage.V4_ROOT:
+        raise ValueError("Frozen v4 source bytes or pinned root changed before import")
+    return captured
+
+
 def source_executor(bundle):
     bundle = Path(bundle)
+    captured = verified_v4_bytes(bundle)
     sys.path.insert(0, str(bundle))
-    spec = importlib.util.spec_from_file_location("nba_n0_reviewed_v4_executor", bundle / "executor.py")
-    base = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(base)
-    from validator import verify
-    verify(bundle, stage.V4_ROOT, check_cache=True)
+    def module(name, filename):
+        result = types.ModuleType(name)
+        result.__file__ = str(bundle / filename)
+        exec(compile(captured[filename], result.__file__, "exec"), result.__dict__)
+        return result
+    base = module("nba_n0_reviewed_v4_executor", "executor.py")
+    builder = module("nba_n0_reviewed_v4_builder", "builder.py")
+    eligibility = module("nba_n0_reviewed_v4_eligibility", "price_eligibility.py")
+    validator = module("nba_n0_reviewed_v4_validator", "validator.py")
+    previous = {name: sys.modules.get(name) for name in ("builder", "executor", "price_eligibility")}
+    try:
+        sys.modules.update(builder=builder, executor=base, price_eligibility=eligibility)
+        validator.verify(bundle, stage.V4_ROOT, check_cache=True)
+    finally:
+        for name, prior in previous.items():
+            if prior is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = prior
     return base
 
 
@@ -114,6 +155,7 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
             if (attempt["status"] != "completed" or base.sha(receipt) != attempt["receipt_sha256"]
                     or base.sha(Path(attempt["response_path"])) != attempt["response_sha256"]):
                 raise base.Halt("Existing N0 response/receipt changed; no repurchase")
+        verified_v4_bytes(bundle)
         RawCache, read_record, BulkClient, Call, new_session, remember_secret, scrub = base.vendor_imports(bundle, runtime)
         key = key() if callable(key) else key
         if not key or len(key) < 8:
