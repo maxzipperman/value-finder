@@ -43,8 +43,9 @@ separately. The test report adds a distinct **tested_identity**. Editing a test
 preserves purchase identity but invalidates affected verification. Editing budget,
 recovery, eligibility, requests or executable bytes changes purchase identity.
 Changing explanatory docs updates supporting provenance. New/missing undeclared
-files or symlinks fail closed. Add a supporting file to the spec before rebuilding;
-this changes provenance but not bound content identity.
+files or symlinks fail closed. Add a supporting file to the spec before rebuilding. Within unchanged declared
+scopes, this changes provenance but not bound content identity; adding a new scope
+also changes purchase identity.
 
 Reviewers must establish complete dependency boundaries: static Python checks
 catch direct imports/package initializers outside them, including imports inside
