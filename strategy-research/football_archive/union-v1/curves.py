@@ -252,7 +252,7 @@ def summarize(manifest, rows, opportunities, responses, protocol):
         fresh_by_book = defaultdict(set)
         for book_name in manifest['books']:
             for market_name in MARKETS:
-                key = (op['season'], op['slot'], book_name, market_name)
+                key = (op['season'], op['slot'], book_name, market_name, op['identity_type'])
                 count = cells[key]; count['denominator'] += 1
                 reasons, present = [], False
                 if root_reason: reasons = [root_reason]
@@ -296,7 +296,7 @@ def summarize(manifest, rows, opportunities, responses, protocol):
             'paired_both_markets_books': both,
             'paired_by_market_books': {m: [b for b in manifest['books'] if book_slots[b][m] == SLOTS] for m in MARKETS},
             'actual_play_certified': False})
-    grouped = [{'season': key[0], 'slot': key[1], 'book': key[2], 'market': key[3],
+    grouped = [{'season': key[0], 'slot': key[1], 'book': key[2], 'market': key[3], 'identity_type': key[4],
                 'counts': {name: value.get(name, 0) for name in ('denominator', 'market_present', 'fresh_curve', 'scheduled_safe_fresh_curve')},
                 'exclusions': {name.removeprefix('exclude/'): n for name, n in sorted(value.items()) if name.startswith('exclude/')}}
                for key, value in sorted(cells.items())]

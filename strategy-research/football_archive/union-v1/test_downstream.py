@@ -45,6 +45,22 @@ def test_wrapper_requires_captured_complete_certificate(tmp_path):
     with pytest.raises(ValueError):union.verify_downstream_union(Path('/tmp/NOT_CAPTURED'),authenticate=False)
 
 
+def test_removed_captured_sibling_cannot_import_ambient_code(tmp_path,monkeypatch):
+    packet,root=copied(tmp_path);sentinel=tmp_path/'EXECUTED'
+    helper=packet.parent/'captured_helper.py';helper.write_text('VALUE=1\n')
+    with (packet.parent/'union.py').open('a') as h:h.write('\nimport captured_helper\n')
+    ambient=tmp_path/'ambient';ambient.mkdir()
+    (ambient/'captured_helper.py').write_text(f"from pathlib import Path\nPath({str(sentinel)!r}).write_text('BAD')\n")
+    monkeypatch.syspath_prepend(str(ambient))
+    files={f'code/{p.name}':__import__('hashlib').sha256(p.read_bytes()).hexdigest() for p in packet.parent.glob('*.py')}
+    files.update({p.name:__import__('hashlib').sha256(p.read_bytes()).hexdigest() for p in packet.iterdir() if p.name!='FREEZE.json'})
+    root=__import__('hashlib').sha256(downstream.canonical(dict(sorted(files.items())))).hexdigest()
+    atomic(packet/'FREEZE.json',{'root':root,'files':dict(sorted(files.items()))})
+    with pytest.raises(ImportError,match='Unmapped local executable dependency'):
+        downstream.load_verified_union(packet,root,after_capture=helper.unlink)
+    assert not sentinel.exists()
+
+
 def test_whole_wrapper_exact_certificate_and_commits(prepared,tmp_path):
     target,pk,auth=prepared;cert,report=union.validate(auth)
     packet,root=copied(tmp_path)

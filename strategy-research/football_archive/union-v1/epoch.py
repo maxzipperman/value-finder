@@ -105,19 +105,44 @@ def stage_guard(packet,manifest,seed,rows,bundle,*,authenticate=True):
         raise ValueError('Exact completed five-root F2 union certificate/seed differs')
 
 
+def verified_v4_bytes(bundle):
+    bundle=Path(bundle)
+    if bundle.is_symlink() or not bundle.is_dir() or any(p.is_symlink() for p in bundle.rglob('*')):
+        raise ValueError('Ordinary frozen v4 tree required')
+    def regular(path):
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):raise ValueError('Regular source bytes required')
+            with os.fdopen(fd,'rb',closefd=False) as h:return h.read()
+        finally:os.close(fd)
+    captured={str(p.relative_to(bundle)):regular(p) for p in bundle.rglob('*') if p.is_file() and p.name!='FREEZE.json'}
+    files={name:__import__('hashlib').sha256(data).hexdigest() for name,data in captured.items()}
+    cert=json.loads(regular(bundle/'FREEZE.json'))
+    root=__import__('hashlib').sha256(plan.canonical(files)).hexdigest()
+    if files!=cert['file_sha256'] or root!=cert['bundle_root_sha256'] or root!=plan.SOURCE_ROOT:
+        raise ValueError('Entire v4 bytes/root changed before import')
+    return captured
+
+
 def source_executor(bundle):
-    cert = json.loads((bundle / 'FREEZE.json').read_text())
-    if any(p.is_symlink() for p in bundle.rglob('*')):
-        raise ValueError('Frozen source cannot contain symlinks')
-    paths = {str(p.relative_to(bundle)): plan.sha(p) for p in bundle.rglob('*')
-             if p.is_file() and p != bundle / 'FREEZE.json'}
-    if paths != cert['file_sha256']:
-        raise ValueError('Completed frozen source bytes differ')
-    plan.verify_source(bundle)
-    spec = importlib.util.spec_from_file_location('reviewed_v4_executor', bundle / 'executor.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    bundle=Path(bundle);captured=verified_v4_bytes(bundle)
+    def module(name,filename):
+        result=types.ModuleType(name);result.__file__=str(bundle/filename)
+        exec(compile(captured[filename],result.__file__,'exec'),result.__dict__)
+        return result
+    base=module('f3a_captured_v4_executor','executor.py')
+    builder=module('f3a_captured_v4_builder','builder.py')
+    eligibility=module('f3a_captured_v4_eligibility','price_eligibility.py')
+    validator=module('f3a_captured_v4_validator','validator.py')
+    previous={name:sys.modules.get(name) for name in ('builder','executor','price_eligibility')}
+    try:
+        sys.modules.update(builder=builder,executor=base,price_eligibility=eligibility)
+        validator.verify(bundle,plan.SOURCE_ROOT,check_cache=True)
+    finally:
+        for name,prior in previous.items():
+            if prior is None:sys.modules.pop(name,None)
+            else:sys.modules[name]=prior
+    return base
 
 
 

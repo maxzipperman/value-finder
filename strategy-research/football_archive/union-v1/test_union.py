@@ -51,6 +51,8 @@ def snapshot(tmp_path_factory):
         if st.get('predecessor_seed'):
             previous=st['predecessor_seed']['root'];st['predecessor_seed'].update(ledger_path=str(paths[previous]),ledger_sha256=pins[previous])
         path=base/root/'spending-ledger.json';atomic(path,st);states[root]=st;paths[root]=path;pins[root]=union.sha(path)
+        shutil.copyfile(REAL/root/'INITIALIZED.json',path.parent/'INITIALIZED.json')
+        atomic(base/'registrations'/(root+'.json'),{'bundle_root_sha256':root,'authorization_sha256':st['authorization_sha256'],'runtime_path':str(path.parent.resolve())})
         if root!=union.SOURCE_ROOT:shutil.copytree(REAL/root/'receipts',path.parent/'receipts')
     c1=packets['recovery-v1/F2-continuation']['missing-certificate.json']
     c1['post_ledger_sha256']=pins[union.ORIGINAL_ROOT]
@@ -98,6 +100,7 @@ def snapshot(tmp_path_factory):
         state['attempts'][row['request_id']]={'status':'completed','cache_key':row['cache_key'],'send_started':True,'reserved_credits':20,'billed_credits':20,
             'response_path':str(cache),'response_sha256':union.sha(cache),'receipt_sha256':union.sha(receipt)}
     atomic(base/union.CONTINUATION_ROOT/'spending-ledger.json',state)
+    atomic(base/union.CONTINUATION_ROOT/'INITIALIZED.json',{'bundle_root_sha256':union.CONTINUATION_ROOT,'probe_credits':1687})
     atomic(base/'registrations'/(union.CONTINUATION_ROOT+'.json'),{'bundle_root_sha256':union.CONTINUATION_ROOT,'authorization_sha256':state['authorization_sha256'],'runtime_path':str((base/union.CONTINUATION_ROOT).resolve())})
     atomic(base/union.CONTINUATION_ROOT/'run-manifest.json',{'epoch_root':union.CONTINUATION_ROOT,'commit':union.CONTINUATION_COMMIT,'seed':seed,
         'missing_certificate':c2,'exact_missing_policy':final['exact-missing-policy.json'],'frozen_source_root':union.SOURCE_ROOT,'request_set_sha256':final['manifest.json']['request_set_sha256']})
@@ -131,7 +134,7 @@ def prepared(snapshot,tmp_path,monkeypatch):
     final['seed.json']['ledger_sha256']=c2['post_ledger_sha256']
     st=newstates[union.CONTINUATION_ROOT];st['accepted_missing_reuse'][union.SECOND_MISSING]=c2['proposal_sha256'];atomic(target/union.CONTINUATION_ROOT/'spending-ledger.json',st)
     run=union.json_file(target/union.CONTINUATION_ROOT/'run-manifest.json');run.update(seed=final['seed.json'],missing_certificate=c2);atomic(target/union.CONTINUATION_ROOT/'run-manifest.json',run)
-    for root in (union.SECOND_ROOT,union.CONTINUATION_ROOT):
+    for root in (union.SOURCE_ROOT,union.PILOT_ROOT,union.ORIGINAL_ROOT,union.SECOND_ROOT,union.CONTINUATION_ROOT):
         obj=union.json_file(target/'registrations'/(root+'.json'));obj['runtime_path']=str((target/root).resolve());atomic(target/'registrations'/(root+'.json'),obj)
     monkeypatch.setattr(union,'RUNTIME_BASE',target)
     monkeypatch.setattr(epoch,'ROOT_BASE',target)
@@ -146,6 +149,8 @@ def test_full_five_root_union_and_missing_denominators(prepared):
     target,packets,auth=prepared;cert,report=union.validate(auth)
     assert cert['request_slots']==1773 and cert['opportunity_count']==1774
     assert report['denominators']['book_market_cells']==35480
+    assert sum(c['counts']['denominator'] for c in report['book_market_coverage'])==35480
+    assert {c['identity_type'] for c in report['book_market_coverage']}=={'canonical','provider-only'}
     assert cert['missing_categories']=={'initial_offline_missing':1,'historical_provider_only_missing':4,'canonical_offline_missing':1,'prospective_exact_slot_missing':0}
     assert report['accounting']['cumulative_reserved']==121676 and len(report['response_evidence'])==1773
     assert cert['continuation_commit']==union.CONTINUATION_COMMIT
@@ -184,3 +189,43 @@ def test_authenticates_both_offline_at_original_commits_only(prepared,monkeypatc
     monkeypatch.setattr(union,'authenticated_comment',comment)
     union.validate(auth,authenticate=True)
     assert seen==[union.FIRST_COMMIT,union.CONTINUATION_COMMIT]
+
+
+
+def test_all1186_prospective_missings_keep_full_denominators(prepared):
+    target,pk,auth=prepared;path=target/union.CONTINUATION_ROOT/'spending-ledger.json';state=union.json_file(path)
+    policy=pk['recovery-v2/F2-second-continuation']['exact-missing-policy.json'];psha=union.digest(union.canonical(policy))
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    for rid,a in state['attempts'].items():
+        rp=target/union.CONTINUATION_ROOT/'receipts'/(rid+'.json');receipt=union.json_file(rp);record=receipt['record']
+        record.update(http_status=404,body=json.dumps({'error_code':'EVENT_NOT_FOUND'}),
+            headers_json=json.dumps({'x-requests-last':'0','x-requests-used':'96149','x-requests-remaining':'4903851'}))
+        cache=target/union.CONTINUATION_ROOT/'data/raw'/'synthetic-missing'/(rid+'.parquet');cache.parent.mkdir(parents=True,exist_ok=True)
+        pq.write_table(pa.Table.from_pylist([record]),cache)
+        receipt.update(record=record,record_sha256=union.sha(cache),headers=json.loads(record['headers_json']),status='missing',missing_policy_sha256=psha,
+            reason='exact requested slot absent; reservation retained')
+        atomic(rp,receipt)
+        a.update(status='missing',billed_credits=0,response_path=str(cache),response_sha256=union.sha(cache),receipt_sha256=union.sha(rp),missing_policy_sha256=psha)
+    state.update(provider_used=96149,provider_remaining=4903851);atomic(path,state)
+    cert,report=union.validate(auth)
+    assert cert['missing_categories']['prospective_exact_slot_missing']==1186
+    assert report['response_coverage']['valid']==581 and report['denominators']['request_slots']==1773
+    assert sum(c['counts']['denominator'] for c in report['book_market_coverage'])==35480
+    assert report['accounting']['continuation_billed']==0 and report['accounting']['cumulative_reserved']==121676
+
+
+
+@pytest.mark.parametrize('index',range(5))
+@pytest.mark.parametrize('kind',['registration-omitted','registration-tampered','initialization-omitted','initialization-tampered'])
+def test_all_five_roots_require_original_markers(prepared,index,kind):
+    target,pk,auth=prepared
+    root=[union.SOURCE_ROOT,union.PILOT_ROOT,union.ORIGINAL_ROOT,union.SECOND_ROOT,union.CONTINUATION_ROOT][index]
+    path=target/'registrations'/(root+'.json') if kind.startswith('registration') else target/root/'INITIALIZED.json'
+    if kind.endswith('omitted'):path.unlink()
+    else:
+        obj=union.json_file(path)
+        if kind.startswith('registration'):obj['authorization_sha256']='0'*64
+        else:obj['probe_credits']=0
+        atomic(path,obj)
+    with pytest.raises((ValueError,OSError)):union.validate(auth)

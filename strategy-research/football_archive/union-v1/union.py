@@ -64,6 +64,7 @@ def fixed_ledger(root,expected_sha=None):
     if expected_sha is not None and digest(data)!=expected_sha:raise ValueError('Pinned predecessor ledger changed')
     state=json.loads(data)
     if state['bundle_root_sha256']!=root or state['probe_credits']!=1687:raise ValueError('Ledger root/probe differs')
+    registration(root,state,state['authorization_sha256'])
     if state['pending'] or state['stopped']:raise ValueError('Unresolved/stopped acquisition; no union certificate')
     return state,path,digest(data)
 
@@ -197,6 +198,8 @@ def registration(root,state,auth_sha):
     if (state['authorization_sha256']!=auth_sha or json_file(RUNTIME_BASE/'registrations'/(root+'.json'))!={
         'bundle_root_sha256':root,'authorization_sha256':auth_sha,'runtime_path':str(path.resolve())}):
         raise ValueError('Historical authorization/registration differs')
+    if json_file(path/'INITIALIZED.json')!={'bundle_root_sha256':root,'probe_credits':1687}:
+        raise ValueError('Historical initialization evidence differs')
 
 
 def validate(authorization, *, expected_ledger_sha256=None, authenticate=False):
@@ -337,6 +340,8 @@ def validate(authorization, *, expected_ledger_sha256=None, authenticate=False):
         'missing_certificate_sha256':digest(canonical(cert1)),'second_missing_certificate_sha256':digest(canonical(cert2)),
         'historical_policy_sha256':digest(canonical(oldpolicy)),'prospective_policy_sha256':digest(canonical(policy)),
         'response_evidence_sha256':digest(canonical(evidence)),
+        'registration_evidence_sha256':{root:sha(RUNTIME_BASE/'registrations'/(root+'.json')) for root in roots},
+        'initialization_evidence_sha256':{root:sha(RUNTIME_BASE/root/'INITIALIZED.json') for root in roots},
         'coverage_sha256':digest(canonical({k:v for k,v in report.items() if k!='offline_approvals_authenticated_live'})+bytes([10])),
         'missing_categories':missing_counts,'cumulative_debit_without_probe':total_without_probe(state),
         'opportunity_count':1774,'request_slots':1773,'books':original['manifest.json']['books'],

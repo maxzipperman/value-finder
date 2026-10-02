@@ -62,14 +62,20 @@ def authorization(root,m,obj):
             'max_baseline_used':200000,'billing_period_utc':datetime.now(timezone.utc).strftime('%Y-%m')}}
 
 
+@pytest.fixture(scope='module')
+def candidate_bytes():
+    return {p.name:p.read_bytes() for p in (HERE/'F3a').iterdir() if p.is_file()}
+
+
 @pytest.fixture
-def driver(prepared,tmp_path,monkeypatch):
+def driver(prepared,tmp_path,monkeypatch,candidate_bytes):
     import shutil
     target,pk,auth=prepared;cert,coverage=union.validate(auth)
     base=epoch.source_executor(BUNDLE);monkeypatch.setattr(base,'RUNTIME_BASE',target)
     monkeypatch.setattr(base,'checkout_commit',lambda _:'b'*40);monkeypatch.setattr(epoch,'source_executor',lambda _:base)
     monkeypatch.setattr(epoch,'checkout_clean',lambda _:None);monkeypatch.setattr(epoch,'union_certificate',lambda:cert)
-    packet=tmp_path/'packet';shutil.copytree(HERE/'F3a',packet)
+    packet=tmp_path/'packet';packet.mkdir()
+    for name,data in candidate_bytes.items():(packet/name).write_bytes(data)
     m=json.loads((packet/'manifest.json').read_text());rows=json.loads((packet/'requests.json').read_text());ops=json.loads((packet/'opportunities.json').read_text())
     m['stage']='F3a-from-F2-union';m['f2_union_certificate_sha256']=union.digest(plan.canonical(cert));m=plan.write_packet(packet,m,rows,ops)
     seed={'root':union.CONTINUATION_ROOT,'ledger_path':str(target/union.CONTINUATION_ROOT/'spending-ledger.json'),

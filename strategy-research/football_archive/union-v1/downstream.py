@@ -39,7 +39,7 @@ def load_verified_union(packet,expected_root,*,after_capture=lambda:None):
     if freeze!={'root':expected_root,'files':files} or hashlib.sha256(canonical(files)).hexdigest()!=expected_root:
         raise ValueError('Complete union dependency/packet map changed before import')
     after_capture()  # Regression hook: subsequent compilation never reopens code.
-    modules={};local_names={p.stem for p in packet.parent.glob('*.py')}
+    modules={};local_names={Path(name).stem for name in captured if name.startswith('code/') and name.endswith('.py')}
     original_import=builtins.__import__
     def closed_import(name,globals=None,locals=None,fromlist=(),level=0):
         if level:raise ImportError('Relative local imports prohibited')
