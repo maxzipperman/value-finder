@@ -88,44 +88,17 @@ def pilot_gate(bundle):
     return report
 
 
-def stage_guard(packet, manifest, seed, rows, bundle):
-    pilot_gate(bundle)
-    if manifest.get('stage') == 'remainder' and manifest['pull'] == 'F2':
-        if seed['root'] != PILOT_ROOT or seed['ledger_sha256'] != PILOT_LEDGER_SHA:
-            raise ValueError('Remainder requires exact completed pilot predecessor')
-        pilot_rows = json.loads((Path(__file__).parent.parent / 'followups/F2-pilot/requests.json').read_text())
-        by_id = {r['request_id']: r for r in rows}
-        for old in pilot_rows:
-            row = by_id.get(old['request_id'])
-            if row is None or row['max_new_credits'] != 0:
-                raise ValueError('Every pilot response must be reused')
-        verify_ancestor_reuse(seed, rows)
-    elif manifest.get('stage') == '2025-props' and manifest['pull'] == 'F3a':
-        f2 = Path(packet).parent / 'F2'
-        root = json.loads((f2 / 'FREEZE.json').read_text())['root']
-        m2, r2 = verify_packet(f2, root)
-        if seed['root'] != root or m2['stage'] != 'remainder':
-            raise ValueError('F3a requires completed frozen F2 remainder')
-        state = json.loads(Path(seed['ledger_path']).read_text())
-        paid = {r['request_id'] for r in r2 if r['max_new_credits']}
-        reused = {r['request_id']: r['cache_sha256'] for r in r2 if not r['max_new_credits']}
-        if set(state['attempts']) != paid or state['cache_reuse'] != reused:
-            raise ValueError('F2 predecessor coverage incomplete')
-        if state['predecessor_seed'] != json.loads((f2 / 'seed.json').read_text()):
-            raise ValueError('F2 predecessor seed changed')
-        for row in r2:
-            if not row['max_new_credits']:
-                continue
-            attempt = state['attempts'][row['request_id']]
-            receipt = Path(seed['ledger_path']).parent / 'receipts' / (row['request_id'] + '.json')
-            if (attempt['status'] != 'completed' or attempt['reserved_credits'] != row['max_new_credits']
-                    or plan.sha(Path(attempt['response_path'])) != attempt['response_sha256']
-                    or plan.sha(receipt) != attempt['receipt_sha256']):
-                raise ValueError('Completed F2 cache/receipt or debit changed')
-        verify_ancestor_reuse(state['predecessor_seed'], r2)
-        verify_ancestor_reuse(seed, rows)
-    else:
-        raise ValueError('Unreviewed stage; candidates cannot execute')
+def stage_guard(packet, manifest, seed, rows, bundle, *, authenticate=True):
+    import union
+    if manifest.get('stage')!='F3a-from-F2-union' or manifest['pull']!='F3a':
+        raise ValueError('Only exact 2025 F3a after completed F2 union is enabled')
+    expected=json.loads((Path(packet)/'union-certificate.json').read_text())
+    auth=json.loads((Path(packet)/'continuation-authorization.json').read_text())
+    certificate,_=union.validate(auth,authenticate=authenticate)
+    if (certificate!=expected or manifest['f2_union_certificate_sha256']!=__import__('hashlib').sha256(plan.canonical(certificate)).hexdigest()
+        or seed['root']!=union.CONTINUATION_ROOT or seed['ledger_sha256']!=certificate['continuation_ledger_sha256']
+        or seed['cumulative_debit_without_probe']!=certificate['cumulative_debit_without_probe']):
+        raise ValueError('Exact completed F2 union certificate/seed differs')
 
 
 def verify_ancestor_reuse(seed, rows):
@@ -162,6 +135,10 @@ def source_executor(bundle):
     spec.loader.exec_module(module)
     return module
 
+
+
+def matches(row,raw_roots):
+    return sorted({p.resolve() for root in raw_roots for p in (Path(root)/row['sport']/row['source']).glob('*/'+row['cache_key']+'.parquet')})
 
 def bindings(packet):
     if any(p.is_symlink() or p.is_dir() for p in packet.iterdir()):
@@ -234,43 +211,29 @@ def verify_packet(packet, root):
 
 
 def seed_state(seed, rows, seen=None):
-    seen = set() if seen is None else seen
-    if seed['root'] in seen:
-        raise ValueError('Cyclic predecessor ledger')
+    """Explicit four-root ancestry, including only the one pinned partial exception."""
+    import union
+    seen=set() if seen is None else seen
+    if seed['root'] in seen:raise ValueError('Cyclic predecessor')
     seen.add(seed['root'])
-    path = Path(seed['ledger_path'])
-    if path.resolve() != ROOT_BASE / seed['root'] / 'spending-ledger.json':
-        raise ValueError('Predecessor must use the fixed global ledger path')
-    if plan.sha(path) != seed['ledger_sha256']:
-        raise ValueError('Predecessor ledger changed')
-    state = json.loads(path.read_text())
-    if state['bundle_root_sha256'] != seed['root'] or state['pending'] or state['stopped']:
-        raise ValueError('Unresolved predecessor ledger')
-    if state['status'] not in ('recent_complete_stopped_before_older', 'event_epoch_complete') or state['probe_credits'] != 1687:
-        raise ValueError('Incomplete predecessor epoch')
-    if any(a['status'] not in ('completed', 'missing') for a in state['attempts'].values()):
-        raise ValueError('Nonterminal predecessor attempt')
-    if (type(state['other_usage_reserved']) is not int or state['other_usage_reserved'] < 0
-            or any(type(a['reserved_credits']) is not int or a['reserved_credits'] < 0
-                   or type(a.get('billed_credits', 0)) is not int
-                   or not 0 <= a.get('billed_credits', 0) <= a['reserved_credits']
-                   for a in state['attempts'].values())):
-        raise ValueError('Invalid predecessor debit')
-    prior = sum(a['reserved_credits'] for a in state['attempts'].values()) + state['other_usage_reserved']
-    if seed['cumulative_debit_without_probe'] != prior or seed['probe_credits'] != 1687:
-        raise ValueError('Cumulative seed debit differs')
-    duplicate = {r['request_id'] for r in rows if r['max_new_credits']} & set(state['attempts'])
-    if duplicate:
-        raise ValueError('Prior request cannot be bought twice')
-    if seed['root'] == PRIOR_ROOT:
-        if seed['ledger_sha256'] != SEED_HASH:
-            raise ValueError('Original completed ledger differs from approved pin')
-    else:
-        previous = state['predecessor_seed']
-        earlier = seed_state(previous, rows, seen)
-        if state['other_usage_reserved'] < earlier:
-            raise ValueError('Ancestor debit decreased')
-    return prior
+    certificate=json.loads((Path(__file__).parent/'F3a/union-certificate.json').read_text())
+    pins={union.CONTINUATION_ROOT:certificate['continuation_ledger_sha256'],union.ORIGINAL_ROOT:union.PARTIAL_SHA,
+          union.PILOT_ROOT:union.PILOT_SHA,union.SOURCE_ROOT:union.SOURCE_LEDGER_SHA}
+    statuses={union.CONTINUATION_ROOT:'event_epoch_complete',union.ORIGINAL_ROOT:'event_epoch_partial_reconciled',
+        union.PILOT_ROOT:'event_epoch_complete',union.SOURCE_ROOT:'recent_complete_stopped_before_older'}
+    if seed['root'] not in pins or seed['ledger_sha256']!=pins[seed['root']]:raise ValueError('Unreviewed ancestry/root pin')
+    state,path,digest=union.fixed_ledger(seed['root'],pins[seed['root']])
+    if state['status']!=statuses[seed['root']]:raise ValueError('Incomplete exact predecessor')
+    union.seed_link(seed,seed['root'],state,path,digest)
+    if any(a['status'] not in ('completed','missing') for a in state['attempts'].values()):raise ValueError('Unresolved ancestor')
+    if {r['request_id'] for r in rows if r['max_new_credits']} & set(state['attempts']):raise ValueError('Ancestor cannot be bought twice')
+    previous={union.CONTINUATION_ROOT:union.ORIGINAL_ROOT,union.ORIGINAL_ROOT:union.PILOT_ROOT,union.PILOT_ROOT:union.SOURCE_ROOT}
+    if seed['root'] in previous:
+        old=state['predecessor_seed']
+        if old['root']!=previous[seed['root']]:raise ValueError('Exact ancestor order differs')
+        debit=seed_state(old,rows,seen)
+        if state['other_usage_reserved']<debit:raise ValueError('Ancestor debit decreased')
+    return union.total_without_probe(state)
 
 
 def checkout_clean(packet):
@@ -354,7 +317,7 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     base = source_executor(bundle)
     seed = json.loads((packet / 'seed.json').read_text())
     seed_state(seed, rows)
-    stage_guard(packet, manifest, seed, rows, bundle)
+    stage_guard(packet, manifest, seed, rows, bundle, authenticate=fake_session is None)
     verify_source_plan(packet, bundle, manifest, rows)
     checkout_clean(packet)
     source_books = json.loads((bundle / 'protocol.json').read_text())['book_panel']
@@ -379,8 +342,7 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     try:
         fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         seed_state(seed, rows)
-        stage_guard(packet, manifest, seed, rows, bundle)
-        from reconcile import matches
+        stage_guard(packet, manifest, seed, rows, bundle, authenticate=fake_session is None)
         cache_info = json.loads((packet / 'cache-reconciliation.json').read_text())
         if cache_info['status'] != 'reconciled' or cache_info['request_set_sha256'] != manifest['request_set_sha256']:
             raise base.Halt('Cache reconciliation missing or stale')
