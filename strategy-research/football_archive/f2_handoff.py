@@ -16,6 +16,7 @@ import types
 
 FIRST_ROOT = "059fc135b00bbbc36db208a8bb622d7444a43d42bb2607675d30671ad455f4e4"
 SECOND_ROOT = "4053703d09fdcedb6ce1608c8a5a0d09d3e702a6426891463163224e10af792e"
+PILOT_ROOT = "cbe125474acf46becd3f7e01903675ece864adb683cdc73734bad7e1635dddcc"
 FIRST_POST = "cc2f17d3289ac1dbebac6bcf5d828f4384f2ea4c9d88829c2d8510a014a57313"
 SECOND_POST = "d10808cb0ba3962ff3abdef5d48c09cb53d3a95733e0b3b6c2bc605feccee3aa"
 FIRST_PROPOSAL = "8e8bb95f87b7b51e04eca912e1a30db44578f2746d33b5ccc3ad796a435aeb30"
@@ -71,9 +72,11 @@ def verify_partial(root, ledger_path, state, ledger_sha256):
     expected_sha, proposal, request_id = pins[root]
     attempt = state.get("attempts", {}).get(request_id, {})
     resolution = state.get("missing_resolution", {})
+    expected_parent = PILOT_ROOT if root == FIRST_ROOT else FIRST_ROOT
     if (ledger_sha256 != expected_sha or state.get("bundle_root_sha256") != root
             or state.get("status") != "event_epoch_partial_reconciled"
             or state.get("pending") is not None or state.get("stopped") is not None
+            or state.get("predecessor_seed", {}).get("root") != expected_parent
             or resolution.get("proposal_sha256") != proposal
             or attempt.get("status") != "missing" or type(attempt.get("reserved_credits")) is not int
             or attempt["reserved_credits"] != 20 or type(attempt.get("billed_credits")) is not int

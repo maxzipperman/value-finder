@@ -21,6 +21,7 @@ def test_only_exact_reconciled_partial_state(root, post, proposal, rid, tmp_path
     path = tmp_path / "spending-ledger.json"
     state = {"bundle_root_sha256": root, "status": "event_epoch_partial_reconciled",
              "pending": None, "stopped": None,
+             "predecessor_seed": {"root": gate.PILOT_ROOT if root == gate.FIRST_ROOT else gate.FIRST_ROOT},
              "missing_resolution": {"proposal_sha256": proposal},
              "attempts": {rid: {"status": "missing", "reserved_credits": 20, "billed_credits": 0}}}
     path.write_text(json.dumps(state))
@@ -101,7 +102,8 @@ def test_both_consumers_require_exact_partial_order_and_full_union(tmp_path, mon
     stage_spec.loader.exec_module(stage)
     monkeypatch.setattr(stage, "RUNTIME_BASE", tmp_path)
     check_calls = []
-    fake_gate = types.SimpleNamespace(FIRST_ROOT=gate.FIRST_ROOT, SECOND_ROOT=gate.SECOND_ROOT)
+    fake_gate = types.SimpleNamespace(FIRST_ROOT=gate.FIRST_ROOT, SECOND_ROOT=gate.SECOND_ROOT,
+                                      PILOT_ROOT=gate.PILOT_ROOT)
     def partial(root, path, state, digest):
         check_calls.append(("partial", root))
         if (root not in (gate.FIRST_ROOT, gate.SECOND_ROOT)
@@ -140,7 +142,7 @@ def test_both_consumers_require_exact_partial_order_and_full_union(tmp_path, mon
     source_root = stage.SOURCE_ROOT if consumer == "older" else stage.V4_ROOT
     f1 = append(source_root, "recent_complete_stopped_before_older")
     monkeypatch.setattr(stage, "RECENT_LEDGER_SHA256", stage.sha(f1[0]))
-    pilot = append("c" * 64, "event_epoch_complete", f1)
+    pilot = append(gate.PILOT_ROOT, "event_epoch_complete", f1)
     first = append(gate.FIRST_ROOT, "event_epoch_partial_reconciled", pilot, gate.FIRST_MISSING)
     second = append(gate.SECOND_ROOT, "event_epoch_partial_reconciled", first, gate.SECOND_MISSING)
     final = append("e" * 64, "event_epoch_complete", second)

@@ -28,7 +28,7 @@ COVERAGE_SHA256 = "adb6c303948a18de52b9213bc2afacf7886213598ac3d64e05d45b3f7919d
 RUNTIME_BASE = Path.home() / "Library/Application Support/ValueFinder/football-acquisition-state"
 MAX_CREDITS = 68010
 F2_HANDOFF_PATH = REPO / "strategy-research/football_archive/f2_handoff.py"
-F2_HANDOFF_SHA256 = "17187a1ee03b9ed04d6bc6e9f03d18117d8d2ae1e819079c7dfb439119a03c57"
+F2_HANDOFF_SHA256 = "86087240f786b1caea3e0e56d8436095f7894824f69812d6cd424b499ae4dc8c"
 
 
 def canonical(value):
@@ -202,6 +202,8 @@ def seed(ledger_path, paid_rows, *, require_f2=False):
             union_proof = gate.verify_full_union(current_path)
         if current_root == gate.SECOND_ROOT and prior["root"] != gate.FIRST_ROOT:
             raise ValueError("Second F2 partial does not follow first")
+        if current_root == gate.PILOT_ROOT and prior["root"] != SOURCE_ROOT:
+            raise ValueError("F2 pilot does not follow original F1")
         current = parent
         current_path = prior_path
     if require_f2 and (partial_roots != {gate.FIRST_ROOT, gate.SECOND_ROOT} or union_proof is None):
