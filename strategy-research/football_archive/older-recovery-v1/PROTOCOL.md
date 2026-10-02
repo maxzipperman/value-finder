@@ -57,10 +57,15 @@ Before key access and under the shared lock, verify exact code/list/policy/paren
 hashes, all retained receipts, global settlement, exact-key cache overlap and the
 full cumulative debit including the once-counted probe. Fresh paid/list/cap,
 account-ceiling and lag-policy authority are separate from offline reconciliation
-or merge agreement. N0 still requires actual completed older acquisition and its
+or merge agreement. Active approvals reject HALTED, EXHAUSTED or REVOKED
+bodies and bind the entire account reconciliation digest, content root and
+finite policy in authenticated lines. Reauthenticate live paid authority before
+every send. Completed authority cannot run again. N0 still requires actual completed older acquisition and its
 reviewed full ancestry proof.
 
 ## Report for the hub
 
-NOT READY — implementation and targeted adversarial checks are in progress.
-Actual transition and continuation packet remain unperformed/unprepared.
+READY FOR INDEPENDENT REVIEW OF CODE — targeted synthetic checks and local
+read-only preview are available. Actual transition and continuation packet remain
+unperformed/unprepared. Fresh offline, content/list/budget/account and finite-policy
+authority remain required; no worker execution is authorized.

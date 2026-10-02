@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "risk": "execution",
+  "status": "ready for independent code review; not approved for transition or paid execution",
+  "synthetic": {
+    "worktree_clean": true,
+    "tested_identity": "74024296c0cef08b7c062e2c775a897de0049899f230da0010c8f1b82ed3af77",
+    "evidence_digest": "a5879fdba22d078199da0034ed29a7a62959b3d7f5c034f5f8c5ee58a33825a7",
+    "passed": true,
+    "results": [
+      {
+        "argv": [
+          "{python}",
+          "-B",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "strategy-research/football_archive/older-recovery-v1",
+          "-p",
+          "test_recovery.py",
+          "-v"
+        ],
+        "exit_code": 0,
+        "stderr_sha256": "61356f60df74f5c5ced6f46b311e0dd5aa43cf9c824f7edbec39f0e9ee4c4ae0",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unittest_count": [
+          19
+        ]
+      }
+    ],
+    "config": "strategy-research/football_archive/older-recovery-v1/verification.json",
+    "complete_report": "local process-format artifact; auditor must verify source inventory/environment/provenance",
+    "provenance_note": "Local report recorded before publication; final declared inputs must match through verify-test. No operational evidence is published."
+  },
+  "next": "independent reviewer and hub exact-head review; then fresh offline authority/actual transition; only then actual successor freeze and fresh paid/list/account/policy authority"
+}
