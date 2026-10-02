@@ -1,0 +1,25 @@
+{
+  "report_id": "ffc3a891857f476c0a5c5f71afd029134a41909b60f793acf371216dd6fdecb5",
+  "created_utc": "2026-10-02T20:00:00+00:00",
+  "model_status": "local_model",
+  "model": "qwen3.6:35b",
+  "recovered": [],
+  "events": [
+    {
+      "project": "nfl-weather",
+      "status": "failed",
+      "step": "building the board",
+      "kind": "timeout",
+      "run_utc": "2026-10-02T10:00:00+00:00",
+      "row": 2,
+      "streak": 1,
+      "episode_utc": "2026-10-02T10:00:00+00:00",
+      "check": "connectivity",
+      "event_id": "99df84730bcefc615a93be4d6c25bcf59d9945150ace3cfa56f8abb2350deb27",
+      "source": "synthetic fixture only",
+      "verified_fact": "nfl-weather: failed; step building the board; 1 matching recorded problem(s).",
+      "next_check": "Check connectivity and the existing job log; do not rerun data requests.",
+      "ai_draft": "The project nfl-weather failed during the building the board step with a timeout error and streak of 1, requiring connectivity check."
+    }
+  ]
+}
