@@ -240,7 +240,7 @@ These are things you need to do or decide. This pull request doesn't change any 
    - `oddsapi.historical()` stamps each snapshot with the requested time instead of the API's `timestamp` (`nflweather/oddsapi.py:115`). The real quote can be up to 5 minutes earlier, which can overstate CLV.
    - `backfill()` defaults to `max_credits=6000`, but the plan needs 8,260.
 5. **Commit a data-use plan before March.** Give one primary hypothesis, metric and holdout per dataset, and keep a running variant count that starts at the screen's 109. There's a draft [below](#draft-data-use-plan). Nothing without a line in it gets pulled, even though 5M leaves about 4.7M credits spare.
-6. **Back up what you buy.** Paid data can't be re-created without paying again.
+6. **Optional backup (owner update, Oct 2, 2026).** The owner explicitly waived the off-device backup/restore as a purchase prerequisite to prioritize efficient use of this prepaid month. Local cache, receipts, pending reservations and cumulative credit accounting remain mandatory. The current operational queue is [OCTOBER_2026_QUEUE.md](../sharp-markets/docs/OCTOBER_2026_QUEUE.md). The following backup support is optional:
    - Keep `*/data/raw/oddsapi*` in an encrypted backup outside git.
    - Commit a pull manifest (requested and returned timestamps, `x-requests-last`, file hashes).
    - Commit compact derived tables to `data/processed/` only after checking the Odds API terms of use. (Since checked by the hub: derived tables are allowed, and raw responses stay out of git. See the 5M-month decisions above.)

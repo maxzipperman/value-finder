@@ -1,5 +1,8 @@
 # The 5M month: day-one checklist
 
+**Operational update — October 2, 2026:** [OCTOBER_2026_QUEUE.md](OCTOBER_2026_QUEUE.md) is the current queue. Recent archive F1 is complete (82,830 new credits); its one-time approval is exhausted. Do not repeat generic F1 week/full or archive probe calls. The owner waived encrypted off-device backup/restore as a purchase gate; local cache and cumulative-credit controls remain required. F2 → F3a 2025 → N0 → qualifying heat closes are prepared one at a time, with older F1 as soon as its reviewed runner/coverage approval is ready. Below is reference material for the original pipelines, not a fresh paid authorization. Any recovery/retry guidance below is subordinate to the exact approved request list and durable reconciliation; no automatic retry or reset of uncertain charges. No strategy grader runs until its prospective amendments are registered.
+
+
 For the hub, on the Mac, once the owner has bought the 5M plan on Thursday, October 1, 2026. The plan, its
 gates and its March list are in
 [`strategy-research/odds-api-credits.md`](../../strategy-research/odds-api-credits.md#the-5m-month-owner-decisions-september-28-2026-rewritten-september-29).
@@ -163,30 +166,16 @@ then.
    - F3's line here covers all its seasons and ends ``(all seasons; `full` needs one slice: --seasons 2025 (F3a), --seasons 2023,2024,2026 (F3b))``. On October 1 it shows about 108,300, not the plan's 136,800, because only the 2026 games already played count; for the same reason F3b's dry run shows about 74,100 against the 102,600 in the gated table. For the day-one slice, run `uv run markets odds5m plan --pull F3 --seasons 2025` and compare that with 34,200.
    - If F1, F2 or F3's 2025 slice comes out more than about 10% above its estimate, stop and tell the owner before pulling: a schedule window is probably wrong.
    - **Where 4,440,000 comes from:** 5,000,000 − 531,630 (the `--floor` reserve) − about 10,700 (the probe) − about 9,200 (October's live use on the same key: alerts 248, close capture ~385, trigger poller ~2,600, props log ~2,520, NBA collector from Oct 20 ~3,460) ≈ 4,448,500, rounded down. The floor stops every run at 4.47M spent, so a plan above this line can't finish anyway. Day one plus every gate is 2,304,050, so the ceiling only matters if a gate is misread.
-4. **One week per sport for F1 and F2**, to check coverage before the full spend. Dry run first to see the cost, then set `--max-credits` a little above it:
-   ```bash
-   uv run markets odds5m week --pull F1,F2                     # prints the most each pull could cost
-   uv run markets odds5m week --pull F1,F2 --confirm --max-credits 6000 --alarm-margin A30
-   uv run markets odds5m headers --pull F1                     # free: the header again, on 30-credit calls
-   uv run markets odds5m headers --pull F1 --per-call 60
-   ```
-   Replace A30 with the margin from step 2. A 30-credit call can show a lateness a one-credit sweep didn't, so if either `headers` advises more than A30 or A60, use the larger figure from here on; its verdicts mean what they meant in step 2. Each pull covers the first week of its latest unsealed season. Use `--week-of YYYY-MM-DD` to pick another week. After each pull, a `coverage:` line prints:
-   - books returned and `missing_books` (books with no rows at all);
-   - markets returned;
-   - snapshots that came back empty, and calls saved as 404s (`cached_404`);
-   - the lag between the requested and returned snapshot, in minutes. It should be about 0–5, or 0–10 before September 2022.
+4. **Use the completed archive; prepare the next exact F2 list.** Do not buy another generic F1 week. Reuse existing provider inventory and cached probes. If F2 needs a small coverage sample, freeze it as a subset of the same reviewed list and subtract its cached responses from the later full run; do not let a generic week command define an overlapping purchase. The hub must accept outcome-blind book/market/snapshot coverage before authorizing the rest.
 
-   A book missing for a whole sport, or a market that never appears, is a decision for the hub: drop it from the config's book list, or accept it.
-5. **F1, then F2, then F3's 2025 slice, one at a time.** Set `--max-credits` to the plan figure plus about 5%, and `--alarm-margin` to A30, or A60 for F3's 60-credit calls:
+5. **Next F2, then F3's 2025 slice, one at a time, after exact-list review.** Set `--max-credits` to the plan figure plus about 5%, and `--alarm-margin` to A30, or A60 for F3's 60-credit calls:
    ```bash
-   uv run markets odds5m full --pull F1 --confirm --max-credits 170000 --alarm-margin A30
-   uv run markets odds5m check --pull F1
    uv run markets odds5m full --pull F2 --confirm --max-credits 48000 --alarm-margin A30
    uv run markets odds5m check --pull F2
    uv run markets odds5m full --pull F3 --seasons 2025 --confirm --max-credits 36000 --alarm-margin A60     # F3a: 2025 only
    uv run markets odds5m check --pull F3 --seasons 2025
    ```
-   - At the default 8 requests a second, F1's calls (at most about 5,400) take about 12 minutes, F2's (at most 2,280, since each costs 20; the rehearsal's schedules gave 1,806) about 5, and F3a's 570 about a minute. `--rate 20` is safe if nothing else is using the key heavily (the API allows 30).
+   - Keep execution at 4 RPS unless a reviewed exact execution plan approves otherwise. Credits, not wall-clock minutes, are the binding resource. No current pipeline command is permission to buy a list that has not been frozen and approved.
    - If a run stops, read the `STOPPED:` line and do what [If a run stops](#if-a-run-stops) says for it. In short:
      - **Budget stop** (`... run budget is counted`): the pull needed more than `--max-credits`. Run the same command without `--confirm` to see what is left to fetch, then rerun it with `--max-credits` a little above that. If the whole pull comes out more than about 10% above its plan figure, stop and tell the owner first.
      - **Floor stop** (`... the floor is 531,630`): on day one this is an alarm, not a routine stop. The account starts near 5,000,000, so reaching the floor means about 4.47 million credits are gone. Stop and tell the owner; run `balance --confirm` to read the balance.
@@ -194,10 +183,7 @@ then.
      - **The alarm** (`the account has fallen by ...`): run the `headers` command the line gives and do what the table says; after a late header, the rerun takes the larger of the margin `headers` advises and A30 (A60 for F3a and the NBA week).
      - **Anything else** (the circuit breaker, billing or a balance that couldn't be read or trusted, a network failure, a full disk, an unexpected error): something needs a look. Tell the hub before rerunning.
    - F3 always needs exactly one slice: `--seasons 2025` is F3a, the day-one slice (34,200 at most); F3b (`--seasons 2023,2024,2026`) is gated (below). The puller refuses anything else, in `full` and in `week`, dry run included. Without the guard, `full --pull F3` would have pulled all of 2023–26 (136,800).
-   - **The price-engine backtest (#8, #53), free, once F1 is in.**
-     - The rules are registered: [`PRICE_ENGINE_PREREGISTRATION.md`](PRICE_ENGINE_PREREGISTRATION.md), September 29, 2026 (PR #56), before F1 existed; the run must come after it. At registration `PRIOR_COUNT` in `price_engine/engine.py` and the file's section 8 were set to STATUS.md's running count that day, 233 (so 271 with its 38 variants, bar p < 0.000185). The tests fail if the two disagree.
-     - Then run `uv run markets price-engine`. It needs no credits, and it writes `reports/price_engine/report.md` and `results.csv`.
-     - Report its eight primary verdicts to the hub.
+   - **Price-engine analysis remains disabled.** The acquired cache is read through the repaired handoff, not the legacy F1 planner. Amendments 2 and 3 must settle season scope, identity/timing eligibility, close policy and trial accounting before `REGISTERED_ROOT` is set and any outcome is joined. F4's six-season gate also requires the older daily data. Do not run the old unqualified `markets price-engine` instruction here.
    - **The props grader (#10), free, once F3a is in.** The rules are registered: [`nfl-weather/PREREGISTRATION_PROPS.md`](../../nfl-weather/PREREGISTRATION_PROPS.md), September 30, 2026 (PR 82).
      - Run `uv run markets props-grade`. It reads no outcome: it prints each primary market's coverage at F3a's close and the book the rule picks (with a warning if F3a is partial), and the prop names the roster doesn't match, then stops. Send the unmatched names to the hub: a roster fix is a dated amendment made before the first join.
      - Record that book and its two coverage figures in a dated entry in the registration's section 8 (`- **YYYY-MM-DD (Pacific):** the book is DraftKings (...)`) and commit it, before anything else.
