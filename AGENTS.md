@@ -10,7 +10,13 @@
 - **Never work in `~/code/value-finder` itself, and never switch its branch.** The scheduled jobs (alerts, close capture, ledger sync) run whatever is checked out there. Use your own clone or a `git worktree` elsewhere. Never load, unload or install a launchd job; never run `scripts/alerts.py` or `scripts/capture_close.py`; run a scorer only with `--now` and `--ledger` on a copy.
 - **Keep your work in the repo, not in a private folder.** Plans, protocols, request lists, simulations and reviews go on a branch (the lab's is `research/expanded-local-lab`), so the hub can see them. A file left untracked in the live checkout blocks the hub's checks: put it on a branch instead.
 - **Tell the hub what you're doing.** Open the pull request (draft is fine) when you start, not when you finish. Long notes for the hub can go on the `hub-briefs` branch under `notes/`.
-- **Spend tokens like the owner's money.** The owner's rule is cloud first for anything that needs only git.
+- **Spend tokens like the owner's money.** Prefer installed offline coding models for suitable bounded tasks (owner preference, October 2, 2026); Qwen is the first choice. Otherwise, work needing only git goes to the cloud worker. Follow [the routing guide](ops/LOCAL_CODING_MODELS.md); this preference does not authorize local paid cloud-model workers for git-only work.
+
+## Offline coding preference (owner, October 2, 2026)
+
+Prefer `qwen3-coder:30b` running locally through Ollama for small, well-specified drafts, tests, documentation and refactors that can be independently checked. `devstral-small-2:latest` is an optional alternative; the three-task trial favored Qwen ([PR #110](https://github.com/maxzipperman/value-finder/pull/110)). An assistant may use this preference without asking again for each suitable task, within the owner's authorized scope and its available local tools.
+
+Read [ops/LOCAL_CODING_MODELS.md](ops/LOCAL_CODING_MODELS.md) for acceptance criteria, local entry points and escalation. Use an isolated checkout, one loaded model, tests and review. The hub remains the coordinator. Model drafts do not approve purchases, registrations, strategy decisions, merges or live-job operations.
 
 ## The Codex–hub arrangement (the owner, September 30, 2026)
 

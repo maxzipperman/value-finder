@@ -1,10 +1,10 @@
 # Value Finder: status
 
-*Updated October 1, 2026*
+*Updated October 2, 2026*
 
 Paper-only sports-betting research. The goal is to find prices the market gets wrong, and to prove each one on a pre-registered forward test graded on closing-line value (CLV) before any money goes in. Nothing in this repo places bets.
 
-**Cloud first (the owner's rule, Sep 29, 2026):** work that needs only what is in git goes to the cloud worker, on cloud session credits; local chats, agents and workflows are only for work that needs this Mac, and a hook blocks a local agent or workflow that doesn't say why ([`ops/CLOUD_FIRST.md`](ops/CLOUD_FIRST.md)).
+**Model routing (owner update, Oct 2, 2026):** prefer installed offline coding models for suitable bounded tasks, Qwen first, with tests and review; other git-only work goes to the cloud worker. The hub and existing purchase, research and live-job controls remain in place. [Offline guide](ops/LOCAL_CODING_MODELS.md); [cloud-first exception](ops/CLOUD_FIRST.md).
 
 ## Projects
 
