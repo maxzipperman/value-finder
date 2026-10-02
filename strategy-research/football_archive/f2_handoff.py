@@ -1,7 +1,7 @@
 """Shared fail-closed F2 ancestry gate for the older and N0 acquisition stages.
 
-The union verifier and certificate pins are filled only after PR119's final
-review. No downstream packet can be prepared while either pin is absent.
+PR119's reviewed bootstrap, complete dependency packet and union certificate
+are pinned independently before either downstream consumer can use them.
 """
 from __future__ import annotations
 
@@ -30,14 +30,14 @@ SECOND_TRANSITION_COMMIT = "3f29479fd8c9c5798ceb08b0c2d26d3c0e2706cb"
 
 # PR119's bootstrap is self-contained and captures/hashes the entire sibling
 # dependency/packet map before importing the reviewed union implementation.
-# All final byte/root/ledger pins stay absent until its completed packet exists.
+# Final pins identify the reviewed packet in merged PR119 at 9a6e557a.
 FINAL_ROOT = "7485bc1230aeaf069a21e0a75ca9d93002c2e8abccdddaa706e45c5aa63aa467"
 FINAL_LEDGER_SHA256 = "84ff08834943ab4418d69efa9c5ce9355d0be20931fee20df149937a5064d0cd"
 UNION_BOOTSTRAP_PATH = Path(__file__).resolve().parent / "union-v1/downstream.py"
-UNION_BOOTSTRAP_SHA256 = None
+UNION_BOOTSTRAP_SHA256 = "9b0437e9bbf4ce0788489b071e2435f2c12fbf429f6aa2124f132c80e3ce00ba"
 UNION_PACKET_PATH = Path(__file__).resolve().parent / "union-v1/F3a"
-UNION_PACKET_ROOT = None
-UNION_CERTIFICATE_SHA256 = None
+UNION_PACKET_ROOT = "f955f28b2fba9f36b3cdcaa7cf29013de9b18b128a629204b0e098f6594259cd"
+UNION_CERTIFICATE_SHA256 = "800e087a7a7808b52063f7f35fa585ac7ca9b100f35a2c63dfab5e719c2c5fa6"
 
 
 def canonical(value):

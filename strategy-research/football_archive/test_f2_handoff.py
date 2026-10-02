@@ -41,6 +41,7 @@ def test_unpublished_union_stops_without_import_or_key(tmp_path, monkeypatch):
     code = tmp_path / "downstream.py"
     code.write_text(f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n")
     monkeypatch.setattr(gate, "UNION_BOOTSTRAP_PATH", code)
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_SHA256", None)
     with pytest.raises(ValueError, match="not published"):
         gate.verified_union_module()
     assert not marker.exists()

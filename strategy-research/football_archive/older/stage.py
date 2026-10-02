@@ -28,7 +28,7 @@ COVERAGE_SHA256 = "adb6c303948a18de52b9213bc2afacf7886213598ac3d64e05d45b3f7919d
 RUNTIME_BASE = Path.home() / "Library/Application Support/ValueFinder/football-acquisition-state"
 MAX_CREDITS = 68010
 F2_HANDOFF_PATH = REPO / "strategy-research/football_archive/f2_handoff.py"
-F2_HANDOFF_SHA256 = "5fc3ecd447311c0234f1e4b17de17fbefd0cea88b8931654818ff9d81b636957"
+F2_HANDOFF_SHA256 = "49d0ed2c01a1aee22246a72ca0913f5e3c5659acc92a1b7dd75a643336ba1bfb"
 
 
 def canonical(value):
