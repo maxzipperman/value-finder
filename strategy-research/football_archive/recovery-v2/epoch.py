@@ -132,7 +132,9 @@ def known_raw_roots(own_root=None):
     # inventory only. Candidate-key scans never enumerate/read unrelated payloads.
     legacy=Path(__file__).parent.parent/'recovery-v1/F2-continuation/cache-reconciliation.json'
     roots={Path(p) for p in json.loads(legacy.read_text())['raw_roots']}
-    roots.update([LIVE/'sharp-markets/data/raw',REPO/'sharp-markets/data/raw'])
+    roots.add(LIVE/'sharp-markets/data/raw')
+    own_store=REPO/'sharp-markets/data/raw'
+    if own_store.exists():roots.add(own_store)
     projects={PROJECT}
     for raw in list(roots):
         if str(raw).endswith('/sharp-markets/data/raw'):projects.add(raw.parents[2].parent)

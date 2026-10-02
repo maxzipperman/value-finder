@@ -301,3 +301,14 @@ def test_inventory_excludes_own_output_but_keeps_other_roots(tmp_path,monkeypatc
     for root in (own,other):(tmp_path/root/'data/raw').mkdir(parents=True)
     roots=epoch.known_raw_roots(own)
     assert str(tmp_path/own/'data/raw') not in roots and str(tmp_path/other/'data/raw') in roots
+
+
+
+def test_cross_checkout_without_raw_store_is_inventory_portable(tmp_path,monkeypatch):
+    before=epoch.known_raw_roots()
+    checkout=tmp_path/'another-executing-checkout';checkout.mkdir()
+    monkeypatch.setattr(epoch,'REPO',checkout)
+    assert epoch.known_raw_roots()==before
+    raw=checkout/'sharp-markets/data/raw';raw.mkdir(parents=True)
+    assert str(raw.resolve()) in epoch.known_raw_roots()
+    assert epoch.known_raw_roots()!=before
