@@ -235,8 +235,10 @@ def csv_bytes(bundle, older):
 def raw_roots(exclude_root=None):
     pilot = ROOT / "followups/F2-pilot/cache-reconciliation.json"
     continuation = ROOT / "recovery-v1/F2-continuation/cache-reconciliation.json"
+    final_continuation = ROOT / "recovery-v2/F2-second-continuation/cache-reconciliation.json"
     roots = {Path(p) for p in json.loads(pilot.read_text())["raw_roots"]}
     roots.update(Path(p) for p in json.loads(continuation.read_text())["raw_roots"])
+    roots.update(Path(p) for p in json.loads(final_continuation.read_text())["raw_roots"])
     roots.add(Path.home() / "code/value-finder/sharp-markets/data/raw")
     own_store = REPO / "sharp-markets/data/raw"
     if own_store.exists():

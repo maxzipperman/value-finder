@@ -120,8 +120,10 @@ def raw_roots(own_root=None):
     roots = {Path(p) for p in json.loads((SOURCE / "manifest.json").read_text())["raw_roots_checked"]}
     pilot = REPO / "strategy-research/football_archive/followups/F2-pilot/cache-reconciliation.json"
     continuation = REPO / "strategy-research/football_archive/recovery-v1/F2-continuation/cache-reconciliation.json"
+    final_continuation = REPO / "strategy-research/football_archive/recovery-v2/F2-second-continuation/cache-reconciliation.json"
     roots.update(Path(p) for p in json.loads(pilot.read_text())["raw_roots"])
     roots.update(Path(p) for p in json.loads(continuation.read_text())["raw_roots"])
+    roots.update(Path(p) for p in json.loads(final_continuation.read_text())["raw_roots"])
     roots.add(Path.home() / "code/value-finder/sharp-markets/data/raw")
     own_store = REPO / "sharp-markets/data/raw"
     if own_store.exists():

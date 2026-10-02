@@ -83,12 +83,14 @@ def test_cross_checkout_inventory_skips_nonexistent_self_store_and_finds_actual_
     archive = tmp_path / "historical-contract"
     (archive / "followups/F2-pilot").mkdir(parents=True)
     (archive / "recovery-v1/F2-continuation").mkdir(parents=True)
+    (archive / "recovery-v2/F2-second-continuation").mkdir(parents=True)
     historic_project = tmp_path / "historic"
     historic = historic_project / "old/sharp-markets/data/raw"
     sibling = historic_project / "new/sharp-markets/data/raw"
     sibling.mkdir(parents=True)
     stage.write(archive / "followups/F2-pilot/cache-reconciliation.json", {"raw_roots": [str(historic)]})
     stage.write(archive / "recovery-v1/F2-continuation/cache-reconciliation.json", {"raw_roots": [str(historic)]})
+    stage.write(archive / "recovery-v2/F2-second-continuation/cache-reconciliation.json", {"raw_roots": [str(historic)]})
     peer = tmp_path / "project/peer/sharp-markets/data/raw"
     peer.mkdir(parents=True)
     global_raw = tmp_path / "global" / ("a" * 64) / "data/raw"
