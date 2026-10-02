@@ -29,3 +29,16 @@ ALERT  CFB RULE B WIND UNDER 50.0 at -102: Texas Tech @ Colorado Sat 10-03 19:30
   odds feed team names with no match (their games arrive unpriced): ['McNeese State Cowboys']
 ALERT  CFB RULE B WIND UNDER 62.0 at -113: Oregon State @ Colorado State Sat 10-03 18:00 ET
        17 mph, 82°F forecast 3d out; EV +6.5% at this line (pinnacle). Best under at this number: -108 (lowvig). Best number: under 62.5 at -105 (hardrockbet), expected value +12.5%. Bet only this number or better; log your fill (scripts/log_fill.py). Timing: bet now; totals drift down before kickoff.
+  cfbfastR-data: seasons 2006-2026
+  odds feed team names with no match (their games arrive unpriced): ['McNeese State Cowboys']
+2026-10-01 14:30Z checked 66 FBS games, nothing new
+  cfbfastR-data: seasons 2006-2026
+  odds feed team names with no match (their games arrive unpriced): ['McNeese State Cowboys']
+2026-10-01 18:30Z checked 66 FBS games, nothing new
+  cfbfastR-data: seasons 2006-2026
+  odds feed team names with no match (their games arrive unpriced): ['McNeese State Cowboys']
+2026-10-01 22:30Z checked 66 FBS games, nothing new
+  cfbfastR-data: seasons 2006-2026
+  odds feed team names with no match (their games arrive unpriced): ['McNeese State Cowboys']
+ALERT  CFB RULE B WIND UNDER 43.0 at -105: Michigan @ Minnesota Sat 10-03 12:00 ET
+       16 mph, 58°F forecast 2d out; EV +10.2% at this line (pinnacle). Bet only this number or better; log your fill (scripts/log_fill.py). Timing: bet now; totals drift down before kickoff.
