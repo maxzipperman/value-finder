@@ -1,5 +1,6 @@
 """No-network full N0 execution and adverse accounting/transport paths."""
 import importlib.util
+import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -194,3 +195,21 @@ def test_real_global_pending_guard(tmp_path, monkeypatch):
     (other / "spending-ledger.json").write_text(json.dumps({"pending": "attempt", "stopped": "halted"}))
     with pytest.raises(ValueError, match="Unresolved global"):
         execute.global_settled("d" * 64)
+
+
+@pytest.mark.parametrize("tampered", ["executor.py", "validator.py"])
+def test_changed_v4_code_never_executes_before_freeze_check(tmp_path, monkeypatch, tampered):
+    bundle = tmp_path / "source"
+    bundle.mkdir()
+    for name in ("executor.py", "validator.py"):
+        (bundle / name).write_text("pass\n")
+    files = {name: hashlib.sha256((bundle / name).read_bytes()).hexdigest()
+             for name in ("executor.py", "validator.py")}
+    root = hashlib.sha256(stage.canonical(files)).hexdigest()
+    stage.write(bundle / "FREEZE.json", {"bundle_root_sha256": root, "file_sha256": files})
+    monkeypatch.setattr(stage, "V4_ROOT", root)
+    marker = tmp_path / "untrusted-code-ran"
+    (bundle / tampered).write_text(f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n")
+    with pytest.raises(ValueError, match="before import"):
+        execute.source_executor(bundle)
+    assert not marker.exists()
