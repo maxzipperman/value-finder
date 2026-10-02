@@ -1,0 +1,18 @@
+{
+  "model": "qwen3-coder:30b",
+  "created_at": "2026-10-02T17:51:59.50002Z",
+  "message": {
+    "role": "assistant",
+    "content": "```python\nimport math\n\ndef run_tests(candidate):\n    # Test valid positive odds\n    assert abs(candidate(100) - 0.5) < 1e-10\n    assert abs(candidate(200) - 0.6666666666666666) < 1e-10\n    assert abs(candidate(50) - 0.3333333333333333) < 1e-10\n    \n    # Test valid negative odds\n    assert abs(candidate(-100) - 0.5) < 1e-10\n    assert abs(candidate(-200) - 0.6666666666666666) < 1e-10\n    assert abs(candidate(-50) - 0.3333333333333333) < 1e-10\n    \n    # Test string inputs\n    assert abs(candidate(\"100\") - 0.5) < 1e-10\n    assert abs(candidate(\"200\") - 0.6666666666666666) < 1e-10\n    assert abs(candidate(\"-100\") - 0.5) < 1e-10\n    \n    # Test whitespace around strings\n    assert abs(candidate(\" 100 \") - 0.5) < 1e-10\n    assert abs(candidate(\" -100 \") - 0.5) < 1e-10\n    \n    # Test float inputs\n    assert abs(candidate(100.0) - 0.5) < 1e-10\n    assert abs(candidate(-100.0) - 0.5) < 1e-10\n    \n    # Test edge case: exactly 100\n    assert abs(candidate(100) - 0.5) < 1e-10\n    assert abs(candidate(-100) - 0.5) < 1e-10\n    \n    # Test that values with absolute value < 100 are rejected\n    try:\n        candidate(99)\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    try:\n        candidate(-99)\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n        \n    try:\n        candidate(\"99\")\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    # Test invalid inputs that should raise ValueError\n    try:\n        candidate(None)\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    try:\n        candidate(True)\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n        \n    try:\n        candidate(False)\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    try:\n        candidate(\"abc\")\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n        \n    try:\n        candidate(\"\")\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n        \n    try:\n        candidate(\"  \")\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    # Test that non-finite values are rejected\n    try:\n        candidate(float('inf'))\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n        \n    try:\n        candidate(float('-inf'))\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n        \n    try:\n        candidate(float('nan'))\n        assert False, \"Should have raised ValueError\"\n    except ValueError:\n        pass\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 6135727375,
+  "load_duration": 1914709,
+  "prompt_eval_count": 206,
+  "prompt_eval_cached_count": 113,
+  "prompt_eval_duration": 66997000,
+  "eval_count": 820,
+  "eval_duration": 6056330000,
+  "wall_seconds": 6.136482333007734
+}

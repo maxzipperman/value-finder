@@ -1,0 +1,50 @@
+[
+  {
+    "model": "qwen3.6-35b",
+    "requests": 5,
+    "wall_seconds": 68.17061900100089,
+    "completion_reasons": [
+      "stop",
+      "stop",
+      "stop",
+      "stop",
+      "stop"
+    ]
+  },
+  {
+    "model": "qwen3-coder-30b",
+    "requests": 5,
+    "wall_seconds": 50.737440541997785,
+    "completion_reasons": [
+      "length",
+      "stop",
+      "stop",
+      "stop",
+      "stop"
+    ]
+  },
+  {
+    "model": "devstral-small-2-latest",
+    "requests": 5,
+    "wall_seconds": 129.4667983329564,
+    "completion_reasons": [
+      "stop",
+      "stop",
+      "stop",
+      "stop",
+      "stop"
+    ]
+  },
+  {
+    "model": "glm-4.7-flash-latest",
+    "requests": 5,
+    "wall_seconds": 46.504825166019145,
+    "completion_reasons": [
+      "stop",
+      "stop",
+      "stop",
+      "stop",
+      "stop"
+    ]
+  }
+]

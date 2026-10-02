@@ -1,0 +1,31 @@
+Here's the review of the code with findings in the requested format:
+
+```json
+[
+  {
+    "line": 13,
+    "explanation": "Sorting key uses snapshot first, but requirement specifies to sort by last_update when there are ties in snapshot"
+  },
+  {
+    "line": 11,
+    "explanation": "Probability calculation doesn't handle negative odds correctly - should use abs(r['odds']) in denominator"
+  },
+  {
+    "line": 13,
+    "explanation": "Sorting doesn't properly handle the tie-breaker requirement for smallest id when both snapshot and last_update are equal"
+  }
+]
+```
+
+Key issues identified:
+1. The sorting logic doesn't properly implement the tie-breaking requirements (should sort by last_update first, then by id)
+2. The probability calculation doesn't account for negative odds (should use absolute value)
+3. The sorting doesn't properly handle the case where both snapshot and last_update are equal (should break ties by id)
+
+The code correctly:
+- Filters for snapshots at or before decision time
+- Filters for updates at or before decision time
+- Filters for odds with absolute value >= 100
+- Returns None when no eligible rows exist
+- Doesn't mutate inputs (creates new probability field in copy)
+- Returns a JSON-serializable result

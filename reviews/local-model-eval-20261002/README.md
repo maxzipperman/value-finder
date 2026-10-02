@@ -108,3 +108,8 @@ First-pass wall times were 5.18, 4.45 and 5.56 seconds (15.19 s total). Generate
 | GLM-4.7-Flash 30B | 22/34 | 24/34 | 0/3 | 20.63 s | 19 GB |
 
 Provisionally prefer Qwen3.6 in direct mode for bounded supervised code drafts on this Mac; original Qwen-Coder remains the lower-memory fallback. GLM's three tested configurations did not demonstrate an advantage on these tasks. Do not infer broad coding percentages from dependent checks, generalize to autonomous repository work, or claim a controlled speed benchmark across changed runtime versions/background workloads. Next useful evidence is a bounded multi-file patch with tool use, meaningful project tests and independent review. No unattended routing, provider settings or production behavior were changed.
+
+
+## Expanded edge-case and utility trial
+
+The owner requested broader tasks and edge cases. Twenty additional requests covered two-file code delivery, odds regression-test generation, seeded code review, untrusted-log extraction, and tests for the actual dashboard parse_utc helper. See [the full expanded report](extended/README.md) for the fixed protocols, complete results, failures, grading corrections and practical routing. Qwen3.6 remained strongest for supervised drafts/test writing, but no model completely solved the original two-file task, every model missed the temporal-leakage review defect, and all four succeeded at the bounded log-extraction task. These results narrow the earlier snippet recommendation; they do not support autonomous repository control. All benchmark models unloaded afterward; no runtime provider or production code changed.

@@ -1,0 +1,308 @@
+```python
+import math
+
+
+def run_tests(candidate):
+    """
+    Run tests against the candidate american_probability function.
+    Raises AssertionError if any test fails.
+    """
+    
+    # Test 1: Positive odds - standard case
+    result = candidate(200)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (200 + 100), f"Expected {100/300}, got {result}"
+    
+    # Test 2: Positive odds - another standard case
+    result = candidate(150)
+    assert result == 100 / (150 + 100), f"Expected {100/250}, got {result}"
+    
+    # Test 3: Negative odds - standard case
+    result = candidate(-200)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == -(-200) / (200 + 100), f"Expected {200/300}, got {result}"
+    
+    # Test 4: Negative odds - another standard case
+    result = candidate(-150)
+    assert result == 150 / (150 + 100), f"Expected {150/250}, got {result}"
+    
+    # Test 5: Positive odds as string with whitespace
+    result = candidate(" 200 ")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (200 + 100), f"Expected {100/300}, got {result}"
+    
+    # Test 6: Negative odds as string with whitespace
+    result = candidate(" -150 ")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 150 / (150 + 100), f"Expected {150/250}, got {result}"
+    
+    # Test 7: Positive odds as string without whitespace
+    result = candidate("100")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 8: Negative odds as string without whitespace
+    result = candidate("-100")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 9: Float input - positive
+    result = candidate(250.0)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (250 + 100), f"Expected {100/350}, got {result}"
+    
+    # Test 10: Float input - negative
+    result = candidate(-250.0)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 250 / (250 + 100), f"Expected {250/350}, got {result}"
+    
+    # Test 11: Boundary - exactly 100
+    result = candidate(100)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 12: Boundary - exactly -100
+    result = candidate(-100)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 13: Large positive odds
+    result = candidate(1000)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (1000 + 100), f"Expected {100/1100}, got {result}"
+    
+    # Test 14: Large negative odds
+    result = candidate(-1000)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 1000 / (1000 + 100), f"Expected {1000/1100}, got {result}"
+    
+    # Test 15: Reject bool True
+    try:
+        candidate(True)
+        assert False, "Should have raised ValueError for bool True"
+    except ValueError:
+        pass
+    
+    # Test 16: Reject bool False
+    try:
+        candidate(False)
+        assert False, "Should have raised ValueError for bool False"
+    except ValueError:
+        pass
+    
+    # Test 17: Reject None
+    try:
+        candidate(None)
+        assert False, "Should have raised ValueError for None"
+    except ValueError:
+        pass
+    
+    # Test 18: Reject non-numeric string
+    try:
+        candidate("abc")
+        assert False, "Should have raised ValueError for non-numeric string"
+    except ValueError:
+        pass
+    
+    # Test 19: Reject empty string
+    try:
+        candidate("")
+        assert False, "Should have raised ValueError for empty string"
+    except ValueError:
+        pass
+    
+    # Test 20: Reject string with only whitespace (should fail to convert to number)
+    try:
+        candidate("   ")
+        assert False, "Should have raised ValueError for whitespace-only string"
+    except ValueError:
+        pass
+    
+    # Test 21: Reject value less than 100 in absolute value (positive)
+    try:
+        candidate(99)
+        assert False, "Should have raised ValueError for value < 100"
+    except ValueError:
+        pass
+    
+    # Test 22: Reject value less than -100 in absolute value (negative)
+    try:
+        candidate(-99)
+        assert False, "Should have raised ValueError for value > -100"
+    except ValueError:
+        pass
+    
+    # Test 23: Reject zero
+    try:
+        candidate(0)
+        assert False, "Should have raised ValueError for zero"
+    except ValueError:
+        pass
+    
+    # Test 24: Reject list input
+    try:
+        candidate([100])
+        assert False, "Should have raised ValueError for list"
+    except ValueError:
+        pass
+    
+    # Test 25: Reject dict input
+    try:
+        candidate({"value": 100})
+        assert False, "Should have raised ValueError for dict"
+    except ValueError:
+        pass
+    
+    # Test 26: Reject tuple input
+    try:
+        candidate((100,))
+        assert False, "Should have raised ValueError for tuple"
+    except ValueError:
+        pass
+    
+    # Test 27: Reject infinity (positive)
+    try:
+        candidate(float('inf'))
+        assert False, "Should have raised ValueError for infinity"
+    except ValueError:
+        pass
+    
+    # Test 28: Reject infinity (negative)
+    try:
+        candidate(float('-inf'))
+        assert False, "Should have raised ValueError for negative infinity"
+    except ValueError:
+        pass
+    
+    # Test 29: Reject NaN
+    try:
+        candidate(float('nan'))
+        assert False, "Should have raised ValueError for NaN"
+    except ValueError:
+        pass
+    
+    # Test 30: String with leading zeros (positive)
+    result = candidate("0100")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 31: String with leading zeros (negative)
+    result = candidate("-0100")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 32: Very large positive odds
+    result = candidate(10000)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (10000 + 100), f"Expected {100/10100}, got {result}"
+    
+    # Test 33: Very large negative odds
+    result = candidate(-10000)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 10000 / (10000 + 100), f"Expected {10000/10100}, got {result}"
+    
+    # Test 34: String representation of negative number with spaces
+    result = candidate(" -200 ")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 200 / (200 + 100), f"Expected {200/300}, got {result}"
+    
+    # Test 35: String representation of positive number with spaces
+    result = candidate(" 150 ")
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (150 + 100), f"Expected {100/250}, got {result}"
+    
+    # Test 36: Reject integer string that represents value < 100
+    try:
+        candidate("99")
+        assert False, "Should have raised ValueError for string representing value < 100"
+    except ValueError:
+        pass
+    
+    # Test 37: Reject integer string that represents value > -100 (i.e., -99)
+    try:
+        candidate("-99")
+        assert False, "Should have raised ValueError for string representing value > -100"
+    except ValueError:
+        pass
+    
+    # Test 38: Reject float that is exactly 100
+    result = candidate(100.0)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 39: Reject float that is exactly -100
+    result = candidate(-100.0)
+    assert isinstance(result, float), f"Expected float, got {type(result)}"
+    assert result == 100 / (100 + 100), f"Expected {100/200}, got {result}"
+    
+    # Test 40: Reject string that represents infinity
+    try:
+        candidate("inf")
+        assert False, "Should have raised ValueError for string representing infinity"
+    except ValueError:
+        pass
+    
+    # Test 41: Reject string that represents -infinity
+    try:
+        candidate("-inf")
+        assert False, "Should have raised ValueError for string representing negative infinity"
+    except ValueError:
+        pass
+    
+    # Test 42: Reject string that represents NaN
+    try:
+        candidate("nan")
+        assert False, "Should have raised ValueError for string representing NaN"
+    except ValueError:
+        pass
+    
+    # Test 43: Check that output is not rounded (use a value that produces non-terminating decimal)
+    result = candidate(101)
+    expected = 100 / (101 + 100)
+    assert abs(result - expected) < 1e-15, f"Expected {expected}, got {result}"
+    
+    # Test 44: Check that output is not rounded for negative odds
+    result = candidate(-101)
+    expected = 101 / (101 + 100)
+    assert abs(result - expected) < 1e-15, f"Expected {expected}, got {result}"
+    
+    # Test 45: Reject complex number
+    try:
+        candidate(1+2j)
+        assert False, "Should have raised ValueError for complex number"
+    except ValueError:
+        pass
+    
+    # Test 46: Reject set input
+    try:
+        candidate({100})
+        assert False, "Should have raised ValueError for set"
+    except ValueError:
+        pass
+    
+    # Test 47: Reject function input
+    try:
+        candidate(lambda x: x)
+        assert False, "Should have raised ValueError for function"
+    except ValueError:
+        pass
+    
+    # Test 48: Reject class instance
+    class MyClass:
+        pass
+    try:
+        candidate(MyClass())
+        assert False, "Should have raised ValueError for custom object"
+    except ValueError:
+        pass
+    
+    # Test 49: Check exact value for positive odds = 100
+    result = candidate(100)
+    expected = 100 / 200  # 0.5
+    assert result == expected, f"Expected {expected}, got {result}"
+    
+    # Test 50: Check exact value for negative odds = -100
+    result = candidate(-100)
+    expected = 100 / 200  # 0.5
+    assert result == expected, f"Expected {expected}, got {result}"
+```

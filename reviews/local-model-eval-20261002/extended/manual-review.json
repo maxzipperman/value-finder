@@ -1,0 +1,29 @@
+{
+  "method": "Independently read original explanations; line-localization scores in acceptance.json are diagnostic only and overcount genuine findings. This assessment governs review results.",
+  "qwen3.6-35b": {
+    "correct_defects": ["oldest snapshot selected", "input mutation"],
+    "missed_defects": ["missing last_update eligibility gate", "negative odds probability"],
+    "false_findings": ["Claims snap > decision rejects equal timestamps and recommends >=, which would introduce a boundary defect"],
+    "format": "accepted single JSON fence"
+  },
+  "qwen3-coder-30b": {
+    "correct_defects": ["negative odds probability, explicitly identifies division by zero at -100"],
+    "missed_defects": ["missing last_update eligibility gate", "input mutation", "oldest snapshot selected"],
+    "false_findings": ["Tie-breaking is allegedly wrong although ascending id correctly breaks ties", "Second duplicate incorrect tie-breaking finding"],
+    "format": "extra prose outside JSON; strict format failed"
+  },
+  "devstral-small-2-latest": {
+    "correct_defects": ["Identifies incorrect negative odds probability"],
+    "unsafe_fix": "Suggested abs(odds) in denominator does not supply the required abs(odds) numerator for negative odds",
+    "missed_defects": ["missing last_update eligibility gate", "input mutation", "oldest snapshot selected"],
+    "false_findings": ["Invents last_update tie-breaker not in contract", "Incorrect claim existing id tie-breaker fails"],
+    "unsupported_summary": ["Claims updates are filtered though they are not", "Claims input is copied though it is mutated"],
+    "format": "extra prose outside JSON; strict format failed"
+  },
+  "glm-4.7-flash-latest": {
+    "correct_defects": ["input mutation"],
+    "missed_defects": ["missing last_update eligibility gate", "negative odds probability", "oldest snapshot selected"],
+    "false_findings": [],
+    "format": "accepted single JSON fence"
+  }
+}

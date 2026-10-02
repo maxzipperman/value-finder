@@ -1,0 +1,36 @@
+[
+  {
+    "case": "actual helper accepted",
+    "passed": true
+  },
+  {
+    "case": "none_raises",
+    "passed": true,
+    "error": "TypeError: "
+  },
+  {
+    "case": "no_whitespace_strip",
+    "passed": true,
+    "error": "AssertionError: Outer whitespace stripping: Expected 2026-09-29 14:30:07+00:00, got None"
+  },
+  {
+    "case": "compact_unsupported",
+    "passed": true,
+    "error": "AssertionError: Compact UTC HHMMZ: Expected 2026-09-29 00:02:00+00:00, got None"
+  },
+  {
+    "case": "offset_relabelled",
+    "passed": false,
+    "error": null
+  },
+  {
+    "case": "invalid_raises",
+    "passed": true,
+    "error": "ValueError: bad timestamp"
+  },
+  {
+    "case": "fractional_seconds_lost",
+    "passed": false,
+    "error": null
+  }
+]

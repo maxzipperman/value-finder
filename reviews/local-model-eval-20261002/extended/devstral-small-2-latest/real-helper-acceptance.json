@@ -1,0 +1,7 @@
+[
+  {
+    "case": "candidate completion/loading",
+    "passed": false,
+    "error": "ValueError: day 29 must be in range 1..28 for month 2 in year 2026"
+  }
+]

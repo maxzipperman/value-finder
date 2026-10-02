@@ -1,0 +1,125 @@
+```python
+from datetime import datetime, timezone, timedelta
+from math import isclose
+
+UTC = timezone.utc
+
+def run_tests(candidate):
+    """
+    Regression tests for the parse_utc helper.
+    candidate: The function to test (parse_utc).
+    """
+    
+    # Helper to assert equality of aware datetimes, handling fractional seconds
+    def assert_datetime_equal(actual, expected, msg=""):
+        if actual is None and expected is None:
+            return
+        if actual is None or expected is None:
+            raise AssertionError(f"{msg}: Expected {expected}, got {actual}")
+        
+        # Compare absolute UTC instants
+        if actual.tzinfo != UTC or expected.tzinfo != UTC:
+            raise AssertionError(f"{msg}: Datetimes must be UTC aware")
+            
+        if not isclose(actual.timestamp(), expected.timestamp(), rel_tol=1e-9):
+            raise AssertionError(f"{msg}: Expected {expected}, got {actual}")
+
+    # --- Test Cases ---
+
+    # 1. Standard Zulu Time (ISO 8601)
+    assert_datetime_equal(
+        candidate("2026-09-29T14:30:07Z"),
+        datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC),
+        "Standard Zulu Time"
+    )
+
+    # 2. Compact UTC HHMMZ
+    assert_datetime_equal(
+        candidate("2026-09-29T0002Z"),
+        datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC),
+        "Compact UTC HHMMZ"
+    )
+
+    # 3. Explicit Offset (+00:00)
+    assert_datetime_equal(
+        candidate("2026-10-02 00:00:00+00:00"),
+        datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC),
+        "Explicit +00:00 offset"
+    )
+
+    # 4. Naive ISO interpreted as UTC
+    assert_datetime_equal(
+        candidate("2026-09-29T14:30:07"),
+        datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC),
+        "Naive ISO interpreted as UTC"
+    )
+
+    # 5. Naive Date/Time interpreted as UTC
+    assert_datetime_equal(
+        candidate("2026-09-29 14:30:07"),
+        datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC),
+        "Naive Date/Time interpreted as UTC"
+    )
+
+    # 6. Naive Compact HHMM interpreted as UTC
+    assert_datetime_equal(
+        candidate("2026-09-29T0002"),
+        datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC),
+        "Naive Compact HHMM interpreted as UTC"
+    )
+
+    # 7. Naive Date/Time HHMM interpreted as UTC
+    assert_datetime_equal(
+        candidate("2026-09-29 00:02"),
+        datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC),
+        "Naive Date/Time HHMM interpreted as UTC"
+    )
+
+    # 8. Preserve Fractional Seconds
+    # Note: The reference implementation uses strptime which truncates microseconds.
+    # We test that the function handles the input format correctly, even if it loses precision.
+    # However, to strictly test the "preserve" requirement, we use fromisoformat path.
+    # The reference implementation's fromisoformat path *does* preserve fractional seconds.
+    assert_datetime_equal(
+        candidate("2026-09-29T14:30:07.123456Z"),
+        datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=UTC),
+        "Fractional seconds preservation"
+    )
+
+    # 9. None Input
+    assert candidate(None) is None, "None input should return None"
+
+    # 10. Blank Input
+    assert candidate("") is None, "Blank input should return None"
+
+    # 11. Invalid Input
+    assert candidate("not a date") is None, "Invalid input should return None"
+
+    # 12. Whitespace Handling (Outer)
+    assert_datetime_equal(
+        candidate(" 2026-09-29T14:30:07Z  "),
+        datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC),
+        "Outer whitespace stripping"
+    )
+
+    # 13. Whitespace Handling (Inner)
+    # The reference implementation uses strptime, which does not strip inner whitespace.
+    # We test that it fails gracefully or returns None as per the contract.
+    # The contract says "strip outer whitespace", implying inner is preserved.
+    # strptime will raise ValueError for "2026-09-29 T14:30:07Z".
+    assert candidate("2026-09-29 T14:30:07Z") is None, "Inner whitespace should not be stripped"
+
+    # 14. Offset with Fractional Seconds
+    assert_datetime_equal(
+        candidate("2026-09-29T14:30:07.123456+00:00"),
+        datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=UTC),
+        "Offset with fractional seconds"
+    )
+
+    # 15. Edge Case: Midnight
+    assert_datetime_equal(
+        candidate("2026-12-31T23:59:59Z"),
+        datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC),
+        "End of year"
+    )
+```

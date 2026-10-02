@@ -1,0 +1,88 @@
+Here's a Python source file that defines `run_tests(candidate)` to evaluate the `american_probability` function according to the given specifications:
+
+```python
+import math
+
+def run_tests(candidate):
+    # Test valid positive odds
+    assert math.isclose(candidate("100"), 0.5, rel_tol=1e-9)
+    assert math.isclose(candidate(100), 0.5, rel_tol=1e-9)
+    assert math.isclose(candidate(" 150 "), 2/3, rel_tol=1e-9)
+    assert math.isclose(candidate(200), 0.3333333333333333, rel_tol=1e-9)
+
+    # Test valid negative odds
+    assert math.isclose(candidate("-100"), -0.5, rel_tol=1e-9)
+    assert math.isclose(candidate(-100), -0.5, rel_tol=1e-9)
+    assert math.isclose(candidate("-200"), -0.6666666666666666, rel_tol=1e-9)
+    assert math.isclose(candidate("-150"), -2/3, rel_tol=1e-9)
+
+    # Test edge cases with absolute value exactly 100
+    assert math.isclose(candidate("100"), 0.5, rel_tol=1e-9)
+    assert math.isclose(candidate("-100"), -0.5, rel_tol=1e-9)
+
+    # Test invalid inputs that should raise ValueError
+    try:
+        candidate("abc")
+        assert False, "Should have raised ValueError for non-numeric string"
+    except ValueError:
+        pass
+
+    try:
+        candidate(True)
+        assert False, "Should have raised ValueError for bool"
+    except ValueError:
+        pass
+
+    try:
+        candidate(None)
+        assert False, "Should have raised ValueError for None"
+    except ValueError:
+        pass
+
+    try:
+        candidate(50)
+        assert False, "Should have raised ValueError for value < 100"
+    except ValueError:
+        pass
+
+    try:
+        candidate(-50)
+        assert False, "Should have raised ValueError for value > -100"
+    except ValueError:
+        pass
+
+    try:
+        candidate(float('inf'))
+        assert False, "Should have raised ValueError for infinite value"
+    except ValueError:
+        pass
+
+    try:
+        candidate(float('nan'))
+        assert False, "Should have raised ValueError for NaN"
+    except ValueError:
+        pass
+
+    # Test that output is not rounded
+    result = candidate("101")
+    assert result == 100/201, f"Expected {100/201}, got {result}"
+    result = candidate("-101")
+    assert result == -101/201, f"Expected {-101/201}, got {result}"
+```
+
+This test suite:
+1. Tests valid positive and negative odds with both string and numeric inputs
+2. Tests edge cases with absolute value exactly 100
+3. Verifies that invalid inputs raise ValueError
+4. Checks that the output isn't rounded (using exact fraction comparisons)
+5. Uses `math.isclose` for floating-point comparisons with a tight tolerance
+6. Doesn't inspect the candidate function's implementation or attributes
+7. Only uses the standard library (math module)
+8. Has no output (only assertions)
+
+The tests will pass with a correct implementation and fail with incorrect ones, including those that:
+- Don't handle string inputs properly
+- Don't validate input types
+- Don't validate the absolute value >= 100 requirement
+- Round the output
+- Don't handle infinite or NaN values properly
