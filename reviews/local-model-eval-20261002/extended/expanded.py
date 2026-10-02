@@ -130,8 +130,8 @@ def grade(task,s):
  if task=='multifile':
   obj=parse_json(s)
   if not isinstance(obj,dict) or set(obj)!={'odds.py','selection.py'}:raise ValueError('unauthorized file set')
-  odds=types.ModuleType('odds');exec(validated(obj['odds.py'],{'math','typing'}),odds.__dict__);sys.modules['odds']=odds
-  sel={};exec(validated(obj['selection.py'],{'odds','datetime','math','typing'}),sel)
+  odds=types.ModuleType('odds');exec(validated(obj['odds.py'],{'math','typing','re','decimal'}),odds.__dict__);sys.modules['odds']=odds
+  sel={};exec(validated(obj['selection.py'],{'odds','datetime','math','typing','re','decimal','zoneinfo'}),sel)
   return odds_checks(odds.american_probability)+selection_checks(sel['select_latest'])
  if task=='regression':
   blocks=re.findall(r'```(?:python)?\s*\n(.*?)```',s,re.S);ns={};exec(validated('\n'.join(blocks) if blocks else s,{'math'}),ns)
