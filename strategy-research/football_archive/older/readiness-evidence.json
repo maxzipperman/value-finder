@@ -1,0 +1,24 @@
+{
+  "frozen_bundle_root_sha256": "4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d",
+  "maximum_new_credits": 68010,
+  "older_paid_request_slots": 2267,
+  "older_request_slots": 2279,
+  "older_reused_request_slots": 12,
+  "outcomes_joined": false,
+  "paid_cache_key_overlap_with_completed_recent_and_pilot_ledgers": 0,
+  "paid_request_overlap_with_completed_recent_and_pilot_ledgers": 0,
+  "pilot_ledger_sha256": "754c81b87bb22af671bcf8cc6d8dd02accd5123296ad43d0ce50a119adc49d77",
+  "recent_ledger_sha256": "eb9e93e354babef2be73ddaa13ea6e2913c58eaaff706ed4e78aec1381636190",
+  "request_list_sha256": "81d557cffc1a57c6fb7547cc3be319158745c985bbc746513bda039a7c972910",
+  "request_set_sha256": "63d4ab26f80d54d9316de8b9b5457adc6ca4609e4be4cb01da63e98e9dceea9b",
+  "reused_cache_hashes_checked": true,
+  "seasons": [
+    2020,
+    2021,
+    2022
+  ],
+  "sports": {
+    "americanfootball_ncaaf": 1285,
+    "americanfootball_nfl": 994
+  }
+}
