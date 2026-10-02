@@ -8,6 +8,8 @@ The second transition's historical implementation commit is pinned to reviewed P
 
 Both downstream raw-store inventories preserve explicit historical roots, discover existing project peers and global runtime stores, and include the executing checkout's store only when that directory exists. A different checkout without local raw data therefore does not invent a new frozen path. Exact planned keys are rescanned at preparation and under the execution lock.
 
+The older runner now verifies and captures the full immutable v4 file map before compiling any v4 executor, builder, eligibility or validator helper. It executes those captured bytes, then rechecks the frozen map under the purchase lock before vendor imports. This closes the pre-import and post-hash reopen path without changing the frozen v4 bundle.
+
 ## Report for the hub
 
 NOT READY — the final union verifier/certificate, final runtime states and older packet are pending. The composition gate and synthetic adverse tests are implemented, but the final union evidence pins are intentionally absent.

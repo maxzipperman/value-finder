@@ -8,25 +8,67 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
+import types
 
 import stage
 
 
+def verified_v4_bytes(bundle):
+    bundle = Path(bundle)
+    if bundle.is_symlink() or not bundle.is_dir():
+        raise ValueError("Frozen v4 bundle must be an ordinary directory")
+    def regular(path):
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise ValueError("Frozen v4 source permits regular files only")
+            with os.fdopen(fd, "rb", closefd=False) as handle:
+                return handle.read()
+        finally:
+            os.close(fd)
+    if any(p.is_symlink() for p in bundle.rglob("*")):
+        raise ValueError("Frozen v4 source contains a symlink")
+    captured = {str(p.relative_to(bundle)): regular(p) for p in bundle.rglob("*")
+                if p.is_file() and p.name != "FREEZE.json"}
+    files = {name: hashlib.sha256(data).hexdigest() for name, data in captured.items()}
+    cert = json.loads(regular(bundle / "FREEZE.json"))
+    root = hashlib.sha256(stage.canonical(files)).hexdigest()
+    if files != cert["file_sha256"] or root != cert["bundle_root_sha256"] or root != stage.SOURCE_ROOT:
+        raise ValueError("Frozen v4 source bytes or pinned root changed before import")
+    return captured
+
+
 def source_executor(bundle):
+    bundle = Path(bundle)
     stage.source(bundle)
+    captured = verified_v4_bytes(bundle)
     sys.path.insert(0, str(bundle))
-    spec = importlib.util.spec_from_file_location("older_reviewed_v4_executor", bundle / "executor.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    from validator import verify
-    verify(bundle, stage.SOURCE_ROOT, check_cache=True)
-    return module
+    def module(name, filename):
+        result = types.ModuleType(name)
+        result.__file__ = str(bundle / filename)
+        exec(compile(captured[filename], result.__file__, "exec"), result.__dict__)
+        return result
+    base = module("older_reviewed_v4_executor", "executor.py")
+    builder = module("older_reviewed_v4_builder", "builder.py")
+    eligibility = module("older_reviewed_v4_eligibility", "price_eligibility.py")
+    validator = module("older_reviewed_v4_validator", "validator.py")
+    previous = {name: sys.modules.get(name) for name in ("builder", "executor", "price_eligibility")}
+    try:
+        sys.modules.update(builder=builder, executor=base, price_eligibility=eligibility)
+        validator.verify(bundle, stage.SOURCE_ROOT, check_cache=True)
+    finally:
+        for name, prior in previous.items():
+            if prior is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = prior
+    return base
 
 
 def checkout_clean(packet):
@@ -132,6 +174,7 @@ def run(packet, root, bundle, coverage_path, authorization, *, key, fake_session
             if (attempt["status"] != "completed" or base.sha(receipt) != attempt["receipt_sha256"]
                     or base.sha(Path(attempt["response_path"])) != attempt["response_sha256"]):
                 raise base.Halt("Existing older response evidence missing or changed")
+        verified_v4_bytes(bundle)
         RawCache, read_record, BulkClient, Call, new_session, remember_secret, scrub = base.vendor_imports(bundle, runtime)
         for row in rows:
             if not row["max_new_credits"]:
