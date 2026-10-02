@@ -2,11 +2,11 @@
 description: Hub check-in for Value Finder. Triage status, deadlines, PRs and worker chats; do small Mac-only jobs here; spawn workers for the rest.
 ---
 
-You are the Value Finder **hub**, the pinned chat "Value Finder — hub" working in `~/code/value-finder`. Run one check-in. $ARGUMENTS
+You are the Value Finder Codex **hub chat**. Read `GOVERNANCE.md` first; it owns roles, review tiers, purchase authority and isolated-checkout protections. Run one check-in from an isolated checkout. Never work in or switch branches in the live checkout. $ARGUMENTS
 
 ## 1. Gather (cheap reads, in parallel)
 
-- **Git.** `git fetch`, then `git status`. The hub checkout should be on `main` and clean. If it isn't, say why before doing anything else.
+- **Git.** `git fetch`, then `git status`. The isolated hub checkout should be clean. If it isn't, say why before doing anything else.
 - **Status.** `STATUS.md`: deadlines, forward-test counts, "Waiting on you".
 - **GitHub.**
   - `gh pr list --state open`.
@@ -25,7 +25,7 @@ You are the Value Finder **hub**, the pinned chat "Value Finder — hub" working
     - "it has lost or changed a line that the published copy holds": a lost line is restored from the copy by the next real scorer run, and the file is published again that night. A changed line (a hand edit, or a spreadsheet re-save with other line endings) is not: put the published line back by hand at this check-in. Until then nothing new is published, so a decision recorded meanwhile exists only on the Mac, and would be decided again if the file were lost. If a scorer also says that its copy on the `ledgers` branch is unreadable, the copy is the damaged one: nothing is restored from it, and its damaged line must not be put back into the file; the hub replaces a damaged published copy by hand with a commit to the `ledgers` branch, and recording resumes once the copy can be read.
     - the file is missing, empty, holds only blank lines, cut, or its first line is not the record's header (a blank line, or a line of only spaces, is skipped on both sides and never published; it is not damage): the next real scorer run restores a missing file from the copy; repair or restore any other by hand. "nothing has been published for it yet" means the same checks refused the first copy.
     Never push a shortened record to the `ledgers` branch.
-- **Forward tests.** Run both `scripts/score_forward.py` scripts. They're fast and make no API calls. Before them, run `git fetch` in `~/code/value-finder` first (wait for it to finish; don't run it alongside), so that a lost decision record is restored from the latest published copy: nfl-weather amendment 6 / cfb-weather amendment 4, section 3, read `origin/ledgers` as the checkout last fetched it, and the scorers never fetch.
+- **Forward tests.** Run both `scripts/score_forward.py` scripts. They're fast and make no API calls. Fetch the ledgers branch in the isolated checkout first. Use `--now` and `--ledger` on a copy; never run a mutating scorer in the live checkout.
 
 ## 2. Decide who does each piece of work
 
@@ -34,9 +34,9 @@ The cloud worker is the default (the owner's cloud-first rule in `CLAUDE.md` and
 | Where | When | How |
 |---|---|---|
 | **Cloud worker (the default)** | Needs only what's in git: code, docs, analysis on `data/processed/`, reviews, research | `SendMessage` the brief to the standing cloud chat (`ListAgents` lists it as `cloud`; its title changes with its latest task). A long brief goes into a file on the `hub-briefs` branch (`briefs/<date>-<n>-<name>.md`), and the message names the file. It runs on cloud session credits. It can't message back, so it reports through its PR. Follow its progress with `RemoteTrigger` `get_run_log` (session `session_013evLY2m27WefSRypjuXJpK`). Don't use the Agent tool's `isolation: "remote"`: on this Mac it runs locally, on plan limits. Never send a message to an agent that belongs to a running workflow: on this Mac that starts a second copy of the agent. |
-| **Here, in the hub** | Mac-only and under about 10 minutes: a key swap, a launchd install, a live check, merging a reviewed PR, `STATUS.md` edits | Do it directly, and say why it must be local (an Agent or Workflow call here needs a `LOCAL-BECAUSE:` line) |
+| **Here, in the hub** | Mac-only and under about 10 minutes: a specifically authorized key change, a read-only live check, merging a reviewed PR, `STATUS.md` edits | Do it directly, and say why it must be local (an Agent or Workflow call here needs a `LOCAL-BECAUSE:` line) |
 | **Local worker chat** | Needs Mac-only things (`.env` keys, raw caches, Open-Meteo, Odds API or Kalshi pulls) and is bigger than a quick job | `spawn_task`, and say why it must be local. The user clicks the chip, and the chat opens in its own worktree. A local worker must never switch branches in `~/code/value-finder`, because the alert jobs run whatever is checked out there. Its agents and workflows need a `LOCAL-BECAUSE:` line, or the hook blocks them. |
-| **The user** | Money, rule or pre-registration changes, anything outward-facing, or a choice with no clear default | Ask, with a recommendation |
+| **The user** | Action outside recorded owner authorization, or a genuinely missing decision | Ask with a recommendation only when needed; do not re-ask work already authorized. Apply GOVERNANCE.md review and exact authority within standing scope. |
 
 **Don't spawn when:**
 - Two workers would touch the same files.
@@ -51,14 +51,14 @@ Spawn one worker per issue.
 
 - **The task.** The goal and issue number, the files involved, and what "done" means: tests pass, one PR that links the issue, and a line in `STATUS.md`.
 - **The binding rules from `CLAUDE.md`.** Name the ones that apply. For example: paper only; no lookahead; don't edit `STRATEGY.md` or `PREREGISTRATION.md` unless the task is a dated amendment; cloud workers have no `.env`, raw data or launchd.
-- **What to report back,** in 15 lines or fewer: the PR link, headline results with numbers, and anything that failed or was skipped.
+- **What to report back,** using the compact PR template: change, current head, evidence, blockers, budget, next action. Subsequent reports contain only differences and links.
   - The cloud worker can't message back. It puts its report in its PR description, and the hub reads its run log.
   - Local worker chats send their report to the hub session (see `CLAUDE.md`).
 
 ## 4. When a worker reports
 
 1. Review its PR against the brief. Check that the numbers reproduce, the tests pass, no rule was edited without a dated amendment, and no secrets or raw data were committed.
-2. If it's clean, merge it with a merge commit and delete the branch. Then pull `main` and update `STATUS.md`.
+2. Apply GOVERNANCE.md review tier and current-head agreements. The hub merges consequential changes; merge only after required approval. Update STATUS.md in the PR when state changes, and refresh only the isolated checkout.
 3. If it isn't, send the fixes back to the same worker rather than starting a new one.
 4. When a research pull request merges, add or update its entry in `dashboard/content/evidence.json`, the list the dashboard's Research screen shows. Quote each number as its source file writes it; `uv run --project dashboard pytest -q` checks that.
 5. A "Waiting on you" item in `STATUS.md` that has a deadline carries "due" and the date in its bold title, for example **The Oct 20 gate decisions (due Tue Oct 20, 2026).** The dashboard shows that date beside the item.
