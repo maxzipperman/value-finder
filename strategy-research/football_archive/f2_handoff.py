@@ -24,8 +24,9 @@ SECOND_PROPOSAL = "1c94c10be95b9097ec598a982df2caf2509292d45385322c8e035dcc771ca
 FIRST_MISSING = "850c02077a7ef01010d277ad63cff3a88847548a9a1a70424fa8252ccf632c9a"
 SECOND_MISSING = "cbacd1c8b9929a1386777465ca18148ea7feb7a88e6917542cca3a9ff4eba719"
 FIRST_TRANSITION_COMMIT = "20bcaa35d3d5b6f93d292062c2480e3edb82a83a"
-# PR121's second transition commit is not final until its current-head review.
-SECOND_TRANSITION_COMMIT = None
+# PR121's reviewed execution head, authenticated by the hub's exact offline
+# approval on PR99; the subsequent downstream checkout commit is unrelated.
+SECOND_TRANSITION_COMMIT = "3f29479fd8c9c5798ceb08b0c2d26d3c0e2706cb"
 
 # PR119 must publish one self-contained, read-only downstream verifier and its
 # final certificate. The reviewed byte hashes are pinned here before use.
