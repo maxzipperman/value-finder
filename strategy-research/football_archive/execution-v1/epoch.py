@@ -9,6 +9,8 @@ import argparse
 import importlib.util
 import json
 import os
+import stat
+import types
 import fcntl
 from pathlib import Path
 import sys
@@ -24,18 +26,59 @@ PILOT_LEDGER_SHA = '754c81b87bb22af671bcf8cc6d8dd02accd5123296ad43d0ce50a119adc4
 PILOT_COVERAGE_SHA = '70035da9cac544a94d6c5f44155d97008c5300e24f064fa1dc7979e77ffb0f27'
 
 
+def verified_pilot_bytes(folder):
+    """Trusted extension verifies the entire historical freeze before executing code.
+
+    Capture once through non-following regular-file descriptors; execution uses
+    those exact verified bytes rather than reopening a mutable source path.
+    """
+    folder = Path(folder)
+    packet = folder / 'F2-pilot'
+    if folder.is_symlink() or packet.is_symlink() or not packet.is_dir():
+        raise ValueError('Pilot source/packet must be ordinary directories')
+    def read_regular(path):
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise ValueError('Pilot freeze permits regular files only')
+            with os.fdopen(fd, 'rb', closefd=False) as handle:
+                return handle.read()
+        finally:
+            os.close(fd)
+    paths = {f'code/{p.name}': p for p in folder.glob('*.py')}
+    for path in packet.iterdir():
+        if path.is_symlink() or not path.is_file():
+            raise ValueError('Pilot packet permits regular immediate files only')
+        if path.name != 'FREEZE.json':
+            paths[path.name] = path
+    if any(path.is_symlink() or not path.is_file() for path in paths.values()):
+        raise ValueError('Pilot code permits regular files only')
+    captured = {name: read_regular(path) for name, path in paths.items()}
+    files = {name: __import__('hashlib').sha256(data).hexdigest()
+             for name, data in sorted(captured.items())}
+    cert = json.loads(read_regular(packet / 'FREEZE.json'))
+    if (cert.get('root') != PILOT_ROOT or cert.get('files') != files
+            or __import__('hashlib').sha256(plan.canonical(files)).hexdigest() != PILOT_ROOT):
+        raise ValueError('Pilot frozen bytes changed before import')
+    return captured
+
+
+def pilot_module(name, folder, filename, captured):
+    module = types.ModuleType(name)
+    module.__file__ = str(folder / filename)
+    exec(compile(captured['code/' + filename], module.__file__, 'exec'), module.__dict__)
+    return module
+
+
 def pilot_gate(bundle):
     folder = Path(__file__).parent.parent / 'followups'
-    spec = importlib.util.spec_from_file_location('immutable_pilot_epoch', folder / 'epoch.py')
-    old = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(old)
+    captured = verified_pilot_bytes(folder)
+    old = pilot_module('immutable_pilot_epoch', folder, 'epoch.py', captured)
     old.verify_packet(folder / 'F2-pilot', PILOT_ROOT)
     ledger = ROOT_BASE / PILOT_ROOT / 'spending-ledger.json'
     if plan.sha(ledger) != PILOT_LEDGER_SHA:
         raise ValueError('Completed pilot ledger changed')
-    spec = importlib.util.spec_from_file_location('immutable_pilot_coverage', folder / 'pilot_coverage.py')
-    coverage = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(coverage)
+    coverage = pilot_module('immutable_pilot_coverage', folder, 'pilot_coverage.py', captured)
     coverage.epoch = old
     report = coverage.report(folder / 'F2-pilot', PILOT_ROOT, bundle, ledger)
     if __import__('hashlib').sha256(plan.canonical(report) + b'\n').hexdigest() != PILOT_COVERAGE_SHA:

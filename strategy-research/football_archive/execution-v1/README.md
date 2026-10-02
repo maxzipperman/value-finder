@@ -11,11 +11,11 @@ Mac-only implementation worker: requires exact paid historical cache keys and cu
 
 F2 preserves all 1,774 opportunities: 64 provider-only and one unbound. Its full CSV includes all 48 pilot rows with zero new cost. `opportunities.json` retains every source listing binding, missing/ambiguous status and as-of sweep evidence; no played-game selection. T−24h/T−10min are scheduled acquisition restrictions, not independently verified actual play or independent schedules known at entry time.
 
-F2 root: `7e2be84bc641713a4832eaad3f88047b0d1ba293aa71caf5b1501ea8b6e5fd6f`.
+F2 root: `059fc135b00bbbc36db208a8bb622d7444a43d42bb2607675d30671ad455f4e4`.
 F2 CSV SHA256: `1ca4e3ccfafe89c33d8ea1e0cc395dd1afb2442a9174bdc5af1b0c799f561c89`.
 F2 request-set SHA256: `2f92159e384e612ccca2101c5862f6ee067ddfcb7f42860608ac8980c9946519`.
 
-F3a candidate root: `f62bc12fa675f1937e392e08c34271e7ca46017c0d904a65c53024b7ef6d00f8` (cannot execute).
+F3a candidate root: `ba90220ec439e023f9f58257737aaf7b21264e8fadf38ee551ef40a11d50b011` (cannot execute).
 F3a CSV SHA256: `a0f915c2af66f8d370faf3b21c84a404ce43b3ac55b06720a3aa0f4724c6029b`.
 F3a candidate request-set SHA256: `7850428dd798383946ff091893744d97762f5c9ca0e681bccf4bded7e16cf267`.
 After F2, `prepare.py --stage F3a` pins its completed ledger and reconciles fresh exact-key overlap. Commit the resulting new F3a freeze and obtain new exact-head review/approval; candidate approval cannot substitute. Any list/cache change changes its root and exact approval.
@@ -30,7 +30,7 @@ The seed carries root, fixed global ledger path/hash, probe=1,687, cumulative de
 
 F2 starts from **87,176** conservative cumulative credits, including probe and external/carry debits. In the full synthetic integration, F2 ends at 121,676 and F3a at 155,876. These are conservative reservation totals under no additional external use, not claims of live account balances or future billing. Every stage adopts a fresh free account check and preserves the larger prior/fresh account debit. Explicit debit overrides and automatic account-only recovery are disabled. The original reserve floor, 250,000 first-tranche cap, 400,000 day-one cap and 4,440,000 broader cap remain unchanged.
 
-All offline source/pilot/seed/scope/approval/cache/runtime/restart guards precede key loading. Transport remains 4 RPS, zero client and adapter retries, no redirects; each paid attempt is durably reserved and marked sent before GET. The existing billing, cumulative external-use, lag, reset, overcharge and floor stops remain active.
+The trusted extension reads and hashes the complete pilot packet and all sibling Python files, recomputes the pinned pilot root, and rejects changed/missing/unexpected/symlink/nonregular files before importing any pilot code. Pilot modules execute the captured verified bytes, so a path replacement after verification cannot execute new bytes. Sentinel regressions cover changed epoch, coverage and plan modules through the actual pilot_gate entry point. All offline source/pilot/seed/scope/approval/cache/runtime/restart guards precede key loading. Transport remains 4 RPS, zero client and adapter retries, no redirects; each paid attempt is durably reserved and marked sent before GET. The existing billing, cumulative external-use, lag, reset, overcharge and floor stops remain active.
 
 ## Hub approval and remaining gates
 
@@ -57,7 +57,7 @@ PYTHONDONTWRITEBYTECODE=1 sharp-markets/.venv/bin/python -m pytest -q strategy-r
 PYTHONDONTWRITEBYTECODE=1 sharp-markets/.venv/bin/python -m pytest -q strategy-research/football_archive/acquisition/football-archive-v4/test_v4.py
 ```
 
-**Observed results:** 72 extension tests passed (43.30s); 146 immutable v4 tests passed (5.84s). The full synthetic integration bought exactly 1,725 new F2 rows, reused all 48 actual pilot responses, then bought 570 synthetic F3a rows; cumulative reservations were 121,676 and 155,876. Missing F2 receipt blocked both stages before key loading. No real transport occurred.
+**Observed results:** 80 extension tests passed; 146 immutable v4 tests passed (5.84s). The full synthetic integration bought exactly 1,725 new F2 rows, reused all 48 actual pilot responses, then bought 570 synthetic F3a rows; cumulative reservations were 121,676 and 155,876. Missing F2 receipt blocked both stages before key loading. No real transport occurred.
 
 Tests prohibit sockets, credential files, forward logs, pricing cohort and outcome files; transport uses synthetic keys. Library tests isolate real frozen transport/cache/accounting; stage tests use the actual 48 historical pilot response/receipt hashes and gate, full 1,773-row F2 selection and 570-row F3a list, then fake all new transport. Only git checkout/commit proof is replaced in synthetic runs. They cover failed/mutated coverage, source/pilot corruption, scope/book/market/season errors, every-ancestor duplicate/cycle/debit reduction, crashes and restart, missing/changed evidence, 429/403/404, billing/overcharge/reset/external use, exact approvals/caps, authenticated ceiling tampering, debit overrides and global pending/stopped escape.
 

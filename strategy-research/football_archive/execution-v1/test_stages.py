@@ -153,3 +153,40 @@ def test_full_f2_then_f3_reuse_and_debits(tmp_path, monkeypatch):
     with pytest.raises(Exception): epoch.run(packet, root, BUNDLE, auth, key=lambda: reads.append(1), fake_session=again)
     with pytest.raises(Exception): epoch.run(props, root3, BUNDLE, auth3, key=lambda: reads.append(1), fake_session=again)
     assert not reads and not again.calls
+
+
+@pytest.mark.parametrize('filename', ['epoch.py', 'pilot_coverage.py', 'plan.py'])
+def test_pilot_gate_rejects_sentinel_before_any_import(tmp_path, monkeypatch, filename):
+    source = tmp_path / 'followups'
+    shutil.copytree(HERE.parent / 'followups', source)
+    extension = tmp_path / 'execution-v1'; extension.mkdir()
+    monkeypatch.setattr(epoch, '__file__', str(extension / 'epoch.py'))
+    marker = tmp_path / 'UNVERIFIED_EXECUTED'
+    with (source / filename).open('ab') as handle:
+        handle.write(('\nfrom pathlib import Path\nPath(' + repr(str(marker)) + ').write_text("bad")\nraise RuntimeError("UNVERIFIED_EXECUTED")\n').encode())
+    with pytest.raises(ValueError, match='before import'):
+        epoch.pilot_gate(BUNDLE)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize('change', ['missing', 'unexpected', 'symlink', 'packet_directory'])
+def test_pilot_gate_file_inventory_precedes_import(tmp_path, monkeypatch, change):
+    source = tmp_path / 'followups'; shutil.copytree(HERE.parent / 'followups', source)
+    extension = tmp_path / 'execution-v1'; extension.mkdir()
+    monkeypatch.setattr(epoch, '__file__', str(extension / 'epoch.py'))
+    if change == 'missing': (source / 'prepare.py').unlink()
+    if change == 'unexpected': (source / 'extra.py').write_text('raise RuntimeError("bad")')
+    if change == 'symlink':
+        (source / 'epoch.py').unlink()
+        (source / 'epoch.py').symlink_to(HERE.parent / 'followups/epoch.py')
+    if change == 'packet_directory': (source / 'F2-pilot/extra').mkdir()
+    with pytest.raises(ValueError): epoch.pilot_gate(BUNDLE)
+
+
+def test_pilot_execution_uses_verified_bytes_not_reopened_path(tmp_path, monkeypatch):
+    source = tmp_path / 'followups'; shutil.copytree(HERE.parent / 'followups', source)
+    captured = epoch.verified_pilot_bytes(source)
+    marker = tmp_path / 'UNVERIFIED_EXECUTED'
+    (source / 'epoch.py').write_text('from pathlib import Path\nPath(' + repr(str(marker)) + ').write_text("bad")')
+    old = epoch.pilot_module('verified_snapshot', source, 'epoch.py', captured)
+    assert callable(old.verify_packet) and not marker.exists()
