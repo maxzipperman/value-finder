@@ -16,6 +16,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[3]
+PROJECT = REPO.parent
 SOURCE_ROOT = "4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d"
 SOURCE_MANIFEST_SHA256 = "ab6e72a7e3bfc1f1b1ccdbc0a2b496eebd141097c80fc36dd96b684b4e25bb47"
 RECENT_LEDGER_SHA256 = "eb9e93e354babef2be73ddaa13ea6e2913c58eaaff706ed4e78aec1381636190"
@@ -95,6 +97,7 @@ def coverage(coverage_path):
 
 
 def seed(ledger_path, paid_rows):
+    paid_rows = list(paid_rows)
     ledger_path = Path(ledger_path).resolve()
     root = ledger_path.parent.name
     if len(root) != 64 or ledger_path != RUNTIME_BASE / root / "spending-ledger.json":
@@ -102,7 +105,8 @@ def seed(ledger_path, paid_rows):
     ledger_hash = sha(ledger_path)
     ledger = json.loads(ledger_path.read_text())
     if (ledger["bundle_root_sha256"] != root or ledger["pending"] is not None
-            or ledger["stopped"] is not None or ledger["probe_credits"] != 1687
+            or ledger["stopped"] is not None or type(ledger["probe_credits"]) is not int
+            or ledger["probe_credits"] != 1687
             or ledger["status"] not in ("recent_complete_stopped_before_older", "event_epoch_complete")
             or any(a["status"] not in ("completed", "missing") for a in ledger["attempts"].values())):
         raise ValueError("Predecessor is not completed and settled")
@@ -117,6 +121,11 @@ def seed(ledger_path, paid_rows):
         if current_root in ancestors:
             raise ValueError("Cyclic predecessor chain")
         ancestors.add(current_root)
+        if (type(current["probe_credits"]) is not int or current["probe_credits"] != 1687
+                or type(current["other_usage_reserved"]) is not int or current["other_usage_reserved"] < 0
+                or any(type(a["reserved_credits"]) is not int or a["reserved_credits"] < 0
+                       for a in current["attempts"].values())):
+            raise ValueError("Invalid ancestor accounting value")
         registered = RUNTIME_BASE / "registrations" / (current_root + ".json")
         initialized = RUNTIME_BASE / current_root / "INITIALIZED.json"
         if (not registered.is_file() or not initialized.is_file()
@@ -132,19 +141,29 @@ def seed(ledger_path, paid_rows):
                 raise ValueError("Original recent ledger pin changed")
             break
         prior = current.get("predecessor_seed")
-        if not prior or prior["root"] in ancestors:
+        if (not prior or prior["root"] in ancestors or type(prior["probe_credits"]) is not int
+                or prior["probe_credits"] != 1687
+                or type(prior["cumulative_debit_without_probe"]) is not int
+                or prior["cumulative_debit_without_probe"] < 0):
             raise ValueError("Missing or cyclic ancestor pin")
         prior_path = Path(prior["ledger_path"]).resolve()
         if prior_path != RUNTIME_BASE / prior["root"] / "spending-ledger.json" or sha(prior_path) != prior["ledger_sha256"]:
             raise ValueError("Ancestor ledger path or hash changed")
-        current = json.loads(prior_path.read_text())
-        if (current["bundle_root_sha256"] != prior["root"] or current["pending"] or current["stopped"]
-                or current["status"] not in ("recent_complete_stopped_before_older", "event_epoch_complete")
-                or any(a["status"] not in ("completed", "missing") for a in current["attempts"].values())):
+        parent = json.loads(prior_path.read_text())
+        if (parent["bundle_root_sha256"] != prior["root"] or parent["pending"] or parent["stopped"]
+                or parent["status"] not in ("recent_complete_stopped_before_older", "event_epoch_complete")
+                or type(parent["probe_credits"]) is not int or parent["probe_credits"] != 1687
+                or type(parent["other_usage_reserved"]) is not int or parent["other_usage_reserved"] < 0
+                or any(type(a["reserved_credits"]) is not int or a["reserved_credits"] < 0
+                       for a in parent["attempts"].values())
+                or any(a["status"] not in ("completed", "missing") for a in parent["attempts"].values())):
             raise ValueError("Ancestor ledger unsettled")
-        debit = current["other_usage_reserved"] + sum(a["reserved_credits"] for a in current["attempts"].values())
+        debit = parent["other_usage_reserved"] + sum(a["reserved_credits"] for a in parent["attempts"].values())
         if debit != prior["cumulative_debit_without_probe"] or prior["probe_credits"] != 1687:
             raise ValueError("Ancestor cumulative debit changed")
+        if current["other_usage_reserved"] < debit:
+            raise ValueError("Child cumulative debit decreased below ancestor")
+        current = parent
     debit = ledger["other_usage_reserved"] + sum(a["reserved_credits"] for a in ledger["attempts"].values())
     if 1687 + debit + MAX_CREDITS > 250000 or 1687 + debit + MAX_CREDITS > 400000:
         raise ValueError("Older stage exceeds cumulative ceiling")
@@ -166,9 +185,43 @@ def csv_bytes(bundle, older):
     return output.getvalue().encode()
 
 
+def raw_roots(exclude_root=None):
+    roots = {Path.home() / "code/value-finder/sharp-markets/data/raw",
+             REPO / "sharp-markets/data/raw",
+             Path.home() / "Documents/Codex/2026-10-02/value-finder-download-worker/implementation/sharp-markets/data/raw"}
+    roots.update(PROJECT.glob("*/sharp-markets/data/raw"))
+    pilot = ROOT / "followups/F2-pilot/cache-reconciliation.json"
+    roots.update(Path(p) for p in json.loads(pilot.read_text())["raw_roots"])
+    if RUNTIME_BASE.exists():
+        roots.update(RUNTIME_BASE.glob("*/data/raw"))
+    excluded = (RUNTIME_BASE / exclude_root / "data/raw").resolve() if exclude_root else None
+    return sorted({str(p.resolve()) for p in roots if p.resolve() != excluded})
+
+
+def reconcile_cache(older, bundle, exclude_root=None):
+    roots = raw_roots(exclude_root)
+    for row in older:
+        matches = set()
+        for raw in roots:
+            directory = Path(raw) / row["sport"] / row["source"]
+            matches.update(p.resolve() for p in directory.glob(f"*/{row['cache_key']}.parquet"))
+        if row["max_new_credits"] and matches:
+            raise ValueError("Existing exact paid cache key; no repurchase")
+        if not row["max_new_credits"]:
+            if sha(Path(bundle) / row["cache_source"]) != row["cache_sha256"]:
+                raise ValueError("Frozen reused cache changed")
+            if any(sha(path) != row["cache_sha256"] for path in matches):
+                raise ValueError("Conflicting reused cache copy")
+    return {"status": "reconciled", "request_count": len(older),
+            "paid_count": sum(bool(r["max_new_credits"]) for r in older),
+            "new_credits": MAX_CREDITS, "raw_roots": roots,
+            "paid_exact_cache_overlap": 0, "unrelated_cache_files_read": False}
+
+
 def freeze(packet):
     packet = Path(packet)
-    names = ("manifest.json", "requests.json", "request-list.csv", "seed.json", "coverage-decision.json")
+    names = ("manifest.json", "requests.json", "request-list.csv", "seed.json", "coverage-decision.json",
+             "cache-reconciliation.json")
     files = {name: sha(packet / name) for name in names}
     files["code/stage.py"] = sha(__file__)
     files["code/execute.py"] = sha(Path(__file__).with_name("execute.py"))
@@ -187,6 +240,7 @@ def prepare(bundle, coverage_path, predecessor_ledger, packet):
     (packet / "request-list.csv").write_bytes(csv_bytes(bundle, older))
     write(packet / "seed.json", predecessor)
     write(packet / "coverage-decision.json", accepted)
+    write(packet / "cache-reconciliation.json", reconcile_cache(older, bundle))
     write(packet / "manifest.json", {
         "stage": "older-priority-2", "source_bundle_root": SOURCE_ROOT,
         "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
@@ -206,7 +260,7 @@ def verify_packet(packet, root, bundle, coverage_path):
     cert = json.loads((packet / "FREEZE.json").read_text())
     if any(p.is_symlink() or p.is_dir() for p in packet.iterdir()):
         raise ValueError("Packet contains nonregular files")
-    expected_names = {"manifest.json", "requests.json", "request-list.csv", "seed.json",
+    expected_names = {"manifest.json", "requests.json", "request-list.csv", "seed.json", "cache-reconciliation.json",
                       "coverage-decision.json", "code/stage.py", "code/execute.py"}
     packet_names = {name for name in expected_names if not name.startswith("code/")} | {"FREEZE.json"}
     if set(cert["files"]) != expected_names or {p.name for p in packet.iterdir()} != packet_names:
@@ -235,6 +289,8 @@ def verify_packet(packet, root, bundle, coverage_path):
         raise ValueError("Older CSV differs from frozen source")
     if json.loads((packet / "coverage-decision.json").read_text()) != coverage(coverage_path):
         raise ValueError("Coverage acceptance artifact differs")
+    if json.loads((packet / "cache-reconciliation.json").read_text()) != reconcile_cache(older, bundle, root):
+        raise ValueError("Exact-key cache inventory changed")
     prior = json.loads((packet / "seed.json").read_text())
     if prior != seed(prior["ledger_path"], (r for r in older if r["max_new_credits"])):
         raise ValueError("Older predecessor changed")

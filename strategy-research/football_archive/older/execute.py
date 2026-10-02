@@ -12,7 +12,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 
@@ -33,7 +32,7 @@ def source_executor(bundle):
 def checkout_clean(packet):
     repo = Path(subprocess.check_output(["git", "-C", str(packet), "rev-parse", "--show-toplevel"], text=True).strip())
     paths = [packet / name for name in ("FREEZE.json", "manifest.json", "requests.json", "request-list.csv",
-             "seed.json", "coverage-decision.json")]
+             "seed.json", "coverage-decision.json", "cache-reconciliation.json")]
     paths.extend([Path(__file__), Path(stage.__file__)])
     relative = [str(p.resolve().relative_to(repo)) for p in paths]
     subprocess.run(["git", "-C", str(repo), "ls-files", "--error-unmatch", "--", *relative],
@@ -69,27 +68,14 @@ def exact_approval(base, authorization, manifest, root, commit, live):
 
 def cache_hits(row, exclude_root=None):
     hits = set()
-    if not stage.RUNTIME_BASE.exists():
-        return []
-    for folder in stage.RUNTIME_BASE.iterdir():
-        if folder.name == exclude_root or not folder.is_dir() or not re.fullmatch("[a-f0-9]{64}", folder.name):
-            continue
-        directory = folder / "data/raw" / row["sport"] / row["source"]
+    for raw in stage.raw_roots(exclude_root):
+        directory = Path(raw) / row["sport"] / row["source"]
         hits.update(p.resolve() for p in directory.glob(f"*/{row['cache_key']}.parquet"))
     return sorted(hits)
 
 
 def preflight_cache(rows, bundle, exclude_root=None):
-    for row in rows:
-        hits = cache_hits(row, exclude_root)
-        if row["max_new_credits"] and hits:
-            raise ValueError("An older paid request already has an exact cache key; no repurchase")
-        if not row["max_new_credits"]:
-            source = (bundle / row["cache_source"]).resolve()
-            if stage.sha(source) != row["cache_sha256"]:
-                raise ValueError("Frozen reuse changed")
-            if any(stage.sha(path) != row["cache_sha256"] for path in hits):
-                raise ValueError("Conflicting reused cache copy")
+    return stage.reconcile_cache(rows, bundle, exclude_root)
 
 
 def global_settled(current_root):
