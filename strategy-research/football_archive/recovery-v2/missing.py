@@ -139,6 +139,8 @@ def transition(bundle, certificate_path, approval_path, *, fake_auth=False, chec
     base.execution_context(Path(__file__).parent,ORIGINAL_ROOT,epoch.ROOT_BASE/ORIGINAL_ROOT)
     validate_approval(auth,certificate,base,base.checkout_commit(Path(__file__).parent))
     if not fake_auth: base.verify_live_hub_comment(auth)
+    import ancestry
+    ancestry.verify_first(bundle,authenticate=not fake_auth)
     folder=epoch.ROOT_BASE/ORIGINAL_ROOT
     with (epoch.ROOT_BASE/'followup-purchase.lock').open('a') as global_lock, (folder/'acquisition.lock').open('a') as local_lock:
         fcntl.flock(global_lock,fcntl.LOCK_EX|fcntl.LOCK_NB);fcntl.flock(local_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)

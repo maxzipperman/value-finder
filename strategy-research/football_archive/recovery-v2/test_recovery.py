@@ -78,7 +78,7 @@ class Session:
         if self.mode=='missing-billing':h['x-requests-last']='1'
         if self.mode=='missing-keyecho':body['message']=params['apiKey']
         if self.mode=='missing-floor':h['x-requests-remaining']='531629'
-        if self.mode=='missing-lag':h['x-requests-used']=str(self.used-1)
+        if self.mode=='missing-lag':h['x-requests-used']=str(self.used-101)
         if self.mode in ('403','404','429'):status=int(self.mode)
         return Response(json.dumps(body),h,status)
     def close(self):pass
