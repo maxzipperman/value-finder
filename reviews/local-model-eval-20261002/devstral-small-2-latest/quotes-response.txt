@@ -1,0 +1,62 @@
+Here's the Python implementation that meets all the specified requirements:
+
+```python
+import datetime
+from typing import List, Dict, Optional
+
+def select_quote(rows: List[Dict], decision: datetime.datetime, kickoff: datetime.datetime) -> Optional[Dict]:
+    eligible_rows = []
+
+    for row in rows:
+        # Check required keys exist
+        if not all(key in row for key in ['id', 'snapshot_utc', 'last_update_utc', 'price']):
+            continue
+
+        # Validate clocks
+        try:
+            snapshot = datetime.datetime.fromisoformat(row['snapshot_utc'])
+            last_update = datetime.datetime.fromisoformat(row['last_update_utc'])
+        except (ValueError, TypeError):
+            continue
+
+        # Check clocks are timezone-aware
+        if snapshot.tzinfo is None or last_update.tzinfo is None:
+            continue
+
+        # Check clocks are at or before decision and strictly before kickoff
+        if (snapshot > decision or last_update > decision or
+            snapshot >= kickoff or last_update >= kickoff):
+            continue
+
+        # Check last_update is at or before snapshot
+        if last_update > snapshot:
+            continue
+
+        # Validate price
+        try:
+            price = float(row['price'])
+        except (ValueError, TypeError):
+            continue
+
+        # Check price is numeric, finite, and absolute value >= 100
+        if (not isinstance(price, (int, float)) or
+            not str(price).replace('.', '', 1).isdigit() or
+            abs(price) < 100 or
+            not (price == int(price) or str(price).endswith('.0'))):
+            continue
+
+        eligible_rows.append(row)
+
+    if not eligible_rows:
+        return None
+
+    # Find row with latest snapshot
+    latest_snapshot = max(eligible_rows, key=lambda x: datetime.datetime.fromisoformat(x['snapshot_utc']))
+
+    # Filter rows with this snapshot
+    candidates = [r for r in eligible_rows
+                 if datetime.datetime.fromisoformat(r['snapshot_utc']) == datetime.datetime.fromisoformat(latest_snapshot['snapshot_utc'])]
+
+    # Return lexicographically smallest id
+    return min(candidates, key=lambda x: x['id'])
+```

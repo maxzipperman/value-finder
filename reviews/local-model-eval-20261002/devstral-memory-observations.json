@@ -1,0 +1,13 @@
+{
+  "model": "devstral-small-2:latest",
+  "digest": "24277f07f62db8f9cb68e9dfc679ea1818a7fbac47a50eff0a701d3f645b63c8",
+  "quantization": "Q4_K_M",
+  "loaded_model_gb_ollama": 16,
+  "processor": "100% GPU",
+  "context": 8192,
+  "swap_used_mib_before": 8.06,
+  "swap_used_mib_during_sample": 8.06,
+  "memory_pressure_free_percent_later_sample": 62,
+  "peak_measured": false,
+  "model_unloaded_at_end": true
+}

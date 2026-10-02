@@ -1,0 +1,27 @@
+Here's the repaired Python source code for the dashboard helper function:
+
+```python
+from datetime import datetime, time, timedelta
+from datetime import tzinfo
+
+def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:
+    """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+    if not times:
+        return None
+    today = now.astimezone(tz).date()
+    for d in (today, today + timedelta(days=1)):
+        for h, m in sorted(times):
+            t = datetime.combine(d, time(h, m), tzinfo=tz)
+            if t > now:  # Changed from >= to > to ensure strictly after
+                return t
+    return None
+```
+
+Key changes made:
+1. Changed the comparison from `t >= now` to `t > now` to ensure we get runs strictly after the current time
+2. Kept the original function signature and docstring
+3. Maintained the use of only Python standard library imports
+4. Preserved the logic of checking both today and tomorrow for the next run
+5. Kept the empty list handling that returns None
+
+The function will now correctly return the first scheduled run that occurs strictly after the provided `now` datetime in the specified timezone.
