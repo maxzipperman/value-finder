@@ -26,3 +26,5 @@ Reader/guard regressions: 106 passed, two skipped (unfetched research branch and
 Backup source correction is the follow-up [PR #106](https://github.com/maxzipperman/value-finder/pull/106) into #79's branch. It does not substitute for an actual encrypted off-device restore.
 
 READY FOR INDEPENDENT REVIEW. NOT READY for strategy grading or another purchase until the remaining gates above are satisfied.
+
+Owner update October 2: the owner explicitly waived off-device backup/restore as a purchase gate to prioritize the prepaid month. PR 105 is merged; PR 106 is merged into PR 79's branch and backup support is optional. Local durable accounting, exact-list reviews/approvals, cumulative older-run recovery and prospective grading registration remain required. Current queue: [OCTOBER_2026_QUEUE.md](../../sharp-markets/docs/OCTOBER_2026_QUEUE.md).
