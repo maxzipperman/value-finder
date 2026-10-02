@@ -77,6 +77,8 @@ class Session:
         if self.mode=='missing-code':body['error_code']='OTHER'
         if self.mode=='missing-billing':h['x-requests-last']='1'
         if self.mode=='missing-keyecho':body['message']=params['apiKey']
+        if self.mode=='missing-floor':h['x-requests-remaining']='531629'
+        if self.mode=='missing-lag':h['x-requests-used']=str(self.used-1)
         if self.mode in ('403','404','429'):status=int(self.mode)
         return Response(json.dumps(body),h,status)
     def close(self):pass
@@ -190,9 +192,13 @@ def test_full_exact_1186_preserves_581_valid_6_missing(prepared,mode):
     old={r['request_id'] for r in json.loads((prepared[0]/'requests.json').read_text()) if not r['max_new_credits']}
     assert not old & set(state['attempts'])
     assert state['status']=='event_epoch_complete'
+    rid=next(iter(state['attempts']));(prepared[7].runtime_path(prepared[1])/'receipts'/f'{rid}.json').unlink()
+    reads=[];again=Session()
+    with pytest.raises(Exception):run(prepared,again,key=lambda:reads.append(1))
+    assert not reads and not again.calls
 
 
-@pytest.mark.parametrize('mode',['timeout','billing','overcharge','reset','lag','external','403','404','429','missing-code','missing-billing','missing-counters','missing-reset','missing-external','missing-keyecho'])
+@pytest.mark.parametrize('mode',['timeout','billing','overcharge','reset','lag','external','403','404','429','missing-code','missing-billing','missing-counters','missing-reset','missing-external','missing-keyecho','missing-floor','missing-lag'])
 def test_adverse_halts_and_restart_never_sends(prepared,mode):
     apply(prepared);session=Session(mode)
     with pytest.raises(Exception):run(prepared,session)
@@ -241,3 +247,25 @@ def test_exact_policy_canonical_provider_only_and_identity():
     for field in ('cache_key','sport','source','url','params_json','http_status','body','headers_json'):
         bad=dict(rec);bad[field]='WRONG'
         with pytest.raises(Exception):policy.valid(row,bad,obj,base)
+
+
+def test_historical_second_original_commit_explicit_for_downstream(prepared,monkeypatch):
+    apply(prepared);base=prepared[7];monkeypatch.setattr(base,'checkout_commit',lambda _:'c'*40)
+    observed=[];monkeypatch.setattr(base,'verify_live_hub_comment',lambda auth:observed.append(auth['execution_commit']))
+    ancestry.verify_first(BUNDLE,authenticate=True)
+    ancestry.verify_second(prepared[2],BUNDLE,expected_commit='b'*40,authenticate=True)
+    assert observed==[ancestry.FIRST_COMMIT,'b'*40]
+    with pytest.raises(ValueError):ancestry.verify_second(prepared[2],BUNDLE,expected_commit='c'*40,authenticate=False)
+
+
+def test_missing_after_terminal_commit_crash_still_halts_no_resend(prepared):
+    apply(prepared);session=Session('missing')
+    def crash(at):
+        if at=='after_terminal_ledger':raise RuntimeError('crash')
+    with pytest.raises(RuntimeError):run(prepared,session,crash)
+    state=json.loads((prepared[7].runtime_path(prepared[1])/'spending-ledger.json').read_text())
+    assert len(state['attempts'])==1 and next(iter(state['attempts'].values()))['status']=='missing'
+    assert state['stopped']
+    reads=[];again=Session()
+    with pytest.raises(Exception):run(prepared,again,key=lambda:reads.append(1))
+    assert not reads and not again.calls

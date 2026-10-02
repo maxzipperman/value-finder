@@ -283,6 +283,7 @@ def event_ledger(base, missing_policy):
                 receipt = self.folder/'receipts'/(row['request_id']+'.json')
                 base.atomic(receipt, {'request_id':row['request_id'],'cache_key':row['cache_key'],
                     'record_sha256':plan.sha(path),'headers':headers,'record':record,'status':'missing',
+                    'reason':'exact approved requested event slot absent; full reservation retained; no resend',
                     'missing_policy_sha256':policy.sha(missing_policy)})
                 getattr(self,'checkpoint',lambda _:None)('after_receipt_durability')
                 self.state['attempts'][row['request_id']].update(status='missing',billed_credits=0,
