@@ -8,6 +8,12 @@ October 2, 2026, Codex chat `01a0ef6a-2d3f-7d22-903d-30bf83f66528`:
 
 > yea we should ask the hub to download the props archive starting may 3 2023 and get all that data and i give approval to download it when ready
 
+The owner reaffirmed the override in hub chat on October 2:
+
+> i override that old gate, i just want to download all the props
+
+The comprehensive scope inventory must therefore include all provider-supported historical NFL player-prop markets, rather than defaulting to the earlier six-market subset. Books, game phases, available history and a costed snapshot schedule still need to be explicit. The active [October queue](../sharp-markets/docs/OCTOBER_2026_QUEUE.md) and [credit-plan amendment](odds-api-credits.md) record this acquisition-only exception.
+
 The context is the NFL props archive, including earlier 2023 and 2024 seasons in addition to the completed 2025 stage. The owner wants acquisition for a broader research archive, regardless of whether the 2025 props gate passes. This prospectively changes purchase sequencing only. It does not revise the registered props hypotheses, their result criteria, season exclusions or staking rules, and does not authorize examining sealed 2026 outcomes. No additional blanket owner confirmation is needed for the requested acquisition within a reviewed, affordable scope.
 
 ## Hub preparation and readiness
@@ -22,6 +28,6 @@ The context is the NFL props archive, including earlier 2023 and 2024 seasons in
 
 The earlier plan makes more props acquisition conditional on the 2025 gate. The owner now asks for archive acquisition independently of that result. The hub must record this prospective purchase-policy change in the single queue before execution, while leaving prior executed freezes and registered research gates intact. Existing 2025 data must not be purchased again. No numeric cap is invented in this request; the exact cost is a deliverable of preparation.
 
-## Report for the hub
+## Readiness
 
-READY FOR THE HUB to prepare and review the archive scope. NOT READY FOR PAID EXECUTION: exact scope, list, budget and reviewed executor are not yet frozen. This worker made no API calls, read no keys or outcomes, and changed no live runtime.
+Preparation is authorized now. Paid execution requires the exact scope, list, budget and reviewed executor to be frozen and approved by the hub. No API calls, keys, outcomes or live runtime changes were involved in this policy amendment.
