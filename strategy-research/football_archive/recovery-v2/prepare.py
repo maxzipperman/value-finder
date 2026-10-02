@@ -26,9 +26,7 @@ def prepare():
     m['exact_missing_policy_sha256']=policy.sha(prospective)
     m['stage']='F2-second-continuation';m['cache_reconciliation']='completed predecessor reuse plus exact no-resend missing; fresh exact-key cross-store check'
     m=plan.write_packet(packet,m,rows,ops)
-    raw_roots=json.loads((here.parent/'recovery-v1/F2-continuation/cache-reconciliation.json').read_text())['raw_roots']
-    # New exact rows must be absent from all known stores, including original root.
-    raw_roots=sorted(set(raw_roots+[str(epoch.ROOT_BASE/missing.ORIGINAL_ROOT/'data/raw')]))
+    raw_roots=epoch.known_raw_roots()
     for row in rows:
         hits=[]
         for raw in raw_roots:

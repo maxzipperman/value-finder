@@ -124,7 +124,10 @@ def prepared(tmp_path,monkeypatch):
     base.atomic(packet/'missing-certificate.json',cert)
     seed=json.loads((packet/'seed.json').read_text());seed.update(ledger_path=str(paths[ancestry.SECOND_ROOT]),ledger_sha256=cert['post_ledger_sha256'])
     base.atomic(packet/'seed.json',seed)
-    info=json.loads((packet/'cache-reconciliation.json').read_text());info['raw_roots'].append(str(second/'data/raw'));info['request_set_sha256']=m['request_set_sha256'];base.atomic(packet/'cache-reconciliation.json',info)
+    info=json.loads((packet/'cache-reconciliation.json').read_text())
+    actual_roots=set(info['raw_roots']);discover=epoch.known_raw_roots
+    monkeypatch.setattr(epoch,'known_raw_roots',lambda own_root=None:sorted(actual_roots|set(discover(own_root))))
+    info['raw_roots']=epoch.known_raw_roots();info['request_set_sha256']=m['request_set_sha256'];base.atomic(packet/'cache-reconciliation.json',info)
     root=epoch.freeze(packet);auth=tmp_path/'offline.json';base.atomic(auth,offline_auth(cert))
     monkeypatch.setattr(epoch,'partial_certificate',lambda:cert)
     return packet,root,cert,post,receipt,paths[ancestry.SECOND_ROOT],auth,base,m
@@ -269,3 +272,32 @@ def test_missing_after_terminal_commit_crash_still_halts_no_resend(prepared):
     reads=[];again=Session()
     with pytest.raises(Exception):run(prepared,again,key=lambda:reads.append(1))
     assert not reads and not again.calls
+
+
+@pytest.mark.parametrize('kind',['global','isolated','known-store-overlap'])
+def test_new_store_inventory_and_exact_overlap_before_key(prepared,monkeypatch,kind):
+    apply(prepared);packet,root,*_=prepared
+    row=next(r for r in json.loads((packet/'requests.json').read_text()) if r['max_new_credits'])
+    if kind=='global':raw=epoch.ROOT_BASE/('f'*64)/'data/raw'
+    elif kind=='isolated':
+        project=packet.parent/'isolated-checkouts';monkeypatch.setattr(epoch,'PROJECT',project)
+        raw=project/'later-worker/sharp-markets/data/raw'
+    else:raw=Path(json.loads((packet/'cache-reconciliation.json').read_text())['raw_roots'][0])
+    # Never write a real store in the overlap test; freeze a temporary known store instead.
+    if kind=='known-store-overlap':
+        raw=packet.parent/'temporary-known/data/raw';raw.mkdir(parents=True)
+        discover=epoch.known_raw_roots;monkeypatch.setattr(epoch,'known_raw_roots',lambda own_root=None:sorted(set(discover(own_root))|{str(raw.resolve())}))
+        info=json.loads((packet/'cache-reconciliation.json').read_text());info['raw_roots']=epoch.known_raw_roots(root);prepared[7].atomic(packet/'cache-reconciliation.json',info)
+        root=epoch.freeze(packet)
+    hit=raw/row['sport']/row['source']/'2024-01-01'/(row['cache_key']+'.parquet');hit.parent.mkdir(parents=True);hit.write_bytes(b'SYNTHETIC exact-key overlap only')
+    reads=[];session=Session()
+    with pytest.raises(Exception):epoch.run(packet,root,BUNDLE,paid_auth(root,prepared[8],packet),key=lambda:reads.append(1),fake_session=session)
+    assert not reads and not session.calls
+
+
+def test_inventory_excludes_own_output_but_keeps_other_roots(tmp_path,monkeypatch):
+    monkeypatch.setattr(epoch,'ROOT_BASE',tmp_path)
+    own='1'*64;other='2'*64
+    for root in (own,other):(tmp_path/root/'data/raw').mkdir(parents=True)
+    roots=epoch.known_raw_roots(own)
+    assert str(tmp_path/own/'data/raw') not in roots and str(tmp_path/other/'data/raw') in roots

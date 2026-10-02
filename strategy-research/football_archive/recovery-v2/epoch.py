@@ -19,6 +19,8 @@ import plan
 
 ROOT_BASE = Path.home() / 'Library/Application Support/ValueFinder/football-acquisition-state'
 LIVE = Path.home() / 'code/value-finder'
+REPO=Path(__file__).resolve().parents[3]
+PROJECT=REPO.parent
 SEED_HASH = 'eb9e93e354babef2be73ddaa13ea6e2913c58eaaff706ed4e78aec1381636190'
 PRIOR_ROOT = plan.SOURCE_ROOT
 PILOT_ROOT = 'cbe125474acf46becd3f7e01903675ece864adb683cdc73734bad7e1635dddcc'
@@ -123,6 +125,21 @@ def source_executor(bundle):
     spec.loader.exec_module(module)
     return module
 
+
+
+def known_raw_roots(own_root=None):
+    # Same bounded live/project/worker/global discovery as reviewed N0; directory
+    # inventory only. Candidate-key scans never enumerate/read unrelated payloads.
+    legacy=Path(__file__).parent.parent/'recovery-v1/F2-continuation/cache-reconciliation.json'
+    roots={Path(p) for p in json.loads(legacy.read_text())['raw_roots']}
+    roots.update([LIVE/'sharp-markets/data/raw',REPO/'sharp-markets/data/raw'])
+    projects={PROJECT}
+    for raw in list(roots):
+        if str(raw).endswith('/sharp-markets/data/raw'):projects.add(raw.parents[2].parent)
+    for project in projects:roots.update(project.glob('*/sharp-markets/data/raw'))
+    roots.update(ROOT_BASE.glob('*/data/raw'))
+    excluded=(ROOT_BASE/own_root/'data/raw').resolve() if own_root else None
+    return sorted({str(p.resolve()) for p in roots if p.resolve()!=excluded})
 
 
 def matches(row, raw_roots):
@@ -348,6 +365,8 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
         cache_info = json.loads((packet / 'cache-reconciliation.json').read_text())
         if cache_info['status'] != 'reconciled' or cache_info['request_set_sha256'] != manifest['request_set_sha256']:
             raise base.Halt('Cache reconciliation missing or stale')
+        if cache_info['raw_roots']!=known_raw_roots(root):
+            raise base.Halt('Known raw-store inventory changed; reconcile/refreeze before purchase')
         for row in rows:
             hits = matches(row, cache_info['raw_roots'])
             if row['max_new_credits'] and hits:
