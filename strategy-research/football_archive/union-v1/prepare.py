@@ -10,7 +10,7 @@ import union
 import f3a_missing
 
 
-def prepare(candidate=False,continuation_authorization=None):
+def prepare(candidate=False,continuation_authorization=None,expected_ledger_sha256=None):
     here=Path(__file__).resolve().parent;packet=here/'F3a';bundle=here.parent/'acquisition/football-archive-v4'
     if (packet/'FREEZE.json').exists():
         root=json.loads((packet/'FREEZE.json').read_text())['root']
@@ -20,16 +20,14 @@ def prepare(candidate=False,continuation_authorization=None):
         auth={'status':'candidate_only'};seed={'status':'no_completed_predecessor_yet'}
     else:
         if not continuation_authorization:raise ValueError('Exact non-secret continuation paid authorization JSON required')
-        auth=union.json_file(Path(continuation_authorization));cert,coverage=union.validate(auth)
+        auth=union.json_file(Path(continuation_authorization));cert,coverage=union.validate(auth,expected_ledger_sha256=expected_ledger_sha256,authenticate=True)
         seed={'root':union.CONTINUATION_ROOT,'ledger_path':str(epoch.ROOT_BASE/union.CONTINUATION_ROOT/'spending-ledger.json'),
             'ledger_sha256':cert['continuation_ledger_sha256'],'probe_credits':1687,
             'cumulative_debit_without_probe':cert['cumulative_debit_without_probe']}
     epoch.source_executor(bundle)
     plan.build(bundle,packet,'F3a')
     m=json.loads((packet/'manifest.json').read_text());rows=json.loads((packet/'requests.json').read_text());ops=json.loads((packet/'opportunities.json').read_text())
-    raw_roots={Path.home()/'code/value-finder/sharp-markets/data/raw',here.parents[2]/'sharp-markets/data/raw',
-        Path('/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/football-analysis-repair/sharp-markets/data/raw')}
-    raw_roots.update(epoch.ROOT_BASE.glob('*/data/raw'))
+    raw_roots=epoch.known_raw_roots()
     _,read_record,*_=epoch.source_executor(bundle).vendor_imports(bundle,packet)
     base=epoch.source_executor(bundle);protocol=json.loads((bundle/'protocol.json').read_text());reused=[]
     for row in rows:
@@ -46,7 +44,7 @@ def prepare(candidate=False,continuation_authorization=None):
     m['f2_union_certificate_sha256']=union.digest(plan.canonical(cert))
     m=plan.write_packet(packet,m,rows,ops)
     for name,obj in [('exact-missing-policy.json',missing_policy),('seed.json',seed),('union-certificate.json',cert),('union-coverage.json',coverage),('continuation-authorization.json',auth),
-        ('cache-reconciliation.json',{'status':'reconciled','raw_roots':sorted(str(p.resolve()) for p in raw_roots),
+        ('cache-reconciliation.json',{'status':'reconciled','raw_roots':sorted(str(Path(p).resolve()) for p in raw_roots),
             'request_set_sha256':m['request_set_sha256'],'reused':reused,'paid_count':sum(bool(r['max_new_credits']) for r in rows),'new_credits':m['new_credits']})]:
         (packet/name).write_bytes(plan.canonical(obj)+b'\n')
     root=epoch.freeze(packet);epoch.verify_packet(packet,root);epoch.verify_source_plan(packet,bundle,m,rows)
@@ -58,5 +56,5 @@ def prepare(candidate=False,continuation_authorization=None):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--candidate',action='store_true');p.add_argument('--continuation-authorization',type=Path)
-    a=p.parse_args();prepare(a.candidate,a.continuation_authorization)
+    p=argparse.ArgumentParser();p.add_argument('--candidate',action='store_true');p.add_argument('--continuation-authorization',type=Path);p.add_argument('--expected-ledger-sha256')
+    a=p.parse_args();prepare(a.candidate,a.continuation_authorization,a.expected_ledger_sha256)

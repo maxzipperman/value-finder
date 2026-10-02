@@ -2,6 +2,7 @@
 import hashlib
 import json
 import plan
+from pathlib import Path
 
 
 def sha(obj):return hashlib.sha256(plan.canonical(obj)).hexdigest()
@@ -43,3 +44,11 @@ def valid(row,record,obj,base):
     last,used,left=[base.integer(headers.get(k)) for k in ('x-requests-last','x-requests-used','x-requests-remaining')]
     if last!=0:raise base.Halt('Only exact zero-billed F3a missing permitted')
     return headers,used,left
+
+
+def load(packet,manifest,rows):
+    ops=json.loads((Path(packet)/'opportunities.json').read_text())
+    obj=json.loads((Path(packet)/'exact-missing-policy.json').read_text())
+    if obj!=expected(rows,ops) or sha(obj)!=manifest['f3a_exact_missing_policy_sha256']:
+        raise ValueError('Exact separate F3a policy differs')
+    return obj
