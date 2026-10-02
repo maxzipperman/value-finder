@@ -94,6 +94,7 @@ def check_python_imports(root, files):
                         ancestor = ancestor.parent
                     if isinstance(node, ast.ImportFrom):
                         candidates += [target / (x.name + '.py') for x in node.names]
+                        candidates += [target / x.name / '__init__.py' for x in node.names]
                     for candidate in candidates:
                         if candidate.is_file() and candidate.is_relative_to(root):
                             local = candidate.relative_to(root).as_posix()
@@ -151,22 +152,37 @@ def evidence_inputs(root, config):
     require(all(not Path(n).name.startswith('.env') for n in files), 'secret evidence input forbidden')
     require(isinstance(config['environment'], dict) and all(isinstance(k, str) and
             isinstance(v, str) for k, v in config['environment'].items()), 'invalid test environment')
+    effective_env = {'PATH': os.defpath, 'LANG': 'C.UTF-8', **config['environment']}
+    require(all(Path(part).is_absolute() for part in effective_env['PATH'].split(os.pathsep)),
+            'test PATH must use absolute directories')
     binaries = {}
     for command in commands:
-        binary = sys.executable if command[0] == '{python}' else shutil.which(command[0])
+        binary = (sys.executable if command[0] == '{python}' else
+                  shutil.which(command[0], path=effective_env['PATH']))
         require(binary is not None, 'missing command binary')
-        binaries[command[0]] = file_hash(Path(binary).resolve())
+        path = Path(binary)
+        if not path.is_absolute(): path = root / path
+        path = path.absolute()  # Preserve venv interpreter symlink invocation.
+        require(path.read_bytes()[:2] != b'#!',
+                'invoke script with an explicitly bound interpreter')
+        binaries[command[0]] = {'path': str(path), 'sha256': file_hash(path.resolve())}
+        for token in command[1:]:
+            argument = root / token
+            if argument.is_file():
+                require(argument.is_relative_to(root) and argument.relative_to(root).as_posix() in files,
+                        'script/file command argument outside declared test inputs')
     return {'files': files, 'commands': commands, 'environment': environment(),
-            'configured_environment': config['environment'], 'command_binaries': binaries}
+            'configured_environment': config['environment'], 'effective_environment': effective_env,
+            'command_binaries': binaries}
 
 
 def run_evidence(root, config):
     inputs = evidence_inputs(root, config)
     results = []
     for command in config['commands']:
-        actual = [sys.executable if x == '{python}' else x for x in command]
+        actual = [inputs['command_binaries'][command[0]]['path'], *command[1:]]
         run = subprocess.run(actual, cwd=root, capture_output=True, shell=False,
-                             env={'PATH': os.defpath, 'LANG': 'C.UTF-8', **config['environment']})
+                             env=inputs['effective_environment'])
         results.append({'argv': command, 'exit_code': run.returncode,
                         'stdout_sha256': hashlib.sha256(run.stdout).hexdigest(),
                         'stderr_sha256': hashlib.sha256(run.stderr).hexdigest(),

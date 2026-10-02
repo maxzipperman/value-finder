@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import os
+from unittest.mock import patch
 import tempfile
 import unittest
 
@@ -16,7 +18,7 @@ class Guards(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
         for name, text in {'stage/main.py': 'import json\n', 'stage/requests.json': '[]',
                            'stage/runtime.json': '{}', 'stage/eligibility.json': '{}', 'stage/policy.json': '{}',
                            'stage/tests/test_main.py': '# test', 'stage/README.md': '# Explain'}.items():
@@ -123,6 +125,19 @@ class Guards(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'undeclared local import: external.py'):
             g.content_manifest(self.root, self.spec)
 
+    def test_from_import_child_package_initializer_rejected(self):
+        (self.root/'pkg/sub').mkdir(parents=True)
+        (self.root/'pkg/__init__.py').write_text('pass')
+        (self.root/'pkg/sub/__init__.py').write_text('pass')
+        self.spec['scopes'].append('pkg/__init__.py')
+        self.spec['files']['pkg/__init__.py'] = 'dependency'
+        (self.root/'stage/main.py').write_text('from pkg import sub')
+        with self.assertRaisesRegex(ValueError, 'undeclared local import: pkg/sub/__init__.py'):
+            g.content_manifest(self.root, self.spec)
+        self.spec['scopes'].append('pkg/sub/__init__.py')
+        self.spec['files']['pkg/sub/__init__.py'] = 'dependency'
+        g.content_manifest(self.root, self.spec)
+
     def evidence(self):
         subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
         subprocess.run(['git', '-C', str(self.root), '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
@@ -131,6 +146,49 @@ class Guards(unittest.TestCase):
                                          'stage/policy.json'],
                   'commands': [['{python}', '-c', 'print("ok")']], 'environment': {'PYTHONHASHSEED': '0'}}
         return config, g.run_evidence(self.root, config)
+
+    def test_caller_path_cannot_change_hashed_or_executed_binary(self):
+        config, _ = self.evidence()
+        fake = self.root/'caller-bin'
+        fake.mkdir()
+        (fake/'false').write_text('#!/bin/sh\nexit 0\n')
+        (fake/'false').chmod(0o755)
+        config['commands'] = [['false']]
+        with patch.dict(os.environ, {'PATH': str(fake) + os.pathsep + os.defpath}):
+            report = g.run_evidence(self.root, config)
+        self.assertFalse(report['passed'])
+        self.assertEqual(report['inputs']['effective_environment']['PATH'], os.defpath)
+        self.assertNotEqual(report['inputs']['command_binaries']['false']['path'], str(fake/'false'))
+
+    def test_changed_effective_binary_and_path_invalidate_evidence(self):
+        config, _ = self.evidence()
+        folder = self.root/'effective-bin'; folder.mkdir()
+        binary = folder/'vf-guard-test-command'
+        # Symlink to genuine binaries so the runner binds and executes their bytes.
+        binary.symlink_to('/usr/bin/true')
+        config['commands'] = [['vf-guard-test-command']]
+        config['environment']['PATH'] = str(folder)
+        report = g.run_evidence(self.root, config)
+        self.assertTrue(report['passed'])
+        self.assertEqual(report['inputs']['command_binaries']['vf-guard-test-command']['path'], str(binary))
+        binary.unlink(); binary.symlink_to('/usr/bin/false')
+        with self.assertRaisesRegex(ValueError, 'mismatch'):
+            g.verify_evidence(self.root, config, report)
+        self.assertFalse(g.run_evidence(self.root, config)['passed'])
+        config['environment']['PATH'] = os.defpath
+        with self.assertRaisesRegex(ValueError, 'missing command'):
+            g.verify_evidence(self.root, config, report)
+
+    def test_implicit_script_interpreter_and_undeclared_script_rejected(self):
+        config, _ = self.evidence()
+        script = self.root/'unbound.sh'; script.write_text('#!/bin/sh\nexit 0\n')
+        script.chmod(0o755)
+        config['commands'] = [[str(script)]]
+        with self.assertRaisesRegex(ValueError, 'explicitly bound interpreter'):
+            g.evidence_inputs(self.root, config)
+        config['commands'] = [['{python}', str(script)]]
+        with self.assertRaisesRegex(ValueError, 'outside declared'):
+            g.evidence_inputs(self.root, config)
 
     def test_evidence_reuse_and_unchanged_docs(self):
         config, report = self.evidence()
