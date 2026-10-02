@@ -152,18 +152,24 @@ def test_f3a_prekey_guards(driver,fault):
 
 
 def test_v4_source_rechecked_under_lock_before_vendor_key_or_send(driver,monkeypatch):
+    import shutil
+    bundle=driver[0].parent/'v4-copy';shutil.copytree(BUNDLE,bundle)
+    marker=driver[0].parent/'EXECUTED'
     original_flock=epoch.fcntl.flock;held=[];captures=[];vendors=[];reads=[];session=Session()
     def flock(fd,flags):
         result=original_flock(fd,flags)
-        if flags & epoch.fcntl.LOCK_EX:held.append(True)
+        if flags & epoch.fcntl.LOCK_EX:
+            held.append(True)
+            with (bundle/'executor.py').open('a') as h:
+                h.write(f"\nfrom pathlib import Path\nPath({str(marker)!r}).write_text('BAD')\n")
         return result
     def capture(bundle):
         captures.append(bool(held))
-        if held:raise ValueError('SYNTHETIC changed v4 source under purchase lock')
+        epoch.verified_v4_bytes(bundle)
         return driver[2]
     monkeypatch.setattr(epoch.fcntl,'flock',flock)
     monkeypatch.setattr(epoch,'source_executor',capture)
     monkeypatch.setattr(driver[2],'vendor_imports',lambda *args:vendors.append(1))
-    with pytest.raises(ValueError,match='changed v4 source under purchase lock'):
+    with pytest.raises(ValueError,match='Entire v4 bytes/root changed before import'):
         run(driver,session,key=lambda:reads.append(1))
-    assert captures==[False,True] and not vendors and not reads and not session.calls
+    assert captures==[False,True] and not marker.exists() and not vendors and not reads and not session.calls
