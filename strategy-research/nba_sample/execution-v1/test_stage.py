@@ -50,8 +50,10 @@ def test_exact_source_and_cache_identity():
     assert len({r["cache_key"] for r in rows}) == 754
 
 
-def test_candidate_packet_round_trip_and_tamper(chain, tmp_path):
+def test_candidate_packet_round_trip_and_tamper(chain, tmp_path, monkeypatch):
     _, child_path, _ = chain
+    original_seed = stage.seed
+    monkeypatch.setattr(stage, "seed", lambda path, rows, **kwargs: original_seed(path, rows))
     packet = tmp_path / "packet"
     root = stage.prepare(child_path, packet)
     manifest, rows, predecessor = stage.verify_packet(packet, root)
@@ -62,6 +64,12 @@ def test_candidate_packet_round_trip_and_tamper(chain, tmp_path):
     stage.write(packet / "requests.json", altered)
     with pytest.raises(ValueError, match="frozen root"):
         stage.verify_packet(packet, root)
+
+
+def test_real_packet_requires_both_f2_partials_and_union(chain, tmp_path):
+    _, child_path, _ = chain
+    with pytest.raises(ValueError, match="Both exact partial F2"):
+        stage.prepare(child_path, tmp_path / "blocked-packet")
 
 
 def test_child_cannot_drop_real_parent_debit(chain):

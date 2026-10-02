@@ -73,7 +73,7 @@ def source_executor(bundle):
 def checkout_clean(packet):
     repo = Path(subprocess.check_output(["git", "-C", str(packet), "rev-parse", "--show-toplevel"], text=True).strip())
     paths = [packet / name for name in (*stage.FILES, "FREEZE.json")]
-    paths.extend([Path(__file__), Path(stage.__file__)])
+    paths.extend([Path(__file__), Path(stage.__file__), stage.F2_HANDOFF_PATH])
     relative = [str(p.resolve().relative_to(repo)) for p in paths]
     subprocess.run(["git", "-C", str(repo), "ls-files", "--error-unmatch", "--", *relative],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -126,7 +126,7 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     if base.current_runtime() != json.loads((bundle / "runtime-lock.json").read_text()):
         raise base.Halt("Reviewed v4 runtime differs")
     internal_auth, bridge_manifest = exact_approval(base, authorization, manifest, root, commit, fake_session is None)
-    stage.seed(predecessor["ledger_path"], rows)
+    stage.seed(predecessor["ledger_path"], rows, require_f2=True)
     stage.reconcile(rows, root)
     global_settled(root)
     bridge_rows = internal_rows(rows)

@@ -70,7 +70,7 @@ def synthetic_run(tmp_path, monkeypatch):
                    "probe_credits": 1687, "cumulative_debit_without_probe": 85489}
     monkeypatch.setattr(stage, "RUNTIME_BASE", tmp_path / "global")
     monkeypatch.setattr(stage, "verify_packet", lambda *args: (manifest, rows, predecessor))
-    monkeypatch.setattr(stage, "seed", lambda *args: predecessor)
+    monkeypatch.setattr(stage, "seed", lambda *args, **kwargs: predecessor)
     monkeypatch.setattr(stage, "reconcile", lambda *args: {"exact_cache_overlap": 0})
     monkeypatch.setattr(execute, "source_executor", lambda *args: base)
     monkeypatch.setattr(execute, "checkout_clean", lambda *args: "b" * 40)

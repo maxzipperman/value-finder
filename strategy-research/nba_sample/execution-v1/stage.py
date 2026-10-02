@@ -7,8 +7,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import stat
+import types
 
 
 SOURCE = Path(__file__).resolve().parents[1]
@@ -28,6 +31,8 @@ REQUEST_SET_SHA256 = "b4894a5b1b837372d0a5aa7e649abe49b79840b5b6f1ef4836233c192a
 CAP = 7540
 RUNTIME_BASE = Path.home() / "Library/Application Support/ValueFinder/football-acquisition-state"
 TERMINAL = {"recent_complete_stopped_before_older", "event_epoch_complete", "older_epoch_complete"}
+F2_HANDOFF_PATH = REPO / "strategy-research/football_archive/f2_handoff.py"
+F2_HANDOFF_SHA256 = "17187a1ee03b9ed04d6bc6e9f03d18117d8d2ae1e819079c7dfb439119a03c57"
 
 
 def canonical(value):
@@ -44,6 +49,25 @@ def sha(path):
 
 def write(path, value):
     Path(path).write_bytes(canonical(value) + b"\n")
+
+
+def f2_handoff():
+    if F2_HANDOFF_PATH.is_symlink():
+        raise ValueError("Shared F2 gate must be a regular file")
+    fd = os.open(F2_HANDOFF_PATH, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError("Shared F2 gate must be a regular file")
+        with os.fdopen(fd, "rb", closefd=False) as handle:
+            data = handle.read()
+    finally:
+        os.close(fd)
+    if hashlib.sha256(data).hexdigest() != F2_HANDOFF_SHA256:
+        raise ValueError("Shared F2 gate bytes changed before import")
+    module = types.ModuleType("n0_reviewed_f2_handoff")
+    module.__file__ = str(F2_HANDOFF_PATH)
+    exec(compile(data, str(F2_HANDOFF_PATH), "exec"), module.__dict__)
+    return module
 
 
 def source():
@@ -124,8 +148,9 @@ def reconcile(rows, own_root=None):
             "unrelated_cache_files_read": False}
 
 
-def seed(ledger_path, rows):
+def seed(ledger_path, rows, *, require_f2=False):
     rows = list(rows)
+    gate = f2_handoff()
     ledger_path = Path(ledger_path).resolve()
     root = ledger_path.parent.name
     if not re.fullmatch("[a-f0-9]{64}", root) or ledger_path != RUNTIME_BASE / root / "spending-ledger.json":
@@ -137,6 +162,9 @@ def seed(ledger_path, rows):
     if root == V4_ROOT and digest != RECENT_LEDGER_SHA256:
         raise ValueError("Original F1 ledger changed")
     seen = set()
+    partial_roots = set()
+    union_proof = None
+    current_path = ledger_path
     paid_ids = {r["request_id"] for r in rows}
     paid_keys = {r["cache_key"] for r in rows}
     while True:
@@ -144,8 +172,13 @@ def seed(ledger_path, rows):
         if current_root in seen:
             raise ValueError("Cyclic predecessor chain")
         seen.add(current_root)
+        if current_root in (gate.FIRST_ROOT, gate.SECOND_ROOT):
+            gate.verify_partial(current_root, current_path, current, sha(current_path))
+            partial_roots.add(current_root)
         if (current["pending"] is not None or current["stopped"] is not None
-                or current["status"] not in TERMINAL or type(current["probe_credits"]) is not int
+                or (current["status"] not in TERMINAL
+                    and current_root not in (gate.FIRST_ROOT, gate.SECOND_ROOT))
+                or type(current["probe_credits"]) is not int
                 or current["probe_credits"] != 1687
                 or type(current["other_usage_reserved"]) is not int or current["other_usage_reserved"] < 0
                 or any(type(a["reserved_credits"]) is not int or a["reserved_credits"] < 0
@@ -177,7 +210,9 @@ def seed(ledger_path, rows):
             raise ValueError("Ancestor ledger path/hash changed")
         previous = json.loads(path.read_text())
         if (previous["bundle_root_sha256"] != prior["root"] or previous["pending"] or previous["stopped"]
-                or previous["status"] not in TERMINAL or type(previous["probe_credits"]) is not int
+                or (previous["status"] not in TERMINAL
+                    and prior["root"] not in (gate.FIRST_ROOT, gate.SECOND_ROOT))
+                or type(previous["probe_credits"]) is not int
                 or previous["probe_credits"] != 1687
                 or type(previous["other_usage_reserved"]) is not int or previous["other_usage_reserved"] < 0
                 or any(type(a["reserved_credits"]) is not int or a["reserved_credits"] < 0
@@ -188,15 +223,27 @@ def seed(ledger_path, rows):
             raise ValueError("Ancestor debit or root changed")
         if current["other_usage_reserved"] < prior_debit:
             raise ValueError("Cumulative debit decreased")
+        if prior["root"] == gate.SECOND_ROOT:
+            if union_proof is not None or current_root in (gate.FIRST_ROOT, gate.SECOND_ROOT):
+                raise ValueError("Duplicate or misplaced full F2 union")
+            union_proof = gate.verify_full_union(current_path)
+        if current_root == gate.SECOND_ROOT and prior["root"] != gate.FIRST_ROOT:
+            raise ValueError("Second F2 partial does not follow first")
         current = previous
+        current_path = path
+    if require_f2 and (partial_roots != {gate.FIRST_ROOT, gate.SECOND_ROOT} or union_proof is None):
+        raise ValueError("Both exact partial F2 ancestors and full union are required")
     latest = json.loads(ledger_path.read_text())
     if latest["bundle_root_sha256"] != root:
         raise ValueError("Latest predecessor root changed")
     debit = latest["other_usage_reserved"] + sum(a["reserved_credits"] for a in latest["attempts"].values())
     if 1687 + debit + CAP > 250000 or 1687 + debit + CAP > 400000:
         raise ValueError("N0 exceeds cumulative ceiling")
-    return {"root": root, "ledger_path": str(ledger_path), "ledger_sha256": digest,
-            "probe_credits": 1687, "cumulative_debit_without_probe": debit}
+    result = {"root": root, "ledger_path": str(ledger_path), "ledger_sha256": digest,
+              "probe_credits": 1687, "cumulative_debit_without_probe": debit}
+    if union_proof is not None:
+        result["f2_union_proof_sha256"] = union_proof
+    return result
 
 
 FILES = ("manifest.json", "requests.json", "request-list.csv", "seed.json", "cache-reconciliation.json")
@@ -206,6 +253,7 @@ def freeze(packet):
     files = {name: sha(packet / name) for name in FILES}
     files["code/stage.py"] = sha(__file__)
     files["code/execute.py"] = sha(Path(__file__).with_name("execute.py"))
+    files["code/f2_handoff.py"] = sha(F2_HANDOFF_PATH)
     root = hashlib.sha256(canonical(files)).hexdigest()
     write(packet / "FREEZE.json", {"root": root, "files": files})
     return root
@@ -213,7 +261,7 @@ def freeze(packet):
 
 def prepare(predecessor_ledger, packet):
     _, rows = source()
-    predecessor = seed(predecessor_ledger, rows)
+    predecessor = seed(predecessor_ledger, rows, require_f2=True)
     cache = reconcile(rows)
     packet = Path(packet)
     packet.mkdir(parents=True, exist_ok=False)
@@ -232,13 +280,14 @@ def verify_packet(packet, root):
     packet = Path(packet)
     _, rows = source()
     cert = json.loads((packet / "FREEZE.json").read_text())
-    expected_names = set(FILES) | {"code/stage.py", "code/execute.py"}
+    expected_names = set(FILES) | {"code/stage.py", "code/execute.py", "code/f2_handoff.py"}
     if (any(p.is_dir() or p.is_symlink() for p in packet.iterdir())
             or {p.name for p in packet.iterdir()} != set(FILES) | {"FREEZE.json"}
             or set(cert["files"]) != expected_names):
         raise ValueError("N0 packet file set changed")
     files = {name: sha(packet / name) for name in FILES}
-    files.update({"code/stage.py": sha(__file__), "code/execute.py": sha(Path(__file__).with_name("execute.py"))})
+    files.update({"code/stage.py": sha(__file__), "code/execute.py": sha(Path(__file__).with_name("execute.py")),
+                  "code/f2_handoff.py": sha(F2_HANDOFF_PATH)})
     if files != cert["files"] or hashlib.sha256(canonical(files)).hexdigest() != root or cert["root"] != root:
         raise ValueError("N0 frozen root or code changed")
     manifest = json.loads((packet / "manifest.json").read_text())
@@ -253,7 +302,7 @@ def verify_packet(packet, root):
     if json.loads((packet / "cache-reconciliation.json").read_text()) != reconcile(rows, root):
         raise ValueError("N0 cache reconciliation stale")
     prior = json.loads((packet / "seed.json").read_text())
-    if prior != seed(prior["ledger_path"], rows):
+    if prior != seed(prior["ledger_path"], rows, require_f2=True):
         raise ValueError("N0 predecessor changed")
     return manifest, rows, prior
 

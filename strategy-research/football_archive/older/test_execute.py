@@ -139,7 +139,7 @@ def test_confirm_path_reserves_before_send_and_refuses_resend(tmp_path, monkeypa
              "probe_credits": 1687, "cumulative_debit_without_probe": 85489}
     monkeypatch.setattr(stage, "RUNTIME_BASE", tmp_path)
     monkeypatch.setattr(stage, "verify_packet", lambda *args: (manifest, [row], prior))
-    monkeypatch.setattr(stage, "seed", lambda *args: prior)
+    monkeypatch.setattr(stage, "seed", lambda *args, **kwargs: prior)
     monkeypatch.setattr(execute, "source_executor", lambda *args: base)
     monkeypatch.setattr(execute, "checkout_clean", lambda *args: "b" * 40)
     monkeypatch.setattr(execute, "preflight_cache", lambda *args: None)

@@ -33,7 +33,7 @@ def checkout_clean(packet):
     repo = Path(subprocess.check_output(["git", "-C", str(packet), "rev-parse", "--show-toplevel"], text=True).strip())
     paths = [packet / name for name in ("FREEZE.json", "manifest.json", "requests.json", "request-list.csv",
              "seed.json", "coverage-decision.json", "cache-reconciliation.json")]
-    paths.extend([Path(__file__), Path(stage.__file__)])
+    paths.extend([Path(__file__), Path(stage.__file__), stage.F2_HANDOFF_PATH])
     relative = [str(p.resolve().relative_to(repo)) for p in paths]
     subprocess.run(["git", "-C", str(repo), "ls-files", "--error-unmatch", "--", *relative],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -103,7 +103,7 @@ def run(packet, root, bundle, coverage_path, authorization, *, key, fake_session
     internal_auth, bridge_manifest = exact_approval(base, authorization, manifest, root, commit, fake_session is None)
     base.validate_reconciliation(internal_auth["account_reconciliation"], root)
     preflight_cache(rows, bundle, root)
-    stage.seed(predecessor["ledger_path"], (r for r in rows if r["max_new_credits"]))
+    stage.seed(predecessor["ledger_path"], (r for r in rows if r["max_new_credits"]), require_f2=True)
     global_settled(root)
     source_rows = internal_rows(rows)
     bridge_manifest["requests"] = source_rows
