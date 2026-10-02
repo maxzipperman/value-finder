@@ -1,0 +1,124 @@
+1.  **Analyze the Request:**
+    *   **Goal:** Repair a specific Python function `next_run`.
+    *   **Context:** "Value Finder" is paper-only research (irrelevant context, just flavor).
+    *   **Constraints:**
+        *   Isolated synthetic coding test.
+        *   Use Python standard library only.
+        *   Do not read files, use network, execute commands, or access real data.
+        *   Return *only* complete executable Python source.
+        *   No markdown (just code).
+        *   Include needed imports.
+    *   **Function Signature:** `def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:`
+    *   **Logic Requirement:** Return the first daily scheduled run *strictly after* `now`, in the provided timezone. Accept unsorted times. Empty list returns None.
+    *   **Input:** `times` (list of tuples `(hour, minute)`), `now` (datetime), `tz` (timezone info).
+    *   **Output:** `datetime` object or `None`.
+
+2.  **Analyze the Provided Code:**
+    ```python
+    def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:
+        """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+        if not times:
+            return None
+        today = now.astimezone(tz).date()
+        for d in (today, today + timedelta(days=1)):
+            for h, m in sorted(times):
+                t = datetime.combine(d, time(h, m), tzinfo=tz)
+                if t >= now:
+                    return t
+        return None
+    ```
+
+3.  **Identify Issues/Edge Cases:**
+    *   *Logic Check:* The logic iterates through today and tomorrow. If `t >= now`, it returns `t`. This looks correct for "strictly after" (or "at or after", but usually "after" implies `>`, though the docstring says "strictly after" but the code uses `>=`. I should probably stick to the code's logic or correct it to `>` if the docstring is the source of truth. Let's look at the docstring again: "strictly after". The code uses `>=`. This is a potential bug. I should fix it to `>` to match the docstring, or stick to the code. Usually, "strictly after" means `>`. If the run is *at* `now`, it's not strictly after. I will correct the comparison to `>` to match the docstring.)
+    *   *Timezone Handling:* `now.astimezone(tz)` is used to get the date. This is good.
+    *   *Timezone on Result:* `datetime.combine(d, time(h, m), tzinfo=tz)`. This creates a naive datetime with a timezone attached. This is correct.
+    *   *Comparison:* `t >= now`. `now` is naive (usually passed as naive, though the signature doesn't enforce it). If `now` is naive and `t` is aware, comparison might raise an error or behave unexpectedly depending on the Python version and settings. However, the prompt implies `now` is a standard `datetime`. To be safe and robust, `now` should ideally be converted to the target timezone before comparison, or the result should be compared against a localized `now`.
+    *   *Refined Logic:*
+        1.  Normalize `now` to the target timezone (`now_tz`).
+        2.  Iterate through today and tomorrow.
+        3.  For each time in `times` (sorted):
+            4.  Construct `dt` in target timezone.
+            5.  Compare `dt` with `now_tz`.
+            6.  If `dt > now_tz`, return `dt`.
+    *   *Edge Case:* What if the time is exactly `now`? The docstring says "strictly after". So `>` is correct.
+    *   *Edge Case:* What if `times` is empty? Handled (`return None`).
+    *   *Edge Case:* What if `times` contains invalid times? The prompt assumes valid input for a coding test, but `time(h, m)` handles invalid ranges (raises ValueError). I'll assume valid input.
+
+4.  **Refining the Code:**
+
+    ```python
+    from datetime import datetime, time, timedelta
+    from typing import List, Tuple, Optional, Union
+
+    # The signature provided uses list[tuple[int, int]] and datetime | None.
+    # Python 3.9+ supports these types directly. I will use the standard library types.
+
+    def next_run(times: List[Tuple[int, int]], now: datetime, tz) -> Optional[datetime]:
+        """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+        if not times:
+            return None
+
+        # Normalize 'now' to the target timezone to ensure accurate comparison
+        now_tz = now.astimezone(tz)
+
+        today = now_tz.date()
+
+        # Check today and tomorrow
+        for days_offset in (0, 1):
+            current_date = today + timedelta(days=days_offset)
+            for h, m in sorted(times):
+                # Construct the datetime in the target timezone
+                candidate = datetime.combine(current_date, time(h, m), tzinfo=tz)
+
+                # Check if strictly after 'now'
+                if candidate > now_tz:
+                    return candidate
+
+        return None
+    ```
+
+5.  **Reviewing Constraints:**
+    *   "Return only complete executable Python source, without markdown." -> OK.
+    *   "Include needed imports." -> `datetime`, `timedelta`, `time`. `typing` is optional but good for clarity, though the prompt signature used `list` and `tuple` (Python 3.9+ style). I'll stick to standard library imports.
+    *   "Repair the following dashboard helper." -> The original code had `>=` instead of `>`. It also didn't explicitly normalize `now` to `tz` before comparison, which is safer.
+
+6.  **Final Code Construction:**
+
+    ```python
+    from datetime import datetime, time, timedelta
+
+    def next_run(times: list[tuple[int, int]], now: datetime, tz) -> datetime | None:
+        """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+        if not times:
+            return None
+
+        # Normalize 'now' to the target timezone to ensure accurate comparison
+        now_tz = now.astimezone(tz)
+
+        today = now_tz.date()
+
+        # Check today and tomorrow
+        for days_offset in (0, 1):
+            current_date = today + timedelta(days=days_offset)
+            for h, m in sorted(times):
+                # Construct the datetime in the target timezone
+                candidate = datetime.combine(current_date, time(h, m), tzinfo=tz)
+
+                # Check if strictly after 'now'
+                if candidate > now_tz:
+                    return candidate
+
+        return None
+    ```
+
+    *Self-Correction on `datetime | None`:* This syntax requires Python 3.10+. The prompt uses it. I will use it.
+
+    *Comparison Logic:* The original code did `t >= now`. The docstring says "strictly after". I will change to `>`.
+
+    *Timezone Logic:* `now.astimezone(tz)` is the correct way to handle naive `now` vs aware `tz`.
+
+    *Sorting:* `sorted(times)` is correct.
+
+    *Return:* `None` is correct.
+
+7.  **Final Output Generation:** (Produce the code block).

@@ -1,0 +1,110 @@
+```python
+import math
+from datetime import datetime, timezone
+
+
+def select_quote(rows, decision, kickoff):
+    """
+    Select the best quote from a list of rows based on specific eligibility criteria.
+    
+    Args:
+        rows: List of dicts with keys 'id', 'snapshot_utc', 'last_update_utc', 'price'
+        decision: Aware datetime object representing the decision time
+        kickoff: Aware datetime object representing the kickoff time
+        
+    Returns:
+        The original dict for the eligible row with the latest snapshot, or None
+    """
+    # Validate decision and kickoff are timezone-aware
+    if not isinstance(decision, datetime) or decision.tzinfo is None:
+        return None
+    if not isinstance(kickoff, datetime) or kickoff.tzinfo is None:
+        return None
+    
+    best_row = None
+    best_snapshot = None
+    
+    for row in rows:
+        # Check required keys exist
+        if not all(key in row for key in ('id', 'snapshot_utc', 'last_update_utc', 'price')):
+            continue
+        
+        snapshot_str = row['snapshot_utc']
+        last_update_str = row['last_update_utc']
+        price = row['price']
+        
+        # Validate price is not boolean first (bool is subclass of int)
+        if isinstance(price, bool):
+            continue
+            
+        # Validate price is numeric and finite
+        if isinstance(price, (int, float)):
+            if math.isnan(price) or math.isinf(price):
+                continue
+        elif isinstance(price, str):
+            try:
+                price_val = float(price)
+                if math.isnan(price_val) or math.isinf(price_val):
+                    continue
+                # Convert to numeric for further checks
+                price = price_val
+            except (ValueError, TypeError):
+                continue
+        else:
+            continue
+        
+        # Validate American odds absolute value >= 100
+        if abs(price) < 100:
+            continue
+        
+        # Parse snapshot_utc
+        try:
+            snapshot_dt = datetime.fromisoformat(snapshot_str)
+        except (ValueError, TypeError):
+            continue
+            
+        # Check snapshot is timezone-aware
+        if snapshot_dt.tzinfo is None:
+            continue
+            
+        # Parse last_update_utc
+        try:
+            last_update_dt = datetime.fromisoformat(last_update_str)
+        except (ValueError, TypeError):
+            continue
+            
+        # Check last_update is timezone-aware
+        if last_update_dt.tzinfo is None:
+            continue
+        
+        # Validate clocks are at or before decision
+        if snapshot_dt > decision:
+            continue
+        if last_update_dt > decision:
+            continue
+            
+        # Validate clocks are strictly before kickoff
+        if snapshot_dt >= kickoff:
+            continue
+        if last_update_dt >= kickoff:
+            continue
+            
+        # Validate last_update_utc is at or before snapshot_utc
+        if last_update_dt > snapshot_dt:
+            continue
+        
+        # Check eligibility: all conditions met
+        # For equal snapshots, choose lexicographically smallest id
+        if best_snapshot is None:
+            best_snapshot = snapshot_dt
+            best_row = row
+        elif snapshot_dt == best_snapshot:
+            # Compare ids lexicographically
+            if row['id'] < best_row['id']:
+                best_row = row
+        elif snapshot_dt > best_snapshot:
+            best_snapshot = snapshot_dt
+            best_row = row
+    
+    return best_row
+```

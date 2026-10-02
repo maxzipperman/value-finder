@@ -1,0 +1,16 @@
+{
+  "model": "glm-4.7-flash:latest",
+  "digest": "4475827791a269b02c8ec49b1c3bc1abb5846bacf3fae015b75d33986322d8f6",
+  "download_bytes": 19019270897,
+  "parameter_size": "29.9B",
+  "quantization": "Q4_K_M",
+  "ollama_version": "0.35.0",
+  "loaded_model_gb_ollama": 19,
+  "processor": "100% GPU",
+  "context": 8192,
+  "swap_used_mib_before": 8.06,
+  "swap_used_mib_during": 8.06,
+  "memory_pressure_free_percent_sample": 59,
+  "peak_measured": false,
+  "model_unloaded_at_end": true
+}

@@ -1,0 +1,224 @@
+The user wants a Python function `next_run` that returns the first scheduled run strictly after `now` based on a list of daily time tuples.
+
+**Constraints & Requirements:**
+1.  **Context:** "Value Finder" is paper-only research (irrelevant for code generation, but good for flavor).
+2.  **Type:** Isolated synthetic coding test.
+3.  **Libraries:** Python standard library only. No file I/O, no network, no external data.
+4.  **Output:** Only complete executable Python source code. No markdown.
+5.  **Implementation:** Repair the provided dashboard helper.
+6.  **Function Signature:** `def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:`
+7.  **Logic:**
+    *   `times`: List of `(hour, minute)` tuples.
+    *   `now`: `datetime` object representing the current moment.
+    *   `tz`: `tzinfo` object (e.g., `timezone.utc` or `timezone(timedelta(hours=5))`).
+    *   Behavior: Return the first run *strictly after* `now`.
+    *   Input handling: Accept unsorted times, handle empty list.
+    *   Time zone handling: Convert `now` to the target `tz` before comparing? The prompt says "return the first daily scheduled run STRICTLY AFTER aware now, in the provided timezone". Usually, this means we compare the local time of `now` in the `tz` against the schedules in that `tz`.
+
+**Analyzing the provided code snippet:**
+
+```python
+def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:
+    """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+    if not times:
+        return None
+    today = now.astimezone(tz).date()
+    for d in (today, today + timedelta(days=1)):
+        for h, m in sorted(times):
+            t = datetime.combine(d, time(h, m), tzinfo=tz)
+            if t >= now:
+                return t
+    return None
+```
+
+**Critique of provided code:**
+1.  `datetime.combine(d, time(h, m), tzinfo=tz)` creates a naive datetime with a timezone attached. This is valid.
+2.  `if t >= now`: This checks if the new time is *after or equal* to `now`.
+3.  The requirement is "strictly after".
+4.  The logic iterates today, then tomorrow.
+
+**Issues to fix:**
+1.  **"Strictly after" vs "After or equal":** Change `t >= now` to `t > now`.
+2.  **Timezone consistency:** The loop compares `t` (which is in `tz`) with `now` (which is passed in as a `datetime` argument). However, `now` might be in a different timezone. The prompt says "return... in the provided timezone". It implies the output should be in `tz`. To check if `t > now`, `now` needs to be aware of `tz`. If `now` is naive, it breaks. If `now` is aware of a *different* tz, `t > now` compares naive naive or aware-aware in the system default or explicitly passed tz. Standard practice for scheduling usually involves comparing against `now.astimezone(tz)`.
+    *   *Correction:* The logic `t = datetime.combine(d, time(h, m), tzinfo=tz)` makes `t` timezone-aware. `now` is passed as an argument. To ensure strict comparison in the correct calendar day, we should normalize `now` to `tz` *or* assume `now` is already the right context. However, standard robust code usually does `target = now.astimezone(tz)`.
+    *   The provided code does `today = now.astimezone(tz).date()`. This implies it expects to handle `now` relative to `tz`.
+    *   Let's look at the comparison: `if t >= now`. If `now` is naive, comparison with `t` (aware) usually raises an error or depends on Python version/default behavior (since 3.9, `datetime` comparison raises TypeError). The prompt says `now: datetime`. It doesn't specify if it's aware. The logic `t = datetime.combine(..., tzinfo=tz)` makes `t` aware. We should probably handle the comparison by converting `now` to `tz` inside the function to be safe and strictly logical, or ensure `now` is handled correctly.
+    *   Actually, looking at `today = now.astimezone(tz).date()`, the function *already* attempts to normalize `now` for the date calculation.
+    *   The main logic error is the inequality operator. It needs to be `>`.
+
+**Refining the Algorithm:**
+1.  Check if `times` is empty. Return `None`.
+2.  Determine the reference time: `target_now = now.astimezone(tz)`.
+    *   Why? Because we are scheduling in `tz`.
+3.  Determine `today` date in that zone.
+4.  Sort the times.
+5.  Loop through today.
+    *   Construct datetime `t`.
+    *   If `t > target_now`, return `t`.
+6.  Loop through tomorrow.
+    *   Construct datetime `t`.
+    *   If `t > target_now`, return `t`.
+7.  If none found, return `None` (though practically, a schedule always repeats eventually, but for a single day view, None is correct).
+
+**Correcting the provided code:**
+
+```python
+def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:
+    """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+    if not times:
+        return None
+    
+    # Normalize 'now' to the target timezone for accurate comparison
+    target_now = now.astimezone(tz)
+    
+    # Identify today and tomorrow in the target timezone
+    today = target_now.date()
+    tomorrow = today + timedelta(days=1)
+    
+    # Sort times to ensure we pick the earliest of the sorted candidates
+    sorted_times = sorted(times)
+    
+    for day_offset in (0, 1):
+        current_date = today + timedelta(days=day_offset)
+        for h, m in sorted_times:
+            # Construct naive datetime and attach timezone info
+            scheduled_time = datetime.combine(current_date, time(h, m), tzinfo=tz)
+            
+            # Strictly after comparison
+            if scheduled_time > target_now:
+                return scheduled_time
+                
+    return None
+```
+
+**Constraint Check:**
+*   Python standard library only? Yes.
+*   No files/network? Yes.
+*   No markdown? Yes.
+*   Imports? `from datetime import datetime, time, timedelta, tzinfo`. `typing` is usually needed for the signature hints like `datetime | None` (Python 3.10+ style), but strictly speaking standard library includes `typing`. However, the pipe operator `|` was introduced in 3.10. If the user wants compatible code, they might need `Union`. But the prompt signature uses `datetime | None`. I will include `typing` for compatibility if I can, or just use the syntax assuming modern Python. The prompt signature explicitly uses `datetime | None`, implying Python 3.10+. I will stick to that. I need `datetime`, `time`, `timedelta`, and `tzinfo`.
+
+Let's double check the "strictly after" logic.
+If the current time is 14:00 (in the target tz).
+Schedule: 12:00, 15:00.
+Sorted: 12:00, 15:00.
+Today (14:00): t=12:00 (No, not > 14:00). t=15:00 (Yes). Returns 15:00.
+Correct.
+
+If the current time is 14:00.
+Schedule: 14:00.
+Today (14:00): t=14:00 (Not > 14:00). t=15:00 (if exists).
+Tomorrow: t=14:00 (next day).
+Returns 14:00 tomorrow.
+Correct for "strictly after".
+
+One detail: `datetime.combine(..., tzinfo=tz)`. If `tz` is `timezone.utc` and the `now` passed is naive, `now.astimezone(tz)` works. If `now` is aware in a different tz, `now.astimezone(tz)` works. This handles the requirement "strictly after... in the provided timezone" correctly.
+
+**Final Code Structure:**
+```python
+from datetime import datetime, time, timedelta, tzinfo
+
+def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:
+    """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+    if not times:
+        return None
+    
+    # Normalize `now` to the target timezone to ensure accurate day/time comparison
+    target_now = now.astimezone(tz)
+    today = target_now.date()
+    
+    # Sort times to guarantee the first match is the earliest possible
+    sorted_times = sorted(times)
+    
+    # Check today and tomorrow (schedules are daily)
+    for day_offset in (0, 1):
+        candidate_date = today + timedelta(days=day_offset)
+        for hour, minute in sorted_times:
+            run_time = datetime.combine(candidate_date, time(hour, minute), tzinfo=tz)
+            if run_time > target_now:
+                return run_time
+                
+    return None
+```
+
+Wait, the prompt says "Repair the following dashboard helper." and provides code. I should probably keep the docstring or improve it slightly, but the core logic is the priority.
+
+The original code: `t = datetime.combine(d, time(h, m), tzinfo=tz)`.
+This creates a time-aware datetime with a fixed tzinfo. If `tz` is an offset timezone (like UTC), this is fine.
+If `tz` is a named timezone (e.g., `ZoneInfo('America/New_York')`), `tzinfo` is the correct argument for `combine` (though `datetime.combine(d, t)` + `astimezone` is often safer to avoid issues with DST transitions at midnight if the tz object is static).
+Actually, `datetime.combine(d, time(h, m), tzinfo=tz)` attaches the timezone object *to the datetime*.
+If `tz` is `timezone.utc`, `datetime.combine(today, time(...), tzinfo=timezone.utc)` is correct.
+If `tz` is `ZoneInfo('US/Eastern')`, `datetime.combine(today, time(...), tzinfo=ZoneInfo('US/Eastern'))` might be incorrect depending on implementation details (it might be naive with the wrong tz info or valid).
+However, the standard way is `datetime.combine(d, time(h, m), tzinfo=tz)` is generally accepted for simple offset timezones. Given the constraints and "Repair", I will stick to the syntax provided but fix the logic error (`>=` -> `>`) and the comparison reference.
+
+One specific edge case: `datetime.combine(date, time, tzinfo)`. If `tzinfo` is `None`, it's naive. If it's a specific object, it's aware.
+If `now` is naive and `tz` is UTC:
+`now.astimezone(tz)` -> raises ValueError: `NaiveTime` cannot be converted to UTC.
+Wait, `now` is passed as `datetime`. The prompt doesn't guarantee it's aware.
+If `now` is naive, `now.astimezone(tz)` fails.
+Is `now` guaranteed to be aware? Usually, `aware now` implies it is aware. The prompt text says "return the first daily scheduled run STRICTLY AFTER aware now". It implies `now` *is* aware.
+So I will assume `now` is aware or handles the conversion gracefully.
+If I want to be super robust (Standard Library only), I can check if `now` is naive. But the prompt signature doesn't imply handling naive datetimes (like `from datetime import datetime`). It accepts a `datetime`.
+
+Let's stick to the robust version that normalizes `now` to the target `tz`, as that is the only way to correctly answer "strictly after ... in the provided timezone".
+
+The provided code iterates `(today, today + timedelta(days=1))`. This is correct for a daily schedule that repeats every 24 hours.
+
+Refined Code:
+
+```python
+from datetime import datetime, time, timedelta, tzinfo
+
+def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:
+    """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+    if not times:
+        return None
+
+    # Normalize the current time to the target timezone to ensure the comparison is correct
+    target_now = now.astimezone(tz)
+    today = target_now.date()
+    tomorrow = today + timedelta(days=1)
+    
+    # Sort times to find the earliest valid run
+    sorted_times = sorted(times)
+    
+    # Check today and tomorrow
+    for day in (today, tomorrow):
+        for hour, minute in sorted_times:
+            run_time = datetime.combine(day, time(hour, minute), tzinfo=tz)
+            if run_time > target_now:
+                return run_time
+                
+    return None
+```
+
+This looks solid. It uses standard library only. It fixes the comparison logic. It respects the signature. It addresses the timezone requirement.
+
+One nuance: The prompt says "Repair the following dashboard helper." It implies I shouldn't rewrite the logic structure entirely, just fix the bugs. The original logic structure was:
+1. Check empty.
+2. Get today.
+3. Loop 2 days.
+4. Sort times.
+5. Combine and compare.
+
+My fix changes:
+`if t >= now:` to `if run_time > target_now:`.
+It adds `target_now = now.astimezone(tz)` to handle the timezone requirement more robustly than relying on the global/local state implied by `datetime.combine` comparison if `now` was naive (though I assume `now` is aware per prompt).
+
+Actually, looking at the provided code: `t = datetime.combine(d, time(h, m), tzinfo=tz)`. This is valid standard library usage.
+
+Final check on imports: `from datetime import datetime, time, timedelta, tzinfo`.
+The signature `datetime | None` requires Python 3.10+ syntax. I'll assume the environment supports it as per modern Python standard.
+
+One edge case: If `times` contains `(23, 59)` and `now` is `00:00` tomorrow.
+Today: `t` is `23:59` (previous day or today). `t > target_now`?
+If `target_now` is `00:00` today: `23:59` < `00:00`. Fail.
+Tomorrow: `t` is `23:59` (tomorrow). `23:59` > `00:00`. Returns `23:59` tomorrow.
+Correct.
+
+If `times` is `[(23, 59)]` and `now` is `23:59` today.
+Today: `t` is `23:59`. `23:59` > `23:59`? False.
+Tomorrow: `t` is `23:59` tomorrow. `23:59` > `23:59`? False.
+Returns None.
+Correct for "strictly after".
+
+I will output the code block.

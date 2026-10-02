@@ -1,6 +1,7 @@
 """LOCAL-BECAUSE: hardware: bounded local inference, synthetic coding tests only."""
 import ast
 import json
+import os
 import re
 import sys
 import time
@@ -70,22 +71,27 @@ case('numeric string price','quotes',lambda ns: check_quote(ns,[row(price='-110'
 
 if sys.argv[1]=='generate':
  model=sys.argv[2]
- out=ROOT/(model.replace(':','-') + ('-repair' if len(sys.argv)>3 else ''));out.mkdir(exist_ok=True)
+ out=ROOT/(model.replace(':','-') + os.environ.get('EVAL_LABEL','') + ('-repair' if len(sys.argv)>3 else ''));out.mkdir(exist_ok=True)
  for task,prompt in TASKS:
   (out/(task+'-prompt.txt')).write_text(prompt)
   messages=[dict(role='user',content=prompt)]
   if len(sys.argv)>3:
-   prior=ROOT/model.replace(':','-')
+   prior=ROOT/(model.replace(':','-') + os.environ.get('EVAL_LABEL',''))
    failures=[r for r in json.loads((prior/'acceptance.json').read_text()) if r['task']==task and not r['passed']]
    if not failures: continue
    messages += [dict(role='assistant',content=(prior/(task+'-response.txt')).read_text()),dict(role='user',content='Your code failed these acceptance checks. Fix the implementation and return complete Python source only. '+json.dumps(failures))]
   body=dict(model=model,messages=messages,stream=False,keep_alive='5m',options=dict(temperature=0,num_ctx=8192,num_predict=2400,seed=42))
+  if os.environ.get('EVAL_THINK') in ('false','true'): body['think']=os.environ['EVAL_THINK']=='true'
+  if os.environ.get('EVAL_TOKEN_BUDGET'): body['options']['num_predict']=int(os.environ['EVAL_TOKEN_BUDGET'])
+  if os.environ.get('EVAL_SAMPLING')=='default': body['options'].pop('temperature',None)
+  (out/(task+'-request-settings.json')).write_text(json.dumps({k:v for k,v in body.items() if k!='messages'},indent=2))
   started=time.monotonic()
   try:
    req=urllib.request.Request('http://127.0.0.1:11434/api/chat',data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
    with urllib.request.urlopen(req,timeout=360) as r: result=json.load(r)
    result['wall_seconds']=time.monotonic()-started
    response=result.get('message',{}).get('content','')
+   (out/(task+'-thinking.txt')).write_text(result.get('message',{}).get('thinking',''))
    (out/(task+'-response.txt')).write_text(response)
    blocks=re.findall(r'```(?:python)?\s*\n(.*?)```',response,re.S)
    code='\n'.join(blocks) if blocks else response
@@ -95,11 +101,11 @@ if sys.argv[1]=='generate':
   except Exception as e:
    (out/(task+'-error.txt')).write_text(str(e));print(task,type(e).__name__,str(e),flush=True)
 else:
- model=sys.argv[2];out=ROOT/(model.replace(':','-') + ('-repair' if len(sys.argv)>3 else ''));results=[]
+ model=sys.argv[2];out=ROOT/(model.replace(':','-') + os.environ.get('EVAL_LABEL','') + ('-repair' if len(sys.argv)>3 else ''));results=[]
  for task,_ in TASKS:
   try:
    source_path=out/(task+'.py')
-   if not source_path.exists() and len(sys.argv)>3: source_path=ROOT/model.replace(':','-')/(task+'.py')
+   if not source_path.exists() and len(sys.argv)>3: source_path=ROOT/(model.replace(':','-') + os.environ.get('EVAL_LABEL',''))/(task+'.py')
    source=source_path.read_text();tree=ast.parse(source)
    for node in ast.walk(tree):
     if isinstance(node,(ast.Import,ast.ImportFrom)):
