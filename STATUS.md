@@ -165,3 +165,5 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 ## Keeping this current
 
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
+
+**N0 acquisition preparation (Oct2,2026):** the fixed Jan5–11,2026 NBA2025–26 sample has56 scheduled event identities and754 exact h2h requests /7540-credit maximum, still non-executable pending a reviewed cumulative driver, clean latest predecessor and exact hub approval. Free Kalshi inputs are cached for112 markets (259778 price minutes), with no paid credits or strategy results. See [candidate packet](strategy-research/nba_sample/README.md).
