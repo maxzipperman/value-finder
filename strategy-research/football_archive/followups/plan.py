@@ -35,7 +35,10 @@ def sha(path):
 
 
 def ts(value):
-    return datetime.fromisoformat(value.replace('Z', '+00:00'))
+    result = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    if result.utcoffset() is None:
+        raise ValueError('Timezone required')
+    return result
 
 
 def iso(value):
@@ -69,7 +72,13 @@ def request(sport, provider_id, at, markets, books):
 
 def plan(pid, games, observations, books):
     seasons, markets, cap = SPECS[pid]
+    game_metadata = {g['canonical_game_id']: g for g in games}
     by_game, unmatched = defaultdict(list), defaultdict(list)
+    id_games = defaultdict(set)
+    for observation in observations:
+        if observation.get('canonical_game_id'):
+            id_games[observation['sport'], observation['provider_id']].add(observation['canonical_game_id'])
+    conflicted = {key for key, ids in id_games.items() if len(ids) > 1}
     for observation in observations:
         if observation['sport'] != NFL or observation['season'] not in seasons:
             continue
@@ -95,7 +104,11 @@ def plan(pid, games, observations, books):
         for slot, delta in (('T24', timedelta(hours=24)), ('CLOSE_T10', timedelta(minutes=10))):
             at = anchor - delta
             op = {'opportunity_id': f'{gid}/{slot}', 'game_identity': gid, 'identity_type': kind,
-                  'season': season, 'slot': slot, 'requested_utc': iso(at), 'anchor_utc': iso(anchor)}
+                  'season': season, 'slot': slot, 'requested_utc': iso(at), 'anchor_utc': iso(anchor),
+                  'timing_claim': 'retrospective scheduled safety restriction; not actual-play certified'}
+            metadata = game_metadata.get(gid, {})
+            op['close_primary_status'] = metadata.get('close_primary_status', 'independent_schedule_missing')
+            op['schedule_discrepancy_minutes'] = metadata.get('schedule_discrepancy_minutes')
             eligible = [o for o in seen if ts(o['returned_utc']) <= at]
             if not eligible:
                 op['status'] = 'not_bound_in_available_sweeps_before_slot'
@@ -110,7 +123,9 @@ def plan(pid, games, observations, books):
                     eid = next(iter(ids))
                     clocks = [ts(o['provider_kickoff_utc']) for o in closest]
                     orientations = {(o['home_team'], o['away_team']) for o in closest}
-                    if len(orientations) != 1 or len(set(clocks)) != 1:
+                    if (NFL, eid) in conflicted:
+                        op['status'] = 'provider_id_maps_to_multiple_canonical_games'
+                    elif len(orientations) != 1 or len(set(clocks)) != 1:
                         op['status'] = 'conflicting_provider_clock_or_orientation'
                     elif at >= min(clocks):
                         op['status'] = 'at_or_after_provider_kickoff_as_observed_before_slot'
@@ -121,7 +136,11 @@ def plan(pid, games, observations, books):
                         existing = rows.setdefault(row['request_id'], row)
                         if op['opportunity_id'] not in existing['opportunities']:
                             existing['opportunities'].append(op['opportunity_id'])
-                        op.update(status='planned', request_id=row['request_id'], provider_id=eid)
+                        op.update(status='planned', request_id=row['request_id'], provider_id=eid,
+                                  provider_kickoff_utc=iso(clocks[0]), home_team=closest[0]['home_team'],
+                                  away_team=closest[0]['away_team'],
+                                  binding_evidence=[{'cache_key': o['source_cache_key'], 'body_sha256': o['source_body_sha256']}
+                                                    for o in closest])
             opportunities.append(op)
     requests = sorted(rows.values(), key=lambda row: (row['requested_utc'], row['request_id']))
     cost = sum(row['max_new_credits'] for row in requests)
@@ -130,13 +149,7 @@ def plan(pid, games, observations, books):
     return requests, opportunities
 
 
-def build(bundle, out, pid):
-    inputs = verify_source(bundle)
-    cfg = json.loads((bundle / 'protocol.json').read_text())
-    if len(cfg['book_panel']) != 10 or len(set(cfg['book_panel'])) != 10:
-        raise ValueError('Exactly ten distinct books required')
-    requests, opportunities = plan(pid, json.loads((bundle / 'canonical-games.json').read_text()),
-                                   json.loads((bundle / 'provider-observations.json').read_text()), cfg['book_panel'])
+def write_packet(out, manifest, requests, opportunities):
     out.mkdir(parents=True, exist_ok=True)
     (out / 'requests.json').write_bytes(canonical(requests) + b'\n')
     (out / 'opportunities.json').write_bytes(canonical(opportunities) + b'\n')
@@ -149,17 +162,52 @@ def build(bundle, out, pid):
     counts = defaultdict(int)
     for op in opportunities:
         counts[op['status']] += 1
+    manifest.update(request_count=len(requests), request_set_sha256=hashlib.sha256(canonical(requests)).hexdigest(),
+                    request_list_sha256=sha(out / 'request-list.csv'), new_credits=sum(r['max_new_credits'] for r in requests),
+                    opportunity_count=len(opportunities), opportunity_status=dict(counts),
+                    provider_only_opportunities=sum(o['identity_type'] == 'provider-only' for o in opportunities))
+    (out / 'manifest.json').write_bytes(canonical(manifest) + b'\n')
+    return manifest
+
+
+def build(bundle, out, pid):
+    inputs = verify_source(bundle)
+    cfg = json.loads((bundle / 'protocol.json').read_text())
+    if len(cfg['book_panel']) != 10 or len(set(cfg['book_panel'])) != 10:
+        raise ValueError('Exactly ten distinct books required')
+    requests, opportunities = plan(pid, json.loads((bundle / 'canonical-games.json').read_text()),
+                                   json.loads((bundle / 'provider-observations.json').read_text()), cfg['book_panel'])
     manifest = {'status': 'prepared_not_authorized', 'pull': pid, 'source_bundle_root': SOURCE_ROOT,
-                'source_input_sha256': inputs, 'scope_seasons': list(SPECS[pid][0]), 'sport': NFL,
-                'request_count': len(requests), 'request_set_sha256': hashlib.sha256(canonical(requests)).hexdigest(),
-                'request_list_sha256': sha(out / 'request-list.csv'), 'new_credits': sum(r['max_new_credits'] for r in requests),
-                'planning_ceiling': SPECS[pid][2], 'opportunity_count': len(opportunities), 'opportunity_status': dict(counts),
-                'provider_only_opportunities': sum(o['identity_type'] == 'provider-only' for o in opportunities),
+                'source_input_sha256': inputs, 'scope_seasons': list(SPECS[pid][0]), 'sport': NFL, 'books': cfg['book_panel'],
+                'planning_ceiling': SPECS[pid][2],
                 'close_policy_proposal': 'scheduled-safe T-10; amendment/list review required before paid send',
                 'cache_reconciliation': 'PENDING: no reuse assumed until cross-store hashes verified',
                 'API_calls': 0, 'outcomes_joined': False, 'sealed_seasons_included': False}
-    (out / 'manifest.json').write_bytes(canonical(manifest) + b'\n')
-    return manifest
+    return write_packet(out, manifest, requests, opportunities)
+
+
+def pilot_subset(rows, ops):
+    selected = set()
+    for year in SPECS['F2'][0]:
+        games = {o['game_identity']: o['anchor_utc'] for o in ops
+                 if o['season'] == year and o['identity_type'] == 'canonical' and
+                 ts(o['anchor_utc']) >= ts(f'{year}-09-01T00:00:00Z')}
+        selected.update(sorted(games, key=lambda gid: (games[gid], gid))[:8])
+    ops = [o for o in ops if o['game_identity'] in selected]
+    op_ids = {o['opportunity_id'] for o in ops}
+    rows = [dict(r, opportunities=[o for o in r['opportunities'] if o in op_ids]) for r in rows if set(r['opportunities']) & op_ids]
+    return rows, ops
+
+
+def pilot(full, out):
+    manifest = json.loads((full / 'manifest.json').read_text())
+    if manifest['pull'] != 'F2':
+        raise ValueError('Pilot is F2 only')
+    rows, ops = pilot_subset(json.loads((full / 'requests.json').read_text()),
+                             json.loads((full / 'opportunities.json').read_text()))
+    manifest.update(stage='pilot', pilot_selection='first 8 canonical games after Sep 1 per season; both slots',
+                    parent_request_set_sha256=manifest['request_set_sha256'], gate='coverage.json criteria; no outcomes')
+    return write_packet(out, manifest, rows, ops)
 
 
 def main():

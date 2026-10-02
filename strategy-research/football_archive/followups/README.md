@@ -25,7 +25,33 @@ report and independent review precede the remainder, F3a or older F1.
 
 ## Report for the hub
 
-NOT READY: executor implementation, cache reconciliation, freeze and adversarial checks are
-in progress. No credentials, outcomes or sealed 2026 data have been opened. Run at 4 RPS,
-zero retries, only after exact CSV/request-set/budget/root/commit approval and a reviewed
-predecessor ledger carrying the probe and every reservation.
+READY FOR THE HUB to review, NOT READY to spend until independent exact-head agreement and
+new paid approval. Cache reconciliation and 50 adversarial follow-up tests passed; all 146
+original v4 tests also passed. No credentials, outcomes or sealed 2026 data have been opened.
+Run at 4 RPS, zero retries, only after exact CSV/request-set/budget/root/commit approval. The
+reviewed predecessor carries 86,212 credits conservatively, including the 1,687-credit probe.
+
+The exact F2 candidate list is 1,773 requests / 35,460 credits; F3a is 570 / 34,200. Those
+counts preserve provider-only opportunities and one unbound F2 opportunity. The 48-request
+pilot costs at most 960 credits and is included in F2, leaving at most 34,500 after reuse.
+This executor refuses the remainder, F3a and older F1; extending it requires separate review.
+No new strategy grading, forecast replay, simulation, model fit or holdout access is enabled.
+
+`prepare.py` is offline and regenerates selection, exact-key cache reconciliation, predecessor
+pin and pilot freeze. Never regenerate an active packet or silently adopt a changed predecessor.
+`epoch.py` verifies offline by default. `--confirm` additionally requires authorization matching
+the authenticated hub comment on PR #99, the frozen root and exact checkout commit. It verifies
+all original frozen bytes/runtime versions, the clean committed packet, source-generated selection,
+ancestor debits and caches before reading a key. A fixed global lock, root registration marker,
+durable reservation and durable send-start prevent competing follow-up epochs and resends.
+
+On any stop, preserve the ledger and response. No automatic retries or recovery are implemented.
+Pending paid attempts require separately reviewed, hash-pinned offline recovery or missing
+acceptance before a later run. Stopping is an expected controlled state, not permission to
+generate a fresh root and send again. Seed ancestry prohibits rebuying every earlier attempt.
+
+`pilot_coverage.py` checks receipt/cache hashes and the predeclared gate: at least 90% valid
+responses and 12 canonical games (at least 4 per era) with the same named book's fresh alternate
+spread and total curves at both times, two points per side. No actual-play certification is
+claimed. Missing reference/books/markets and failures stay visible. A pass permits review of
+the remainder; it does not authorize it or establish a betting edge.

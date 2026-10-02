@@ -23,8 +23,10 @@ PRIOR_ROOT = plan.SOURCE_ROOT
 
 def source_executor(bundle):
     cert = json.loads((bundle / 'FREEZE.json').read_text())
+    if any(p.is_symlink() for p in bundle.rglob('*')):
+        raise ValueError('Frozen source cannot contain symlinks')
     paths = {str(p.relative_to(bundle)): plan.sha(p) for p in bundle.rglob('*')
-             if p.is_file() and p.name != 'FREEZE.json'}
+             if p.is_file() and p != bundle / 'FREEZE.json'}
     if paths != cert['file_sha256']:
         raise ValueError('Completed frozen source bytes differ')
     plan.verify_source(bundle)
@@ -35,7 +37,9 @@ def source_executor(bundle):
 
 
 def bindings(packet):
-    fixed = {'code/epoch.py': Path(__file__), 'code/plan.py': Path(plan.__file__)}
+    if any(p.is_symlink() or p.is_dir() for p in packet.iterdir()):
+        raise ValueError('Packet must contain regular immediate files only')
+    fixed = {f'code/{p.name}': p for p in Path(__file__).parent.glob('*.py')}
     fixed.update({p.name: p for p in packet.iterdir() if p.is_file() and p.name != 'FREEZE.json'})
     return {name: plan.sha(path) for name, path in sorted(fixed.items())}
 
@@ -59,20 +63,57 @@ def verify_packet(packet, root):
             or manifest['request_list_sha256'] != plan.sha(packet / 'request-list.csv')
             or manifest['new_credits'] != sum(r['max_new_credits'] for r in rows)):
         raise ValueError('Exact epoch manifest differs')
+    if manifest['pull'] not in plan.SPECS or manifest['new_credits'] > manifest['planning_ceiling']:
+        raise ValueError('Unreviewed pull or planning ceiling')
+    if manifest['scope_seasons'] != list(plan.SPECS[manifest['pull']][0]) or len(set(manifest['books'])) != 10:
+        raise ValueError('Unreviewed seasons or books')
     for row in rows:
         expected = plan.request(row['sport'], row['event_id'], plan.ts(row['requested_utc']),
                                 row['params']['markets'], row['params']['bookmakers'].split(','))
         if (any(row[k] != expected[k] for k in ('request_id', 'cache_key', 'path', 'params', 'max_credits'))
                 or row['priority'] != 1 or row['retry_allowance'] != 0 or row['sealed']
-                or row['sport'] != plan.NFL or not set(row['seasons']) <= {2023, 2024, 2025}
+                or row['source'] != expected['source'] or row['sport'] != plan.NFL
+                or not row['seasons'] or not set(row['seasons']) <= set(manifest['scope_seasons'])
                 or row['max_new_credits'] not in (0, row['max_credits'])
-                or row['params']['markets'] not in {v[1] for v in plan.SPECS.values()}):
+                or row['params']['markets'] != plan.SPECS[manifest['pull']][1]
+                or row['params']['bookmakers'].split(',') != manifest['books']
+                or plan.ts(row['requested_utc']).year > 2026
+                or (row['max_new_credits'] == 0 and (not row['cache_source'] or not row['cache_sha256']))):
             raise ValueError('Unreviewed request identity/cost/scope')
+    opportunities = json.loads((packet / 'opportunities.json').read_text())
+    ids = {o['opportunity_id'] for o in opportunities}
+    if len(ids) != manifest['opportunity_count'] or len(ids) != len(opportunities):
+        raise ValueError('Opportunity denominator differs')
+    by_request = {r['request_id']: r for r in rows}
+    for op in opportunities:
+        if op['status'] == 'planned':
+            row = by_request.get(op['request_id'])
+            if not row or op['opportunity_id'] not in row['opportunities'] or op['requested_utc'] != row['requested_utc']:
+                raise ValueError('Opportunity binding differs')
+            if not (plan.ts(op['binding_observed_utc']) <= plan.ts(op['requested_utc']) <
+                    min(plan.ts(op['provider_kickoff_utc']), plan.ts(op['anchor_utc']))):
+                raise ValueError('Unsafe opportunity clock')
+    if any(not r['opportunities'] or not set(r['opportunities']) <= ids for r in rows):
+        raise ValueError('Unaccounted request')
+    import csv
+    with (packet / 'request-list.csv').open(newline='') as f:
+        csv_rows = list(csv.DictReader(f))
+    expected_csv = [{'request_id': r['request_id'], 'sport': r['sport'], 'event_id': r['event_id'],
+                     'requested_utc': r['requested_utc'], 'markets': r['params']['markets'],
+                     'bookmakers': r['params']['bookmakers'], 'max_new_credits': str(r['max_new_credits'])} for r in rows]
+    if csv_rows != expected_csv:
+        raise ValueError('CSV differs from executable request set')
     return manifest, rows
 
 
-def seed_state(seed, rows):
+def seed_state(seed, rows, seen=None):
+    seen = set() if seen is None else seen
+    if seed['root'] in seen:
+        raise ValueError('Cyclic predecessor ledger')
+    seen.add(seed['root'])
     path = Path(seed['ledger_path'])
+    if path.resolve() != ROOT_BASE / seed['root'] / 'spending-ledger.json':
+        raise ValueError('Predecessor must use the fixed global ledger path')
     if plan.sha(path) != seed['ledger_sha256']:
         raise ValueError('Predecessor ledger changed')
     state = json.loads(path.read_text())
@@ -80,13 +121,54 @@ def seed_state(seed, rows):
         raise ValueError('Unresolved predecessor ledger')
     if state['status'] not in ('recent_complete_stopped_before_older', 'event_epoch_complete') or state['probe_credits'] != 1687:
         raise ValueError('Incomplete predecessor epoch')
+    if any(a['status'] not in ('completed', 'missing') for a in state['attempts'].values()):
+        raise ValueError('Nonterminal predecessor attempt')
     prior = sum(a['reserved_credits'] for a in state['attempts'].values()) + state['other_usage_reserved']
     if seed['cumulative_debit_without_probe'] != prior or seed['probe_credits'] != 1687:
         raise ValueError('Cumulative seed debit differs')
     duplicate = {r['request_id'] for r in rows if r['max_new_credits']} & set(state['attempts'])
     if duplicate:
         raise ValueError('Prior request cannot be bought twice')
+    if seed['root'] == PRIOR_ROOT:
+        if seed['ledger_sha256'] != SEED_HASH:
+            raise ValueError('Original completed ledger differs from approved pin')
+    else:
+        previous = state['predecessor_seed']
+        earlier = seed_state(previous, rows, seen)
+        if state['other_usage_reserved'] < earlier:
+            raise ValueError('Ancestor debit decreased')
     return prior
+
+
+def checkout_clean(packet):
+    import subprocess
+    paths = [p for p in packet.iterdir() if p.is_file()]
+    paths += list(Path(__file__).parent.glob('*.py'))
+    repo = subprocess.check_output(['git', '-C', str(packet), 'rev-parse', '--show-toplevel'], text=True).strip()
+    relative = [str(p.resolve().relative_to(repo)) for p in paths]
+    subprocess.run(['git', '-C', repo, 'ls-files', '--error-unmatch', '--', *relative],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(['git', '-C', repo, 'diff', '--exit-code', 'HEAD', '--', *relative],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def verify_source_plan(packet, bundle, manifest, rows):
+    inputs = plan.verify_source(bundle)
+    if manifest['source_bundle_root'] != plan.SOURCE_ROOT or inputs != manifest['source_input_sha256']:
+        raise ValueError('Selection source provenance differs')
+    cfg = json.loads((bundle / 'protocol.json').read_text())
+    expected, ops = plan.plan(manifest['pull'], json.loads((bundle / 'canonical-games.json').read_text()),
+                              json.loads((bundle / 'provider-observations.json').read_text()), cfg['book_panel'])
+    if manifest.get('stage') == 'pilot':
+        if manifest['pull'] != 'F2':
+            raise ValueError('Only F2 pilot reviewed')
+        expected, ops = plan.pilot_subset(expected, ops)
+    if json.loads((packet / 'opportunities.json').read_text()) != ops or len(expected) != len(rows):
+        raise ValueError('Frozen opportunity selection differs from source algorithm')
+    cache_fields = {'max_new_credits', 'cache_source', 'cache_sha256'}
+    for got, want in zip(rows, expected):
+        if {k: v for k, v in got.items() if k not in cache_fields} != {k: v for k, v in want.items() if k not in cache_fields}:
+            raise ValueError('Frozen request selection differs from source algorithm')
 
 
 def event_valid(row, record, base, protocol):
@@ -137,6 +219,13 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     packet, bundle = Path(packet).resolve(), Path(bundle).resolve()
     manifest, rows = verify_packet(packet, root)
     base = source_executor(bundle)
+    if manifest.get('stage') != 'pilot' or manifest['pull'] != 'F2':
+        raise base.Halt('This executor only enables the F2 pilot; remainder/F3a require separate reviewed extension')
+    verify_source_plan(packet, bundle, manifest, rows)
+    checkout_clean(packet)
+    source_books = json.loads((bundle / 'protocol.json').read_text())['book_panel']
+    if manifest['books'] != source_books:
+        raise base.Halt('Frozen book panel differs')
     runtime = base.runtime_path(root)
     base.execution_context(packet, root, runtime)
     if base.current_runtime() != json.loads((bundle / 'runtime-lock.json').read_text()):
@@ -152,9 +241,22 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     # Serializes all follow-up epochs. The completed source run is exhausted and never executed here.
     ROOT_BASE.mkdir(parents=True, exist_ok=True)
     global_lock = (ROOT_BASE / 'followup-purchase.lock').open('a')
-    fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     ledger = client = None
     try:
+        fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        seed_state(seed, rows)
+        from reconcile import matches
+        cache_info = json.loads((packet / 'cache-reconciliation.json').read_text())
+        if cache_info['status'] != 'reconciled' or cache_info['request_set_sha256'] != manifest['request_set_sha256']:
+            raise base.Halt('Cache reconciliation missing or stale')
+        for row in rows:
+            hits = matches(row, cache_info['raw_roots'])
+            if row['max_new_credits'] and hits:
+                raise base.Halt('New overlapping cache appeared; review list without repurchase')
+            if not row['max_new_credits'] and any(plan.sha(p) != row['cache_sha256'] for p in hits):
+                raise base.Halt('Reused cache conflict')
+            if not row['max_new_credits'] and Path(row['cache_source']).resolve() not in hits:
+                raise base.Halt('Reuse outside inspected raw stores')
         base.register_runtime(runtime, root, authorization)
         ledger = event_ledger(base)(runtime, protocol, m, root, authorization, probe)
         prior_seed = ledger.state.get('predecessor_seed')
