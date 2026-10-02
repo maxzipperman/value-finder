@@ -2,15 +2,24 @@
 
 **The rule, in your words (September 29, 2026):** "i would prefer to use Cloud session credits vs local on mac claude chats".
 
-**In plain words:** work that needs only what is in git runs in the cloud, on cloud session credits. Work runs on this Mac, on the plan's limits, only when it needs the Mac: its keys, its raw data, its scheduled jobs, its live checkout, its hardware, or a token in the home folder. The plan's limits are kept for the hub.
+**Owner update, October 2, 2026:** prefer the installed offline coding models when appropriate. [ops/LOCAL_CODING_MODELS.md](LOCAL_CODING_MODELS.md) defines a bounded exception: local Qwen drafts suitable coding tasks; tests and the supervising assistant validate the result. Other git-only work still uses cloud session credits. This does not move ordinary work to local paid cloud-model workers.
+
+**In plain words:** try an installed offline model for a small task with clear acceptance checks. If unsuitable or unavailable, use the cloud worker for git-only work. Local paid cloud-model workers still need a real Mac requirement. Hub coordination and all other project controls remain in force.
 
 ## What runs where
 
 | Where | What | Paid from |
 |---|---|---|
-| The cloud worker | Code, docs, analysis on `data/processed/`, reviews, research: anything that needs only git | Cloud session credits |
-| A local worker chat, agent or workflow | Only work that needs this Mac, and it says which need | The plan |
+| Offline coding worker | Bounded suitable drafts, tests, documentation and refactors, with independent validation | Local inference; supervising cloud chat may still consume credits |
+| The cloud worker | Git-only work unsuitable for or not completed by the offline coding route | Cloud session credits |
+| A local paid cloud-model worker chat, agent or workflow | Only work that needs this Mac, and it says which need | The plan |
 | The hub itself | Check-ins, small Mac-only jobs, merging, `STATUS.md` | The plan |
+
+For an offline-model task, use the existing truthful hardware reason:
+
+    LOCAL-BECAUSE: hardware: runs the owner-preferred offline coding model on this Mac.
+
+The hardware reason applies to actual local inference, not a local paid cloud-model worker doing ordinary git-only work. Do not disable the hook or change the hub's provider settings to implement this preference. Cloud workers without access to the Mac's local endpoint use the cloud route and record that limitation.
 
 ## What you will see
 
@@ -20,7 +29,7 @@ A hook ([`hooks/cloud_first.py`](hooks/cloud_first.py), set in `.claude/settings
 
 The reason is one of `keys`, `raw-data`, `jobs`, `live-checkout`, `hardware`, `home-token` or `owner-asked`, and the sentence must say something real (at least 15 characters; the exact checks are in the hook's docstring). For a workflow the line goes in its script, as a comment. A workflow whose script the hook can't read, such as a built-in one started by name, is always blocked: pass the script inline, or switch the rule off. If the hook breaks or its file is missing, it lets the call through, so it never stops the hub on the day of a pull. Cloud sessions are never blocked.
 
-The hub also reports the plan's weekly figure at each check-in (you read it on the app's usage page; the hub asks for it if you haven't given it). Above 60% it starts nothing local without your word, except a job that protects the live forward tests or the paid data; above 85% it starts nothing local at all.
+The hub also reports the plan's weekly figure at each check-in (you read it on the app's usage page; the hub asks for it if you haven't given it). Above 60% it starts no local paid cloud-model worker without your word, except a job that protects the live forward tests or the paid data; above 85% it starts no local paid cloud-model worker at all. These subscription thresholds do not forbid offline inference, but a supervising cloud chat still consumes its own allowance.
 
 ## Switching it off (your decision)
 
