@@ -19,6 +19,10 @@ The acquired root alone uses the bounded adapter; other synthetic/future roots r
 
 No paid API calls, strategy grades or sealed outcomes. The acceptance preflight does not invoke the registered strategy runner or bypass its registration gate; it validates accepted cache bytes and completion evidence only.
 
-See `adapter-preflight.json` for exact runtime/memory measurements and `preflight_adapter.py` for the repeatable outcome-blind check. Synthetic tests: identity duplicates, orientation across three markets, revised kickoff crossing midnight, rematches, unknown bindings/teams, stable price preservation, strict completion headers and changed-byte/symlink refusal.
+See `adapter-preflight.json` for the measured acceptance-only check: 2,773 request slots, one accepted missing, 62.0 seconds and 372,555,776 bytes peak RSS. `preflight_adapter.py` repeats it without invoking the registered runner. Frozen root and ledger remain unchanged.
+
+Reader/guard regressions: 106 passed, two skipped (unfetched research branch and filesystem-invalid UTF-8 names). Other engine regressions: 104 passed, one skipped, three real-data cases deliberately deselected. New adapter/identity files pass lint. Synthetic tests cover identity duplicates, orientation across all three markets, revised kickoff crossing midnight, rematches, unknown/mismatched bindings/teams, stable prices, strict completion headers, changed bytes/symlinks, exact old/new handoff equivalence with accepted-missing requests, and the registered adapter dispatch including the outer refusing-cache wrapper.
+
+Backup source correction is the follow-up [PR #106](https://github.com/maxzipperman/value-finder/pull/106) into #79's branch. It does not substitute for an actual encrypted off-device restore.
 
 READY FOR INDEPENDENT REVIEW. NOT READY for strategy grading or another purchase until the remaining gates above are satisfied.

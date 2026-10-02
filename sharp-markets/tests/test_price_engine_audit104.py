@@ -1,11 +1,9 @@
 """Synthetic regressions for PR 104; no scores, cohorts, credentials or fitting."""
-from collections import Counter
 from datetime import date
 from types import SimpleNamespace
 
 import pandas as pd
 import pytest
-
 from markets.research.price_engine import engine, quotes
 
 NFL = 'americanfootball_nfl'
@@ -15,11 +13,11 @@ CFG = {'sports': {NFL: {'windows': [{'from': date(2024, 1, 1), 'to': date(2024, 
 
 def rows(eid, snap, kick, home='H', away='A', market='totals'):
     names = ('Over', 'Under') if market == 'totals' else (home, away)
-    return [dict(sport=NFL, odds_event_id=eid, snapshot_ts=snap, commence_time=kick,
-                 home_team=home, away_team=away, bookmaker='draftkings', market_key=market,
-                 market_last_update=snap, book_last_update=snap, outcome_name=name,
-                 point=44.5 if market == 'totals' else (-3.5 if name == home else 3.5)
-                 if market == 'spreads' else None, price_decimal=1.91) for name in names]
+    return [{'sport': NFL, 'odds_event_id': eid, 'snapshot_ts': snap, 'commence_time': kick,
+             'home_team': home, 'away_team': away, 'bookmaker': 'draftkings', 'market_key': market,
+             'market_last_update': snap, 'book_last_update': snap, 'outcome_name': name,
+             'point': 44.5 if market == 'totals' else (-3.5 if name == home else 3.5)
+             if market == 'spreads' else None, 'price_decimal': 1.91} for name in names]
 
 
 def load(monkeypatch, batch, cache=None):
