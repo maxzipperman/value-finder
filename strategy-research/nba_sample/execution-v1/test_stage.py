@@ -112,3 +112,31 @@ def test_external_exact_cache_key_stops_preparation(tmp_path, monkeypatch):
     monkeypatch.setattr(stage, "raw_roots", lambda own_root=None: [str(external)])
     with pytest.raises(ValueError, match="Existing exact NBA paid cache"):
         stage.reconcile([row])
+
+
+def test_cross_checkout_inventory_skips_nonexistent_self_store_and_finds_actual_peers(tmp_path, monkeypatch):
+    checkout = tmp_path / "project/checkout"
+    archive = checkout / "strategy-research/football_archive"
+    (archive / "followups/F2-pilot").mkdir(parents=True)
+    (archive / "recovery-v1/F2-continuation").mkdir(parents=True)
+    historic_project = tmp_path / "historic"
+    historic = historic_project / "old/sharp-markets/data/raw"
+    sibling = historic_project / "new/sharp-markets/data/raw"
+    sibling.mkdir(parents=True)
+    stage.write(archive / "followups/F2-pilot/cache-reconciliation.json", {"raw_roots": [str(historic)]})
+    stage.write(archive / "recovery-v1/F2-continuation/cache-reconciliation.json", {"raw_roots": [str(historic)]})
+    peer = tmp_path / "project/peer/sharp-markets/data/raw"
+    peer.mkdir(parents=True)
+    global_raw = tmp_path / "global" / ("a" * 64) / "data/raw"
+    global_raw.mkdir(parents=True)
+    monkeypatch.setattr(stage, "REPO", checkout)
+    monkeypatch.setattr(stage, "PROJECT", checkout.parent)
+    monkeypatch.setattr(stage, "RUNTIME_BASE", tmp_path / "global")
+    roots = set(stage.raw_roots())
+    assert str((checkout / "sharp-markets/data/raw").resolve()) not in roots
+    assert {str(historic.resolve()), str(sibling.resolve()), str(peer.resolve()),
+            str(global_raw.resolve())} <= roots
+    self_store = checkout / "sharp-markets/data/raw"
+    self_store.mkdir(parents=True)
+    assert str(self_store.resolve()) in stage.raw_roots()
+    assert str(global_raw.resolve()) not in stage.raw_roots("a" * 64)

@@ -6,6 +6,8 @@ The shared `f2_handoff.py` is byte-pinned before either consumer imports it. Bot
 
 The final PR #119 verifier and certificate paths/hashes and PR #121's historical second-transition implementation commit are deliberately unset. Their absence makes `verify_full_union` fail before compiling any external verifier code or preparing a paid packet. Once those reviewed values and final runtime evidence exist, the full union, outcome-blind coverage and completed F3a predecessor must be verified before older can freeze or execute. No paid call is authorized here.
 
+Both downstream raw-store inventories preserve explicit historical roots, discover existing project peers and global runtime stores, and include the executing checkout's store only when that directory exists. A different checkout without local raw data therefore does not invent a new frozen path. Exact planned keys are rescanned at preparation and under the execution lock.
+
 ## Report for the hub
 
 NOT READY — the second recovery certificate, final union verifier/certificate, final runtime states and older packet are pending. The composition gate and synthetic adverse tests are implemented, but the final evidence pins are intentionally absent.

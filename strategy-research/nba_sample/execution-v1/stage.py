@@ -118,14 +118,21 @@ def source():
 
 def raw_roots(own_root=None):
     roots = {Path(p) for p in json.loads((SOURCE / "manifest.json").read_text())["raw_roots_checked"]}
-    roots.add(REPO / "sharp-markets/data/raw")
-    roots.add(Path.home() / "code/value-finder/sharp-markets/data/raw")
-    roots.add(Path.home() / "Documents/Codex/2026-10-02/value-finder-download-worker/implementation/sharp-markets/data/raw")
     pilot = REPO / "strategy-research/football_archive/followups/F2-pilot/cache-reconciliation.json"
+    continuation = REPO / "strategy-research/football_archive/recovery-v1/F2-continuation/cache-reconciliation.json"
     roots.update(Path(p) for p in json.loads(pilot.read_text())["raw_roots"])
-    roots.update(PROJECT.glob("*/sharp-markets/data/raw"))
-    if RUNTIME_BASE.exists():
-        roots.update(RUNTIME_BASE.glob("*/data/raw"))
+    roots.update(Path(p) for p in json.loads(continuation.read_text())["raw_roots"])
+    roots.add(Path.home() / "code/value-finder/sharp-markets/data/raw")
+    own_store = REPO / "sharp-markets/data/raw"
+    if own_store.exists():
+        roots.add(own_store)
+    projects = {PROJECT}
+    for raw in list(roots):
+        if raw.parts[-3:] == ("sharp-markets", "data", "raw"):
+            projects.add(raw.parents[2].parent)
+    for project in projects:
+        roots.update(project.glob("*/sharp-markets/data/raw"))
+    roots.update(RUNTIME_BASE.glob("*/data/raw"))
     excluded = (RUNTIME_BASE / own_root / "data/raw").resolve() if own_root else None
     return sorted({str(p.resolve()) for p in roots if p.resolve() != excluded})
 
