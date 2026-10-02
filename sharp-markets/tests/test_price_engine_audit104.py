@@ -93,3 +93,11 @@ def test_stable_single_listing_keeps_its_prices_and_canonical_id(monkeypatch):
     assert len(q) == 1 and q.iloc[0].event_id == 'canonical'
     assert (q.iloc[0].home, q.iloc[0].away, q.iloc[0].line, q.iloc[0].dec_a) == ('H', 'A', -3.5, 1.91)
     assert not any(drops.values())
+
+
+def test_known_aliases_must_match_the_bound_game_teams(monkeypatch):
+    cache = SimpleNamespace(canonical_event_map={(NFL, 'provider'): 'canonical'},
+                            canonical_team_aliases={(NFL, 'H'): 'team:h', (NFL, 'A'): 'team:a'},
+                            canonical_game_teams={'canonical': frozenset(('team:h', 'team:other'))})
+    q, drops = load(monkeypatch, rows('provider', '2024-09-07T16:00:00Z', '2024-09-08T19:00:00Z'), cache)
+    assert q.empty and drops['unresolved_canonical_team'] == 1

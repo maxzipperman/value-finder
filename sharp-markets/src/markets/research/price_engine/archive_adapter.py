@@ -13,6 +13,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import ijson
+import pyarrow.dataset  # noqa: F401 - warm Arrow's pandas/six imports before the frozen-code import guard
 import pyarrow.parquet as pq
 
 ACQUIRED_ROOT = '4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d'

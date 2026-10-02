@@ -1073,9 +1073,10 @@ def test_the_default_runtime_refuses_a_root_that_is_not_a_sha256(root):
 
 
 # PR 104: the analysis-side bounded adapter leaves the paid bundle unchanged.
-def test_bounded_adapter_preserves_the_exact_handoff_including_missing(made):
+@pytest.mark.parametrize("fixture_name", ["made", "made_missing"])
+def test_bounded_adapter_preserves_the_exact_handoff_including_missing(request, fixture_name):
     from markets.research.price_engine import archive_adapter
-    cfg, calls, cache, scores, bundle, runtime, root = made
+    cfg, calls, cache, scores, bundle, runtime, root = request.getfixturevalue(fixture_name)
     with handoff._bundle_code(bundle, handoff._verify(bundle, root)[1]):
         import importlib
         original = importlib.import_module("cache_handoff")
@@ -1126,3 +1127,21 @@ def test_canonical_context_marks_ambiguous_provider_bindings(tmp_path):
     bindings, aliases, teams = archive_adapter.canonical_context(tmp_path)
     assert bindings[NFL, "unique"] == "g1" and bindings[NFL, "ambiguous"] is None
     assert aliases[NFL, "H"] == "h" and teams["g1"] == frozenset(("h", "a"))
+
+
+def test_registered_handoff_dispatches_to_bounded_adapter_with_missing(made_missing, monkeypatch):
+    from markets.research.price_engine import archive_adapter
+    cfg, calls, cache, scores, bundle, runtime, root = made_missing
+    (bundle / "canonical-games.json").write_text("[]")
+    (bundle / "aliases.json").write_text("[]")
+    root = refreeze(bundle, runtime, monkeypatch)
+    monkeypatch.setattr(archive_adapter, "ACQUIRED_ROOT", root)
+    build = archive_adapter.build_handoff
+    digest = archive_adapter.sha(runtime / "coverage-report.json")
+    monkeypatch.setattr(archive_adapter, "build_handoff",
+                        lambda *a, **kw: build(*a, **kw, report_sha=digest))
+    hcalls, hcache, info = load(bundle, root, cfg)
+    assert isinstance(hcache._cache, archive_adapter.ReadOnlyCache)
+    assert len(hcalls) == len(calls) and info["accepted_missing"] == len(MISSING)
+    assert hcache.offline and hcache.canonical_event_map == {}
+    assert sum(hcache.lookup(c.cache_sport, c.source, c.key) is None for c in hcalls) == len(MISSING)
