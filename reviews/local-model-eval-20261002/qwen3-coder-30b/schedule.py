@@ -1,0 +1,15 @@
+from datetime import datetime, time, timedelta
+from typing import List, Tuple, Optional
+from datetime import tzinfo
+
+def next_run(times: List[Tuple[int, int]], now: datetime, tz: tzinfo) -> Optional[datetime]:
+    """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+    if not times:
+        return None
+    today = now.astimezone(tz).date()
+    for d in (today, today + timedelta(days=1)):
+        for h, m in sorted(times):
+            t = datetime.combine(d, time(h, m), tzinfo=tz)
+            if t > now:
+                return t
+    return None

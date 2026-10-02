@@ -1,0 +1,13 @@
+{
+  "model": "qwen3-coder:30b",
+  "created_at": "2026-10-02T16:49:39.855044Z",
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 9052592875,
+  "load_duration": 65575542,
+  "prompt_eval_count": 682,
+  "prompt_eval_duration": 602447750,
+  "eval_count": 581,
+  "eval_duration": 8119588658,
+  "wall_seconds": 9.054776583012426
+}

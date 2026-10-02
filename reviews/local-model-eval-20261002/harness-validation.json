@@ -1,0 +1,19 @@
+[
+  {
+    "task": "schedule",
+    "original_passed": 5,
+    "total": 5,
+    "mutation_failures": [
+      "exact scheduled time moves to next",
+      "last slot moves to tomorrow"
+    ]
+  },
+  {
+    "task": "scrub",
+    "original_passed": 7,
+    "total": 7,
+    "mutation_failures": [
+      "standalone bearer"
+    ]
+  }
+]

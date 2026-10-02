@@ -1,0 +1,9 @@
+{
+  "loaded_model_gb_ollama": 19,
+  "processor": "100% GPU",
+  "context": 8192,
+  "swap_used_mib_sample": 8.06,
+  "memory_pressure_free_percent_later_sample": 57,
+  "baseline_or_peak_measured": false,
+  "model_unloaded_at_end": true
+}
