@@ -7,6 +7,7 @@ sys.dont_write_bytecode=True
 import epoch
 import missing
 import plan
+import policy
 
 
 def prepare():
@@ -21,6 +22,8 @@ def prepare():
         attempt=post['attempts'].get(row['request_id'])
         if attempt:
             row.update(max_new_credits=0,cache_source=attempt['response_path'],cache_sha256=attempt['response_sha256'])
+    prospective=policy.expected(rows,ops)
+    m['provider_only_missing_policy_sha256']=policy.sha(prospective)
     m['stage']='F2-continuation';m['cache_reconciliation']='completed predecessor reuse plus exact no-resend missing; fresh exact-key cross-store check'
     m=plan.write_packet(packet,m,rows,ops)
     raw_roots=json.loads((here.parent/'execution-v1/F2/cache-reconciliation.json').read_text())['raw_roots']
@@ -37,7 +40,7 @@ def prepare():
         'ledger_sha256':cert['post_ledger_sha256'],'probe_credits':1687,
         'cumulative_debit_without_probe':post['other_usage_reserved']+sum(a['reserved_credits'] for a in post['attempts'].values())}
     packet.mkdir(exist_ok=True)
-    for name,obj in [('missing-certificate.json',cert),('seed.json',seed),('cache-reconciliation.json',
+    for name,obj in [('provider-only-missing-policy.json',prospective),('missing-certificate.json',cert),('seed.json',seed),('cache-reconciliation.json',
         {'status':'reconciled','raw_roots':raw_roots,'request_set_sha256':m['request_set_sha256'],
          'reused':[{'request_id':r['request_id'],'sha256':r['cache_sha256'],'paths':[r['cache_source']]} for r in rows if not r['max_new_credits']],
          'paid_count':1307,'new_credits':26140})]:

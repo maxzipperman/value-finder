@@ -115,6 +115,8 @@ def validate_missing(row, record):
         or record['url']!=plan.BASE+row['path'] or json.loads(record['params_json'])!=row['params']
         or record['http_status']!=404):
         raise ValueError('404 identity/status differs')
+    if not isinstance(json.loads(record['body']),dict) or json.loads(record['body']).get('error_code')!='EVENT_NOT_FOUND':
+        raise ValueError('Exact missing error body differs')
     headers=json.loads(record['headers_json'])
     if any(headers.get(k)!=v for k,v in {'x-requests-last':'0','x-requests-used':'93829','x-requests-remaining':'4906171'}.items()):
         raise ValueError('404 billing differs')
@@ -150,13 +152,26 @@ def transition(bundle, certificate_path, approval_path, *, fake_auth=False, chec
         current,state,receipt,_=preview(bundle)
         if current!=certificate: raise ValueError('Frozen transition certificate differs from exact evidence')
         proposal_sha=certificate['proposal_sha256']
+        # Preserve the exact stopped bytes before any approval/receipt/ledger write.
+        backup=folder/'recovery'/('original-ledger-'+STOPPED_SHA+'.json')
+        stopped_bytes=regular_bytes(folder/'spending-ledger.json')
+        if hashlib.sha256(stopped_bytes).hexdigest()!=STOPPED_SHA:raise ValueError('Stopped bytes changed')
+        if backup.exists():
+            if plan.sha(backup)!=STOPPED_SHA:raise ValueError('Original ledger backup conflicts')
+        else:
+            backup.parent.mkdir(parents=True,exist_ok=True)
+            temporary=backup.with_suffix('.json.tmp')
+            with temporary.open('xb') as handle:
+                handle.write(stopped_bytes);handle.flush();os.fsync(handle.fileno())
+            os.replace(temporary,backup);base.durable_directory(backup.parent)
+        checkpoint('after_original_backup')
         approval_out=folder/('missing-approval-'+proposal_sha+'.json')
         receipt_out=folder/'receipts'/f'{REQUEST}.json'
         for path,obj in [(approval_out,auth),(receipt_out,receipt)]:
             expected=hashlib.sha256(base.canonical(obj)+b'\n').hexdigest()
             if path.exists() and plan.sha(path)!=expected: raise ValueError('Existing recovery evidence conflicts')
             if not path.exists():base.atomic(path,obj)
-        checkpoint('after_missing_receipt')
+            checkpoint('after_approval' if path==approval_out else 'after_missing_receipt')
         if plan.sha(folder/'spending-ledger.json')!=STOPPED_SHA:raise ValueError('Stopped ledger changed before transition')
         base.atomic(folder/'spending-ledger.json',state)
         checkpoint('after_missing_transition')

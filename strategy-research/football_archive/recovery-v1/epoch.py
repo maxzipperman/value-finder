@@ -88,16 +88,25 @@ def pilot_gate(bundle):
     return report
 
 
-def stage_guard(packet, manifest, seed, rows, bundle):
+def stage_guard(packet, manifest, seed, rows, bundle, *, authenticate=True):
     import missing
     pilot_gate(bundle)
     if manifest.get('stage') != 'F2-continuation' or manifest['pull'] != 'F2':
         raise ValueError('Only exact approved F2 continuation enabled')
+    import policy
+    policy.load(packet, manifest, rows)
     cert = json.loads((Path(packet) / 'missing-certificate.json').read_text())
     if seed['root'] != missing.ORIGINAL_ROOT or seed['ledger_sha256'] != cert['post_ledger_sha256']:
         raise ValueError('Continuation requires exact terminal partial predecessor')
     state = json.loads(Path(seed['ledger_path']).read_text())
     validate_partial(state, cert)
+    folder=ROOT_BASE/missing.ORIGINAL_ROOT
+    if plan.sha(folder/'recovery'/('original-ledger-'+missing.STOPPED_SHA+'.json'))!=missing.STOPPED_SHA:
+        raise ValueError('Exact stopped predecessor backup missing/changed')
+    offline_auth=json.loads((folder/('missing-approval-'+cert['proposal_sha256']+'.json')).read_text())
+    base=source_executor(bundle)
+    missing.validate_approval(offline_auth,cert,base,base.checkout_commit(packet))
+    if authenticate:base.verify_live_hub_comment(offline_auth)
     _, _, original_rows = missing.original()
     completed = {rid for rid, a in state['attempts'].items() if a['status'] == 'completed'}
     expected_new = {r['request_id'] for r in original_rows if r['max_new_credits'] and r['request_id'] not in state['attempts']}
@@ -161,6 +170,11 @@ def source_executor(bundle):
     spec.loader.exec_module(module)
     return module
 
+
+
+def matches(row, raw_roots):
+    return sorted({p.resolve() for raw in raw_roots
+        for p in (Path(raw)/row['sport']/row['source']).glob('*/'+row['cache_key']+'.parquet')})
 
 def bindings(packet):
     if any(p.is_symlink() or p.is_dir() for p in packet.iterdir()):
@@ -333,11 +347,29 @@ def event_valid(row, record, base, protocol):
         raise base.Halt('Historical event snapshot timing invalid')
 
 
-def event_ledger(base):
+def event_ledger(base, missing_policy):
     class EventLedger(base.Ledger):
         def complete(self, row, record, path):
             if self.state['pending'] != row['request_id']:
                 raise base.Halt('No durable event reservation')
+            if record['http_status'] == 404:
+                import policy
+                headers, used, remaining = policy.valid(row, record, missing_policy, base)
+                if sum(a['status']=='missing' for a in self.state['attempts'].values()) >= missing_policy['max_missing']:
+                    raise base.Halt('Prospective missing bound exceeded')
+                self.measure_counters(used, remaining, self.billed()-self.state['epoch']['start_billed'])
+                receipt = self.folder/'receipts'/(row['request_id']+'.json')
+                base.atomic(receipt, {'request_id':row['request_id'],'cache_key':row['cache_key'],
+                    'record_sha256':plan.sha(path),'headers':headers,'record':record,'status':'missing',
+                    'missing_policy_sha256':policy.sha(missing_policy)})
+                getattr(self,'checkpoint',lambda _:None)('after_receipt_durability')
+                self.state['attempts'][row['request_id']].update(status='missing',billed_credits=0,
+                    response_path=str(Path(path).resolve()),response_sha256=plan.sha(path),
+                    receipt_sha256=plan.sha(receipt),missing_policy_sha256=policy.sha(missing_policy))
+                self.state['provider_used'],self.state['provider_remaining']=used,remaining
+                self.state['pending']=None
+                self.save()
+                return
             event_valid(row, record, base, self.protocol)
             headers = json.loads(record['headers_json'])
             last, used, remaining = [base.integer(headers.get(k)) for k in ('x-requests-last', 'x-requests-used', 'x-requests-remaining')]
@@ -362,8 +394,10 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     base = source_executor(bundle)
     seed = json.loads((packet / 'seed.json').read_text())
     seed_state(seed, rows)
-    stage_guard(packet, manifest, seed, rows, bundle)
+    stage_guard(packet, manifest, seed, rows, bundle, authenticate=fake_session is None)
     verify_source_plan(packet, bundle, manifest, rows)
+    import policy
+    missing_policy = policy.load(packet, manifest, rows)
     checkout_clean(packet)
     source_books = json.loads((bundle / 'protocol.json').read_text())['book_panel']
     if manifest['books'] != source_books:
@@ -387,8 +421,7 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     try:
         fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         seed_state(seed, rows)
-        stage_guard(packet, manifest, seed, rows, bundle)
-        from reconcile import matches
+        stage_guard(packet, manifest, seed, rows, bundle, authenticate=fake_session is None)
         cache_info = json.loads((packet / 'cache-reconciliation.json').read_text())
         if cache_info['status'] != 'reconciled' or cache_info['request_set_sha256'] != manifest['request_set_sha256']:
             raise base.Halt('Cache reconciliation missing or stale')
@@ -414,10 +447,16 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
             if state.get('pending') or state.get('stopped'):
                 raise base.Halt('Pending/stopped extension cannot recover automatically')
             for rid, attempt in state['attempts'].items():
-                if (attempt['status'] != 'completed'
+                if (attempt['status'] not in ('completed', 'missing')
                         or plan.sha(Path(attempt['response_path'])) != attempt['response_sha256']
                         or plan.sha(runtime / 'receipts' / (rid + '.json')) != attempt['receipt_sha256']):
                     raise base.Halt('Completed event evidence missing/changed; no repurchase')
+                if attempt['status'] == 'missing':
+                    _, read_missing, *_ = base.vendor_imports(bundle, runtime)
+                    row = next(r for r in rows if r['request_id']==rid)
+                    policy.valid(row, read_missing(Path(attempt['response_path'])), missing_policy, base)
+                    if attempt.get('missing_policy_sha256') != policy.sha(missing_policy):
+                        raise base.Halt('Terminal missing policy evidence differs')
         base.validate_reconciliation(authorization.get('account_reconciliation'), root)
         if 'pre_run_other_usage_budget_debit' in authorization['account_reconciliation']:
             raise base.Halt('Stage cannot override fresh account usage debit')
@@ -425,6 +464,8 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
         line = f'APPROVED account ceiling: max-baseline-used {ceiling}, root {root}'
         if line not in authorization['hub_go_ahead']['comment_body'].splitlines():
             raise base.Halt('Stage account ceiling must be authenticated by hub comment')
+        if policy.approval_line(missing_policy, root) not in authorization['hub_go_ahead']['comment_body'].splitlines():
+            raise base.Halt('Prospective missing policy must be authenticated by hub comment')
         if authorization['account_reconciliation'].get('account_only_recovery'):
             raise base.Halt('Automatic account-only recovery disabled for extension')
         import missing
@@ -446,7 +487,7 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
                 else:
                     event_valid(row, record, base, protocol_for_reuse)
         base.register_runtime(runtime, root, authorization)
-        ledger = event_ledger(base)(runtime, protocol, m, root, authorization, probe)
+        ledger = event_ledger(base, missing_policy)(runtime, protocol, m, root, authorization, probe)
         prior_seed = ledger.state.get('predecessor_seed')
         if prior_seed is not None and prior_seed != seed:
             raise base.Halt('Predecessor seed changed; never reset history')
@@ -472,14 +513,14 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
         ledger.account(base.integer(account['used']), base.integer(account['remaining']))
         base.atomic(runtime / 'run-manifest.json', {'epoch_root': root, 'commit': authorization['execution_commit'],
                     'frozen_source_root': plan.SOURCE_ROOT, 'seed': seed, 'runtime': base.current_runtime(),
-                    'pull': manifest['pull'], 'stage': manifest['stage'], 'missing_certificate': cert,
+                    'pull': manifest['pull'], 'stage': manifest['stage'], 'missing_certificate': cert, 'provider_only_missing_policy': missing_policy,
                     'request_set_sha256': manifest['request_set_sha256'],
                     'scope': 'exact event-odds rows only; no outcomes; no retries; no replan'})
         for row in rows:
             attempt = ledger.state['attempts'].get(row['request_id'])
             cached = cache.lookup(row['sport'], row['source'], row['cache_key'])
             if attempt:
-                if (attempt['status'] != 'completed' or cached is None
+                if (attempt['status'] not in ('completed', 'missing') or cached is None
                         or plan.sha(cached) != attempt['response_sha256']
                         or plan.sha(runtime / 'receipts' / f"{row['request_id']}.json") != attempt['receipt_sha256']):
                     raise base.Halt('Completed event evidence missing/changed; no repurchase')

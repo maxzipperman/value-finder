@@ -12,7 +12,7 @@ sys.dont_write_bytecode=True
 import pytest
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-import epoch,missing,plan
+import epoch,missing,plan,policy
 BUNDLE=HERE.parent/'acquisition/football-archive-v4'
 REAL_RUNTIME=epoch.ROOT_BASE
 
@@ -43,6 +43,8 @@ def offline_auth(cert):
 def paid_auth(root,m):
     body=(f"APPROVED paid run: list {m['request_list_sha256']}, request-set {m['request_set_sha256']}, "
         f"budget {m['new_credits']} credits, commit {'b'*40}\nAPPROVED account ceiling: max-baseline-used 200000, root {root}")
+    obj=json.loads((HERE/'F2-continuation/provider-only-missing-policy.json').read_text())
+    body+='\n'+policy.approval_line(obj,root)
     return {'status':'approved','bundle_root_sha256':root,'priority':1,'max_new_credits':m['new_credits'],
         'human_authorization_evidence':'SYNTHETIC ONLY','execution_commit':'b'*40,
         'hub_go_ahead':{'status':'approved','bundle_root_sha256':root,'request_set_sha256':m['request_set_sha256'],
@@ -182,16 +184,17 @@ def test_stop_before_offline_acceptance_blocks_key(prepared):
     assert not reads and not session.calls and plan.sha(path)==missing.STOPPED_SHA
 
 
-@pytest.mark.parametrize('point',['after_missing_receipt','after_missing_transition'])
+@pytest.mark.parametrize('point',['after_original_backup','after_approval','after_missing_receipt','after_missing_transition'])
 def test_offline_transition_crash_never_sends_or_reduces_debit(prepared,point):
     def crash(at):
         if at==point:raise RuntimeError('synthetic offline crash')
     with pytest.raises(RuntimeError):apply(prepared,crash)
     state=json.loads(prepared[5].read_text())
     assert sum(a['reserved_credits'] for a in state['attempts'].values())==8360
-    if point=='after_missing_receipt':
+    assert plan.sha(prepared[5].parent/'recovery'/('original-ledger-'+missing.STOPPED_SHA+'.json'))==missing.STOPPED_SHA
+    if point!='after_missing_transition':
         assert state['pending']==missing.REQUEST
-        assert (prepared[5].parent/'receipts'/f'{missing.REQUEST}.json').exists()
+        if point=='after_missing_receipt':assert (prepared[5].parent/'receipts'/f'{missing.REQUEST}.json').exists()
         apply(prepared) # explicit second offline acceptance, no paid path
     else:
         assert state['pending'] is None
@@ -223,3 +226,89 @@ def test_continuation_adverse_transport_stops_once(prepared,mode):
     second=Session();reads=[]
     with pytest.raises(Exception):epoch.run(packet,root,BUNDLE,paid_auth(root,m),key=lambda:reads.append(1),fake_session=second)
     assert not reads and not second.calls
+
+
+def test_policy_bounds_exact_63_provider_only_new_rows():
+    packet=HERE/'F2-continuation';m=json.loads((packet/'manifest.json').read_text());rows=json.loads((packet/'requests.json').read_text())
+    obj=policy.load(packet,m,rows)
+    assert obj['max_missing']==len(obj['eligible_request_ids'])==63 and obj['source_provider_only_opportunity_bound']==64
+    assert missing.REQUEST not in obj['eligible_request_ids']
+
+
+@pytest.mark.parametrize('mode',['canonical','code','status','billing','counters','identity'])
+def test_prospective_missing_rejects_unreviewed_status_identity_billing(mode):
+    packet=HERE/'F2-continuation';m=json.loads((packet/'manifest.json').read_text());rows=json.loads((packet/'requests.json').read_text())
+    obj=policy.load(packet,m,rows);base=epoch.source_executor(BUNDLE)
+    row=copy.deepcopy(next(r for r in rows if r['request_id'] in obj['eligible_request_ids']))
+    record={'http_status':404,'cache_key':row['cache_key'],'sport':row['sport'],'source':row['source'],
+        'url':plan.BASE+row['path'],'params_json':json.dumps(row['params']),
+        'body':json.dumps({'error_code':'EVENT_NOT_FOUND'}),'headers_json':json.dumps({'x-requests-last':'0','x-requests-used':'93829','x-requests-remaining':'4906171'})}
+    if mode=='canonical': row=next(r for r in rows if r['max_new_credits'] and r['request_id'] not in obj['eligible_request_ids'])
+    if mode=='code':record['body']=json.dumps({'error_code':'OTHER'})
+    if mode=='status':record['http_status']=403
+    if mode=='billing':record['headers_json']=json.dumps({'x-requests-last':'1','x-requests-used':'93830','x-requests-remaining':'4906170'})
+    if mode=='counters':record['headers_json']=json.dumps({'x-requests-last':'0'})
+    if mode=='identity':record['params_json']='{}'
+    with pytest.raises(Exception):policy.valid(row,record,obj,base)
+
+
+def test_policy_requires_explicit_authenticated_paid_line(prepared):
+    apply(prepared);packet,root,cert,post,receipt,path,auth_path,base,m=prepared
+    auth=paid_auth(root,m);auth['hub_go_ahead']['comment_body']='\n'.join(line for line in auth['hub_go_ahead']['comment_body'].splitlines() if not line.startswith('APPROVED provider-only'))
+    reads=[];session=Session()
+    with pytest.raises(Exception):epoch.run(packet,root,BUNDLE,auth,key=lambda:reads.append(1),fake_session=session)
+    assert not reads and not session.calls
+
+
+def test_all_prospective_404s_terminal_missing_full_reservations_and_no_resend(prepared):
+    apply(prepared);packet,root,cert,post,receipt,path,auth_path,base,m=prepared
+    obj=policy.load(packet,m,json.loads((packet/'requests.json').read_text()))
+    rows=json.loads((packet/'requests.json').read_text())
+    allowed={(plan.BASE+r['path'],r['params']['date']) for r in rows if r['request_id'] in obj['eligible_request_ids']}
+    class MissingSession(Session):
+        def get(self,url,params=None,**kwargs):
+            if params and (url,params.get('date')) in allowed:
+                assert kwargs['allow_redirects'] is False
+                self.calls.append((url,params))
+                return Response(json.dumps({'error_code':'EVENT_NOT_FOUND','message':'synthetic missing only'}),
+                    {'x-requests-last':'0','x-requests-used':str(self.used),'x-requests-remaining':str(self.remaining)},404)
+            return super().get(url,params,**kwargs)
+    session=MissingSession();result=epoch.run(packet,root,BUNDLE,paid_auth(root,m),key='SYNTHETIC_KEY_ONLY',fake_session=session)
+    state=json.loads((base.runtime_path(root)/'spending-ledger.json').read_text())
+    assert len(session.calls)==1308 and result['new_reserved']==26140 and result['new_billed']==26140-63*20
+    assert sum(a['status']=='missing' for a in state['attempts'].values())==63
+    assert all(a['reserved_credits']==20 and a['billed_credits']==0 and a['missing_policy_sha256']==policy.sha(obj)
+        for a in state['attempts'].values() if a['status']=='missing')
+    assert result['cumulative_reserved']==121676 and state['status']=='event_epoch_complete'
+    # Lost accepted-missing receipt blocks restart before key or even free account GET.
+    rid=next(rid for rid,a in state['attempts'].items() if a['status']=='missing')
+    (base.runtime_path(root)/'receipts'/f'{rid}.json').unlink();reads=[];again=Session()
+    with pytest.raises(Exception):epoch.run(packet,root,BUNDLE,paid_auth(root,m),key=lambda:reads.append(1),fake_session=again)
+    assert not reads and not again.calls
+
+
+
+def test_canonical_or_mixed_linked_opportunity_cannot_qualify():
+    packet=HERE/'F2-continuation';rows=json.loads((packet/'requests.json').read_text());ops=json.loads((packet/'opportunities.json').read_text())
+    obj=policy.expected(rows,ops)
+    row=next(r for r in rows if r['request_id'] in obj['eligible_request_ids'])
+    canonical=next(o for o in ops if o['identity_type']=='canonical' and o['status']=='planned')
+    row['opportunities'].append(canonical['opportunity_id'])
+    assert row['request_id'] not in policy.expected(rows,ops)['eligible_request_ids']
+    row['opportunities']=[canonical['opportunity_id']]
+    assert row['request_id'] not in policy.expected(rows,ops)['eligible_request_ids']
+
+
+@pytest.mark.parametrize('mode',['approval','backup','forged_auth','post_ledger'])
+def test_terminal_partial_requires_real_transition_evidence_before_key(prepared,mode):
+    apply(prepared);packet,root,cert,post,receipt,path,auth_path,base,m=prepared
+    approval=path.parent/('missing-approval-'+cert['proposal_sha256']+'.json')
+    if mode=='approval':approval.unlink()
+    if mode=='backup':(path.parent/'recovery'/('original-ledger-'+missing.STOPPED_SHA+'.json')).unlink()
+    if mode=='forged_auth':
+        auth=json.loads(approval.read_text());auth['request_id']='wrong';base.atomic(approval,auth)
+    if mode=='post_ledger':
+        state=json.loads(path.read_text());state['attempts'][missing.REQUEST]['reserved_credits']=0;base.atomic(path,state)
+    reads=[];session=Session()
+    with pytest.raises(Exception):epoch.run(packet,root,BUNDLE,paid_auth(root,m),key=lambda:reads.append(1),fake_session=session)
+    assert not reads and not session.calls
