@@ -7,6 +7,7 @@ sys.dont_write_bytecode=True
 import epoch
 import plan
 import union
+import f3a_missing
 
 
 def prepare(candidate=False,continuation_authorization=None):
@@ -39,10 +40,12 @@ def prepare(candidate=False,continuation_authorization=None):
             epoch.event_valid(row,read_record(hits[0]),base,protocol)
             row.update(max_new_credits=0,cache_source=str(hits[0]),cache_sha256=next(iter(hashes)))
             reused.append({'request_id':row['request_id'],'paths':[str(p) for p in hits],'sha256':row['cache_sha256']})
+    missing_policy=f3a_missing.expected(rows,ops)
+    m['f3a_exact_missing_policy_sha256']=f3a_missing.sha(missing_policy)
     m['stage']='candidate' if candidate else 'F3a-from-F2-union'
     m['f2_union_certificate_sha256']=union.digest(plan.canonical(cert))
     m=plan.write_packet(packet,m,rows,ops)
-    for name,obj in [('seed.json',seed),('union-certificate.json',cert),('union-coverage.json',coverage),('continuation-authorization.json',auth),
+    for name,obj in [('exact-missing-policy.json',missing_policy),('seed.json',seed),('union-certificate.json',cert),('union-coverage.json',coverage),('continuation-authorization.json',auth),
         ('cache-reconciliation.json',{'status':'reconciled','raw_roots':sorted(str(p.resolve()) for p in raw_roots),
             'request_set_sha256':m['request_set_sha256'],'reused':reused,'paid_count':sum(bool(r['max_new_credits']) for r in rows),'new_credits':m['new_credits']})]:
         (packet/name).write_bytes(plan.canonical(obj)+b'\n')
