@@ -25,7 +25,7 @@ def deny_network(event, args):
         raise RuntimeError('Offline tests prohibit network')
     if event == 'open' and isinstance(args[0], (str, bytes)):
         name = str(args[0])
-        if Path(name).name == '.env' or '/data/forward/' in name:
+        if Path(name).name in ('.env', 'player_week.parquet', 'pricing_cohort.json', 'game_outcomes.parquet') or '/data/forward/' in name:
             raise RuntimeError('Offline tests prohibit credentials and holdout logs')
 
 
@@ -36,7 +36,7 @@ def approval(root, manifest):
     commit = 'b' * 40
     cost = manifest['new_credits']
     body = (f"APPROVED paid run: list {manifest['request_list_sha256']}, request-set {manifest['request_set_sha256']}, "
-            f"budget {cost} credits, commit {commit}")
+            f"budget {cost} credits, commit {commit}\nAPPROVED account ceiling: max-baseline-used 100000, root {root}")
     return {'status': 'approved', 'bundle_root_sha256': root, 'priority': 1, 'max_new_credits': cost,
             'human_authorization_evidence': 'SYNTHETIC OWNER ONLY', 'execution_commit': commit,
             'hub_go_ahead': {'status': 'approved', 'bundle_root_sha256': root,
@@ -101,7 +101,7 @@ class Session:
             headers['x-requests-remaining'] = '5000000'
         if self.mode == 'echo':
             body['echo'] = 'SYNTHETIC_KEY_ONLY'
-        status = {'429': 429, '500': 500, '404': 404}.get(self.mode, 200)
+        status = {'429': 429, '500': 500, '404': 404, '403': 403}.get(self.mode, 200)
         return Response(json.dumps(body), headers, status)
 
     def close(self):
@@ -115,6 +115,9 @@ def prepared(tmp_path, monkeypatch):
     monkeypatch.setattr(epoch, 'ROOT_BASE', tmp_path / 'state')
     monkeypatch.setattr(epoch, 'source_executor', lambda _: base)
     monkeypatch.setattr(epoch, 'checkout_clean', lambda _: None)
+    # These inherited transport/accounting tests isolate the real frozen library.
+    # Separate stage tests exercise the unmocked pilot and ancestor guards.
+    monkeypatch.setattr(epoch, 'stage_guard', lambda *args: None)
     monkeypatch.setattr(base, 'checkout_commit', lambda _: 'b' * 40)
     packet = tmp_path / 'pilot'
     full = tmp_path / 'full'
@@ -184,7 +187,7 @@ def test_crash_never_resends(prepared, point):
 
 
 @pytest.mark.parametrize('mode', ['timeout', 'lag', 'future', 'wrong_event', 'list_body', 'bad_billing',
-                                 'overcharge', 'external', 'reset', 'echo', '429', '500', '404'])
+                                 'overcharge', 'external', 'reset', 'echo', '429', '500', '404', '403'])
 def test_transport_fault_stops_after_one_paid_attempt(prepared, mode):
     session = Session(mode)
     with pytest.raises(Exception):
@@ -356,7 +359,7 @@ def test_cache_and_receipt_changes_block_resumed_sends(prepared):
     second.used, second.remaining = first.used, first.remaining
     with pytest.raises(Exception, match='evidence missing/changed'):
         run(prepared, second)
-    assert len(second.calls) == 1
+    assert not second.calls
 
 
 def test_csv_mismatch_rejected_even_with_updated_digest(prepared):
@@ -446,3 +449,18 @@ def test_fresh_paired_curves_pass_gate_without_strategy_grade(prepared):
     assert result['remainder_gate_passed'] and result['paired_canonical_games'] >= 12
     assert all(result['paired_by_season'][y] >= 4 for y in (2023, 2024, 2025))
     assert not result['profits_computed'] and not result['outcomes_joined'] and not result['purchase_authorized']
+
+
+@pytest.mark.parametrize('mode', ['ceiling_tamper', 'debit_override', 'global_pending', 'global_stopped'])
+def test_extension_offline_account_and_global_guards(prepared, mode):
+    packet, root, auth, base = prepared
+    if mode == 'ceiling_tamper': auth['account_reconciliation']['max_baseline_used'] = 300000
+    if mode == 'debit_override': auth['account_reconciliation']['pre_run_other_usage_budget_debit'] = 0
+    if mode.startswith('global_'):
+        base.atomic(epoch.ROOT_BASE / ('a' * 64) / 'spending-ledger.json',
+            {'pending': 'other' if mode == 'global_pending' else None,
+             'stopped': 'unresolved' if mode == 'global_stopped' else None})
+    reads = []; session = Session()
+    with pytest.raises(Exception):
+        epoch.run(packet, root, BUNDLE, auth, key=lambda: reads.append(1), fake_session=session)
+    assert not reads and not session.calls
