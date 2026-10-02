@@ -32,7 +32,7 @@ CAP = 7540
 RUNTIME_BASE = Path.home() / "Library/Application Support/ValueFinder/football-acquisition-state"
 TERMINAL = {"recent_complete_stopped_before_older", "event_epoch_complete", "older_epoch_complete"}
 F2_HANDOFF_PATH = REPO / "strategy-research/football_archive/f2_handoff.py"
-F2_HANDOFF_SHA256 = "86087240f786b1caea3e0e56d8436095f7894824f69812d6cd424b499ae4dc8c"
+F2_HANDOFF_SHA256 = "fabf3da704b22737e0eb6182be0c8d554be06e44a7238805c1df0ebe06ab2a27"
 
 
 def canonical(value):

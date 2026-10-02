@@ -113,6 +113,9 @@ def verify_full_union(final_ledger_path):
     proof = module.verify_downstream_union(final_ledger_path,
         certificate_path=certificate, first_transition_commit=FIRST_TRANSITION_COMMIT,
         second_transition_commit=SECOND_TRANSITION_COMMIT, authenticate=True)
+    if (sha_bytes(regular_bytes(certificate)) != UNION_CERTIFICATE_SHA256
+            or sha(final_ledger_path) != final_sha):
+        raise ValueError("F2 union evidence changed during verification")
     if (not isinstance(proof, dict) or proof.get("status") != "full_f2_union_verified"
             or proof.get("final_root") != final_ledger_path.parent.name
             or proof.get("final_ledger_sha256") != final_sha

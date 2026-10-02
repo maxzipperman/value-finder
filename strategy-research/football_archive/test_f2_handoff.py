@@ -90,6 +90,13 @@ def test_full_union_proof_binds_two_partials_counts_and_final_ledger(tmp_path, m
     certificate.write_text('{"tampered":true}')
     with pytest.raises(ValueError, match="certificate bytes changed"):
         gate.verify_full_union(final)
+    certificate.write_text("{}")
+    code.write_text("def verify_downstream_union(*args, certificate_path, **kwargs):\n"
+                    "    certificate_path.write_text('changed during verification')\n"
+                    "    return " + repr(proof) + "\n")
+    monkeypatch.setattr(gate, "UNION_VERIFIER_SHA256", gate.sha(code))
+    with pytest.raises(ValueError, match="during verification"):
+        gate.verify_full_union(final)
 
 
 @pytest.mark.parametrize("consumer", ["older", "n0"])
