@@ -11,7 +11,8 @@
 #
 # What it copies, most important first:
 #   group 1, the paid data: the sharp-markets data folder's raw/ (the folder MARKETS_DATA_DIR names when it is set, as
-#            sharp-markets/src/markets/settings.py reads it) and each weather project's data/raw/oddsapi* folders
+#            sharp-markets/src/markets/settings.py reads it), each weather project's data/raw/oddsapi* folders,
+#            the complete football acquisition state parent, frozen bundles/reuse and non-secret run evidence
 #   group 2, the forward-test records: each weather project's data/forward/, also kept at every run as a dated
 #            snapshot, DEST/value-finder-backup/forward-snapshots/<UTC date and time>/, with a SHA-256 list of its files
 #   group 3, slow to re-create: ~/.cache/value-finder (the forecast archive) and sharp-markets' markets.duckdb
@@ -109,11 +110,19 @@ fi
 # The sharp-markets data folder, as settings.py finds it: MARKETS_DATA_DIR, else MARKETS_ROOT/data, else sharp-markets/data.
 MDATA="${MARKETS_DATA_DIR:-${MARKETS_ROOT:-$REPO/sharp-markets}/data}"
 case "$MDATA" in /*) ;; *) MDATA="$REPO/sharp-markets/$MDATA" ;; esac
+FSTATE="${FOOTBALL_ACQUISITION_STATE_DIR:-$HOME/Library/Application Support/ValueFinder/football-acquisition-state}"
+FEVID="${FOOTBALL_ACQUISITION_EVIDENCE_DIR:-$HOME/Library/Application Support/ValueFinder/football-acquisition-evidence}"
+case "$FSTATE" in /*) ;; *) refuse "FOOTBALL_ACQUISITION_STATE_DIR must be an absolute folder path." ;; esac
+case "$FEVID" in /*) ;; *) refuse "FOOTBALL_ACQUISITION_EVIDENCE_DIR must be an absolute folder path." ;; esac
 
 # One entry per folder (or file): group, kind (dir or file), source, place in the backup.
 N=0
 add() { G[N]="$1"; K[N]="$2"; SRC[N]="$3"; REL[N]="$4"; N=$((N + 1)); }
 add 1 dir "$MDATA/raw" "sharp-markets/data/raw"
+# The complete parent includes per-root caches/receipts/ledgers AND central registrations/reservations.
+add 1 dir "$FSTATE" "home-state/football-acquisition-state"
+add 1 dir "$REPO/strategy-research/football_archive/acquisition" "strategy-research/football_archive/acquisition"
+add 1 dir "$FEVID" "home-state/football-acquisition-evidence"
 for p in nfl-weather cfb-weather; do
   seen=" "
   # Each oddsapi* folder on this Mac, and each one already in the backup, so that one gone missing here is reported.
@@ -240,9 +249,11 @@ source_field() { sed -n "s/^$1: //p" "$SOURCE_TXT" 2>/dev/null | head -1; }
 MOVED=""
 if [ -f "$SOURCE_TXT" ]; then
   if [ "$(source_field machine)" != "$HOST_ID" ] || [ "$(source_field checkout)" != "$REPO" ] ||
-     [ "$(source_field 'sharp-markets data folder')" != "$MDATA" ]; then
+     [ "$(source_field 'sharp-markets data folder')" != "$MDATA" ] ||
+     { [ -n "$(source_field 'football state folder')" ] && [ "$(source_field 'football state folder')" != "$FSTATE" ]; } ||
+     { [ -n "$(source_field 'football evidence folder')" ] && [ "$(source_field 'football evidence folder')" != "$FEVID" ]; }; then
     was_id="$(source_field machine)"
-    MOVED="This backup was last made from $(source_field 'computer name') (Mac ${was_id%%-*}, checkout $(source_field checkout), sharp-markets data folder $(source_field 'sharp-markets data folder')). This run is from $HOST_NAME (Mac ${HOST_ID%%-*}, checkout $REPO, sharp-markets data folder $MDATA)."
+    MOVED="This backup was last made from $(source_field 'computer name') (Mac ${was_id%%-*}, checkout $(source_field checkout), sharp-markets data folder $(source_field 'sharp-markets data folder'), football state $(source_field 'football state folder'), football evidence $(source_field 'football evidence folder')). This run is from $HOST_NAME (Mac ${HOST_ID%%-*}, checkout $REPO, sharp-markets data folder $MDATA, football state $FSTATE, football evidence $FEVID)."
   fi
 fi
 if [ -n "$MOVED" ] && [ "$CHECK" -eq 0 ] && [ "$NEW_SOURCE" -eq 0 ]; then
@@ -513,7 +524,9 @@ if [ "$CHECK" -eq 0 ]; then
   echo
   echo "Copying (nothing on the backup is deleted; a file the copy replaces is kept in value-finder-backup/replaced/$REPNAME/):"
   { printf 'machine: %s\n' "$HOST_ID"; printf 'computer name: %s\n' "$HOST_NAME"; printf 'checkout: %s\n' "$REPO"
-    printf 'sharp-markets data folder: %s\n' "$MDATA"; printf 'recorded: %s\n' "$STAMP"; } > "$SOURCE_TXT" ||
+    printf 'sharp-markets data folder: %s\n' "$MDATA"
+    printf 'football state folder: %s\n' "$FSTATE"; printf 'football evidence folder: %s\n' "$FEVID"
+    printf 'recorded: %s\n' "$STAMP"; } > "$SOURCE_TXT" ||
     refuse "Could not write $SOURCE_TXT."
   SNAPNAME="$STAMP"
   k=2

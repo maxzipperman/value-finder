@@ -14,7 +14,29 @@ from September 29, 2026, before the paid pull (a `--check` of the laptop).
 | 2. The forward-test records | `nfl-weather/data/forward` and `cfb-weather/data/forward`: ledgers, run records, saved forecasts, and the decision record once there is one. Each run also keeps a dated copy in `forward-snapshots/`. | 222 files, 0.4 MB |
 | 3. Slow to re-create | `~/.cache/value-finder` (the forecast archive, five to six hours to download, and the credit balance file) and `sharp-markets/data/markets.duckdb` (54 MB) | 2,643 files, 1.9 GB |
 
-The first backup writes about 2.0 GB. **Never copied:** key files, whatever the mix of capital and small letters
+These are pre-purchase sizes, not a current space estimate. Group 1 also includes the complete
+`~/Library/Application Support/ValueFinder/football-acquisition-state` parent (each root's raw cache,
+receipts, cumulative spending ledger and coverage report, plus the central `registrations/` markers),
+`strategy-research/football_archive/acquisition/` in the selected checkout (frozen bundles and ignored
+`reuse/` probe responses), and the non-secret `football-acquisition-evidence` sibling in Application Support.
+The completed recent run's coverage report alone is 9.26 GiB. The script measures current space before copying.
+
+If evidence currently lives elsewhere, set `FOOTBALL_ACQUISITION_EVIDENCE_DIR` to its absolute folder path
+for both backup and `--check`. It must contain the saved paid authorization and hub approval, approved
+recovery/reconciliation and missing-response resolution, completion/integrity evidence and execution logs;
+never put keys or credential files there. `FOOTBALL_ACQUISITION_STATE_DIR` can likewise name a relocated
+complete state parent. A missing folder is reported by this general backup tool; after a completed football
+purchase that is a readiness blocker, not permission to proceed without it. Use the same overrides on each run.
+Choose an isolated checkout with the exact frozen acquisition bundle and all local probe reuse files present.
+
+Before another football purchase, verify encryption on the destination, finish the backup and `--check`,
+then restore these three additional group-1 folders into a fresh scratch directory. Compare every restored
+file's SHA-256 and size with the source in both directions, including all raw responses, both receipt types,
+ledger, report, freeze, probe reuse, central markers and approval/reconciliation evidence. Preserve the
+restore manifest and verification report. Do not restore over the live store or count a same-disk scratch
+copy as an off-device backup. Generic test-disk results do not establish this operational gate.
+
+**Never copied:** key files, whatever the mix of capital and small letters
 (`.env` and any name like `.ENV`, `.env.local`, `prod.env`, `env`, and `.netrc`, `kaggle.json`, `.kaggle`, `*.pem`,
 `*.p12`, `*.key`, `id_rsa*`, `id_ed25519*`, and any name containing `secret`, `credential`, `password`, `api_key`,
 `api-key` or `apikey`, and `*token*.json`, `service-account*.json`; the output names every one it leaves out, and the
