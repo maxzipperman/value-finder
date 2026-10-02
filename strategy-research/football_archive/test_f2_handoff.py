@@ -38,9 +38,9 @@ def test_only_exact_reconciled_partial_state(root, post, proposal, rid, tmp_path
 
 def test_unpublished_union_stops_without_import_or_key(tmp_path, monkeypatch):
     marker = tmp_path / "untrusted-ran"
-    code = tmp_path / "union.py"
+    code = tmp_path / "downstream.py"
     code.write_text(f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n")
-    monkeypatch.setattr(gate, "UNION_VERIFIER_PATH", code)
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_PATH", code)
     with pytest.raises(ValueError, match="not published"):
         gate.verified_union_module()
     assert not marker.exists()
@@ -48,16 +48,21 @@ def test_unpublished_union_stops_without_import_or_key(tmp_path, monkeypatch):
 
 def test_changed_union_code_cannot_execute_before_digest_check(tmp_path, monkeypatch):
     marker = tmp_path / "untrusted-ran"
-    code = tmp_path / "union.py"
-    code.write_text("def verify_downstream_union(*args, **kwargs): return {}\n")
+    union_dir = tmp_path / "union"
+    union_dir.mkdir()
+    code = union_dir / "downstream.py"
+    code.write_text("def load_verified_union(*args, **kwargs): return object()\n")
     expected = gate.sha(code)
-    certificate = tmp_path / "certificate.json"
+    packet = union_dir / "F3a"
+    packet.mkdir()
+    certificate = packet / "union-certificate.json"
     certificate.write_text("{}")
-    monkeypatch.setattr(gate, "UNION_VERIFIER_PATH", code)
-    monkeypatch.setattr(gate, "UNION_VERIFIER_SHA256", expected)
-    monkeypatch.setattr(gate, "UNION_CERTIFICATE_PATH", certificate)
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_PATH", code)
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_SHA256", expected)
+    monkeypatch.setattr(gate, "UNION_PACKET_PATH", packet)
+    monkeypatch.setattr(gate, "UNION_PACKET_ROOT", "e" * 64)
     monkeypatch.setattr(gate, "UNION_CERTIFICATE_SHA256", gate.sha(certificate))
-    monkeypatch.setattr(gate, "SECOND_TRANSITION_COMMIT", "a" * 40)
+    monkeypatch.setattr(gate, "FINAL_LEDGER_SHA256", "b" * 64)
     code.write_text(f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n")
     with pytest.raises(ValueError, match="before import"):
         gate.verified_union_module()
@@ -68,33 +73,70 @@ def test_full_union_proof_binds_two_partials_counts_and_final_ledger(tmp_path, m
     final = tmp_path / ("b" * 64) / "spending-ledger.json"
     final.parent.mkdir()
     final.write_text('{"status":"event_epoch_complete"}\n')
-    certificate = tmp_path / "certificate.json"
-    certificate.write_text("{}")
-    second_commit = "a" * 40
-    proof = {"status": "full_f2_union_verified", "final_root": final.parent.name,
-             "final_ledger_sha256": gate.sha(final), "certificate_sha256": gate.sha(certificate),
-             "first_partial": {"root": gate.FIRST_ROOT, "ledger_sha256": gate.FIRST_POST,
-                               "transition_commit": gate.FIRST_TRANSITION_COMMIT},
-             "second_partial": {"root": gate.SECOND_ROOT, "ledger_sha256": gate.SECOND_POST,
-                                "transition_commit": second_commit},
-             "request_slots": 1773, "opportunities": 1774,
-             "disjoint_ownership_sha256": "c" * 64}
-    code = tmp_path / "union.py"
-    code.write_text("def verify_downstream_union(*args, **kwargs):\n    return " + repr(proof) + "\n")
-    monkeypatch.setattr(gate, "UNION_VERIFIER_PATH", code)
-    monkeypatch.setattr(gate, "UNION_VERIFIER_SHA256", gate.sha(code))
-    monkeypatch.setattr(gate, "UNION_CERTIFICATE_PATH", certificate)
+    union_dir = tmp_path / "union"
+    packet = union_dir / "F3a"
+    packet.mkdir(parents=True)
+    certificate = packet / "union-certificate.json"
+    cert = {"schema": "completed-f2-union-certificate-v2", "continuation_root": final.parent.name,
+            "continuation_commit": gate.SECOND_TRANSITION_COMMIT,
+            "continuation_ledger_sha256": gate.sha(final), "partial_ledger_sha256": gate.FIRST_POST,
+            "second_partial_ledger_sha256": gate.SECOND_POST, "request_slots": 1773,
+            "opportunity_count": 1774, "missing_categories": {"synthetic": 1},
+            "outcomes_joined": False, "purchase_authorized": False}
+    coverage = {"schema": "completed-f2-union-v2", "acquisition_complete": True,
+                "root": final.parent.name, "ledger_sha256": gate.sha(final),
+                "missing_categories": cert["missing_categories"], "response_evidence": [],
+                "offline_approvals_authenticated_live": True}
+    cert["response_evidence_sha256"] = gate.sha_bytes(gate.canonical(coverage["response_evidence"]))
+    cert["coverage_sha256"] = gate.sha_bytes(gate.canonical({k: v for k, v in coverage.items()
+        if k != "offline_approvals_authenticated_live"}) + b"\n")
+    certificate.write_bytes(gate.canonical(cert) + b"\n")
+    code = union_dir / "downstream.py"
+    code.write_text("def load_verified_union(*args, **kwargs):\n"
+                    "    class Captured:\n"
+                    "        def verify_downstream_union(self, *args, **kwargs):\n"
+                    "            return " + repr((cert, coverage)) + "\n"
+                    "    return Captured()\n")
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_PATH", code)
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_SHA256", gate.sha(code))
+    monkeypatch.setattr(gate, "UNION_PACKET_PATH", packet)
+    monkeypatch.setattr(gate, "UNION_PACKET_ROOT", "e" * 64)
     monkeypatch.setattr(gate, "UNION_CERTIFICATE_SHA256", gate.sha(certificate))
-    monkeypatch.setattr(gate, "SECOND_TRANSITION_COMMIT", second_commit)
-    assert gate.verify_full_union(final) == gate.sha_bytes(gate.canonical(proof))
+    monkeypatch.setattr(gate, "FINAL_ROOT", final.parent.name)
+    monkeypatch.setattr(gate, "FINAL_LEDGER_SHA256", gate.sha(final))
+    binding = {"certificate_sha256": gate.sha(certificate), "final_ledger_sha256": gate.sha(final),
+               "coverage_sha256": cert["coverage_sha256"],
+               "response_evidence_sha256": cert["response_evidence_sha256"]}
+    assert gate.verify_full_union(final) == gate.sha_bytes(gate.canonical(binding))
+    altered = {**coverage, "response_evidence": [{"unreviewed": True}]}
+    code.write_text("def load_verified_union(*args, **kwargs):\n"
+                    "    class Captured:\n"
+                    "        def verify_downstream_union(self, *args, **kwargs):\n"
+                    "            return " + repr((cert, altered)) + "\n"
+                    "    return Captured()\n")
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_SHA256", gate.sha(code))
+    with pytest.raises(ValueError, match="differs from the reviewed contract"):
+        gate.verify_full_union(final)
+    altered = {**coverage, "offline_approvals_authenticated_live": False}
+    code.write_text("def load_verified_union(*args, **kwargs):\n"
+                    "    class Captured:\n"
+                    "        def verify_downstream_union(self, *args, **kwargs):\n"
+                    "            return " + repr((cert, altered)) + "\n"
+                    "    return Captured()\n")
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_SHA256", gate.sha(code))
+    with pytest.raises(ValueError, match="differs from the reviewed contract"):
+        gate.verify_full_union(final)
     certificate.write_text('{"tampered":true}')
     with pytest.raises(ValueError, match="certificate bytes changed"):
         gate.verify_full_union(final)
-    certificate.write_text("{}")
-    code.write_text("def verify_downstream_union(*args, certificate_path, **kwargs):\n"
-                    "    certificate_path.write_text('changed during verification')\n"
-                    "    return " + repr(proof) + "\n")
-    monkeypatch.setattr(gate, "UNION_VERIFIER_SHA256", gate.sha(code))
+    certificate.write_bytes(gate.canonical(cert) + b"\n")
+    code.write_text("def load_verified_union(*args, **kwargs):\n"
+                    "    class Captured:\n"
+                    "        def verify_downstream_union(self, *args, certificate_path, **kwargs):\n"
+                    "            certificate_path.write_text('changed during verification')\n"
+                    "            return " + repr((cert, coverage)) + "\n"
+                    "    return Captured()\n")
+    monkeypatch.setattr(gate, "UNION_BOOTSTRAP_SHA256", gate.sha(code))
     with pytest.raises(ValueError, match="during verification"):
         gate.verify_full_union(final)
 

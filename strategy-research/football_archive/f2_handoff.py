@@ -28,11 +28,15 @@ FIRST_TRANSITION_COMMIT = "20bcaa35d3d5b6f93d292062c2480e3edb82a83a"
 # approval on PR99; the subsequent downstream checkout commit is unrelated.
 SECOND_TRANSITION_COMMIT = "3f29479fd8c9c5798ceb08b0c2d26d3c0e2706cb"
 
-# PR119 must publish one self-contained, read-only downstream verifier and its
-# final certificate. The reviewed byte hashes are pinned here before use.
-UNION_VERIFIER_PATH = None
-UNION_VERIFIER_SHA256 = None
-UNION_CERTIFICATE_PATH = None
+# PR119's bootstrap is self-contained and captures/hashes the entire sibling
+# dependency/packet map before importing the reviewed union implementation.
+# All final byte/root/ledger pins stay absent until its completed packet exists.
+FINAL_ROOT = "7485bc1230aeaf069a21e0a75ca9d93002c2e8abccdddaa706e45c5aa63aa467"
+FINAL_LEDGER_SHA256 = "84ff08834943ab4418d69efa9c5ce9355d0be20931fee20df149937a5064d0cd"
+UNION_BOOTSTRAP_PATH = Path(__file__).resolve().parent / "union-v1/downstream.py"
+UNION_BOOTSTRAP_SHA256 = None
+UNION_PACKET_PATH = Path(__file__).resolve().parent / "union-v1/F3a"
+UNION_PACKET_ROOT = None
 UNION_CERTIFICATE_SHA256 = None
 
 
@@ -87,45 +91,66 @@ def verify_partial(root, ledger_path, state, ledger_sha256):
 
 
 def verified_union_module():
-    if (not UNION_VERIFIER_PATH or not re.fullmatch("[a-f0-9]{64}", UNION_VERIFIER_SHA256 or "")
-            or not UNION_CERTIFICATE_PATH or not re.fullmatch("[a-f0-9]{64}", UNION_CERTIFICATE_SHA256 or "")
-            or not re.fullmatch("[a-f0-9]{40}", SECOND_TRANSITION_COMMIT or "")):
+    if (not UNION_BOOTSTRAP_PATH or not re.fullmatch("[a-f0-9]{64}", UNION_BOOTSTRAP_SHA256 or "")
+            or not UNION_PACKET_PATH or not re.fullmatch("[a-f0-9]{64}", UNION_PACKET_ROOT or "")
+            or not re.fullmatch("[a-f0-9]{64}", UNION_CERTIFICATE_SHA256 or "")
+            or not re.fullmatch("[a-f0-9]{64}", FINAL_LEDGER_SHA256 or "")):
         raise ValueError("Final reviewed F2 union proof is not published")
-    path = Path(UNION_VERIFIER_PATH)
+    path = Path(UNION_BOOTSTRAP_PATH)
+    packet = Path(UNION_PACKET_PATH)
+    if packet != path.parent / "F3a":
+        raise ValueError("Union packet must accompany its pinned bootstrap")
     data = regular_bytes(path)
-    if sha_bytes(data) != UNION_VERIFIER_SHA256:
-        raise ValueError("Reviewed F2 union verifier bytes changed before import")
-    module = types.ModuleType("reviewed_f2_downstream_union")
-    module.__file__ = str(path)
-    exec(compile(data, str(path), "exec"), module.__dict__)
-    if not callable(getattr(module, "verify_downstream_union", None)):
-        raise ValueError("Reviewed F2 union verifier has no downstream entrypoint")
-    return module
+    if sha_bytes(data) != UNION_BOOTSTRAP_SHA256:
+        raise ValueError("Reviewed F2 union bootstrap bytes changed before import")
+    bootstrap = types.ModuleType("reviewed_f2_downstream_bootstrap")
+    bootstrap.__file__ = str(path)
+    exec(compile(data, str(path), "exec"), bootstrap.__dict__)
+    if not callable(getattr(bootstrap, "load_verified_union", None)):
+        raise ValueError("Reviewed F2 union bootstrap has no captured loader")
+    return bootstrap.load_verified_union(packet, UNION_PACKET_ROOT)
 
 
 def verify_full_union(final_ledger_path):
     """Require PR119's independently pinned deep evidence proof before use."""
     module = verified_union_module()
-    certificate = Path(UNION_CERTIFICATE_PATH)
+    certificate = Path(UNION_PACKET_PATH) / "union-certificate.json"
     if sha_bytes(regular_bytes(certificate)) != UNION_CERTIFICATE_SHA256:
         raise ValueError("Reviewed F2 union certificate bytes changed")
     final_ledger_path = Path(final_ledger_path).resolve()
     final_sha = sha(final_ledger_path)
+    if final_ledger_path.parent.name != FINAL_ROOT or final_sha != FINAL_LEDGER_SHA256:
+        raise ValueError("Exact completed F2 ledger pin changed")
     proof = module.verify_downstream_union(final_ledger_path,
         certificate_path=certificate, first_transition_commit=FIRST_TRANSITION_COMMIT,
         second_transition_commit=SECOND_TRANSITION_COMMIT, authenticate=True)
+    if not isinstance(proof, tuple) or len(proof) != 2:
+        raise ValueError("Full F2 union verifier returned no certificate and coverage")
+    cert, coverage = proof
     if (sha_bytes(regular_bytes(certificate)) != UNION_CERTIFICATE_SHA256
             or sha(final_ledger_path) != final_sha):
         raise ValueError("F2 union evidence changed during verification")
-    if (not isinstance(proof, dict) or proof.get("status") != "full_f2_union_verified"
-            or proof.get("final_root") != final_ledger_path.parent.name
-            or proof.get("final_ledger_sha256") != final_sha
-            or proof.get("certificate_sha256") != UNION_CERTIFICATE_SHA256
-            or proof.get("first_partial") != {"root": FIRST_ROOT, "ledger_sha256": FIRST_POST,
-                                                "transition_commit": FIRST_TRANSITION_COMMIT}
-            or proof.get("second_partial") != {"root": SECOND_ROOT, "ledger_sha256": SECOND_POST,
-                                                 "transition_commit": SECOND_TRANSITION_COMMIT}
-            or proof.get("request_slots") != 1773 or proof.get("opportunities") != 1774
-            or not re.fullmatch("[a-f0-9]{64}", proof.get("disjoint_ownership_sha256", ""))):
+    if (not isinstance(cert, dict) or not isinstance(coverage, dict)
+            or cert.get("schema") != "completed-f2-union-certificate-v2"
+            or cert.get("continuation_root") != FINAL_ROOT
+            or cert.get("continuation_commit") != SECOND_TRANSITION_COMMIT
+            or cert.get("continuation_ledger_sha256") != final_sha
+            or cert.get("partial_ledger_sha256") != FIRST_POST
+            or cert.get("second_partial_ledger_sha256") != SECOND_POST
+            or cert.get("request_slots") != 1773 or cert.get("opportunity_count") != 1774
+            or not re.fullmatch("[a-f0-9]{64}", cert.get("response_evidence_sha256", ""))
+            or not re.fullmatch("[a-f0-9]{64}", cert.get("coverage_sha256", ""))
+            or cert.get("outcomes_joined") is not False or cert.get("purchase_authorized") is not False
+            or coverage.get("schema") != "completed-f2-union-v2"
+            or coverage.get("acquisition_complete") is not True
+            or coverage.get("root") != FINAL_ROOT or coverage.get("ledger_sha256") != final_sha
+            or coverage.get("missing_categories") != cert.get("missing_categories")
+            or coverage.get("offline_approvals_authenticated_live") is not True
+            or sha_bytes(canonical(coverage.get("response_evidence"))) != cert["response_evidence_sha256"]
+            or sha_bytes(canonical({k: v for k, v in coverage.items()
+                                    if k != "offline_approvals_authenticated_live"}) + b"\n") != cert["coverage_sha256"]
+            or sha_bytes(canonical(cert) + b"\n") != UNION_CERTIFICATE_SHA256):
         raise ValueError("Full F2 union proof differs from the reviewed contract")
-    return sha_bytes(canonical(proof))
+    return sha_bytes(canonical({"certificate_sha256": UNION_CERTIFICATE_SHA256,
+        "final_ledger_sha256": final_sha, "coverage_sha256": cert["coverage_sha256"],
+        "response_evidence_sha256": cert["response_evidence_sha256"]}))
