@@ -1,0 +1,14 @@
+{
+  "functional_cases": 52,
+  "oracle_passed": true,
+  "mutants_detected": {
+    "negative_rejected": true,
+    "positive_formula_for_both": true,
+    "rounded_probability": true,
+    "numeric_strings_rejected": true,
+    "sub100_accepted": true,
+    "nonfinite_accepted": true,
+    "bad_input_returns_none": true,
+    "valid_boundary_rejected": true
+  }
+}
