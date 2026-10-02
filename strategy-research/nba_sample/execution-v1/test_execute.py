@@ -213,3 +213,45 @@ def test_changed_v4_code_never_executes_before_freeze_check(tmp_path, monkeypatc
     with pytest.raises(ValueError, match="before import"):
         execute.source_executor(bundle)
     assert not marker.exists()
+
+
+@pytest.mark.parametrize("change", ["extra", "missing", "symlink"])
+def test_v4_file_inventory_rejects_shape_changes(tmp_path, monkeypatch, change):
+    bundle = tmp_path / "source"
+    bundle.mkdir()
+    (bundle / "executor.py").write_text("pass\n")
+    files = {"executor.py": hashlib.sha256((bundle / "executor.py").read_bytes()).hexdigest()}
+    root = hashlib.sha256(stage.canonical(files)).hexdigest()
+    stage.write(bundle / "FREEZE.json", {"bundle_root_sha256": root, "file_sha256": files})
+    monkeypatch.setattr(stage, "V4_ROOT", root)
+    if change == "extra":
+        (bundle / "extra.py").write_text("pass\n")
+    elif change == "missing":
+        (bundle / "executor.py").unlink()
+    else:
+        (bundle / "linked.py").symlink_to(bundle / "executor.py")
+    with pytest.raises(ValueError, match="source|before import"):
+        execute.verified_v4_bytes(bundle)
+
+
+def test_v4_loader_executes_verified_capture_even_if_file_changes_after_capture(tmp_path, monkeypatch):
+    bundle = tmp_path / "source"
+    bundle.mkdir()
+    files = {"executor.py": b"CAPTURED = True\n", "builder.py": b"pass\n",
+             "price_eligibility.py": b"pass\n", "validator.py": b"def verify(*args, **kwargs): pass\n"}
+    for name, data in files.items():
+        (bundle / name).write_bytes(data)
+    marker = tmp_path / "reopened-untrusted-source"
+    actual_verify = execute.verified_v4_bytes
+    def change_after_capture(path):
+        captured = actual_verify(path)
+        (bundle / "executor.py").write_text(
+            f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n")
+        return captured
+    hashes = {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}
+    root = hashlib.sha256(stage.canonical(hashes)).hexdigest()
+    stage.write(bundle / "FREEZE.json", {"bundle_root_sha256": root, "file_sha256": hashes})
+    monkeypatch.setattr(stage, "V4_ROOT", root)
+    monkeypatch.setattr(execute, "verified_v4_bytes", change_after_capture)
+    assert execute.source_executor(bundle).CAPTURED is True
+    assert not marker.exists()
