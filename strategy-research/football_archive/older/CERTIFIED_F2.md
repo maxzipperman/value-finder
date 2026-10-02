@@ -12,4 +12,4 @@ The older runner now verifies and captures the full immutable v4 file map before
 
 ## Report for the hub
 
-NOT READY — the completed F3a runtime state and older packet are pending. Final PR #119 evidence pins and real read-only composition are verified. Older still needs its actual frozen packet, current-head review and separate exact hub paid approval; N0 follows actual older completion.
+READY FOR THE HUB — the actual older packet is frozen at `older/older-2020-22`, root `03391fd2c0bf224f053aae102fe1e3c520db58f9fa97837d34244e4fc54988c0`, from completed F3a ledger SHA `8c8592a437646416d6dfb3b0cb989738a5c6cbf100851e874e35d6ac36ad7ba9`. It carries 154,189 credits without the once-counted 1,687-credit probe, for a prospective conservative maximum of 223,886 after older. The ten-store exact-key inventory has zero paid overlap. Current-head review and separate exact hub paid approval are still required. N0 follows actual older completion.
