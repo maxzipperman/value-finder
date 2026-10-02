@@ -163,6 +163,14 @@ def test_both_consumers_require_exact_partial_order_and_full_union(tmp_path, mon
     with pytest.raises(ValueError, match="request.*repurchased|request overlap"):
         stage.seed(newest[0], [{"request_id": gate.FIRST_MISSING,
                                   "cache_key": gate.FIRST_MISSING[:20]}], require_f2=True)
+    with pytest.raises(ValueError, match="cache.*repurchased|cache overlap"):
+        stage.seed(newest[0], [{"request_id": "new-request",
+                                  "cache_key": gate.FIRST_MISSING[:20]}], require_f2=True)
+    newest_state = json.loads(newest[0].read_text())
+    stage.write(newest[0], {**newest_state, "other_usage_reserved": 0})
+    with pytest.raises(ValueError, match="decreased"):
+        stage.seed(newest[0], [], require_f2=True)
+    stage.write(newest[0], newest_state)
     state = json.loads(first[0].read_text())
     state["status"] = "event_epoch_complete"
     stage.write(first[0], state)
