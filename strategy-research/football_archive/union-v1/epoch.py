@@ -400,6 +400,10 @@ def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoi
     ledger = client = None
     try:
         fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        # Re-capture the complete immutable source after obtaining the shared
+        # purchase lock, before any vendor import, registration or key loading.
+        base = source_executor(bundle)
+        verify_source_plan(packet, bundle, manifest, rows)
         seed_state(seed, rows)
         stage_guard(packet, manifest, seed, rows, bundle, authenticate=fake_session is None)
         cache_info = json.loads((packet / 'cache-reconciliation.json').read_text())
