@@ -331,6 +331,7 @@ def scorer_trouble(project: str, s, then: str = "The counts above are from the l
     name = "NFL" if project == "nfl-weather" else "college football"
     return {
         "ok": "",
+        "disabled": "Scoring is disabled for this dashboard. Logged signals are not graded results.",
         "waiting": f"The {name} scorer's read is being prepared; it appears here when it is ready.",
         "missing": (f"The {name} scorer can't be run here: its Python environment "
                     f"({project}/.venv) or its script is missing. {then}"),
@@ -378,8 +379,8 @@ def forward_tests(scr: Screen, wait: bool) -> list[dict]:
                 f", {sk['pending']} waiting for a result" if sk["pending"] else "")
             detail = (f"{sk['signals']} signals, {sk['settled']} settled, {sk['pending']} waiting for a result, "
                       f"{sk['void']} void (the scorer's count)")
-        elif sc["status"] in ("failed", "timed_out", "missing", "skipped", "not_document"):
-            why = {"failed": "stopped with an error", "timed_out": "took too long and was stopped",
+        elif sc["status"] in ("disabled", "failed", "timed_out", "missing", "skipped", "not_document"):
+            why = {"disabled": "is disabled", "failed": "stopped with an error", "timed_out": "took too long and was stopped",
                    "missing": "can't be run here", "skipped": "was not started",
                    "not_document": "printed something the dashboard can't read"}[sc["status"]]
             progress = f"The scorer {why}; {logged} logged (from the ledger)"
@@ -458,22 +459,15 @@ def jobs(scr: Screen) -> list[dict]:
                 result = "Nothing new to copy"
             if level != "ok":
                 result = f"{exit_words}. {result}"
+        collector = None
         if job.get("collector"):
-            stamp = snap.operations.get("collector_outputs", {}).get(lbl)
-            output_at = datetime.fromtimestamp(stamp, UTC) if stamp else None
-            output_words = scr.when(output_at) if output_at else "Not verified"
             start = snap.operations.get("nba_start") if lbl.endswith("nbacollector") else None
-            future_start = bool(start and scr.now.astimezone(scr.tz).date().isoformat() < start)
-            process = "Running" if running else "Loaded; idle" if loaded else "Not loaded" if loaded is False else "Unknown"
-            result = process + ". " + (exit_words + ". " if loaded else "")
-            if future_start:
-                result += "Collection starts " + start + "; no collections expected yet. "
-            result += "Last output file update: " + output_words + ". Collection success is unverified; process status alone does not prove data arrived."
-            # Output can be legitimately quiet without a trigger/slot. Do not invent freshness deadlines.
-            if level == "ok" and not future_start:
-                level = "warn"  # no successful-collection receipt contract exists for these jobs yet
-            if future_start and loaded is True and status in (None, 0):
-                level = "ok"
+            future_start = start if start and scr.now.astimezone(scr.tz).date().isoformat() < start else None
+            receipt = snap.operations.get("collector_receipts", {}).get(lbl, {"available": False})
+            collector = operations.collector_display(lbl, loaded, running, status, receipt, future_start)
+            result, level = collector["text"], collector["level"]
+            stamp = snap.operations.get("collector_outputs", {}).get(lbl)
+            collector["output_updated"] = scr.when(datetime.fromtimestamp(stamp, UTC)) if stamp else "Not recorded"
         out.append({"label": lbl, "name": job["name"], "schedule": schedule_words(snap.plists.get(lbl)),
                     "loaded": loaded, "running": running, "state": printed.get("state", ""),
                     "runs_since_load": printed.get("runs", ""), "exit_status": status,
@@ -481,7 +475,7 @@ def jobs(scr: Screen) -> list[dict]:
                     "last_run_label": "Last run" if "project" in job else "Last wrote to its log",
                     "last_run_note": ("from its run record" if "project" in job else
                                       "when it last wrote to its log" if last_run else ""),
-                    "result": result, "level": level,
+                    "result": result, "level": level, "collector": collector,
                     "log_line": (snap.logs.get(lbl) or {}).get("last_line", "")})
     return out
 
@@ -644,6 +638,7 @@ def home(store: Store) -> dict:
         },
         "tests": tests, "jobs": job_list, "waiting": waiting, "evidence": ev_sorted[:3],
         "operations": op, "sources": source_freshness(scr),
+        "scoring_disabled": store.cfg.disable_scorers,
         "evidence_total": len(ev), "variants": n, "bar": bar,
     })
 

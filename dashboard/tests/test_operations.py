@@ -280,3 +280,121 @@ def test_nba_run_log_metadata_visible_without_collection_success(root, home):
     target = root / 'private-log'; write(target, 'private')
     p.symlink_to(target)
     assert op.collector_outputs(root)['com.valuefinder.nbacollector'] is None
+
+
+def receipt(home, name='propslog', **changes):
+    d = dict(version=1,label='com.valuefinder.'+name,recorded_utc='2026-10-03T18:00:00Z',
+             state='collected',last_attempt_utc='2026-10-03T17:59:00Z',
+             last_success_utc='2026-10-03T17:59:00Z',next_expected_utc=None,
+             missed_windows=None,window_start_utc=None,window_end_utc=None)
+    d.update(changes)
+    p = home/'Library/Application Support/ValueFinder/collector-status'/f'{name}.json'
+    write(p,json.dumps(d))
+    return p
+
+
+def test_deployment_pending_has_owner_and_action():
+    d=op.collector_display('com.valuefinder.propslog',False,False,None,{'available':False})
+    assert d['state']=='deployment_pending' and d['owner']=='Hub'
+    assert '/pull/125' in d['tracking_url'] and 'first eligible' in d['next_action']
+
+
+def test_future_nba_not_an_attention_failure_but_still_needs_installation():
+    d=op.collector_display('com.valuefinder.nbacollector',False,False,None,{},'2026-10-20')
+    assert d['state']=='scheduled' and not d['attention'] and d['level']=='ok'
+    assert 'not loaded' in d['text'] and 'before 2026-10-20' in d['next_action']
+
+
+def test_launchctl_unknown_or_failure_not_hidden_by_future_start_or_receipt():
+    d=op.collector_display('com.valuefinder.nbacollector',None,False,None,{},'2026-10-20')
+    assert d['state']=='process_unknown' and d['attention']
+    d=op.collector_display('com.valuefinder.nbacollector',True,False,1,{'available':True,'state':'collected'},'2026-10-20')
+    assert d['state']=='process_failed' and d['level']=='fail'
+
+
+def test_collection_receipts_report_success_and_unknown_misses_separately(home):
+    p=receipt(home);before=p.read_bytes(),p.stat().st_mtime_ns
+    r=op.collector_receipts(home,NOW)['com.valuefinder.propslog']
+    assert r['available'] and r['state']=='collected' and r['missed_windows'] is None
+    assert before==(p.read_bytes(),p.stat().st_mtime_ns)
+    d=op.collector_display('com.valuefinder.propslog',True,False,0,r)
+    assert 'reports a successful' in d['text']
+    assert op.collector_display('com.valuefinder.propslog',False,False,None,r)['state']=='deployment_pending'
+
+
+@pytest.mark.parametrize('changes',[
+    {'version':True}, {'label':'com.valuefinder.triggerpoll'}, {'state':'other'},
+    {'recorded_utc':'2026-10-03T19:00:00Z'}, {'recorded_utc':'2026-10-03'},
+    {'last_success_utc':'2026-10-03T18:01:00Z'}, {'last_attempt_utc':None},
+    {'missed_windows':0}, {'missed_windows':True}, {'missed_windows':-1},
+    {'window_start_utc':'2026-10-03T17:00:00Z'},
+    {'state':'collected','last_success_utc':None}, {'private_key':'DO_NOT_EXPOSE'},
+])
+def test_invalid_collection_receipt_is_unknown(home,changes):
+    receipt(home,**changes)
+    r=op.collector_receipts(home,NOW)['com.valuefinder.propslog']
+    assert not r['available'] and 'DO_NOT_EXPOSE' not in json.dumps(r)
+
+
+def test_collection_receipt_bounded_no_links_duplicate_fields_or_pipes(home,tmp_path):
+    p=receipt(home)
+    p.write_text('{"version":1,"version":1}')
+    assert not op.collector_receipts(home,NOW)['com.valuefinder.propslog']['available']
+    p.write_text(' '*16385)
+    assert not op.collector_receipts(home,NOW)['com.valuefinder.propslog']['available']
+    p.unlink();target=tmp_path/'private.env';target.write_text('DO_NOT_READ');p.symlink_to(target)
+    assert not op.collector_receipts(home,NOW)['com.valuefinder.propslog']['available']
+    p.unlink();os.mkfifo(p)
+    assert not op.collector_receipts(home,NOW)['com.valuefinder.propslog']['available']
+
+
+def test_stale_receipt_not_current_success_and_misses_have_window(home):
+    receipt(home,recorded_utc='2026-10-03T16:00:00Z',last_attempt_utc='2026-10-03T15:59:00Z',last_success_utc='2026-10-03T15:59:00Z')
+    r=op.collector_receipts(home,NOW)['com.valuefinder.propslog']
+    assert r['stale']
+    assert op.collector_display('com.valuefinder.propslog',True,False,0,r)['state']=='collection_unverified'
+    receipt(home,missed_windows=2,window_start_utc='2026-10-02T18:00:00Z',window_end_utc='2026-10-03T18:00:00Z')
+    r=op.collector_receipts(home,NOW)['com.valuefinder.propslog']
+    assert r['missed_windows']==2
+    d=op.collector_display('com.valuefinder.propslog',True,False,0,r)
+    assert d['attention'] and d['level']=='warn'
+
+
+def test_explicit_disable_never_runs_or_reuses_scorers(root,home):
+    from vfdash.data import Scored
+    store=make_store(root,home)
+    store.cfg.disable_scorers=True
+    store._scores['nfl-weather']=Scored('nfl-weather','ok',text='old cached result',ran_at=store.clock())
+    def forbidden(*a,**kw):
+        raise AssertionError('Scorer execution forbidden')
+    store._run=forbidden
+    for project in ('nfl-weather','cfb-weather'):
+        assert store.scorer(project).status=='disabled'
+        assert store.scorer(project,wait=False).status=='disabled'
+        assert store._score(project).status=='disabled'
+
+
+def test_render_actionable_status_and_disabled_mode(root,home,tmp_path):
+    from test_signals import draw,text
+    store=make_store(root,home,clock=Clock(NOW));store.cfg.disable_scorers=True
+    data=api.home(store)
+    rendered=text(draw(tmp_path,'#home',data))
+    assert 'Scoring disabled for this dashboard' in rendered
+    assert 'Owner: Hub' in rendered and 'Next action:' in rendered
+    assert 'Missed windows: Unknown' in rendered and 'Last successful collection: Not verified' in rendered
+    assert 'Dashboard version and status source' in rendered
+
+
+def test_deployment_record_binds_status_without_paths_or_false_freshness(root,home,tmp_path):
+    import hashlib
+    store=make_store(root,home);store.cfg.content=tmp_path/'release/dashboard/content'
+    status='Updated October 3, 2026\n'
+    p=tmp_path/'release/DEPLOYMENT.json'
+    d=dict(version=1,commit='a'*40,deployed_utc='2026-10-03T17:00:00Z',status_sha256=hashlib.sha256(status.encode()).hexdigest())
+    write(p,json.dumps(d))
+    result=op.deployment_provenance(store.cfg,status,NOW)
+    assert result['available'] and result['status_matches'] and '/'+ 'a'*40+'/' in result['source_url']
+    result=op.deployment_provenance(store.cfg,status+'changed',NOW)
+    assert not result['status_matches'] and result['source_url'] is None
+    d['commit']='javascript:DO_NOT_EXPOSE';write(p,json.dumps(d))
+    assert not op.deployment_provenance(store.cfg,status,NOW)['available']
