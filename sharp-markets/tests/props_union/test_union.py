@@ -121,7 +121,7 @@ class UnionTests(unittest.TestCase):
             dict(slot=s,requested_utc='2025-10-01T16:50:00Z') for s in U.SLOTS]),
             dict(game_id='g',season=2025,identity_type='canonical',source_opportunities=[
             dict(slot=s,requested_utc='2025-10-01T16:50:00Z') for s in U.SLOTS])]
-        p=dict(receipt_projection={},ledger_pins={},classifier_sha256='c',timing_sha256='t',original_final_sha256='f')
+        p=dict(bound_inputs={},receipt_projection={},ledger_pins={},classifier_sha256='c',timing_sha256='t',original_final_sha256='f')
         classifier=type('Classifier',(),{'bind_asof':staticmethod(lambda *_: {'status':'bound'})})
         with patch.object(U,'metadata',return_value=({'provenance':p},games,{}, {},[{'canonical_game_id':'g'}],[],{})), \
              patch.object(U,'readers',return_value=(None,classifier,None,lambda *_:[])):
@@ -141,7 +141,7 @@ class UnionTests(unittest.TestCase):
             U.read_union(Path('/unused'))
         games=[dict(game_id='g',season=2025,identity_type='canonical',certainty_evidence={'source_request_ids':['must-not-read']},
                     source_opportunities=[dict(slot=s,requested_utc='2025-10-01T16:50:00Z') for s in U.SLOTS])]
-        p=dict(receipt_projection={'must-not-read':{}},ledger_pins={},classifier_sha256='c',timing_sha256='t',original_final_sha256='f')
+        p=dict(bound_inputs={},receipt_projection={'must-not-read':{}},ledger_pins={},classifier_sha256='c',timing_sha256='t',original_final_sha256='f')
         classifier=type('Classifier',(),{'bind_asof':staticmethod(lambda *_: {'status':'bound'})})
         def forbidden(*args,**kwargs): self.fail('Dry run opened a raw receipt')
         with patch.object(U,'metadata',return_value=({'provenance':p},games,{}, {},[{'canonical_game_id':'g'}],[],{})), \
