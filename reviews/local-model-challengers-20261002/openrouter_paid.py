@@ -99,7 +99,7 @@ def main():
             if not {'prompt', 'completion'} <= set(costs):
                 raise RuntimeError('missing token prices')
             for name, value in costs.items():
-                ceiling = item['body']['provider']['max_price'].get(name, costs['prompt'] if name == 'input_cache_read' else 0)
+                ceiling = item['body']['provider']['max_price'].get(name, item['body']['provider']['max_price']['prompt'] if name == 'input_cache_read' else 0)
                 if number(value) * 1_000_000 > ceiling:
                     raise RuntimeError('catalog price exceeds approved ceiling')
             before = billing()
