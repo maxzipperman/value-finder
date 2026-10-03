@@ -29,7 +29,7 @@ def loader():
 class BridgeTests(unittest.TestCase):
  def test_logical_source_mutation_and_unknown_physical_file_fail(self):
   with tempfile.TemporaryDirectory(dir='/private/tmp') as d:
-   folder=Path(d);config=dict(repo=d,preparation=d,final_record=d,restart_policy=dict(allowed=['prepared','running','pilot_clean_pause'],pending='block_no_resend',stopped='block_reconciliation',terminal='exhausted',automatic_retries=0,automatic_redirects=0))
+   folder=Path(d);config=dict(superseded_unexecuted_root='05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017',repo=d,preparation=d,final_record=d,restart_policy=dict(allowed=['prepared','running','pilot_clean_pause'],pending='block_no_resend',stopped='block_reconciliation',terminal='exhausted',automatic_retries=0,automatic_redirects=0))
    data={'logical-source':b'original'}
    for n in bootstrap.PHYSICAL:
     raw=bootstrap.canonical(config if n=='config.json' else {});(folder/n).write_bytes(raw);data[n]=raw
@@ -66,6 +66,45 @@ class BridgeTests(unittest.TestCase):
   for name,value in mutations.items():
    changed=dict(data);changed[name]=bootstrap.canonical(value)
    with self.subTest(name=name),self.assertRaises(ValueError):v.packet(changed,source)
+
+ def test_probe_guards_apply_to_every_fresh_verified_executor(self):
+  import ast
+  script=HERE.parent.parent/'reviews/captured-dependency-path-fix/actual-orchestration-probe.py'
+  tree=ast.parse(script.read_bytes());node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='guarded_verified')
+  called=[]
+  class Blocked(Exception):pass
+  def stop(*a,**k):called.append('blocked');raise Blocked()
+  class NoLedger:
+   def __init__(self,*a,**k):stop()
+  original=SimpleNamespace(register_runtime=lambda:called.append('unsafe'),Ledger=lambda:called.append('unsafe'))
+  def verified(*a,**k):return (None,SimpleNamespace(register_runtime=original.register_runtime,Ledger=original.Ledger),None,None,None)
+  scope=dict(real_verified=verified,stop_registration=stop,ForbiddenLedger=NoLedger,guarded=[])
+  exec(compile(ast.Module(body=[node],type_ignores=[]),str(script),'exec'),scope)
+  fresh=[scope['guarded_verified']()[1] for _ in range(3)]
+  for base in fresh:
+   with self.assertRaises(Blocked):base.register_runtime()
+   with self.assertRaises(Blocked):base.Ledger()
+  self.assertEqual(called,['blocked']*6);self.assertEqual(len(set(scope['guarded'])),3)
+
+ def test_captured_paths_match_real_authenticated_helpers(self):
+  repo=HERE.parent.parent;names={'planner','bounds','timing','mapping','receipts','baseline','evidence','transport','authority','classifier','execution','certainty','overlap','frame_binding','quarantine','capture','history','plan','f2_gate','older_recovery','preparation','packet_builder','completion_report','bootstrap','runner','orchestration','assembler'}
+  paths=bootstrap.module_paths(repo,names)
+  self.assertEqual(paths['f2_gate'],repo/'strategy-research/football_archive/f2_handoff.py')
+  self.assertEqual(paths['older_recovery'],repo/'strategy-research/football_archive/older-recovery-v1/recovery.py')
+  with self.assertRaises(ValueError):bootstrap.module_paths(repo,names|{'uncaptured'})
+  load=loader();gate=load('f2_gate');nested=bootstrap.nested_union_inputs(gate)
+  self.assertIn('nested-union/code/downstream.py',nested);self.assertIn('nested-union/union-certificate.json',nested)
+  gate.verified_union_module() # Real pinned nested capture, no provider/authentication call.
+  import shutil
+  with tempfile.TemporaryDirectory(dir='/private/tmp') as d:
+   dst=Path(d)/'union-v1';shutil.copytree(gate.UNION_PACKET_PATH.parent,dst)
+   fake=SimpleNamespace(UNION_BOOTSTRAP_PATH=dst/'downstream.py',UNION_BOOTSTRAP_SHA256=gate.UNION_BOOTSTRAP_SHA256,UNION_PACKET_PATH=dst/'F3a',UNION_PACKET_ROOT=gate.UNION_PACKET_ROOT,UNION_CERTIFICATE_SHA256=gate.UNION_CERTIFICATE_SHA256)
+   bootstrap.nested_union_inputs(fake)
+   (dst/'downstream.py').write_bytes((dst/'downstream.py').read_bytes()+b'changed')
+   with self.assertRaises(ValueError):bootstrap.nested_union_inputs(fake)
+   shutil.copyfile(gate.UNION_BOOTSTRAP_PATH,dst/'downstream.py')
+   cert=dst/'F3a/union-certificate.json';cert.write_bytes(cert.read_bytes()+b' ')
+   with self.assertRaises(ValueError):bootstrap.nested_union_inputs(fake)
 
  def test_stage_exception_exact_list_only_and_other_gates_unchanged(self):
   load=loader();v=load('runner');p=HERE.parent/'coverage-pass-residual-v1/passing-groups-2020-24/manifest.json';manifest=json.loads(p.read_bytes());old=json.loads((BUNDLE/'protocol.json').read_bytes());cfg=v.execution_protocol(old,manifest)

@@ -1,0 +1,18 @@
+{
+  "root": "c75ef924f5d44c62176de915f47744515f2ca35088f2a82e507a105c0733bacb",
+  "status": "actual_orchestration_reached_registration_boundary",
+  "calls": [
+    "future_authority_fixture",
+    "future_authority_fixture",
+    "future_authority_fixture",
+    "registration_boundary"
+  ],
+  "guarded_verified_instances": 3,
+  "runtime_write_deny_hook": true,
+  "historical_verification": "unchanged native proof, historical GitHub approvals authenticated live",
+  "future_authority": "fixture only; exact live successor authority required",
+  "runtime_created": false,
+  "registration_created": false,
+  "credentials_read": false,
+  "odds_http_calls": 0
+}

@@ -32,6 +32,30 @@ def module(raw,path,name,pin):
  m=types.ModuleType(name);m.__file__=str(path);exec(compile(raw,str(path),'exec'),m.__dict__);return m
 
 
+def module_paths(repo,names):
+ repo=Path(repo).absolute();parent=repo/'strategy-research';pilot=parent/'coverage-pilot-v1';here=parent/'coverage-pass-execution-v1'
+ old={'planner','bounds','timing','mapping','receipts','baseline','evidence','transport','authority','classifier','execution','certainty','overlap','frame_binding','quarantine'}
+ paths={n:pilot/(n+'.py') for n in old}
+ paths.update(capture=parent/'football-metadata-v1/capture.py',history=parent/'football-metadata-v1/history.py',plan=parent/'nfl-props-archive-v1/plan.py',f2_gate=parent/'football_archive/f2_handoff.py',older_recovery=parent/'football_archive/older-recovery-v1/recovery.py',preparation=parent/'coverage-pass-residual-v1/build.py',packet_builder=parent/'coverage-pilot-packet-v1/build.py',completion_report=parent/'coverage-pilot-completion-v1/report.py',bootstrap=here/'bootstrap.py',runner=here/'validator.py',orchestration=here/'orchestration.py',assembler=here/'assemble.py')
+ if set(names)!=set(paths):raise ValueError('undeclared captured module path')
+ return paths
+
+
+def nested_union_inputs(gate):
+ path=gate.UNION_BOOTSTRAP_PATH;packet=gate.UNION_PACKET_PATH
+ raw=regular(path)
+ if sha(raw)!=gate.UNION_BOOTSTRAP_SHA256:raise ValueError('nested union bootstrap changed')
+ cert=json.loads(regular(packet/'FREEZE.json'))
+ files={n:regular(packet.parent/n[5:] if n.startswith('code/') else packet/n) for n in cert['files']}
+ if cert!={'root':gate.UNION_PACKET_ROOT,'files':{n:sha(v) for n,v in files.items()}} or sha(canonical(cert['files']))!=gate.UNION_PACKET_ROOT:raise ValueError('nested union closure differs')
+ # Exact nested inventory matches the independently pinned union bootstrap rule.
+ actual={'code/'+p.name for p in packet.parent.glob('*.py')}|{p.name for p in packet.iterdir() if p.name!='FREEZE.json'}
+ if actual!=set(files):raise ValueError('nested union inventory differs')
+ if sha(files['union-certificate.json'])!=gate.UNION_CERTIFICATE_SHA256:raise ValueError('nested union certificate changed')
+ files['FREEZE.json']=regular(packet/'FREEZE.json')
+ return {'nested-union/'+n:v for n,v in files.items()}
+
+
 def inputs(repo,prep,final_path):
  repo=Path(repo).absolute();prep=Path(prep).absolute();final_raw=regular(final_path)
  if sha(final_raw)!=FINAL_SHA:raise ValueError('saved final record changed')
@@ -56,16 +80,21 @@ def inputs(repo,prep,final_path):
  here=repo/'strategy-research/coverage-pass-execution-v1'
  if {p.name for p in here.glob('*.py') if not p.name.startswith('test')}!={'bootstrap.py','validator.py','orchestration.py','assemble.py'}:raise ValueError('bulk executable inventory differs')
  for name,file in [('bootstrap','bootstrap.py'),('runner','validator.py'),('orchestration','orchestration.py'),('assembler','assemble.py')]:data['code/'+name+'.py']=regular(here/file)
+ names={n[5:-3] for n in data if n.startswith('code/') and n.endswith('.py')}
+ data['dependency-paths.json']=canonical({n:str(p) for n,p in module_paths(repo,names).items()})
+ data.update(nested_union_inputs(oldload('f2_gate')))
  return data,source,oldload
 
 
 def load_modules(repo,data,source):
  # The original frozen source is retained, including its430-game validator.
  # Only this separate captured namespace replaces bulk runner/bootstrap/orchestration.
- paths={};modules={}
+ names={n[5:-3] for n in data if n.startswith('code/') and n.endswith('.py')}
+ paths=module_paths(repo,names);modules={}
+ if json.loads(data['dependency-paths.json'])!={n:str(p) for n,p in paths.items()}:raise ValueError('captured dependency path mapping differs')
  for n,v in data.items():
   if n.startswith('code/') and n.endswith('.py'):
-   key=n[5:-3];modules[key]=v;paths[key]=Path(repo)/n
+   key=n[5:-3];modules[key]=v
  for n,v in source.items():
   if n.endswith('.py'):
    key=(n[:-12] if n.endswith('/__init__.py') else n[:-3]).replace('/','.')
@@ -79,7 +108,7 @@ def verified(packet,root,bundle=None):
  packet=Path(packet);cert=json.loads(regular(packet/'FREEZE.json'))
  if cert['root']!=root or sha(canonical(cert['files']))!=root or {p.name for p in packet.iterdir()}!=PHYSICAL|{'FREEZE.json'}:raise ValueError('execution packet inventory/root differs')
  cfg=json.loads(regular(packet/'config.json'))
- if set(cfg)!={'repo','preparation','final_record','restart_policy'} or cfg['restart_policy']!=dict(allowed=['prepared','running','pilot_clean_pause'],pending='block_no_resend',stopped='block_reconciliation',terminal='exhausted',automatic_retries=0,automatic_redirects=0):raise ValueError('configuration/restart policy differs')
+ if set(cfg)!={'repo','preparation','final_record','restart_policy','superseded_unexecuted_root'} or cfg['superseded_unexecuted_root']!='05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017' or cfg['restart_policy']!=dict(allowed=['prepared','running','pilot_clean_pause'],pending='block_no_resend',stopped='block_reconciliation',terminal='exhausted',automatic_retries=0,automatic_redirects=0):raise ValueError('configuration/restart policy differs')
  data,source,_=inputs(cfg['repo'],cfg['preparation'],cfg['final_record'])
  data.update({n:regular(packet/n) for n in PHYSICAL})
  data['protocol.json']=canonical({'execution_status':'reviewed_for_execution'})

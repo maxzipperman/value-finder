@@ -29,7 +29,7 @@ def assemble(a):
   overlap.update(raw_roots=history['raw_roots'],inventory_sha256=history['raw_inventory_sha256'])
   cfg=load('runner').execution_protocol(json.loads(source['protocol.json']),json.loads(data['preparation/manifest.json']))
   m=json.loads(data['preparation/manifest.json']);m=dict(m,request_set_sha256=capture.identity(json.loads(data['requests.json'])))
-  config=dict(repo=str(repo),preparation=str(Path(a.preparation).absolute()),final_record=str(Path(a.final_record).absolute()),restart_policy=dict(allowed=['prepared','running','pilot_clean_pause'],pending='block_no_resend',stopped='block_reconciliation',terminal='exhausted',automatic_retries=0,automatic_redirects=0))
+  config=dict(superseded_unexecuted_root='05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017',repo=str(repo),preparation=str(Path(a.preparation).absolute()),final_record=str(Path(a.final_record).absolute()),restart_policy=dict(allowed=['prepared','running','pilot_clean_pause'],pending='block_no_resend',stopped='block_reconciliation',terminal='exhausted',automatic_retries=0,automatic_redirects=0))
   objects={'config.json':config,'manifest.json':m,'baseline.json':baseline,'overlap.json':overlap,'execution-protocol.json':cfg}
   data.update({n:boot.canonical(obj) for n,obj in objects.items()});data['protocol.json']=boot.canonical({'execution_status':'reviewed_for_execution'})
   load=boot.load_modules(repo,data,source);load('runner').packet(data,source)

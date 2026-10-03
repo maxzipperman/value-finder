@@ -1,0 +1,10 @@
+{
+  "source_directory": "/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/research-lab/acquisition/coverage-pilot-once/failed-diagnostic-registration-150",
+  "file_sha256": {
+    "registration.json": "14a05864c42d1214150fabcb99c7bc5616c52f210cb4772ebe43803ca2f21217",
+    "reconciliation.json": "53fcbc4b15a2ab05b96f2336486f313a91789ea0b796b22d4b030bcc73e94296"
+  },
+  "root_retired": "05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017",
+  "worker_cleanup": false,
+  "interpretation": "Hub-approved archival references; no worker changes to runtime or artifacts"
+}
