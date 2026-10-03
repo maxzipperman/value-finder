@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "scopes": [
+    "ops/process/process_guard.py",
+    "strategy-research/football_archive/older-recovery-v1/recovery.py",
+    "strategy-research/football_archive/older-recovery-v1/test_recovery.py",
+    "strategy-research/football_archive/older-recovery-v1/verification.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/__init__.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/cache.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/http.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/oddsapi/__init__.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/oddsapi/bulk.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/oddsapi/normalize.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/settings.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/sport.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/builder.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/cache_handoff.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/coverage_report.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/executor.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/price_eligibility.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/test_v4.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/validator.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/protocol.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/request-manifest.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/probe-spending-ledger.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/runtime-lock.json",
+    "strategy-research/football_archive/older-recovery-v1/PROTOCOL.md"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "strategy-research/football_archive/older-recovery-v1",
+      "-p",
+      "test_recovery.py",
+      "-v"
+    ]
+  ],
+  "environment": {
+    "PYTHONHASHSEED": "0",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}
