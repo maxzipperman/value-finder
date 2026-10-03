@@ -1,0 +1,577 @@
+{
+  "id": "value-finder-research-lab-2026-09-30-v1",
+  "interpretation": "Retrospective discovery only; no fresh confirmation, executable-price or ROI claim.",
+  "latest_season": 2025,
+  "prior_project_count_at_snapshot": 294,
+  "new_specifications": 20,
+  "conservative_project_count_floor": 314,
+  "models": [
+    {
+      "id": "NFL_REV_BASE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "NFL_REV_DELTA",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "CFB_REV_BASE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "CFB_REV_DELTA",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "NFL_STYLE_ADD",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "NFL_STYLE_INTERACTION",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "wind_style"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "NFL_REV_CURVE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_REV_CURVE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_ASYMMETRY",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision_up",
+        "revision_down"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_PERSISTENCE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_CROSSINGS",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "cross_up15",
+        "cross_down15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_REV_INTERACTION",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_revision"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_PREVIOUS",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind2",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_COMBINED",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq",
+        "revision_up",
+        "revision_down",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_CURVE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_REV_CURVE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_ASYMMETRY",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision_up",
+        "revision_down"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_PERSISTENCE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_CROSSINGS",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "cross_up15",
+        "cross_down15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_REV_INTERACTION",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_revision"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_PREVIOUS",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind2",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_COMBINED",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq",
+        "revision_up",
+        "revision_down",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_REVISION",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "revision",
+        "wind_revision"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_CURVE",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "wind_sq",
+        "wind_style"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_PERSISTENCE",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "persistent15",
+        "persistence_style"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_REV_STYLE",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "revision",
+        "wind_style",
+        "revision_style"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "NFL_REVISION",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_DELTA"
+    },
+    {
+      "id": "CFB_REVISION",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_DELTA"
+    },
+    {
+      "id": "NFL_OFFENSIVE_STYLE",
+      "control": "NFL_STYLE_ADD",
+      "candidate": "NFL_STYLE_INTERACTION"
+    },
+    {
+      "id": "NFL_REV_CURVE",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_CURVE"
+    },
+    {
+      "id": "NFL_REV_REV_CURVE",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_REV_CURVE"
+    },
+    {
+      "id": "NFL_REV_ASYMMETRY",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_ASYMMETRY"
+    },
+    {
+      "id": "NFL_REV_PERSISTENCE",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_PERSISTENCE"
+    },
+    {
+      "id": "NFL_REV_CROSSINGS",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_CROSSINGS"
+    },
+    {
+      "id": "NFL_REV_REV_INTERACTION",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_REV_INTERACTION"
+    },
+    {
+      "id": "NFL_REV_PREVIOUS",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_PREVIOUS"
+    },
+    {
+      "id": "NFL_REV_COMBINED",
+      "control": "NFL_REV_BASE",
+      "candidate": "NFL_REV_COMBINED"
+    },
+    {
+      "id": "CFB_REV_CURVE",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_CURVE"
+    },
+    {
+      "id": "CFB_REV_REV_CURVE",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_REV_CURVE"
+    },
+    {
+      "id": "CFB_REV_ASYMMETRY",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_ASYMMETRY"
+    },
+    {
+      "id": "CFB_REV_PERSISTENCE",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_PERSISTENCE"
+    },
+    {
+      "id": "CFB_REV_CROSSINGS",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_CROSSINGS"
+    },
+    {
+      "id": "CFB_REV_REV_INTERACTION",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_REV_INTERACTION"
+    },
+    {
+      "id": "CFB_REV_PREVIOUS",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_PREVIOUS"
+    },
+    {
+      "id": "CFB_REV_COMBINED",
+      "control": "CFB_REV_BASE",
+      "candidate": "CFB_REV_COMBINED"
+    },
+    {
+      "id": "NFL_STYLE_REVISION",
+      "control": "NFL_STYLE_ADD",
+      "candidate": "NFL_STYLE_REVISION"
+    },
+    {
+      "id": "NFL_STYLE_CURVE",
+      "control": "NFL_STYLE_ADD",
+      "candidate": "NFL_STYLE_CURVE"
+    },
+    {
+      "id": "NFL_STYLE_PERSISTENCE",
+      "control": "NFL_STYLE_ADD",
+      "candidate": "NFL_STYLE_PERSISTENCE"
+    },
+    {
+      "id": "NFL_STYLE_REV_STYLE",
+      "control": "NFL_STYLE_ADD",
+      "candidate": "NFL_STYLE_REV_STYLE"
+    }
+  ],
+  "upstream_source_commit": "f3b56b31aadff4e0c17bf8f8f5c102e21c09c840",
+  "upstream_code_sha256": "f248ef106afbb60e972791e2ec7c1863c68821a3cd5db976fd302d1ca63fd951",
+  "upstream_protocol_sha256": "b7704a7ed04c4227707c54f9fd1755af21f28b0429f1d13f649476565ad98ac8",
+  "design": {
+    "id": "forecast-style-2026-09-30-v1",
+    "status": "setup recorded before new hypothesis results; retrospective discovery only",
+    "latest_season": 2025,
+    "project_count_before": 288,
+    "specifications_added": 6,
+    "project_count_at_setup": 294,
+    "target": "final total points minus consensus closing total; diagnostic benchmark, not an entry price",
+    "decision": "19:30 America/Los_Angeles on the day before kickoff's America/New_York date",
+    "mos_publication_lag_hours": 5,
+    "style_reporting_lag_hours": 48,
+    "style_prior_games": 4,
+    "style_min_prior_games": 3,
+    "style_same_season_only": true,
+    "style_stat": "pass_rate_sit",
+    "minimum_prior_seasons": 5,
+    "minimum_train_games": 300,
+    "minimum_test_games": 25,
+    "ridge_penalty": 10.0,
+    "standardization": "training means and population standard deviations only; intercept unpenalized",
+    "seed": 20260930,
+    "bootstrap_draws": 10000,
+    "models": [
+      {
+        "id": "NFL_REV_BASE",
+        "sport": "nfl",
+        "cohort": "revision",
+        "features": [
+          "wind1"
+        ]
+      },
+      {
+        "id": "NFL_REV_DELTA",
+        "sport": "nfl",
+        "cohort": "revision",
+        "features": [
+          "wind1",
+          "revision"
+        ]
+      },
+      {
+        "id": "CFB_REV_BASE",
+        "sport": "cfb",
+        "cohort": "revision",
+        "features": [
+          "wind1"
+        ]
+      },
+      {
+        "id": "CFB_REV_DELTA",
+        "sport": "cfb",
+        "cohort": "revision",
+        "features": [
+          "wind1",
+          "revision"
+        ]
+      },
+      {
+        "id": "NFL_STYLE_ADD",
+        "sport": "nfl",
+        "cohort": "style",
+        "features": [
+          "wind1",
+          "style"
+        ]
+      },
+      {
+        "id": "NFL_STYLE_INTERACTION",
+        "sport": "nfl",
+        "cohort": "style",
+        "features": [
+          "wind1",
+          "style",
+          "wind_style"
+        ]
+      }
+    ],
+    "comparisons": [
+      {
+        "id": "NFL_REVISION",
+        "control": "NFL_REV_BASE",
+        "candidate": "NFL_REV_DELTA"
+      },
+      {
+        "id": "CFB_REVISION",
+        "control": "CFB_REV_BASE",
+        "candidate": "CFB_REV_DELTA"
+      },
+      {
+        "id": "NFL_OFFENSIVE_STYLE",
+        "control": "NFL_STYLE_ADD",
+        "candidate": "NFL_STYLE_INTERACTION"
+      }
+    ],
+    "primary_metric": "mean across validation seasons of the paired per-game squared-error improvement; every season has equal weight",
+    "inference": "two-sided Student t on validation-season mean improvements; report raw p and p times the project count, capped at 1; minimum five validation seasons",
+    "bootstrap": "95% diagnostic interval: resample seasons, then entire Eastern game days within each sampled season; not a second selection gate",
+    "interpretation": "shortlist only; existing historical seasons are not untouched confirmation; no live-rule changes, ROI claims, model selection, or 2026 evaluation"
+  },
+  "bootstrap_draws": 50000,
+  "sign_flip_draws": 100000,
+  "seed": 20260930,
+  "uncertainty": "Two-sided t inference on equally weighted held-out season means; Bonferroni against the project count. Nested season/day bootstrap is diagnostic only.",
+  "selection_diagnostic": "Joint season sign flips across all paired improvements, centered at zero; approximate diagnostic, not a full null refit or a new adoption gate.",
+  "cohort_policy": "Within each sport/cohort, all models see the union-feature complete-case sample. Baselines are rerun on that same sample.",
+  "minimum_inference_seasons": 5,
+  "local_trial_ledger": true,
+  "global_ledger_status": "20 additional specifications recorded locally before results; reconcile with the hub before any promotion.",
+  "frozen_features": {
+    "wind_sq": "wind1 squared",
+    "revision_up": "max(wind1-wind2,0)",
+    "revision_down": "max(wind2-wind1,0)",
+    "persistent15": "both winds >=15",
+    "cross_up15": "wind2 <15 and wind1 >=15",
+    "cross_down15": "wind2 >=15 and wind1 <15",
+    "wind_revision": "wind1 times revision",
+    "persistence_style": "persistent15 times style",
+    "revision_style": "revision times style"
+  },
+  "future_stages": [
+    {
+      "id": "market_response",
+      "status": "awaiting timestamped historical odds and separate frozen protocol"
+    },
+    {
+      "id": "college_uncertainty",
+      "status": "awaiting availability-date audit and separate frozen protocol"
+    },
+    {
+      "id": "price_engine_robustness",
+      "status": "awaiting odds cache and separate frozen protocol"
+    },
+    {
+      "id": "github_parser_crosscheck",
+      "status": "independent input audit; not implemented in this batch"
+    }
+  ]
+}

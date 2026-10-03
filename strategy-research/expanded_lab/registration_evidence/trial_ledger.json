@@ -1,0 +1,317 @@
+{
+  "new_trials": [
+    {
+      "id": "NFL_REV_CURVE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_REV_CURVE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_ASYMMETRY",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision_up",
+        "revision_down"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_PERSISTENCE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_CROSSINGS",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "cross_up15",
+        "cross_down15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_REV_INTERACTION",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_revision"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_PREVIOUS",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind2",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_REV_COMBINED",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq",
+        "revision_up",
+        "revision_down",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_CURVE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_REV_CURVE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_sq"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_ASYMMETRY",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision_up",
+        "revision_down"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_PERSISTENCE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_CROSSINGS",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "cross_up15",
+        "cross_down15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_REV_INTERACTION",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision",
+        "wind_revision"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_PREVIOUS",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind2",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "CFB_REV_COMBINED",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "wind_sq",
+        "revision_up",
+        "revision_down",
+        "persistent15"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_REVISION",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "revision",
+        "wind_revision"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_CURVE",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "wind_sq",
+        "wind_style"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_PERSISTENCE",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "persistent15",
+        "persistence_style"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    },
+    {
+      "id": "NFL_STYLE_REV_STYLE",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "revision",
+        "wind_style",
+        "revision_style"
+      ],
+      "new_variant": true,
+      "origin": "research-lab-v1"
+    }
+  ],
+  "reused_trials": [
+    {
+      "id": "NFL_REV_BASE",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "NFL_REV_DELTA",
+      "sport": "nfl",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "CFB_REV_BASE",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "CFB_REV_DELTA",
+      "sport": "cfb",
+      "cohort": "revision",
+      "features": [
+        "wind1",
+        "revision"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "NFL_STYLE_ADD",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    },
+    {
+      "id": "NFL_STYLE_INTERACTION",
+      "sport": "nfl",
+      "cohort": "style",
+      "features": [
+        "wind1",
+        "style",
+        "wind_style"
+      ],
+      "origin": "existing-six-model-study",
+      "new_variant": false
+    }
+  ],
+  "counted_even_if_failed": true
+}

@@ -1,0 +1,16 @@
+{
+  "protocol_sha256": "0c0f0e1e0cb25e5fb50ce25c7e37b97a3be44e98847bc0475fa1f81eb86da276",
+  "code_sha256": "9d29eb63e6b73cc89367e20b72864ed326388e53605452ff354fa8da3897a239",
+  "parent_sha256": "5869f0088fac1f504c4feb244ce8a89bc0ae6acb56fd65a862bbc8903e9f30bd",
+  "pilot": true,
+  "latest_season": 2025,
+  "outcomes_read": false,
+  "status": "completed",
+  "input_hashes": {
+    "nfl": "84ae605da0151954b1450f7c99884918005d5f182c568e1a5466e15933ec5331",
+    "cfb": "de033d8e211815a2ddf26d5d1eef1e202bee951cdfb516502bb381c516d82b82"
+  },
+  "completed_cells": 15,
+  "elapsed_seconds": 6.06,
+  "total_synthetic_searches": 480
+}
