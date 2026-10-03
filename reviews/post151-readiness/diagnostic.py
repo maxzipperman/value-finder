@@ -66,6 +66,28 @@ def operations(game, slotmap):
              'slot': 'EARLY_18_54' if k == 'EARLY' else 'CLOSE_T10'} for k in ('EARLY', 'CLOSE')]
 
 
+def frozen_failures_for_slot(mapping, slot):
+    """Only known slot prefixes are local; unqualified/unknown failures are global.
+
+    This is descriptive projection only. Frozen paired-game gate failures persist.
+    """
+    roles = {'EARLY': 'EARLY', 'EARLY_18_54': 'EARLY',
+             'CLOSE': 'CLOSE', 'CLOSE_T10': 'CLOSE', 'T24': 'T24'}
+    current = roles.get(slot)
+    if current is None: raise ValueError('unknown diagnostic slot')
+    failures = []
+    for key in ('metadata_disposition', 'coverage_disposition'):
+        disposition = mapping.get(key, {})
+        if disposition.get('classification') != 'failure': continue
+        reasons = list(disposition.get('reasons', []))
+        if disposition.get('reason'): reasons.append(disposition['reason'])
+        for reason in reasons or ['failure_without_reason']:
+            prefix, separator, _ = reason.partition(':')
+            if separator and prefix in roles and roles[prefix] != current: continue
+            failures.append(reason)
+    return sorted(set(failures))
+
+
 def matches(record, sport, decision, event_id=None):
     if json.loads(record['params_json'])['date'] != decision: return False
     if record['sport'] != sport: raise ValueError('sport mismatch')
@@ -159,12 +181,11 @@ def run():
         older = game['stratum'].startswith('older/')
         markets = ['totals'] if older else MARKETS
         mapping = references.get(gid, {})
-        forced = [r for k in ('metadata_disposition', 'coverage_disposition')
-                  for r in mapping.get(k, {}).get('reasons', []) if mapping.get(k, {}).get('classification') == 'failure']
         ops = operations(game, slots)
         game_pairs = {}
         for op in ops:
             decision, slot = op['requested_utc'], op['slot']
+            forced = frozen_failures_for_slot(mapping, slot)
             binding = classifier.bind_asof(observations, gid, decision) if decision else {'status': 'unbound', 'reason': 'no_designated_slot'}
             if decision and slot == 'CLOSE_T10' and gid in canonical_games:
                 seconds = int((timing.utc(canonical_games[gid]['scheduled_utc']) - timing.utc(decision)).total_seconds())
@@ -303,7 +324,7 @@ def run():
                            'stat_schema_source': str(schema_path.relative_to(REPO)),
                            'python': sys.version, 'pyarrow': __import__('pyarrow').__version__,
                            'settlement_source_sha256': sha(regular(settlement_path)), 'native_outcomes_read': False,
-                           'source_commit': 'be40f2536f37e619b02c1f63bea756f69b6d28a4'},
+                           'source_commit': 'c410747d505f70ba709fb6eecf98029ca18f067b'},
             'held_groups': ['older/americanfootball_ncaaf/2021', 'older/americanfootball_ncaaf/2022',
                             'props/americanfootball_ncaaf/2023', 'props/americanfootball_ncaaf/2024', 'props/americanfootball_ncaaf/2025']}
 

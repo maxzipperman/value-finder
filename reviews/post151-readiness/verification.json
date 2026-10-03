@@ -7,7 +7,8 @@
     "reviews/post151-readiness/verification.json",
     "ops/process/process_guard.py",
     ".github/workflows/cache-readiness.yml",
-    "strategy-research/coverage-pilot-v1/classifier.py"
+    "strategy-research/coverage-pilot-v1/classifier.py",
+    "reviews/post151-readiness/slot-correction-delta.json"
   ],
   "commands": [
     [

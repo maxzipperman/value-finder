@@ -35,9 +35,11 @@ stake or registration. Paper-only project policy remains in force.
 
 ## Paid data — sole current queue
 
-**Post-successor151 cached readiness (PR155, October 3):** Diagnostics preserve
+**Post-successor151 cached readiness (PR155; PR159 correction pending review):** Diagnostics preserve
 2,401 fixed game denominators, including missing/unbound slots. NFL rush/reception
-and older-total pairs are measured without outcomes. The 334 temporal-point games
+and older-total pairs are measured without outcomes. Corrected slot diagnostics add
+14 book/game CLOSE pairs; two other designated closes remain without receipts.
+The original pilot gate is unchanged. The 334 temporal-point games
 retain each book's own point across time; domestic and Pinnacle points may differ.
 T10-versus-registered-T5, inactive book/count notes, matching/settlement and draft
 price-engine adoption still block grading. Held CFB groups remain held. See the

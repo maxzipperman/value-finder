@@ -11,32 +11,31 @@
     "missing_quote_clocks": 0,
     "provider_independent_over300": 52,
     "provider_independent_within300": 4340,
-    "quote_decision_0_1500": 112486,
-    "quote_snapshot_0_900": 92403,
+    "quote_decision_0_1500": 112528,
+    "quote_snapshot_0_900": 92445,
     "quote_snapshot_future": 19972,
     "quote_snapshot_over900": 111,
-    "snapshot_0_600": 4362
+    "snapshot_0_600": 4364
   },
   "coverage": [
     {
       "book": "betmgm",
-      "complete_pair_keys": 404,
+      "complete_pair_keys": 405,
       "game_denominator": 653,
-      "games_with_pairs": 404,
+      "games_with_pairs": 405,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
-      "provider_label_player_games": 404,
+      "projected_records_requesting_book_games": 502,
+      "provider_label_player_games": 405,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
+        "no_designated_matching_snapshot": 3,
         "no_eligible_same_response_pair": 81,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -53,7 +52,6 @@
       "provider_label_player_games": 380,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 103,
@@ -71,20 +69,19 @@
       "game_denominator": 653,
       "games_with_pairs": 0,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
+      "projected_records_requesting_book_games": 502,
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
-        "no_eligible_same_response_pair": 482,
+        "no_designated_matching_snapshot": 3,
+        "no_eligible_same_response_pair": 483,
         "quote_age": 3,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -101,7 +98,6 @@
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 483,
@@ -115,23 +111,22 @@
     },
     {
       "book": "betrivers",
-      "complete_pair_keys": 409,
+      "complete_pair_keys": 410,
       "game_denominator": 653,
-      "games_with_pairs": 409,
+      "games_with_pairs": 410,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
-      "provider_label_player_games": 409,
+      "projected_records_requesting_book_games": 502,
+      "provider_label_player_games": 410,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
+        "no_designated_matching_snapshot": 3,
         "no_eligible_same_response_pair": 76,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -148,7 +143,6 @@
       "provider_label_player_games": 424,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 59,
@@ -162,23 +156,22 @@
     },
     {
       "book": "draftkings",
-      "complete_pair_keys": 447,
+      "complete_pair_keys": 448,
       "game_denominator": 653,
-      "games_with_pairs": 447,
+      "games_with_pairs": 448,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
-      "provider_label_player_games": 447,
+      "projected_records_requesting_book_games": 502,
+      "provider_label_player_games": 448,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
+        "no_designated_matching_snapshot": 3,
         "no_eligible_same_response_pair": 38,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -195,7 +188,6 @@
       "provider_label_player_games": 442,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 41,
@@ -213,20 +205,19 @@
       "game_denominator": 653,
       "games_with_pairs": 0,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
+      "projected_records_requesting_book_games": 502,
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
-        "no_eligible_same_response_pair": 482,
+        "no_designated_matching_snapshot": 3,
+        "no_eligible_same_response_pair": 483,
         "quote_age": 3,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -243,7 +234,6 @@
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 483,
@@ -261,20 +251,19 @@
       "game_denominator": 653,
       "games_with_pairs": 0,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
+      "projected_records_requesting_book_games": 502,
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
-        "no_eligible_same_response_pair": 482,
+        "no_designated_matching_snapshot": 3,
+        "no_eligible_same_response_pair": 483,
         "quote_age": 3,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -291,7 +280,6 @@
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 483,
@@ -309,20 +297,19 @@
       "game_denominator": 653,
       "games_with_pairs": 370,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
+      "projected_records_requesting_book_games": 502,
       "provider_label_player_games": 370,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
-        "no_eligible_same_response_pair": 114,
+        "no_designated_matching_snapshot": 3,
+        "no_eligible_same_response_pair": 115,
         "quote_age": 1,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -339,7 +326,6 @@
       "provider_label_player_games": 364,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 119,
@@ -353,24 +339,23 @@
     },
     {
       "book": "lowvig",
-      "complete_pair_keys": 422,
+      "complete_pair_keys": 423,
       "game_denominator": 653,
-      "games_with_pairs": 422,
+      "games_with_pairs": 423,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
-      "provider_label_player_games": 422,
+      "projected_records_requesting_book_games": 502,
+      "provider_label_player_games": 423,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
+        "no_designated_matching_snapshot": 3,
         "no_eligible_same_response_pair": 60,
         "quote_age": 3,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -387,7 +372,6 @@
       "provider_label_player_games": 414,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 69,
@@ -401,23 +385,22 @@
     },
     {
       "book": "pinnacle",
-      "complete_pair_keys": 475,
+      "complete_pair_keys": 476,
       "game_denominator": 653,
-      "games_with_pairs": 475,
+      "games_with_pairs": 476,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
-      "provider_label_player_games": 475,
+      "projected_records_requesting_book_games": 502,
+      "provider_label_player_games": 476,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
+        "no_designated_matching_snapshot": 3,
         "no_eligible_same_response_pair": 10,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -434,7 +417,6 @@
       "provider_label_player_games": 462,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 21,
@@ -448,23 +430,22 @@
     },
     {
       "book": "williamhill_us",
-      "complete_pair_keys": 475,
+      "complete_pair_keys": 476,
       "game_denominator": 653,
-      "games_with_pairs": 475,
+      "games_with_pairs": 476,
       "market": "totals",
-      "projected_records_requesting_book_games": 501,
-      "provider_label_player_games": 475,
+      "projected_records_requesting_book_games": 502,
+      "provider_label_player_games": 476,
       "reasons": {
         "base_ineligible": 12,
         "decision_snapshot_or_execution_not_before_schedule": 6,
         "frozen_metadata:CLOSE:provider_independent_conflict": 1,
-        "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 12,
         "missing_or_duplicate_event": 3,
-        "no_designated_matching_snapshot": 2,
+        "no_designated_matching_snapshot": 3,
         "no_eligible_same_response_pair": 10,
         "terminal_missing": 1,
-        "unavailable_or_duplicate_receipt": 2,
+        "unavailable_or_duplicate_receipt": 3,
         "unbound:no_designated_slot": 147
       },
       "season": 2020,
@@ -481,7 +462,6 @@
       "provider_label_player_games": 474,
       "reasons": {
         "base_ineligible": 17,
-        "frozen_metadata:CLOSE:provider_independent_conflict": 1,
         "frozen_metadata:EARLY:provider_independent_conflict": 3,
         "kickoff_conflict": 17,
         "no_eligible_same_response_pair": 9,
@@ -495,18 +475,19 @@
     },
     {
       "book": "betmgm",
-      "complete_pair_keys": 214,
+      "complete_pair_keys": 215,
       "game_denominator": 285,
-      "games_with_pairs": 214,
+      "games_with_pairs": 215,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 214,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 215,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
         "no_eligible_same_response_pair": 49,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -537,17 +518,18 @@
     },
     {
       "book": "betonlineag",
-      "complete_pair_keys": 263,
+      "complete_pair_keys": 264,
       "game_denominator": 285,
-      "games_with_pairs": 263,
+      "games_with_pairs": 264,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 263,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 264,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -578,17 +560,18 @@
     },
     {
       "book": "betrivers",
-      "complete_pair_keys": 263,
+      "complete_pair_keys": 264,
       "game_denominator": 285,
-      "games_with_pairs": 263,
+      "games_with_pairs": 264,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 263,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 264,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -619,17 +602,18 @@
     },
     {
       "book": "draftkings",
-      "complete_pair_keys": 263,
+      "complete_pair_keys": 264,
       "game_denominator": 285,
-      "games_with_pairs": 263,
+      "games_with_pairs": 264,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 263,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 264,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -664,14 +648,15 @@
       "game_denominator": 285,
       "games_with_pairs": 0,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
+      "projected_records_requesting_book_games": 268,
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
-        "no_eligible_same_response_pair": 263,
+        "no_designated_matching_snapshot": 1,
+        "no_eligible_same_response_pair": 264,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -706,14 +691,15 @@
       "game_denominator": 285,
       "games_with_pairs": 0,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
+      "projected_records_requesting_book_games": 268,
       "provider_label_player_games": 0,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
-        "no_eligible_same_response_pair": 263,
+        "no_designated_matching_snapshot": 1,
+        "no_eligible_same_response_pair": 264,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -744,18 +730,19 @@
     },
     {
       "book": "fanduel",
-      "complete_pair_keys": 258,
+      "complete_pair_keys": 259,
       "game_denominator": 285,
-      "games_with_pairs": 258,
+      "games_with_pairs": 259,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 258,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 259,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
         "no_eligible_same_response_pair": 5,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -786,18 +773,19 @@
     },
     {
       "book": "lowvig",
-      "complete_pair_keys": 245,
+      "complete_pair_keys": 246,
       "game_denominator": 285,
-      "games_with_pairs": 245,
+      "games_with_pairs": 246,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 245,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 246,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
         "no_eligible_same_response_pair": 18,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -828,17 +816,18 @@
     },
     {
       "book": "pinnacle",
-      "complete_pair_keys": 263,
+      "complete_pair_keys": 264,
       "game_denominator": 285,
-      "games_with_pairs": 263,
+      "games_with_pairs": 264,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 263,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 264,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -869,17 +858,18 @@
     },
     {
       "book": "williamhill_us",
-      "complete_pair_keys": 263,
+      "complete_pair_keys": 264,
       "game_denominator": 285,
-      "games_with_pairs": 263,
+      "games_with_pairs": 264,
       "market": "totals",
-      "projected_records_requesting_book_games": 267,
-      "provider_label_player_games": 263,
+      "projected_records_requesting_book_games": 268,
+      "provider_label_player_games": 264,
       "reasons": {
         "base_ineligible": 3,
         "decision_snapshot_or_execution_not_before_schedule": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "kickoff_conflict": 3,
+        "no_designated_matching_snapshot": 1,
+        "unavailable_or_duplicate_receipt": 1,
         "unbound:no_designated_slot": 16
       },
       "season": 2020,
@@ -1257,7 +1247,6 @@
       "provider_label_player_games": 256,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "no_eligible_same_response_pair": 24,
         "unavailable_or_duplicate_receipt": 2,
@@ -1276,7 +1265,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 279,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "no_eligible_same_response_pair": 1,
@@ -1297,7 +1285,6 @@
       "provider_label_player_games": 280,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
         "unbound:no_designated_slot": 1
@@ -1315,7 +1302,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 280,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
@@ -1335,7 +1321,6 @@
       "provider_label_player_games": 280,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
         "unbound:no_designated_slot": 1
@@ -1353,7 +1338,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 280,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
@@ -1373,7 +1357,6 @@
       "provider_label_player_games": 280,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
         "unbound:no_designated_slot": 1
@@ -1391,7 +1374,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 280,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
@@ -1411,7 +1393,6 @@
       "provider_label_player_games": 0,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "no_eligible_same_response_pair": 280,
         "unavailable_or_duplicate_receipt": 2,
@@ -1430,7 +1411,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 0,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "no_eligible_same_response_pair": 280,
@@ -1451,7 +1431,6 @@
       "provider_label_player_games": 0,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "no_eligible_same_response_pair": 280,
         "unavailable_or_duplicate_receipt": 2,
@@ -1470,7 +1449,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 0,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "no_eligible_same_response_pair": 280,
@@ -1491,7 +1469,6 @@
       "provider_label_player_games": 280,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
         "unbound:no_designated_slot": 1
@@ -1509,7 +1486,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 280,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
@@ -1529,7 +1505,6 @@
       "provider_label_player_games": 280,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
         "unbound:no_designated_slot": 1
@@ -1547,7 +1522,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 280,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
@@ -1567,7 +1541,6 @@
       "provider_label_player_games": 280,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
         "unbound:no_designated_slot": 1
@@ -1585,7 +1558,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 277,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "no_eligible_same_response_pair": 3,
@@ -1606,7 +1578,6 @@
       "provider_label_player_games": 280,
       "reasons": {
         "frozen_metadata:CLOSE:provider_independent_conflict": 2,
-        "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
         "unbound:no_designated_slot": 1
@@ -1624,7 +1595,6 @@
       "projected_records_requesting_book_games": 280,
       "provider_label_player_games": 280,
       "reasons": {
-        "frozen_metadata:CLOSE:provider_independent_conflict": 2,
         "frozen_metadata:EARLY:provider_independent_conflict": 2,
         "no_designated_matching_snapshot": 2,
         "unavailable_or_duplicate_receipt": 2,
@@ -8903,7 +8873,8 @@
       "game_id": "americanfootball_ncaaf/2020/401249032",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:EARLY:provider_independent_conflict"
+        "no_designated_matching_snapshot",
+        "unavailable_or_duplicate_receipt"
       ],
       "slot": "CLOSE_T10",
       "stratum": "older/americanfootball_ncaaf/2020"
@@ -8912,7 +8883,6 @@
       "game_id": "americanfootball_ncaaf/2020/401249043",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:CLOSE:provider_independent_conflict",
         "frozen_metadata:EARLY:provider_independent_conflict"
       ],
       "slot": "EARLY_18_54",
@@ -8922,8 +8892,7 @@
       "game_id": "americanfootball_ncaaf/2020/401249043",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:CLOSE:provider_independent_conflict",
-        "frozen_metadata:EARLY:provider_independent_conflict"
+        "frozen_metadata:CLOSE:provider_independent_conflict"
       ],
       "slot": "CLOSE_T10",
       "stratum": "older/americanfootball_ncaaf/2020"
@@ -9004,15 +8973,6 @@
         "frozen_metadata:EARLY:provider_independent_conflict"
       ],
       "slot": "EARLY_18_54",
-      "stratum": "older/americanfootball_ncaaf/2020"
-    },
-    {
-      "game_id": "americanfootball_ncaaf/2020/401249878",
-      "original_classification": "unknown",
-      "reasons": [
-        "frozen_metadata:EARLY:provider_independent_conflict"
-      ],
-      "slot": "CLOSE_T10",
       "stratum": "older/americanfootball_ncaaf/2020"
     },
     {
@@ -11811,7 +11771,8 @@
       "game_id": "americanfootball_nfl/2020/2020_12_BAL_PIT",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:EARLY:provider_independent_conflict"
+        "no_designated_matching_snapshot",
+        "unavailable_or_duplicate_receipt"
       ],
       "slot": "CLOSE_T10",
       "stratum": "older/americanfootball_nfl/2020"
@@ -11823,15 +11784,6 @@
         "frozen_metadata:EARLY:provider_independent_conflict"
       ],
       "slot": "EARLY_18_54",
-      "stratum": "older/americanfootball_nfl/2020"
-    },
-    {
-      "game_id": "americanfootball_nfl/2020/2020_17_TEN_HOU",
-      "original_classification": "unknown",
-      "reasons": [
-        "frozen_metadata:EARLY:provider_independent_conflict"
-      ],
-      "slot": "CLOSE_T10",
       "stratum": "older/americanfootball_nfl/2020"
     },
     {
@@ -12146,7 +12098,6 @@
       "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:CLOSE:provider_independent_conflict",
         "frozen_metadata:EARLY:provider_independent_conflict"
       ],
       "slot": "EARLY_18_54",
@@ -12156,8 +12107,7 @@
       "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:CLOSE:provider_independent_conflict",
-        "frozen_metadata:EARLY:provider_independent_conflict"
+        "frozen_metadata:CLOSE:provider_independent_conflict"
       ],
       "slot": "CLOSE_T10",
       "stratum": "older/americanfootball_nfl/2022"
@@ -12176,7 +12126,6 @@
       "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:CLOSE:provider_independent_conflict",
         "frozen_metadata:EARLY:provider_independent_conflict"
       ],
       "slot": "EARLY_18_54",
@@ -12186,8 +12135,7 @@
       "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
       "original_classification": "unknown",
       "reasons": [
-        "frozen_metadata:CLOSE:provider_independent_conflict",
-        "frozen_metadata:EARLY:provider_independent_conflict"
+        "frozen_metadata:CLOSE:provider_independent_conflict"
       ],
       "slot": "CLOSE_T10",
       "stratum": "older/americanfootball_nfl/2022"
@@ -25481,13 +25429,7 @@
     "canonical_metadata_sha256": "c2e3ce27b12a4c47da09f3fe26c148f6c4f2f4b1802cd91f96dc209bb9fe8395",
     "classifier_sha256": "3022001dd610bd57bdc9aa301e761f987f5977cabc200b81b2806218511e7ac2",
     "completion_sha256": "17046b87ce044d89db8087f174c75ea07f3aa8401cc83ddec40a4a7f5871d8db",
-    "diagnostic_sha256": "28fbe961ee6b11fec64ed6c2a1df034c7a0375f9b66d1c7a1bcce24908d22c60",
-    "label_correction": {
-      "corrected_key": "each_book_preserves_own_point_across_slots",
-      "operation": "Rename temporal within-book point metric only; no cached-data remeasurement",
-      "original_artifact_sha256": "0fefa3abec62ed1f8807b8d36dd2e900a63698e6a4234c3790b9ad57256b59cd",
-      "original_key": "four_quote_sets_same_point"
-    },
+    "diagnostic_sha256": "dd2f5e6f410b7dca64250a610651d43c5c55a078063ece22838c09b238cb22fe",
     "ledger_pins": {
       "03391fd2c0bf224f053aae102fe1e3c520db58f9fa97837d34244e4fc54988c0": "4d2fb599aa16318ed09f4057bca63a0a9efc92810461f5e42879a742842ce586",
       "059fc135b00bbbc36db208a8bb622d7444a43d42bb2607675d30671ad455f4e4": "cc2f17d3289ac1dbebac6bcf5d828f4384f2ea4c9d88829c2d8510a014a57313",
@@ -25501,7 +25443,6 @@
       "f499935c05191d9583f891d9f859575ad7419472829fd802e39e2f62549eb22f": "3a3813fee41b4054cf4c67ed3c92c21a4247187b1f70c2ca536d2dff2c71d5bf",
       "f955f28b2fba9f36b3cdcaa7cf29013de9b18b128a629204b0e098f6594259cd": "8c8592a437646416d6dfb3b0cb989738a5c6cbf100851e874e35d6ac36ad7ba9"
     },
-    "measurement_diagnostic_sha256": "738536c587d5b590ee5b317a6faa3c9d3d1a6cbac5cdc07bbf2f6f0a646b1866",
     "merged_saved_record_source_sha256": "2370ab54c14fc491d9e9b35f9ac929b687c159059aff7ed8aff8f82512f20691",
     "native_outcomes_read": false,
     "original_final_sha256": "100a53275119fba283b3e8938cfee994f0d1a535201f2bab2e8769bfba9fdbdb",
@@ -40664,7 +40605,13 @@
     },
     "registration_reader_sha256": "f4d90991d3b6d01d373848f4d4d6a7261e05dcf1260f268b026a5f22c0fb6bf7",
     "settlement_source_sha256": "6815bc0ac18e9c927315f6b666db4200f8d3da8ddf1c5e5e1b6c984c4edf5a20",
-    "source_commit": "be40f2536f37e619b02c1f63bea756f69b6d28a4",
+    "slot_failure_correction": {
+      "baseline_commit": "c410747d505f70ba709fb6eecf98029ca18f067b",
+      "baseline_readiness_sha256": "7804cc8ae95c4606b75822feba23dcff34873add654d52a8b04db59e2c55dec3",
+      "native_repaired_projection_sha256": "ecadccd78b505ea43de3f6e3f7663612825ce0dd3f5095db1ebdfc8887373ebe",
+      "scope": "Descriptive acquired-data slots only; original paired-game gate/final untouched"
+    },
+    "source_commit": "c410747d505f70ba709fb6eecf98029ca18f067b",
     "stat_schema_source": "nfl-weather/data/processed/player_week.parquet",
     "timing_sha256": "45926bd9c8444dcda71f253a3c55e3c6d5f3942ade4b800b4ab3290f249cef58"
   },

@@ -1,0 +1,2818 @@
+{
+  "baseline_commit": "c410747d505f70ba709fb6eecf98029ca18f067b",
+  "baseline_readiness_sha256": "7804cc8ae95c4606b75822feba23dcff34873add654d52a8b04db59e2c55dec3",
+  "changed_coverage_rows": [
+    {
+      "after": {
+        "book": "betmgm",
+        "complete_pair_keys": 405,
+        "game_denominator": 653,
+        "games_with_pairs": 405,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 405,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 81,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "betmgm",
+        "complete_pair_keys": 404,
+        "game_denominator": 653,
+        "games_with_pairs": 404,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 404,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 81,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "betmgm",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betmgm",
+        "complete_pair_keys": 380,
+        "game_denominator": 653,
+        "games_with_pairs": 380,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 380,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 103,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "betmgm",
+        "complete_pair_keys": 380,
+        "game_denominator": 653,
+        "games_with_pairs": 380,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 380,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 103,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "betmgm",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "betonlineag",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 483,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "betonlineag",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 482,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "betonlineag",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betonlineag",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 483,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "betonlineag",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 483,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "betonlineag",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "betrivers",
+        "complete_pair_keys": 410,
+        "game_denominator": 653,
+        "games_with_pairs": 410,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 410,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 76,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "betrivers",
+        "complete_pair_keys": 409,
+        "game_denominator": 653,
+        "games_with_pairs": 409,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 409,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 76,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "betrivers",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betrivers",
+        "complete_pair_keys": 424,
+        "game_denominator": 653,
+        "games_with_pairs": 424,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 424,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 59,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "betrivers",
+        "complete_pair_keys": 424,
+        "game_denominator": 653,
+        "games_with_pairs": 424,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 424,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 59,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "betrivers",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "draftkings",
+        "complete_pair_keys": 448,
+        "game_denominator": 653,
+        "games_with_pairs": 448,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 448,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 38,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "draftkings",
+        "complete_pair_keys": 447,
+        "game_denominator": 653,
+        "games_with_pairs": 447,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 447,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 38,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "draftkings",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "draftkings",
+        "complete_pair_keys": 442,
+        "game_denominator": 653,
+        "games_with_pairs": 442,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 442,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 41,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "draftkings",
+        "complete_pair_keys": 442,
+        "game_denominator": 653,
+        "games_with_pairs": 442,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 442,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 41,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "draftkings",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 483,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 482,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "espnbet",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 483,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 483,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "espnbet",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 483,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 482,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "fanatics",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 483,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 653,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 483,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "fanatics",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanduel",
+        "complete_pair_keys": 370,
+        "game_denominator": 653,
+        "games_with_pairs": 370,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 370,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 115,
+          "quote_age": 1,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "fanduel",
+        "complete_pair_keys": 370,
+        "game_denominator": 653,
+        "games_with_pairs": 370,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 370,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 114,
+          "quote_age": 1,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "fanduel",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanduel",
+        "complete_pair_keys": 364,
+        "game_denominator": 653,
+        "games_with_pairs": 364,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 364,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 119,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "fanduel",
+        "complete_pair_keys": 364,
+        "game_denominator": 653,
+        "games_with_pairs": 364,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 364,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 119,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "fanduel",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "lowvig",
+        "complete_pair_keys": 423,
+        "game_denominator": 653,
+        "games_with_pairs": 423,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 423,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 60,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "lowvig",
+        "complete_pair_keys": 422,
+        "game_denominator": 653,
+        "games_with_pairs": 422,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 422,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 60,
+          "quote_age": 3,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "lowvig",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "lowvig",
+        "complete_pair_keys": 414,
+        "game_denominator": 653,
+        "games_with_pairs": 414,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 414,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 69,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "lowvig",
+        "complete_pair_keys": 414,
+        "game_denominator": 653,
+        "games_with_pairs": 414,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 414,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 69,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "lowvig",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "pinnacle",
+        "complete_pair_keys": 476,
+        "game_denominator": 653,
+        "games_with_pairs": 476,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 476,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 10,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "pinnacle",
+        "complete_pair_keys": 475,
+        "game_denominator": 653,
+        "games_with_pairs": 475,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 475,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 10,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "pinnacle",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "pinnacle",
+        "complete_pair_keys": 462,
+        "game_denominator": 653,
+        "games_with_pairs": 462,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 462,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 21,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "pinnacle",
+        "complete_pair_keys": 462,
+        "game_denominator": 653,
+        "games_with_pairs": 462,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 462,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 21,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "pinnacle",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 476,
+        "game_denominator": 653,
+        "games_with_pairs": 476,
+        "market": "totals",
+        "projected_records_requesting_book_games": 502,
+        "provider_label_player_games": 476,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 3,
+          "no_eligible_same_response_pair": 10,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 3,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 475,
+        "game_denominator": 653,
+        "games_with_pairs": 475,
+        "market": "totals",
+        "projected_records_requesting_book_games": 501,
+        "provider_label_player_games": 475,
+        "reasons": {
+          "base_ineligible": 12,
+          "decision_snapshot_or_execution_not_before_schedule": 6,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 12,
+          "missing_or_duplicate_event": 3,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 10,
+          "terminal_missing": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "williamhill_us",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 474,
+        "game_denominator": 653,
+        "games_with_pairs": 474,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 474,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 9,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "before": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 474,
+        "game_denominator": 653,
+        "games_with_pairs": 474,
+        "market": "totals",
+        "projected_records_requesting_book_games": 500,
+        "provider_label_player_games": 474,
+        "reasons": {
+          "base_ineligible": 17,
+          "frozen_metadata:CLOSE:provider_independent_conflict": 1,
+          "frozen_metadata:EARLY:provider_independent_conflict": 3,
+          "kickoff_conflict": 17,
+          "no_eligible_same_response_pair": 9,
+          "unbound:conflicting_latest_snapshot": 1,
+          "unbound:no_asof_observation": 2,
+          "unbound:no_designated_slot": 147
+        },
+        "season": 2020,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_ncaaf"
+      },
+      "key": [
+        "americanfootball_ncaaf",
+        2020,
+        "totals",
+        "williamhill_us",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "betmgm",
+        "complete_pair_keys": 215,
+        "game_denominator": 285,
+        "games_with_pairs": 215,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 215,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "no_eligible_same_response_pair": 49,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betmgm",
+        "complete_pair_keys": 214,
+        "game_denominator": 285,
+        "games_with_pairs": 214,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 214,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "no_eligible_same_response_pair": 49,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "betmgm",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betonlineag",
+        "complete_pair_keys": 264,
+        "game_denominator": 285,
+        "games_with_pairs": 264,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 264,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betonlineag",
+        "complete_pair_keys": 263,
+        "game_denominator": 285,
+        "games_with_pairs": 263,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 263,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "betonlineag",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betrivers",
+        "complete_pair_keys": 264,
+        "game_denominator": 285,
+        "games_with_pairs": 264,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 264,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betrivers",
+        "complete_pair_keys": 263,
+        "game_denominator": 285,
+        "games_with_pairs": 263,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 263,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "betrivers",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "draftkings",
+        "complete_pair_keys": 264,
+        "game_denominator": 285,
+        "games_with_pairs": 264,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 264,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "draftkings",
+        "complete_pair_keys": 263,
+        "game_denominator": 285,
+        "games_with_pairs": 263,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 263,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "draftkings",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "no_eligible_same_response_pair": 264,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "no_eligible_same_response_pair": 263,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "espnbet",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "no_eligible_same_response_pair": 264,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "no_eligible_same_response_pair": 263,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "fanatics",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanduel",
+        "complete_pair_keys": 259,
+        "game_denominator": 285,
+        "games_with_pairs": 259,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 259,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "no_eligible_same_response_pair": 5,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "fanduel",
+        "complete_pair_keys": 258,
+        "game_denominator": 285,
+        "games_with_pairs": 258,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 258,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "no_eligible_same_response_pair": 5,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "fanduel",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "lowvig",
+        "complete_pair_keys": 246,
+        "game_denominator": 285,
+        "games_with_pairs": 246,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 246,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "no_eligible_same_response_pair": 18,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "lowvig",
+        "complete_pair_keys": 245,
+        "game_denominator": 285,
+        "games_with_pairs": 245,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 245,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "no_eligible_same_response_pair": 18,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "lowvig",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "pinnacle",
+        "complete_pair_keys": 264,
+        "game_denominator": 285,
+        "games_with_pairs": 264,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 264,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "pinnacle",
+        "complete_pair_keys": 263,
+        "game_denominator": 285,
+        "games_with_pairs": 263,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 263,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "pinnacle",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 264,
+        "game_denominator": 285,
+        "games_with_pairs": 264,
+        "market": "totals",
+        "projected_records_requesting_book_games": 268,
+        "provider_label_player_games": 264,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "kickoff_conflict": 3,
+          "no_designated_matching_snapshot": 1,
+          "unavailable_or_duplicate_receipt": 1,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 263,
+        "game_denominator": 285,
+        "games_with_pairs": 263,
+        "market": "totals",
+        "projected_records_requesting_book_games": 267,
+        "provider_label_player_games": 263,
+        "reasons": {
+          "base_ineligible": 3,
+          "decision_snapshot_or_execution_not_before_schedule": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "kickoff_conflict": 3,
+          "unbound:no_designated_slot": 16
+        },
+        "season": 2020,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2020,
+        "totals",
+        "williamhill_us",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betmgm",
+        "complete_pair_keys": 256,
+        "game_denominator": 285,
+        "games_with_pairs": 256,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 256,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 24,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betmgm",
+        "complete_pair_keys": 256,
+        "game_denominator": 285,
+        "games_with_pairs": 256,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 256,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 24,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "betmgm",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betmgm",
+        "complete_pair_keys": 279,
+        "game_denominator": 285,
+        "games_with_pairs": 279,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 279,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betmgm",
+        "complete_pair_keys": 279,
+        "game_denominator": 285,
+        "games_with_pairs": 279,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 279,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 1,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "betmgm",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "betonlineag",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betonlineag",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "betonlineag",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betonlineag",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betonlineag",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "betonlineag",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "betrivers",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betrivers",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "betrivers",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "betrivers",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "betrivers",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "betrivers",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "draftkings",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "draftkings",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "draftkings",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "draftkings",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "draftkings",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "draftkings",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "espnbet",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "espnbet",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "espnbet",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "fanatics",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "fanatics",
+        "complete_pair_keys": 0,
+        "game_denominator": 285,
+        "games_with_pairs": 0,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 0,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 280,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "fanatics",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanduel",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "fanduel",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "fanduel",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "fanduel",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "fanduel",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "fanduel",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "lowvig",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "lowvig",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "lowvig",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "lowvig",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "lowvig",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "lowvig",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "pinnacle",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "pinnacle",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "pinnacle",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "pinnacle",
+        "complete_pair_keys": 277,
+        "game_denominator": 285,
+        "games_with_pairs": 277,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 277,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 3,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "pinnacle",
+        "complete_pair_keys": 277,
+        "game_denominator": 285,
+        "games_with_pairs": 277,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 277,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "no_eligible_same_response_pair": 3,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "pinnacle",
+        "EARLY_18_54"
+      ]
+    },
+    {
+      "after": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "CLOSE_T10",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "williamhill_us",
+        "CLOSE_T10"
+      ]
+    },
+    {
+      "after": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "before": {
+        "book": "williamhill_us",
+        "complete_pair_keys": 280,
+        "game_denominator": 285,
+        "games_with_pairs": 280,
+        "market": "totals",
+        "projected_records_requesting_book_games": 280,
+        "provider_label_player_games": 280,
+        "reasons": {
+          "frozen_metadata:CLOSE:provider_independent_conflict": 2,
+          "frozen_metadata:EARLY:provider_independent_conflict": 2,
+          "no_designated_matching_snapshot": 2,
+          "unavailable_or_duplicate_receipt": 2,
+          "unbound:no_designated_slot": 1
+        },
+        "season": 2022,
+        "slot": "EARLY_18_54",
+        "sport": "americanfootball_nfl"
+      },
+      "key": [
+        "americanfootball_nfl",
+        2022,
+        "totals",
+        "williamhill_us",
+        "EARLY_18_54"
+      ]
+    }
+  ],
+  "changed_exclusions": [
+    {
+      "after": {
+        "game_id": "americanfootball_ncaaf/2020/401249032",
+        "original_classification": "unknown",
+        "reasons": [
+          "no_designated_matching_snapshot",
+          "unavailable_or_duplicate_receipt"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_ncaaf/2020"
+      },
+      "before": {
+        "game_id": "americanfootball_ncaaf/2020/401249032",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_ncaaf/2020"
+      },
+      "game_id": "americanfootball_ncaaf/2020/401249032",
+      "slot": "CLOSE_T10"
+    },
+    {
+      "after": {
+        "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "before": {
+        "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict",
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
+      "slot": "CLOSE_T10"
+    },
+    {
+      "after": null,
+      "before": {
+        "game_id": "americanfootball_nfl/2020/2020_17_TEN_HOU",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_nfl/2020"
+      },
+      "game_id": "americanfootball_nfl/2020/2020_17_TEN_HOU",
+      "slot": "CLOSE_T10"
+    },
+    {
+      "after": null,
+      "before": {
+        "game_id": "americanfootball_ncaaf/2020/401249878",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_ncaaf/2020"
+      },
+      "game_id": "americanfootball_ncaaf/2020/401249878",
+      "slot": "CLOSE_T10"
+    },
+    {
+      "after": {
+        "game_id": "americanfootball_ncaaf/2020/401249043",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_ncaaf/2020"
+      },
+      "before": {
+        "game_id": "americanfootball_ncaaf/2020/401249043",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict",
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_ncaaf/2020"
+      },
+      "game_id": "americanfootball_ncaaf/2020/401249043",
+      "slot": "CLOSE_T10"
+    },
+    {
+      "after": {
+        "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "EARLY_18_54",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "before": {
+        "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict",
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "EARLY_18_54",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
+      "slot": "EARLY_18_54"
+    },
+    {
+      "after": {
+        "game_id": "americanfootball_nfl/2020/2020_12_BAL_PIT",
+        "original_classification": "unknown",
+        "reasons": [
+          "no_designated_matching_snapshot",
+          "unavailable_or_duplicate_receipt"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_nfl/2020"
+      },
+      "before": {
+        "game_id": "americanfootball_nfl/2020/2020_12_BAL_PIT",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_nfl/2020"
+      },
+      "game_id": "americanfootball_nfl/2020/2020_12_BAL_PIT",
+      "slot": "CLOSE_T10"
+    },
+    {
+      "after": {
+        "game_id": "americanfootball_ncaaf/2020/401249043",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "EARLY_18_54",
+        "stratum": "older/americanfootball_ncaaf/2020"
+      },
+      "before": {
+        "game_id": "americanfootball_ncaaf/2020/401249043",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict",
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "EARLY_18_54",
+        "stratum": "older/americanfootball_ncaaf/2020"
+      },
+      "game_id": "americanfootball_ncaaf/2020/401249043",
+      "slot": "EARLY_18_54"
+    },
+    {
+      "after": {
+        "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "EARLY_18_54",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "before": {
+        "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict",
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "EARLY_18_54",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "game_id": "americanfootball_nfl/2022/2022_16_HOU_TEN",
+      "slot": "EARLY_18_54"
+    },
+    {
+      "after": {
+        "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "before": {
+        "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
+        "original_classification": "unknown",
+        "reasons": [
+          "frozen_metadata:CLOSE:provider_independent_conflict",
+          "frozen_metadata:EARLY:provider_independent_conflict"
+        ],
+        "slot": "CLOSE_T10",
+        "stratum": "older/americanfootball_nfl/2022"
+      },
+      "game_id": "americanfootball_nfl/2022/2022_19_NYG_MIN",
+      "slot": "CLOSE_T10"
+    }
+  ],
+  "clock_count_changes": {
+    "quote_decision_0_1500": {
+      "after": 112528,
+      "before": 112486,
+      "delta": 42
+    },
+    "quote_snapshot_0_900": {
+      "after": 92445,
+      "before": 92403,
+      "delta": 42
+    },
+    "snapshot_0_600": {
+      "after": 4364,
+      "before": 4362,
+      "delta": 2
+    }
+  },
+  "exclusion_record_count": {
+    "after": 1852,
+    "before": 1854
+  },
+  "native_repaired_projection_sha256": "ecadccd78b505ea43de3f6e3f7663612825ce0dd3f5095db1ebdfc8887373ebe",
+  "new_book_game_close_pairs": 14,
+  "receipt_availability": {
+    "2020_12_BAL_PIT": "No designated CLOSE receipt in pinned ledger set; remains missing",
+    "2020_17_TEN_HOU": "Authenticated CLOSE receipt; existing classifier accepts eight book pairs",
+    "401249032": "No designated CLOSE receipt in pinned ledger set; remains missing",
+    "401249878": "Authenticated CLOSE receipt; existing classifier accepts six book pairs"
+  },
+  "repair_diagnostic_sha256": "dd2f5e6f410b7dca64250a610651d43c5c55a078063ece22838c09b238cb22fe",
+  "scope": "Descriptive acquired-data slots only; original paired-game gate/final untouched",
+  "unchanged_denominators": {
+    "older/americanfootball_ncaaf/2020": 653,
+    "older/americanfootball_nfl/2020": 285,
+    "older/americanfootball_nfl/2021": 291,
+    "older/americanfootball_nfl/2022": 285,
+    "props/americanfootball_nfl/2023": 294,
+    "props/americanfootball_nfl/2024": 308,
+    "props/americanfootball_nfl/2025": 285
+  },
+  "unchanged_frozen_inputs_ledgers_receipts_classifier_timing_final": true,
+  "unchanged_older_paired_readiness": {
+    "older/americanfootball_ncaaf/2020": {
+      "each_book_preserves_own_point_across_slots": 76,
+      "game_denominator": 653,
+      "same_domestic_plus_reference_both_slots": 457
+    },
+    "older/americanfootball_nfl/2020": {
+      "each_book_preserves_own_point_across_slots": 52,
+      "game_denominator": 285,
+      "same_domestic_plus_reference_both_slots": 252
+    },
+    "older/americanfootball_nfl/2021": {
+      "each_book_preserves_own_point_across_slots": 99,
+      "game_denominator": 291,
+      "same_domestic_plus_reference_both_slots": 282
+    },
+    "older/americanfootball_nfl/2022": {
+      "each_book_preserves_own_point_across_slots": 107,
+      "game_denominator": 285,
+      "same_domestic_plus_reference_both_slots": 276
+    }
+  },
+  "unchanged_props_coverage": true
+}
