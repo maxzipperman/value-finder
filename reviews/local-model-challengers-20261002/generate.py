@@ -1,6 +1,7 @@
 """LOCAL-BECAUSE: hardware. Collect one matched local-model response; never execute it."""
 import json
 import fcntl
+import argparse
 import subprocess
 import time
 import urllib.request
@@ -32,9 +33,12 @@ def api(endpoint, body=None):
     return json.loads(data)
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--models', nargs='+', choices=PROTOCOL['models'])
+    selected = parser.parse_args().models or PROTOCOL['models']
     inventory = api('tags')['models']
     available = {m['name']: m for m in inventory}
-    missing = [m for m in PROTOCOL['models'] if m not in available]
+    missing = [m for m in selected if m not in available]
     if missing:
         print(json.dumps({'status': 'waiting_for_downloads', 'missing': missing}))
         return
@@ -48,13 +52,14 @@ def main():
         print(json.dumps({'status': 'deferred', 'reason': 'low or unknown memory headroom'}))
         return
     snapshot = ROOT / 'inventory.json'
-    current = {m: {'digest': available[m]['digest'], 'artifact_bytes': available[m]['size']} for m in PROTOCOL['models']}
+    current = {m: {'digest': available[m]['digest'], 'artifact_bytes': available[m]['size']} for m in selected}
     if snapshot.exists():
-        if json.loads(snapshot.read_text()) != current:
+        recorded = json.loads(snapshot.read_text())
+        if any(m in recorded and recorded[m] != current[m] for m in selected):
             raise ValueError('installed model inventory changed; review required')
-    else:
-        snapshot.write_text(json.dumps(current, indent=2) + '\n')
-    for model in PROTOCOL['models']:
+        current = recorded | current
+    snapshot.write_text(json.dumps(current, indent=2) + '\n')
+    for model in selected:
         out = ROOT / model.replace(':', '-')
         out.mkdir(exist_ok=True)
         for task in PROTOCOL['tasks']:
