@@ -1,0 +1,140 @@
+```python
+import math
+from datetime import datetime, timezone
+
+
+def _parse_iso_utc(s):
+    """Parse an ISO 8601 string into a timezone-aware UTC datetime.
+    Returns None if parsing fails or the result is not timezone-aware."""
+    if not isinstance(s, str):
+        return None
+    s = s.strip()
+    if not s:
+        return None
+    # Handle trailing 'Z'
+    if s.endswith('Z') or s.endswith('z'):
+        s = s[:-1] + '+00:00'
+    try:
+        dt = datetime.fromisoformat(s)
+    except (ValueError, TypeError):
+        return None
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        return None
+    # Convert to UTC
+    return dt.astimezone(timezone.utc)
+
+
+def _is_valid_book(v):
+    return isinstance(v, str) and len(v) > 0
+
+
+def _is_valid_id(v):
+    return isinstance(v, str) and len(v) > 0
+
+
+def _parse_odds(v):
+    """Return float value if v is a valid odds field, else None.
+    Valid: finite int/float (not bool), or numeric string with abs >= 100.
+    Bool and other types are invalid.
+    Numeric conversions outside float range are malformed (return None)."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        if isinstance(v, float):
+            if not math.isfinite(v):
+                return None
+        # int is always finite
+        val = float(v)
+        if not math.isfinite(val):
+            return None
+        if abs(val) < 100:
+            return None
+        return val
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        try:
+            val = float(s)
+        except (ValueError, OverflowError):
+            return None
+        if not math.isfinite(val):
+            return None
+        if abs(val) < 100:
+            return None
+        return val
+    return None
+
+
+def _is_valid_row(row):
+    """Check if a row is a dict with all required fields valid."""
+    if not isinstance(row, dict):
+        return False
+    if not _is_valid_book(row.get('book')):
+        return False
+    if not _is_valid_id(row.get('id')):
+        return False
+    if _parse_odds(row.get('odds')) is None:
+        return False
+    obs = _parse_iso_utc(row.get('observed_at'))
+    if obs is None:
+        return False
+    exp = _parse_iso_utc(row.get('expires_at'))
+    if exp is None:
+        return False
+    # observed_at < expires_at
+    if not (obs < exp):
+        return False
+    return True
+
+
+def select_books(rows, asof):
+    """Select the best eligible row for each book.
+    
+    Returns dict: book -> original row (identity preserved).
+    """
+    # Validate asof
+    if not isinstance(asof, datetime) or asof.utcoffset() is None:
+        raise ValueError("asof must be a datetime with non-None utcoffset")
+    asof_utc = asof.astimezone(timezone.utc)
+
+    # For each book, track the best candidate
+    # Key: book name
+    # Value: (observed_at_utc, id, index, row)
+    best = {}
+
+    for idx, row in enumerate(rows):
+        if not _is_valid_row(row):
+            continue
+
+        book = row['book']
+        rid = row['id']
+        obs = _parse_iso_utc(row['observed_at'])
+        exp = _parse_iso_utc(row['expires_at'])
+
+        # Eligibility: observed_at <= asof < expires_at
+        if not (obs <= asof_utc < exp):
+            continue
+
+        # This row is eligible for book
+        # Compare with current best for this book
+        if book not in best:
+            best[book] = (obs, rid, idx, row)
+        else:
+            prev_obs, prev_id, prev_idx, prev_row = best[book]
+            # Choose latest observed_at
+            if obs > prev_obs:
+                best[book] = (obs, rid, idx, row)
+            elif obs == prev_obs:
+                # Tie: lexicographically smallest id
+                if rid < prev_id:
+                    best[book] = (obs, rid, idx, row)
+                elif rid == prev_id:
+                    # Both observed time and id tie: first input row
+                    if idx < prev_idx:
+                        best[book] = (obs, rid, idx, row)
+                # else keep prev
+
+    # Return dict book -> original row
+    return {book: info[3] for book, info in best.items()}
+```

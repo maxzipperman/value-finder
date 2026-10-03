@@ -1,0 +1,20 @@
+```json
+[
+  {
+    "line": 6,
+    "explanation": "The logic selects the latest 'observed_at' globally for each book before checking eligibility, which causes valid eligible rows to be suppressed if a more recent row exists that is either expired or in the future."
+  },
+  {
+    "line": 6,
+    "explanation": "The comparison 'row['observed_at'] > latest[book]['observed_at']' performs lexicographical string comparison instead of temporal comparison, which fails to correctly identify the latest instant for ISO strings with varying offsets or different lengths."
+  },
+  {
+    "line": 6,
+    "explanation": "The selection logic does not implement the tie-breaking requirements for identical 'observed_at' values (smallest 'id' or first input row order)."
+  },
+  {
+    "line": 12,
+    "explanation": "The eligibility condition 'asof <= expires' is incorrect; the contract requires 'asof < expires'."
+  }
+]
+```

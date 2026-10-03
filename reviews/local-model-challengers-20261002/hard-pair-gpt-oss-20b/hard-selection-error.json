@@ -1,0 +1,6 @@
+{
+  "error_type": "HTTPError",
+  "elapsed_seconds": 24.1975969170162,
+  "http_status": 500,
+  "bounded_server_error": "{\"error\":\"prediction aborted, token repeat limit reached\"}"
+}

@@ -1,0 +1,37 @@
+{
+  "hard-selection": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/hard-pair-recovery-qwen3.8-27b/hard-selection-response.txt'"
+    }
+  ],
+  "hard-review": [
+    {
+      "case": "line localization only; manual explanation review required",
+      "passed": true,
+      "findings": [
+        {
+          "line": 6,
+          "explanation": "Compares observed_at values as raw ISO-8601 strings lexicographically. With arbitrary UTC offsets (e.g. '2024-01-01T10:00:00+05:00' is 05:00 UTC but sorts after '2024-01-01T06:00:00+00:00' which is 06:00 UTC), string order does not equal chronological order of absolute instants. The spec requires comparing absolute instants."
+        },
+        {
+          "line": 6,
+          "explanation": "No tie-breaking by 'id' when two rows for the same book have equal observed_at instants. The spec mandates that ties in observed_at are broken by smallest id (then first input row). The code's strict '>' simply retains whichever row appeared first in iteration order, ignoring id entirely."
+        },
+        {
+          "line": 6,
+          "explanation": "The selection loop picks the single latest row per book regardless of eligibility, and the subsequent filter (line 12) discards the book if that one row is ineligible. This means a latest-but-future or latest-but-expired row suppresses earlier rows that would be eligible. The spec requires choosing the latest among ELIGIBLE rows only; eligibility must be part of the selection, not a post-hoc filter."
+        },
+        {
+          "line": 12,
+          "explanation": "Uses 'asof <= expires' (inclusive upper bound) but the spec defines eligibility as 'observed_at <= asof < expires_at' (strict). When asof equals expires_at exactly, the row must be ineligible, yet the code admits it."
+        },
+        {
+          "line": 13,
+          "explanation": "The implied-probability formula 100/(abs(odds)+100) is correct only for positive American odds. For negative odds (e.g. -200) the correct formula is abs(odds)/(abs(odds)+100). The code applies the positive-odds formula to all values, producing an incorrect probability for every negative-odds row."
+        }
+      ]
+    }
+  ]
+}

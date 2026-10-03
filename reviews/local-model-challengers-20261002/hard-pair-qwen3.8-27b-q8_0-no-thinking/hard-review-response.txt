@@ -1,0 +1,12 @@
+```json
+[
+  {
+    "line": 6,
+    "explanation": "The selection logic does not filter for eligibility (observed_at <= asof < expires_at) before determining the latest row. Consequently, a future or expired row with a later observed_at will overwrite an eligible row, causing the eligible alternative to be suppressed and potentially omitted from the output entirely."
+  },
+  {
+    "line": 12,
+    "explanation": "The eligibility check uses 'observed <= asof <= expires', which includes the case where asof equals expires_at. The specification requires 'asof < expires_at', meaning rows expiring exactly at the asof timestamp should be considered expired and ineligible."
+  }
+]
+```

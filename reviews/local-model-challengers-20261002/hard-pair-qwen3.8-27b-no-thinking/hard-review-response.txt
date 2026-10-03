@@ -1,0 +1,16 @@
+```json
+[
+  {
+    "line": 6,
+    "explanation": "The selection logic does not filter for eligibility (observed_at <= asof < expires_at) before comparing timestamps. Consequently, a future or expired row with a later observed_at will overwrite an eligible row, violating the requirement that latest future/expired rows do not suppress eligible alternatives."
+  },
+  {
+    "line": 12,
+    "explanation": "The eligibility check uses 'observed <= asof <= expires', which allows observed_at == expires_at. The contract requires observed_at < expires_at (strict inequality), so rows where observed_at equals expires_at are incorrectly included."
+  },
+  {
+    "line": 6,
+    "explanation": "Tie-breaking logic is missing. When multiple rows have the same latest eligible observed_at, the code retains the first encountered row in iteration order rather than selecting the smallest id, and it does not handle identical instant/id ties by first input row as specified."
+  }
+]
+```

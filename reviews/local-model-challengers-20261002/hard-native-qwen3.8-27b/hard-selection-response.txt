@@ -1,0 +1,94 @@
+```python
+import math
+from datetime import datetime, timezone
+
+
+def _valid_odds(odds):
+    if isinstance(odds, bool):
+        return False
+    if isinstance(odds, int):
+        return abs(odds) >= 100
+    if isinstance(odds, float):
+        if not math.isfinite(odds):
+            return False
+        return abs(odds) >= 100
+    if isinstance(odds, str):
+        try:
+            val = float(odds)
+        except (ValueError, OverflowError, TypeError):
+            return False
+        if not math.isfinite(val):
+            return False
+        return abs(val) >= 100
+    return False
+
+
+def _parse_tz_aware(s):
+    if not isinstance(s, str):
+        return None
+    try:
+        s_clean = s
+        if s_clean.endswith('Z') or s_clean.endswith('z'):
+            s_clean = s_clean[:-1] + '+00:00'
+        dt = datetime.fromisoformat(s_clean)
+        if dt.tzinfo is None:
+            return None
+        return dt
+    except (ValueError, TypeError, OverflowError):
+        return None
+
+
+def select_books(rows, asof):
+    if not isinstance(asof, datetime) or asof.utcoffset() is None:
+        raise ValueError("asof must be a timezone-aware datetime")
+
+    asof_utc = asof.astimezone(timezone.utc)
+
+    best = {}
+
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+
+        book = row.get('book')
+        if not isinstance(book, str) or len(book) == 0:
+            continue
+
+        row_id = row.get('id')
+        if not isinstance(row_id, str) or len(row_id) == 0:
+            continue
+
+        odds = row.get('odds')
+        if not _valid_odds(odds):
+            continue
+
+        observed_at = row.get('observed_at')
+        obs_dt = _parse_tz_aware(observed_at)
+        if obs_dt is None:
+            continue
+
+        expires_at = row.get('expires_at')
+        exp_dt = _parse_tz_aware(expires_at)
+        if exp_dt is None:
+            continue
+
+        obs_utc = obs_dt.astimezone(timezone.utc)
+        exp_utc = exp_dt.astimezone(timezone.utc)
+
+        if not (obs_utc <= asof_utc < exp_utc and obs_utc < exp_utc):
+            continue
+
+        if book not in best:
+            best[book] = (obs_utc, row_id, idx, row)
+        else:
+            existing_obs, existing_id, existing_idx, _ = best[book]
+            if obs_utc > existing_obs:
+                best[book] = (obs_utc, row_id, idx, row)
+            elif obs_utc == existing_obs:
+                if row_id < existing_id:
+                    best[book] = (obs_utc, row_id, idx, row)
+                elif row_id == existing_idx and idx < existing_idx:
+                    best[book] = (obs_utc, row_id, idx, row)
+
+    return {book: data[3] for book, data in best.items()}
+```

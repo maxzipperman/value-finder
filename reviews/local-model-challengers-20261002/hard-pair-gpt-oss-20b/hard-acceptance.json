@@ -1,0 +1,41 @@
+{
+  "hard-selection": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/hard-pair-gpt-oss-20b/hard-selection-response.txt'"
+    }
+  ],
+  "hard-review": [
+    {
+      "case": "line localization only; manual explanation review required",
+      "passed": true,
+      "findings": [
+        {
+          "line": 6,
+          "explanation": "The code compares 'observed_at' values as strings instead of parsing them into datetime objects. This leads to incorrect ordering when timestamps have different timezones or when lexicographic order differs from chronological order."
+        },
+        {
+          "line": 6,
+          "explanation": "Tie\u2011breaking rules are not implemented: the code selects the later string lexicographically, ignoring the requirement to choose the smallest 'id' when observed_at instants are identical, and to prefer the first input row when both instant and id are identical."
+        },
+        {
+          "line": 6,
+          "explanation": "The algorithm always keeps the latest row regardless of eligibility. If the latest row is ineligible (future or expired), earlier eligible rows are discarded, violating the requirement that eligible alternatives should not be suppressed by later ineligible rows."
+        },
+        {
+          "line": 10,
+          "explanation": "Using datetime.fromisoformat to parse ISO strings fails for timestamps ending with 'Z' (Zulu time) and may produce naive datetime objects if timezone information is missing, breaking the assumption of aware datetimes."
+        },
+        {
+          "line": 12,
+          "explanation": "The code uses inclusive comparison 'observed <= asof <= expires', but the specification requires 'observed <= asof < expires', so rows that expire exactly at 'asof' are incorrectly considered eligible."
+        },
+        {
+          "line": 13,
+          "explanation": "The probability formula 100/(abs(odds)+100) is applied to all odds, which is incorrect for negative American odds. The correct formula is 100/(odds+100) for positive odds and abs(odds)/(abs(odds)+100) for negative odds."
+        }
+      ]
+    }
+  ]
+}

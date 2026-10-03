@@ -1,0 +1,19 @@
+{
+  "model": "ornith-1.5:35b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Isolated Value Finder coding evaluation. Paper-only synthetic data. Use standard library only. Do not access files, network, processes, real data or credentials. Write complete Python source defining select_books(rows, asof). rows is a list of potentially malformed records. Return dict book -> ORIGINAL selected row (identity matters), choosing separately for each book the latest ELIGIBLE observed_at, tie lexicographically smallest id, then first input row if both observed time and id tie. Fields: nonempty string book and id; odds finite int/float/numeric string with abs>=100, bool and other types invalid; observed_at/expires_at timezone-aware ISO strings, Z and offsets allowed. Skip malformed rows. Eligibility is observed_at <= asof < expires_at and observed_at < expires_at. Compare all clocks as UTC absolute instants; asof must be a datetime with non-None utcoffset or raise ValueError, even for empty rows. Future, expired or malformed later records MUST NOT suppress older eligible records for that book. Never mutate rows or row contents. Numeric conversions outside float range are malformed, not a reason to crash. Standard library math/datetime only, no I/O or tools. Return only source, no explanations."
+    }
+  ],
+  "stream": false,
+  "keep_alive": 0,
+  "think": true,
+  "options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 16384,
+    "num_predict": 8192,
+    "draft_num_predict": 0
+  }
+}

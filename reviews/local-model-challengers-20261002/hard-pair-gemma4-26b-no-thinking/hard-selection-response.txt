@@ -1,0 +1,95 @@
+```python
+import datetime
+
+def select_books(rows, asof):
+    if not isinstance(asof, datetime.datetime) or asof.tzinfo is None or asof.utcoffset() is None:
+        raise ValueError("asof must be a timezone-aware datetime")
+
+    def parse_iso(s):
+        if not isinstance(s, str):
+            return None
+        try:
+            # datetime.fromisoformat handles Z and offsets in Python 3.11+
+            # For older versions, we handle the 'Z' manually
+            if s.endswith('Z'):
+                s = s[:-1] + '+00:00'
+            dt = datetime.datetime.fromisoformat(s)
+            if dt.tzinfo is None:
+                return None
+            return dt.astimezone(datetime.timezone.utc)
+        except (ValueError, TypeError):
+            return None
+
+    def parse_odds(val):
+        if isinstance(val, bool):
+            return None
+        try:
+            f = float(val)
+            if abs(f) >= 100:
+                return f
+            return None
+        except (ValueError, TypeError, OverflowError):
+            return None
+
+    # best_records stores: book -> (observed_at_dt, id_str, original_index, row_dict)
+    best_records = {}
+
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+
+        # Extract and validate required fields
+        book = row.get('book')
+        row_id = row.get('id')
+        odds_val = row.get('odds')
+        obs_str = row.get('observed_at')
+        exp_str = row.get('expires_at')
+
+        if not isinstance(book, str) or not book:
+            continue
+        if not isinstance(row_id, str) or not row_id:
+            continue
+        
+        parsed_odds = parse_odds(odds_val)
+        if parsed_odds is None:
+            continue
+
+        obs_dt = parse_iso(obs_str)
+        exp_dt = parse_iso(exp_str)
+        if obs_dt is None or exp_dt is None:
+            continue
+
+        # Eligibility logic
+        # observed_at < expires_at AND observed_at <= asof < expires_at
+        if not (obs_dt < exp_dt):
+            continue
+        if not (obs_dt <= asof < exp_dt):
+            continue
+
+        # Comparison logic:
+        # 1. Latest observed_at (descending)
+        # 2. Tie: lexicographically smallest id (ascending)
+        # 3. Tie: first input row (ascending index)
+        
+        current_candidate = (obs_dt, row_id, idx, row)
+        
+        if book not in best_records:
+            best_records[book] = current_candidate
+        else:
+            best = best_records[book]
+            # best = (best_obs, best_id, best_idx, best_row)
+            
+            # Compare observed_at (descending)
+            if current_candidate[0] > best[0]:
+                best_records[book] = current_candidate
+            elif current_candidate[0] == best[0]:
+                # Compare id (ascending)
+                if current_candidate[1] < best[1]:
+                    best_records[book] = current_candidate
+                elif current_candidate[1] == best[1]:
+                    # Compare index (ascending)
+                    if current_candidate[2] < best[2]:
+                        best_records[book] = current_candidate
+
+    return {book: data[3] for book, data in best_records.items()}
+```

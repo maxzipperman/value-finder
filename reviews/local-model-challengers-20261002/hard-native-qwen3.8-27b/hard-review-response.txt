@@ -1,0 +1,22 @@
+[
+  {
+    "line": 6,
+    "explanation": "Compares ISO-8601 strings lexicographically (row['observed_at'] > latest[book]['observed_at']) instead of comparing parsed datetime absolute instants. With arbitrary UTC offsets, lexicographic order of the offset-bearing strings does not reflect true chronological order (e.g. '…T10:00:00+05:00' is 05:00 UTC yet sorts after '…T06:00:00+00:00' which is 06:00 UTC), so the wrong row can be selected as 'latest'."
+  },
+  {
+    "line": 6,
+    "explanation": "The loop unconditionally keeps the row with the greatest observed_at per book, and eligibility (observed_at <= asof < expires_at) is only checked afterwards on line 12. A single latest row that is expired (asof >= expires_at) or future (observed_at > asof) therefore suppresses all earlier rows that would have been eligible, violating the requirement that 'latest future/expired rows do not suppress eligible alternatives.' Eligible rows must be filtered first, then the latest among them chosen."
+  },
+  {
+    "line": 6,
+    "explanation": "When two rows for the same book share the same observed_at instant, the strict '>' comparison retains whichever row was encountered first in input order, ignoring the required tie-breaker of smallest id. The spec mandates 'ties smallest id, identical instant/id ties first input row,' so a row with a lexicographically larger id seen earlier will incorrectly win over a row with a smaller id seen later."
+  },
+  {
+    "line": 12,
+    "explanation": "The eligibility test uses 'asof <= expires' (inclusive upper bound), but the specification requires 'asof < expires_at' (strictly less than). A row whose expires_at is exactly equal to asof should be ineligible, yet the code admits it."
+  },
+  {
+    "line": 13,
+    "explanation": "The implied-probability formula 100 / (abs(odds) + 100) is only correct for positive American odds. For negative odds (e.g. -200) the correct formula is abs(odds) / (abs(odds) + 100) (i.e. 200/300 ≈ 0.667), but the code yields 100/300 ≈ 0.333. The sign of the odds must determine which side of the fraction is 100."
+  }
+]

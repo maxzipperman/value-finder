@@ -1,0 +1,410 @@
+{
+  "hard-selection": [
+    {
+      "case": "empty",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "negative",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "future does not suppress",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expired later does not suppress",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "independent books",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "absolute offset order",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "offset instant tie id",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "same id first identity",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "exact observation",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "exact expiry",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "nonutc asof",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": false,
+      "error": "OverflowError: int too large to convert to float"
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "book malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "book malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof None",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof '2025-11-02T06:30:00Z'",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 11, 2, 6, 30)",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 11, 2, 6, 30, tzinfo=<__main__.NoOffset object at 0x107eb6900>)",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 0",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 1",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 2",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 3",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 4",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 5",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 6",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 7",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 8",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 9",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 10",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 11",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 12",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 13",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 14",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 15",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 16",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 17",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 18",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 19",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 20",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 21",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 22",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 23",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 24",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 25",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 26",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 27",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 28",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 29",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 30",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 31",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 32",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 33",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 34",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 35",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 36",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 37",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 38",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 39",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 40",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 41",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 42",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 43",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 44",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 45",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 46",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 47",
+      "passed": true,
+      "error": null
+    }
+  ],
+  "hard-review": [
+    {
+      "case": "line localization only; manual explanation review required",
+      "passed": true,
+      "findings": [
+        {
+          "line": 6,
+          "explanation": "The selection logic does not filter for eligibility (observed_at <= asof < expires_at) before determining the latest row. Consequently, a future or expired row with a later observed_at will overwrite an eligible row, causing the eligible alternative to be suppressed and potentially omitted from the output entirely."
+        },
+        {
+          "line": 12,
+          "explanation": "The eligibility check uses 'observed <= asof <= expires', which includes the case where asof equals expires_at. The specification requires 'asof < expires_at', meaning rows expiring exactly at the asof timestamp should be considered expired and ineligible."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "model": "gemma4:26b",
+  "created_at": "2026-10-03T08:21:51.306471Z",
+  "message": {
+    "role": "assistant",
+    "content": "```python\nimport datetime\n\ndef select_books(rows, asof):\n    if not isinstance(asof, datetime.datetime) or asof.tzinfo is None or asof.utcoffset() is None:\n        raise ValueError(\"asof must be a timezone-aware datetime\")\n\n    def parse_iso(s):\n        if not isinstance(s, str):\n            return None\n        try:\n            # datetime.fromisoformat handles Z and offsets in Python 3.11+\n            # For older versions, we handle the 'Z' manually\n            if s.endswith('Z'):\n                s = s[:-1] + '+00:00'\n            dt = datetime.datetime.fromisoformat(s)\n            if dt.tzinfo is None:\n                return None\n            return dt.astimezone(datetime.timezone.utc)\n        except (ValueError, TypeError):\n            return None\n\n    def parse_odds(val):\n        if isinstance(val, bool):\n            return None\n        try:\n            f = float(val)\n            if abs(f) >= 100:\n                return f\n            return None\n        except (ValueError, TypeError, OverflowError):\n            return None\n\n    # best_records stores: book -> (observed_at_dt, id_str, original_index, row_dict)\n    best_records = {}\n\n    for idx, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n\n        # Extract and validate required fields\n        book = row.get('book')\n        row_id = row.get('id')\n        odds_val = row.get('odds')\n        obs_str = row.get('observed_at')\n        exp_str = row.get('expires_at')\n\n        if not isinstance(book, str) or not book:\n            continue\n        if not isinstance(row_id, str) or not row_id:\n            continue\n        \n        parsed_odds = parse_odds(odds_val)\n        if parsed_odds is None:\n            continue\n\n        obs_dt = parse_iso(obs_str)\n        exp_dt = parse_iso(exp_str)\n        if obs_dt is None or exp_dt is None:\n            continue\n\n        # Eligibility logic\n        # observed_at < expires_at AND observed_at <= asof < expires_at\n        if not (obs_dt < exp_dt):\n            continue\n        if not (obs_dt <= asof < exp_dt):\n            continue\n\n        # Comparison logic:\n        # 1. Latest observed_at (descending)\n        # 2. Tie: lexicographically smallest id (ascending)\n        # 3. Tie: first input row (ascending index)\n        \n        current_candidate = (obs_dt, row_id, idx, row)\n        \n        if book not in best_records:\n            best_records[book] = current_candidate\n        else:\n            best = best_records[book]\n            # best = (best_obs, best_id, best_idx, best_row)\n            \n            # Compare observed_at (descending)\n            if current_candidate[0] > best[0]:\n                best_records[book] = current_candidate\n            elif current_candidate[0] == best[0]:\n                # Compare id (ascending)\n                if current_candidate[1] < best[1]:\n                    best_records[book] = current_candidate\n                elif current_candidate[1] == best[1]:\n                    # Compare index (ascending)\n                    if current_candidate[2] < best[2]:\n                        best_records[book] = current_candidate\n\n    return {book: data[3] for book, data in best_records.items()}\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 13545243375,
+  "load_duration": 4389778500,
+  "prompt_eval_count": 275,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 153600000,
+  "eval_count": 867,
+  "eval_duration": 8991236000,
+  "memory_samples": [
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    },
+    {
+      "size": 17982826740,
+      "size_vram": 17982826740,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 14.087556582991965,
+  "request_deadline_seconds": 600
+}

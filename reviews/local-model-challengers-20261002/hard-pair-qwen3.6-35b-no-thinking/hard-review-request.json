@@ -1,0 +1,19 @@
+{
+  "model": "qwen3.6:35b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Isolated Value Finder coding evaluation. Paper-only synthetic data. Use standard library only. Do not access files, network, processes, real data or credentials. Review this Python 3.14 code. Inputs are valid rows: book/id nonempty strings, int/float/numeric-string odds convertible to finite float with abs>=100, valid aware ISO clocks with arbitrary offsets or Z and observed_at<expires_at; asof is an aware UTC datetime. Desired: for each book choose the latest ELIGIBLE observed_at (observed_at<=asof<expires_at); latest future/expired rows do not suppress eligible alternatives. Compare absolute instants, ties smallest id, identical instant/id ties first input row. Return dict book -> {'row': ORIGINAL selected row, 'probability': correct American-odds implied probability}, no input mutation. Find distinct defects, including interactions. Do not flag unsupported or out-of-contract inputs or speculate about concurrent mutation. Return only JSON list {line: integer, explanation: string}, one per independent cause. No patches.\n1 from datetime import datetime\n2 def choose_books(rows, asof):\n3     latest = {}\n4     for row in rows:\n5         book = row['book']\n6         if book not in latest or row['observed_at'] > latest[book]['observed_at']:\n7             latest[book] = row\n8     out = {}\n9     for book, row in latest.items():\n10         observed = datetime.fromisoformat(row['observed_at'])\n11         expires = datetime.fromisoformat(row['expires_at'])\n12         if observed <= asof <= expires:\n13             probability = 100 / (abs(float(row['odds'])) + 100)\n14             out[book] = {'row': row, 'probability': probability}\n15     return out"
+    }
+  ],
+  "stream": false,
+  "keep_alive": 0,
+  "think": false,
+  "options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 16384,
+    "num_predict": 8192,
+    "draft_num_predict": 0
+  }
+}

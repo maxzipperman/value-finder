@@ -1,0 +1,394 @@
+{
+  "hard-selection": [
+    {
+      "case": "empty",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "negative",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "future does not suppress",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expired later does not suppress",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "independent books",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "absolute offset order",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "offset instant tie id",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "same id first identity",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "exact observation",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "exact expiry",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "nonutc asof",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": false,
+      "error": "OverflowError: int too large to convert to float"
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "book malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "book malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at malformed plus eligible",
+      "passed": false,
+      "error": "unexpected ValueError"
+    },
+    {
+      "case": "observed_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": false,
+      "error": "unexpected ValueError"
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof None",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof '2025-11-02T06:30:00Z'",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 11, 2, 6, 30)",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 11, 2, 6, 30, tzinfo=<hard_pair.NoOffset object at 0x105d9e710>)",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 0",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 1",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 2",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 3",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 4",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 5",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 6",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 7",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 8",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 9",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 10",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 11",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 12",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 13",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 14",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 15",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 16",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 17",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 18",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 19",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 20",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 21",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 22",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 23",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 24",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 25",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 26",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 27",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 28",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 29",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 30",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 31",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 32",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 33",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 34",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 35",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 36",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 37",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 38",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 39",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 40",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 41",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 42",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 43",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 44",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 45",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 46",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 47",
+      "passed": false,
+      "error": null
+    }
+  ]
+}

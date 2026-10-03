@@ -1,0 +1,137 @@
+{
+  "hard-pair-recovery-qwen3.8-27b": {
+    "true_defects": 5,
+    "independent_false_findings": 0,
+    "covered": [
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "eligibility_after_latest",
+      "inclusive_expiry",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Says every negative-odds row has incorrect probability; -100 correctly gives 0.5 under both formulas. Main negative-odds finding is valid."
+    ],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-pair-recovery-qwen3.8-27b-q8_0": {
+    "true_defects": 5,
+    "independent_false_findings": 0,
+    "covered": [
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "eligibility_after_latest",
+      "inclusive_expiry",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Wrong formula is the complement, not reciprocal, of correct negative-odds probability.",
+      "Says every negative-odds row has incorrect probability; -100 correctly gives 0.5 under both formulas. Main finding valid."
+    ],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-pair-qwen3.8-27b-no-thinking": {
+    "true_defects": 2,
+    "independent_false_findings": 1,
+    "covered": [
+      "eligibility_after_latest",
+      "missing_id_tie_break"
+    ],
+    "missed": [
+      "lexical_offset_order",
+      "inclusive_expiry",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Line12 finding wrongly says inclusive asof <= expires allows observed==expires; inputs guarantee observed<expires, so this is not a valid finding of the real expiry defect.",
+      "Tie finding wrongly claims identical clock/id ties do not retain first input row; the exact-string case does retain it."
+    ],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-pair-qwen3.8-27b-q8_0-no-thinking": {
+    "true_defects": 2,
+    "independent_false_findings": 0,
+    "covered": [
+      "eligibility_after_latest",
+      "inclusive_expiry"
+    ],
+    "missed": [
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-pair-qwen3.6-35b-no-thinking": {
+    "true_defects": 3,
+    "independent_false_findings": 1,
+    "duplicate_findings": 1,
+    "covered": [
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "eligibility_after_latest"
+    ],
+    "missed": [
+      "inclusive_expiry",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Reverses American-odds formulas, wrongly claims current formula is correct for negatives and incorrect for positives.",
+      "Finding3 includes speculation about datetime objects despite string-input contract and weak cause localization.",
+      "Finding4 repeats eligibility-after-selection rather than identifying inclusive expiry."
+    ],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-pair-gpt-oss-20b": {
+    "reviewer": "author manual source/contract check, not separate reviewer signoff",
+    "true_defects": 5,
+    "independent_false_findings": 1,
+    "covered": [
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "eligibility_after_latest",
+      "inclusive_expiry",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Python3.14 fromisoformat supports Z; input contract guarantees aware clocks. Tie finding overstates missing first-input preference on identical strings, which strict > preserves."
+    ]
+  },
+  "hard-pair-gemma4-26b-no-thinking": {
+    "reviewer": "author manual source/contract check, not separate reviewer signoff",
+    "true_defects": 4,
+    "independent_false_findings": 0,
+    "covered": [
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "eligibility_after_latest",
+      "inclusive_expiry"
+    ],
+    "missed": [
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Tie finding implies identical-string clock/id first-input preference is missing; strict > preserves this case."
+    ]
+  },
+  "hard-pair-ornith-1.5-35b": {
+    "reviewer": "author manual source/contract check, not separate reviewer signoff",
+    "true_defects": 0,
+    "independent_false_findings": 0,
+    "status": "8192-token reasoning limit with empty answer; no usable review to assess"
+  },
+  "hard-native-qwen3.8-27b": {
+    "true_defects": 5,
+    "independent_false_findings": 0,
+    "covered": [
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "eligibility_after_latest",
+      "inclusive_expiry",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  }
+}

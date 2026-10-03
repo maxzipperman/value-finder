@@ -1,0 +1,22 @@
+[
+    {
+        "line": 6,
+        "explanation": "The condition `row['observed_at'] > latest[book]['observed_at']` compares ISO format strings lexicographically. While this works for valid aware ISO 8601 strings with the same offset structure, it fails to correctly handle timezones with different offsets (e.g., '2023-01-01T00:00:00+05:00' vs '2023-01-01T00:00:00Z') because string comparison does not account for the offset difference, leading to incorrect selection of the latest instant."
+    },
+    {
+        "line": 6,
+        "explanation": "The logic `if book not in latest or ...` selects the first row encountered if it is the only one, but fails to implement the tie-breaking rule 'ties smallest id'. If two rows have identical observed_at instants (after timezone normalization), the code keeps the first one seen, ignoring the requirement to pick the one with the smaller ID."
+    },
+    {
+        "line": 10,
+        "explanation": "The code calls `datetime.fromisoformat` on `row['observed_at']` inside the second loop, but `row['observed_at']` is already a string. More critically, the eligibility check in line 12 uses `asof` (a datetime object) compared against parsed datetimes. However, the initial selection in line 6 used raw strings, meaning the 'latest' row selected might not be the one with the latest *instant* due to timezone offset issues mentioned in defect 1. Furthermore, if the input `row['observed_at']` is already a datetime object (as implied by 'valid aware ISO clocks' potentially being parsed elsewhere or misinterpreted), this would raise an error, but given the prompt says inputs are valid rows with string fields, this line parses it. The main issue is that the eligibility check is performed *after* selection, meaning ineligible rows can be selected as 'latest' and then filtered out, leaving no result for a book even if other eligible rows existed but were not selected because they had an earlier string representation or different timezone offset."
+    },
+    {
+        "line": 12,
+        "explanation": "The eligibility check `observed <= asof <= expires` uses the parsed `observed` and `expires` datetimes. However, `asof` is passed in as an aware UTC datetime. If `observed` or `expires` have non-UTC offsets, the comparison is valid in Python 3 (timezone-aware comparisons work), but the initial selection logic was flawed. More importantly, this check filters out rows where `asof` is outside the window. The requirement states 'latest future/expired rows do not suppress eligible alternatives'. This code selects a single 'latest' row per book based on string comparison (flawed) and then checks eligibility. If the selected 'latest' row is ineligible, it is discarded. If there was another row that was eligible but had an earlier 'string' representation (due to timezone offset differences in string format), it would never be considered because it wasn't selected as 'latest'. Thus, valid eligible rows can be incorrectly excluded."
+    },
+    {
+        "line": 13,
+        "explanation": "The probability calculation `100 / (abs(float(row['odds'])) + 100)` implements the implied probability for American odds correctly only if the odds are negative (e.g., -150). For positive American odds (e.g., +150), the formula should be `100 / (odds + 100)`. The use of `abs()` incorrectly treats positive odds as if they were negative, leading to wrong probabilities for positive odds."
+    }
+]

@@ -1,0 +1,252 @@
+{
+  "model": "gpt-oss:20b",
+  "created_at": "2026-10-03T08:20:18.404813Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n[\n  {\n    \"line\": 6,\n    \"explanation\": \"The code compares 'observed_at' values as strings instead of parsing them into datetime objects. This leads to incorrect ordering when timestamps have different timezones or when lexicographic order differs from chronological order.\"\n  },\n  {\n    \"line\": 6,\n    \"explanation\": \"Tie\u2011breaking rules are not implemented: the code selects the later string lexicographically, ignoring the requirement to choose the smallest 'id' when observed_at instants are identical, and to prefer the first input row when both instant and id are identical.\"\n  },\n  {\n    \"line\": 6,\n    \"explanation\": \"The algorithm always keeps the latest row regardless of eligibility. If the latest row is ineligible (future or expired), earlier eligible rows are discarded, violating the requirement that eligible alternatives should not be suppressed by later ineligible rows.\"\n  },\n  {\n    \"line\": 10,\n    \"explanation\": \"Using datetime.fromisoformat to parse ISO strings fails for timestamps ending with 'Z' (Zulu time) and may produce naive datetime objects if timezone information is missing, breaking the assumption of aware datetimes.\"\n  },\n  {\n    \"line\": 12,\n    \"explanation\": \"The code uses inclusive comparison 'observed <= asof <= expires', but the specification requires 'observed <= asof < expires', so rows that expire exactly at 'asof' are incorrectly considered eligible.\"\n  },\n  {\n    \"line\": 13,\n    \"explanation\": \"The probability formula 100/(abs(odds)+100) is applied to all odds, which is incorrect for negative American odds. The correct formula is 100/(odds+100) for positive odds and abs(odds)/(abs(odds)+100) for negative odds.\"\n  }\n]\n```",
+    "thinking": "We need to review code for defects. The code:\n\n```\n1 from datetime import datetime\n2 def choose_books(rows, asof):\n3     latest = {}\n4     for row in rows:\n5         book = row['book']\n6         if book not in latest or row['observed_at'] > latest[book]['observed_at']:\n7             latest[book] = row\n8     out = {}\n9     for book, row in latest.items():\n10         observed = datetime.fromisoformat(row['observed_at'])\n11         expires = datetime.fromisoformat(row['expires_at'])\n12         if observed <= asof <= expires:\n13             probability = 100 / (abs(float(row['odds'])) + 100)\n14             out[book] = {'row': row, 'probability': probability}\n15     return out\n```\n\nWe need to find distinct defects, including interactions. The requirements:\n\n- Inputs are valid rows: book/id nonempty strings, int/float/numeric-string odds convertible to finite float with abs>=100, valid aware ISO clocks with arbitrary offsets or Z and observed_at<expires_at; asof is an aware UTC datetime.\n\n- Desired: for each book choose the latest ELIGIBLE observed_at (observed_at <= asof < expires_at); latest future/expired rows do not suppress eligible alternatives. Compare absolute instants, ties smallest id, identical instant/id ties first input row.\n\n- Return dict book -> {'row': ORIGINAL selected row, 'probability': correct American-odds implied probability}, no input mutation.\n\n- Use standard library only.\n\n- No file/network/process.\n\nWe need to find defects in code relative to spec.\n\nLet's analyze:\n\n1. The code uses `datetime.fromisoformat(row['observed_at'])` and `expires_at`. But `datetime.fromisoformat` can parse naive datetime strings but not timezone offsets? Actually, `datetime.fromisoformat` supports ISO 8601 strings with timezone offset like '+00:00' or 'Z'? It supports 'Z'? I think `datetime.fromisoformat` does not support 'Z' directly; it expects '+00:00'. So if input uses 'Z', it will raise ValueError. So defect: timezone parsing.\n\n2. The code compares `row['observed_at'] > latest[book]['observed_at']` as strings, not as datetime objects. That compares lexicographically, not by absolute instant. Should parse to datetime for comparison. So defect: string comparison.\n\n3. The code uses `if observed <= asof <= expires:` but spec says `observed_at <= asof < expires_at`. The code uses <= for expires, inclusive. Should be <. So defect: inclusive expiration.\n\n4. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)`. American odds implied probability formula: For positive odds, probability = 100 / (odds + 100). For negative odds, probability = abs(odds) / (abs(odds) + 100). But the code uses 100/(abs(odds)+100) for all odds, which is wrong for negative odds. So defect: incorrect probability formula.\n\n5. The code does not handle ties: if two rows have same observed_at instant, choose smallest id. The code picks the later observed_at string lexicographically, but not tie-breaking by id. Also no tie-breaking by first input row. So defect: tie-breaking.\n\n6. The code does not consider that latest future/expired rows should not suppress eligible alternatives. The code picks latest row regardless of eligibility, then filters. But if the latest row is future/expired, it will be excluded, but the earlier eligible row will not be considered because it's not in latest. So the code fails to consider earlier eligible rows if a later row is ineligible. So defect: ignoring earlier eligible rows.\n\n7. The code does not preserve original row; it returns the row as is, but that's fine. But it might mutate? It doesn't mutate input.\n\n8. The code uses `datetime.fromisoformat` which returns naive datetime if no timezone? But spec says observed_at and expires_at are aware ISO clocks with arbitrary offsets or Z. So they will have timezone info. `datetime.fromisoformat` will parse timezone offset into tzinfo. Good.\n\n9. The code uses `asof` as aware UTC datetime. It compares observed <= asof <= expires. But observed and expires are timezone-aware; asof is UTC. The comparison will work if all are aware. But if observed or expires are naive, it will raise error. But spec says they are aware. So fine.\n\n10. The code uses `abs(float(row['odds']))` but odds may be numeric string convertible to finite float. That's fine.\n\n11. The code uses `probability` as float. That's fine.\n\n12. The code returns dictionary mapping book to dict. That's fine.\n\n13. The code does not handle duplicate books with same observed_at but different id. It picks the later string lexicographically, not by id. So tie-breaking.\n\n14. The code uses `if observed <= asof <= expires:` but spec says `observed_at <= asof < expires_at`. So inclusive expiration is wrong.\n\n15. The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but this uses string comparison. Should parse to datetime for absolute instant comparison. So defect.\n\n16. The code uses `datetime.fromisoformat(row['observed_at'])` but if the string contains timezone offset like '+02:00', it will parse correctly. But if it contains 'Z', it will raise ValueError. So defect.\n\n17. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but for negative odds, formula wrong. So defect.\n\n18. The code does not handle ties by smallest id. So defect.\n\n19. The code does not handle identical instant/id ties first input row. So defect.\n\n20. The code does not handle that latest future/expired rows do not suppress eligible alternatives. So defect.\n\n21. The code uses `datetime.fromisoformat` which returns timezone-aware datetime. But comparing timezone-aware datetimes with different offsets is fine. But the code uses string comparison for observed_at, not datetime. So that is wrong.\n\n22. The code uses `if observed <= asof <= expires:` but spec says `observed_at <= asof < expires_at`. So inclusive expiration is wrong.\n\n23. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but for negative odds, probability should be abs(odds)/(abs(odds)+100). So wrong.\n\n24. The code uses `abs(float(row['odds']))` but if odds is numeric string like '100', abs(100) = 100. So probability = 100/(100+100)=0.5. For positive odds 100, correct probability is 100/(100+100)=0.5. For negative odds -100, correct probability is 100/(100+100)=0.5. But formula used is 100/(abs(-100)+100)=100/(100+100)=0.5. So for -100 it's correct. But for -200, correct probability is 200/(200+100)=0.666..., but formula gives 100/(200+100)=0.333. So wrong.\n\n25. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but spec says \"correct American-odds implied probability\". So wrong.\n\n26. The code uses `if observed <= asof <= expires:` but spec says `observed_at <= asof < expires_at`. So inclusive expiration is wrong.\n\n27. The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison. So wrong.\n\n28. The code uses `datetime.fromisoformat(row['observed_at'])` but if timezone offset is like '+02:00', it's fine. But if 'Z', fails. So defect.\n\n29. The code does not handle tie-breaking by smallest id. So defect.\n\n30. The code does not handle identical instant/id ties first input row. So defect.\n\n31. The code does not consider that latest future/expired rows do not suppress eligible alternatives. So defect.\n\n32. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but for positive odds, correct formula is 100/(odds+100). For negative odds, correct formula is abs(odds)/(abs(odds)+100). So wrong.\n\n33. The code uses `if observed <= asof <= expires:` but spec says `observed_at <= asof < expires_at`. So inclusive expiration is wrong.\n\n34. The code uses `datetime.fromisoformat(row['observed_at'])` but if timezone offset is like '+02:00', it's fine. But if 'Z', fails. So defect.\n\n35. The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison. So wrong.\n\n36. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but for negative odds, wrong.\n\n37. The code uses `if observed <= asof <= expires:` but inclusive expiration wrong.\n\n38. The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison wrong.\n\n39. The code uses `datetime.fromisoformat(row['observed_at'])` but 'Z' fails.\n\n40. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong.\n\n41. The code uses `if observed <= asof <= expires:` but inclusive expiration wrong.\n\n42. The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison wrong.\n\n43. The code uses `datetime.fromisoformat(row['observed_at'])` but 'Z' fails.\n\n44. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong.\n\n45. The code uses `if observed <= asof <= expires:` but inclusive expiration wrong.\n\n46. The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison wrong.\n\n47. The code uses `datetime.fromisoformat(row['observed_at'])` but 'Z' fails.\n\n48. The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong.\n\n49. The code uses `if observed <= asof <= expires:` but inclusive expiration wrong.\n\n50. The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison wrong.\n\nWe need to produce JSON list of defects, each with line number and explanation. We need to list distinct defects, including interactions. So we need to identify each distinct cause. Let's enumerate:\n\n- Line 6: string comparison of observed_at instead of datetime comparison. This leads to incorrect ordering of rows by observed_at. Also fails to compare absolute instants across timezones.\n\n- Line 10-11: using datetime.fromisoformat may fail for 'Z' timezone. Also may produce naive datetime if timezone missing, but spec says aware. But still potential issue.\n\n- Line 12: inclusive expiration check; should be `<` not `<=`.\n\n- Line 13: incorrect probability formula for American odds; uses same formula for positive and negative odds.\n\n- Line 6-7: logic does not consider tie-breaking by smallest id or first input row. It just picks later string lexicographically.\n\n- Line 6-7: also fails to consider earlier eligible rows if later row is ineligible. Because it picks latest regardless of eligibility.\n\n- Line 6-7: also fails to compare absolute instants; string comparison may incorrectly order across timezones.\n\n- Line 10-11: timezone parsing may fail for 'Z'.\n\n- Line 12: inclusive expiration.\n\n- Line 13: probability formula.\n\n- Line 6-7: tie-breaking by id.\n\n- Line 6-7: tie-breaking by first input row.\n\n- Line 6-7: ignoring earlier eligible rows.\n\n- Line 10-11: timezone parsing.\n\n- Line 12: inclusive expiration.\n\n- Line 13: probability formula.\n\n- Also, the code does not handle that observed_at <= asof < expires_at; but uses <= for expires. So inclusive expiration.\n\n- The code uses `datetime.fromisoformat` which returns timezone-aware datetime if offset present. But if offset is 'Z', it fails. So defect.\n\n- The code uses `abs(float(row['odds']))` but if odds is numeric string convertible to finite float, fine.\n\n- The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but for negative odds, wrong.\n\n- The code uses `if observed <= asof <= expires:` but spec says `observed_at <= asof < expires_at`. So inclusive expiration.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no tie-breaking.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no handling of earlier eligible rows.\n\n- The code uses `if observed <= asof <= expires:` but inclusive expiration.\n\n- The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong formula.\n\n- The code uses `datetime.fromisoformat(row['observed_at'])` but 'Z' fails.\n\n- The code uses `datetime.fromisoformat(row['expires_at'])` but 'Z' fails.\n\n- The code uses `if observed <= asof <= expires:` but inclusive expiration.\n\n- The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong formula.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no tie-breaking.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no earlier eligible rows.\n\n- The code uses `if observed <= asof <= expires:` but inclusive expiration.\n\n- The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong formula.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no tie-breaking.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no earlier eligible rows.\n\n- The code uses `if observed <= asof <= expires:` but inclusive expiration.\n\n- The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong formula.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but string comparison.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no tie-breaking.\n\n- The code uses `if book not in latest or row['observed_at'] > latest[book]['observed_at']:` but no earlier eligible rows.\n\n- The code uses `if observed <= asof <= expires:` but inclusive expiration.\n\n- The code uses `probability = 100 / (abs(float(row['odds'])) + 100)` but wrong formula.\n\nWe need to produce JSON list of defects. Each defect should have line number and explanation. We need to list distinct causes. So we need to group them.\n\nLet's identify distinct defects:\n\n1. Line 6-7: Using string comparison for observed_at instead of datetime comparison, leading to incorrect ordering across timezones and not comparing absolute instants.\n\n2. Line 6-7: Not handling tie-breaking by smallest id or first input row; picks later string lexicographically.\n\n3. Line 6-7: Ignoring earlier eligible rows if a later row is ineligible; because it picks latest regardless of eligibility.\n\n4. Line 10-11: Using datetime.fromisoformat which fails for 'Z' timezone; also may produce naive datetime if timezone missing.\n\n5. Line 12: Inclusive expiration check; should be `<` not `<=`.\n\n6. Line 13: Incorrect probability formula for American odds; uses same formula for positive and negative odds.\n\n7. Line 10-11: Not comparing absolute instants; but that's part of defect 1.\n\n8. Line 12: The comparison uses `<=` for expires; spec says `<`.\n\n9. Line 13: Probability formula wrong for negative odds.\n\n10. Line 6-7: Not handling tie-breaking by smallest id.\n\n11. Line 6-7: Not handling tie-breaking by first input row.\n\nBut we can combine tie-breaking issues into one defect: \"Tie-breaking not implemented correctly: no smallest id or first input row handling\".\n\nAlso, we can combine timezone parsing issue into one defect: \"datetime.fromisoformat fails for 'Z' timezone\".\n\nAlso, we can combine inclusive expiration into one defect.\n\nAlso, probability formula wrong into one defect.\n\nAlso, ignoring earlier eligible rows into one defect.\n\nAlso, string comparison for observed_at into one defect.\n\nThus we have 5 distinct defects:\n\n- Defect 1: Line 6-7: string comparison of observed_at instead of datetime comparison, leading to incorrect ordering across timezones and not comparing absolute instants.\n\n- Defect 2: Line 6-7: tie-breaking not implemented: no smallest id or first input row handling; picks later string lexicographically.\n\n- Defect 3: Line 6-7: ignoring earlier eligible rows if a later row is ineligible; because it picks latest regardless of eligibility.\n\n- Defect 4: Line 10-11: datetime.fromisoformat fails for 'Z' timezone; may produce naive datetime if timezone missing; not robust.\n\n- Defect 5: Line 12: inclusive expiration check; should be `<` not `<=`.\n\n- Defect 6: Line 13: incorrect probability formula for American odds; uses same formula for positive and negative odds.\n\nWe might also note that line 12 uses `<=` for expires, but spec says `<`. So that's defect 5.\n\nAlso, we might note that line 12 uses `<=` for expires, but also uses `<=` for observed? It uses `observed <= asof <= expires`. Observed <= asof is fine. But expiration inclusive is wrong.\n\nAlso, we might note that line 13 uses wrong formula.\n\nAlso, we might note that line 6-7 uses string comparison.\n\nAlso, we might note that line 6-7 does not handle tie-breaking.\n\nAlso, we might note that line 6-7 ignores earlier eligible rows.\n\nAlso, we might note that line 10-11 uses fromisoformat which fails for 'Z'.\n\nThus we have 6 distinct defects.\n\nWe need to output JSON list of objects with line number and explanation. For each defect, we need to provide line number. For defects that involve multiple lines, we can pick the first relevant line. For example, defect 1: line 6. Defect 2: line 6. Defect 3: line 6. Defect 4: line 10. Defect 5: line 12. Defect 6: line 13.\n\nBut we need to avoid duplicates. We can combine defects that share same line number? But we can list each defect separately with same line number if they are distinct. But the instruction: \"Return only JSON list {line: integer, explanation: string}, one per independent cause.\" So each independent cause should be separate. So we can list each defect separately, even if same line number. But we should not duplicate same cause. So we need to list each distinct cause. So we can list 6 items.\n\nLet's craft explanations:\n\n- For defect 1: \"Line 6 uses string comparison of 'observed_at' values instead of comparing parsed datetime objects, causing incorrect ordering when timestamps have different timezones or when lexicographic order differs from chronological order.\"\n\n- For defect 2: \"Line 6 does not implement tie-breaking rules: it selects the later string lexicographically, ignoring the requirement to choose the smallest 'id' in case of identical observed_at instants, and to prefer the first input row when both instant and id are identical.\"\n\n- For defect 3: \"Line 6 always keeps the latest row regardless of eligibility; if the latest row is ineligible (future or expired), earlier eligible rows are discarded, violating the requirement that eligible alternatives should not be suppressed by later ineligible rows.\"\n\n- For defect 4: \"Line 10 (and 11) uses datetime.fromisoformat which does not accept 'Z' timezone designator; this will raise ValueError for ISO strings ending with 'Z', and may produce naive datetime objects if timezone information is missing, breaking the assumption of aware datetimes.\"\n\n- For defect 5: \"Line 12 uses inclusive comparison 'observed <= asof <= expires', but the specification requires 'observed <= asof < expires', so rows that expire exactly at 'asof' are incorrectly considered eligible.\"\n\n- For defect 6: \"Line 13 applies the formula 100/(abs(odds)+100) to all odds, which is incorrect for negative American odds; the correct formula is 100/(odds+100) for positive odds and abs(odds)/(abs(odds)+100) for negative odds.\"\n\nWe should also mention that line 12 uses <= for expires. That's defect 5.\n\nNow produce JSON list. Ensure each object has \"line\" and \"explanation\". Use integer line numbers. Provide list. Let's produce."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 47838689750,
+  "load_duration": 1571019042,
+  "prompt_eval_count": 440,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 215503000,
+  "eval_count": 5167,
+  "eval_duration": 46045130000,
+  "memory_samples": [
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 48.36179483300657,
+  "request_deadline_seconds": 600
+}

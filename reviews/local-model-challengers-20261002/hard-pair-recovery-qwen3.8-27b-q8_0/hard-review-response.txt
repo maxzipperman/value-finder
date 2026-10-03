@@ -1,0 +1,22 @@
+[
+  {
+    "line": 6,
+    "explanation": "observed_at values are compared as ISO-8601 strings (lexicographic order) rather than as parsed aware datetimes. Strings with different UTC offsets do not sort by absolute instant (e.g. '2024-01-01T10:00:00+05:00' is 05:00Z but sorts after '2024-01-01T06:00:00+00:00' which is 06:00Z), so the wrong row can be selected as 'latest'."
+  },
+  {
+    "line": 6,
+    "explanation": "Eligibility (observed_at <= asof < expires_at) is not checked during selection. The code first picks a single 'latest' row per book, then discards it in the second loop if it is expired or future. An earlier eligible row for the same book is never considered, violating the requirement that latest future/expired rows must not suppress eligible alternatives."
+  },
+  {
+    "line": 6,
+    "explanation": "When two rows share the same observed_at instant, the spec requires tie-breaking by smallest id. The code uses a strict '>' comparison with no id check, so the first row encountered in input order wins regardless of id, which is incorrect when a later row has a smaller id."
+  },
+  {
+    "line": 12,
+    "explanation": "The eligibility upper bound uses 'asof <= expires' (inclusive), but the spec requires 'asof < expires_at' (strict). A row whose expires_at exactly equals asof is incorrectly treated as eligible."
+  },
+  {
+    "line": 13,
+    "explanation": "The implied-probability formula 100/(abs(odds)+100) is only correct for positive American odds. For negative odds (e.g. -200) the correct formula is abs(odds)/(abs(odds)+100); the code returns the reciprocal, producing an incorrect probability for every negative-odds row."
+  }
+]

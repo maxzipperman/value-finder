@@ -1,0 +1,143 @@
+```python
+import math
+from datetime import datetime, timezone
+
+
+def _parse_iso_utc(s):
+    """Parse an ISO-8601 string to a timezone-aware datetime in UTC.
+    Returns None if parsing fails or the result is not timezone-aware."""
+    if not isinstance(s, str):
+        return None
+    try:
+        # Handle trailing 'Z'
+        t = s.strip()
+        if t.endswith('Z') or t.endswith('z'):
+            t = t[:-1] + '+00:00'
+        dt = datetime.fromisoformat(t)
+    except (ValueError, TypeError):
+        return None
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        return None
+    return dt.astimezone(timezone.utc)
+
+
+def _is_valid_book(v):
+    return isinstance(v, str) and len(v) > 0
+
+
+def _is_valid_id(v):
+    return isinstance(v, str) and len(v) > 0
+
+
+def _is_valid_odds(v):
+    """Check if v is a finite int/float/numeric string with abs >= 100.
+    bool and other types are invalid. Numeric conversions outside float range are malformed."""
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, (int, float)):
+        if isinstance(v, float):
+            if not math.isfinite(v):
+                return False
+        # int is always finite
+        try:
+            av = abs(v)
+        except (OverflowError, TypeError):
+            return False
+        return av >= 100
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return False
+        try:
+            f = float(s)
+        except (ValueError, OverflowError):
+            return False
+        if not math.isfinite(f):
+            return False
+        return abs(f) >= 100
+    return False
+
+
+def _is_valid_datetime_str(v):
+    """Check if v is a valid timezone-aware ISO string."""
+    return _parse_iso_utc(v) is not None
+
+
+def select_books(rows, asof):
+    # Validate asof
+    if not isinstance(asof, datetime) or asof.utcoffset() is None:
+        raise ValueError("asof must be a datetime with non-None utcoffset")
+    asof_utc = asof.astimezone(timezone.utc)
+
+    if not isinstance(rows, list):
+        return {}
+
+    # For each book, track the best candidate
+    # best[book] = (observed_at_utc, id_str, index, row)
+    best = {}
+
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+
+        # Extract fields without mutating
+        book = row.get('book')
+        id_val = row.get('id')
+        odds = row.get('odds')
+        observed_at_str = row.get('observed_at')
+        expires_at_str = row.get('expires_at')
+
+        # Validate book
+        if not _is_valid_book(book):
+            continue
+
+        # Validate id
+        if not _is_valid_id(id_val):
+            continue
+
+        # Validate odds
+        if not _is_valid_odds(odds):
+            continue
+
+        # Validate observed_at
+        observed_at = _parse_iso_utc(observed_at_str)
+        if observed_at is None:
+            continue
+
+        # Validate expires_at
+        expires_at = _parse_iso_utc(expires_at_str)
+        if expires_at is None:
+            continue
+
+        # Eligibility: observed_at < expires_at AND observed_at <= asof < expires_at
+        if not (observed_at < expires_at):
+            continue
+        if not (observed_at <= asof_utc < expires_at):
+            continue
+
+        # This row is eligible for book
+        # Compare with current best for this book
+        if book not in best:
+            best[book] = (observed_at, id_val, idx, row)
+        else:
+            prev_obs, prev_id, prev_idx, prev_row = best[book]
+            # Choose latest observed_at
+            if observed_at > prev_obs:
+                best[book] = (observed_at, id_val, idx, row)
+            elif observed_at == prev_obs:
+                # Tie: lexicographically smallest id
+                if id_val < prev_id:
+                    best[book] = (observed_at, id_val, idx, row)
+                elif id_val == prev_id:
+                    # Both observed time and id tie: first input row
+                    if idx < prev_idx:
+                        best[book] = (observed_at, id_val, idx, row)
+                # else keep prev
+
+    # Build result: book -> original row
+    result = {}
+    for book, (_, _, _, row) in best.items():
+        result[book] = row
+
+    return result
+```

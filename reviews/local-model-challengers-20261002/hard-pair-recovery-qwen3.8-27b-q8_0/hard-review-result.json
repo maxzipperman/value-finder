@@ -1,0 +1,987 @@
+{
+  "model": "qwen3.8:27b-q8_0",
+  "created_at": "2026-10-03T08:14:11.187001Z",
+  "message": {
+    "role": "assistant",
+    "content": "[\n  {\n    \"line\": 6,\n    \"explanation\": \"observed_at values are compared as ISO-8601 strings (lexicographic order) rather than as parsed aware datetimes. Strings with different UTC offsets do not sort by absolute instant (e.g. '2024-01-01T10:00:00+05:00' is 05:00Z but sorts after '2024-01-01T06:00:00+00:00' which is 06:00Z), so the wrong row can be selected as 'latest'.\"\n  },\n  {\n    \"line\": 6,\n    \"explanation\": \"Eligibility (observed_at <= asof < expires_at) is not checked during selection. The code first picks a single 'latest' row per book, then discards it in the second loop if it is expired or future. An earlier eligible row for the same book is never considered, violating the requirement that latest future/expired rows must not suppress eligible alternatives.\"\n  },\n  {\n    \"line\": 6,\n    \"explanation\": \"When two rows share the same observed_at instant, the spec requires tie-breaking by smallest id. The code uses a strict '>' comparison with no id check, so the first row encountered in input order wins regardless of id, which is incorrect when a later row has a smaller id.\"\n  },\n  {\n    \"line\": 12,\n    \"explanation\": \"The eligibility upper bound uses 'asof <= expires' (inclusive), but the spec requires 'asof < expires_at' (strict). A row whose expires_at exactly equals asof is incorrectly treated as eligible.\"\n  },\n  {\n    \"line\": 13,\n    \"explanation\": \"The implied-probability formula 100/(abs(odds)+100) is only correct for positive American odds. For negative odds (e.g. -200) the correct formula is abs(odds)/(abs(odds)+100); the code returns the reciprocal, producing an incorrect probability for every negative-odds row.\"\n  }\n]",
+    "thinking": "Let me carefully analyze this Python code against the specification.\n\nThe specification says:\n1. For each book, choose the latest ELIGIBLE observed_at (observed_at <= asof < expires_at)\n2. Latest future/expired rows do NOT suppress eligible alternatives\n3. Compare absolute instants, ties smallest id, identical instant/id ties first input row\n4. Return dict book -> {'row': ORIGINAL selected row, 'probability': correct American-odds implied probability}\n5. No input mutation\n6. Inputs: book/id nonempty strings, int/float/numeric-string odds convertible to finite float with abs>=100, valid aware ISO clocks with arbitrary offsets or Z and observed_at < expires_at; asof is an aware UTC datetime.\n\nLet me go through the code line by line:\n\n**Line 6:** `if book not in latest or row['observed_at'] > latest[book]['observed_at']:`\n\nThis is the selection logic. The problem here is:\n- It's comparing `row['observed_at']` as a string (ISO format string) rather than as a datetime. ISO format strings don't compare correctly across different timezone offsets. For example, \"2024-01-01T12:00:00+05:00\" vs \"2024-01-01T07:00:00+00:00\" \u2014 the first is later in absolute time but the string comparison would say \"2024-01-01T12:00:00+05:00\" > \"2024-01-01T07:00:00+00:00\" which happens to be correct here, but \"2024-01-01T07:00:00+00:00\" vs \"2024-01-01T06:00:00-01:00\" \u2014 the first is 07:00 UTC, the second is 07:00 UTC (same instant), but string comparison would say they're different. Actually wait, let me think more carefully.\n\nActually, the bigger issue: the code is comparing ISO strings lexicographically. This does NOT correctly compare absolute instants when timezone offsets differ. For example:\n- \"2024-01-01T10:00:00+05:00\" = 05:00 UTC\n- \"2024-01-01T06:00:00+00:00\" = 06:00 UTC\n\nString comparison: \"2024-01-01T10:00:00+05:00\" > \"2024-01-01T06:00:00+00:00\" \u2192 True (because '1' > '0' at position 11)\nBut in absolute time: 05:00 UTC < 06:00 UTC, so the first is EARLIER.\n\nSo the string comparison is wrong for comparing absolute instants. This is a defect.\n\n- Also, the eligibility check (observed_at <= asof < expires_at) is NOT done during selection. The code first picks the \"latest\" row per book (by string comparison), then checks eligibility. If the latest row is expired or future, it's simply excluded, and no earlier eligible row is considered. The spec says \"latest future/expired rows do not suppress eligible alternatives.\" This is a major defect.\n\n- The tie-breaking: \"ties smallest id, identical instant/id ties first input row.\" The code doesn't handle ties at all. If two rows have the same observed_at, the code uses `>` (strict greater than), so the first one encountered wins. But the spec says ties should be broken by smallest id first, then first input row. The code doesn't check id for tie-breaking.\n\nWait, let me re-read: \"Compare absolute instants, ties smallest id, identical instant/id ties first input row.\"\n\nSo the ordering is:\n1. Latest observed_at (absolute instant)\n2. If tie in observed_at: smallest id\n3. If tie in both: first input row\n\nThe code only does step 1 (incorrectly, via string comparison) and doesn't do steps 2 or 3 properly. Actually for step 3, using `>` means the first row wins on ties, which is correct for \"first input row\" tie-breaking. But step 2 (smallest id) is missing.\n\n**Line 10-11:** `datetime.fromisoformat(row['observed_at'])` and `datetime.fromisoformat(row['expires_at'])`\n\nIn Python 3.14, `datetime.fromisoformat` can handle 'Z' suffix (since 3.11). So this should work for the input format. But wait - the spec says \"valid aware ISO clocks with arbitrary offsets or Z\". In Python 3.11+, `fromisoformat` handles 'Z'. So this should be fine for 3.14.\n\nActually wait, let me reconsider. The spec says the inputs are valid, so `fromisoformat` should work. But the issue is that the comparison on line 6 is done on strings, not on parsed datetimes.\n\n**Line 12:** `if observed <= asof <= expires:`\n\nThe spec says: `observed_at <= asof < expires_at`\n\nThe code uses `<=` for both: `observed <= asof <= expires`\n\nThis means `asof == expires` would pass, but the spec says `asof < expires_at` (strict). So if asof equals expires_at, the row should NOT be eligible, but the code would include it. This is a defect.\n\n**Line 13:** `probability = 100 / (abs(float(row['odds'])) + 100)`\n\nAmerican odds implied probability:\n- For positive odds (e.g., +150): probability = 100 / (odds + 100)\n- For negative odds (e.g., -200): probability = abs(odds) / (abs(odds) + 100)\n\nThe code uses `100 / (abs(float(row['odds'])) + 100)` for ALL cases.\n\nFor positive odds: 100 / (odds + 100) \u2014 correct\nFor negative odds: should be abs(odds) / (abs(odds) + 100), but code gives 100 / (abs(odds) + 100) \u2014 INCORRECT\n\nSo for negative odds, the probability is wrong. This is a defect.\n\n**Line 14:** `out[book] = {'row': row, 'probability': probability}`\n\nThe spec says return the ORIGINAL selected row. The code stores the row reference. Since there's no mutation of the row, this should be fine. The row is the original dict from the input list. No mutation is performed. This seems OK.\n\nWait, but let me check: does the code mutate the input? Looking through the code... No, it just reads from rows and creates a new dict `out`. No mutation. OK.\n\n**Line 6 - the eligibility issue (revisited):**\n\nThe code structure is:\n1. First pass: for each book, keep the row with the \"latest\" observed_at (string comparison)\n2. Second pass: check if that single row is eligible\n\nThe spec requires: for each book, among ALL rows that are eligible (observed_at <= asof < expires_at), pick the one with the latest observed_at (with tie-breaking).\n\nThe code's approach of first picking the latest and then checking eligibility means:\n- If the latest row is expired (asof >= expires_at), it's excluded, and no earlier eligible row is considered.\n- If the latest row is future (observed_at > asof), it's excluded, and no earlier eligible row is considered.\n\nThis is the \"latest future/expired rows do not suppress eligible alternatives\" requirement being violated.\n\n**Line 6 - string comparison issue:**\n\nComparing ISO strings lexicographically does not correctly compare absolute instants when timezone offsets differ. This is a separate defect from the eligibility issue.\n\nLet me now enumerate the distinct defects:\n\n1. **Line 6: String comparison instead of datetime comparison.** The code compares `row['observed_at']` (a string) with `latest[book]['observed_at']` (a string) using `>`. ISO format strings with different timezone offsets don't compare correctly lexicographically for absolute instant ordering. Should parse to datetime first.\n\n2. **Line 6: No eligibility filtering during selection.** The code selects the \"latest\" row per book without checking eligibility (observed_at <= asof < expires_at). If the latest row is expired or future, it's simply dropped, and no earlier eligible row is considered. The spec explicitly states \"latest future/expired rows do not suppress eligible alternatives.\"\n\n3. **Line 6: Missing tie-breaking by smallest id.** When two rows have the same observed_at instant, the spec requires choosing the one with the smallest id. The code only uses `>` (strict), so on a tie, the first encountered row wins, ignoring id.\n\n4. **Line 12: `<=` instead of `<` for expires_at.** The spec says `asof < expires_at` (strict inequality), but the code uses `asof <= expires`. This means a row where asof exactly equals expires_at would be incorrectly included.\n\n5. **Line 13: Incorrect probability formula for negative odds.** For negative American odds (e.g., -200), the implied probability should be `abs(odds) / (abs(odds) + 100)`, but the code computes `100 / (abs(odds) + 100)` for all cases.\n\nLet me double-check each:\n\n1. String comparison: Yes, this is a real issue. \"2024-01-01T10:00:00+05:00\" (05:00 UTC) vs \"2024-01-01T06:00:00+00:00\" (06:00 UTC). String comparison says first > second, but absolute time says first < second.\n\n2. Eligibility: Yes, the two-pass approach (select latest, then check eligibility) is fundamentally wrong. Should filter to eligible rows first, then select latest among those.\n\n3. Tie-breaking by id: Yes, the spec says \"ties smallest id\" but the code doesn't compare ids at all.\n\n4. `<=` vs `<`: Yes, spec says `asof < expires_at` but code has `asof <= expires`.\n\n5. Probability formula: Yes, for negative odds the formula is wrong.\n\nAre there any interactions between these? Let me think...\n\n- Defect 1 and 2 interact: even if you fix the string comparison, the eligibility issue remains. And even if you fix eligibility, the string comparison issue remains. They're independent causes.\n- Defect 3 is independent of the others.\n- Defect 4 is independent.\n- Defect 5 is independent.\n\nActually, wait. Let me reconsider defect 1. Is the string comparison truly a separate defect from the eligibility issue? \n\nThe string comparison affects WHICH row is selected as \"latest.\" The eligibility issue affects WHETHER the selected row is kept. These are independent:\n- Even with correct datetime comparison, if the latest row is expired, it's still wrongly excluded (defect 2).\n- Even with correct eligibility filtering, if you compare strings, you might pick the wrong \"latest\" among eligible rows (defect 1).\n\nSo yes, they're independent.\n\nLet me also check: is there an issue with the `fromisoformat` on line 10-11? In Python 3.14, `fromisoformat` handles 'Z' and various ISO formats. The spec says inputs are valid aware ISO clocks. So this should be fine. No defect here.\n\nWhat about the \"no input mutation\" requirement? The code doesn't mutate any input. It creates a new dict `out` and stores references to the original row dicts. No mutation. OK.\n\nWhat about \"identical instant/id ties first input row\"? The code uses `>` which means on a tie (equal observed_at), the first row encountered is kept (since the second row's observed_at is not > the first's). This is correct for the \"first input row\" tie-break. But the \"smallest id\" tie-break is missing (defect 3).\n\nWait, actually I need to be more careful. The spec says:\n- Compare absolute instants (primary sort: latest observed_at)\n- Ties: smallest id (secondary sort)\n- Identical instant/id: first input row (tertiary sort)\n\nThe code's `>` comparison means: only replace if strictly greater. So on a tie in observed_at, the first row wins. But the spec says on a tie in observed_at, we should pick the smallest id. So if row A (id=\"5\") comes before row B (id=\"3\") and they have the same observed_at, the code picks A (first), but the spec says pick B (smallest id). This is defect 3.\n\nI'm satisfied with my 5 defects. Let me format them.\n\nActually, let me reconsider whether defect 1 (string comparison) is truly a separate line from defect 2 (eligibility). They're both on line 6. But they are independent causes:\n- Defect 1: even among eligible rows, the \"latest\" might be wrong due to string comparison\n- Defect 2: the latest row might be ineligible, and no fallback is attempted\n\nThese are logically independent. Both happen to be on line 6. The question asks for \"one per independent cause\" with a line number. Both are on line 6. Can I have two entries for line 6? The format says \"one per independent cause\" so yes, I think I can have multiple entries for the same line if they're independent causes.\n\nLet me finalize my answer."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 201087378875,
+  "load_duration": 7372404792,
+  "prompt_eval_count": 408,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 695070000,
+  "eval_count": 3616,
+  "eval_duration": 193015221000,
+  "memory_samples": [
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 201.93878329201834,
+  "request_deadline_seconds": 600
+}

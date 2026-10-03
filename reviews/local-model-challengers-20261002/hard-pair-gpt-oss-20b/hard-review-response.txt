@@ -1,0 +1,28 @@
+```json
+[
+  {
+    "line": 6,
+    "explanation": "The code compares 'observed_at' values as strings instead of parsing them into datetime objects. This leads to incorrect ordering when timestamps have different timezones or when lexicographic order differs from chronological order."
+  },
+  {
+    "line": 6,
+    "explanation": "Tie‑breaking rules are not implemented: the code selects the later string lexicographically, ignoring the requirement to choose the smallest 'id' when observed_at instants are identical, and to prefer the first input row when both instant and id are identical."
+  },
+  {
+    "line": 6,
+    "explanation": "The algorithm always keeps the latest row regardless of eligibility. If the latest row is ineligible (future or expired), earlier eligible rows are discarded, violating the requirement that eligible alternatives should not be suppressed by later ineligible rows."
+  },
+  {
+    "line": 10,
+    "explanation": "Using datetime.fromisoformat to parse ISO strings fails for timestamps ending with 'Z' (Zulu time) and may produce naive datetime objects if timezone information is missing, breaking the assumption of aware datetimes."
+  },
+  {
+    "line": 12,
+    "explanation": "The code uses inclusive comparison 'observed <= asof <= expires', but the specification requires 'observed <= asof < expires', so rows that expire exactly at 'asof' are incorrectly considered eligible."
+  },
+  {
+    "line": 13,
+    "explanation": "The probability formula 100/(abs(odds)+100) is applied to all odds, which is incorrect for negative American odds. The correct formula is 100/(odds+100) for positive odds and abs(odds)/(abs(odds)+100) for negative odds."
+  }
+]
+```

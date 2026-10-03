@@ -14,5 +14,13 @@
   "gemma4:26b": {
     "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c",
     "artifact_bytes": 18731025629
+  },
+  "qwen3.8:27b-q8_0": {
+    "digest": "8f5fb6b71ea00052cbe8545738c55ce61112c4e571cb60ca4dad00b131766039",
+    "artifact_bytes": 29978242050
+  },
+  "ornith-1.5:35b": {
+    "digest": "9f3b89b2521908dd2e6f7a11fa368e62c8f89e1075f22604e4d1a76dd1240fcc",
+    "artifact_bytes": 22616285024
   }
 }
