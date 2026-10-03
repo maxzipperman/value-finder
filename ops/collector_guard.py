@@ -14,9 +14,10 @@ import os
 import re
 import subprocess
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit, quote, quote_plus
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent.parent
 # One fixed account journal, not a caller-selectable ledger/lock domain. Synthetic
@@ -165,6 +166,44 @@ def slot(now, seconds):
     return str(int(now.timestamp()) // seconds)
 
 
+ALERT_TIMEZONE = 'America/Los_Angeles'
+ALERT_LOCAL_TIMES = ((7, 30), (11, 30), (15, 30), (19, 30))
+
+
+def alert_occurrence(value, *, now=None):
+    """Validate an explicit occurrence, never infer one from execution time.
+
+    Syntax/calendar validation is NOT authenticated trigger provenance. A reviewed
+    producer/binding is an activation prerequisite; the production hold remains.
+    The token expires at the next approved LOCAL occurrence (including overnight
+    and DST), so a delayed/coalesced ambiguous prior trigger cannot be guessed.
+    This identity clock never replaces the response's actual observed quote clock.
+    """
+    try:
+        if not isinstance(value, str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00Z', value):
+            raise ValueError('Canonical explicit scheduled UTC occurrence required')
+        occurrence = utc(value)
+        now = now or datetime.now(timezone.utc)
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ValueError('Aware decision clock required')
+        now = now.astimezone(timezone.utc)
+        zone = ZoneInfo(ALERT_TIMEZONE)
+        local = occurrence.astimezone(zone)
+        if (local.hour, local.minute) not in ALERT_LOCAL_TIMES or occurrence > now:
+            raise ValueError('Not an approved past/current scheduled occurrence')
+        following = min(
+            datetime.combine(local.date()+timedelta(days=days), datetime.min.time(),zone)
+            .replace(hour=hour,minute=minute).astimezone(timezone.utc)
+            for days in (0,1) for hour,minute in ALERT_LOCAL_TIMES
+            if datetime.combine(local.date()+timedelta(days=days),datetime.min.time(),zone)
+            .replace(hour=hour,minute=minute).astimezone(timezone.utc) > occurrence)
+        if now >= following:
+            raise ValueError('Prior occurrence expired/ambiguous; trigger provenance required')
+        return value
+    except (ValueError, TypeError, KeyError):
+        raise Blocked('Alert occurrence missing/invalid/ambiguous; reviewed trigger provenance required') from None
+
+
 def close_slot(kickoff_slots, tries, now):
     """Identity for one scheduled close observation, independent of mutable selection/state.
 
@@ -226,6 +265,8 @@ def _reservation_get(session, url, params, *, label, request_slot, now=None):
             raise ValueError('Caller role/endpoint differs')
         if not isinstance(request_slot, str) or not request_slot:
             raise ValueError('Stable slot required')
+        if label in {'nfl-alert', 'cfb-alert'}:
+            alert_occurrence(request_slot, now=now)
         # Guard only known live endpoints; a scope cannot admit historical/order requests.
         if not re.fullmatch(r'/v4/sports/(americanfootball_nfl|americanfootball_ncaaf|basketball_nba)/(events/[^/]+/)?odds', parsed.path):
             raise ValueError('Not a named live GET endpoint')

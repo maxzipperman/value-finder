@@ -32,9 +32,13 @@ from cfbweather import board, fetch, notify, runlog
 from cfbweather.market import timing_note
 from cfbweather.config import ROOT
 
+sys.path.insert(0, str(ROOT.parent))
+from ops.collector_guard import alert_occurrence
+
 ap = argparse.ArgumentParser()
 ap.add_argument("--dry-run", action="store_true")
 ap.add_argument("--test", action="store_true")
+ap.add_argument("--scheduled-occurrence-utc", help="explicit reviewed trigger occurrence, YYYY-MM-DDTHH:MM:00Z; not proof of scheduler provenance")
 args = ap.parse_args()
 if args.test:
     ok = notify.send("CFB weather alerts", "Test alert: notifications are working.")
@@ -70,7 +74,8 @@ def damaged_notice(kept):
 def run(at):
     """One alert run. `at` holds the stage the run has reached and what it has counted so far, so a
     failure anywhere is recorded with both."""
-    up = board.compute(prices=not args.dry_run, odds_role="cfb-alert")  # a dry run spends no Odds API credits
+    occurrence = None if args.dry_run else alert_occurrence(args.scheduled_occurrence_utc)
+    up = board.compute(prices=not args.dry_run, odds_role="cfb-alert", odds_slot=occurrence)  # a dry run spends no Odds API credits
     if up.empty:
         return print("no FBS games in the next 8 days")
     at["counts"] = dict(games=len(up), signals=int((up.rule_b == "SIGNAL").sum() + (up.rule_ht == "SIGNAL").sum()),

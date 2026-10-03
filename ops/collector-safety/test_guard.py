@@ -71,6 +71,9 @@ class GuardTests(unittest.TestCase):
         os.environ['VF_COLLECTOR_ENVELOPE_SHA256'] = self.identity
 
     def send(self, session=None, slot='slot1', label='nba', **kwargs):
+        if label in {'nfl-alert','cfb-alert'}:
+            from ops.shared_account_testkit import synthetic_current_occurrence
+            slot=synthetic_current_occurrence()
         url = ('https://api.the-odds-api.com' + g.ROLE_PATHS[label].replace('[^/]+', 'synthetic'))
         return g._reservation_get(session or Session(), url, {**PARAMS, 'apiKey':KEY}, label=label, request_slot=slot, **kwargs)
 
@@ -459,11 +462,13 @@ class RolePropagationTests(unittest.TestCase):
             node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='run')
             seen=[]
             def stop(**kwargs):seen.append(kwargs);raise StopIteration()
-            ns=dict(board=SimpleNamespace(compute=stop),args=SimpleNamespace(days=8,dry_run=False),
+            ns=dict(board=SimpleNamespace(compute=stop),args=SimpleNamespace(days=8,dry_run=False,scheduled_occurrence_utc='fixture-occurrence'),
+                    alert_occurrence=lambda token:token,
                     oddsapi=SimpleNamespace(has_key=lambda:True))
             exec(compile(ast.Module(body=[node],type_ignores=[]),str(source),'exec'),ns)
             with self.assertRaises(StopIteration):ns['run']({})
             self.assertEqual(seen[0]['odds_role'],f'{sport}-alert')
+            self.assertEqual(seen[0]['odds_slot'],'fixture-occurrence')
 
     def test_close_transport_expression_and_registered_constants_unchanged(self):
         for sport in ('nfl','cfb'):
@@ -485,6 +490,65 @@ class RolePropagationTests(unittest.TestCase):
             eval(compile(ast.Expression(body=node),str(path),'eval'),ns)
             self.assertEqual(seen[0]['role'],f'{sport}-close')
             self.assertEqual(seen[0]['request_slot'],g.close_slot(['kick'],{},now))
+
+
+class AlertOccurrenceTests(unittest.TestCase):
+    def test_delayed_pdt_pst_occurrences_remain_distinct_and_restarts_stable(self):
+        cases=[('2026-10-03T14:30:00Z','2026-10-03T16:01:00Z','2026-10-03T18:30:00Z'),
+               ('2026-12-03T15:30:00Z','2026-12-03T16:01:00Z','2026-12-03T19:30:00Z')]
+        for morning,delayed,later in cases:
+            d=g.utc(delayed);l=g.utc(later)
+            self.assertEqual(g.slot(d,14400),g.slot(l,14400)) # reproduce OLD defect
+            self.assertNotEqual(g.alert_occurrence(morning,now=d),g.alert_occurrence(later,now=l))
+            self.assertEqual(g.alert_occurrence(morning,now=d),g.alert_occurrence(morning,now=d+timedelta(seconds=30)))
+
+    def test_explicit_identity_calendar_and_overnight_dst_boundaries(self):
+        # Pacific19:30 to07:30 spans12h normally,11h spring,13h autumn.
+        for occurrence,last_valid,next_run in [
+            ('2026-10-04T02:30:00Z','2026-10-04T14:29:59Z','2026-10-04T14:30:00Z'),
+            ('2026-03-08T03:30:00Z','2026-03-08T14:29:59Z','2026-03-08T14:30:00Z'),
+            ('2026-11-01T02:30:00Z','2026-11-01T15:29:59Z','2026-11-01T15:30:00Z')]:
+            self.assertEqual(g.alert_occurrence(occurrence,now=g.utc(last_valid)),occurrence)
+            with self.assertRaises(g.Blocked):g.alert_occurrence(occurrence,now=g.utc(next_run))
+
+    def test_missing_noncanonical_future_wrong_date_or_schedule_is_not_guessed(self):
+        now=g.utc('2026-10-03T16:01:00Z')
+        for token in [None,'', '07:30', '2026-10-03T14:30Z', '2026-10-03T14:30:00+00:00',
+                      '2026-10-03T14:30:01Z','2026-10-03T15:30:00Z',
+                      '2026-10-03T18:30:00Z','2026-10-02T14:30:00Z',
+                      '2026-02-30T14:30:00Z','ambiguous-trigger',datetime.now(timezone.utc)]:
+            with self.subTest(token=token),self.assertRaises(g.Blocked):g.alert_occurrence(token,now=now)
+
+    def test_actual_alert_run_rejects_missing_token_before_board_or_key_side_effects(self):
+        for sport in ('nfl','cfb'):
+            path=ROOT/f'{sport}-weather/scripts/alerts.py';tree=ast.parse(path.read_text())
+            node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='run')
+            calls=[]
+            def side_effect(**kw):calls.append(kw);raise StopIteration()
+            ns=dict(board=SimpleNamespace(compute=side_effect),alert_occurrence=g.alert_occurrence,
+                    args=SimpleNamespace(days=8,dry_run=False,scheduled_occurrence_utc=None),
+                    oddsapi=SimpleNamespace(has_key=lambda:calls.append('key')))
+            exec(compile(ast.Module(body=[node],type_ignores=[]),str(path),'exec'),ns)
+            with self.assertRaises(g.Blocked):ns['run']({})
+            self.assertEqual(calls,[])
+            ns['args'].dry_run=True
+            with self.assertRaises(StopIteration):ns['run']({})
+            self.assertEqual(calls[-1]['odds_slot'],None) # nonpaid preview needs no identity
+
+    def test_board_expression_forwards_literal_occurrence_without_rebucketing(self):
+        for sport in ('nfl','cfb'):
+            path=ROOT/f'{sport}-weather/{sport}weather/board.py';tree=ast.parse(path.read_text())
+            func=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='compute')
+            node=next(n for n in ast.walk(func) if isinstance(n,ast.Call) and
+                      ((isinstance(n.func,ast.Name) and n.func.id=='_pinnacle_live') or
+                       (isinstance(n.func,ast.Attribute) and n.func.attr=='odds_api_totals')))
+            calls=[]
+            def capture(*a,**kw):calls.append(kw)
+            token='2026-10-03T14:30:00Z'
+            ns=dict(_pinnacle_live=capture,fetch=SimpleNamespace(odds_api_totals=capture),names={},
+                    odds_role=f'{sport}-alert',odds_slot=token)
+            eval(compile(ast.Expression(body=node),str(path),'eval'),ns)
+            self.assertEqual(calls[0],{'role':f'{sport}-alert','request_slot':token})
 
 
 if __name__=='__main__':unittest.main()

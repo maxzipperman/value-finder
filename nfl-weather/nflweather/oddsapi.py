@@ -35,7 +35,7 @@ from .config import PROC, RAW, ROOT
 from .fetch import session
 
 sys.path.insert(0, str(ROOT.parent))
-from ops.collector_guard import Blocked, paid_get, slot
+from ops.collector_guard import Blocked, paid_get, slot, alert_occurrence
 
 BASE = "https://api.the-odds-api.com/v4"
 SPORT = "americanfootball_nfl"
@@ -140,8 +140,13 @@ def live(markets=("totals", "spreads"), budget: Budget | None = None, tag: str |
         if role not in (None, "nfl-trigger"):
             raise OddsAPIUnavailable("Conflicting caller role")
         role = "nfl-trigger"
-    if role in {"nfl-alert", "nfl-trigger"} and request_slot is None:
-        request_slot = slot(datetime.now(timezone.utc), 14400 if role == "nfl-alert" else 600)
+    if role == "nfl-alert":
+        try:
+            request_slot = alert_occurrence(request_slot)
+        except Blocked as e:
+            raise OddsAPIUnavailable(str(e)) from None
+    elif role == "nfl-trigger" and request_slot is None:
+        request_slot = slot(datetime.now(timezone.utc), 600)
     why = quota.check()
     if why:
         raise OddsAPIUnavailable(why)

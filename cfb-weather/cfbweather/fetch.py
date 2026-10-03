@@ -214,7 +214,7 @@ def odds_api_totals(team_names: dict, *, role=None, request_slot=None):
     import sys
     from datetime import datetime, timezone
     sys.path.insert(0, str(ROOT.parent))
-    from ops.collector_guard import Blocked, paid_get, slot
+    from ops.collector_guard import Blocked, paid_get, alert_occurrence
     from .notify import _env
     key = _env("ODDS_API_KEY")
     cols = ["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over", "line_src", "quote_utc",
@@ -227,8 +227,8 @@ def odds_api_totals(team_names: dict, *, role=None, request_slot=None):
         print(f"  {why}", flush=True)
         return empty
     try:
-        if role == "cfb-alert" and request_slot is None:
-            request_slot = slot(datetime.now(timezone.utc), 14400)
+        if role == "cfb-alert":
+            request_slot = alert_occurrence(request_slot)
         r = paid_get(session, ODDS_API, dict(apiKey=key, bookmakers=",".join(LIVE_BOOKS), markets="totals",
                                               oddsFormat="american", dateFormat="iso"),
                      label=role, request_slot=request_slot)

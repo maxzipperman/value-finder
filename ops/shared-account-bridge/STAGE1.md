@@ -46,8 +46,18 @@ remain the original provider headers, not a new bill.
 ## Timing and exclusions
 
 No launchd schedules, windows, selections, registration/scoring files or executed
-freezes change. Alerts identify their existing four-hour observation window;
-trigger polls use their existing ten-minute windows; props retain event/offset IDs;
+freezes change. Alerts require `--scheduled-occurrence-utc`, passed literally through the board
+and checked at paid admission. Canonical UTC seconds, the fixed approved
+America/Los_Angeles07:30/11:30/15:30/19:30 local calendar, date, future/expired
+occurrences and DST/overnight transitions are validated without inferring a trigger
+from actual start time. Occurrence identity expires at the next approved local
+occurrence; the19:30 overnight interval is12h normally,11h/13h across DST. Missing
+or ambiguous provenance fails before model/paid/ledger work. Nonpaid dry-run/test
+paths do not require this token. Quote time remains the actual saved receipt time.
+A CLI token is NOT authenticated launchd provenance: trusted producer and reviewed
+trigger binding (including actual host schedule/timezone) remain activation gates.
+Installers/launchd metadata are unchanged and do not supply this token today.
+Trigger polls use their existing ten-minute windows; props retain event/offset IDs;
 NBA retains its configured cadence. Close IDs depend only on the scheduled fifteen-minute observation tick; mutable
 try counts and due-slot membership cannot change the ID. Exact URL/params remain
 bound by the account journal, so different requests cannot become cache hits. A restart in that
@@ -89,5 +99,5 @@ The bound evidence/report is added after testing. Independent current-head revie
 and CI are needed for source adoption. Live deployment is separately blocked by
 historical integration/exclusion, full writer inventory, authenticated cumulative
 account baseline including prior/probe/uncertain exposure, exact caps/reserve/expiry
-and source authority, and reviewed activation. No running job, key, provider,
+and source authority, and reviewed activation, plus authenticated scheduled-alert trigger provenance. No running job, key, provider,
 raw runtime data, outcome, holdout or live ledger was accessed or changed.

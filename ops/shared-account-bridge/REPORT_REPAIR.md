@@ -1,4 +1,8 @@
-# Close restart repair: current source evidence
+# Close restart repair: historical source evidence
+
+**Close repair at4243a6ce passed focused independent tests. A subsequently confirmed
+alert occurrence collision required further source changes; this evidence is historical
+for current acceptance. See REPORT_ALERT_REPAIR.md.**
 
 Issue #166 / PR #167. Independent initial disposition: NOT READY at c36b502,
 one reproduced P2: mutable tries changed the close ID within the same tick.

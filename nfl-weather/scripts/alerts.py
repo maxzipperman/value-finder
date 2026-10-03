@@ -46,6 +46,9 @@ import pandas as pd
 
 from nflweather import board, notify, oddsapi, runlog
 from nflweather.config import ROOT
+
+sys.path.insert(0, str(ROOT.parent))
+from ops.collector_guard import alert_occurrence
 from nflweather.features import RAIN_IN, SNOW_IN
 from nflweather.market import timing_note
 
@@ -53,6 +56,7 @@ from nflweather.market import timing_note
 ap = argparse.ArgumentParser()
 ap.add_argument("--dry-run", action="store_true")
 ap.add_argument("--test", action="store_true")
+ap.add_argument("--scheduled-occurrence-utc", help="explicit reviewed trigger occurrence, YYYY-MM-DDTHH:MM:00Z; not proof of scheduler provenance")
 ap.add_argument("--days", type=int, default=8)
 ap.add_argument("--edge", type=float, default=0.05)
 args = ap.parse_args()
@@ -183,7 +187,8 @@ def run(at):
     """One alert run. `at` holds the stage the run has reached and what it has counted so far, so a
     failure anywhere is recorded with both."""
     # a dry run spends no Odds API credits
-    up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run, odds_role="nfl-alert")
+    occurrence = None if args.dry_run else alert_occurrence(args.scheduled_occurrence_utc)
+    up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run, odds_role="nfl-alert", odds_slot=occurrence)
     now = pd.Timestamp.now(tz="UTC")
     if up.empty:
         return print(f"{now:%Y-%m-%d %H:%M}Z no games in the next {args.days} days")
