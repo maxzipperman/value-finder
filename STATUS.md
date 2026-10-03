@@ -181,3 +181,11 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
 
 **N0 acquisition preparation (Oct2,2026):** the fixed Jan5–11,2026 NBA2025–26 sample has56 scheduled event identities and754 exact h2h requests /7540-credit maximum, still non-executable pending a reviewed cumulative driver, clean latest predecessor and exact hub approval. Free Kalshi inputs are cached for112 markets (259778 price minutes), with no paid credits or strategy results. See [candidate packet](strategy-research/nba_sample/README.md).
+
+**Prospective coverage pilot design (Oct 2, DRAFT):**
+[New sibling adapter architecture](strategy-research/coverage-pilot-v1/DESIGN.md)
+preserves the installed older recovery and executed freezes. Reuse the NFL2025
+285-game census; do not buy another50 games. Conditional revised planning bound
+52,844 credits is not an executable cap. Selector/frame, statistical classifier and
+prospective pilot-union integration require review before any seed/list/paid authority.
+All full listing/availability/bulk purchases remain held for coverage measurement.
