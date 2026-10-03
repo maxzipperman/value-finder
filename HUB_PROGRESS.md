@@ -111,3 +111,10 @@ The existing 480 older responses are a chronological sample; the 570 props respo
 - [NBA preparation PR #128](https://github.com/maxzipperman/value-finder/pull/128)
 - [Forecast coverage report](/private/tmp/value-finder-forecast-coverage-review-2026-10-02.md)
 - Local ledger inventory and pending-response hash checked October 2; original stopped bytes preserved by the exact certified transition. Saved test artifacts are reused only when source, environment and command bindings match.
+
+
+### Pilot recovery and successor prepared (October 2, 2026 PT)
+
+PR #142 is merged and its exact certified offline transition is installed under [hub authority](https://github.com/maxzipperman/value-finder/pull/142#issuecomment-5966047530). Pilot observed charges remain **210**, full reservations **270**, conservative cumulative carry **170,576**. No new paid call was made during reconciliation or successor assembly. The stopped response remains missing/ineligible and its selected game remains a coverage failure.
+
+The new `strategy-research/coverage-pilot-packet-v1/pilot-successor-142` packet has root `f490e0daaec2d7721d0298da1abbfbce47a7de13124a412641d5edb33addb380`: **729 untouched requests / 36,810 maximum new credits**. Frame, protocol, draw and selected files are byte-identical to the original; all seven attempted IDs are excluded. Actual captured packet validation and current historical/cache union passed. Independent exact-packet review and fresh hub paid authority remain before execution. No coverage conclusion or later tranche release is claimed.

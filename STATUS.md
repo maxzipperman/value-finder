@@ -238,3 +238,10 @@ All full listing/availability/bulk purchases remain held for coverage measuremen
 **Coverage pilot packet preparation (Oct2, prospective):** PR137 executor merged; successor offline builder and exact pre-draw protocol are under review. Protocol fixes price-only seven-book/six-market scope,30 per older stratum/50 per five unknown props strata/0 NFL2025 census, and separate5% missing caps. No production seed, list or paid authority exists. Hub alone records the once-only seed after protocol agreement.
 
 **Exact coverage pilot prepared (October2):** sole draw committed after PR137/140 review. Actual packet736requests/37,080maximum credits,430selected games; root/list and accounting in [HUB_PROGRESS](HUB_PROGRESS.md). Read-only cache/history and packet validation passed. Exact packet review/current account/live paid authority remain; no paid requests or automatic tranche release.
+
+
+### Pilot recovery and successor prepared (October 2, 2026 PT)
+
+PR #142 is merged and its exact certified offline transition is installed under [hub authority](https://github.com/maxzipperman/value-finder/pull/142#issuecomment-5966047530). Pilot observed charges remain **210**, full reservations **270**, conservative cumulative carry **170,576**. No new paid call was made during reconciliation or successor assembly. The stopped response remains missing/ineligible and its selected game remains a coverage failure.
+
+The new `strategy-research/coverage-pilot-packet-v1/pilot-successor-142` packet has root `f490e0daaec2d7721d0298da1abbfbce47a7de13124a412641d5edb33addb380`: **729 untouched requests / 36,810 maximum new credits**. Frame, protocol, draw and selected files are byte-identical to the original; all seven attempted IDs are excluded. Actual captured packet validation and current historical/cache union passed. Independent exact-packet review and fresh hub paid authority remain before execution. No coverage conclusion or later tranche release is claimed.
