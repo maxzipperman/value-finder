@@ -1,0 +1,8 @@
+{
+  "phase": "prospective author diagnostic freeze before execution",
+  "sha256": {
+    "CEILING_TYPE_NAME_DIAGNOSTIC.md": "d936462b001364e39e0f46d2a95602744240624d830f20962b314885953dc49f",
+    "ceiling_type_name_diagnostic.py": "cf63dc992522cf304c2aefb97c811e1e33c1c2e18f1c210ce7f5b97632e612f3",
+    "ceiling-local/qwen3.8-27b-q8_0/implementation-response.txt": "250114de339206914856fd6358df5198857da641d681253384ebb3d86d7fce74"
+  }
+}
