@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "scopes": [
+    "reviews/post151-readiness/diagnostic.py",
+    "reviews/post151-readiness/test_diagnostic.py",
+    "reviews/post151-readiness/readiness.json",
+    "reviews/post151-readiness/verification.json",
+    "ops/process/process_guard.py",
+    ".github/workflows/cache-readiness.yml",
+    "strategy-research/coverage-pilot-v1/classifier.py"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "reviews/post151-readiness",
+      "-p",
+      "test_diagnostic.py",
+      "-v"
+    ]
+  ],
+  "environment": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONHASHSEED": "0"
+  }
+}

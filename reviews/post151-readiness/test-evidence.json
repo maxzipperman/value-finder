@@ -1,0 +1,355 @@
+{
+  "evidence_digest": "8d5197ee6518cc8282cf736b487b36dc75f05146c028b1e3e5c80141a5f31adb",
+  "inputs": {
+    "command_binaries": {
+      "{python}": {
+        "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "sha256": "00c07e4d31048b15eebbe4c883f229338c5b2d598e9ee061da39b7fccba20cad"
+      }
+    },
+    "commands": [
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "reviews/post151-readiness",
+        "-p",
+        "test_diagnostic.py",
+        "-v"
+      ]
+    ],
+    "configured_environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "effective_environment": {
+      "LANG": "C.UTF-8",
+      "PATH": "/bin:/usr/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "environment": {
+      "executable_sha256": "00c07e4d31048b15eebbe4c883f229338c5b2d598e9ee061da39b7fccba20cad",
+      "packages": [
+        [
+          "GitPython",
+          "3.1.46"
+        ],
+        [
+          "Jinja2",
+          "3.1.6"
+        ],
+        [
+          "MarkupSafe",
+          "3.0.3"
+        ],
+        [
+          "PyYAML",
+          "6.0.3"
+        ],
+        [
+          "Pygments",
+          "2.19.2"
+        ],
+        [
+          "altair",
+          "6.0.0"
+        ],
+        [
+          "annotated-doc",
+          "0.0.4"
+        ],
+        [
+          "annotated-types",
+          "0.7.0"
+        ],
+        [
+          "anyio",
+          "4.12.1"
+        ],
+        [
+          "attrs",
+          "25.4.0"
+        ],
+        [
+          "blinker",
+          "1.9.0"
+        ],
+        [
+          "cachetools",
+          "6.2.6"
+        ],
+        [
+          "certifi",
+          "2026.1.4"
+        ],
+        [
+          "charset-normalizer",
+          "3.4.4"
+        ],
+        [
+          "click",
+          "8.3.1"
+        ],
+        [
+          "distro",
+          "1.9.0"
+        ],
+        [
+          "duckduckgo_search",
+          "8.1.1"
+        ],
+        [
+          "filelock",
+          "3.23.0"
+        ],
+        [
+          "fsspec",
+          "2026.2.0"
+        ],
+        [
+          "gitdb",
+          "4.0.12"
+        ],
+        [
+          "h11",
+          "0.16.0"
+        ],
+        [
+          "hf-xet",
+          "1.2.0"
+        ],
+        [
+          "httpcore",
+          "1.0.9"
+        ],
+        [
+          "httpx",
+          "0.28.1"
+        ],
+        [
+          "huggingface_hub",
+          "1.4.1"
+        ],
+        [
+          "idna",
+          "3.11"
+        ],
+        [
+          "jiter",
+          "0.13.0"
+        ],
+        [
+          "jsonschema",
+          "4.26.0"
+        ],
+        [
+          "jsonschema-specifications",
+          "2025.9.1"
+        ],
+        [
+          "lxml",
+          "6.0.2"
+        ],
+        [
+          "markdown-it-py",
+          "4.0.0"
+        ],
+        [
+          "mdurl",
+          "0.1.2"
+        ],
+        [
+          "mlx",
+          "0.30.3"
+        ],
+        [
+          "narwhals",
+          "2.16.0"
+        ],
+        [
+          "numpy",
+          "2.4.1"
+        ],
+        [
+          "openai",
+          "2.21.0"
+        ],
+        [
+          "packaging",
+          "26.0"
+        ],
+        [
+          "pandas",
+          "2.3.3"
+        ],
+        [
+          "pillow",
+          "12.1.1"
+        ],
+        [
+          "pip",
+          "25.3"
+        ],
+        [
+          "primp",
+          "1.0.0"
+        ],
+        [
+          "protobuf",
+          "6.33.5"
+        ],
+        [
+          "pyarrow",
+          "23.0.0"
+        ],
+        [
+          "pybind11",
+          "3.0.1"
+        ],
+        [
+          "pydantic",
+          "2.12.5"
+        ],
+        [
+          "pydantic_core",
+          "2.41.5"
+        ],
+        [
+          "pydeck",
+          "0.9.1"
+        ],
+        [
+          "python-dateutil",
+          "2.9.0.post0"
+        ],
+        [
+          "pytz",
+          "2025.2"
+        ],
+        [
+          "referencing",
+          "0.37.0"
+        ],
+        [
+          "requests",
+          "2.32.5"
+        ],
+        [
+          "rich",
+          "14.3.2"
+        ],
+        [
+          "rpds-py",
+          "0.30.0"
+        ],
+        [
+          "shellingham",
+          "1.5.4"
+        ],
+        [
+          "six",
+          "1.17.0"
+        ],
+        [
+          "smmap",
+          "5.0.2"
+        ],
+        [
+          "sniffio",
+          "1.3.1"
+        ],
+        [
+          "streamlit",
+          "1.54.0"
+        ],
+        [
+          "tenacity",
+          "9.1.4"
+        ],
+        [
+          "toml",
+          "0.10.2"
+        ],
+        [
+          "tornado",
+          "6.5.4"
+        ],
+        [
+          "tqdm",
+          "4.67.3"
+        ],
+        [
+          "typer",
+          "0.23.1"
+        ],
+        [
+          "typer-slim",
+          "0.23.1"
+        ],
+        [
+          "typing-inspection",
+          "0.4.2"
+        ],
+        [
+          "typing_extensions",
+          "4.15.0"
+        ],
+        [
+          "tzdata",
+          "2025.3"
+        ],
+        [
+          "urllib3",
+          "2.6.3"
+        ],
+        [
+          "wheel",
+          "0.46.3"
+        ]
+      ],
+      "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+      "python": "3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.6.3.2)]"
+    },
+    "files": {
+      ".github/workflows/cache-readiness.yml": "d663aa7037bb1d1541422f75a03af902209c9c796e4a1f02309237575322f551",
+      "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
+      "reviews/post151-readiness/diagnostic.py": "28fbe961ee6b11fec64ed6c2a1df034c7a0375f9b66d1c7a1bcce24908d22c60",
+      "reviews/post151-readiness/readiness.json": "7804cc8ae95c4606b75822feba23dcff34873add654d52a8b04db59e2c55dec3",
+      "reviews/post151-readiness/test_diagnostic.py": "db3b7a7778446257ab71a02747946e0a48bd0b9eb68f7950f3b610524ae1af16",
+      "reviews/post151-readiness/verification.json": "93158d1304e8d5ad83ecb82770b640313344ccc3ac11895060a53adbb0cda4b0",
+      "strategy-research/coverage-pilot-v1/classifier.py": "3022001dd610bd57bdc9aa301e761f987f5977cabc200b81b2806218511e7ac2"
+    }
+  },
+  "passed": true,
+  "recorded_at": "2026-10-03T18:44:44.165233+00:00",
+  "results": [
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "reviews/post151-readiness",
+        "-p",
+        "test_diagnostic.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "c3d36bfcdcf49649de77ba9848e84e138528463e2fd38b9f6fbd75546faf8f6d",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unittest_count": [
+        7
+      ]
+    }
+  ],
+  "tested_commit": "09011e909e2cda9db2c89faca2c2d544879227ec",
+  "tested_identity": "5065fb12e7e820710dadbcbb23cc36a091fd5a74328f705c6d94bb9512f8b262",
+  "version": 1,
+  "worktree_clean": true
+}
