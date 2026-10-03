@@ -231,3 +231,5 @@ receipt/reuse, overlap, binding and crash verification; exact frozen union and
 independent current-head review remain required before seed/list/paid authority.
 Synthetic orchestration is not a live paid preflight.
 All full listing/availability/bulk purchases remain held for coverage measurement.
+
+**Coverage pilot packet preparation (Oct2, prospective):** PR137 executor merged; successor offline builder and exact pre-draw protocol are under review. Protocol fixes price-only seven-book/six-market scope,30 per older stratum/50 per five unknown props strata/0 NFL2025 census, and separate5% missing caps. No production seed, list or paid authority exists. Hub alone records the once-only seed after protocol agreement.

@@ -71,7 +71,7 @@ def run(packet_path,root,bundle,auth,*,key_factory,http_factory):
         global_snapshot,carry=evidence.global_union(root_base,bindings['base_snapshot'],bindings['pilot_bindings'],base_check,
                                                    active_root=root if existing.exists() else None,active_verifier=current_check)
         if global_snapshot!=bindings['expected_global_snapshot']:raise ValueError('approved global snapshot differs')
-        evidence.authenticate_reuse(root_base,global_snapshot,json.loads(data['mappings.json']))
+        evidence.authenticate_reuse(root_base,global_snapshot,json.loads(data['mappings.json']),frozen_source={'freeze':data['source/FREEZE.json'],'files':source})
         # Missing/uncertain attempts cannot escape via another grouping or root.
         historical_ids=set()
         for old in global_snapshot['ledgers']:

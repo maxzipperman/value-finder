@@ -110,11 +110,46 @@ class BindingTests(unittest.TestCase):
         originals=[dict(request_id=rid,sport=sport,requested_utc=at,purposes=[purpose],source='oddsapi/hist_odds') for rid,at,purpose in [('early',early,'daily_16UTC'),('close',close,'pregame_close_proxy')]]
         frame=[dict(game_id='g',season=2020,stratum='older/'+sport+'/2020',scheduled_utc=kick,classification='unknown',binding=True)]
         slotmap=[dict(game_id='g',binding=True,slots={slot:dict(request_id=rid,requested_utc=at,provider_id='abc',binding=obs) for slot,rid,at in [('EARLY','early',early),('CLOSE','close',close)]})]
-        source={'provider-observations.json':json.dumps([obs]).encode(),'request-manifest.json':json.dumps(dict(requests=originals)).encode(),'canonical-games.json':b'[]'}
+        source={'provider-observations.json':json.dumps([obs]).encode(),'request-manifest.json':json.dumps(dict(requests=originals)).encode(),'canonical-games.json':json.dumps([dict(canonical_game_id='g',scheduled_utc=kick)]).encode()}
         data={'frame.json':json.dumps(frame).encode(),'slot-map.json':json.dumps(slotmap).encode(),'classifier-contract.json':json.dumps(dict(market='totals',reference='pinnacle',replace_failed_slots=False,book_panel=['draftkings'])).encode(),'protocol.json':json.dumps(dict(candidate_books=['draftkings'],primary_markets=list(self.mapping.MARKETS))).encode(),'code/plan.py':b'synthetic-code'}
         proof=dict(frame_sha256=self.capture.digest(data['frame.json']),requested_slot_map_sha256=self.capture.digest(data['slot-map.json']),contract_sha256=self.capture.digest(data['classifier-contract.json']),older_metadata_proof=dict(metadata_files={n:self.capture.digest(v) for n,v in source.items()},early_decision_rule_source_sha256=self.capture.digest(data['code/plan.py'])))
-        data['certainty-source-proof.json']=json.dumps(proof).encode();maps=[dict(game_id='g',request_ids=['early','close'])]
+        data['certainty-source-proof.json']=json.dumps(proof).encode();maps=[dict(game_id='g',request_ids=['early','close'],metadata_disposition=dict(classification='unknown',reasons=[]))]
         self.assertTrue(m.verify(data,source,originals,{},maps,frame))
+        zero=[dict(game_id='g',request_ids=[],reason='metadata_ineligible',metadata_disposition=dict(classification='failure',reasons=['CLOSE:provider_independent_conflict','EARLY:provider_independent_conflict']))]
+        with self.assertRaises(ValueError):m.verify(data,source,originals,{},zero,frame)
+        conflictframe=copy.deepcopy(frame);conflictframe[0]['scheduled_utc']='2020-10-02T17:00:00Z'
+        conflictsource=copy.deepcopy(source);conflictsource['canonical-games.json']=json.dumps([dict(canonical_game_id='g',scheduled_utc=conflictframe[0]['scheduled_utc'])]).encode()
+        conflictdata=copy.deepcopy(data);conflictdata['frame.json']=json.dumps(conflictframe).encode()
+        cp=json.loads(conflictdata['certainty-source-proof.json']);cp['frame_sha256']=self.capture.digest(conflictdata['frame.json']);cp['older_metadata_proof']['metadata_files']['canonical-games.json']=self.capture.digest(conflictsource['canonical-games.json']);conflictdata['certainty-source-proof.json']=json.dumps(cp).encode()
+        self.assertTrue(m.verify(conflictdata,conflictsource,originals,{},zero,conflictframe))
+        with self.assertRaises(ValueError):m.verify(conflictdata,conflictsource,originals,{},maps,conflictframe)
         bad=copy.deepcopy(slotmap);bad[0]['slots']['CLOSE']['binding']=dict(obs,returned_utc='2020-10-02T15:55:00Z')
         data['slot-map.json']=json.dumps(bad).encode();proof['requested_slot_map_sha256']=self.capture.digest(data['slot-map.json']);data['certainty-source-proof.json']=json.dumps(proof).encode()
         with self.assertRaisesRegex(ValueError,'decision-time'):m.verify(data,source,originals,{},maps,frame)
+
+    def test_provider_primary_offsets_and_authenticated_zero_failure_rule(self):
+        mapping=self.load('mapping');utc=self.load('timing').utc
+        # Exact six observed clock cases; synthetic identities and no quote payloads.
+        cases=[('2021-08-28T17:20:00Z','2021-08-28T17:00:00Z','2021-08-28T16:55:00Z',False),
+               ('2021-10-24T03:59:00Z','2021-10-24T04:00:00Z','2021-10-24T03:55:00Z',True),
+               ('2022-10-16T03:59:00Z','2022-10-16T04:00:00Z','2022-10-16T03:55:00Z',True),
+               ('2022-10-30T03:59:00Z','2022-10-30T04:00:00Z','2022-10-30T03:55:00Z',True),
+               ('2022-09-04T03:59:00Z','2022-09-04T04:00:00Z','2022-09-04T03:55:00Z',True),
+               ('2022-12-24T19:00:00Z','2022-12-24T18:00:00Z','2022-12-24T17:55:00Z',False)]
+        from datetime import timedelta
+        for independent,provider,close,valid in cases:
+            # Pick an original16UTC early row within the independent18–54h window.
+            early=(utc(independent)-timedelta(days=1)).replace(hour=16,minute=0,second=0).isoformat()
+            if utc(independent)-utc(early)<timedelta(hours=18):early=(utc(early)-timedelta(days=1)).isoformat()
+            rows=[dict(request_id='early',sport='nfl',requested_utc=early,purposes=['daily_16UTC']),dict(request_id='close',sport='nfl',requested_utc=close,purposes=['pregame_close_proxy'])]
+            game=dict(game_id='g',season=2020,sport='nfl',binding=True,scheduled_utc=independent)
+            slots={s:dict(request_id=rid,requested_utc=at,binding=dict(provider_kickoff_utc=provider,returned_utc=early)) for s,rid,at in [('EARLY','early',early),('CLOSE','close',close)]}
+            with self.subTest(independent=independent):
+                result=mapping.older_slots(game,rows,['close'],primary_close_id='close',primary_close_anchor=provider)
+                self.assertEqual(result['primary_request_ids'],['early','close'])
+                disposition=mapping.older_metadata_disposition(game,slots)
+                self.assertEqual(disposition['classification'],'unknown' if valid else 'failure')
+        evidence=self.load('evidence')
+        args=dict(frame_sha256='a'*64,protocol_sha256='b'*64,draw_sha256='c'*64,evidence_sha256='d'*64,selected_ids=['g'],saved_bounds={},mappings=[dict(game_id='g',metadata_disposition=dict(classification='failure',reasons=['EARLY:provider_independent_conflict']))])
+        with self.assertRaisesRegex(ValueError,'remain a failure'):evidence.final_record(**args,classifications={'g':True})
+        self.assertFalse(evidence.final_record(**args,classifications={'g':False})['classifications']['g'])
