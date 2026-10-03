@@ -11,3 +11,7 @@ run_utc,job,rules_version,status,games,signals,priced,unmapped,error,rule_priced
 2026-10-01T18:30:16Z,cfb-alerts,cfb-v3-2026-09-28,ok,66,1,60,McNeese State Cowboys,,60
 2026-10-01T22:30:19Z,cfb-alerts,cfb-v3-2026-09-28,ok,66,1,60,McNeese State Cowboys,,60
 2026-10-02T02:30:21Z,cfb-alerts,cfb-v3-2026-09-28,ok,69,2,60,McNeese State Cowboys,,60
+2026-10-02T14:30:28Z,cfb-alerts,cfb-v3-2026-09-28,ok,106,0,67,McNeese State Cowboys,,67
+2026-10-02T18:30:20Z,cfb-alerts,cfb-v3-2026-09-28,ok,107,0,67,McNeese State Cowboys,,67
+2026-10-02T22:30:21Z,cfb-alerts,cfb-v3-2026-09-28,ok,112,1,68,McNeese State Cowboys,,68
+2026-10-03T02:30:23Z,cfb-alerts,cfb-v3-2026-09-28,ok,112,0,64,McNeese State Cowboys,,64
