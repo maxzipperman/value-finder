@@ -1,5 +1,7 @@
 # Captured dependency path correction
 
-LOCAL-BECAUSE: actual orchestration pre-registration proof needs Mac's historical receipt/cache metadata. New isolated checkout; both handed-off hub checkouts remain untouched.
+LOCAL-BECAUSE: actual orchestration pre-registration proof needs Mac historical receipt/cache metadata. New isolated checkout; handed-off hub checkouts untouched.
 
-Fix synthetic repo/code module paths that broke __file__-relative authenticated dependencies. Preserve exact source capture and nested union proof, never fabricate files or bypass verification. New unexecuted successor/exact-head review/authority required. No worker key/HTTP/runtime writes or paid entrypoint. Draft; regression/preflight pending.
+Explicit real module paths fix the nonexistent repo/code/union-v1 lookup. Complete nested source/packet bytes are authenticated against independently pinned bootstrap/root/certificate and included in the prospective capture. No fabricated files or native verifier bypass.
+
+Failed initial probe: outer executor patch missed the freshly reverified instance. Actual registration JSON/root directory were created for05904; then synthetic authority was rejected before Ledger acquisition lock/init/state, key or Odds HTTP. Exact failed source (.txt), trace and state/hash preserved. No zero-runtime-write claim for failed probe; worker performed no cleanup. Hub handles separate exact retirement/reconciliation. Corrected per-instance, Ledger/key/HTTP blockers and runtime-write audit deny are prepared; no actual rerun before hub clearance. New successor explicitly retires05904 and needs fresh source-bound review/authority. Original freezes/request list/cap/budgets/reservations remain unchanged.

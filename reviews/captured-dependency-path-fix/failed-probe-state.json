@@ -1,0 +1,13 @@
+{
+  "root": "05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017",
+  "runtime_exists": true,
+  "files": {},
+  "registration": {
+    "sha256": "14a05864c42d1214150fabcb99c7bc5616c52f210cb4772ebe43803ca2f21217",
+    "content": {
+      "authorization_sha256": "7cb87ea0ed1196357f6fc9d1fe9cb0ab76b1f794bb7e0cc346189e5fbd22212b",
+      "bundle_root_sha256": "05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017",
+      "runtime_path": "/Users/maxzipperman/Library/Application Support/ValueFinder/football-acquisition-state/05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017"
+    }
+  }
+}
