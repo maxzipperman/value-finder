@@ -1,0 +1,9 @@
+{
+  "sha256": {
+    "MIMO_COMPATIBILITY_DIAGNOSTIC.md": "163708deb52eead5f2b5487b023a8f8e96a896c18d87cf32d4396c5e7af5e6a7",
+    "ceiling_mimo_diagnostic.py": "69f83bf5649d3c9250f14cb8f6b6bea354e63073dbb8db2f81bd491ee58b8ef5",
+    "ceiling_type_name_diagnostic.py": "cf63dc992522cf304c2aefb97c811e1e33c1c2e18f1c210ce7f5b97632e612f3",
+    "openrouter-ceiling/xiaomi--mimo-v2.6-flash/implementation-response.txt": "f22d55a920f335bcaf9588dd57edd0615ac7d414c6c4991ce11843c1353102d4"
+  },
+  "note": "Exact-source supplemental diagnostic declared before execution; original stress freeze unchanged."
+}
