@@ -1,0 +1,68 @@
+{
+  "reviewer": "author complete manual source/semantic inspection; not independent validation",
+  "task": "review",
+  "delivery": "Markdown JSON fence fails JSON-only delivery. Original acceptance0/1 retained; visible findings audited separately, not accepted machine output.",
+  "all_findings_inspected": true,
+  "distinct_real_causes": 6,
+  "seeded_causes": 10,
+  "false_findings": 1,
+  "duplicate_findings": 0,
+  "non_defect_annotations": 1,
+  "correct_times_component_flagged": false,
+  "finding_audit": [
+    {
+      "index": 1,
+      "classification": "real",
+      "cause": "missing quote tie rules",
+      "caveat": "Strict greater comparison correctly retains first exact-time/ID tie; the actual omission is smaller ID selection. No lexical-offset or eligibility diagnosis given."
+    },
+    {
+      "index": 2,
+      "classification": "real",
+      "cause": "inclusive expiry"
+    },
+    {
+      "index": 3,
+      "classification": "real",
+      "cause": "last duplicate time tie",
+      "caveat": "Conflicting equal-time duplicate input ties are expressly allowed to be permutation dependent. Wrong last retention is the real defect, not permutation dependence alone."
+    },
+    {
+      "index": 4,
+      "classification": "real",
+      "cause": "stale job retry overwrite"
+    },
+    {
+      "index": 5,
+      "classification": "false",
+      "reason": "Rank is unused under if True. Even if compared within one job, a fixed job prefix preserves run_id lexicographic order. This does not identify global run_id deduplication or a distinct active rank bug."
+    },
+    {
+      "index": 6,
+      "classification": "non_defect_annotation",
+      "reason": "Passing normalized aware datetime is permitted and correct; the explanation itself calls it harmless. No defect or times.py control flag."
+    },
+    {
+      "index": 7,
+      "classification": "real",
+      "cause": "partial downloaded rows omitted"
+    },
+    {
+      "index": 8,
+      "classification": "real",
+      "cause": "pending classified failed"
+    }
+  ],
+  "missed_causes": [
+    "negative odds formula",
+    "lexical offset ordering",
+    "eligibility after book dedupe",
+    "job-scoped run id dedupe"
+  ],
+  "evidence": [
+    "review-response.txt",
+    "../../ceiling/review-source.json",
+    "../../ceiling/review-inventory.json"
+  ],
+  "schema_check_is_not_semantic_credit": true
+}

@@ -1,0 +1,14 @@
+{
+  "reviewer": "author complete visible source inspection before restricted grade; not independent validation",
+  "delivery": "Fence and extra closing JSON brace rejected before generated test execution; no oracle/mutation credit, no source repair.",
+  "source_sha256": "ec643a9b047a5908ea80cdf5e0757dc223a6ef3651611838a29f6c3bd5ad6b15",
+  "manual_errors": [
+    "Repeatedly reverses event/asof positional arguments relative to snapshot(quote_rows,run_rows,event,asof).",
+    "Invents _extra_probability keyword outside callable interface.",
+    "Requires whitespace-only event rejection despite explicit allowance.",
+    "Treats returned run as nested row rather than original dictionary.",
+    "Requires malformed individual rows/invalid odds to raise rather than skip.",
+    "Marks valid100.5 odds invalid."
+  ],
+  "all_source_inspected": true
+}

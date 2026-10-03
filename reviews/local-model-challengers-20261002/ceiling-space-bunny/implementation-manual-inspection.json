@@ -1,0 +1,20 @@
+{
+  "reviewer": "author full source inspection then ordinary restricted/no-network/no-credential15s grader; not independent validation",
+  "all_source_inspected": true,
+  "source_sha256": "efd08b92bfd51b1df7b5cbcb832511c8b91a4f11cb1e8b495abb84775f9b3d24",
+  "restricted_grade": {
+    "passed": 154,
+    "cases": 197
+  },
+  "pipeline_invokes_supporting_modules": true,
+  "failure_cause": "partial_jobs stays empty: the status ok-or-partial branch adds known downloaded_rows but never appends partial jobs.",
+  "failed_cases": 43,
+  "case_group_explanation": "All43 failed fixtures contain selected partial jobs:5 single/status/rank fixtures,32 interaction fixtures,6 permutation/replay fixtures. Static inspection of unchanged candidate and explicit fixture expectations matches the omission; no repaired source was executed.",
+  "support_interface_limit": "Original197 does not fully exercise direct select/reconcile asof inputs; this score is not exhaustive contract acceptance.",
+  "no_model_feedback_or_source_repair": true,
+  "evidence": [
+    "implementation-response.txt",
+    "implementation-acceptance.json",
+    "../ceiling/harness.py"
+  ]
+}

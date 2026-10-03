@@ -224,3 +224,6 @@ PR147 Q8 integrated checkpoint:724s implementation validfourfileJSON but origina
 
 
 PR147 Q8review author9/10 causes,0whollyfalse/duplicate,497s, ancillary inaccuracies and combinedcause noted. Ornithfast implementation fencedJSON/relativeimports/missingmath/maxIDties; no codeexecuted. Remaining Ornithsource authorgrades pending; queue98555 may proceed free/API sequentially, no competingcollector.
+
+
+PR147 ceiling checkpoint: all18 local stress responses collected and author inspected; Ornith regression fenced/extra brace and wrong interfaces/oracle expectations, review fenced delivery with6/10 real causes+1false+1non-defect annotation. SpaceBunny sampled64K implementation completed283s at reported$0, passes154/197 frozen checks;43 failures trace to omitted partial_jobs list despite counted partial rows. Completed stop output not128K target. Queue98555 continues free regression/review then9paid, no competing collector. Qualified matched32K6 remain pending until queue exits/idle. Final report/hub allocation and independent extension validation remain pending.

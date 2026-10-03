@@ -145,5 +145,32 @@
       "ceiling-local/ornith-1.5-35b/implementation-acceptance.json"
     ],
     "reviewer": "author full source inspection"
+  },
+  "ornith-1.5:35b|regression|64k": {
+    "proceed": false,
+    "reason": "Stop after8440tokens/77.63s. Fenced JSON with extra closing brace; visible reversed positional arguments, nonexistent probability keyword and wrong oracle expectations. Completed packaging/semantic error, no cap exhaustion.",
+    "evidence": [
+      "ceiling-local/ornith-1.5-35b/regression-result.json",
+      "ceiling-local/ornith-1.5-35b/regression-acceptance.json"
+    ],
+    "reviewer": "author full source/manual inspection"
+  },
+  "ornith-1.5:35b|review|64k": {
+    "proceed": false,
+    "reason": "Stop after661tokens/9.07s; fenced delivery, manual6/10 real causes,1false and1non-defect annotation. Completed answer not a resource escalation target.",
+    "evidence": [
+      "ceiling-local/ornith-1.5-35b/review-result.json",
+      "ceiling-local/ornith-1.5-35b/review-acceptance.json"
+    ],
+    "reviewer": "author full source/manual inspection"
+  },
+  "stealth/space-bunny-alpha|implementation|128k": {
+    "proceed": false,
+    "reason": "Stop after25839 completion tokens/283.02s below65536. Delivered four files;154/197 checks,43 failures follow missing partial_jobs append. Completed semantic omission, not cap exhaustion; no128K reroll.",
+    "evidence": [
+      "ceiling-space-bunny/implementation-result.json",
+      "ceiling-space-bunny/implementation-acceptance.json"
+    ],
+    "reviewer": "author full source/manual inspection"
   }
 }

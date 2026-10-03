@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 18,
+    "result": 19,
     "error": 0,
     "pending": 1,
-    "not_started": 11
+    "not_started": 10
   },
   "records": [
     {
@@ -26244,7 +26244,18 @@
           "context_length": 65536
         }
       ],
-      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
     },
     {
       "family": "local",
@@ -26321,13 +26332,92 @@
           "context_length": 65536
         }
       ],
-      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      },
+      "manual_review": {
+        "reviewer": "author complete manual source/semantic inspection; not independent validation",
+        "task": "review",
+        "delivery": "Markdown JSON fence fails JSON-only delivery. Original acceptance0/1 retained; visible findings audited separately, not accepted machine output.",
+        "all_findings_inspected": true,
+        "distinct_real_causes": 6,
+        "seeded_causes": 10,
+        "false_findings": 1,
+        "duplicate_findings": 0,
+        "non_defect_annotations": 1,
+        "correct_times_component_flagged": false,
+        "finding_audit": [
+          {
+            "index": 1,
+            "classification": "real",
+            "cause": "missing quote tie rules",
+            "caveat": "Strict greater comparison correctly retains first exact-time/ID tie; the actual omission is smaller ID selection. No lexical-offset or eligibility diagnosis given."
+          },
+          {
+            "index": 2,
+            "classification": "real",
+            "cause": "inclusive expiry"
+          },
+          {
+            "index": 3,
+            "classification": "real",
+            "cause": "last duplicate time tie",
+            "caveat": "Conflicting equal-time duplicate input ties are expressly allowed to be permutation dependent. Wrong last retention is the real defect, not permutation dependence alone."
+          },
+          {
+            "index": 4,
+            "classification": "real",
+            "cause": "stale job retry overwrite"
+          },
+          {
+            "index": 5,
+            "classification": "false",
+            "reason": "Rank is unused under if True. Even if compared within one job, a fixed job prefix preserves run_id lexicographic order. This does not identify global run_id deduplication or a distinct active rank bug."
+          },
+          {
+            "index": 6,
+            "classification": "non_defect_annotation",
+            "reason": "Passing normalized aware datetime is permitted and correct; the explanation itself calls it harmless. No defect or times.py control flag."
+          },
+          {
+            "index": 7,
+            "classification": "real",
+            "cause": "partial downloaded rows omitted"
+          },
+          {
+            "index": 8,
+            "classification": "real",
+            "cause": "pending classified failed"
+          }
+        ],
+        "missed_causes": [
+          "negative odds formula",
+          "lexical offset ordering",
+          "eligibility after book dedupe",
+          "job-scoped run id dedupe"
+        ],
+        "evidence": [
+          "review-response.txt",
+          "../../ceiling/review-source.json",
+          "../../ceiling/review-inventory.json"
+        ],
+        "schema_check_is_not_semantic_credit": true
+      }
     },
     {
       "family": "api",
       "model": "stealth/space-bunny-alpha",
       "task": "implementation",
-      "status": "pending",
+      "status": "result",
       "folder": "ceiling-space-bunny",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": null,
@@ -26352,13 +26442,889 @@
         },
         "top_p": 0.95
       },
-      "request_sha256": "6a56132ea09ca37b69779764e7cec28ec59980188ebd075315ecb1481d6e25c8"
+      "request_sha256": "6a56132ea09ca37b69779764e7cec28ec59980188ebd075315ecb1481d6e25c8",
+      "returned_model": "stealth/space-bunny-alpha",
+      "wall_seconds": 283.01828516699607,
+      "provider": "Stealth",
+      "finish_reason": "stop",
+      "final_answer_bytes": 7408,
+      "usage": {
+        "prompt_tokens": 1251,
+        "completion_tokens": 25839,
+        "total_tokens": 27090,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 154,
+        "cases": 197,
+        "checks": [
+          {
+            "case": "empty",
+            "passed": true
+          },
+          {
+            "case": "basic and independent jobs",
+            "passed": true
+          },
+          {
+            "case": "abs offset latest",
+            "passed": true
+          },
+          {
+            "case": "absolute tie smallest id",
+            "passed": true
+          },
+          {
+            "case": "same instant/id first identity",
+            "passed": true
+          },
+          {
+            "case": "future cannot suppress",
+            "passed": true
+          },
+          {
+            "case": "expiry exact cannot suppress",
+            "passed": true
+          },
+          {
+            "case": "update vintage cannot suppress",
+            "passed": true
+          },
+          {
+            "case": "other event isolated",
+            "passed": true
+          },
+          {
+            "case": "asof aware datetime",
+            "passed": true
+          },
+          {
+            "case": "asof offset",
+            "passed": true
+          },
+          {
+            "case": "exact observation/update",
+            "passed": true
+          },
+          {
+            "case": "quotes independent failed job",
+            "passed": true
+          },
+          {
+            "case": "whitespace identifiers",
+            "passed": true
+          },
+          {
+            "case": "quote field id ''",
+            "passed": true
+          },
+          {
+            "case": "quote field id None",
+            "passed": true
+          },
+          {
+            "case": "quote field id False",
+            "passed": true
+          },
+          {
+            "case": "quote field id 2",
+            "passed": true
+          },
+          {
+            "case": "quote field id []",
+            "passed": true
+          },
+          {
+            "case": "quote field id {}",
+            "passed": true
+          },
+          {
+            "case": "quote field book ''",
+            "passed": true
+          },
+          {
+            "case": "quote field book None",
+            "passed": true
+          },
+          {
+            "case": "quote field book False",
+            "passed": true
+          },
+          {
+            "case": "quote field book 2",
+            "passed": true
+          },
+          {
+            "case": "quote field book []",
+            "passed": true
+          },
+          {
+            "case": "quote field book {}",
+            "passed": true
+          },
+          {
+            "case": "quote field event ''",
+            "passed": true
+          },
+          {
+            "case": "quote field event None",
+            "passed": true
+          },
+          {
+            "case": "quote field event False",
+            "passed": true
+          },
+          {
+            "case": "quote field event 2",
+            "passed": true
+          },
+          {
+            "case": "quote field event []",
+            "passed": true
+          },
+          {
+            "case": "quote field event {}",
+            "passed": true
+          },
+          {
+            "case": "quote time observed_at 'bad'",
+            "passed": true
+          },
+          {
+            "case": "quote time observed_at '2025-11-02T06:00:00'",
+            "passed": true
+          },
+          {
+            "case": "quote time observed_at None",
+            "passed": true
+          },
+          {
+            "case": "quote time observed_at False",
+            "passed": true
+          },
+          {
+            "case": "quote time observed_at []",
+            "passed": true
+          },
+          {
+            "case": "quote time observed_at {}",
+            "passed": true
+          },
+          {
+            "case": "quote time expires_at 'bad'",
+            "passed": true
+          },
+          {
+            "case": "quote time expires_at '2025-11-02T06:00:00'",
+            "passed": true
+          },
+          {
+            "case": "quote time expires_at None",
+            "passed": true
+          },
+          {
+            "case": "quote time expires_at False",
+            "passed": true
+          },
+          {
+            "case": "quote time expires_at []",
+            "passed": true
+          },
+          {
+            "case": "quote time expires_at {}",
+            "passed": true
+          },
+          {
+            "case": "quote time last_update 'bad'",
+            "passed": true
+          },
+          {
+            "case": "quote time last_update '2025-11-02T06:00:00'",
+            "passed": true
+          },
+          {
+            "case": "quote time last_update None",
+            "passed": true
+          },
+          {
+            "case": "quote time last_update False",
+            "passed": true
+          },
+          {
+            "case": "quote time last_update []",
+            "passed": true
+          },
+          {
+            "case": "quote time last_update {}",
+            "passed": true
+          },
+          {
+            "case": "invalid odds True",
+            "passed": true
+          },
+          {
+            "case": "invalid odds False",
+            "passed": true
+          },
+          {
+            "case": "invalid odds None",
+            "passed": true
+          },
+          {
+            "case": "invalid odds 99",
+            "passed": true
+          },
+          {
+            "case": "invalid odds -99",
+            "passed": true
+          },
+          {
+            "case": "invalid odds 0",
+            "passed": true
+          },
+          {
+            "case": "invalid odds 'bad'",
+            "passed": true
+          },
+          {
+            "case": "invalid odds 'nan'",
+            "passed": true
+          },
+          {
+            "case": "invalid odds 'inf'",
+            "passed": true
+          },
+          {
+            "case": "invalid odds 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            "passed": true
+          },
+          {
+            "case": "invalid odds []",
+            "passed": true
+          },
+          {
+            "case": "invalid odds {}",
+            "passed": true
+          },
+          {
+            "case": "invalid odds (100+0j)",
+            "passed": true
+          },
+          {
+            "case": "valid odds 100",
+            "passed": true
+          },
+          {
+            "case": "valid odds -100",
+            "passed": true
+          },
+          {
+            "case": "valid odds 110",
+            "passed": true
+          },
+          {
+            "case": "valid odds -110",
+            "passed": true
+          },
+          {
+            "case": "valid odds ' +250 '",
+            "passed": true
+          },
+          {
+            "case": "valid odds '-250'",
+            "passed": true
+          },
+          {
+            "case": "valid odds '1e3'",
+            "passed": true
+          },
+          {
+            "case": "valid odds 100.5",
+            "passed": true
+          },
+          {
+            "case": "valid odds -100.5",
+            "passed": true
+          },
+          {
+            "case": "malformed both lists",
+            "passed": true
+          },
+          {
+            "case": "invalid asof None",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof False",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof 7",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof 'bad'",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof '2025-11-02T06:30:00'",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof datetime.datetime(2025, 11, 2, 6, 30)",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid event ''",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid event None",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid event False",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid event []",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid event 2",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "run status ok3",
+            "passed": true
+          },
+          {
+            "case": "run status ok0",
+            "passed": true
+          },
+          {
+            "case": "run status partial2",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "run status partial0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "run status failed0",
+            "passed": true
+          },
+          {
+            "case": "run status pending0",
+            "passed": true
+          },
+          {
+            "case": "retry latest failed",
+            "passed": true
+          },
+          {
+            "case": "retry latest partial",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "retry latest pending",
+            "passed": true
+          },
+          {
+            "case": "stale failed last cannot overwrite",
+            "passed": true
+          },
+          {
+            "case": "numeric attempt10 beats2",
+            "passed": true
+          },
+          {
+            "case": "job tie lexical run id",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "run abs offset latest",
+            "passed": true
+          },
+          {
+            "case": "duplicate corrected job global",
+            "passed": true
+          },
+          {
+            "case": "same run id time tie first",
+            "passed": true
+          },
+          {
+            "case": "future dup cannot suppress",
+            "passed": true
+          },
+          {
+            "case": "invalid dup cannot suppress",
+            "passed": true
+          },
+          {
+            "case": "latest observed dup not largest attempt",
+            "passed": true
+          },
+          {
+            "case": "run id run_id ''",
+            "passed": true
+          },
+          {
+            "case": "run id run_id None",
+            "passed": true
+          },
+          {
+            "case": "run id run_id False",
+            "passed": true
+          },
+          {
+            "case": "run id run_id 2",
+            "passed": true
+          },
+          {
+            "case": "run id run_id []",
+            "passed": true
+          },
+          {
+            "case": "run id run_id {}",
+            "passed": true
+          },
+          {
+            "case": "run id job ''",
+            "passed": true
+          },
+          {
+            "case": "run id job None",
+            "passed": true
+          },
+          {
+            "case": "run id job False",
+            "passed": true
+          },
+          {
+            "case": "run id job 2",
+            "passed": true
+          },
+          {
+            "case": "run id job []",
+            "passed": true
+          },
+          {
+            "case": "run id job {}",
+            "passed": true
+          },
+          {
+            "case": "run number attempt True",
+            "passed": true
+          },
+          {
+            "case": "run number attempt False",
+            "passed": true
+          },
+          {
+            "case": "run number attempt -1",
+            "passed": true
+          },
+          {
+            "case": "run number attempt '2'",
+            "passed": true
+          },
+          {
+            "case": "run number attempt 2.0",
+            "passed": true
+          },
+          {
+            "case": "run number attempt None",
+            "passed": true
+          },
+          {
+            "case": "run number attempt []",
+            "passed": true
+          },
+          {
+            "case": "run number attempt {}",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows True",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows False",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows -1",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows '2'",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows 2.0",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows None",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows []",
+            "passed": true
+          },
+          {
+            "case": "run number downloaded_rows {}",
+            "passed": true
+          },
+          {
+            "case": "run malformed attempt0",
+            "passed": true
+          },
+          {
+            "case": "run malformed status'unknown'",
+            "passed": true
+          },
+          {
+            "case": "run malformed status[]",
+            "passed": true
+          },
+          {
+            "case": "run malformed statusTrue",
+            "passed": true
+          },
+          {
+            "case": "run malformed observed_atNone",
+            "passed": true
+          },
+          {
+            "case": "run malformed observed_at'bad'",
+            "passed": true
+          },
+          {
+            "case": "run malformed observed_at'2025-11-02T06:00:00'",
+            "passed": true
+          },
+          {
+            "case": "nonzero bad failed",
+            "passed": true
+          },
+          {
+            "case": "nonzero bad pending",
+            "passed": true
+          },
+          {
+            "case": "sorted failed partial unknown controls",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "all quote timestamp objects",
+            "passed": true
+          },
+          {
+            "case": "run timestamp object",
+            "passed": true
+          },
+          {
+            "case": "extra nested fields preserved",
+            "passed": true
+          },
+          {
+            "case": "first invalid quote tie skipped",
+            "passed": true
+          },
+          {
+            "case": "interaction futureok0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction futureok-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction futurepartial0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction futurepartial-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction futurefailed0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction futurefailed-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction futurepending0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction futurepending-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expiryok0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expiryok-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expirypartial0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expirypartial-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expiryfailed0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expiryfailed-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expirypending0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction expirypending-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintageok0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintageok-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintagepartial0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintagepartial-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintagefailed0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintagefailed-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintagepending0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction vintagepending-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherok0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherok-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherpartial0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherpartial-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherfailed0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherfailed-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherpending0",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "interaction otherpending-5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "permutation/replay False1",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "permutation/replay False2",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "permutation/replay False5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "permutation/replay True1",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "permutation/replay True2",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "permutation/replay True5",
+            "passed": false,
+            "error": "AssertionError: "
+          },
+          {
+            "case": "public probability -100",
+            "passed": true
+          },
+          {
+            "case": "public probability 100",
+            "passed": true
+          },
+          {
+            "case": "public probability -200",
+            "passed": true
+          },
+          {
+            "case": "public probability 250",
+            "passed": true
+          },
+          {
+            "case": "public probability  -250 ",
+            "passed": true
+          },
+          {
+            "case": "public probability 100.5",
+            "passed": true
+          },
+          {
+            "case": "public probability invalid <class 'bool'>",
+            "passed": true
+          },
+          {
+            "case": "public probability invalid <class 'NoneType'>",
+            "passed": true
+          },
+          {
+            "case": "public probability invalid <class 'int'>",
+            "passed": true
+          },
+          {
+            "case": "public probability invalid <class 'str'>",
+            "passed": true
+          },
+          {
+            "case": "public probability invalid <class 'float'>",
+            "passed": true
+          },
+          {
+            "case": "public probability invalid <class 'int'>",
+            "passed": true
+          },
+          {
+            "case": "public probability invalid <class 'list'>",
+            "passed": true
+          },
+          {
+            "case": "public instant normalized",
+            "passed": true
+          },
+          {
+            "case": "entry point imports all supporting modules (manual invocation review also required)",
+            "passed": true
+          }
+        ]
+      }
     },
     {
       "family": "api",
       "model": "stealth/space-bunny-alpha",
       "task": "regression",
-      "status": "not_started",
+      "status": "pending",
       "folder": "ceiling-space-bunny",
       "prompt_sha256": "123cf6e07cdf909838ea44a69bf18498231fb9551e4d3f1d9be3d6b053be96f3",
       "digest": null,
@@ -26382,7 +27348,8 @@
           }
         },
         "top_p": 0.95
-      }
+      },
+      "request_sha256": "13f185c278461bc5fc2b5c41b5b5d46aebb0fdc9762d34f29c4a828379031c30"
     },
     {
       "family": "api",
