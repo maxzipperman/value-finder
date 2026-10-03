@@ -52,7 +52,7 @@ class BridgeTests(unittest.TestCase):
   data['policy.json']=(prep/'response-policy.json').read_bytes();data['frame.json']=(pilot/'frame.json').read_bytes()
   frame=json.loads(data['frame.json']);groups=sorted({g['stratum'] for g in frame});f={'record':{'saved_bounds':{'strata':[dict(stratum=k,status='utility_pass' if k in v.preparation.PASS else 'hold',population=sum(g['stratum']==k for g in frame)) for k in groups]}}}
   data['final-record.json']=bootstrap.canonical(f);v.FINAL_SHA=cap.digest(data['final-record.json']) # synthetic source substitution only
-  source={n:(BUNDLE/n).read_bytes() for n in ('protocol.json','request-manifest.json')};cfg=json.loads(source['protocol.json']);cfg['budgets']=json.loads(data['future-budget-policy.json'])['budgets'];data['execution-protocol.json']=bootstrap.canonical(cfg)
+  source={n:(BUNDLE/n).read_bytes() for n in ('protocol.json','request-manifest.json')};cfg=v.execution_protocol(json.loads(source['protocol.json']),json.loads(data['preparation/manifest.json']));data['execution-protocol.json']=bootstrap.canonical(cfg)
   v.packet(data,source)
   mutations={
    'cell-allowlist.json':[],
@@ -60,9 +60,21 @@ class BridgeTests(unittest.TestCase):
    'policy.json':dict(json.loads(data['policy.json']),max_missing={'snapshot_lag':99999,'event_not_found':99999}),
    'execution-protocol.json':dict(cfg,budgets=dict(cfg['budgets'],first_tranche_cumulative_credits=999999)),
    'requests.json':json.loads(data['requests.json'])[:-1]}
+  stale=copy.deepcopy(cfg);stale['purchase_order_and_gates']=json.loads(source['protocol.json'])['purchase_order_and_gates']
+  changed=dict(data);changed['execution-protocol.json']=bootstrap.canonical(stale)
+  with self.assertRaises(ValueError):v.packet(changed,source)
   for name,value in mutations.items():
    changed=dict(data);changed[name]=bootstrap.canonical(value)
    with self.subTest(name=name),self.assertRaises(ValueError):v.packet(changed,source)
+
+ def test_stage_exception_exact_list_only_and_other_gates_unchanged(self):
+  load=loader();v=load('runner');p=HERE.parent/'coverage-pass-residual-v1/passing-groups-2020-24/manifest.json';manifest=json.loads(p.read_bytes());old=json.loads((BUNDLE/'protocol.json').read_bytes());cfg=v.execution_protocol(old,manifest)
+  expected=dict(old,budgets=dict(old['budgets'],first_tranche_cumulative_credits=274686),purchase_order_and_gates=dict(old['purchase_order_and_gates'],before_older_slice=v.stage_amendment(manifest)['before_older_slice'],passing_groups_stage_acceptance=v.stage_amendment(manifest)))
+  self.assertEqual(cfg,expected);self.assertNotEqual(cfg['purchase_order_and_gates']['before_older_slice'],old['purchase_order_and_gates']['before_older_slice'])
+  stage=cfg['purchase_order_and_gates']['passing_groups_stage_acceptance'];self.assertEqual(stage['saved_final_sha256'],v.FINAL_SHA);self.assertEqual(set(stage['accepted_groups']),v.preparation.PASS);self.assertFalse(stage['next_purchase_authorized'])
+  for key,value in [('request_count',1303),('max_new_credits',67201),('request_list_sha256','a'*64),('cell_rectangles_sha256','b'*64)]:
+   changed=dict(manifest);changed[key]=value
+   with self.assertRaises(ValueError):v.execution_protocol(old,changed)
 
  def test_actual_ledger_pending_exposure_and_resumed_baseline_no_double_bill(self):
   load=loader();base=load('executor');m=load('orchestration');transport=load('transport')

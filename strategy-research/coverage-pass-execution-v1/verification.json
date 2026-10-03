@@ -12,7 +12,8 @@
     "strategy-research/football_archive/f2_handoff.py",
     "strategy-research/football_archive/older-recovery-v1",
     "strategy-research/football_archive/acquisition/football-archive-v4",
-    "ops/process/process_guard.py"
+    "ops/process/process_guard.py",
+    "reviews/passing-stage-policy-fix/offline-launch-probe.py"
   ],
   "commands": [
     [

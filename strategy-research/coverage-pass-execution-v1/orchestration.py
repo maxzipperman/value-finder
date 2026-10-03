@@ -47,6 +47,8 @@ def run(packet_path,root,bundle,auth,*,key_factory,http_factory):
     base.execution_context(packet_path,root,runtime)
     manifest=json.loads(data['manifest.json']);rows=json.loads(data['requests.json']);policy=json.loads(data['policy.json'])
     bindings=json.loads(data['baseline.json']);cache_plan=json.loads(data['overlap.json'])
+    # Priority1 is the ledger transport class explicitly bound by the prospective
+    # combined-stage amendment; it does not reclassify original older priority2.
     effective=[dict(r,path=r['url'].removeprefix('https://api.the-odds-api.com/v4'),priority=1,max_credits=r['max_new_credits']) for r in rows]
     bridge=dict(manifest,requests=effective,new_credits_by_priority={'1':manifest['max_new_credits']})
     context={'policy_sha256':capture.identity(policy),'plan_sha256':root,
