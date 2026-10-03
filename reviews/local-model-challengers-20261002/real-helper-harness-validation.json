@@ -1,0 +1,8 @@
+{
+  "none_raises": true,
+  "no_whitespace_strip": true,
+  "compact_unsupported": true,
+  "offset_relabelled": true,
+  "invalid_raises": true,
+  "fractional_seconds_lost": true
+}

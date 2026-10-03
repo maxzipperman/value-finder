@@ -163,3 +163,8 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 ## Keeping this current
 
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
+
+
+## Local model challenger evaluation (October 2, 2026)
+
+Owner-authorized hardware comparison of Qwen3.8:27b, gpt-oss:20b and Gemma4:26b against Qwen3.6:35b is queued pending downloads (#146). Six task types, synthetic fixtures and repository helper code only. No live changes, paid calls, model promotion or research variants. Protocol: reviews/local-model-challengers-20261002/PLAN.md.

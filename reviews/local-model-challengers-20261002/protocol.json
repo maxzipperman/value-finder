@@ -1,0 +1,30 @@
+{
+  "models": [
+    "qwen3.6:35b",
+    "qwen3.8:27b",
+    "gpt-oss:20b",
+    "gemma4:26b"
+  ],
+  "source": "public repository code and synthetic 2025 fixtures only",
+  "tasks": [
+    "multifile",
+    "regression",
+    "review",
+    "extraction",
+    "real-helper",
+    "debugging"
+  ],
+  "rounds": 1,
+  "options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 16384,
+    "num_predict": 8192
+  },
+  "reasoning": "enabled; gpt-oss medium, others true; record actual settings and thinking tokens",
+  "deadline_seconds": 300,
+  "repair_policy": "no feedback in first pass; optional one equal-budget feedback round reported separately",
+  "promotion": "supervised draft roles only, validated by independent acceptance and claim review",
+  "notification_thread": "01a0ffc0-b663-7265-ab9e-fd5cb90e3001",
+  "prior_report": "reviews/local-model-eval-20261002/extended/README.md"
+}
