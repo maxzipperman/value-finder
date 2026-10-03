@@ -74,9 +74,6 @@ retained reservations, cumulative ceilings and live revocation checks.
 8. **NFL scorer readings (due Thu Oct 8, 2026).** The already registered readings stand; any owner-requested change requires a dated amendment before affected outcomes. The CFB decision window is past and remains historical, not reopened here.
 11. **Multiple-testing families before 2027 rules.** The single running-count bar remains until an explicit prospective registered family decision; this PR changes none of it.
 
-12. **[open] Plan after the prepaid month (due Sun Oct 25, 2026).** Choose the next-month subscription from actual usage before renewal; no renewal or new spend is authorized by this reminder. The already purchased 5M month and waived backup remain resolved background.
-13. **[review] Historical paper-to-money discussion.** Hub should confirm whether the unresolved historical discussion belongs on the future-policy backlog or can be closed. This is discussion only: the project remains paper-only. No old staking sentence is reinstated, no current test is changed, and no betting authority is granted.
-
 ## Keeping this current
 
 Hub updates only changed decisions/queue states with evidence links. Governance is

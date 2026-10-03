@@ -102,7 +102,8 @@
       waiting: "Running both scorers as previews; this takes a few seconds the first time." },
     jobs: { url: (r) => (r.arg === "records" ? "/api/run-records" : "/api/jobs"),
       draw: (d, r) => (r.arg === "records" ? drawRecords(d) : drawJobs(d)), nav: "jobs" },
-    pull: { url: () => "/api/pull", draw: drawPull, nav: "pull" },
+    pull: { url: () => "/api/pull", draw: drawPull, nav: "downloads" },
+    downloads: { url: () => "/api/pull", draw: drawPull, nav: "downloads" },
     research: { url: () => "/api/research", draw: drawResearch, nav: "research" },
   };
 
@@ -241,26 +242,34 @@
           h("span", null, (j.last_run_label || "Last run") + " " + j.last_run)),
         h("div", { class: "faint" }, j.result)))));
 
-    const waiting = panel("Waiting on you", null,
+    const waiting = panel("Your decisions", null,
       (d.waiting || []).length ? h("ul", { class: "rows" }, d.waiting.map((w) => {
         const det = h("details", { class: "item", open: state.openWaiting.has(w.n) },
           h("summary", null, h("span", { class: "n" }, w.n + "."), h("span", { class: "t" }, w.title),
             w.due ? h("span", { class: "due status" }, dot(w.due_level), w.due) : ""),
-          h("p", null, w.first_sentence));
+          h("p", null, w.detail || w.first_sentence));
         det.addEventListener("toggle", () => { if (det.open) state.openWaiting.add(w.n); else state.openWaiting.delete(w.n); });
         return h("li", null, det);
-      })) : h("p", { class: "muted" }, "Nothing is listed under “Waiting on you”."));
+      })) : h("p", { class: "muted" }, "No owner decisions are listed in this status snapshot."));
 
-    const ev = panel("Evidence", h("a", { href: "#research" }, "All " + (d.evidence_total || 0) + " results"),
-      h("ul", { class: "rows" }, (d.evidence || []).map(evidenceRow)),
+    const ev = panel("Research progress", h("a", { href: "#research" }, "All " + (d.evidence_total || 0) + " results"),
+      h("p", { class: "muted" }, "Historical findings and forward tests remain separate. Downloaded data is not automatically ready for analysis."),
       variantsLine(d.variants, d.bar));
 
-    return h("div", null, livePanel(d), tiles, h("div", { class: "grid2" }, tests, jobs, waiting, ev));
+    const attention = (d.jobs || []).filter((j) => j.level !== "ok");
+    const needs = panel("Needs attention", h("a", { href: "#jobs" }, "Job details"),
+      attention.length ? h("ul", { class: "rows" }, attention.map((j) => h("li", null,
+        h("strong", null, j.name), h("div", { class: "faint" }, j.result)))) :
+        h("p", { class: "muted" }, "No job exceptions reported in this snapshot."));
+    return h("div", null, h("div", { class: "grid2" }, needs, waiting),
+      downloadPanel(d.operations || {}, true), livePanel(d), tiles,
+      h("div", { class: "grid2" }, tests, ev), sourcePanel(d.sources || []),
+      h("details", null, h("summary", null, "All scheduled jobs"), jobs));
   }
 
   function variantsLine(n, bar) {
     if (!n) return h("p", { class: "bar-note" }, "The running count of variants could not be read from STATUS.md.");
-    return h("p", { class: "bar-note" }, fmtInt(n) + " variants tried so far, so a new result must reach p < " + bar +
+    return h("p", { class: "bar-note" }, fmtInt(n) + " variants recorded in the local status source; its reported bar is p < " + bar +
       " (0.05 / " + fmtInt(n) + ") to clear the multiple-testing bar.");
   }
 
@@ -805,11 +814,53 @@
   }
 
   // ------------------------------------------------------------------ Thursday's pull
+  function sourcePanel(sources) {
+    return panel("Source freshness", null, h("p", { class: "muted" },
+      "Page refresh is not a data update. Old completed journals can be valid historical records; dates show when evidence last changed."),
+      h("ul", { class: "rows" }, sources.map((s) => h("li", null,
+        h("div", { class: "row-top" }, h("strong", null, s.name), h("span", { class: "tag" }, s.state)),
+        h("div", { class: "faint" }, s.kind + ": " + s.at + ". " + s.note)))));
+  }
+
+  function downloadPanel(op, compact) {
+    const total = op.total;
+    const box = panel("Download progress", compact ? h("a", { href: "#downloads" }, "All downloads") : null,
+      h("p", { class: "muted" }, "Reported from local acquisition journals. Completed responses are not verified usable pairs, settled bets or permission to analyze."));
+    if (total) box.append(h("div", { class: "tiles" },
+      tile("Recorded attempts", fmtInt(total.requests), "Unique across readable journals; excludes cache reuse"),
+      tile("Completed responses", fmtInt(total.completed), fmtInt(total.missing) + " explicitly missing; " + fmtInt(total.pending) + " pending"),
+      tile("Recorded charges", fmtInt(total.billed), total.unknown_bill ? fmtInt(total.unknown_bill) + (total.unknown_bill === 1 ? " attempt has" : " attempts have") + " unknown billing; this is a subtotal" : "Acquisition attempts only; excludes probe and live/other usage")));
+    else box.append(h("p", { class: "muted" }, "Acquisition total unavailable. Missing or inconsistent records are not zero downloads."));
+    const batches = compact ? (op.batches || []).slice(0, 3) : (op.batches || []);
+    box.append(h("ul", { class: "rows" }, batches.map((b) => h("li", null,
+      h("div", { class: "row-top" }, h("strong", null, b.name), h("span", { class: "tag" }, b.state)),
+      h("div", null, fmtInt(b.completed) + " completed · " + fmtInt(b.missing) + " missing · " + fmtInt(b.pending) + " pending · " + fmtInt(b.billed) + " recorded credits"),
+      h("div", { class: "faint" }, "Updated " + b.updated + (b.unknown_bill ? " · Some billing unknown" : "")),
+      compact ? "" : h("details", null, h("summary", null, "Record details"),
+        h("p", { class: "faint" }, "Batch " + b.root + ". Recorded state: " + b.recorded_state +
+          ". Reservations: " + fmtInt(b.reserved) + " credits (not extra billed charges). Reconciled batches are retained history; a successor may have finished."))))));
+    for (const note of op.notes || []) box.append(h("p", { class: "note" }, note));
+    return box;
+  }
+
   function drawPull(d) {
-    const out = h("div", null, h("h1", null, "Thursday’s pull"));
+    const op = d.operations || {};
+    const out = h("div", null, h("h1", null, "Downloads"), downloadPanel(op, false));
+    out.append(panel("Plan and usable coverage", op.queue_url ? h("a", { href: op.queue_url, target: "_blank", rel: "noopener" }, "Canonical queue") : null,
+      h("p", { class: "muted" }, "Document snapshot, not live execution or paid authority. Planned caps are not spending. A newer local journal may supersede a queued item; verify the source date. Coverage notes below are reported plan text, not recalculated eligibility."),
+      (op.queue || []).length ? h("ul", { class: "rows" }, op.queue.map((q) => h("li", null,
+        h("div", { class: "row-top" }, h("strong", null, q.name), h("span", { class: "tag" }, q.state + " · " + q.order)),
+        h("div", null, "Maximum new credits: " + q.cap), h("div", { class: "faint" }, q.detail)))) :
+        h("p", { class: "muted" }, "The canonical queue could not be read; queued work is unknown.")));
+    out.append(sourcePanel(d.sources || []), h("details", null, h("summary", null, "Legacy request log (separate scope)"), drawLegacyPull(d)));
+    return out;
+  }
+
+  function drawLegacyPull(d) {
+    const out = h("div", null, h("h1", null, "Legacy request log"));
     if (!d.started) {
       out.append(h("p", { class: "big-sentence" }, d.text));
-      out.append(h("p", { class: "muted" }, "Once it starts, this screen shows each pull’s requests, the credits billed, the upper bound and the lowest balance seen, from the pull’s own request log."));
+      out.append(h("p", { class: "muted" }, "This older log does not include the acquisition journals above. Its totals must not be added to those journals."));
       return out;
     }
     const t = d.total || {};

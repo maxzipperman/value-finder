@@ -93,7 +93,7 @@ def test_the_panel_and_the_tab_title_as_drawn(root, home, tmp_path, when, n, tit
     panel = next(find(page, "section", "live"))
     drawn = text(panel)
     tiles = next(find(page, "div", "tiles"))
-    assert page["kids"][0]["kids"].index(panel) < page["kids"][0]["kids"].index(tiles)   # above the four numbers
+    assert text(page).index(drawn) < text(page).index("Signals on the board")   # above signal tiles
     if n:
         items = list(find(panel, "li"))
         assert len(items) == n
@@ -137,7 +137,7 @@ def test_a_game_that_signals_under_two_rules(root, home, tmp_path):
     assert d["header"]["signals_live"] == d["numbers"]["signals_live"] == api.summary(store)["signals_live"] == 3
     if NODE:
         page = draw(tmp_path, "#home", d)
-        assert text(next(find(page, "h2"))) == "4 signals are live, on 3 games"
+        assert text(next(find(next(find(page, "section", "live")), "h2"))) == "4 signals are live, on 3 games"
         assert page["doc_title"] == "(3) Value Finder"
         tile = next(x for x in find(page, "div", "tile") if text(x).startswith("Signals on the board"))
         assert text(tile).startswith("Signals on the board3Games not yet kicked off with a Rule B or Rule HT signal, "

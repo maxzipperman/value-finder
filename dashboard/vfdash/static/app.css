@@ -378,3 +378,6 @@ pre.plain { font-family: inherit; font-size: 13.5px; line-height: 1.55; backgrou
 .bt-table > summary { cursor: pointer; color: var(--text-2); font-size: 13px; margin-top: 8px; }
 .bt-table .tablewrap { margin-top: 6px; max-height: 440px; overflow: auto; }
 .bt-table table { font-size: 12.5px; }
+
+/* Give operational overview sections the same spacing as detail panels. */
+.grid2 + .panel, .panel + .live, .grid2 + details { margin-top: 18px; }

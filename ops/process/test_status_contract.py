@@ -42,7 +42,9 @@ class StatusContracts(unittest.TestCase):
         text = (ROOT / 'STATUS.md').read_text()
         self.assertEqual(status_md.variants(text), 294)
         items = status_md.waiting_items(text, datetime(2026, 10, 3, tzinfo=timezone.utc), timezone.utc)
-        self.assertEqual([i['n'] for i in items], [0, 2, 4, 8, 11])
+        self.assertEqual([i['n'] for i in items], [0, 2, 4, 8, 11, 12, 13])
+        self.assertIn('no renewal or new spend', next(i for i in items if i['n'] == 12)['detail'])
+        self.assertIn('paper-only', next(i for i in items if i['n'] == 13)['detail'])
         self.assertEqual(next(i for i in items if i['n'] == 2)['due_iso'], '2026-10-20')
         body = status_md.section(text, 'Forward tests')
         lines = [l for l in body.splitlines() if l.startswith('The live Mac (the one that runs the scheduled jobs): ')]

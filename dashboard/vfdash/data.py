@@ -29,6 +29,9 @@ JOBS = [
      "log": "valuefinder-closecapture.log"},
     {"label": "com.valuefinder.ledgersync", "name": "Nightly ledger copy", "in_a_sentence": "nightly ledger copy",
      "log": "valuefinder-ledgersync.log"},
+    {"label": "com.valuefinder.triggerpoll", "name": "Wind-trigger price collector", "in_a_sentence": "trigger collector", "log": "valuefinder-triggerpoll.log", "collector": True},
+    {"label": "com.valuefinder.propslog", "name": "NFL props collector", "in_a_sentence": "props collector", "log": "valuefinder-propslog.log", "collector": True},
+    {"label": "com.valuefinder.nbacollector", "name": "NBA collector", "in_a_sentence": "NBA collector", "log": "valuefinder-nbacollector.log", "collector": True},
 ]
 MANIFEST = Path("sharp-markets") / "data" / "raw" / "_manifest" / "oddsapi_manifest.csv"
 
@@ -41,6 +44,7 @@ class Config:
     content: Path                   # dashboard/content
     tz: tzinfo
     port: int = 8787
+    operations_root: Path | None = None
 
     @property
     def quota_file(self) -> Path:
@@ -163,6 +167,7 @@ class Snap:
     plists: dict = field(default_factory=dict)
     launchctl: Launchctl = field(default_factory=Launchctl)
     logs: dict = field(default_factory=dict)
+    operations: dict = field(default_factory=dict)
     status_text: str | None = None
     status_note: str = ""
     evidence: Read = field(default_factory=Read)
@@ -375,7 +380,7 @@ class Store:
             r = read_plist(cfg.plist(lbl), f"the launchd file for the {job['in_a_sentence']} job "
                                            f"(~/Library/LaunchAgents/{lbl}.plist)")
             snap.plists[lbl] = schedule_of(r.data) if isinstance(r.data, dict) else None
-            if r.data is None:
+            if r.data is None and not job.get("collector"):
                 snap.unreadable.append(cap(r.note))
             if "log" in job:
                 lr = read_text(cfg.log(job["log"]), f"the {job['in_a_sentence']} log", tail=4096)
@@ -384,8 +389,10 @@ class Store:
         snap.launchctl = self._launchctl()
         if snap.launchctl.listed is None:
             snap.unreadable.append(snap.launchctl.note)
+        from . import operations
+        snap.operations = operations.build(cfg, now)
         # STATUS.md, content
-        st = read_text(cfg.root / "STATUS.md", "the status page (STATUS.md)")
+        st = read_text((cfg.operations_root or cfg.root) / "STATUS.md", "the status page (STATUS.md)")
         snap.status_text, snap.status_note = st.data, cap(st.note)
         self._expect(snap, st, "the status page (STATUS.md)")
         snap.evidence = read_json(cfg.content / "evidence.json", "the evidence list (dashboard/content/evidence.json)")
