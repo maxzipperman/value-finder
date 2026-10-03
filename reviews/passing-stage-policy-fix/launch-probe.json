@@ -1,0 +1,9 @@
+{
+  "status": "reached_pre_runtime_authority_boundary",
+  "calls": [
+    "authority_boundary"
+  ],
+  "diagnosis": "No source/bootstrap/checkout/runtime-path failure reproduced before authority boundary. Real authorization/provider/launcher state deliberately not inspected.",
+  "runtime_writes": 0,
+  "paid_calls": 0
+}

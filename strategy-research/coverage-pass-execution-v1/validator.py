@@ -12,6 +12,20 @@ PREPARATION_ROOT='22c546ed08e0b9f52037dd17c0c90be707d0804e5d68be66c046730639ba8f
 FINAL_SHA='100a53275119fba283b3e8938cfee994f0d1a535201f2bab2e8769bfba9fdbdb'
 
 
+def stage_amendment(manifest):
+ """Explicit exception only for the already accepted, exactly bound residual."""
+ if (manifest['request_count'],manifest['max_new_credits'],manifest['request_list_sha256'],manifest['cell_rectangles_sha256'])!=(1302,67200,'a18043788727951be83baeab3a607e48ab28d5827e4f532ed79ba51aa2b03951','aa70d981075bf746ed22b0aff5ab7b6ae58d4a0a73362c820fe07df3780843c9'):
+  raise ValueError('stage amendment cannot expand the exact accepted list')
+ return dict(version=1,status='prospective_requires_exact_hub_paid_authority',saved_final_sha256=FINAL_SHA,accepted_groups=sorted(preparation.PASS),preparation_root=PREPARATION_ROOT,request_count=1302,max_new_credits=67200,request_list_sha256=manifest['request_list_sha256'],cell_rectangles_sha256=manifest['cell_rectangles_sha256'],stage_order=list(preparation.PRIORITY),ledger_transport_priority=1,ledger_priority_meaning='technical allowlist class for this combined tranche; not original season priority',before_older_slice='For this exact combined residual only, replace the original unconditional priority-1 halt with the saved accepted six-PASS-group coverage decision. Execute NFL2023-24 props then only NFL2020-22 and CFB2020 totals in the same finite tranche. No new coverage look or automatic next-stage release; held groups remain excluded.',next_purchase_authorized=False)
+
+
+def execution_protocol(old,manifest):
+ cfg=dict(old,budgets=dict(old['budgets'],first_tranche_cumulative_credits=274686))
+ amendment=stage_amendment(manifest)
+ cfg['purchase_order_and_gates']=dict(old['purchase_order_and_gates'],before_older_slice=amendment['before_older_slice'],passing_groups_stage_acceptance=amendment)
+ return cfg
+
+
 def packet(data,source):
  m=json.loads(data['manifest.json']);rows=json.loads(data['requests.json']);frame=json.loads(data['frame.json'])
  final=json.loads(data['final-record.json']);original=json.loads(data['preparation/manifest.json'])
@@ -43,7 +57,7 @@ def packet(data,source):
  if policy!=expected:raise ValueError('finite missing policy differs')
  receipts.validate_policy(rows,policy)
  future=json.loads(data['future-budget-policy.json']);cfg=json.loads(data['execution-protocol.json']);old=json.loads(source['protocol.json'])
- expected_cfg=dict(old,budgets=dict(old['budgets'],first_tranche_cumulative_credits=274686))
+ expected_cfg=execution_protocol(old,original)
  if cfg!=expected_cfg or future['budgets']!=cfg['budgets'] or future['billing_reconciliation']!=cfg['billing_reconciliation'] or future['shared_usage_allowance_in_ceiling']!=100 or future['paid_authority'] is not False:raise ValueError('prospective budget differs')
  if original['budget']!=preparation.assess_budget(67200):raise ValueError('carry/margin differs')
  return dict(status='offline_validated_authority_required',requests=1302,max_new_credits=67200,full_denominator=len(den),purchase_candidate_denominator=len(maps),paid_authority=False)

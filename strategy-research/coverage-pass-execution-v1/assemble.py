@@ -27,7 +27,7 @@ def assemble(a):
   baseline=dict(old,pilot_bindings=dict(old['pilot_bindings'],**{pilotroot:binding}),expected_global_snapshot=snapshot)
   history=json.loads(data['preparation/history-proof.json']);overlap=json.loads(data['overlap.json'])
   overlap.update(raw_roots=history['raw_roots'],inventory_sha256=history['raw_inventory_sha256'])
-  cfg=json.loads(source['protocol.json']);cfg['budgets']=json.loads(data['future-budget-policy.json'])['budgets']
+  cfg=load('runner').execution_protocol(json.loads(source['protocol.json']),json.loads(data['preparation/manifest.json']))
   m=json.loads(data['preparation/manifest.json']);m=dict(m,request_set_sha256=capture.identity(json.loads(data['requests.json'])))
   config=dict(repo=str(repo),preparation=str(Path(a.preparation).absolute()),final_record=str(Path(a.final_record).absolute()),restart_policy=dict(allowed=['prepared','running','pilot_clean_pause'],pending='block_no_resend',stopped='block_reconciliation',terminal='exhausted',automatic_retries=0,automatic_redirects=0))
   objects={'config.json':config,'manifest.json':m,'baseline.json':baseline,'overlap.json':overlap,'execution-protocol.json':cfg}
