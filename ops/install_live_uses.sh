@@ -63,7 +63,8 @@ from pathlib import Path
 from html import escape
 import os
 sys.path.insert(0, sys.argv[1])
-from ops.collector_guard import envelope
+from ops.collector_guard import envelope, require_bridge
+require_bridge()  # Unconditional hold; no declaration-only configuration can enable jobs.
 c, identity = envelope(datetime.now(timezone.utc))
 p = Path(c['ledger'])
 if not p.is_file() or not p.with_suffix(p.suffix + '.lock').is_file():

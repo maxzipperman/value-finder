@@ -163,7 +163,25 @@ class Response:
         return json.loads(self.text)
 
 
+def require_bridge():
+    """Production admission is disabled until a reviewed enforcement bridge exists.
+
+    No config flag, writer inventory, ledger state or approval string can lift this.
+    A later implementation must enforce real writer coordination before changing it.
+    """
+    raise Blocked('Collector installation/send disabled: shared-account enforcement bridge not implemented')
+
+
 def paid_get(session, url, params, *, label, request_slot, now=None):
+    """Named production entry point. Intentionally unreachable transport in this PR."""
+    require_bridge()
+
+
+def _reservation_get(session, url, params, *, label, request_slot, now=None):
+    """Source-only reservation primitive for synthetic tests/future bridge integration.
+
+    Not used by collectors or installer. Envelope declarations are NOT coordination.
+    """
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     c, identity = envelope(now)
     try:

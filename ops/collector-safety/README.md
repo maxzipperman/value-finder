@@ -2,6 +2,12 @@
 
 Issue #164 / PR #165 repairs the existing PR #125 collector deployment only.
 Schedules, markets, books, active-game selection and registered rules stay as before.
+**Source-only infrastructure: installation and every production paid entry point are
+unconditionally disabled.** `require_bridge()` always raises, regardless of envelope,
+writer inventory or ledger state. No environment/configuration switch lifts this hold.
+The reservation primitive is private and used only by synthetic tests; no collector
+or installer calls it. A later reviewed implementation must enforce actual shared
+writer coordination before this code hold can change.
 No live files, credentials, provider requests or outcomes were accessed by this author.
 
 ## Reproduced defects and smallest repairs
@@ -9,7 +15,8 @@ No live files, credentials, provider requests or outcomes were accessed by this 
 - `nfl-weather/scripts/log_props.py` previously marked a slot captured only after a
   response/raw write, and explicitly reattempted failures while the slot stayed open.
   A process death after sending but before marking captured could buy it twice.
-  The paid `_get` now uses the event ID/offset as a pre-send durable attempt identity.
+  The paid `_get` now routes the event ID/offset to the disabled production entry.
+  The source-only reservation primitive demonstrates durable admission for later integration.
 - `sharp-markets/src/markets/collector.py::_odds_get` previously passed
   `max_retries=2`. Its tick lock checked existence then wrote a file; simultaneous
   entrants could both pass, and restart times made different paid cache keys.
@@ -20,16 +27,17 @@ No live files, credentials, provider requests or outcomes were accessed by this 
   `allow_redirects=False` and rejects sessions configured with transport retries.
   Registered alert/close paths are unaffected.
 - Existing quota files are post-response observations, not durable budget admission.
-  The new collector guard serializes admission under a shared ledger lock, reserves
+  The source-only reservation primitive serializes admission under a shared ledger lock, reserves
   full market/book upper bounds before HTTP and keeps every reservation. Props
   reserves 9 even if a response costs less. A pending/error/missing billing response,
   unexpected account usage or modified receipt halts further collector admission.
   Response receipt and terminal ledger are independently replaced/fsynced, including
   directory fsync. A crash between either write leaves the pending attempt blocked.
 
-## Explicit configuration interface — no authority provided by this PR
+## Draft integration interface — cannot enable production in this PR
 
-Installer requires `VF_COLLECTOR_ENVELOPE` (absolute file path) and
+Even a valid envelope cannot pass the installer or production send hold.
+The future interface requires `VF_COLLECTOR_ENVELOPE` (absolute file path) and
 `VF_COLLECTOR_ENVELOPE_SHA256` (64 lowercase hex digits), and passes them to each
 plist. Metadata preflight occurs before key comparison or any launchd mutation.
 Deleting/changing the file revokes admission. The executing checkout must be clean
@@ -72,20 +80,21 @@ with a blocked state. Only a reconciled success can restore `ready`. This PR doe
 or historical executors. A manifest listing them is not evidence of that bridge.
 Before deployment the hub must either integrate those writers with independent
 review/evidence or approve/enforce a nonoverlapping arrangement with reconciled
-account state. The guard halts on provider usage above accounted upper bounds;
+account state. The private reservation primitive halts on provider usage above accounted upper bounds;
 that is a detection circuit breaker, not a substitute for coordinating other writers.
 Do not rotate/delete the lock inode, reset totals, or treat legacy quota.json as this
 ledger. Config/ledger files must be on the same trusted local durable filesystem
 for their lock/rename/fsync contract; restrict their write permissions to the hub.
 
-## Existing limits and remaining deployment prerequisites
+## Review repairs and remaining deployment prerequisites
 
 PR #125 owner installation scope exists. The October plan's 4,440,000 monthly
 ceiling and 531,630 reserve are account limits, while the 14,100–20,000 live monthly
 figure is an estimate. None is an exact new collector envelope. Exhausted acquisition
 tranches provide no live authority. No cap is invented or populated here.
 
-Before hub installation: independent exact-head review and required CI; current
+Before hub installation: implement/review the missing enforcement bridge and replace
+the unconditional source hold through a new reviewed change; independent exact-head review and required CI; current
 approved source/scope/hash/finite collector caps/expiry; reconciled baseline and
 shared-writer accounting bridge (or approved enforced nonoverlap); precreated durable
 ledger/lock; current runtime source and environment readiness. Review configuration
@@ -94,13 +103,18 @@ approval or bridge remains a deployment blocker. The dashboard PR #163 metadata-
 status producer remains a separate dependency; this guard does not report fabricated
 missed windows or treat receipt absence as no opportunity.
 
-Synthetic tests cover death after reservation, disk failure before send/after response/
+Synthetic primitive tests cover death after reservation, disk failure before send/after response/
 before terminal write, repeated slots, concurrent admission, real NBA tick-lock overlap,
 9-market props reservations, caps/shared ceiling, revoked/missing authority, status/
 billing anomalies, corrupted receipts and named NFL/CFB/NBA transport integrations.
 Existing NBA cadence/cache/quota tests mock admission explicitly to retain their scope;
-the new tests exercise actual guard admission. HTTP regressions use fake sessions or
+the primitive tests exercise real reservation behavior without claiming production
+admission. Actual weather script/helper integration tests run in each project’s
+own declared dependencies and prove production stays disabled with populated declarations.
+Legacy cache/filename fixtures mock admission explicitly. Caller scripts and package
+fetch/config/quota/default dependencies are bound in verification and workflow triggers. HTTP regressions use fake sessions or
 localhost only; the pre-existing external `.invalid` DNS test is excluded.
 
 **READY FOR THE HUB for independent implementation review. NOT READY for deployment:**
-no exact live envelope or approved shared-account bridge has been supplied.
+the shared-account bridge is unimplemented; production is deliberately non-executable
+even if a declaration-only envelope/ledger is supplied. No live authority is supplied.

@@ -113,6 +113,9 @@ def test_same_minute_snapshots_never_overwrite_and_polls_stay_out_of_the_lines_t
     monkeypatch.setattr(oddsapi, "PROC", tmp_path / "proc")
     (tmp_path / "proc").mkdir()
     api(Resp(body=[EVENT]))
+    # Downstream filename/row test only; production collector admission stays disabled.
+    monkeypatch.setattr(oddsapi, "paid_get", lambda session, url, params, **kw:
+                        session.get(url, params=params, timeout=60))
     t0 = pd.Timestamp("2026-10-11T12:00:05Z")
     for sec, tag in ((0, None), (20, None), (65, "poll")):
         monkeypatch.setattr(pd.Timestamp, "now", classmethod(lambda cls, tz=None, s=sec: t0 + pd.Timedelta(seconds=s)))

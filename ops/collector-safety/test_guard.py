@@ -68,10 +68,22 @@ class GuardTests(unittest.TestCase):
         os.environ['VF_COLLECTOR_ENVELOPE_SHA256'] = self.identity
 
     def send(self, session=None, slot='slot1', label='nba', **kwargs):
-        return g.paid_get(session or Session(), URL, {**PARAMS, 'apiKey':KEY}, label=label, request_slot=slot, **kwargs)
+        return g._reservation_get(session or Session(), URL, {**PARAMS, 'apiKey':KEY}, label=label, request_slot=slot, **kwargs)
 
     def state(self):
         return json.loads(self.ledger.read_text())
+
+    def test_populated_configuration_cannot_enable_unintegrated_production(self):
+        # Reviewer's reproduction: one unaccounted legacy credit already spent;
+        # baseline100, cap101, external0/ready and a writer inventory aren't a bridge.
+        self.c['account_ceiling']=101
+        self.c['shared_writers']=['legacy-writer-with-no-bridge']
+        self.bind();state=self.state();state['envelope_sha256']=self.identity;self.ledger.write_text(json.dumps(state))
+        s=Session(headers={'x-requests-last':'1','x-requests-used':'102','x-requests-remaining':'898'})
+        with self.assertRaises(g.Blocked):g.paid_get(s,URL,{**PARAMS,'apiKey':KEY},label='nba',request_slot='legacy-overlap')
+        with self.assertRaises(g.Blocked):g.require_bridge()  # same install admission
+        self.assertEqual(s.calls,[])
+        self.assertEqual(self.state()['attempts'],{})
 
     def test_reserves_before_send_and_stores_sanitized_receipt(self):
         s = Session()
@@ -98,7 +110,7 @@ class GuardTests(unittest.TestCase):
             self.assertEqual(next(iter(self.state()['attempts'].values()))['reserved'],9)
             return original(*a,**kw)
         s.get=get
-        g.paid_get(s,url,{**params,'apiKey':KEY},label='nfl-props',request_slot='synthetic:24')
+        g._reservation_get(s,url,{**params,'apiKey':KEY},label='nfl-props',request_slot='synthetic:24')
         self.assertEqual(next(iter(self.state()['attempts'].values()))['reserved'],9)
 
     def test_provider_warning_redacts_key(self):
@@ -172,7 +184,7 @@ class GuardTests(unittest.TestCase):
         s=Session(retries=2)
         with self.assertRaises(g.Blocked):self.send(s)
         s=Session()
-        with self.assertRaises(g.Blocked):g.paid_get(s,URL,{**PARAMS,'apiKey':KEY,'markets':'totals'},label='nba',request_slot='x')
+        with self.assertRaises(g.Blocked):g._reservation_get(s,URL,{**PARAMS,'apiKey':KEY,'markets':'totals'},label='nba',request_slot='x')
         self.assertEqual(s.calls,[])
 
     def test_concurrency_same_slot_sends_once(self):

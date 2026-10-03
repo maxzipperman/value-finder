@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from cfbweather import fetch, live, quota  # noqa: E402
 
@@ -101,6 +102,10 @@ def test_paid_poll_is_cached_first(monkeypatch):
         def json(self):
             return []
 
+    # Downstream cache/rows only. Actual production admission is tested separately.
+    from ops import collector_guard
+    monkeypatch.setattr(collector_guard, "paid_get", lambda session, url, params, **kw:
+                        session.get(url, params=params, timeout=60))
     monkeypatch.setattr(fetch.session, "get", lambda *a, **k: R())
     monkeypatch.setattr("cfbweather.config.RAW", fetch.RAW)
     out = live.live_totals(NAMES)
