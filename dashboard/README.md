@@ -252,3 +252,11 @@ Deployment still requires hub review/coordination. For an isolated UI review use
 `--scorer-root` pointing at a missing directory to disable scorer launches; warnings
 then describe the preview, not production health. The start-at-login installer is
 unchanged by this PR.
+
+## Actionable collector status (#162)
+
+The follow-up links collector deployment to issue #124 / PR #125 and identifies
+hub ownership. Process state, expected collection windows and successful-collection
+receipts remain separate. Missing receipt metadata is unknown, never zero missed
+windows or proof of successful collection. Scoring mode and reviewed source/deployment
+provenance will be shown explicitly. No collector or paid execution is added here.
