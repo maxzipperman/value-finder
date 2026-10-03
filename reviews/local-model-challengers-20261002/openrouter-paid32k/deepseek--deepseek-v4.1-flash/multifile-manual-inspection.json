@@ -1,0 +1,18 @@
+{
+  "reviewer": "author saved final-answer and provider-error inspection, not independent validation",
+  "response_sha256": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068",
+  "all_candidate_source_inspected": true,
+  "candidate_source": "Whitespace only; no source to execute",
+  "provider_error": {
+    "code": 502,
+    "message": "Upstream error from OpenInference: Generation stopped because the model entered a repetition loop.",
+    "metadata": {
+      "error_type": "provider_unavailable"
+    }
+  },
+  "no_candidate_execution": true,
+  "no_retry": true,
+  "resource_decision": "Stop repetition/provider error; no further budget escalation. Original capped baseline preserved.",
+  "billing_note": "Gateway usage.cost explicitly0; upstream_inference_cost0.00751478 separately reported. Do not infer account refund/zero ultimate charge; maximum attempt reservation retained by combined guard.",
+  "reasoning_repeat_literal_count": 33
+}

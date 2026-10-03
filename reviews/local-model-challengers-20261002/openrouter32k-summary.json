@@ -1,0 +1,455 @@
+{
+  "grading": "author only; not independent validation",
+  "list_sha256": "441f14b4b605d49e1b9fcc0cc6ee123dd32e7e22ceeff41b213a27c8e34f0156",
+  "records": [
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "multifile",
+      "status": "provider_error",
+      "folder": "openrouter-paid32k/deepseek--deepseek-v4.1-flash",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 32768,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 1800,
+      "decision": {
+        "proceed": true,
+        "reason": "Capped empty/whitespace final. Saved thinking constructs concrete select_latest source with eligibility, absolute-time comparison and ID tie handling; tail remains task-specific validation after source rather than digit runaway. One32k diagnostic tests delivery under same settings; correctness is unknown.",
+        "evidence": [
+          "openrouter-paid/deepseek--deepseek-v4.1-flash/multifile-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "200aa40fa3dbd2f78e7c9b29eecef4148cc67c52c7b7fbd95a92b5ce77bd172d",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      },
+      "request_sha256": "ee11ee60788e910bb76f7d9b936b58ead56e2f92e28549a251294fe7f9a606d2",
+      "finish_reason": "error",
+      "error": {
+        "code": 502,
+        "message": "Upstream error from OpenInference: Generation stopped because the model entered a repetition loop.",
+        "metadata": {
+          "error_type": "provider_unavailable"
+        }
+      },
+      "returned_model": "deepseek/deepseek-v4.1-flash",
+      "provider": "OpenInference",
+      "wall_seconds": 321.9987882919959,
+      "usage": {
+        "prompt_tokens": 340,
+        "completion_tokens": 9623,
+        "total_tokens": 9963,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00751478,
+          "upstream_inference_prompt_cost": 8.84e-06,
+          "upstream_inference_completions_cost": 0.00750594
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 9622,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "final_answer_bytes": 1,
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      },
+      "manual_inspection": {
+        "reviewer": "author saved final-answer and provider-error inspection, not independent validation",
+        "response_sha256": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068",
+        "all_candidate_source_inspected": true,
+        "candidate_source": "Whitespace only; no source to execute",
+        "provider_error": {
+          "code": 502,
+          "message": "Upstream error from OpenInference: Generation stopped because the model entered a repetition loop.",
+          "metadata": {
+            "error_type": "provider_unavailable"
+          }
+        },
+        "no_candidate_execution": true,
+        "no_retry": true,
+        "resource_decision": "Stop repetition/provider error; no further budget escalation. Original capped baseline preserved.",
+        "billing_note": "Gateway usage.cost explicitly0; upstream_inference_cost0.00751478 separately reported. Do not infer account refund/zero ultimate charge; maximum attempt reservation retained by combined guard.",
+        "reasoning_repeat_literal_count": 33
+      }
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "hard-selection",
+      "status": "pending",
+      "folder": "openrouter-paid32k/deepseek--deepseek-v4.1-flash",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 32768,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 1800,
+      "decision": {
+        "proceed": true,
+        "reason": "Capped empty final. Saved thinking continues eligibility/UTC/finite-odds helper construction, ending at _valid_odds bool rejection. Concrete unfinished source work without digit runaway qualifies one bounded32k delivery diagnostic despite some repeated reconsideration.",
+        "evidence": [
+          "openrouter-paid/deepseek--deepseek-v4.1-flash/hard-selection-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "d67bf3ef502dfdf4120eae1be494561b91bc0dc48e5fa5d55febdcf4ffa7bb6c",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      },
+      "request_sha256": "6a875124599cc3e866824da5520aa6aef810933293447d395b57ccd853e9e2bb"
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "multifile",
+      "status": "not_started",
+      "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 32768,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 1800,
+      "decision": {
+        "proceed": true,
+        "reason": "Capped empty final. Complete source draft and eligibility helper are developed; tail explicitly starts JSON packaging after validating selected row identity/ties. Meaningful unfinished delivery warrants one32k attempt, not feedback or a semantic reroll.",
+        "evidence": [
+          "openrouter-paid/xiaomi--mimo-v2.6-flash/multifile-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "55e11c95b4e3d0e819dac028417fe5843b329ff153b5a46765325b18a42fcb8f",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "debugging",
+      "status": "not_started",
+      "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 32768,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 1800,
+      "decision": {
+        "proceed": true,
+        "reason": "Capped empty final. Thinking develops concrete type/finite/overflow probability repairs and timestamp parsing decisions. Tail is still source construction and input-case checking, not runaway digits or repeated final finding enumeration. One32k completion diagnostic with unchanged settings.",
+        "evidence": [
+          "openrouter-paid/xiaomi--mimo-v2.6-flash/debugging-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "d2f9e260bc51b27605440ff5b4a6a8a95cb5e0137a7c3846374f378750cca3c3",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "regression",
+      "status": "not_started",
+      "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 32768,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 1800,
+      "decision": {
+        "proceed": true,
+        "reason": "Capped empty final. Thinking constructs expect_error/expect_value helpers and starts explicit finite valid numeric assertion cases. Behavioral suite construction remains unfinished; one32k diagnostic may deliver a test artifact. Oracle acceptance is not yet established.",
+        "evidence": [
+          "openrouter-paid/xiaomi--mimo-v2.6-flash/regression-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "b11b1107e2848211008dc3fe77e56020c5f56771dc1564b936abfc3e16828184",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "hard-selection",
+      "status": "not_started",
+      "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 32768,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 1800,
+      "decision": {
+        "proceed": true,
+        "reason": "Capped empty final. Thinking constructs select_books main loop and row extraction helper after time/ID validation decisions. Some vacillation exists, but concrete unfinished function work warrants only one32k attempt; stop renewed repetition or delivery failure.",
+        "evidence": [
+          "openrouter-paid/xiaomi--mimo-v2.6-flash/hard-selection-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "341a92327c54d015558578bc55d04d4de9441d2ede016877101045e44d622db1",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    }
+  ],
+  "excluded": [
+    {
+      "key": "deepseek/deepseek-v4.1-flash|debugging|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "Greedy baseline thinking ends in a contiguous run of19067 zero characters with empty final answer. This is runaway digit expansion rather than meaningful unfinished delivery; more tokens alone not justified. Preserve baseline. Different sampling/configuration could be studied separately, no feedback supplied.",
+        "evidence": [
+          "openrouter-paid/deepseek--deepseek-v4.1-flash/debugging-result.json"
+        ],
+        "reviewer": "author progress inspection"
+      }
+    },
+    {
+      "key": "deepseek/deepseek-v4.1-flash|regression|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "Greedy baseline thinking ends in a contiguous run of4887 zero characters with empty final answer. This is runaway digit expansion rather than meaningful unfinished delivery; more tokens alone not justified. Preserve baseline. Different sampling/configuration could be studied separately, no feedback supplied.",
+        "evidence": [
+          "openrouter-paid/deepseek--deepseek-v4.1-flash/regression-result.json"
+        ],
+        "reviewer": "author progress inspection"
+      }
+    },
+    {
+      "key": "deepseek/deepseek-v4.1-flash|review|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "Capped thinking repeatedly re-enumerates the same finding inventory without final delivery (hard review reaches numbered70, seeded review repeatedly debates splitting/combinations). No meaningful progress for same-setting token increase.",
+        "evidence": [
+          "openrouter-paid/deepseek--deepseek-v4.1-flash/review-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "cbbbe4d5e423d1b27d60e191db5f63e4d13ae77e3d1d346cdaac2c7a1d613eb8",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "deepseek/deepseek-v4.1-flash|hard-review|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "Capped thinking repeatedly re-enumerates the same finding inventory without final delivery (hard review reaches numbered70, seeded review repeatedly debates splitting/combinations). No meaningful progress for same-setting token increase.",
+        "evidence": [
+          "openrouter-paid/deepseek--deepseek-v4.1-flash/hard-review-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "5211a511c5da552babcd48a2b5e8030b092cf034ad6568f91c2a0c9e2c27dc2a",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "z-ai/glm-5.3-flash|multifile|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "No32k attempt: preserved Relace provider outage/error or provider-unavailable baseline deferral. Multifile has unfinished packaging but same-profile provider availability is not established. Distinct prospectively pinned DeepInfra integrated tasks provide the planned diagnostic; no baseline retry/provider switch.",
+        "evidence": [
+          "openrouter-paid/z-ai--glm-5.3-flash/multifile-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "cb782ae18405f68cef2200adbff7df8704f9ad803b341be3e97dae58e1c8defe",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "z-ai/glm-5.3-flash|debugging|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "No32k attempt: preserved Relace provider outage/error or provider-unavailable baseline deferral. Multifile has unfinished packaging but same-profile provider availability is not established. Distinct prospectively pinned DeepInfra integrated tasks provide the planned diagnostic; no baseline retry/provider switch.",
+        "evidence": [
+          "openrouter-paid/z-ai--glm-5.3-flash/debugging-error.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": null,
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "z-ai/glm-5.3-flash|regression|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "No32k attempt: preserved Relace provider outage/error or provider-unavailable baseline deferral. Multifile has unfinished packaging but same-profile provider availability is not established. Distinct prospectively pinned DeepInfra integrated tasks provide the planned diagnostic; no baseline retry/provider switch.",
+        "evidence": [
+          "openrouter-paid/z-ai--glm-5.3-flash/regression-error.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": null,
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "z-ai/glm-5.3-flash|review|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "No32k attempt: preserved Relace provider outage/error or provider-unavailable baseline deferral. Multifile has unfinished packaging but same-profile provider availability is not established. Distinct prospectively pinned DeepInfra integrated tasks provide the planned diagnostic; no baseline retry/provider switch.",
+        "evidence": [
+          "openrouter-provider-deferral.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": null,
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "z-ai/glm-5.3-flash|hard-selection|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "No32k attempt: preserved Relace provider outage/error or provider-unavailable baseline deferral. Multifile has unfinished packaging but same-profile provider availability is not established. Distinct prospectively pinned DeepInfra integrated tasks provide the planned diagnostic; no baseline retry/provider switch.",
+        "evidence": [
+          "openrouter-provider-deferral.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": null,
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "z-ai/glm-5.3-flash|hard-review|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "No32k attempt: preserved Relace provider outage/error or provider-unavailable baseline deferral. Multifile has unfinished packaging but same-profile provider availability is not established. Distinct prospectively pinned DeepInfra integrated tasks provide the planned diagnostic; no baseline retry/provider switch.",
+        "evidence": [
+          "openrouter-provider-deferral.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": null,
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "xiaomi/mimo-v2.6-flash|review|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "Baseline stopped with a complete usable final review. Completed answers are not32k budget targets.",
+        "evidence": [
+          "openrouter-paid/xiaomi--mimo-v2.6-flash/review-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "b9fa060a672bfde8588343f99b19945f4b6d155b07b29a9d6f6b9de52abfd7b8",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    },
+    {
+      "key": "xiaomi/mimo-v2.6-flash|hard-review|32k",
+      "decision": {
+        "proceed": false,
+        "reason": "Baseline stopped with a complete usable final review. Completed answers are not32k budget targets.",
+        "evidence": [
+          "openrouter-paid/xiaomi--mimo-v2.6-flash/hard-review-result.json"
+        ],
+        "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
+        "baseline_sha256": "538015e5b97ffd703b9351b108f97ac80014bdbb555330fd97c42d9839e17cc6",
+        "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      }
+    }
+  ],
+  "note": "Original capped attempts remain separate. Embedded provider errors are failures, not valid completions. Gateway per-request costs and upstream cost fields are distinct; private account ledgers excluded."
+}

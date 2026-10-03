@@ -42,3 +42,13 @@ October3 next checkpoint: GLM4 remaining baseline requests now explicitly classi
 
 
 Baseline collection terminal:17 paid attempts (15 responses,2 GLM provider520 errors),4 GLM requests deferred/unavailable;7 free baseline +4 free16k. Reported paid charges$0.055236609, conservative reserves$0.10296242 including errors. MiMo hard selection empty length8192 in100.55s,$0.00232472; hard review5/5 real causes,0false with minor -100 exception in107.66s,$0.00209972. MiMo seeded review4seeded+validoffset,0false; extraction exact. Four MiMo code finals empty. Author semantic grades, markdown JSON fence deviations noted. New frozen integrated round starts only from CEILING_EXECUTION_PLAN.md; budgets/modes/providers changed, no pooling with these screens.
+
+## Matched32K progress diagnostic — in progress
+
+Six of the18 declared conditional targets qualified prospectively from concrete unfinished baseline reasoning;12 denied/deferred. Output32768/deadline1800, original synthetic prompts/temp0/seed42/reasoning/provider filters, distinct folders and no feedback. Session4995 is the sole active collector; no capped baseline or error is retried. Saved metadata are indexed separately in [openrouter32k-summary.json](openrouter32k-summary.json), preserving earlier32-task screening summary.
+
+First DeepSeek/OpenInference multifile diagnostic ended after322.00s/9623completiontokens with finish_reason=error, embedded502/provider_unavailable: provider says generation stopped for repetition. Final is one whitespace character; ordinary restricted grading rejects JSON without executing any source. Saved reasoning contains33 exact repetitions of a valid100-string acceptance phrase. No further escalation warranted. [Manual audit](openrouter-paid32k/deepseek--deepseek-v4.1-flash/multifile-manual-inspection.json) preserves the error and original capped attempt.
+
+Gateway usage.cost explicitly reports$0, while cost_details.upstream_inference_cost reports$0.00751478. These are distinct supplied fields, not proof of zero final account charge/refund; combined guard retains the maximum token reservation. Aggregate reported gateway trial costs remain$0.202413438 sofar, with prior unknown errors fully reserved. The collector saved this embedded provider error as a result envelope and continued to the next DISTINCT planned hard-selection request, not a retry. Summary classifies it as provider_error rather than a successful completion. Embedded-error stop behavior needs explicit guard review before any future unattended trial; do not interrupt the currently uncertain paid call or modify loaded collectors.
+
+Remaining qualified requests/grades/final synthesis/allocation handoffs are pending. No independent signoff or installed routing.
