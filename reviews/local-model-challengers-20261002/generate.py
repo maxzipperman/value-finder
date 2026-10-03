@@ -38,6 +38,7 @@ def main():
     parser.add_argument('--models', nargs='+', choices=PROTOCOL['models'])
     parser.add_argument('--no-thinking', action='store_true')
     parser.add_argument('--hard-pair', action='store_true')
+    parser.add_argument('--recovery-run', action='store_true')
     parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'] + list(HARD_TASKS))
     args = parser.parse_args()
     if args.hard_pair:
@@ -68,7 +69,8 @@ def main():
     snapshot.write_text(json.dumps(current, indent=2) + '\n')
     for task in (args.tasks or (list(HARD_TASKS) if args.hard_pair else PROTOCOL['tasks'])):
         for model in selected:
-            out = ROOT / (('hard-pair-' if args.hard_pair else '') + model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
+            prefix = ('hard-pair-recovery-' if args.recovery_run else 'hard-pair-') if args.hard_pair else ''
+            out = ROOT / (prefix + model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
             out.mkdir(exist_ok=True)
             result_path = out / (task + '-result.json')
             error_path = out / (task + '-error.json')
@@ -103,7 +105,10 @@ def main():
                                   'wall_seconds': result['wall_seconds'], 'done_reason': result.get('done_reason')}))
             except Exception as exc:
                 # A timeout may leave inference running; don't retry an uncertain request.
-                error_path.write_text(json.dumps({'error_type': type(exc).__name__, 'elapsed_seconds': time.monotonic()-start}, indent=2) + '\n')
+                detail = None
+                if isinstance(exc, urllib.error.HTTPError):
+                    detail = exc.read(4096).decode('utf-8', errors='replace')
+                error_path.write_text(json.dumps({'error_type': type(exc).__name__, 'elapsed_seconds': time.monotonic()-start, 'http_status': getattr(exc, 'code', None), 'bounded_server_error': detail}, indent=2) + '\n')
                 print(json.dumps({'status': 'request_error', 'model': model, 'task': task,
                                   'error_type': type(exc).__name__, 'review_required': True}))
             return

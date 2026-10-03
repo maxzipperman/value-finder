@@ -1,0 +1,39 @@
+{
+  "purpose": "one-token configuration probe after HTTP error, not a repeated hard task",
+  "request": {
+    "model": "qwen3.8:27b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Reply OK."
+      }
+    ],
+    "think": false,
+    "stream": false,
+    "keep_alive": 0,
+    "options": {
+      "num_ctx": 16384,
+      "num_predict": 1,
+      "temperature": 0,
+      "draft_num_predict": 0
+    }
+  },
+  "result": {
+    "model": "qwen3.8:27b",
+    "created_at": "2026-10-03T07:59:22.228549Z",
+    "message": {
+      "role": "assistant",
+      "content": "OK"
+    },
+    "done": true,
+    "done_reason": "length",
+    "total_duration": 2159728042,
+    "load_duration": 1806562167,
+    "prompt_eval_count": 15,
+    "prompt_eval_cached_count": 0,
+    "prompt_eval_duration": 352017000,
+    "eval_count": 1,
+    "eval_duration": 1000
+  },
+  "wall_seconds": 2.1615210000018124
+}

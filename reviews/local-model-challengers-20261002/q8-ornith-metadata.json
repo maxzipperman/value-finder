@@ -82,5 +82,43 @@
       "qwen35.context_length": 262144,
       "qwen35.embedding_length": 5120
     }
+  },
+  "ornith-1.5:35b": {
+    "digest": "9f3b89b2521908dd2e6f7a11fa368e62c8f89e1075f22604e4d1a76dd1240fcc",
+    "artifact_bytes": 22616285024,
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35moe",
+      "families": [
+        "qwen35moe"
+      ],
+      "parameter_size": "35.5B",
+      "quantization_level": "Q4_K_M"
+    },
+    "capabilities": [
+      "tools",
+      "thinking",
+      "completion",
+      "vision"
+    ],
+    "parameters": null,
+    "template_sha256": "f55f52930aa8bf44ab5cb85f99370fcc3c56e9a85640b812086d5330bce5d86b",
+    "model_info": {
+      "general.architecture": "qwen35moe",
+      "general.file_type": 15,
+      "general.finetune": "35b",
+      "general.parameter_count": 35505251456,
+      "general.quantization_version": 2,
+      "general.sampling.temp": 1,
+      "general.sampling.top_k": 20,
+      "general.sampling.top_p": 0.95,
+      "general.size_label": "256x2.6B",
+      "general.type": "model",
+      "general.version": "4000",
+      "qwen35moe.block_count": 41,
+      "qwen35moe.context_length": 262144,
+      "qwen35moe.embedding_length": 2048
+    }
   }
 }
