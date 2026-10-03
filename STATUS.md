@@ -233,3 +233,6 @@ PR147 SpaceBunny regression checkpoint: completed405s/39,241tokens, validtests.p
 
 
 PR147 free ceiling round complete:SpaceBunny3 responses author inspected/graded; implementation154/197 withpartial_jobs omission, regression originalAST rejection plus wrongprobability/deepcopy assertions, review128s9/10real0false/duplicates missesnegativeodds. No128K target. Queue98555 proceeds9paidstress under shared locks/combined owner$1;qualified32K6 wait. Final report/allocation/independent validation pending.
+
+
+PR147 supplemental direct-helper coverage plan committed7b4955a before execution: unchanged SpaceBunny source passes same4extraasof probes; reference4/4 and2trustedfaultycontrols verified first, original AST/runtimebans/ordinarysandbox15s. Separate from154/197 original implementation score; partial_jobs defect unchanged, no inference/feedback or causalcomparison. Paidqueue98555 still active.

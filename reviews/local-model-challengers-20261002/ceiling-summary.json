@@ -27318,6 +27318,15 @@
             "passed": true
           }
         ]
+      },
+      "supplemental_helper_coverage": {
+        "evidence": "ceiling-space-bunny/implementation-helper-coverage.json",
+        "grading": "supplemental author direct-helper coverage, post-observation, not independent or original197 grading",
+        "passed": 4,
+        "cases": 4,
+        "original_acceptance_preserved": true,
+        "restrictions": "Original AST/runtime-import restrictions unchanged; no type-name exception, feedback or source repair.",
+        "limitations": "Four probes only, not exhaustive public-interface validation; separate denominator."
       }
     },
     {

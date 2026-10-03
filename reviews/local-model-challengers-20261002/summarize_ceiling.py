@@ -49,6 +49,10 @@ def summarize():
                 checks = value['original_197_checks']
                 helpers = value['extra_helper_checks']
                 rec['supplemental_diagnostic'] = dict(evidence=str(diagnostic.relative_to(ROOT)), grading=value['grading'], original_acceptance_preserved=value['original_acceptance_preserved'], original197_passed=checks['passed'], original197_cases=checks['cases'], extra_helper_passed=sum(x['passed'] for x in helpers), extra_helper_cases=len(helpers), limitations=value['limitations'])
+            helper_diagnostic = folder / (task + '-helper-coverage.json')
+            if helper_diagnostic.exists():
+                value = json.loads(helper_diagnostic.read_text())
+                rec['supplemental_helper_coverage'] = dict(evidence=str(helper_diagnostic.relative_to(ROOT)), grading=value['grading'], passed=value['passed'], cases=value['cases'], original_acceptance_preserved=value['original_acceptance_preserved'], restrictions=value['restrictions'], limitations=value['limitations'])
             records.append(rec)
     counts = {s: sum(r['status'] == s for r in records) for s in ('result', 'error', 'pending', 'not_started')}
     snapshot = dict(status='collection_in_progress', grading='author only; independent validation pending', counts=counts, records=records, limitations='Modes/artifacts/providers/tokenization differ; single draws and adaptive profiles are not causal or equal-compute rankings. Sampled allocation is not complete machine peak memory or swap evidence.')

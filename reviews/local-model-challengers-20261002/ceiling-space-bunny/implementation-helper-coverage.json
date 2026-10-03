@@ -1,0 +1,93 @@
+{
+  "grading": "supplemental author direct-helper coverage, post-observation, not independent or original197 grading",
+  "original_acceptance_preserved": true,
+  "source_sha256": "efd08b92bfd51b1df7b5cbcb832511c8b91a4f11cb1e8b495abb84775f9b3d24",
+  "reference_helper_checks": [
+    {
+      "case": "select invalid asof empty",
+      "passed": true
+    },
+    {
+      "case": "reconcile invalid asof empty",
+      "passed": true
+    },
+    {
+      "case": "select valid ISO asof",
+      "passed": true
+    },
+    {
+      "case": "reconcile valid ISO asof",
+      "passed": true
+    }
+  ],
+  "trusted_faulty_controls": [
+    {
+      "name": "empty_invalid_accepted",
+      "checks": [
+        {
+          "case": "select invalid asof empty",
+          "passed": false,
+          "error": "AssertionError: "
+        },
+        {
+          "case": "reconcile invalid asof empty",
+          "passed": false,
+          "error": "AssertionError: "
+        },
+        {
+          "case": "select valid ISO asof",
+          "passed": true
+        },
+        {
+          "case": "reconcile valid ISO asof",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "valid_ISO_rejected",
+      "checks": [
+        {
+          "case": "select invalid asof empty",
+          "passed": true
+        },
+        {
+          "case": "reconcile invalid asof empty",
+          "passed": true
+        },
+        {
+          "case": "select valid ISO asof",
+          "passed": false,
+          "error": "ValueError: deliberate string rejection"
+        },
+        {
+          "case": "reconcile valid ISO asof",
+          "passed": false,
+          "error": "ValueError: deliberate string rejection"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "case": "select invalid asof empty",
+      "passed": true
+    },
+    {
+      "case": "reconcile invalid asof empty",
+      "passed": true
+    },
+    {
+      "case": "select valid ISO asof",
+      "passed": true
+    },
+    {
+      "case": "reconcile valid ISO asof",
+      "passed": true
+    }
+  ],
+  "passed": 4,
+  "cases": 4,
+  "restrictions": "Original AST/runtime-import restrictions unchanged; no type-name exception, feedback or source repair.",
+  "limitations": "Four probes only, not exhaustive public-interface validation; separate denominator."
+}
