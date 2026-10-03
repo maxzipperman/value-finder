@@ -1,0 +1,38 @@
+{
+  "qwen3.6:35b|implementation|64k": {
+    "proceed": false,
+    "reason": "Stopped after 3050 generated tokens, well below 32768 cap. Invalid JSON, five files rather than four, and omitted select implementation. Semantic and packaging failure; more tokens would not address a completed response.",
+    "evidence": [
+      "ceiling-local/qwen3.6-35b/implementation-result.json",
+      "ceiling-local/qwen3.6-35b/implementation-acceptance.json"
+    ],
+    "reviewer": "author full-source inspection"
+  },
+  "qwen3.6:35b|regression|64k": {
+    "proceed": false,
+    "reason": "Stopped normally below cap. Returned five module files instead of only tests.py. Includes incorrect oracle expectations and prohibited module imports. No truncation or unfinished-progress basis for escalation.",
+    "evidence": [
+      "ceiling-local/qwen3.6-35b/regression-result.json",
+      "ceiling-local/qwen3.6-35b/regression-acceptance.json"
+    ],
+    "reviewer": "author full-source inspection"
+  },
+  "qwen3.6:35b|review|64k": {
+    "proceed": false,
+    "reason": "Completed review with stop finish. Five real causes, two false findings, three duplicates and three non-defect annotations. Completed incorrect answer is not a budget-ladder target.",
+    "evidence": [
+      "ceiling-local/qwen3.6-35b/review-result.json",
+      "ceiling-local/qwen3.6-35b/manual-review.json"
+    ],
+    "reviewer": "author manual semantic inspection"
+  },
+  "qwen3.8:27b|implementation|64k": {
+    "proceed": false,
+    "reason": "Server reports stop after14223 generated tokens, below32768 cap, with empty final. Not a reported length/timeout constraint; do not salvage thinking or blindly reroll.",
+    "evidence": [
+      "ceiling-local/qwen3.8-27b/implementation-result.json",
+      "ceiling-local/qwen3.8-27b/implementation-acceptance.json"
+    ],
+    "reviewer": "author delivery and tail inspection"
+  }
+}

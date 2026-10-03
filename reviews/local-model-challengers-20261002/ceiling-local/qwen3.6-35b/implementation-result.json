@@ -1,0 +1,184 @@
+{
+  "model": "qwen3.6:35b",
+  "created_at": "2026-10-03T10:37:58.073426Z",
+  "message": {
+    "role": "assistant",
+    "content": "{\n\"times.py\": \"from datetime import datetime, timezone\\n\\ndef instant(value):\\n    if isinstance(value, datetime):\\n        if value.utcoffset() is None:\\n            raise ValueError('datetime must be timezone-aware')\\n        return value.astimezone(timezone.utc)\\n    if not isinstance(value, str):\\n        raise ValueError('value must be ISO8601 string or datetime')\\n    try:\\n        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))\\n    except (ValueError, TypeError):\\n        raise ValueError(f'invalid ISO8601 string: {value}')\\n    if dt.utcoffset() is None:\\n        raise ValueError('datetime must be timezone-aware')\\n    return dt.astimezone(timezone.utc)\",\n\"quotes.py\": \"from times import instant\\n\\ndef probability(value):\\n    if isinstance(value, bool):\\n        raise ValueError('bool not allowed')\\n    if isinstance(value, (int, float)):\\n        v = value\\n    elif isinstance(value, str):\\n        try:\\n            v = float(value)\\n        except (ValueError, TypeError):\\n            raise ValueError(f'cannot convert to float: {value}')\\n    else:\\n        raise ValueError('unsupported type')\\n    if not (abs(v) >= 100):\\n        raise ValueError(f'magnitude too small: {v}')\\n    if v > 0:\\n        return 100.0 / (v + 100.0)\\n    else:\\n        return (-v) / ((-v) + 100.0)\",\n\"runs.py\": \"from times import instant\\n\\ndef reconcile(rows, asof):\\n    valid_rows = []\\n    for row in rows:\\n        if not isinstance(row, dict):\\n            continue\\n        required = ['run_id', 'job', 'attempt', 'observed_at', 'status', 'downloaded_rows']\\n        if not all(k in row for k in required):\\n            continue\\n        run_id = row['run_id']\\n        job = row['job']\\n        attempt = row['attempt']\\n        status = row['status']\\n        downloaded_rows = row['downloaded_rows']\\n        if not isinstance(run_id, str) or not run_id:\\n            continue\\n        if not isinstance(job, str) or not job:\\n            continue\\n        if isinstance(attempt, bool) or not isinstance(attempt, int) or attempt <= 0:\\n            continue\\n        try:\\n            obs = instant(row['observed_at'])\\n        except (ValueError, TypeError):\\n            continue\\n        if obs > asof:\\n            continue\\n        if status not in ('ok', 'partial', 'failed', 'pending'):\\n            continue\\n        if isinstance(downloaded_rows, bool) or not isinstance(downloaded_rows, int) or downloaded_rows < 0:\\n            continue\\n        if status in ('failed', 'pending') and downloaded_rows != 0:\\n            continue\\n        valid_rows.append((obs, row))\\n    # Deduplicate by run_id: greatest observed_at wins; ties keep first eligible input row\\n    seen = {}\\n    for obs, row in valid_rows:\\n        rid = row['run_id']\\n        if rid not in seen:\\n            seen[rid] = (obs, row)\\n        else:\\n            prev_obs, prev_row = seen[rid]\\n            if obs > prev_obs:\\n                seen[rid] = (obs, row)\\n            elif obs == prev_obs:\\n                # Keep first eligible input row (already in seen)\\n                pass\\n    # Now group by job and select latest attempt per run_id\\n    jobs = {}\\n    for rid, (obs, row) in seen.items():\\n        job = row['job']\\n        if job not in jobs:\\n            jobs[job] = []\\n        jobs[job].append((rid, obs, row))\\n    result = {}\\n    for job, candidates in jobs.items():\\n        # Sort by attempt desc, then observed_at desc, then run_id asc\\n        # We need to pick the single latest attempt\\n        best = None\\n        for rid, obs, row in candidates:\\n            if best is None:\\n                best = (rid, obs, row)\\n            else:\\n                _, _, prev_row = best\\n                curr_attempt = row['attempt']\\n                prev_attempt = prev_row['attempt']\\n                if curr_attempt > prev_attempt:\\n                    best = (rid, obs, row)\\n                elif curr_attempt == prev_attempt:\\n                    if obs > obs:  # This is always false, but we need to compare obs\\n                        pass\\n                    elif obs == obs:\\n                        # Tie in attempt and observed_at? Use run_id lexicographic smallest\\n                        if rid < best[0]:\\n                            best = (rid, obs, row)\\n                    else:\\n                        # obs < prev_obs, so prev is better\\n                        pass\\n                else:\\n                    # curr_attempt < prev_attempt, so prev is better\\n                    pass\\n        if best:\\n            result[job] = best[2]\\n    return result\",\n\"pipeline.py\": \"from quotes import select as quote_select\\nfrom runs import reconcile as run_reconcile\\nfrom times import instant\\n\\ndef snapshot(quote_rows, run_rows, event, asof):\\n    if not isinstance(event, str) or len(event.strip()) == 0:\\n        raise ValueError('event must be a nonempty string')\\n    try:\\n        asof_dt = instant(asof)\\n    except (ValueError, TypeError):\\n        raise ValueError('invalid asof')\\n    quotes = quote_select(quote_rows, event, asof_dt)\\n    runs = run_reconcile(run_rows, asof_dt)\\n    successful_rows = 0\\n    failures = []\\n    partial_jobs = []\\n    unknown_jobs = []\\n    for job, run in runs.items():\\n        status = run['status']\\n        dr = run['downloaded_rows']\\n        if status in ('ok', 'partial'):\\n            successful_rows += dr\\n        if status == 'failed':\\n            failures.append(job)\\n        elif status == 'partial':\\n            partial_jobs.append(job)\\n        elif status == 'pending':\\n            unknown_jobs.append(job)\\n    return {\\n        'quotes': quotes,\\n        'runs': runs,\\n        'successful_rows': successful_rows,\\n        'failures': sorted(failures),\\n        'partial_jobs': sorted(partial_jobs),\\n        'unknown_jobs': sorted(unknown_jobs)\\n    }\",\n\"tests.py\": \"import json\\nfrom datetime import datetime, timezone\\nfrom copy import deepcopy\\nimport math\\n\\ndef run_tests(candidate):\\n    # Test 1: Basic snapshot with valid inputs\\n    asof = '2023-01-01T00:00:00Z'\\n    event = 'test_event'\\n    quote_rows = [\\n        {'id': 'q1', 'book': 'b1', 'event': 'test_event', 'observed_at': '2022-12-31T23:59:59Z', 'expires_at': '2023-01-02T00:00:00Z', 'last_update': '2022-12-31T23:59:58Z', 'odds': 150},\\n        {'id': 'q2', 'book': 'b1', 'event': 'test_event', 'observed_at': '2022-12-31T23:59:58Z', 'expires_at': '2023-01-02T00:00:00Z', 'last_update': '2022-12-31T23:59:57Z', 'odds': 200},\\n        {'id': 'q3', 'book': 'b2', 'event': 'test_event', 'observed_at': '2022-12-31T23:59:59Z', 'expires_at': '2023-01-02T00:00:00Z', 'last_update': '2022-12-31T23:59:58Z', 'odds': -110},\\n    ]\\n    run_rows = [\\n        {'run_id': 'r1', 'job': 'j1', 'attempt': 1, 'observed_at': '2022-12-31T23:59:59Z', 'status': 'ok', 'downloaded_rows': 10},\\n        {'run_id': 'r2', 'job': 'j2', 'attempt': 1, 'observed_at': '2022-12-31T23:59:58Z', 'status': 'failed', 'downloaded_rows': 0},\\n    ]\\n    result = candidate(quote_rows, run_rows, event, asof)\\n    assert 'quotes' in result\\n    assert 'runs' in result\\n    assert 'successful_rows' in result\\n    assert 'failures' in result\\n    assert 'partial_jobs' in result\\n    assert 'unknown_jobs' in result\\n    assert len(result['quotes']) == 2\\n    assert result['quotes']['b1']['probability'] == 100 / (150 + 100)\\n    assert result['quotes']['b2']['probability'] == 110 / (110 + 100)\\n    assert result['successful_rows'] == 10\\n    assert result['failures'] == ['j2']\\n    assert result['partial_jobs'] == []\\n    assert result['unknown_jobs'] == []\\n\\n    # Test 2: Invalid asof\\n    try:\\n        candidate(quote_rows, run_rows, event, 'invalid')\\n        assert False, 'Should have raised ValueError'\\n    except ValueError:\\n        pass\\n\\n    # Test 3: Invalid event\\n    try:\\n        candidate(quote_rows, run_rows, '', asof)\\n        assert False, 'Should have raised ValueError'\\n    except ValueError:\\n        pass\\n\\n    # Test 4: Empty inputs\\n    result = candidate([], [], event, asof)\\n    assert result['quotes'] == {}\\n    assert result['runs'] == {}\\n    assert result['successful_rows'] == 0\\n    assert result['failures'] == []\\n    assert result['partial_jobs'] == []\\n    assert result['unknown_jobs'] == []\\n\\n    # Test 5: Probability function edge cases\\n    from quotes import probability\\n    assert abs(probability(100) - 0.5) < 1e-9\\n    assert abs(probability(-110) - 110/210) < 1e-9\\n    try:\\n        probability(50)\\n        assert False, 'Should have raised ValueError'\\n    except ValueError:\\n        pass\\n    try:\\n        probability(True)\\n        assert False, 'Should have raised ValueError'\\n    except ValueError:\\n        pass\\n\\n    # Test 6: Runs reconciliation with duplicates\\n    run_rows_dup = [\\n        {'run_id': 'r1', 'job': 'j1', 'attempt': 1, 'observed_at': '2022-12-31T23:59:58Z', 'status': 'ok', 'downloaded_rows': 5},\\n        {'run_id': 'r1', 'job': 'j1', 'attempt': 2, 'observed_at': '2022-12-31T23:59:59Z', 'status': 'failed', 'downloaded_rows': 0},\\n    ]\\n    result = candidate([], run_rows_dup, event, asof)\\n    assert len(result['runs']) == 1\\n    assert result['runs']['j1']['status'] == 'failed'\\n    assert result['failures'] == ['j1']\\n    assert result['successful_rows'] == 0\\n\\n    # Test 7: Quote selection with ties in observed_at\\n    quote_rows_tie = [\\n        {'id': 'q2', 'book': 'b1', 'event': 'test_event', 'observed_at': '2022-12-31T23:59:59Z', 'expires_at': '2023-01-02T00:00:00Z', 'last_update': '2022-12-31T23:59:58Z', 'odds': 200},\\n        {'id': 'q1', 'book': 'b1', 'event': 'test_event', 'observed_at': '2022-12-31T23:59:59Z', 'expires_at': '2023-01-02T00:00:00Z', 'last_update': '2022-12-31T23:59:58Z', 'odds': 150},\\n    ]\\n    result = candidate(quote_rows_tie, [], event, asof)\\n    assert len(result['quotes']) == 1\\n    # q1 should be selected because it has smaller id in tie\n\""
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 31328017334,
+  "load_duration": 4580157250,
+  "prompt_eval_count": 1130,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 430469000,
+  "eval_count": 3050,
+  "eval_duration": 26310858000,
+  "wall_seconds": 32.253281000012066,
+  "memory_samples": [
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 81,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

@@ -203,3 +203,6 @@ PR147 follow-up: GLM4 unattempted baseline requests classified provider-unavaila
 
 
 PR147 October3 ceiling freeze: baseline terminal17 paid attempts+4GLM provider-unavailable deferrals, reported$0.055236609,reserved$0.10296242. MiMo reviews4seeded+offset and hard5/5, exact extraction; coding empty8192. New integrated182-case/19-mutant round frozen before inference:18local +12API,local32K/64Kctx,API64K/3600s,paid9 maximum estimate$0.40233936 under combined owner$1 guard. GLM stress explicitly pins DeepInfraFP4 after preserved Relace errors. Author-only methodology; final hub allocation pending.
+
+
+PR147 integrated ceiling checkpoint: active sequential queue98555, Qwen3.6fast three stop responses author inspected/graded: invalid implementation JSON, regression wrong file bundle, review5/10 real causes with2false/3duplicates/3non-defect annotations. Qwen3.8Q4 sampled thinking implementation stop below32K with empty final; no source salvaged, no cap escalation justified. Remaining26 stress requests pending/unstarted. See CEILING_RESULTS.md and ceiling-summary.json; final allocation and independent validation pending.

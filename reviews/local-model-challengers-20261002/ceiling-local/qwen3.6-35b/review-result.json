@@ -1,0 +1,118 @@
+{
+  "model": "qwen3.6:35b",
+  "created_at": "2026-10-03T10:39:14.729912Z",
+  "message": {
+    "role": "assistant",
+    "content": "[\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 21,\n    \"explanation\": \"The comparison `row['observed_at']>latest[row['book']]['observed_at']` compares raw input values (likely strings or datetime objects) directly. The contract requires selecting the greatest eligible *absolute instant*. If inputs are ISO strings with different offsets, lexicographical comparison is incorrect. Even if datetimes, it fails to normalize to UTC before comparison as required by 'All comparisons use absolute instants'. It should compare `instant(row['observed_at'])` values.\"\n  },\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 21,\n    \"explanation\": \"The logic `row['observed_at']>latest...` does not handle the tie-breaking rule. The contract states: 'absolute-time ties choose lexicographically smallest id'. This code only updates if strictly greater, ignoring the ID tie-breaker for equal observed_at times. It also ignores the 'first eligible input row' rule for exact instant AND ID ties.\"\n  },\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 37,\n    \"explanation\": \"The rank comparison `observed>old[0] or (observed==old[0] and row['id']<old[1])` compares the raw `row['id']` string against `old[1]`. While this works for lexicographical ID comparison, `old[0]` is the raw `observed_at` value from the first candidate, not the normalized instant. If the first candidate had a different timezone offset than subsequent candidates, comparing raw values for equality (`observed==old[0]`) is incorrect because two different UTC instants might have identical string representations in different timezones or vice versa. The comparison must be done on normalized UTC datetimes.\"\n  },\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 37,\n    \"explanation\": \"The tie-breaking logic `row['id']<old[1]` selects the lexicographically smallest ID. However, the contract specifies that for 'equal instant/id ties', it should 'keep first eligible input row'. The current code overwrites if a new row has a smaller ID, which violates the 'first-input' rule for exact ties (same observed_at instant AND same id). It should only update if the new rank is strictly better in time, or equal in time but strictly better in ID, but must preserve the first input if both time and ID are identical.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 20,\n    \"explanation\": \"The condition `observed>=stamps[identity]` uses `>=` for deduplication. The contract states: 'exact time ties retaining first eligible input row'. Using `>=` means a later input with the same timestamp will overwrite the earlier one, violating the first-input rule for exact time ties.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 27,\n    \"explanation\": \"The block `if True: picked[key]=row;ranks[key]=rank` unconditionally overwrites the selected row for each job. The contract requires selecting 'each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id'. This code ignores the attempt number and other tie-breakers entirely, simply taking the last processed unique identity for that job.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 27,\n    \"explanation\": \"The selection logic fails to implement the multi-level ranking (attempt, then observed_at, then run_id). It treats all valid unique identities for a job as equivalent and overwrites arbitrarily based on iteration order.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 9,\n    \"explanation\": \"The call `select(quote_rows,event,at)` passes the normalized UTC datetime `at` as `asof`. However, `quotes.select` expects `asof` to be a value that `instant()` can process. While passing a datetime is valid for `instant()`, the contract says `asof` must satisfy the `instant` rule (timezone-aware). The pipeline validates `asof` in line 6 and passes the result. This is technically correct per the code flow, but note that `select` calls `instant(asof)` again. If `asof` was already normalized, this is redundant but safe. However, the bigger issue is in `reconcile(run_rows, at)`. The contract says `reconcile(rows, asof)` takes `asof`. Passing a datetime is valid. But look at line 9: `quotes=select(quote_rows,event,at)`. The `select` function signature is `select(rows,event,asof)`. Inside `select`, it calls `instant(asof)`. This is fine. Wait, look at `pipeline.py` line 9 again. It passes `at` (a datetime) to `select`. `select` expects `asof`. The contract says `asof` must satisfy the `instant` rule. A UTC datetime satisfies this. So this specific call is valid. However, check `reconcile(run_rows, at)`. Same logic. This line is actually correct in terms of type passing.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 9,\n    \"explanation\": \"The contract states: 'Validate asof and event even if inputs are empty.' The code validates `asof` in line 6 (via `instant`) and `event` in line 7. This is correct.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 9,\n    \"explanation\": \"The contract states: 'Quotes are independent of runs; don't require a successful job to select a quote'. The code calls `select` and `reconcile` independently. This is correct.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 10,\n    \"explanation\": \"The calculation of `failures` includes jobs with status 'pending': `if row['status'] in ('failed','pending')`. The contract states: 'failures contains only selected failed jobs'. Pending jobs should NOT be included in failures. They belong in `unknown_jobs`.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 10,\n    \"explanation\": \"The calculation of `unknown_jobs` includes jobs with status 'pending': `if row['status']=='pending'`. This is correct per contract. However, the `failures` list incorrectly includes pending jobs.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 10,\n    \"explanation\": \"The contract states: 'Never infer pending is success/failure'. By including 'pending' in the `failures` list, the code infers pending is a failure, which violates the contract.\"\n  }\n]"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 18219757875,
+  "load_duration": 2053855125,
+  "prompt_eval_count": 2522,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 789668000,
+  "eval_count": 1550,
+  "eval_duration": 15365454000,
+  "wall_seconds": 19.167185750004137,
+  "memory_samples": [
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.6:35b",
+      "size": 22705350900,
+      "size_vram": 22705350900,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 80,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

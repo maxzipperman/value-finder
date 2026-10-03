@@ -1,0 +1,3023 @@
+{
+  "model": "qwen3.8:27b",
+  "created_at": "2026-10-03T10:49:54.043635Z",
+  "message": {
+    "role": "assistant",
+    "content": "",
+    "thinking": "Let me carefully analyze the contract and implement the four files.\n\n**times.py:**\n- `times.instant(value)` - accepts ISO8601 strings (accepted by datetime.fromisoformat, including Z) or datetime objects\n- Must be timezone-aware with non-None utcoffset\n- Normalize to UTC\n- Otherwise raise ValueError\n\n**quotes.py:**\n- `quotes.probability(value)` - accepts finite int, float or float-convertible str, excluding bool, with abs>=100\n- Positive American odds: 100/(v+100)\n- Negative odds: (-v)/((-v)+100)\n- Unsupported types, conversion/overflow, NaN/inf and small magnitude raise ValueError\n\n- `quotes.select(rows, event, asof)` - returns dict keyed by book\n  - Required quote fields: nonempty strings id, book, event\n  - observed_at, expires_at, last_update accepted by instant\n  - valid odds\n  - Eligible iff matching event AND observed_at<=asof<expires_at AND last_update<=observed_at\n  - Select greatest eligible observed_at per book\n  - Absolute-time ties choose lexicographically smallest id\n  - Equal instant/id ties keep first eligible input row\n  - Do not copy chosen row\n  - Books without eligible quotes are omitted\n\n**runs.py:**\n- `runs.reconcile(rows, asof)` - returns dict keyed by job\n  - Required fields: nonempty strings run_id, job\n  - positive int attempt (bool excluded)\n  - observed_at accepted by instant\n  - status exactly one of ok, partial, failed, pending\n  - downloaded_rows nonnegative int (bool excluded)\n  - Failed/pending must have downloaded_rows==0\n  - ok/partial may have 0 or more\n  - Skip malformed/future rows\n  - First deduplicate by run_id: greatest eligible absolute observed_at wins, exact time ties retain first eligible input row\n  - Then select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first\n  - No status-preference rule\n  - Duplicate replay of identical rows must not inflate counts\n\n**pipeline.py:**\n- `pipeline.snapshot(quote_rows, run_rows, event, asof)`\n- Returns exactly the specified dict\n- Validate asof and event even if inputs are empty\n- Must invoke supporting modules\n\nLet me now implement each file:\n\n**times.py:**\n\n```python\nfrom datetime import datetime, timezone\n\ndef instant(value):\n    if isinstance(value, bool):\n        raise ValueError(\"bool not accepted\")\n    if isinstance(value, datetime):\n        if value.utcoffset() is None:\n            raise ValueError(\"must be timezone-aware\")\n        return value.astimezone(timezone.utc)\n    if isinstance(value, str):\n        try:\n            dt = datetime.fromisoformat(value)\n        except (ValueError, TypeError):\n            raise ValueError(f\"invalid ISO8601 string: {value!r}\")\n        if dt.utcoffset() is None:\n            raise ValueError(\"must be timezone-aware\")\n        return dt.astimezone(timezone.utc)\n    raise ValueError(f\"unsupported type: {type(value).__name__}\")\n```\n\nWait, the contract says \"accepts only ISO8601 strings accepted by datetime.fromisoformat (including Z), or datetime objects.\" So bool is not a datetime or string, so it would naturally be rejected. But let me be explicit.\n\nActually, looking more carefully: \"Require timezone-aware values with non-None utcoffset; normalize to UTC. Otherwise raise ValueError.\"\n\nSo if a datetime is naive (no tzinfo), raise ValueError. If a string can't be parsed, raise ValueError. If the parsed datetime is naive, raise ValueError.\n\n**quotes.py:**\n\n```python\nfrom times import instant\nimport math\n\ndef probability(value):\n    if isinstance(value, bool):\n        raise ValueError(\"bool not accepted\")\n    if isinstance(value, int):\n        v = value\n    elif isinstance(value, float):\n        v = value\n    elif isinstance(value, str):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError):\n            raise ValueError(f\"invalid string: {value!r}\")\n    else:\n        raise ValueError(f\"unsupported type: {type(value).__name__}\")\n    \n    if math.isnan(v) or math.isinf(v):\n        raise ValueError(\"NaN/inf not allowed\")\n    if abs(v) < 100:\n        raise ValueError(\"magnitude too small\")\n    \n    if v > 0:\n        return 100.0 / (v + 100.0)\n    else:\n        return (-v) / ((-v) + 100.0)\n```\n\nWait, what about int values? If v is a very large int, converting to float might overflow. Let me handle that.\n\nActually, the contract says \"Values unrepresentable as finite float are invalid.\" So if an int is too large to convert to float, that's invalid.\n\nLet me re-read: \"accepts finite int, float or float-convertible str, excluding bool, with abs>=100\"\n\nSo for int: it must be finite (all Python ints are finite in the sense they're exact), but \"Values unrepresentable as finite float are invalid.\" So if the int is too large to be a finite float, raise ValueError.\n\nFor float: it must be finite (not NaN, not inf).\n\nFor str: must be float-convertible, and the result must be finite.\n\nLet me revise:\n\n```python\ndef probability(value):\n    if isinstance(value, bool):\n        raise ValueError(\"bool not accepted\")\n    if isinstance(value, int):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError):\n            raise ValueError(\"value unrepresentable as finite float\")\n    elif isinstance(value, float):\n        v = value\n    elif isinstance(value, str):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError):\n            raise ValueError(f\"invalid string: {value!r}\")\n    else:\n        raise ValueError(f\"unsupported type: {type(value).__name__}\")\n    \n    if math.isnan(v) or math.isinf(v):\n        raise ValueError(\"NaN/inf not allowed\")\n    if abs(v) < 100:\n        raise ValueError(\"magnitude too small\")\n    \n    if v > 0:\n        return 100.0 / (v + 100.0)\n    else:\n        nv = -v\n        return nv / (nv + 100.0)\n```\n\nNow for `quotes.select`:\n\n```python\ndef select(rows, event, asof):\n    # asof is already a datetime (validated by pipeline or caller)\n    # Actually, the contract says quotes.select(rows, event, asof)\n    # Let me re-read...\n    \n    # Required quote fields: nonempty strings id, book, event\n    # observed_at, expires_at, last_update accepted by instant\n    # valid odds (field name? Let me check... \"valid odds\" - I'll assume the field is \"odds\")\n    \n    # Wait, the contract says \"valid odds\" but doesn't specify the field name explicitly.\n    # Let me re-read: \"Required quote fields: nonempty strings id, book, event; observed_at, expires_at, last_update accepted by instant; valid odds.\"\n    \n    # I think the odds field is called \"odds\" based on context.\n    \n    eligible = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        # Check required fields\n        qid = row.get('id')\n        book = row.get('book')\n        ev = row.get('event')\n        if not isinstance(qid, str) or not qid:\n            continue\n        if not isinstance(book, str) or not book:\n            continue\n        if not isinstance(ev, str) or not ev:\n            continue\n        # Must match event\n        if ev != event:\n            continue\n        # Check time fields\n        try:\n            obs = instant(row.get('observed_at'))\n            exp = instant(row.get('expires_at'))\n            lu = instant(row.get('last_update'))\n        except (ValueError, TypeError, KeyError):\n            continue\n        # Check odds\n        try:\n            prob = probability(row.get('odds'))\n        except (ValueError, TypeError):\n            continue\n        # Eligibility: observed_at <= asof < expires_at AND last_update <= observed_at\n        if not (obs <= asof < exp):\n            continue\n        if not (lu <= obs):\n            continue\n        eligible.append((obs, qid, i, book, prob, row))\n    \n    # Select greatest eligible observed_at per book\n    # Absolute-time ties choose lexicographically smallest id\n    # Equal instant/id ties keep first eligible input row\n    \n    # Group by book\n    by_book = {}\n    for obs, qid, idx, book, prob, row in eligible:\n        if book not in by_book:\n            by_book[book] = []\n        by_book[book].append((obs, qid, idx, prob, row))\n    \n    result = {}\n    for book, candidates in by_book.items():\n        # Sort by: greatest observed_at (desc), then lexicographically smallest id (asc), then first input (asc index)\n        # We want the \"best\" one: greatest obs, then smallest id, then smallest index\n        best = None\n        for obs, qid, idx, prob, row in candidates:\n            if best is None:\n                best = (obs, qid, idx, prob, row)\n            else:\n                b_obs, b_qid, b_idx, b_prob, b_row = best\n                if obs > b_obs:\n                    best = (obs, qid, idx, prob, row)\n                elif obs == b_obs:\n                    if qid < b_qid:\n                        best = (obs, qid, idx, prob, row)\n                    elif qid == b_qid:\n                        if idx < b_idx:\n                            best = (obs, qid, idx, prob, row)\n        result[book] = {'row': best[4], 'probability': best[3]}\n    \n    return result\n```\n\nWait, I need to be more careful. The sorting criteria are:\n1. Greatest eligible observed_at (highest wins)\n2. Absolute-time ties \u2192 lexicographically smallest id\n3. Equal instant/id ties \u2192 first eligible input row (smallest index)\n\nSo I'm looking for: max(obs), then min(id) among those with max(obs), then min(index) among those with max(obs) and min(id).\n\nLet me restructure:\n\n```python\nfor book, candidates in by_book.items():\n    # Find max observed_at\n    max_obs = max(c[0] for c in candidates)\n    # Filter to those with max_obs\n    tied = [c for c in candidates if c[0] == max_obs]\n    # Find min id among tied\n    min_id = min(c[1] for c in tied)\n    # Filter to those with min_id\n    tied2 = [c for c in tied if c[1] == min_id]\n    # First input (min index)\n    tied2.sort(key=lambda x: x[2])\n    best = tied2[0]\n    result[book] = {'row': best[4], 'probability': best[3]}\n```\n\nThis is cleaner. Let me use this approach.\n\n**runs.py:**\n\n```python\nfrom times import instant\n\ndef reconcile(rows, asof):\n    # Required fields: nonempty strings run_id, job\n    # positive int attempt (bool excluded)\n    # observed_at accepted by instant\n    # status exactly one of ok, partial, failed, pending\n    # downloaded_rows nonnegative int (bool excluded)\n    # Failed/pending must have downloaded_rows==0\n    # ok/partial may have 0 or more\n    # Skip malformed/future rows (future = observed_at > asof)\n    \n    valid = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        run_id = row.get('run_id')\n        job = row.get('job')\n        if not isinstance(run_id, str) or not run_id:\n            continue\n        if not isinstance(job, str) or not job:\n            continue\n        attempt = row.get('attempt')\n        if isinstance(attempt, bool) or not isinstance(attempt, int):\n            continue\n        if attempt <= 0:\n            continue\n        try:\n            obs = instant(row.get('observed_at'))\n        except (ValueError, TypeError):\n            continue\n        status = row.get('status')\n        if status not in ('ok', 'partial', 'failed', 'pending'):\n            continue\n        dl = row.get('downloaded_rows')\n        if isinstance(dl, bool) or not isinstance(dl, int):\n            continue\n        if dl < 0:\n            continue\n        if status in ('failed', 'pending') and dl != 0:\n            continue\n        # Not future\n        if obs > asof:\n            continue\n        valid.append((obs, run_id, i, row))\n    \n    # Deduplicate by run_id: greatest eligible absolute observed_at wins\n    # Exact time ties retain first eligible input row (smallest index)\n    by_run_id = {}\n    for obs, run_id, idx, row in valid:\n        if run_id not in by_run_id:\n            by_run_id[run_id] = []\n        by_run_id[run_id].append((obs, idx, row))\n    \n    deduped = {}\n    for run_id, candidates in by_run_id.items():\n        max_obs = max(c[0] for c in candidates)\n        tied = [c for c in candidates if c[0] == max_obs]\n        tied.sort(key=lambda x: x[1])  # first input\n        deduped[run_id] = tied[0]  # (obs, idx, row)\n    \n    # Now group by job and select latest attempt\n    # Greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first\n    by_job = {}\n    for run_id, (obs, idx, row) in deduped.items():\n        job = row['job']\n        if job not in by_job:\n            by_job[job] = []\n        by_job[job].append((row['attempt'], obs, run_id, idx, row))\n    \n    result = {}\n    for job, candidates in by_job.items():\n        # Greatest attempt\n        max_attempt = max(c[0] for c in candidates)\n        tied = [c for c in candidates if c[0] == max_attempt]\n        # Greatest observed_at\n        max_obs = max(c[1] for c in tied)\n        tied2 = [c for c in tied if c[1] == max_obs]\n        # Lexicographically smallest run_id\n        min_rid = min(c[2] for c in tied2)\n        tied3 = [c for c in tied2 if c[2] == min_rid]\n        # First input\n        tied3.sort(key=lambda x: x[3])\n        best = tied3[0]\n        result[job] = best[4]  # the original row\n    \n    return result\n```\n\nWait, I need to re-read the deduplication rule: \"First deduplicate by run_id: greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row.\"\n\nSo among all valid rows with the same run_id, pick the one with the greatest observed_at. If there's a tie in observed_at, pick the first one in input order.\n\nThen: \"Then select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first.\"\n\nSo after deduplication, group by job. For each job, pick the row with:\n1. Greatest attempt\n2. Then greatest observed_at\n3. Then lexicographically smallest run_id\n4. Then first input (this is the \"exact ties first\" part)\n\nWait, \"with exact ties first\" - this means if all three criteria (attempt, observed_at, run_id) are tied, keep the first one in input order.\n\nActually, I think \"exact ties\" means ties in all the preceding criteria. So:\n1. Greatest attempt\n2. Among those, greatest observed_at\n3. Among those, lexicographically smallest run_id\n4. Among those, first input order\n\nThat makes sense.\n\n**pipeline.py:**\n\n```python\nimport times\nimport quotes\nimport runs\n\ndef snapshot(quote_rows, run_rows, event, asof):\n    # Validate asof first\n    asof_dt = times.instant(asof)\n    \n    # Validate event\n    if not isinstance(event, str) or not event:\n        raise ValueError(\"event must be a nonempty string\")\n    \n    # Process quotes and runs\n    quotes_result = quotes.select(quote_rows, event, asof_dt)\n    runs_result = runs.reconcile(run_rows, asof_dt)\n    \n    # Compute stats from runs\n    successful_rows = 0\n    failures = []\n    partial_jobs = []\n    unknown_jobs = []\n    \n    for job, row in runs_result.items():\n        status = row['status']\n        if status == 'ok':\n            successful_rows += row['downloaded_rows']\n        elif status == 'partial':\n            successful_rows += row['downloaded_rows']\n            partial_jobs.append(job)\n        elif status == 'failed':\n            failures.append(job)\n        elif status == 'pending':\n            unknown_jobs.append(job)\n    \n    return {\n        'quotes': quotes_result,\n        'runs': runs_result,\n        'successful_rows': successful_rows,\n        'failures': sorted(failures),\n        'partial_jobs': sorted(partial_jobs),\n        'unknown_jobs': sorted(unknown_jobs),\n    }\n```\n\nWait, the contract says \"event must be a nonempty str (whitespace allowed)\". So \" \" (a space) is valid. Let me fix: `if not isinstance(event, str) or len(event) == 0: raise ValueError`. Actually \"nonempty\" means len > 0. A string with only whitespace is still nonempty. So the check is just `not isinstance(event, str) or event == \"\"`.\n\nActually wait, re-reading: \"event must be a nonempty str (whitespace allowed)\". So whitespace-only strings are valid. The check is: must be a str, and must not be empty (len > 0).\n\nLet me also double-check: \"Validate asof and event even if inputs are empty.\" So we validate asof and event before processing the lists. And \"invalid asof raises ValueError before inspecting either list. invalid event raises ValueError.\"\n\nSo the order is: validate asof, then validate event, then process.\n\nWait, actually re-reading: \"asof must satisfy this rule; invalid asof raises ValueError before inspecting either list. event must be a nonempty str (whitespace allowed); invalid event raises ValueError.\"\n\nIt doesn't explicitly say event is validated before asof or after. But it says asof is validated \"before inspecting either list\" and event validation also raises ValueError. I'll validate asof first, then event, then process.\n\nNow let me also think about the \"no mutation\" requirement. The contract says \"no mutation of either list or any input dictionary.\" I'm not mutating anything, just reading from them. Good.\n\n\"Do not copy chosen row.\" - I'm returning the original dict reference. Good.\n\nLet me also think about edge cases:\n- `quotes.select` with empty rows \u2192 empty dict\n- `runs.reconcile` with empty rows \u2192 empty dict\n- Both with empty rows \u2192 zero counts, empty lists\n\nLet me also make sure I handle the case where `rows` might not be a list. The contract says \"Inputs quote_rows/run_rows are lists of arbitrary objects.\" So they should be lists. But what if they're not? I'll just iterate over them (if they're iterable). Actually, the contract says they ARE lists, so I'll assume they are. But to be safe, I'll just iterate.\n\nWait, actually \"Malformed individual records are skipped\" - this means non-dict items in the list are skipped. And dict items with missing/invalid fields are skipped.\n\nLet me also reconsider the `probability` function. The contract says \"float-convertible str\". So what about strings like \"100\", \"100.5\", \"-200\"? These should work. What about \"nan\", \"inf\"? These convert to NaN/inf, which should be rejected. What about \"  100  \" with whitespace? float(\"  100  \") works in Python. I'll let that be handled naturally.\n\nWhat about very large strings like \"1e999\"? float(\"1e999\") raises OverflowError in Python. Let me check... actually in Python, `float(\"1e999\")` returns `inf`. Let me verify:\n- `float(\"1e400\")` \u2192 `inf` (actually, I think it might raise OverflowError or return inf)\n\nActually in CPython, `float(\"1e400\")` returns `inf`. So I need to check for inf after conversion.\n\nWhat about `float(\"1e-999\")`? That returns `0.0`. And `abs(0.0) < 100`, so it would be rejected. Good.\n\nNow let me also think about the int case. In Python 3, integers are arbitrary precision. So `2**1000` is a valid int. But `float(2**1000)` would raise OverflowError. So I need to catch that.\n\nActually, let me test: in Python, `float(2**1000)` raises `OverflowError: int too large to convert to float`. Yes.\n\nSo my code handles that with the try/except around `float(value)`.\n\nLet me finalize the code.\n\nActually, wait. Let me re-read the probability contract more carefully:\n\n\"quotes.probability(value) accepts finite int, float or float-convertible str, excluding bool, with abs>=100. Unsupported types, conversion/overflow, NaN/inf and small magnitude raise ValueError. Positive American odds give 100/(v+100), negative odds give (-v)/((-v)+100). Values unrepresentable as finite float are invalid. No Decimal/custom numeric support required.\"\n\nSo:\n- Finite int (but must be representable as finite float) \u2192 abs >= 100\n- Float (must be finite) \u2192 abs >= 100\n- Float-convertible str (result must be finite) \u2192 abs >= 100\n- Exclude bool\n- No Decimal/custom numeric\n\nThe formula:\n- v > 0: 100 / (v + 100)\n- v < 0: (-v) / ((-v) + 100)\n\nWhat about v = 100? 100/(100+100) = 0.5\nWhat about v = -100? 100/(100+100) = 0.5\n\nThese are valid since abs >= 100.\n\nWhat about v = 99? abs < 100, invalid.\nWhat about v = -99? abs < 100, invalid.\n\nOK, my implementation looks correct.\n\nNow let me think about the `instant` function more carefully. The contract says \"accepts only ISO8601 strings accepted by datetime.fromisoformat (including Z), or datetime objects.\"\n\nIn Python 3.14, `datetime.fromisoformat` is more permissive than earlier versions. It accepts 'Z' suffix. In Python 3.11+, `fromisoformat` accepts 'Z'. Since we're targeting 3.14, this should be fine.\n\nWhat about a datetime with a non-UTC timezone? Like `datetime(2024, 1, 1, 12, 0, tzinfo=timezone(timedelta(hours=5)))`. This is timezone-aware with non-None utcoffset. So it should be accepted and normalized to UTC.\n\nWhat about a custom tzinfo class that returns None for utcoffset? That would be rejected.\n\nWhat about a string that parses to a naive datetime? Like \"2024-01-01T12:00:00\" (no timezone). `fromisoformat` would parse it, but `utcoffset()` would be None. So reject.\n\nOK, I think my implementation is correct.\n\nLet me also think about whether `rows` could be None or something other than a list. The contract says they are lists, so I'll trust that. But if someone passes None, iterating would raise TypeError. I'll just let that propagate naturally since the contract guarantees they're lists.\n\nActually, wait - \"Inputs quote_rows/run_rows are lists of arbitrary objects.\" This is a guarantee, so I don't need to handle non-list inputs.\n\nLet me now write the final code.\n\nOne more thing: \"Package uses absolute imports among those four files, no other local module imports.\"\n\nSo in quotes.py, I import `from times import instant` (absolute import). In runs.py, same. In pipeline.py, `import times`, `import quotes`, `import runs`.\n\nWait, actually \"absolute imports\" means I use `import times` or `from times import instant` rather than `from .times import instant`. Since these are top-level modules (not in a package), `import times` is the absolute import.\n\nLet me finalize all four files now.\n\nActually, I want to double-check one thing about the runs reconciliation. The contract says:\n\n\"Duplicate replay of identical rows must not inflate counts.\"\n\nThis means if the same row (same run_id, same everything) appears twice, it should only be counted once. My deduplication by run_id handles this naturally - the second occurrence would be deduplicated against the first (same observed_at, so first input wins).\n\n\"Invalid/future duplicates cannot suppress a valid previous record.\"\n\nThis means if row A (run_id=\"X\", valid) appears first, and row B (run_id=\"X\", invalid/future) appears second, row A should still be selected. Since invalid/future rows are skipped entirely, they don't participate in deduplication. So row A would be the only candidate for run_id \"X\". Good.\n\n\"run_id is global across jobs, and a later valid record may correct the job field.\"\n\nSo if run_id \"X\" appears with job \"A\" in one row and job \"B\" in another row, they're the same run_id. The deduplication picks the best one, and that determines the job. So the \"job\" of run_id \"X\" is determined by whichever row wins deduplication.\n\nLet me trace through an example:\n- Row 1: run_id=\"X\", job=\"A\", attempt=1, observed_at=T1, status=\"ok\", downloaded_rows=100\n- Row 2: run_id=\"X\", job=\"B\", attempt=2, observed_at=T2>T1, status=\"ok\", downloaded_rows=200\n\nAfter dedup: run_id \"X\" \u2192 Row 2 (greater observed_at), job=\"B\"\nResult: job \"B\" has one selected row with downloaded_rows=200.\nJob \"A\" has no selected rows (since run_id \"X\" is assigned to job \"B\").\n\nThis makes sense.\n\nNow let me write the final implementation.\n\nActually, one more consideration: the contract says \"No I/O, environment, network, subprocess, tools or production inputs.\" and \"standard library only.\" My implementation only uses `datetime`, `math` from stdlib. Good.\n\nLet me also make sure I'm not importing anything I don't need.\n\ntimes.py: `from datetime import datetime, timezone`\nquotes.py: `import math`, `from times import instant`\nruns.py: `from times import instant`\npipeline.py: `import times`, `import quotes`, `import runs`\n\nWait, do I need `timezone` in times.py? Yes, for `timezone.utc`.\n\nActually, I can use `datetime.timezone.utc` or import `timezone` separately. Let me use `from datetime import datetime, timezone`.\n\nHmm, but actually I need to be careful. The contract says the package uses absolute imports. Let me make sure `from times import instant` works. If these files are in the same directory, `import times` would work as a top-level module. `from times import instant` also works.\n\nLet me write the final code now.\n\nWait, one more edge case for `instant`: what if `value` is a `bool`? `bool` is a subclass of `int` in Python, but it's not a `datetime` or `str`, so it would fall through to the else clause and raise ValueError. Good.\n\nWhat if `value` is None? Not a datetime, not a str \u2192 ValueError. Good.\n\nWhat if `value` is a bytes object? Not a datetime, not a str \u2192 ValueError. Good.\n\nOK let me also think about whether `quotes.select` should validate the `event` parameter. The contract says `pipeline.snapshot` validates event. But `quotes.select` takes event as a parameter. I think the validation happens in pipeline, and quotes.select just uses it for comparison. The contract says \"quotes.select(rows, event, asof)\" - it doesn't explicitly say it validates event. The pipeline validates it. I'll have quotes.select just use event for string comparison.\n\nSimilarly, `asof` in quotes.select - the pipeline validates it and passes the datetime. But what if someone calls quotes.select directly with an invalid asof? The contract says the pipeline validates. I'll assume quotes.select receives a valid datetime from the pipeline. But to be safe, I could validate in quotes.select too. Actually, the contract says \"pipeline.snapshot(quote_rows, run_rows, event, asof)\" is the entry point, and it validates. The supporting functions are called by the pipeline. I'll keep validation in the pipeline and have the supporting functions expect valid inputs.\n\nWait, but the contract also says the functions are specified independently. Let me re-read:\n\n\"Implement pipeline.snapshot(quote_rows, run_rows, event, asof) and the supporting functions below.\"\n\nThe supporting functions have their own contracts. Let me check if quotes.select has its own validation requirements...\n\n\"quotes.select(rows,event,asof) returns a dict keyed by book...\"\n\nIt doesn't explicitly say it validates event and asof. But the pipeline does. I'll have the pipeline validate and pass valid values to the supporting functions.\n\nActually, to be safe and follow the contract literally, let me have the pipeline do the validation, and the supporting functions just use the values as-is (assuming they're valid). This matches \"The pipeline must invoke the supporting modules; don't embed all logic in the entry point.\"\n\nOK, I'm confident in my implementation. Let me write it out.\n\nOne final check: \"Do not copy chosen row.\" - I'm storing the reference to the original dict, not a copy. Good.\n\n\"Returned dict key order is not scored.\" - I don't need to worry about dict ordering.\n\nLet me write the final JSON output.\n\nActually wait, I realize I should double-check: in the `probability` function, what about the value 0? abs(0) < 100, so it's rejected. What about -100? abs(-100) >= 100, so it's valid. Formula: (-(-100))/((-(-100))+100) = 100/200 = 0.5. Good.\n\nWhat about 100? abs(100) >= 100, valid. Formula: 100/(100+100) = 0.5. Good.\n\nLet me also verify: \"Positive American odds give 100/(v+100)\" - so v=100 \u2192 100/200 = 0.5. v=500 \u2192 100/600 \u2248 0.1667.\n\n\"Negative odds give (-v)/((-v)+100)\" - so v=-100 \u2192 100/200 = 0.5. v=-500 \u2192 500/600 \u2248 0.8333.\n\nMakes sense.\n\nNow, one more thing I want to verify: the contract says \"abs>=100\". So |v| >= 100. v=100 and v=-100 are both valid. v=99.999 is not (for float). v=99 is not (for int).\n\nFor the string case: \"100\" \u2192 float 100.0, abs >= 100, valid. \"99.9\" \u2192 99.9, abs < 100, invalid.\n\nOK, I'm good. Let me write the final output.\n\nHmm, actually let me reconsider one thing. The contract says for `probability`: \"accepts finite int, float or float-convertible str\". Does \"finite int\" mean the int must be representable as a finite float? Yes: \"Values unrepresentable as finite float are invalid.\"\n\nSo `probability(2**2000)` should raise ValueError because `float(2**2000)` overflows.\n\nIn Python: `float(2**2000)` \u2192 `OverflowError: int too large to convert to float`. I catch this.\n\nWhat about `probability(float('nan'))`? NaN is not finite \u2192 ValueError. Good.\nWhat about `probability(float('inf'))`? Not finite \u2192 ValueError. Good.\n\nWhat about `probability(\"nan\")`? `float(\"nan\")` = nan \u2192 not finite \u2192 ValueError. Good.\nWhat about `probability(\"inf\")`? `float(\"inf\")` = inf \u2192 not finite \u2192 ValueError. Good.\nWhat about `probability(\"-inf\")`? `float(\"-inf\")` = -inf \u2192 not finite \u2192 ValueError. Good.\n\nOK, I'm confident. Let me write the final code.\n\nLet me also think about whether I need to handle the case where `rows` is not a list but some other iterable. The contract says they're lists, so I'll just iterate. If it's not iterable, a TypeError will propagate, which is fine since the contract guarantees lists.\n\nFinal implementation:\n\n**times.py:**\n```python\nfrom datetime import datetime, timezone\n\n\ndef instant(value):\n    if isinstance(value, datetime):\n        if value.utcoffset() is None:\n            raise ValueError(\"datetime must be timezone-aware\")\n        return value.astimezone(timezone.utc)\n    if isinstance(value, str):\n        try:\n            dt = datetime.fromisoformat(value)\n        except (ValueError, TypeError) as e:\n            raise ValueError(f\"invalid ISO8601 string: {value!r}\") from e\n        if dt.utcoffset() is None:\n            raise ValueError(\"parsed datetime must be timezone-aware\")\n        return dt.astimezone(timezone.utc)\n    raise ValueError(f\"unsupported type for instant: {type(value).__name__}\")\n```\n\n**quotes.py:**\n```python\nimport math\nfrom times import instant\n\n\ndef probability(value):\n    if isinstance(value, bool):\n        raise ValueError(\"bool is not accepted\")\n    if isinstance(value, int):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError) as e:\n            raise ValueError(\"value unrepresentable as finite float\") from e\n    elif isinstance(value, float):\n        v = value\n    elif isinstance(value, str):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError) as e:\n            raise ValueError(f\"invalid numeric string: {value!r}\") from e\n    else:\n        raise ValueError(f\"unsupported type: {type(value).__name__}\")\n    \n    if math.isnan(v) or math.isinf(v):\n        raise ValueError(\"value must be finite\")\n    if abs(v) < 100:\n        raise ValueError(\"magnitude must be >= 100\")\n    \n    if v > 0:\n        return 100.0 / (v + 100.0)\n    else:\n        nv = -v\n        return nv / (nv + 100.0)\n\n\ndef select(rows, event, asof):\n    eligible = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        qid = row.get('id')\n        if not isinstance(qid, str) or not qid:\n            continue\n        book = row.get('book')\n        if not isinstance(book, str) or not book:\n            continue\n        ev = row.get('event')\n        if not isinstance(ev, str) or not ev:\n            continue\n        if ev != event:\n            continue\n        try:\n            obs = instant(row.get('observed_at'))\n        except (ValueError, TypeError):\n            continue\n        try:\n            exp = instant(row.get('expires_at'))\n        except (ValueError, TypeError):\n            continue\n        try:\n            lu = instant(row.get('last_update'))\n        except (ValueError, TypeError):\n            continue\n        try:\n            prob = probability(row.get('odds'))\n        except (ValueError, TypeError):\n            continue\n        if not (obs <= asof < exp):\n            continue\n        if not (lu <= obs):\n            continue\n        eligible.append((obs, qid, i, book, prob, row))\n    \n    by_book = {}\n    for obs, qid, i, book, prob, row in eligible:\n        if book not in by_book:\n            by_book[book] = []\n        by_book[book].append((obs, qid, i, prob, row))\n    \n    result = {}\n    for book, candidates in by_book.items():\n        max_obs = max(c[0] for c in candidates)\n        tied = [c for c in candidates if c[0] == max_obs]\n        min_id = min(c[1] for c in tied)\n        tied2 = [c for c in tied if c[1] == min_id]\n        tied2.sort(key=lambda x: x[2])\n        best = tied2[0]\n        result[book] = {'row': best[4], 'probability': best[3]}\n    \n    return result\n```\n\n**runs.py:**\n```python\nfrom times import instant\n\n\ndef reconcile(rows, asof):\n    valid = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        run_id = row.get('run_id')\n        if not isinstance(run_id, str) or not run_id:\n            continue\n        job = row.get('job')\n        if not isinstance(job, str) or not job:\n            continue\n        attempt = row.get('attempt')\n        if isinstance(attempt, bool) or not isinstance(attempt, int):\n            continue\n        if attempt <= 0:\n            continue\n        try:\n            obs = instant(row.get('observed_at'))\n        except (ValueError, TypeError):\n            continue\n        status = row.get('status')\n        if status not in ('ok', 'partial', 'failed', 'pending'):\n            continue\n        dl = row.get('downloaded_rows')\n        if isinstance(dl, bool) or not isinstance(dl, int):\n            continue\n        if dl < 0:\n            continue\n        if status in ('failed', 'pending') and dl != 0:\n            continue\n        if obs > asof:\n            continue\n        valid.append((obs, run_id, i, row))\n    \n    # Deduplicate by run_id\n    by_run_id = {}\n    for obs, run_id, i, row in valid:\n        if run_id not in by_run_id:\n            by_run_id[run_id] = []\n        by_run_id[run_id].append((obs, i, row))\n    \n    deduped = {}\n    for run_id, candidates in by_run_id.items():\n        max_obs = max(c[0] for c in candidates)\n        tied = [c for c in candidates if c[0] == max_obs]\n        tied.sort(key=lambda x: x[1])\n        best = tied[0]\n        deduped[run_id] = (best[0], best[1], best[2])  # (obs, i, row)\n    \n    # Group by job and select\n    by_job = {}\n    for run_id, (obs, i, row) in deduped.items():\n        job = row['job']\n        if job not in by_job:\n            by_job[job] = []\n        by_job[job].append((row['attempt'], obs, run_id, i, row))\n    \n    result = {}\n    for job, candidates in by_job.items():\n        max_attempt = max(c[0] for c in candidates)\n        tied = [c for c in candidates if c[0] == max_attempt]\n        max_obs = max(c[1] for c in tied)\n        tied2 = [c for c in tied if c[1] == max_obs]\n        min_rid = min(c[2] for c in tied2)\n        tied3 = [c for c in tied2 if c[2] == min_rid]\n        tied3.sort(key=lambda x: x[3])\n        best = tied3[0]\n        result[job] = best[4]\n    \n    return result\n```\n\n**pipeline.py:**\n```python\nimport times\nimport quotes\nimport runs\n\n\ndef snapshot(quote_rows, run_rows, event, asof):\n    asof_dt = times.instant(asof)\n    \n    if not isinstance(event, str) or len(event) == 0:\n        raise ValueError(\"event must be a nonempty string\")\n    \n    quotes_result = quotes.select(quote_rows, event, asof_dt)\n    runs_result = runs.reconcile(run_rows, asof_dt)\n    \n    successful_rows = 0\n    failures = []\n    partial_jobs = []\n    unknown_jobs = []\n    \n    for job, row in runs_result.items():\n        status = row['status']\n        if status == 'ok':\n            successful_rows += row['downloaded_rows']\n        elif status == 'partial':\n            successful_rows += row['downloaded_rows']\n            partial_jobs.append(job)\n        elif status == 'failed':\n            failures.append(job)\n        elif status == 'pending':\n            unknown_jobs.append(job)\n    \n    return {\n        'quotes': quotes_result,\n        'runs': runs_result,\n        'successful_rows': successful_rows,\n        'failures': sorted(failures),\n        'partial_jobs': sorted(partial_jobs),\n        'unknown_jobs': sorted(unknown_jobs),\n    }\n```\n\nNow let me also write the tests:\n\n```python\ndef run_tests(candidate):\n    from datetime import datetime, timezone, timedelta\n    import math\n    import copy\n    import json\n    \n    # Test 1: Invalid asof\n    try:\n        candidate([], [], \"ev\", \"not-a-date\")\n        assert False, \"should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    # Test 2: Invalid event\n    try:\n        candidate([], [], \"\", \"2024-01-01T00:00:00Z\")\n        assert False, \"should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    # Test 3: Empty inputs\n    result = candidate([], [], \"test_event\", \"2024-01-01T00:00:00Z\")\n    assert result == {\n        'quotes': {},\n        'runs': {},\n        'successful_rows': 0,\n        'failures': [],\n        'partial_jobs': [],\n        'unknown_jobs': []\n    }\n    \n    # Test 4: Valid quote selection\n    quote_row = {\n        'id': 'q1',\n        'book': 'bookA',\n        'event': 'test_event',\n        'observed_at': '2024-01-01T00:00:00Z',\n        'expires_at': '2024-01-02T00:00:00Z',\n        'last_update': '2024-01-01T00:00:00Z',\n        'odds': 100\n    }\n    result = candidate([quote_row], [], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert 'bookA' in result['quotes']\n    assert result['quotes']['bookA']['row'] is quote_row  # identity\n    assert abs(result['quotes']['bookA']['probability'] - 0.5) < 1e-10\n    \n    # Test 5: Quote with wrong event\n    result = candidate([quote_row], [], \"other_event\", \"2024-01-01T12:00:00Z\")\n    assert result['quotes'] == {}\n    \n    # Test 6: Quote expired\n    result = candidate([quote_row], [], \"test_event\", \"2024-01-03T00:00:00Z\")\n    assert result['quotes'] == {}\n    \n    # Test 7: Quote not yet observed\n    result = candidate([quote_row], [], \"test_event\", \"2023-12-31T00:00:00Z\")\n    assert result['quotes'] == {}\n    \n    # Test 8: Probability calculation\n    # +100 \u2192 0.5, -100 \u2192 0.5, +500 \u2192 1/6, -500 \u2192 5/6\n    q_pos = dict(quote_row, id='q_pos', odds=500)\n    q_neg = dict(quote_row, id='q_neg', odds=-500)\n    result = candidate([q_pos, q_neg], [], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert abs(result['quotes']['bookA']['probability'] - 100/600) < 1e-10  # or -500?\n    # Wait, both have book 'bookA'. The one with greatest observed_at wins. Both have same observed_at.\n    # Then lexicographically smallest id: 'q_neg' < 'q_pos'\n    assert result['quotes']['bookA']['row'] is q_neg\n    assert abs(result['quotes']['bookA']['probability'] - 500/600) < 1e-10\n    \n    # Test 9: Run reconciliation basic\n    run_row = {\n        'run_id': 'r1',\n        'job': 'jobA',\n        'attempt': 1,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'ok',\n        'downloaded_rows': 100\n    }\n    result = candidate([], [run_row], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert result['runs']['jobA'] is run_row\n    assert result['successful_rows'] == 100\n    assert result['failures'] == []\n    assert result['partial_jobs'] == []\n    assert result['unknown_jobs'] == []\n    \n    # Test 10: Failed run\n    fail_row = {\n        'run_id': 'r2',\n        'job': 'jobB',\n        'attempt': 1,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'failed',\n        'downloaded_rows': 0\n    }\n    result = candidate([], [fail_row], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert result['runs']['jobB'] is fail_row\n    assert result['successful_rows'] == 0\n    assert result['failures'] == ['jobB']\n    \n    # Test 11: Pending run\n    pend_row = {\n        'run_id': 'r3',\n        'job': 'jobC',\n        'attempt': 1,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'pending',\n        'downloaded_rows': 0\n    }\n    result = candidate([], [pend_row], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert result['runs']['jobC'] is pend_row\n    assert result['unknown_jobs'] == ['jobC']\n    assert result['successful_rows'] == 0\n    \n    # Test 12: Partial run\n    part_row = {\n        'run_id': 'r4',\n        'job': 'jobD',\n        'attempt': 1,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'partial',\n        'downloaded_rows': 50\n    }\n    result = candidate([], [part_row], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert result['runs']['jobD'] is part_row\n    assert result['successful_rows'] == 50\n    assert result['partial_jobs'] == ['jobD']\n    \n    # Test 13: Higher attempt supersedes\n    run_a1 = {\n        'run_id': 'r5',\n        'job': 'jobE',\n        'attempt': 1,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'ok',\n        'downloaded_rows': 100\n    }\n    run_a2 = {\n        'run_id': 'r6',\n        'job': 'jobE',\n        'attempt': 2,\n        'observed_at': '2024-01-01T01:00:00Z',\n        'status': 'failed',\n        'downloaded_rows': 0\n    }\n    result = candidate([], [run_a1, run_a2], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert result['runs']['jobE'] is run_a2\n    assert result['successful_rows'] == 0\n    assert result['failures'] == ['jobE']\n    \n    # Test 14: Deduplication by run_id\n    dup1 = {\n        'run_id': 'r7',\n        'job': 'jobF',\n        'attempt': 1,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'ok',\n        'downloaded_rows': 100\n    }\n    dup2 = {\n        'run_id': 'r7',\n        'job': 'jobF',\n        'attempt': 1,\n        'observed_at': '2024-01-01T01:00:00Z',\n        'status': 'ok',\n        'downloaded_rows': 200\n    }\n    result = candidate([], [dup1, dup2], \"test_event\", \"2024-01-01T12:00:00Z\")\n    assert result['runs']['jobF'] is dup2  # greater observed_at wins\n    assert result['successful_rows'] == 200\n    \n    # Test 15: Quote selection - greatest observed_at\n    q_early = {\n        'id': 'q1',\n        'book': 'bookX',\n        'event': 'ev1',\n        'observed_at': '2024-01-01T00:00:00Z',\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-01T00:00:00Z',\n        'odds': 100\n    }\n    q_late = {\n        'id': 'q2',\n        'book': 'bookX',\n        'event': 'ev1',\n        'observed_at': '2024-01-02T00:00:00Z',\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-02T00:00:00Z',\n        'odds': -100\n    }\n    result = candidate([q_early, q_late], [], \"ev1\", \"2024-01-02T12:00:00Z\")\n    assert result['quotes']['bookX']['row'] is q_late\n    \n    # Test 16: last_update > observed_at is invalid\n    q_bad = {\n        'id': 'q3',\n        'book': 'bookY',\n        'event': 'ev1',\n        'observed_at': '2024-01-01T00:00:00Z',\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-01T01:00:00Z',  # after observed_at\n        'odds': 100\n    }\n    result = candidate([q_bad], [], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['quotes'] == {}\n    \n    # Test 17: bool as odds should fail\n    q_bool = {\n        'id': 'q4',\n        'book': 'bookZ',\n        'event': 'ev1',\n        'observed_at': '2024-01-01T00:00:00Z',\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-01T00:00:00Z',\n        'odds': True\n    }\n    result = candidate([q_bool], [], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['quotes'] == {}\n    \n    # Test 18: bool as attempt should fail\n    run_bool = {\n        'run_id': 'r8',\n        'job': 'jobG',\n        'attempt': True,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'ok',\n        'downloaded_rows': 0\n    }\n    result = candidate([], [run_bool], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['runs'] == {}\n    \n    # Test 19: Non-dict rows are skipped\n    result = candidate([\"not a dict\", 42, None], [], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['quotes'] == {}\n    result = candidate([], [\"not a dict\", 42, None], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['runs'] == {}\n    \n    # Test 20: Whitespace event is valid\n    result = candidate([], [], \"  \", \"2024-01-01T00:00:00Z\")\n    assert result['quotes'] == {}\n    assert result['runs'] == {}\n    \n    # Test 21: asof as datetime object\n    dt = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)\n    result = candidate([quote_row], [], \"test_event\", dt)\n    assert 'bookA' in result['quotes']\n    \n    # Test 22: Naive datetime for asof should fail\n    naive_dt = datetime(2024, 1, 1, 12, 0)\n    try:\n        candidate([], [], \"ev1\", naive_dt)\n        assert False, \"should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    # Test 23: Naive datetime in quote should make it invalid\n    q_naive = {\n        'id': 'q5',\n        'book': 'bookW',\n        'event': 'ev1',\n        'observed_at': datetime(2024, 1, 1, 0, 0),  # naive\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-01T00:00:00Z',\n        'odds': 100\n    }\n    result = candidate([q_naive], [], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['quotes'] == {}\n    \n    # Test 24: Future run is skipped\n    run_future = {\n        'run_id': 'r9',\n        'job': 'jobH',\n        'attempt': 1,\n        'observed_at': '2024-01-05T00:00:00Z',\n        'status': 'ok',\n        'downloaded_rows': 100\n    }\n    result = candidate([], [run_future], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['runs'] == {}\n    \n    # Test 25: Duplicate identical rows don't inflate\n    dup_identical = {\n        'run_id': 'r10',\n        'job': 'jobI',\n        'attempt': 1,\n        'observed_at': '2024-01-01T00:00:00Z',\n        'status': 'ok',\n        'downloaded_rows': 50\n    }\n    result = candidate([], [dup_identical, dict(dup_identical)], \"ev1\", \"2024-01-01T12:00:00Z\")\n    assert result['successful_rows'] == 50  # not 100\n    \n    # Test 26: Invalid event (None)\n    try:\n        candidate([], [], None, \"2024-01-01T00:00:00Z\")\n        assert False, \"should have raised ValueError\"\n    except ValueError:\n        pass\n    \n    # Test 27: Multiple books\n    q_b1 = {\n        'id': 'qb1',\n        'book': 'bk1',\n        'event': 'ev2',\n        'observed_at': '2024-01-01T00:00:00Z',\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-01T00:00:00Z',\n        'odds': 200\n    }\n    q_b2 = {\n        'id': 'qb2',\n        'book': 'bk2',\n        'event': 'ev2',\n        'observed_at': '2024-01-01T00:00:00Z',\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-01T00:00:00Z',\n        'odds': -200\n    }\n    result = candidate([q_b1, q_b2], [], \"ev2\", \"2024-01-01T12:00:00Z\")\n    assert 'bk1' in result['quotes']\n    assert 'bk2' in result['quotes']\n    assert abs(result['quotes']['bk1']['probability'] - 100/300) < 1e-10\n    assert abs(result['quotes']['bk2']['probability'] - 200/300) < 1e-10\n    \n    # Test 28: Non-mutating - input lists unchanged\n    q_list = [q_b1, q_b2]\n    q_list_copy = copy.deepcopy(q_list)\n    candidate(q_list, [], \"ev2\", \"2024-01-01T12:00:00Z\")\n    assert q_list == q_list_copy\n    \n    # Test 29: String odds\n    q_str = {\n        'id': 'qs',\n        'book': 'bkS',\n        'event': 'ev3',\n        'observed_at': '2024-01-01T00:00:00Z',\n        'expires_at': '2024-01-03T00:00:00Z',\n        'last_update': '2024-01-01T00:00:00Z',\n        'odds': '150'\n    }\n    result = candidate([q_str], [], \"ev3\", \"2024-01-01T12:00:00Z\")\n    assert abs(result['quotes']['bkS']['probability'] - 100/250) < 1e-10\n    \n    # Test 30: Small odds (abs < 100) should be invalid\n    q_small = {\n        'id': 'qsm',\n        'book': 'bkSm"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 508703797333,
+  "load_duration": 4580848042,
+  "prompt_eval_count": 1128,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 1717724000,
+  "eval_count": 14223,
+  "eval_duration": 502403441000,
+  "wall_seconds": 508.9546730000002,
+  "memory_samples": [
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 81,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

@@ -1,0 +1,29 @@
+{
+  "reviewer": "author manual inspection; not independent validation",
+  "task": "review",
+  "all_findings_inspected": true,
+  "distinct_real_causes": 5,
+  "seeded_causes": 10,
+  "false_findings": 2,
+  "duplicate_findings": 3,
+  "non_defect_annotations": 3,
+  "correct_times_component_flagged": false,
+  "finding_audit": [
+    {"index": 1, "classification": "real", "cause": "lexical offset ordering", "caveat": "Added datetime normalization claim is outside string-only review inputs and unnecessary for aware datetime comparisons."},
+    {"index": 2, "classification": "real", "cause": "missing quote ID tie", "caveat": "Also incorrectly claims that exact instant/ID first-row retention is violated by strict greater-time comparison."},
+    {"index": 3, "classification": "false", "reason": "old[0] stores normalized observed datetime through rank=(observed,row['id']); it is not a raw timestamp."},
+    {"index": 4, "classification": "false", "reason": "Strictly smaller ID cannot overwrite an equal-ID tie. This second-pass comparison correctly preserves exact ties."},
+    {"index": 5, "classification": "real", "cause": "duplicate run time tie retains last"},
+    {"index": 6, "classification": "real", "cause": "stale job overwrite"},
+    {"index": 7, "classification": "duplicate", "duplicate_of": 6},
+    {"index": 8, "classification": "non_defect_annotation", "reason": "Ultimately recognizes that UTC asof forwarding is valid."},
+    {"index": 9, "classification": "non_defect_annotation", "reason": "Input validation is correctly implemented."},
+    {"index": 10, "classification": "non_defect_annotation", "reason": "Independent quotes/runs calculation is correct."},
+    {"index": 11, "classification": "real", "cause": "pending classified failed"},
+    {"index": 12, "classification": "duplicate", "duplicate_of": 11},
+    {"index": 13, "classification": "duplicate", "duplicate_of": 11}
+  ],
+  "missed_causes": ["negative odds formula", "quote eligibility after reduction", "inclusive expiry", "job-scoped global run ID", "partial rows omitted"],
+  "evidence": ["review-response.txt", "../../ceiling/review-source.json", "../../ceiling/review-inventory.json", "../../ceiling/review-validation.json"],
+  "schema_check_is_not_semantic_credit": true
+}

@@ -1,0 +1,7 @@
+[
+  {
+    "case": "candidate completion/loading",
+    "passed": false,
+    "error": "JSONDecodeError: Invalid control character at: line 6 column 4073 (char 9944)"
+  }
+]
