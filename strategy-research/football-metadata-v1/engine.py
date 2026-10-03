@@ -72,6 +72,7 @@ def active_authority(auth,m,policy,root,commit):
               f"APPROVED cache reconciliation: sha256 {capture.identity({'probe_bundle_root':auth.get('probe_bundle_root'), 'additional_raw_roots':auth.get('additional_raw_roots',[])})}, root {root}",
               f"APPROVED metadata policy: sha256 {capture.identity(policy)}, max-missing {policy['max_missing']}, root {root}",
               f"APPROVED account ceiling: max-baseline-used {rec['max_baseline_used']}, root {root}",
+              f"APPROVED historical bindings: sha256 {capture.identity(auth.get('historical_bindings',{}))}, root {root}",
               'CURRENT PAID AUTHORITY: ACTIVE']
     if (not all(line in body.splitlines() for line in required)
         or re.search(r'\b(HALTED|EXHAUSTED|REVOKED|NOT APPROVED|NOT READY)\b',body,re.I)
@@ -83,7 +84,7 @@ def active_authority(auth,m,policy,root,commit):
         raise ValueError('Live hub authority differs')
 
 
-def global_inventory(exclude=None, verify_receipts=True, source_manifest=None):
+def global_inventory(exclude=None, verify_receipts=True, source_manifest=None, historical_bindings=None):
     """Read-only exact global snapshot and a fully covering linear carry lineage.
 
     No max-over-disjoint-epochs estimate. An unknown branch requires reviewed
@@ -107,7 +108,7 @@ def global_inventory(exclude=None, verify_receipts=True, source_manifest=None):
         if set(original['attempts'])!=paid or original['cache_reuse']!=reuse:
             raise ValueError('Original coverage differs from immutable manifest')
     # Partial statuses are certificates, never a general restart class.
-    history.certified_partials(states,ledgers,verify_receipts)
+    certified_older=history.certified_partials(states,ledgers,verify_receipts,historical_bindings)
     snapshots={'ledgers':{},'registrations':{}}
     for root,state in states.items():
         marker=capture.read(markers[root])
@@ -125,7 +126,7 @@ def global_inventory(exclude=None, verify_receipts=True, source_manifest=None):
                 continue
             history.response_evidence(rid,a,ledgers[root].parent,
                 source_row=next((r for r in old_rows if r['request_id']==rid),None) if root==SOURCE_ROOT and source_manifest is not None else None,
-                original=root==SOURCE_ROOT,certified_f2=root in history.F2_ROOTS)
+                original=root==SOURCE_ROOT,certified_f2=root in history.F2_ROOTS,certified_older=root in certified_older)
         snapshots['ledgers'][root]=capture.sha(ledgers[root]);snapshots['registrations'][root]=capture.sha(markers[root])
     def chain(root):
         seen=set()
@@ -242,7 +243,7 @@ def run(packet_path,root,bundle,auth,*,key,verify,fake_session=None,checkpoint=l
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         _,base,data2,source2,load=verify()
         if data2!=data or source2!=source:raise ValueError('Source changed under shared lock')
-        snapshot,seed=global_inventory(root,source_manifest=source['request-manifest.json'])
+        snapshot,seed=global_inventory(root,source_manifest=source['request-manifest.json'],historical_bindings=auth.get('historical_bindings',{}))
         if snapshot!=auth['global_snapshot']:raise ValueError('Exact approved global snapshot differs')
         active_authority(auth,m,policy,root,commit)
         existing=runtime/'spending-ledger.json'
@@ -268,7 +269,7 @@ def run(packet_path,root,bundle,auth,*,key,verify,fake_session=None,checkpoint=l
         base.validate_reconciliation(auth['account_reconciliation'],root)
         paths=[Path(packet_path)/n for n in ('manifest.json','policy.json','request-list.csv','FREEZE.json')]
         paths.extend(Path(__file__).parent/n for n in ('entry.py','engine.py','capture.py','prepare.py','history.py'))
-        paths.append(Path(history.f2_gate.__file__))
+        paths.extend([Path(history.f2_gate.__file__),Path(history.older_recovery.__file__),history.older_recovery.HERE/'PROTOCOL.md'])
         paths.append(Path(__file__).parent.parent/'nfl-props-archive-v1/plan.py')
         repo=subprocess.check_output(['git','-C',str(packet_path),'rev-parse','--show-toplevel'],text=True).strip()
         relative=[str(p.resolve().relative_to(repo)) for p in paths]
@@ -296,7 +297,7 @@ def run(packet_path,root,bundle,auth,*,key,verify,fake_session=None,checkpoint=l
                     active_authority(auth,m,policy,root,commit)
                     _,_,now_data,now_source,_=verify()
                     if now_data!=data or now_source!=source:raise ValueError('Source changed before send')
-                    if global_inventory(root,verify_receipts=False,source_manifest=source['request-manifest.json'])[0]!=snapshot:raise ValueError('Shared state changed before send')
+                    if global_inventory(root,verify_receipts=False,source_manifest=source['request-manifest.json'],historical_bindings=auth.get('historical_bindings',{}))[0]!=snapshot:raise ValueError('Shared state changed before send')
                     return super().get(url,**kwargs)
             session=AuthorizedSession(fake_session or new_session(),ledger,effective);session.ledger_key=secret
             response=session.get(plan.BASE+'/sports',params={},timeout=30)
@@ -325,7 +326,7 @@ def run(packet_path,root,bundle,auth,*,key,verify,fake_session=None,checkpoint=l
                 if fake_session is None:time.sleep(.25)
             terminal_evidence(ledger,effective)
             if set(ledger.state['attempts'])!={r['request_id'] for r in rows}:raise ValueError('Full metadata denominator incomplete')
-            if global_inventory(root,source_manifest=source['request-manifest.json'])[0]!=snapshot:raise ValueError('Global evidence changed before completion')
+            if global_inventory(root,source_manifest=source['request-manifest.json'],historical_bindings=auth.get('historical_bindings',{}))[0]!=snapshot:raise ValueError('Global evidence changed before completion')
             ledger.state['status']='metadata_complete';ledger.save()
             base.atomic(runtime/'coverage-report.json',{'requests':len(rows),'completed':sum(a['status']=='completed' for a in ledger.state['attempts'].values()),
                         'missing_lag':sum(a['status']=='missing' for a in ledger.state['attempts'].values()),'usable_prices':0,

@@ -18,7 +18,9 @@
     "strategy-research/football_archive/execution-v1",
     "strategy-research/football_archive/recovery-v1",
     "strategy-research/football_archive/recovery-v2",
-    "strategy-research/football_archive/followups"
+    "strategy-research/football_archive/followups",
+    "strategy-research/football_archive/older",
+    "strategy-research/football_archive/older-recovery-v1"
   ],
   "commands": [
     [

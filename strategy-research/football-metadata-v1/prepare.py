@@ -45,6 +45,8 @@ def prepare(folder):
     (folder/'manifest.json').write_bytes(canonical(m)+b'\n');(folder/'policy.json').write_bytes(canonical(policy)+b'\n')
     paths={'code/'+n:here/n for n in ('entry.py','engine.py','capture.py','prepare.py','history.py')}
     paths['code/f2_gate.py']=here.parent/'football_archive/f2_handoff.py'
+    paths['code/older_recovery.py']=here.parent/'football_archive/older-recovery-v1/recovery.py'
+    paths['policy/older-PROTOCOL.md']=here.parent/'football_archive/older-recovery-v1/PROTOCOL.md'
     paths['code/plan.py']=props/'plan.py'
     paths.update({n:folder/n for n in ('manifest.json','request-list.csv','policy.json')})
     paths['source/FREEZE.json']=here.parent/'football_archive/acquisition/football-archive-v4/FREEZE.json'

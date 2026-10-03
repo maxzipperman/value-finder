@@ -164,4 +164,111 @@ class HistoryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'approval response'):h.response_evidence(rid,a,folder,original=True)
 
 
+
+class OlderHistoryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        HistoryTests.setUpClass()
+        cls.history=HistoryTests.history;cls.capture=HistoryTests.capture
+
+    evidence=HistoryTests.evidence
+    def fixture(self,folder):
+        h=self.history;old=h.older_recovery;root=old.OLD_ROOT
+        directory=folder/root/'older-lag-recovery-v1';directory.mkdir(parents=True)
+        state={'status':'older_epoch_partial_reconciled','older_lag_reconciliation':{'proposal_sha256':'a'*64}}
+        path=directory.parent/'spending-ledger.json';path.write_text(json.dumps(state))
+        cert={'proposal_sha256':'a'*64,'post_ledger_sha256':self.capture.sha(path)}
+        (directory/'certificate.json').write_text(json.dumps(cert))
+        (directory/'offline-approval.json').write_text(json.dumps({'execution_commit':'18dc3eae65beb941b341a88c3a356613ab1c015b'}))
+        return state,path,cert
+
+    def test_older_installed_partial_dispatch_and_adverse_proofs(self):
+        h=self.history;old=h.older_recovery
+        with tempfile.TemporaryDirectory(dir='/private/tmp') as d,patch.object(old,'RUNTIME_BASE',Path(d)):
+            state,path,cert=self.fixture(Path(d));states={old.OLD_ROOT:state};paths={old.OLD_ROOT:path}
+            bindings={'older_coverage_path':'/synthetic/coverage'}
+            with patch.object(old,'verified_partial',return_value=(cert,state,None)) as verified:
+                self.assertEqual(h.certified_partials(states,paths,bindings=bindings),{old.OLD_ROOT})
+                verified.assert_called_once_with('/synthetic/coverage')
+                verified.side_effect=ValueError('archived stopped/auth/cache proof absent')
+                with self.assertRaisesRegex(ValueError,'archived'):h.certified_partials(states,paths,bindings=bindings)
+            with self.assertRaisesRegex(ValueError,'coverage binding'):h.certified_partials(states,paths)
+            state['status']='older_epoch_complete'
+            with self.assertRaisesRegex(ValueError,'exactly certified partial'):h.certified_partials(states,paths,bindings=bindings)
+
+    def test_older_unfinished_or_unbound_successor_never_accepted(self):
+        h=self.history;old=h.older_recovery
+        with tempfile.TemporaryDirectory(dir='/private/tmp') as d,patch.object(old,'RUNTIME_BASE',Path(d)):
+            state,path,cert=self.fixture(Path(d));child='e'*64;cp=Path(d)/child/'spending-ledger.json';cp.parent.mkdir();cp.write_text('{}')
+            states={old.OLD_ROOT:state,child:{'status':'running','predecessor_seed':{'root':old.OLD_ROOT}}}
+            paths={old.OLD_ROOT:path,child:cp}
+            bindings={'older_coverage_path':'/synthetic/coverage'}
+            with self.assertRaisesRegex(ValueError,'bindings differ'):h.certified_partials(states,paths,False,bindings)
+            bindings['older_successors']={child:{'packet_root':child,'ledger_sha256':self.capture.sha(cp)}}
+            with self.assertRaisesRegex(ValueError,'completed older successor'):h.certified_partials(states,paths,False,bindings)
+
+    def test_older_wrong_original_transition_commit_rejected(self):
+        h=self.history;old=h.older_recovery
+        with tempfile.TemporaryDirectory(dir='/private/tmp') as d,patch.object(old,'RUNTIME_BASE',Path(d)):
+            state,path,cert=self.fixture(Path(d))
+            (path.parent/'older-lag-recovery-v1/offline-approval.json').write_text(json.dumps({'execution_commit':'1'*40}))
+            with self.assertRaisesRegex(ValueError,'installed older transition'):
+                h.certified_partials({old.OLD_ROOT:state},{old.OLD_ROOT:path},False,{'older_coverage_path':'/synthetic/coverage'})
+
+    def test_certified_older_lag_retains_observed_bill(self):
+        h=self.history
+        with tempfile.TemporaryDirectory(dir='/private/tmp') as d:
+            folder=Path(d);rid,a,proof,receipt,cache=self.evidence(folder)
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+            body=json.loads(proof['record']['body']);body.update(timestamp='2025-10-01T05:45:00Z',previous_timestamp='2025-10-01T05:40:00Z',next_timestamp='2025-10-01T05:50:00Z')
+            proof['record']['body']=json.dumps(body);pq.write_table(pa.Table.from_pylist([proof['record']]),cache)
+            proof.update(record_sha256=self.capture.sha(cache),status='missing',reason='snapshot_lag',usable_quote=False)
+            receipt.write_text(json.dumps(proof));a.update(status='missing',response_sha256=self.capture.sha(cache),receipt_sha256=self.capture.sha(receipt))
+            h.response_evidence(rid,a,folder,certified_older=True)
+            self.assertEqual((a['reserved_credits'],a['billed_credits']),(30,30))
+            proof['usable_quote']=True;receipt.write_text(json.dumps(proof));a['receipt_sha256']=self.capture.sha(receipt)
+            with self.assertRaisesRegex(ValueError,'older lag'):h.response_evidence(rid,a,folder,certified_older=True)
+
+
+# This integration test exercises the new completed-child routing with synthetic
+# exact-sized state. The underlying unchanged PR129 verifier is mocked here;
+# its independent evidence is reused, never a claim of real-store acceptance.
+def _completed_older_child(self):
+    h=self.history;old=h.older_recovery
+    from types import SimpleNamespace
+    for fault in (None,'archive_changed','run_changed','receipt_verifier_fault'):
+        with self.subTest(fault=fault),tempfile.TemporaryDirectory(dir='/private/tmp') as d,patch.object(old,'RUNTIME_BASE',Path(d)):
+            parent,path,cert=self.fixture(Path(d));child='e'*64;folder=Path(d)/child;folder.mkdir()
+            rows=[{'request_id':f'{i:064x}'} for i in range(old.REMAINING_COUNT)]
+            seed={'root':old.OLD_ROOT};internal={'priority':1};auth={'execution_commit':'f'*40}
+            attempts={r['request_id']:{'reserved_credits':30} for r in rows}
+            state={'status':'older_epoch_complete','predecessor_seed':seed,'authorization_sha256':old.identity(internal),'attempts':attempts,'slice_cap':old.NEW_CAP}
+            cp=folder/'spending-ledger.json';cp.write_text(json.dumps(state));ap=folder/'original-auth.json';ap.write_text(json.dumps(auth))
+            m={'policy_sha256':'a'*64};runtime={'synthetic':True}
+            run={'stage':'older-lag-continuation','packet_root':child,'predecessor':seed,'source_root':old.SOURCE_ROOT,
+                 'external_authorization_sha256':old.identity(auth),'internal_priority_bridge':1,'commit':auth['execution_commit'],
+                 'runtime':runtime,'policy_sha256':m['policy_sha256'],'scope':'exact never-sent original rows; no retries; no outcomes'}
+            (folder/'run-manifest.json').write_text(json.dumps(run));(folder/'INITIALIZED.json').write_text(json.dumps({'bundle_root_sha256':child,'probe_credits':1687}))
+            binding={'packet_path':'/synthetic/packet','packet_root':child,'authorization_path':str(ap),'authorization_sha256':self.capture.sha(ap),'ledger_sha256':self.capture.sha(cp)}
+            bindings={'older_coverage_path':'/synthetic/coverage','older_successors':{child:binding}}
+            if fault=='archive_changed':ap.write_text('{}')
+            if fault=='run_changed':(folder/'run-manifest.json').write_text('{}')
+            original_read=old.read
+            def read(p):
+                if Path(p)==old.BUNDLE/'runtime-lock.json':return runtime
+                if Path(p)==old.BUNDLE/'protocol.json':return {}
+                return original_read(p)
+            with patch.object(old,'verified_partial',return_value=(cert,parent,None)),patch.object(old,'verify_packet',return_value=(m,rows,seed,None)), \
+                 patch.object(old,'paid_authority',return_value=(internal,None)),patch.object(old,'read',side_effect=read),patch.object(old,'terminal_evidence') as terminal:
+                if fault=='receipt_verifier_fault':terminal.side_effect=ValueError('actual terminal receipt/cache proof absent')
+                def checked():return h.certified_partials({old.OLD_ROOT:parent,child:state},{old.OLD_ROOT:path,child:cp},True,bindings)
+                if fault is None:
+                    self.assertEqual(checked(),{old.OLD_ROOT,child});terminal.assert_called_once()
+                    self.assertEqual(len(terminal.call_args.args[1]),1786)
+                else:
+                    with self.assertRaises(ValueError):checked()
+
+OlderHistoryTests.test_completed_older_child_requires_exact_packet_and_preserved_evidence=_completed_older_child
+
 if __name__=='__main__':unittest.main()

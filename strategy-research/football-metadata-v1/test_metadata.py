@@ -96,6 +96,8 @@ class MetadataTests(unittest.TestCase):
                 shutil.copyfile(HERE.parent/'nfl-props-archive-v1/plan.py',props/'plan.py')
                 archive=directory/'football_archive';archive.mkdir()
                 shutil.copyfile(HERE.parent/'football_archive/f2_handoff.py',archive/'f2_handoff.py')
+                recovery=archive/'older-recovery-v1';recovery.mkdir()
+                for name in ('recovery.py','PROTOCOL.md'):shutil.copyfile(HERE.parent/'football_archive/older-recovery-v1'/name,recovery/name)
                 bundle=directory/'bundle';shutil.copytree(self.bundle,bundle)
                 if mutation=='shared_code':(bundle/'executor.py').write_bytes((bundle/'executor.py').read_bytes()+b'\nraise RuntimeError("SENTINEL EXECUTED")\n')
                 elif mutation=='own_code':(code/'engine.py').write_bytes((code/'engine.py').read_bytes()+b'\nraise RuntimeError("SENTINEL EXECUTED")\n')
@@ -239,7 +241,8 @@ class MetadataTests(unittest.TestCase):
                f'APPROVED global snapshot: sha256 {identity(a["global_snapshot"])}, root {root}',
                f'APPROVED cache reconciliation: sha256 {identity({"probe_bundle_root":"/synthetic","additional_raw_roots":[]})}, root {root}',
                f'APPROVED metadata policy: sha256 {identity(policy)}, max-missing 1544, root {root}',
-               f'APPROVED account ceiling: max-baseline-used 0, root {root}','CURRENT PAID AUTHORITY: ACTIVE']
+               f'APPROVED account ceiling: max-baseline-used 0, root {root}',
+               f'APPROVED historical bindings: sha256 {identity({})}, root {root}','CURRENT PAID AUTHORITY: ACTIVE']
         a['hub_go_ahead']['comment_body']+='\n'+'\n'.join(lines)
         body=a['hub_go_ahead']['comment_body'];live={'html_url':a['hub_go_ahead']['comment_url'],'body':body,'user':{'login':'maxzipperman'}}
         with patch.object(self.engine.subprocess,'check_output',return_value=json.dumps(live)):
@@ -247,6 +250,9 @@ class MetadataTests(unittest.TestCase):
             rec['max_baseline_used']=100
             with self.assertRaises(ValueError):self.engine.active_authority(a,m,policy,root,c)
             rec['max_baseline_used']=0
+            a['historical_bindings']={'older_coverage_path':'altered'}
+            with self.assertRaises(ValueError):self.engine.active_authority(a,m,policy,root,c)
+            a.pop('historical_bindings')
             for word in ('HALTED','EXHAUSTED','REVOKED','NOT APPROVED'):
                 a['hub_go_ahead']['comment_body']=body+'\n'+word
                 with self.assertRaises(ValueError):self.engine.active_authority(a,m,policy,root,c)

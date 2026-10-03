@@ -1,8 +1,7 @@
 """Read-only prior response/certification checks; no status-only recovery admission.
 
 F2's pinned gate reuses the reviewed complete dependency capture and deep union
-validator. Unknown older/event recovery families stay blocked until separately
-reviewed integration; a new snapshot approval cannot certify their history.
+validator. Unknown recovery families stay blocked; a new snapshot approval cannot certify their history.
 """
 import hashlib
 import json
@@ -10,29 +9,93 @@ import re
 from pathlib import Path
 import capture
 import f2_gate
+import older_recovery
+from types import SimpleNamespace
 
 F2_ROOTS={f2_gate.PILOT_ROOT,f2_gate.FIRST_ROOT,f2_gate.SECOND_ROOT,f2_gate.FINAL_ROOT}
+PROBE=1687
 SOURCE_LEDGER_SHA256='eb9e93e354babef2be73ddaa13ea6e2913c58eaaff706ed4e78aec1381636190'
 PARTIAL_ROOTS={f2_gate.FIRST_ROOT,f2_gate.SECOND_ROOT}
 
 
-def certified_partials(states,ledgers,full=True):
+def certified_partials(states,ledgers,full=True,bindings=None):
     partials={r for r,s in states.items() if s.get('status') in
               ('event_epoch_partial_reconciled','older_epoch_partial_reconciled')}
-    if not partials and not (F2_ROOTS & set(states)):return
-    if partials!=PARTIAL_ROOTS or not F2_ROOTS.issubset(states):
-        raise ValueError('Unknown or incomplete certified partial family')
-    for root in partials:
-        f2_gate.verify_partial(root,ledgers[root],states[root],capture.sha(ledgers[root]))
+    f2_partials=partials & PARTIAL_ROOTS
+    older_partials=partials - PARTIAL_ROOTS
+    if older_partials - {older_recovery.OLD_ROOT}:
+        raise ValueError('Unknown certified partial family')
+    if F2_ROOTS & set(states):
+        if f2_partials!=PARTIAL_ROOTS or not F2_ROOTS.issubset(states):
+            raise ValueError('Unknown or incomplete certified partial family')
+        for root in f2_partials:
+            f2_gate.verify_partial(root,ledgers[root],states[root],capture.sha(ledgers[root]))
+        if full:f2_gate.verify_full_union(ledgers[f2_gate.FINAL_ROOT])
+    elif f2_partials:
+        raise ValueError('Incomplete certified F2 lineage')
+    if older_recovery.OLD_ROOT in states and older_partials!={older_recovery.OLD_ROOT}:
+        raise ValueError('Original older root must remain exactly certified partial')
+    if not older_partials:return set()
+    return older_lineage(states,ledgers,bindings or {},full)
+
+
+def older_lineage(states,ledgers,bindings,full):
+    """Adopt PR129's captured read-only verifier; no transition/run/key call.
+
+    Exact actual successor packet/auth/final-ledger bindings are external inputs
+    in the metadata approval. No final child root or completion is invented.
+    """
+    old=older_recovery;root=old.OLD_ROOT;path=ledgers[root]
+    if path.absolute()!=old.RUNTIME_BASE/root/'spending-ledger.json':raise ValueError('Older fixed runtime differs')
+    coverage=bindings.get('older_coverage_path')
+    if not coverage:raise ValueError('Reviewed older coverage binding required')
+    directory=path.parent/'older-lag-recovery-v1';cert=old.read(directory/'certificate.json')
+    auth=old.read(directory/'offline-approval.json')
+    if (auth.get('execution_commit')!='18dc3eae65beb941b341a88c3a356613ab1c015b'
+            or capture.sha(path)!=cert.get('post_ledger_sha256')
+            or states[root].get('older_lag_reconciliation',{}).get('proposal_sha256')!=cert.get('proposal_sha256')):
+        raise ValueError('Exact installed older transition differs')
     if full:
-        # Deep verification: original commits, certificates, stopped backups,
-        # approvals, initialization/run records, all receipts and full ancestry.
-        # Offline transition approvals are live authenticated; historical spent
-        # paid bodies remain archived proof, never fresh send authority.
-        f2_gate.verify_full_union(ledgers[f2_gate.FINAL_ROOT])
+        verified,state,_=old.verified_partial(coverage)
+        if verified!=cert or state!=states[root]:raise ValueError('Older certified transition changed')
+    # Finite explicit successors only. An unknown partial never enters this route.
+    successors=bindings.get('older_successors',{})
+    if not isinstance(successors,dict):raise ValueError('Exact successor map required')
+    actual={r for r,s in states.items() if s.get('predecessor_seed',{}).get('root')==root}
+    if set(successors)!=actual:raise ValueError('Actual older successor bindings differ')
+    accepted={root}
+    for child in actual:
+        binding=successors[child];child_path=ledgers[child];state=states[child]
+        if (state.get('status')!='older_epoch_complete' or capture.sha(child_path)!=binding.get('ledger_sha256')
+                or binding.get('packet_root')!=child):raise ValueError('Actual completed older successor required')
+        if full:
+            packet=Path(binding['packet_path'])
+            # Source capture includes this helper/protocol; verify_packet also
+            # validates original immutable dependency freezes and actual parent.
+            m,rows,seed,base=old.verify_packet(packet,child,coverage)
+            original_auth=old.read(binding['authorization_path'])
+            if capture.sha(binding['authorization_path'])!=binding.get('authorization_sha256'):
+                raise ValueError('Original successor approval archive changed')
+            internal,_=old.paid_authority(original_auth,m,child,original_auth['execution_commit'],base,authenticate=False)
+            if (state.get('authorization_sha256')!=old.identity(internal) or state.get('predecessor_seed')!=seed
+                    or set(state['attempts'])!={r['request_id'] for r in rows}):
+                raise ValueError('Completed older successor identity/scope differs')
+            run=old.read(child_path.parent/'run-manifest.json')
+            expected={'stage':'older-lag-continuation','packet_root':child,'predecessor':seed,'source_root':old.SOURCE_ROOT,
+                      'external_authorization_sha256':old.identity(original_auth),'internal_priority_bridge':1,
+                      'commit':original_auth['execution_commit'],'runtime':old.read(old.BUNDLE/'runtime-lock.json'),
+                      'policy_sha256':m['policy_sha256'],'scope':'exact never-sent original rows; no retries; no outcomes'}
+            if run!=expected or old.read(child_path.parent/'INITIALIZED.json')!={'bundle_root_sha256':child,'probe_credits':PROBE}:
+                raise ValueError('Completed older initialization/run proof differs')
+            if state.get('slice_cap')!=old.NEW_CAP or sum(capture.integer(a['reserved_credits']) for a in state['attempts'].values())!=old.NEW_CAP:
+                raise ValueError('Older successor full reservations differ')
+            ledger=SimpleNamespace(state=state,folder=child_path.parent,protocol=old.read(old.BUNDLE/'protocol.json'))
+            old.terminal_evidence(ledger,rows,base,old.policy(rows))
+        accepted.add(child)
+    return accepted
 
 
-def response_evidence(rid,attempt,folder,*,source_row=None,original=False,certified_f2=False):
+def response_evidence(rid,attempt,folder,*,source_row=None,original=False,certified_f2=False,certified_older=False):
     """Require saved response bytes and exact receipt/HTTP/billing classification.
 
     The sole uncached exception is v4's explicit approved observed-5xx receipt;
@@ -90,6 +153,13 @@ def response_evidence(rid,attempt,folder,*,source_row=None,original=False,certif
             or capture.identity(proof.get('record'))!=capture.identity(record) or proof.get('headers')!=headers):
         raise ValueError('Full historical receipt/cache record differs')
     if status=='missing':
+        if certified_older:
+            body=json.loads(record['body'])
+            if (proof.get('status')!='missing' or proof.get('reason')!='snapshot_lag' or proof.get('usable_quote') is not False
+                    or record['http_status']!=200 or (capture.stamp(params['date'])-capture.stamp(body['timestamp'])).total_seconds()<=600
+                    or not capture.stamp(body['previous_timestamp'])<capture.stamp(body['timestamp'])<capture.stamp(body['next_timestamp'])):
+                raise ValueError('Certified older lag response differs')
+            return
         if not certified_f2:raise ValueError('Unrecognized historical missing policy; reviewed integration required')
         if (proof.get('status')!='missing' or record['http_status']!=404 or bill!=0
                 or json.loads(record['body']).get('error_code')!='EVENT_NOT_FOUND'):

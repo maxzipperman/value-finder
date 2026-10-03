@@ -70,13 +70,38 @@ The two recognized partial F2 roots must pass the independently pinned PR119
 whole-union gate. That gate captures its complete reviewed dependency packet and
 verifies transition certificates, original commits, preserved stopped ledgers,
 original approval/run and initialization evidence, all response receipts, exact
-missing policy and full cumulative ancestry. Unknown event/older partial families
-halt even in the light per-send state check. PR129's older recovery is deliberately
-unsupported until its separate review and certified downstream integration are
-available; status strings or a fresh global snapshot approval cannot admit it.
+missing policy and full cumulative ancestry. Unknown partial families halt even in the light per-send state check. Merged
+PR129's exact older partial is now verified through its freshly captured recovery
+helper/protocol, including the original transition commit, installed certificate,
+stopped backup, original authorization/run/initialization and retained receipt.
+Status strings or a fresh global snapshot approval cannot admit a different family.
 
 The captured F2 gate is a new declared dependency and independent-review item.
 Synthetic certificate/cache adverse paths are saved with process evidence. They
 do not certify the real shared store: positive read-only global acceptance remains
 a hub prerequisite after the older pending purchase is separately reconciled.
 No paid authority, runtime transition, resend or broader metadata stage is added.
+
+The fresh metadata approval additionally binds `historical_bindings` with:
+`APPROVED historical bindings: sha256 <canonical binding digest>, root <metadata root>`.
+Its local `older_coverage_path` is checked against the original coverage pin.
+`older_successors` maps each actual direct older child root to `packet_path`,
+`packet_root`, `authorization_path`, `authorization_sha256` and `ledger_sha256`.
+An absent child is never called completed. A present child must actually complete
+its exact reviewed 1,786-row packet: all original reservations, full terminal
+receipts/cache classification, archived paid approval, initialization/run record,
+finite lag policy and exact certified parent must verify. No unknown child or
+preview-only continuation can pass. These private path/hash bindings stay outside
+git and receive fresh authenticated hub approval; this preparation invents none.
+
+## Owner coverage gate — execution hold
+
+The owner now prioritizes a statistically credible outcome-blind coverage pilot
+before large remaining purchases. All paid execution is on hold. The existing
+1,544 listing candidate and 7,032 availability proposal are not blanket authority
+or a selected next purchase; no new large executable list is prepared here.
+Use the completed 2025 F3a cache baseline first. The hub defines a separate cheap
+stratified 2023–24 NFL/CFB pilot and exact cap for genuinely unmeasured cells.
+The gate needs usable paired prices, freshness, books and settlement support;
+market metadata alone cannot satisfy it. This repair changes safety validation
+only; pilot selection, registration and paid authority remain separate.

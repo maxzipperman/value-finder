@@ -187,7 +187,14 @@ Any change that moves a project, a forward test or a backlog item updates this f
 **PR132 shared-history repair (Oct 2, review pending):** listing metadata remains
 exactly 1,544 requests. Completed prior attempts now require full cache/receipt,
 billing and response classification; recognized F2 partials use the reviewed deep
-union verifier. Unknown older partials remain blocked pending separate PR129
-certification and downstream integration. New head needs independent review,
+union verifier. Merged PR129's exact installed older partial uses the captured certified verifier;
+its successor is accepted only with actual completion and exact local proof bindings. Unknown partials remain blocked. New head needs independent review,
 read-only positive global acceptance and fresh exact hub authority; no worker
 purchase/runtime transition or weather change.
+
+**Owner coverage-first hold (Oct 2):** all new paid execution is held pending the
+hub's outcome-blind coverage protocol and separately reviewed finite cheap pilot.
+Reuse the 2025 F3a cache baseline; measure unobserved 2023–24 NFL/CFB cells through
+stratified sampling. Actual usable pairs/freshness/book/settlement support gate
+large purchases. The existing 1,544/7,032 metadata proposals are not selected paid
+scope. PR132 continues safety repair only; weather is a separate next PR.
