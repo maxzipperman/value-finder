@@ -16,6 +16,9 @@ def check(base, auth, manifest, root, commit, context, *, fetch=None):
     if set(context) != required_keys or any(not re.fullmatch('[a-f0-9]{64}',v or '') for v in context.values()):
         raise ValueError('complete frozen pilot context required')
     hub=auth['hub_go_ahead'];body=hub['comment_body']
+    states=[line.strip() for line in body.splitlines() if re.match(r'^CURRENT PAID AUTHORITY\b',line.strip(),re.I)]
+    if states != ['CURRENT PAID AUTHORITY: ACTIVE']:
+        raise ValueError('exactly one unambiguous ACTIVE authority state required')
     required=[f'APPROVED pilot context: sha256 {digest(context)}, root {root}',
               f'APPROVED account reconciliation: sha256 {digest(rec)}, root {root}',
               'CURRENT PAID AUTHORITY: ACTIVE']

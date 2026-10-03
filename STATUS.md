@@ -222,8 +222,8 @@ scope. PR132 continues safety repair only; weather is a separate next PR.
 [New sibling adapter architecture](strategy-research/coverage-pilot-v1/DESIGN.md)
 preserves the installed older recovery and executed freezes. Reuse the NFL2025
 285-game census; do not buy another50 games. Preferred six-market existing-frame planning bound41,300 credits (or46,700
-if older mapping requires three original IDs/game) is not an executable cap. Pure
-selection, receipt/inventory and guarded-transport primitives are implemented; final
-classifier, frozen bootstrap, exact union and independent review remain required
-before seed/list/paid authority.
+if older mapping requires three original IDs/game) is not an executable cap. The sibling executor and primary classifier are implemented with synthetic
+receipt/reuse, overlap, binding and crash verification; exact frozen union and
+independent current-head review remain required before seed/list/paid authority.
+Synthetic orchestration is not a live paid preflight.
 All full listing/availability/bulk purchases remain held for coverage measurement.

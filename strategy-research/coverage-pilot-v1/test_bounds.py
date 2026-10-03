@@ -2,7 +2,7 @@ from fractions import Fraction as F
 from itertools import combinations
 import unittest
 from bounds import (tail, lower_successes, stratum, pooled_report,
-                    EXISTING_ALPHA, ADDED_ALPHA, OPTIONAL_ALPHA_RESERVED)
+                    EXISTING_ALPHA, ADDED_ALPHA, OPTIONAL_ALPHA_RESERVED, attainable)
 
 class BoundTests(unittest.TestCase):
     def test_tail_against_enumerated_subsets(self):
@@ -53,6 +53,17 @@ class BoundTests(unittest.TestCase):
         self.assertEqual(result['new_credits_per_usable_upper'],600)
         self.assertEqual(self.record()['status'],'utility_pass')
         self.assertEqual(self.record(projected_new_credits=6001)['status'],'hold')
+
+    def test_attainability_full_denominator_not_bare_sample_threshold(self):
+        args=dict(known_successes=0,known_failures=0,unknown=100,sample=30,phase='existing',
+                  projected_new_credits=6000,utility_floor=F(3,5),cost_ceiling=100)
+        simple=attainable(**args)
+        many_failures=attainable(**dict(args,known_failures=100))
+        self.assertEqual(simple['status'],'attainable')
+        self.assertEqual(many_failures['status'],'structural_utility_fail')
+        self.assertIsNone(many_failures['minimum_sample_successes'])
+        self.assertEqual(attainable(**dict(args,sample=1))['status'],'fixed_sample_cannot_certify')
+        self.assertFalse(simple['paid_authority'])
 
     def test_census_and_pooled_no_release(self):
         result=self.record(known_successes=215,known_failures=70,unknown=0,sample=0,observed=0,projected_new_credits=0)

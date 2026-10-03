@@ -72,7 +72,7 @@ class IntegrationTests(unittest.TestCase):
             folder=Path(d)
             payload={'requests.json':[row],'policy.json':self.policy(row),'protocol.json':protocol,'frame.json':frame,'draw.json':draw,'selected.json':selected,
                      'mappings.json':[{'game_id':'g','request_ids':[row['request_id']],'reason':None}],
-                     'baseline.json':{},'overlap.json':{}}
+                     'baseline.json':{},'overlap.json':{},'slot-map.json':[],'classifier-contract.json':{},'certainty-source-proof.json':{}}
             for name,value in payload.items():(folder/name).write_text(json.dumps(value))
             manifest=dict(frame_sha256=draw['frame'],protocol_sha256=draw['protocol'],seed_record_sha256=planner.digest(draw),request_count=1,max_new_credits=60,
                           request_list_sha256=self.capture.sha(folder/'requests.json'),request_set_sha256=self.capture.identity([row]))
@@ -90,7 +90,7 @@ class IntegrationTests(unittest.TestCase):
             runner,base,data,source,_=boot.verified(folder,root,BUNDLE)
             result=runner.packet(data,source)
             self.assertEqual(result['max_new_credits'],60)
-            self.assertFalse(result['paid_entrypoint_available'])
+            self.assertTrue(result['paid_entrypoint_available']);self.assertFalse(result['execution_protocol_ready'])
             with (folder/'requests.json').open('a') as f:f.write(' ')
             with self.assertRaises(ValueError):boot.verified(folder,root,BUNDLE)
 
@@ -124,10 +124,13 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(len(cells),12)
 
     def test_older_three_original_ids_exact_cost(self):
-        game=dict(game_id='g',season=2020,sport=self.plan.NFL,binding='abc',scheduled_utc='2020-10-02T13:00:00Z',classification='unknown',stratum='NFL2020')
+        game=dict(game_id='g',season=2020,sport=self.plan.NFL,binding='abc',scheduled_utc='2020-10-02T16:00:00Z',classification='unknown',stratum='NFL2020')
         rows=[dict(request_id=str(i),sport=self.plan.NFL,requested_utc=t,max_new_credits=30)
-              for i,t in enumerate(['2020-10-01T13:00:00Z','2020-10-02T12:45:00Z','2020-10-02T12:50:00Z'])]
-        mapped=self.mapping.older_slots(game,rows,['1','2'])
+              for i,t in enumerate(['2020-10-01T16:00:00Z','2020-10-02T15:45:00Z','2020-10-02T15:50:00Z'])]
+        rows[0]['purposes']=['daily_16UTC'];rows[1]['purposes']=['alternate_independent_close_proxy'];rows[2]['purposes']=['pregame_close_proxy']
+        mapped=self.mapping.older_slots(game,rows,['1','2'],primary_close_id='2',include_diagnostics=True)
+        primary=self.mapping.older_slots(game,rows,['1','2'],primary_close_id='2')
+        self.assertEqual(primary['request_ids'],['0','2']);self.assertEqual(primary['diagnostic_request_ids'],['1'])
         union=self.mapping.original_union([game],['g'],[mapped],rows,[],[])
         self.assertEqual(union['max_new_credits'],90)
         union=self.mapping.original_union([game],['g'],[mapped],rows,[{'request_id':'0','status':'missing'}],[])
@@ -143,6 +146,18 @@ class IntegrationTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.receipts.classify(row,self.record(row,601),dict(policy,snapshot_lag_ids=[]))
         bad=self.record(row);body=json.loads(bad['body']);body['data']['id']='other';bad['body']=json.dumps(body)
         with self.assertRaises(ValueError):self.receipts.classify(row,bad,policy)
+
+    def test_selected_metadata_schema_and_no_generic_404(self):
+        row=self.plan.make_request('markets',self.plan.ts('2025-10-01T06:00:00Z'),event_id='abc')
+        rec=self.record(row,bill=1)
+        body=json.loads(rec['body']);body['data']['bookmakers']=[{'key':'draftkings','markets':[{'key':'player_pass_yds','last_update':'2025-10-01T05:59:00Z'}]}]
+        rec['body']=json.dumps(body)
+        policy={'snapshot_lag_ids':[row['request_id']],'event_not_found_ids':[],'max_missing':{'snapshot_lag':1,'event_not_found':0}}
+        self.receipts.validate_policy([row],policy)
+        self.assertEqual(self.receipts.classify(row,rec,policy)['bill'],1)
+        with self.assertRaises(ValueError):self.receipts.classify(row,self.record(row,status=404,bill=0),policy)
+        body['data']['bookmakers'][0]['markets'][0]['outcomes']=[];rec['body']=json.dumps(body)
+        with self.assertRaises(ValueError):self.receipts.classify(row,rec,policy)
 
     def save_evidence(self,folder,row,rec):
         import pyarrow as pa
@@ -195,14 +210,22 @@ class IntegrationTests(unittest.TestCase):
             state.update(status='pilot_complete',pending=None,stopped=None,probe_credits=1687,
                          bundle_root_sha256='pilot',authorization_sha256='auth',pilot_plan_sha256='plan',
                          predecessor_snapshot=self.load('planner').digest(snapshot),other_usage_reserved=100,slice_cap=60)
-            (child/'spending-ledger.json').write_text(json.dumps(state));(child/'INITIALIZED.json').write_text('{}')
+            (child/'spending-ledger.json').write_text(json.dumps(state));(child/'INITIALIZED.json').write_text(json.dumps({'bundle_root_sha256':'pilot','probe_credits':1687}))
             marker={'bundle_root_sha256':'pilot','authorization_sha256':'auth','runtime_path':str(child)}
             (root/'registrations/pilot.json').write_text(json.dumps(marker))
-            binding=dict(ledger_sha256=self.capture.sha(child/'spending-ledger.json'),marker_sha256=self.capture.sha(root/'registrations/pilot.json'),
+            binding=dict(initialization_sha256=self.capture.sha(child/'INITIALIZED.json'),ledger_sha256=self.capture.sha(child/'spending-ledger.json'),marker_sha256=self.capture.sha(root/'registrations/pilot.json'),
                          rows=[row],policy=self.policy(row),predecessor_snapshot=state['predecessor_snapshot'],authorization_sha256='auth',plan_sha256='plan')
             verify=lambda *args:(snapshot,{'cumulative_debit_without_probe':100})
             result=self.evidence.global_union(root,snapshot,{'pilot':binding},verify)
             self.assertEqual(result[1]['conservative_debit'],1847)
+            init=child/'INITIALIZED.json';original=init.read_bytes()
+            for bad in ({'bundle_root_sha256':'wrong','probe_credits':1687},{'bundle_root_sha256':'pilot','probe_credits':0}):
+                init.write_text(json.dumps(bad))
+                altered=dict(binding,initialization_sha256=self.capture.sha(init))
+                with self.assertRaises(ValueError):self.evidence.global_union(root,snapshot,{'pilot':altered},verify)
+            init.write_bytes(original);target=child/'other.json';target.write_bytes(original);init.unlink();init.symlink_to(target)
+            with self.assertRaises(ValueError):self.evidence.global_union(root,snapshot,{'pilot':binding},verify)
+            init.unlink();init.write_bytes(original)
             (root/'rogue').mkdir();(root/'rogue/INITIALIZED.json').write_text('{}')
             with self.assertRaises(ValueError):self.evidence.global_union(root,snapshot,{'pilot':binding},verify)
 
@@ -221,6 +244,75 @@ class IntegrationTests(unittest.TestCase):
         authority.check(self.base,auth,manifest,root,commit,context,fetch=lambda _:live)
         with self.assertRaises(ValueError):authority.check(self.base,auth,manifest,root,commit,dict(context,plan_sha256='f'*64),fetch=lambda _:live)
         with self.assertRaises(ValueError):authority.check(self.base,auth,manifest,root,commit,context,fetch=lambda _:dict(live,body='REVOKED'))
+        for change in ({'max_baseline_used':1},{'billing_period_utc':'1900-01'},{'pre_run_other_usage_budget_debit':0},{'account_only_recovery':True}):
+            bad=copy.deepcopy(auth);bad['account_reconciliation'].update(change)
+            with self.assertRaises(Exception):authority.check(self.base,bad,manifest,root,commit,context,fetch=lambda _:live)
+        for suffix in ('CURRENT PAID AUTHORITY: INACTIVE','CURRENT PAID AUTHORITY: ACTIVE','CURRENT PAID AUTHORITY: UNKNOWN'):
+            changed=text+'\n'+suffix;bad=copy.deepcopy(auth);bad['hub_go_ahead']['comment_body']=changed
+            with self.assertRaisesRegex(ValueError,'exactly one'):authority.check(self.base,bad,manifest,root,commit,context,fetch=lambda _:dict(live,body=changed))
+
+    def test_prepared_loop_real_ledger_cache_and_crash_no_resend(self):
+        import os
+        from unittest.mock import patch
+        for crash in (None,'after_reservation','after_cache','after_receipt','clean_pause'):
+            with self.subTest(crash=crash),tempfile.TemporaryDirectory(dir='/private/tmp') as d:
+                folder=Path(d)
+                # Captured cache.settings can only see this empty synthetic root.
+                with patch.dict(os.environ,{'MARKETS_ROOT':str(folder),'MARKETS_DATA_DIR':str(folder/'data')}):
+                    load=loader();base=load('executor');cachemod=load('archive_markets.cache');loop=load('execution')
+                    row=dict(self.row(),path=self.row()['url'].removeprefix(self.plan.BASE),priority=1)
+                    rows=[row]
+                    if crash=='clean_pause':
+                        extra=self.plan.make_request('odds',self.plan.ts('2025-10-01T07:00:00Z'),books=['draftkings'],markets=self.mapping.MARKETS,event_id='abc')
+                        rows.append(dict(extra,path=extra['url'].removeprefix(self.plan.BASE),priority=1))
+                    policy={'snapshot_lag_ids':[r['request_id'] for r in rows],'event_not_found_ids':[r['request_id'] for r in rows],'max_missing':{'snapshot_lag':len(rows),'event_not_found':len(rows)}}
+                    root='a'*64;commit='b'*40;cap=60*len(rows)
+                    manifest={'requests':rows,'new_credits_by_priority':{'1':cap},'request_list_sha256':'c'*64,'request_set_sha256':'d'*64}
+                    rec={'status':'approved','bundle_root_sha256':root,'baseline_mode':'capture_first_free_check','reason':'synthetic','owner_note':'synthetic','max_baseline_used':0,'billing_period_utc':base.datetime.now(base.timezone.utc).strftime('%Y-%m')}
+                    hub=dict(status='approved',bundle_root_sha256=root,request_set_sha256=manifest['request_set_sha256'],request_list_sha256=manifest['request_list_sha256'],budget_credits=cap,commit=commit,comment_url='https://github.com/maxzipperman/value-finder/pull/99#issuecomment-1',comment_body=f"APPROVED paid run: list {manifest['request_list_sha256']}, request-set {manifest['request_set_sha256']}, budget {cap} credits, commit {commit}")
+                    auth=dict(status='approved',bundle_root_sha256=root,priority=1,max_new_credits=cap,human_authorization_evidence='synthetic',execution_commit=commit,account_reconciliation=rec,hub_go_ahead=hub)
+                    protocol=json.loads((BUNDLE/'protocol.json').read_text());probe=json.loads((BUNDLE/'probe-spending-ledger.json').read_text())
+                    ledger_class=load('transport').pilot_ledger(base,policy)
+                    ledger=ledger_class(folder,protocol,manifest,root,auth,probe)
+                    calls=[]
+                    def get(url,**kw):
+                        calls.append(url)
+                        paid=sum(not u.endswith('/sports') for u in calls)
+                        if url.endswith('/sports'):return SimpleNamespace(status_code=200,headers={'x-requests-last':'0','x-requests-used':str(60*paid),'x-requests-remaining':str(5000000-60*paid)},text='[]')
+                        current=next(r for r in rows if r['params']['date']==kw['params']['date'])
+                        record=self.record(current);headers=json.loads(record['headers_json']);headers.update({'x-requests-used':str(60*paid),'x-requests-remaining':str(5000000-60*paid)})
+                        return SimpleNamespace(status_code=200,headers=headers,text=record['body'])
+                    session=SimpleNamespace(adapters={'https':SimpleNamespace(max_retries=SimpleNamespace(total=0))},get=get,close=lambda:None)
+                    def checkpoint(stage):
+                        if stage==crash:raise RuntimeError('synthetic interruption')
+                    args=dict(base=base,ledger=ledger,rows=rows,policy=policy,raw_cache=cachemod.RawCache(folder/'data/raw'),fetched_type=cachemod.Fetched,
+                              http_session=session,authorize_live=lambda:None,verify_unchanged=lambda:None,credential='synthetic-test-secret',checkpoint=checkpoint)
+                    try:
+                        if crash=='clean_pause':
+                            result=loop.prepared_loop(**args,pause_after=1)
+                            self.assertEqual(result['status'],'pilot_clean_pause')
+                            ledger.close();ledger=ledger_class(folder,protocol,manifest,root,auth,probe);args['ledger']=ledger
+                            result=loop.prepared_loop(**args)
+                            self.assertEqual(result['status'],'pilot_complete')
+                            self.assertEqual(sum(not u.endswith('/sports') for u in calls),2)
+                            self.assertEqual(ledger.reserved(),120)
+                        elif crash:
+                            with self.assertRaises(RuntimeError):loop.prepared_loop(**args)
+                            self.assertEqual(ledger.state['attempts'][row['request_id']]['reserved_credits'],60)
+                            before=len(calls)
+                            if crash=='after_receipt':
+                                self.assertTrue((folder/'receipts'/(row['request_id']+'.json')).exists())
+                                self.assertEqual(json.loads(ledger.path.read_text())['pending'],row['request_id'])
+                            ledger.close()
+                            with self.assertRaises(base.Halt):ledger_class(folder,protocol,manifest,root,auth,probe)
+                            with self.assertRaises(ValueError):loop.prepared_loop(**args)
+                            self.assertEqual(len(calls),before)
+                        else:
+                            result=loop.prepared_loop(**args)
+                            self.assertEqual(result['status'],'pilot_complete');self.assertEqual(result['reserved'],60)
+                            self.assertEqual(len(calls),2)
+                            with self.assertRaises(ValueError):loop.prepared_loop(**args)
+                    finally:ledger.close()
 
     def test_real_guarded_session_revocation_before_get_and_no_resend(self):
         row=dict(self.row(),path=self.row()['url'].removeprefix(self.plan.BASE),priority=1)

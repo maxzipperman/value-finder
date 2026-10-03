@@ -22,6 +22,42 @@
       "-p",
       "test_integration.py",
       "-v"
+    ],
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "strategy-research/coverage-pilot-v1",
+      "-p",
+      "test_classifier.py",
+      "-v"
+    ],
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "strategy-research/coverage-pilot-v1",
+      "-p",
+      "test_orchestration.py",
+      "-v"
+    ],
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "strategy-research/coverage-pilot-v1",
+      "-p",
+      "test_binding.py",
+      "-v"
     ]
   ],
   "environment": {

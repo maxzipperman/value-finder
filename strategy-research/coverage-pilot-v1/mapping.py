@@ -9,11 +9,18 @@ MARKETS = ('player_pass_yds', 'player_rush_yds', 'player_reception_yds',
 STATES = {'completed', 'absent', 'missing', 'pending', 'uncertain'}
 
 
-def older_slots(game, originals, close_ids):
+def early_rank(row, kickoff):
+    # Source/window admissibility is enforced by older_slots before this rank.
+    at = utc(row['requested_utc'])
+    return (abs(kickoff-at-timedelta(hours=24)), at, row['request_id'])
+
+
+def older_slots(game, originals, close_ids, *, primary_close_id, include_diagnostics=False):
     """Pick nearest original daily time to T24, with immutable-ID tie break.
 
-    close_ids is the previously frozen game-to-original-close mapping, not a
-    re-created endpoint. Multiple original close candidates remain in exact cost.
+    close_ids is the frozen game-to-original-close map. primary_close_id must be
+    its provider-anchor close. Other closes remain diagnostic, purchased only with
+    the separately frozen include_diagnostics flag and included in the exact cap.
     Unbound or missing early/close emits a zero row, never drops the game.
     """
     rows = unique(originals, 'request_id')
@@ -28,12 +35,20 @@ def older_slots(game, originals, close_ids):
         r = rows[rid]
         if r['sport'] != game['sport'] or not timedelta(minutes=5) <= kickoff-utc(r['requested_utc']) <= timedelta(minutes=20):
             raise InvalidPlan('close mapping outside scheduled proxy')
+    if (primary_close_id not in close_ids or 'pregame_close_proxy' not in rows[primary_close_id].get('purposes',[])):
+        raise InvalidPlan('frozen provider-anchor primary close required')
     candidates = [r for r in rows.values() if r['sport'] == game['sport']
+                  and 'daily_16UTC' in r.get('purposes',[])
+                  and (utc(r['requested_utc']).hour,utc(r['requested_utc']).minute,utc(r['requested_utc']).second)==(16,0,0)
                   and timedelta(hours=18) <= kickoff-utc(r['requested_utc']) <= timedelta(hours=54)]
     if not candidates or not close_ids:
         return {'game_id': game['game_id'], 'request_ids': [], 'reason': 'missing_original_slot'}
-    early = min(candidates, key=lambda r: (abs(kickoff-utc(r['requested_utc'])-timedelta(hours=24)),r['request_id']))
-    return {'game_id': game['game_id'], 'request_ids': [early['request_id'], *sorted(close_ids)], 'reason': None}
+    early = min(candidates, key=lambda r: early_rank(r,kickoff))
+    primary=[early['request_id'],primary_close_id]
+    diagnostic=sorted(set(close_ids)-{primary_close_id})
+    return {'game_id':game['game_id'],'request_ids':primary+(diagnostic if include_diagnostics else []),
+            'primary_request_ids':primary,'diagnostic_request_ids':diagnostic,
+            'diagnostics_in_purchase':include_diagnostics,'reason':None}
 
 
 def original_union(frame, selected, mappings, originals, attempted, reused):
@@ -119,3 +134,22 @@ def props_union(opportunities, history, make_request):
     return {'requests':[requests[k] for k in sorted(requests)],'mappings':mappings,
             'opportunity_denominator':len(ops),'blocked':blocked,
             'max_new_credits':sum(r['max_new_credits'] for r in requests.values())}
+
+
+def selected_availability(opportunities, attempted_ids, make_request):
+    """Finite selected slots only; never substitutes full-season discovery."""
+    ops=unique(opportunities,'opportunity_id');rows={};mappings=[]
+    for oid,op in sorted(ops.items()):
+        if op['season'] not in (2023,2024,2025) or op['slot'] not in ('T24','CLOSE_T10'):
+            raise InvalidPlan('selected primary availability only')
+        if op.get('no_request_reason'):
+            mappings.append({'opportunity_id':oid,'request_ids':[],'reason':op['no_request_reason']});continue
+        row=make_request('markets',utc(op['requested_utc']),event_id=op['event_id'],sport=op['sport'])
+        if utc(row['requested_utc'])!=utc(op['requested_utc']):raise InvalidPlan('availability rounded time')
+        rid=row['request_id']
+        if rid in attempted_ids:
+            mappings.append({'opportunity_id':oid,'request_ids':[],'reason':'prior_metadata_attempt','prior_request_id':rid})
+        else:
+            rows[rid]=row;mappings.append({'opportunity_id':oid,'request_ids':[rid],'reason':None})
+    return {'requests':[rows[k] for k in sorted(rows)],'mappings':mappings,
+            'max_new_credits':len(rows),'opportunity_denominator':len(ops)}

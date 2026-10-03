@@ -99,3 +99,34 @@ def pooled_report(strata):
     lower = sum(r['full_successes_lower'] for r in strata)
     return {'population': total, 'full_successes_lower': lower,
             'coverage_lower': Fraction(lower, total), 'release_authority': False}
+
+
+def attainable(*, known_successes, known_failures, unknown, sample, phase,
+               projected_new_credits, utility_floor, cost_ceiling):
+    """Before any draw: minimum successful sampled games for the fixed contract.
+
+    Full denominator and marginal unknown-cohort cost BOTH apply. A structural
+    fail means no possible population can meet the utility floor; a fixed-sample
+    fail means even x=n cannot certify this predeclared sampling design. Neither
+    permits automatic sample expansion. No outcome or actual sample is consulted.
+    """
+    for v in (known_successes,known_failures,unknown,sample):count(v)
+    if sample>unknown:raise ValueError('sample exceeds unknown population')
+    if not isinstance(utility_floor,Fraction) or not 0<utility_floor<=1:
+        raise ValueError('exact utility floor required')
+    total=known_successes+known_failures+unknown
+    if not total:raise ValueError('empty stratum')
+    ceiling=Fraction(known_successes+unknown,total)
+    args=dict(known_successes=known_successes,known_failures=known_failures,unknown=unknown,
+              sample=sample,phase=phase,projected_new_credits=projected_new_credits,
+              utility_floor=utility_floor,cost_ceiling=cost_ceiling)
+    best=stratum(**args,observed=sample)
+    if not unknown:status='census_only';minimum=None
+    elif ceiling<utility_floor:status='structural_utility_fail';minimum=None
+    else:
+        minimum=next((x for x in range(sample+1) if stratum(**args,observed=x)['status']=='utility_pass'),None)
+        status='attainable' if minimum is not None else 'fixed_sample_cannot_certify'
+    return {'status':status,'sample':sample,'population':total,'unknown_population':unknown,
+            'minimum_sample_successes':minimum,'full_coverage_ceiling':ceiling,
+            'best_full_lower':best['full_coverage_lower'],'best_marginal_lower':best['marginal_coverage_lower'],
+            'best_cost_upper':best['new_credits_per_usable_upper'],'paid_authority':False}

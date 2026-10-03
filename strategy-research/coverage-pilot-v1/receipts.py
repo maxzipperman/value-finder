@@ -74,13 +74,26 @@ def classify(row, record, policy):
     lag = (requested-at).total_seconds()
     if lag < 0: raise InvalidPlan('future snapshot')
     payload = body['data']
-    if row['source'] == 'oddsapi/hist_event_odds':
-        expected_url = 'https://api.the-odds-api.com/v4/historical/sports/'+row['sport']+'/events/'+str(row['event_id'])+'/odds'
+    if row['source'] in {'oddsapi/hist_event_odds','oddsapi/hist_event_markets'}:
+        suffix='odds' if row['source']=='oddsapi/hist_event_odds' else 'markets'
+        expected_url = 'https://api.the-odds-api.com/v4/historical/sports/'+row['sport']+'/events/'+str(row['event_id'])+'/'+suffix
         if (not isinstance(payload,dict) or payload.get('id') != row['event_id']
                 or payload.get('sport_key') != row['sport'] or row['url'] != expected_url
                 or not isinstance(payload.get('bookmakers'),list)):
             raise InvalidPlan('event odds identity/schema differs')
-        utc(payload['commence_time']); odds_shape(payload)
+        utc(payload['commence_time'])
+        if suffix=='odds':odds_shape(payload)
+        else:
+            seen_books=set()
+            for book in payload['bookmakers']:
+                if not isinstance(book,dict) or not book.get('key') or book['key'] in seen_books or not isinstance(book.get('markets'),list):
+                    raise InvalidPlan('malformed market metadata bookmaker')
+                seen_books.add(book['key']);seen_markets=set()
+                for market in book['markets']:
+                    if not isinstance(market,dict) or not market.get('key') or market['key'] in seen_markets or 'outcomes' in market:
+                        raise InvalidPlan('market metadata must contain unique keys, not prices')
+                    seen_markets.add(market['key'])
+                    if utc(market['last_update'])>at:raise InvalidPlan('future market metadata')
     elif row['source'] == 'oddsapi/hist_odds':
         if not isinstance(payload,list): raise InvalidPlan('featured schema differs')
         seen_events = set()

@@ -109,3 +109,31 @@ explicit test selectors so the new bounds/integration suites cannot enter silent
 The first integration attempt under ambient Python failed its dependency-origin
 guard before running tests; the reviewed interpreter is required, not a loosened
 capture policy. No real-state write, provider request or credentials were involved.
+
+## Executable review checkpoint (October 2)
+
+The sibling executor is implemented: captured bootstrap and selected-frame binding,
+fixed shared lock, full authenticated history, exact receipt-bound reused IDs/cells,
+metadata-only semantic overlap, live authority/account binding, durable reservations,
+4RPS/no retries, clean pause and fail-closed crash/reopen. This supersedes the
+earlier unfinished-code statements above. The final existing frame and slot pins
+were verified; certainty.py reports fixed-sample attainability, without a draw.
+
+Saved integration evidence now covers 15 integration, 6 classifier, 2 orchestration
+and 4 binding/reuse/overlap tests; bounds evidence covers 7 tests. Crash checks
+include the actual PilotLedger.complete after-receipt cut and reopening refusal.
+Strict selected props and older bindings pass synthetic positive fixtures; wrong
+provider/slot, incomplete cells, changed receipt and overlapping query fail.
+The orchestration fixture uses real lock/ledger/cache/transport but MOCKS historical
+bootstrap, authority, baseline and overlap adapters. The real seven-store baseline
+proof remains separate. Neither constitutes a complete live paid preflight.
+
+Concrete remaining gates: independent current-head code/protocol review; hub's
+once-only draw and exact residual union; frozen packet with each reused slot's
+terminal historical root/request/receipt/raw pins and complete book/market cells;
+current full shared-state/cache verification, exact cap and live active authority
+with current account reconciliation. No production draw/list/paid authority or
+statistical release has been created. Terminal final-look helpers require separate
+authenticated classifications and saved bounds; acquisition does not auto-release
+a later tranche. Uncached prior attempts cannot support a reused-slot proof: they
+remain excluded from repurchase and require a frozen zero/failure disposition.

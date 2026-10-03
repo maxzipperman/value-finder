@@ -1,8 +1,4 @@
-"""Offline-only capture bootstrap. No seed creation, keys or execution CLI.
-
-An external reviewed packet root is required. A paid entrypoint must independently
-check committed frame/protocol/draw provenance and exact live authority.
-"""
+"""Verified-byte bootstrap: offline validation by default; explicit hub-only paid CLI."""
 import hashlib
 import json
 from pathlib import Path
@@ -11,8 +7,8 @@ import os
 import stat
 
 SOURCE_ROOT='4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d'
-MODULES={'planner','bounds','timing','mapping','receipts','baseline','evidence','transport','authority','bootstrap','runner'}
-PACKET={'manifest.json','requests.json','policy.json','protocol.json','frame.json','draw.json','selected.json','mappings.json','baseline.json','overlap.json'}
+MODULES={'planner','bounds','timing','mapping','receipts','baseline','evidence','transport','authority','bootstrap','runner','classifier','execution','certainty','overlap','orchestration','frame_binding'}
+PACKET={'manifest.json','requests.json','policy.json','protocol.json','frame.json','draw.json','selected.json','mappings.json','baseline.json','overlap.json','slot-map.json','classifier-contract.json','certainty-source-proof.json'}
 
 
 def regular(path):
@@ -67,3 +63,27 @@ def verified(packet, root, bundle):
             modules[key]=blob;paths[key]=bundle/name
     load=capture.closed_modules(modules,paths)
     return load('runner'),load('executor'),data,source,load
+
+
+if __name__=='__main__':
+    import argparse
+    import sys
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--packet',type=Path,required=True);parser.add_argument('--root',required=True)
+    parser.add_argument('--bundle',type=Path,required=True);parser.add_argument('--authorization',type=Path)
+    parser.add_argument('--key-file',type=Path);parser.add_argument('--confirm-paid',action='store_true')
+    args=parser.parse_args()
+    try:
+        runner,base,data,source,load=verified(args.packet,args.root,args.bundle)
+        if not args.confirm_paid:print(json.dumps(runner.packet(data,source)))
+        else:
+            if not sys.flags.isolated or not sys.dont_write_bytecode:raise ValueError('paid bootstrap requires -I -B')
+            if not args.authorization or not args.key_file:raise ValueError('exact external authority and explicit key source required')
+            auth=json.loads(regular(args.authorization))
+            def key():
+                from dotenv import dotenv_values
+                return dotenv_values(args.key_file).get('ODDS_API_KEY')
+            def http():return load('archive_markets.http').new_session()
+            print(json.dumps(load('orchestration').run(args.packet,args.root,args.bundle,auth,key_factory=key,http_factory=http)))
+    except BaseException:
+        raise SystemExit('STOPPED: retain evidence/reservations; no automatic retry or recovery') from None

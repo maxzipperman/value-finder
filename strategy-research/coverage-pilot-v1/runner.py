@@ -1,14 +1,11 @@
-"""Offline packet validator for the prospective pilot. No paid entrypoint yet.
-
-The final classifier/frame integration and end-to-end execution/restart tests must
-be reviewed before adding a callable purchase loop. No secrets are accepted here.
-"""
+"""Offline packet validator for the prospective pilot; no credential access."""
 import json
 import capture
 import plan
 import planner
 import receipts
 import mapping
+import frame_binding
 
 
 def packet(data, source):
@@ -23,6 +20,7 @@ def packet(data, source):
     if set(by_game)!=set(selected['selected']):raise ValueError('selected mapping denominator differs')
     originals={r['request_id']:r for r in json.loads(source['request-manifest.json'])['requests']}
     indexed=planner.unique(rows,'request_id')
+    if not indexed:raise ValueError('no new requests; no purchase packet needed')
     for row in rows:
         if row['source']=='oddsapi/hist_odds':
             original=originals.get(row['request_id'])
@@ -35,7 +33,10 @@ def packet(data, source):
             if not set(markets)<=set(mapping.MARKETS):raise ValueError('primary six markets only')
             expected=plan.make_request('odds',plan.ts(row['requested_utc']),books=books,markets=markets,event_id=row['event_id'],sport=row['sport'])
             if expected!=row:raise ValueError('props request reconstruction differs')
-        else:raise ValueError('separate metadata stage not enabled')
+        elif row['source']=='oddsapi/hist_event_markets':
+            expected=plan.make_request('markets',plan.ts(row['requested_utc']),event_id=row['event_id'],sport=row['sport'])
+            if expected!=row:raise ValueError('selected availability reconstruction differs')
+        else:raise ValueError('full listing stage not enabled')
     referenced=set()
     for op in mappings:
         ids=op['request_ids']
@@ -53,6 +54,8 @@ def packet(data, source):
     if (contract['props_cost_ceiling']!=244 or contract['older_cost_ceiling']!=100
             or set(contract['primary_markets'])!=set(mapping.MARKETS)):
         raise ValueError('primary contract changed')
-    return {'status':'offline_validated_not_paid_ready','requests':len(rows),'max_new_credits':cap,
+    if protocol.get('execution_status')=='reviewed_for_execution':
+        frame_binding.verify(data,source,rows,selected,mappings,frame)
+    return {'status':'offline_validated_authority_required','requests':len(rows),'max_new_credits':cap,
             'selected_denominator':len(mappings),'full_denominator':selected['denominator'],
-            'paid_entrypoint_available':False,'final_classifier_integration_required':True}
+            'paid_entrypoint_available':True,'execution_protocol_ready':protocol.get('execution_status')=='reviewed_for_execution'}
