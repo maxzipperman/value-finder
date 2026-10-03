@@ -101,13 +101,17 @@ def counter_replay(base,state,rows,records,policy,protocol,receipts):
     return dict(billed=own,used=state['provider_used'],remaining=state['provider_remaining'],epoch=state['epoch'],conservative_debit=state['other_usage_reserved']+1687+simulated.reserved())
 
 
-def saved_record(folder,rid,attempt,capture):
+def saved_record(folder,rid,attempt,capture,*,legacy=False):
     import pyarrow as pa
     import pyarrow.parquet as pq
     raw=capture.regular(attempt['response_path']);proof_raw=capture.regular(folder/'receipts'/(rid+'.json'))
     if capture.digest(raw)!=attempt['response_sha256'] or capture.digest(proof_raw)!=attempt['receipt_sha256']:raise ValueError('receipt/raw changed during projection')
     proof=json.loads(proof_raw);records=pq.read_table(pa.BufferReader(raw)).to_pylist()
-    if len(records)!=1 or proof['request_id']!=rid or proof['response_sha256']!=attempt['response_sha256'] or canonical(proof['record'])!=canonical(records[0]):raise ValueError('single exact saved receipt required')
+    if len(records)!=1 or proof['request_id']!=rid or canonical(proof['record'])!=canonical(records[0]):raise ValueError('single exact saved receipt required')
+    if legacy:
+        if (proof.get('record_sha256')!=attempt['response_sha256'] or proof.get('cache_key')!=records[0]['cache_key']
+                or proof.get('headers')!=json.loads(records[0]['headers_json'])):raise ValueError('exact authenticated legacy receipt layout required')
+    elif proof.get('response_sha256')!=attempt['response_sha256']:raise ValueError('exact prospective receipt layout required')
     return records[0]
 
 
@@ -151,7 +155,7 @@ def authenticate(data,source,load,pin):
                 add(rid,recs[0],'completed',claim)
             else:
                 folder=root_base/claim['root'];a=capture.read(folder/'spending-ledger.json')['attempts'][rid]
-                add(rid,saved_record(folder,rid,a,capture),a['status'],claim)
+                add(rid,saved_record(folder,rid,a,capture,legacy=claim['root'] in bindings['base_snapshot']['ledgers']),a['status'],claim)
     if pins!=pin['request_evidence']:raise ValueError('exact designated raw/receipt pin union differs')
     counters=counter_replay(base,state,rows,{rid:r['record'] for rid,r in projected.items()},policy,json.loads(source['protocol.json']),load('receipts'))
     if counters!=pin['counter_reconciliation'] or counters['conservative_debit']!=carry['conservative_debit']:raise ValueError('counter/carry pins differ')

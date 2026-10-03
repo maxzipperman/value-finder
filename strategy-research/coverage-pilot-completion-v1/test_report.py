@@ -130,6 +130,20 @@ class ReportTests(unittest.TestCase):
             with patch.object(report,'ROOT',root),self.assertRaises(ValueError):report.captured_closure(repo,packet,root)
             self.assertFalse(sentinel.exists())
 
+    def test_legacy_receipt_layout_only_after_explicit_legacy_binding(self):
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        capture=self.load('capture');rid='synthetic'
+        with tempfile.TemporaryDirectory(dir='/private/tmp') as d:
+            folder=Path(d);raw=folder/'raw.parquet';record=dict(cache_key='key',headers_json=json.dumps({'x-requests-last':'30'}),body='{}')
+            pq.write_table(pa.Table.from_pylist([record]),raw);receipts=folder/'receipts';receipts.mkdir();saved=receipts/(rid+'.json')
+            proof=dict(request_id=rid,record_sha256=capture.sha(raw),record=record,cache_key='key',headers=json.loads(record['headers_json']));saved.write_bytes(report.canonical(proof))
+            attempt=dict(response_path=str(raw),response_sha256=capture.sha(raw),receipt_sha256=capture.sha(saved))
+            self.assertEqual(report.saved_record(folder,rid,attempt,capture,legacy=True),record)
+            with self.assertRaises(ValueError):report.saved_record(folder,rid,attempt,capture)
+            proof['record_sha256']='0'*64;saved.write_bytes(report.canonical(proof));attempt['receipt_sha256']=capture.sha(saved)
+            with self.assertRaises(ValueError):report.saved_record(folder,rid,attempt,capture,legacy=True)
+
     def test_frozen_counter_replay_is_pure_and_detects_changed_epoch(self):
         from datetime import timedelta
         base=self.load('executor');receipts=self.load('receipts');plan=self.load('plan');mapping=self.load('mapping')
