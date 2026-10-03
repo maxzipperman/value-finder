@@ -1,0 +1,53 @@
+[
+  {
+    "case": "schema only; each cause/false/duplicate finding requires manual semantic review",
+    "passed": true,
+    "findings": [
+      {
+        "file": "quotes.py",
+        "line": 13,
+        "explanation": "Negative odds branch uses 100/((-v)+100) instead of the required (-v)/((-v)+100); for negative v other than -100 the probability is wrong."
+      },
+      {
+        "file": "quotes.py",
+        "line": 21,
+        "explanation": "The prefilter compares raw observed_at values directly rather than normalized instants; with different timezone offsets the string ordering does not match absolute-time ordering."
+      },
+      {
+        "file": "quotes.py",
+        "line": 21,
+        "explanation": "The prefilter selects the latest observed_at row per book before filtering for event match, expiry, and last_update<=observed; an ineligible later row can suppress an eligible older row."
+      },
+      {
+        "file": "quotes.py",
+        "line": 33,
+        "explanation": "The eligibility test uses observed<=at<=expiry, so asof equal to expires_at is accepted; the contract requires observed_at<=asof<expires_at (strict expiry)."
+      },
+      {
+        "file": "runs.py",
+        "line": 19,
+        "explanation": "The deduplication key is row['job']+row['run_id'] rather than run_id alone; this breaks global run_id deduplication and prevents a later valid record from correcting the job field."
+      },
+      {
+        "file": "runs.py",
+        "line": 20,
+        "explanation": "The duplicate-time condition uses observed>=stamps[identity], so a later equal-time duplicate replaces the first eligible row; the contract requires retaining the first on exact time ties."
+      },
+      {
+        "file": "runs.py",
+        "line": 27,
+        "explanation": "The second selection loop uses `if True`, so it always overwrites the job entry and never compares attempt, observed_at, or run_id; the last row encountered for a job wins instead of the required latest attempt."
+      },
+      {
+        "file": "pipeline.py",
+        "line": 10,
+        "explanation": "successful_rows sums downloaded_rows only for status=='ok'; the contract requires summing for each selected job with status ok or partial."
+      },
+      {
+        "file": "pipeline.py",
+        "line": 10,
+        "explanation": "failures includes jobs with status in ('failed','pending'); the contract says failures contains only failed jobs, and pending must not be inferred as failure."
+      }
+    ]
+  }
+]

@@ -242,3 +242,6 @@ PR147 DeepSeek64K sampledimplementation deliveredOpenInference at1883s/52,544com
 
 
 PR147 DeepSeek64K regression stops1894s/52,659completiontokens, reported$0.041090517. Fullsource inspected before originalrestricted15sgrader: benign type-name exception label ASTrejected, no generated tests executed/oracle/mutation credit. Separately trusted-reference counterexample confirms wrong globalIDtie assertions (forward12rows/noj3; reverse17rows/j1uniqueattempt1). Completedsemantic error no128K. Integrated23results/0errors, DeepSeekreviewpending+6paidunstarted; onlyqueue98555 active. Reportedpaidresponses aggregate$0.137326812, unknownerrorsmaxreserved. Qualified32K6/finalallocation/independentvalidation stillpending.
+
+
+PR147 DeepSeek integrated review stop1132s/35,471completiontokens/$0.027699776: validJSON, fullauthorsemantic audit9/10causes0false/duplicates/no correcttimes flag, missesquoteIDtie. AllDeepSeek3 integrated collected,24totalresults0errors. GLMimplementationpending+5paidunstarted, onlyqueue98555; matched32K6 wait. Aggregatepaidreported$0.165026588, unknownerrorsmaxreserved. No128K/feedback/reroll; finalhandoff/independentvalidation pending.

@@ -1,0 +1,81 @@
+{
+  "reviewer": "author full manual semantic inspection; not independent validation",
+  "task": "review",
+  "all_findings_inspected": true,
+  "response_sha256": "257eb7c970b7fc2f337693eb2c92507e77297c17b020ad2da7894e4b2c76783d",
+  "distinct_real_causes": 9,
+  "seeded_causes": 10,
+  "false_findings": 0,
+  "duplicate_findings": 0,
+  "non_defect_annotations": 0,
+  "correct_times_component_flagged": false,
+  "finding_audit": [
+    {
+      "index": 1,
+      "classification": "real",
+      "cause": "negative odds formula",
+      "source_fact": "For negative odds magnitude a, probability must be a/(a+100); -100 gives equal formulas, correctly exempted by the finding."
+    },
+    {
+      "index": 2,
+      "classification": "real",
+      "cause": "lexical offset ordering",
+      "source_fact": "Raw ISO strings with offsets can sort oppositely to UTC instants; the prefilter uses raw observed_at."
+    },
+    {
+      "index": 3,
+      "classification": "real",
+      "cause": "eligibility after book dedupe",
+      "source_fact": "The prefilter reduces before event, expiry and update eligibility; later ineligible rows can erase eligible alternatives."
+    },
+    {
+      "index": 4,
+      "classification": "real",
+      "cause": "inclusive expiry",
+      "source_fact": "The at<=expiry predicate accepts exact expiry; contract requires at<expiry."
+    },
+    {
+      "index": 5,
+      "classification": "real",
+      "cause": "job-scoped run id dedupe",
+      "source_fact": "job+run_id is job scoped; later same global run_id correcting job is retained separately."
+    },
+    {
+      "index": 6,
+      "classification": "real",
+      "cause": "last duplicate time tie",
+      "source_fact": "observed>=stamps replaces the first equal-time duplicate; contract retains first."
+    },
+    {
+      "index": 7,
+      "classification": "real",
+      "cause": "stale job retry overwrite",
+      "source_fact": "Unconditional if True overwrites each job instead of comparing attempt/time/min-ID rank."
+    },
+    {
+      "index": 8,
+      "classification": "real",
+      "cause": "partial downloaded rows omitted",
+      "source_fact": "Only ok contributes; selected partial counts are known and must contribute once."
+    },
+    {
+      "index": 9,
+      "classification": "real",
+      "cause": "pending classified failed",
+      "source_fact": "Selected pending is included in failures; it belongs only to unknown_jobs."
+    }
+  ],
+  "missed_causes": [
+    "missing quote tie rules"
+  ],
+  "caveats": [
+    "Valid JSON/schema acceptance is separate from manual semantic credit. All nine visible claims checked against supplied source and valid-record contract. No independent reviewer signoff."
+  ],
+  "evidence": [
+    "review-response.txt",
+    "../../ceiling/review-source.json",
+    "../../ceiling/review-inventory.json",
+    "../../ceiling/review-validation.json"
+  ],
+  "schema_check_is_not_semantic_credit": true
+}

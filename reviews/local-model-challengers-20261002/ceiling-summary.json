@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 23,
+    "result": 24,
     "error": 0,
     "pending": 1,
-    "not_started": 6
+    "not_started": 5
   },
   "records": [
     {
@@ -28532,7 +28532,7 @@
       "family": "api",
       "model": "deepseek/deepseek-v4.1-flash",
       "task": "review",
-      "status": "pending",
+      "status": "result",
       "folder": "openrouter-ceiling/deepseek--deepseek-v4.1-flash",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": null,
@@ -28558,13 +28558,179 @@
         "seed": 42,
         "top_p": 0.95
       },
-      "request_sha256": "9899c1caf616c5b00b3a931572f9902808f5de2beede7cb2b662fa2f55a89053"
+      "request_sha256": "9899c1caf616c5b00b3a931572f9902808f5de2beede7cb2b662fa2f55a89053",
+      "returned_model": "deepseek/deepseek-v4.1-flash",
+      "wall_seconds": 1132.389025084005,
+      "provider": "OpenInference",
+      "finish_reason": "stop",
+      "final_answer_bytes": 2037,
+      "usage": {
+        "prompt_tokens": 2468,
+        "completion_tokens": 35471,
+        "total_tokens": 37939,
+        "cost": 0.027699776,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 2444,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.027699776,
+          "upstream_inference_prompt_cost": 3.2396e-05,
+          "upstream_inference_completions_cost": 0.02766738
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 34962,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "schema only; each cause/false/duplicate finding requires manual semantic review",
+            "passed": true,
+            "findings": [
+              {
+                "file": "quotes.py",
+                "line": 13,
+                "explanation": "Negative odds branch uses 100/((-v)+100) instead of the required (-v)/((-v)+100); for negative v other than -100 the probability is wrong."
+              },
+              {
+                "file": "quotes.py",
+                "line": 21,
+                "explanation": "The prefilter compares raw observed_at values directly rather than normalized instants; with different timezone offsets the string ordering does not match absolute-time ordering."
+              },
+              {
+                "file": "quotes.py",
+                "line": 21,
+                "explanation": "The prefilter selects the latest observed_at row per book before filtering for event match, expiry, and last_update<=observed; an ineligible later row can suppress an eligible older row."
+              },
+              {
+                "file": "quotes.py",
+                "line": 33,
+                "explanation": "The eligibility test uses observed<=at<=expiry, so asof equal to expires_at is accepted; the contract requires observed_at<=asof<expires_at (strict expiry)."
+              },
+              {
+                "file": "runs.py",
+                "line": 19,
+                "explanation": "The deduplication key is row['job']+row['run_id'] rather than run_id alone; this breaks global run_id deduplication and prevents a later valid record from correcting the job field."
+              },
+              {
+                "file": "runs.py",
+                "line": 20,
+                "explanation": "The duplicate-time condition uses observed>=stamps[identity], so a later equal-time duplicate replaces the first eligible row; the contract requires retaining the first on exact time ties."
+              },
+              {
+                "file": "runs.py",
+                "line": 27,
+                "explanation": "The second selection loop uses `if True`, so it always overwrites the job entry and never compares attempt, observed_at, or run_id; the last row encountered for a job wins instead of the required latest attempt."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 10,
+                "explanation": "successful_rows sums downloaded_rows only for status=='ok'; the contract requires summing for each selected job with status ok or partial."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 10,
+                "explanation": "failures includes jobs with status in ('failed','pending'); the contract says failures contains only failed jobs, and pending must not be inferred as failure."
+              }
+            ]
+          }
+        ]
+      },
+      "manual_review": {
+        "reviewer": "author full manual semantic inspection; not independent validation",
+        "task": "review",
+        "all_findings_inspected": true,
+        "response_sha256": "257eb7c970b7fc2f337693eb2c92507e77297c17b020ad2da7894e4b2c76783d",
+        "distinct_real_causes": 9,
+        "seeded_causes": 10,
+        "false_findings": 0,
+        "duplicate_findings": 0,
+        "non_defect_annotations": 0,
+        "correct_times_component_flagged": false,
+        "finding_audit": [
+          {
+            "index": 1,
+            "classification": "real",
+            "cause": "negative odds formula",
+            "source_fact": "For negative odds magnitude a, probability must be a/(a+100); -100 gives equal formulas, correctly exempted by the finding."
+          },
+          {
+            "index": 2,
+            "classification": "real",
+            "cause": "lexical offset ordering",
+            "source_fact": "Raw ISO strings with offsets can sort oppositely to UTC instants; the prefilter uses raw observed_at."
+          },
+          {
+            "index": 3,
+            "classification": "real",
+            "cause": "eligibility after book dedupe",
+            "source_fact": "The prefilter reduces before event, expiry and update eligibility; later ineligible rows can erase eligible alternatives."
+          },
+          {
+            "index": 4,
+            "classification": "real",
+            "cause": "inclusive expiry",
+            "source_fact": "The at<=expiry predicate accepts exact expiry; contract requires at<expiry."
+          },
+          {
+            "index": 5,
+            "classification": "real",
+            "cause": "job-scoped run id dedupe",
+            "source_fact": "job+run_id is job scoped; later same global run_id correcting job is retained separately."
+          },
+          {
+            "index": 6,
+            "classification": "real",
+            "cause": "last duplicate time tie",
+            "source_fact": "observed>=stamps replaces the first equal-time duplicate; contract retains first."
+          },
+          {
+            "index": 7,
+            "classification": "real",
+            "cause": "stale job retry overwrite",
+            "source_fact": "Unconditional if True overwrites each job instead of comparing attempt/time/min-ID rank."
+          },
+          {
+            "index": 8,
+            "classification": "real",
+            "cause": "partial downloaded rows omitted",
+            "source_fact": "Only ok contributes; selected partial counts are known and must contribute once."
+          },
+          {
+            "index": 9,
+            "classification": "real",
+            "cause": "pending classified failed",
+            "source_fact": "Selected pending is included in failures; it belongs only to unknown_jobs."
+          }
+        ],
+        "missed_causes": [
+          "missing quote tie rules"
+        ],
+        "caveats": [
+          "Valid JSON/schema acceptance is separate from manual semantic credit. All nine visible claims checked against supplied source and valid-record contract. No independent reviewer signoff."
+        ],
+        "evidence": [
+          "review-response.txt",
+          "../../ceiling/review-source.json",
+          "../../ceiling/review-inventory.json",
+          "../../ceiling/review-validation.json"
+        ],
+        "schema_check_is_not_semantic_credit": true
+      }
     },
     {
       "family": "api",
       "model": "z-ai/glm-5.3-flash",
       "task": "implementation",
-      "status": "not_started",
+      "status": "pending",
       "folder": "openrouter-ceiling/z-ai--glm-5.3-flash",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": null,
@@ -28592,7 +28758,8 @@
         },
         "seed": 42,
         "top_p": 0.95
-      }
+      },
+      "request_sha256": "0662ebd465d1c429dac8031156f1239f003a7eefffc07087d216c15c8873bb72"
     },
     {
       "family": "api",

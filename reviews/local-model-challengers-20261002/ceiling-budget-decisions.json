@@ -212,5 +212,14 @@
       "openrouter-ceiling/deepseek--deepseek-v4.1-flash/regression-manual-inspection.json",
       "openrouter-ceiling/deepseek--deepseek-v4.1-flash/regression-trusted-counterexample.json"
     ]
+  },
+  "deepseek/deepseek-v4.1-flash|review|128k": {
+    "proceed": false,
+    "reason": "Completed stop review1132.39s/35471 completion tokens below65536;9/10 causes,0false/duplicate, missed quoteIDtie. Semantic omission, not truncation; no128K reroll.",
+    "reviewer": "author manual semantic inspection",
+    "evidence": [
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/review-result.json",
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/manual-review.json"
+    ]
   }
 }
