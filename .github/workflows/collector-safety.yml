@@ -15,9 +15,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -B -m unittest discover -s ops/collector-safety -p 'test_*.py' -v
       - run: pip install pytest requests pandas pyarrow pyyaml python-dotenv duckdb
-      - name: Existing collector behavior and HTTP regression (fully mocked network)
-        env:
-          PYTHONPATH: sharp-markets/src
-        run: python -m pytest sharp-markets/tests/test_collector.py sharp-markets/tests/test_http.py -q -k 'not a_failed_request_never_shows_the_key'
+      - name: Bind complete inputs and run synthetic guard, collector and localhost HTTP checks
+        run: |
+          python -B ops/process/process_guard.py test --config ops/collector-safety/verification.json --output collector-safety-evidence.json
+          python -B ops/process/process_guard.py verify-test --config ops/collector-safety/verification.json --saved collector-safety-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: collector-safety-${{ github.sha }}
+          path: collector-safety-evidence.json
