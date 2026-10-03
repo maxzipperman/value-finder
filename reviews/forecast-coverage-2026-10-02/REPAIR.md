@@ -55,6 +55,16 @@ remain immutable. Until that prospective decision, installed code stays as is.
 This draft supplies no deployment, scoring or new research authority and tests
 no new strategy variant.
 
+**CFB live collection blocks adoption too:** the unchanged `_om` collector requests
+`start_date=end_date=kickoff UTC day`. The required accumulation window ends at
+kickoff hour +4; kickoffs from 20:00 UTC onward therefore lack following-day hours
+and correctly fail `missing_hour`. Before live adoption, independently review a
+prospective forecast collection/cache-identity change that supplies the full window
+and preserves forecast provenance. Do not rewrite historical caches or reinterpret
+old incomplete inputs. Synthetic day-boundary checks verified 19:00 UTC complete,
+20:00 missing accumulation hours, and 21:00/23:00 missing wind and accumulation
+hours under a day-only response. Replay collection already spans both dates.
+
 ## Verification
 
 44 focused CFB checks passed: new synthetic completeness/board fixtures plus the

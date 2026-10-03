@@ -12,6 +12,18 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 ## Projects
 
+**Current acquisition sequencing (owner, October 2):** remaining bulk purchases
+wait for a predeclared outcome-blind coverage pilot and confidence-bound gate.
+Use cached inputs first; a finite reviewed gap-filling pilot measures usable paired
+quotes, freshness, missing denominators and settlement support. Metadata presence
+or a chronological/one-season cache alone is not representative all-archive proof.
+Recent F1, F2 and F3a are complete. The exact older offline reconciliation is
+installed under PR #129, preserving its charge/reservation and original evidence.
+PR #134 prepares 1,786 never-sent requests /53,580 maximum new credits, held for
+coverage review and fresh exact paid authority. PR #132 executor repairs and
+props/weather analysis repairs proceed separately. [Running progress](HUB_PROGRESS.md)
+mirrors verified purchases and estimates; the October queue remains authoritative.
+
 | Folder | Question | Where it stands | Next step |
 |---|---|---|---|
 | [`nfl-weather/`](nfl-weather/) | Do NFL totals under-price wind? This extends the 2014 thesis. | Thesis replicated and audited. Rule B (forecast wind ≥ 15 mph → under) is pre-registered as playbook v2. Alerts run 4×/day. | Forward test is scored from Week 5 (Oct 8). |
@@ -38,6 +50,8 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
 
 
 **Paid data (updated Oct 1, 2026, Codex hub).** The 5M plan is bought. The audited football archive recent slice is complete: all 2,761 paid requests handled (2,760 valid plus one approved missing), with 12 reused responses and 82,830 new credits. The one-time approval on [PR #99](https://github.com/maxzipperman/value-finder/pull/99) is exhausted. Its frozen bundle root remains `4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d` and needs no repurchase.
+
+**October 2 acquisition-only extension:** the owner requests NFL **and CFB** 2023–2025 player props, both OU sides, yardage/kicking and other supported markets within the prepaid monthly scope. This overrides F6’s NFL-profitability/old-probe purchase gate as well as the old F3b acquisition gate; it changes no registered analysis criteria or 2026 seal. [PR #132](https://github.com/maxzipperman/value-finder/pull/132) prepares T24/close first, separate earlier-time costs and finite metadata lists; no purchase is authorized until exact list/cap and reviewed executor are approved by the hub. See [cost proposal](strategy-research/nfl-props-archive-v1/COSTS.md). The proposed [first metadata executor](strategy-research/football-metadata-v1/README.md) is listing-only (1,544 credits); market availability is a later separately frozen stage. Independent executor review and settled shared state remain required.
 
 **Current queue (Oct 2; public receipt index):** [F2 is completed](https://github.com/maxzipperman/value-finder/pull/99#issuecomment-5959588751) and [F3a is completed](https://github.com/maxzipperman/value-finder/pull/99#issuecomment-5960232356). [Older acquisition is halted](https://github.com/maxzipperman/value-finder/pull/99#issuecomment-5960754995); the next code proposal is [separate lag reconciliation and continuation #129](https://github.com/maxzipperman/value-finder/pull/129), preserving the original freeze. Its already proposed remaining scope is 1,786 requests /53,580-credit maximum. [N0 follow-on #128](https://github.com/maxzipperman/value-finder/pull/128) retains the public 754-request /7,540-credit candidate and must wait for the **actual completed older successor root and final ledger**, not assume that the halted original root will complete. Combined proposed remaining cap: 61,120 credits. Code review is separate from fresh offline transition, actual packet preparation and exact paid/content/account/policy authority. No new account-counter or local certificate details are published here.
 
@@ -183,3 +197,27 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
 
 **N0 acquisition preparation (Oct2,2026):** the fixed Jan5–11,2026 NBA2025–26 sample has56 scheduled event identities and754 exact h2h requests /7540-credit maximum, still non-executable pending a reviewed cumulative driver, clean latest predecessor and exact hub approval. Free Kalshi inputs are cached for112 markets (259778 price minutes), with no paid credits or strategy results. See [candidate packet](strategy-research/nba_sample/README.md).
+
+**Props analysis repair (Oct 2, PR #133, DRAFT):** receipt-bound completed 2025 F3a
+coverage reader and explicit settlement primitives are under independent review.
+Pinnacle offered-line presence at purchased T10 is 2670/3785 receiving-yard and 1291/1789
+rushing-yard player-games; DraftKings is the mechanical candidate, pending the
+[draft timing/stat clarification](sharp-markets/docs/props-archive/AMENDMENT-DRAFT.md).
+Real props grading is disabled pending registration. Unsupported CFB/new markets
+remain ungradable; no outcome joins, sealed 2026 access, paid calls or runtime writes.
+**PR132 shared-history repair (Oct 2, review pending):** listing metadata remains
+exactly 1,544 requests. Completed prior attempts now require full cache/receipt,
+billing and response classification; recognized F2 partials use the reviewed deep
+union verifier. Merged PR129's exact installed older partial uses the captured certified verifier;
+its successor is accepted only with actual completion and exact local proof bindings. Unknown partials remain blocked. New head needs independent review,
+read-only positive global acceptance and fresh exact hub authority; no worker
+purchase/runtime transition or weather change.
+
+**Owner coverage-first hold (Oct 2):** all new paid execution is held pending the
+hub's outcome-blind coverage protocol and separately reviewed finite cheap pilot.
+Reuse the 2025 F3a cache baseline; measure unobserved 2023–24 NFL/CFB cells through
+stratified sampling. Actual usable pairs/freshness/book/settlement support gate
+large purchases. The existing 1,544/7,032 metadata proposals are not selected paid
+scope. PR132 continues safety repair only; weather is a separate next PR.
+
+**Hub acquisition update (October2):** PR132 safety repair and PR134 successor/coverage-first preparation are merged. PR133 merged coverage/settlement primitives still leave real grading disabled pending timing registration. The285-game2025NFL known F3a REG/playoff frame census provides fresh two-family entry/close quote pairs in215games across retail books, but66 at fixedDraftKings (close-only192). These support different analysis uses. The bounded coverage-pilot adapter and exact reconciled sample/cap remain under preparation; no new paid calls were made. See [running progress](HUB_PROGRESS.md).
