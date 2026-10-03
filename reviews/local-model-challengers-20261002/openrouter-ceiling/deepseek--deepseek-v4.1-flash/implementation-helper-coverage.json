@@ -1,0 +1,97 @@
+{
+  "grading": "supplemental author direct-helper coverage, post-observation, not independent or original197 grading",
+  "original_acceptance_preserved": true,
+  "source_sha256": "52ee4051d5c9d1e97c707292c18fff72a28f2ef44ce8768a8f8994ee9288067d",
+  "reference_helper_checks": [
+    {
+      "case": "select invalid asof empty",
+      "passed": true
+    },
+    {
+      "case": "reconcile invalid asof empty",
+      "passed": true
+    },
+    {
+      "case": "select valid ISO asof",
+      "passed": true
+    },
+    {
+      "case": "reconcile valid ISO asof",
+      "passed": true
+    }
+  ],
+  "trusted_faulty_controls": [
+    {
+      "name": "empty_invalid_accepted",
+      "checks": [
+        {
+          "case": "select invalid asof empty",
+          "passed": false,
+          "error": "AssertionError: "
+        },
+        {
+          "case": "reconcile invalid asof empty",
+          "passed": false,
+          "error": "AssertionError: "
+        },
+        {
+          "case": "select valid ISO asof",
+          "passed": true
+        },
+        {
+          "case": "reconcile valid ISO asof",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "valid_ISO_rejected",
+      "checks": [
+        {
+          "case": "select invalid asof empty",
+          "passed": true
+        },
+        {
+          "case": "reconcile invalid asof empty",
+          "passed": true
+        },
+        {
+          "case": "select valid ISO asof",
+          "passed": false,
+          "error": "ValueError: deliberate string rejection"
+        },
+        {
+          "case": "reconcile valid ISO asof",
+          "passed": false,
+          "error": "ValueError: deliberate string rejection"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "case": "select invalid asof empty",
+      "passed": false,
+      "error": "AssertionError: "
+    },
+    {
+      "case": "reconcile invalid asof empty",
+      "passed": false,
+      "error": "AssertionError: "
+    },
+    {
+      "case": "select valid ISO asof",
+      "passed": false,
+      "error": "TypeError: '<=' not supported between instances of 'datetime.datetime' and 'str'"
+    },
+    {
+      "case": "reconcile valid ISO asof",
+      "passed": false,
+      "error": "TypeError: '>' not supported between instances of 'datetime.datetime' and 'str'"
+    }
+  ],
+  "passed": 0,
+  "cases": 4,
+  "restrictions": "Original AST/runtime-import restrictions unchanged; no type-name exception, feedback or source repair.",
+  "limitations": "Four probes only, not exhaustive public-interface validation; separate denominator."
+}

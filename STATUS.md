@@ -236,3 +236,6 @@ PR147 free ceiling round complete:SpaceBunny3 responses author inspected/graded;
 
 
 PR147 supplemental direct-helper coverage plan committed7b4955a before execution: unchanged SpaceBunny source passes same4extraasof probes; reference4/4 and2trustedfaultycontrols verified first, original AST/runtimebans/ordinarysandbox15s. Separate from154/197 original implementation score; partial_jobs defect unchanged, no inference/feedback or causalcomparison. Paidqueue98555 still active.
+
+
+PR147 DeepSeek64K sampledimplementation deliveredOpenInference at1883s/52,544completiontokens, reported$0.040999686. Originalrestricted197/197passes, separateexactsourcehelperplan committedd916cad beforeexecution: reference4/4+2faultycontrols validated, candidate0/4directasofprobes (samepublichelpergap asQ8). Fullcontract notaccepted;stopbelowcap no128K. Reportedpaidresponses aggregate$0.096236295, unknownerrors stillmaxreserved. Queue98555regressionpending+7paidunstarted;qualified32K wait; finalallocation/independentvalidation pending.

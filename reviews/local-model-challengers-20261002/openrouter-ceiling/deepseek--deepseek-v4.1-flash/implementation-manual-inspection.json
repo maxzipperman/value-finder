@@ -1,0 +1,33 @@
+{
+  "reviewer": "author complete four-module source inspection before ordinary restricted/no-network/no-credential15s original grade; not independent validation",
+  "all_source_inspected": true,
+  "source_sha256": "52ee4051d5c9d1e97c707292c18fff72a28f2ef44ce8768a8f8994ee9288067d",
+  "pipeline_invokes_supporting_modules": true,
+  "original_AST_runtime_import_restrictions_unchanged": true,
+  "original_implementation_checks": {
+    "passed": 197,
+    "cases": 197
+  },
+  "separate_direct_helper_checks": {
+    "passed": 0,
+    "cases": 4,
+    "prospective_plan_commit": "d916cad",
+    "evidence": "implementation-helper-coverage.json"
+  },
+  "verified_helper_defect": "Only pipeline.snapshot normalizes/validates asof. Direct quotes.select/runs.reconcile accept invalid asof with empty lists and raise TypeError for validISO asof with validnonempty rows.",
+  "full_contract_accepted": false,
+  "latency_seconds": 1883.2546078329906,
+  "provider": "OpenInference",
+  "completion_tokens": 52544,
+  "reported_reasoning_tokens": 50903,
+  "reported_cost_dollars": 0.040999686,
+  "stop_below_cap": true,
+  "no_feedback_source_repair_or_reroll": true,
+  "scope": "Potential supervised integrated drafting through tested entry point; direct-helper validation still needed. Single sampled draw and provider/profile/budget differences prevent general ranking or causal sampling/budget effect.",
+  "evidence": [
+    "implementation-response.txt",
+    "implementation-acceptance.json",
+    "implementation-helper-coverage.json",
+    "../../ceiling/CONTRACT.md"
+  ]
+}

@@ -191,5 +191,15 @@
       "ceiling-space-bunny/review-result.json",
       "ceiling-space-bunny/manual-review.json"
     ]
+  },
+  "deepseek/deepseek-v4.1-flash|implementation|128k": {
+    "proceed": false,
+    "reason": "Stop after52,544 completion tokens below65,536, delivered completefourfileJSON. Original197/197 passes but separate0/4 helperasof probes fail. Completed public-interface omission, not output/time exhaustion; no128K reroll.",
+    "reviewer": "author complete source inspection, originalrestrictedgrader and prospectively frozen separatehelpercoverage",
+    "evidence": [
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/implementation-result.json",
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/implementation-acceptance.json",
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/implementation-helper-coverage.json"
+    ]
   }
 }
