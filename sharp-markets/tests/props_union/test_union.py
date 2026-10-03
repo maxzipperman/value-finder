@@ -87,7 +87,26 @@ class UnionTests(unittest.TestCase):
                          ('player_rush_yds','draftkings','Other',50.5),
                          ('player_rush_yds','draftkings','Player',51.5)]:
             self.assertFalse(U.pair_flags(copy.deepcopy(quotes), {'r':{accepted}})[0]['quote_pair_eligible'])
-        self.assertTrue(U.pair_flags(copy.deepcopy(quotes), {'r':{key}})[0]['quote_pair_eligible'])
+        row, op, full=sample()
+        full_quotes=A.quote_rows(row,[op],{'body':json.dumps(full)},{'draftkings'})
+        self.assertTrue(all(r['quote_pair_eligible'] for r in U.pair_flags(full_quotes, {'r':{key}})))
+
+    def test_actual_frozen_classifier_never_pairs_cross_response_sides(self):
+        evidence=json.loads((ROOT/'reviews/post151-readiness/readiness.json').read_text())
+        _, classifier, _, _=U.readers(evidence['provenance'])
+        row, op, body=sample()
+        binding=dict(status='bound',event_id='e',provider_kickoff_utc=op['provider_kickoff_utc'],
+                     binding_observed_utc=op['binding_observed_utc'],home_team='Home',away_team='Away')
+        args=dict(requested=row['requested_utc'],execution=row['requested_utc'],binding=binding,
+                  independent_kickoff=op['anchor_utc'],slot='CLOSE_T10',candidate_books=['draftkings'],markets=A.PRIMARY)
+        left=copy.deepcopy(body);right=copy.deepcopy(body)
+        left['data']['bookmakers'][0]['markets'][0]['outcomes'].pop()
+        right['data']['bookmakers'][0]['markets'][0]['outcomes'].pop(0)
+        self.assertEqual(classifier.slot_pairs(left,**args)['pairs'],set())
+        self.assertEqual(classifier.slot_pairs(right,**args)['pairs'],set())
+        self.assertEqual(len(classifier.slot_pairs(body,**args)['pairs']),1)
+        body['data']['bookmakers'][0]['markets'][0]['outcomes'][1]['point']=51.5
+        self.assertEqual(classifier.slot_pairs(body,**args)['pairs'],set())
 
     def test_conflicting_duplicates_not_rescued_and_no_grading(self):
         row, op, body=sample(); quotes=A.quote_rows(row,[op],{'body':json.dumps(body)},{'draftkings'})
