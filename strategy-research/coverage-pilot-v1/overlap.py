@@ -18,9 +18,36 @@ def query(row):
     return (row['sport'],row['source'],row['url'],utc(params['date'])),set(books),set(markets)
 
 
+
+def check_internal(rows, mappings=()):
+    """Reject duplicate purchases within a list and paid-versus-reused cells.
+
+    A single deduplicated ID can be referenced by many game mappings. Only the
+    request list is compared for new/new overlap, not repeated mapping references.
+    """
+    seen=[];ids=set()
+    for row in rows:
+        rid=row['request_id']
+        if rid in ids:raise ValueError('duplicate request ID in paid list')
+        ids.add(rid);key,books,markets=query(row)
+        for old,ob,om in seen:
+            if key==old and (row['source']=='oddsapi/hist_event_markets' or books & ob and markets & om):
+                raise ValueError('internal paid market cells overlap')
+        seen.append((key,books,markets))
+    for item in mappings:
+        if ids & set(item.get('reused_request_ids',[])):raise ValueError('paid/reused request ID overlap')
+        for slot in item.get('reused_slots',[]):
+            key=(slot['sport'],'oddsapi/hist_event_odds',
+                 f"https://api.the-odds-api.com/v4/historical/sports/{slot['sport']}/events/{slot['event_id']}/odds",utc(slot['requested_utc']))
+            for paid,books,markets in seen:
+                if key==paid and books & set(slot['books']) and markets & set(slot['markets']):
+                    raise ValueError('paid/reused market cells overlap')
+    return True
+
 def check(rows, raw_roots, *, expected_inventory_sha256):
     import pyarrow as pa
     import pyarrow.parquet as pq
+    check_internal(rows)
     targets=[query(r) for r in rows]
     seen={};roots=[Path(p).absolute() for p in raw_roots]
     if len(roots)!=len(set(roots)):raise ValueError('duplicate raw roots')

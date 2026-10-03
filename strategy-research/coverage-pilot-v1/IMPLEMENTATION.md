@@ -137,3 +137,14 @@ statistical release has been created. Terminal final-look helpers require separa
 authenticated classifications and saved bounds; acquisition does not auto-release
 a later tranche. Uncached prior attempts cannot support a reused-slot proof: they
 remain excluded from repurchase and require a frozen zero/failure disposition.
+
+Review corrections: the actual packet boundary now rejects intersecting new
+book/market/event/time cells across distinct request IDs and all paid-versus-reused
+cells. One deduplicated request ID can still be referenced by multiple mappings.
+Both overlap.check and runner.packet independently invoke the internal check.
+Props require exactly one T24 and one CLOSE_T10; clocks are derived from the
+immutable canonical minimum independent/provider close anchor with the reviewed
+five-minute floor. A label alone is insufficient. Classifier defense also rejects
+T24 outside the anchor/floor/conflict tolerance and older early slots outside18–54h.
+Packet-level adversaries cover relabeled T1, wrong close clock, duplicate slot,
+redundant new request and paid/reused overlap. No metric or historical freeze changed.

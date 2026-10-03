@@ -61,3 +61,14 @@ class ClassifierTests(unittest.TestCase):
         self.assertEqual(boundary['pairs'],set())
         body['data']['bookmakers'][0]['markets'][0]['outcomes'][1]['point']=45
         self.assertEqual(slot_pairs(body,**args)['pairs'],set())
+
+
+    def test_T24_label_at_T1_and_unsupported_older_horizon_reject(self):
+        binding=bind_asof([self.obs()],'g','2020-10-02T15:00:00Z')
+        at='2020-10-02T15:00:00Z'
+        body=dict(timestamp=at,previous_timestamp='2020-10-02T14:55:00Z',next_timestamp='2020-10-02T15:05:00Z',data=dict(id='early-id',commence_time='2020-10-02T16:00:00Z',home_team='A',away_team='B',bookmakers=[]))
+        args=dict(requested=at,execution=at,binding=binding,independent_kickoff='2020-10-02T16:00:00Z',candidate_books=['draftkings'],markets=['totals'])
+        result=slot_pairs(body,slot='T24',**args)
+        self.assertEqual(result['pairs'],set());self.assertIn('outside_T24_horizon',result['reasons'])
+        result=slot_pairs(body,slot='EARLY_18_54',**args)
+        self.assertIn('outside_early_horizon',result['reasons'])

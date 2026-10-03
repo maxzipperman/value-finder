@@ -56,6 +56,11 @@ def slot_pairs(body, *, requested, execution, binding, independent_kickoff,
         if not 0<=(decision-snapshot).total_seconds()<=600:reasons.append('snapshot_lag')
         if max(provider,response,independent)-min(provider,response,independent)>timedelta(minutes=5):
             reasons.append('kickoff_conflict')
+        horizon=(min(provider,response,independent)-decision).total_seconds()
+        if slot=='T24' and not 24*3600-300<=horizon<=24*3600+600:
+            reasons.append('outside_T24_horizon')
+        if slot=='EARLY_18_54' and not 18*3600<=(independent-decision).total_seconds()<=54*3600:
+            reasons.append('outside_early_horizon')
         if slot=='CLOSE_T10' and not 300<=(provider-snapshot).total_seconds()<=1200:reasons.append('outside_close_proxy')
         if slot not in ('T24','EARLY_18_54','CLOSE_T10'):reasons.append('unsupported_slot')
         if (event.get('home_team'),event.get('away_team'))!=(binding['home_team'],binding['away_team']):reasons.append('team_orientation_conflict')

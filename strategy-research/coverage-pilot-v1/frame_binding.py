@@ -3,6 +3,8 @@ import json
 import capture
 import classifier
 import mapping
+import plan
+from datetime import timedelta
 from timing import utc
 
 
@@ -21,7 +23,7 @@ def verify(data,source,rows,selected,mappings,frame):
     games={r['game_id']:r for r in frame};by_id={r['request_id']:r for r in rows}
     observations=json.loads(source['provider-observations.json'])
     originals=json.loads(source['request-manifest.json'])['requests']
-    original_by_id={r['request_id']:r for r in originals}
+    canonical={r['canonical_game_id']:r for r in json.loads(source['canonical-games.json'])}
     contract=json.loads(data['classifier-contract.json'])
     if contract['market']!='totals' or contract['reference']!='pinnacle' or contract['replace_failed_slots'] is not False:
         raise ValueError('older primary classifier contract differs')
@@ -54,9 +56,18 @@ def verify(data,source,rows,selected,mappings,frame):
                 if by_id[rid]['source']!='oddsapi/hist_odds':raise ValueError('old slot replaced with new endpoint')
         else:
             ops=game.get('source_opportunities',[])
-            if {op['slot'] for op in ops}!={'T24','CLOSE_T10'}:raise ValueError('both props slots required')
+            if len(ops)!=2 or sorted(op['slot'] for op in ops)!=['CLOSE_T10','T24']:
+                raise ValueError('exactly one T24 and one CLOSE_T10 required')
+            anchor_row=canonical.get(game['game_id'])
+            if (not anchor_row or anchor_row['sport']!=sport or anchor_row['season']!=game['season']
+                    or utc(game['scheduled_utc'])!=utc(anchor_row['scheduled_utc'])):
+                raise ValueError('authenticated canonical schedule required')
+            anchor=min(utc(anchor_row['scheduled_utc']),utc(anchor_row['close_anchor_utc']))
             allowed=set()
             for op in ops:
+                expected=plan.floor(anchor-timedelta(minutes=plan.SLOTS[op['slot']]))
+                if utc(op['requested_utc'])!=expected or ('anchor_utc' in op and utc(op['anchor_utc'])!=anchor):
+                    raise ValueError('props slot clock differs from authenticated floored anchor')
                 if op['status']!='bound':raise ValueError('unbound props zero row cannot purchase')
                 bound=classifier.bind_asof(observations,game['game_id'],op['requested_utc'])
                 if (bound.get('event_id')!=op['event_id'] or utc(bound['binding_observed_utc'])!=utc(op['binding_observed_utc'])):

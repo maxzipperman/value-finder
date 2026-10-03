@@ -6,6 +6,7 @@ import planner
 import receipts
 import mapping
 import frame_binding
+import overlap
 
 
 def packet(data, source):
@@ -20,6 +21,7 @@ def packet(data, source):
     if set(by_game)!=set(selected['selected']):raise ValueError('selected mapping denominator differs')
     originals={r['request_id']:r for r in json.loads(source['request-manifest.json'])['requests']}
     indexed=planner.unique(rows,'request_id')
+    overlap.check_internal(rows,mappings)
     if not indexed:raise ValueError('no new requests; no purchase packet needed')
     for row in rows:
         if row['source']=='oddsapi/hist_odds':

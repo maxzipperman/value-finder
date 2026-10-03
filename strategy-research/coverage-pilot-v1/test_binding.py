@@ -16,14 +16,43 @@ class BindingTests(unittest.TestCase):
         early='2023-10-01T16:00:00Z';close='2023-10-02T15:50:00Z';kick='2023-10-02T16:00:00Z'
         obs=dict(canonical_game_id=gid,provider_id='abc',returned_utc=early,provider_kickoff_utc=kick,home_team='A',away_team='B')
         ops=[dict(slot=slot,status='bound',event_id='abc',requested_utc=at,binding_observed_utc=early) for slot,at in [('T24',early),('CLOSE_T10',close)]]
-        frame=[dict(game_id=gid,season=2023,stratum='props/'+sport+'/2023',classification='unknown',binding=True,source_opportunities=ops)]
+        frame=[dict(game_id=gid,season=2023,stratum='props/'+sport+'/2023',classification='unknown',binding=True,scheduled_utc=kick,source_opportunities=ops)]
         rows=[self.plan.make_request('odds',self.plan.ts(at),books=['draftkings'],markets=self.mapping.MARKETS,event_id='abc',sport=sport) for at in (early,close)]
         maps=[dict(game_id=gid,request_ids=[r['request_id'] for r in rows])]
-        source={'provider-observations.json':json.dumps([obs]).encode(),'request-manifest.json':b'{"requests":[]}'}
+        source={'provider-observations.json':json.dumps([obs]).encode(),'request-manifest.json':b'{"requests":[]}', 'canonical-games.json':json.dumps([dict(canonical_game_id=gid,sport=sport,season=2023,scheduled_utc=kick,close_anchor_utc=kick)]).encode()}
         data={'frame.json':json.dumps(frame).encode(),'slot-map.json':b'[]','classifier-contract.json':json.dumps(dict(market='totals',reference='pinnacle',replace_failed_slots=False,book_panel=['draftkings'])).encode(),'protocol.json':json.dumps(dict(candidate_books=['draftkings'],primary_markets=list(self.mapping.MARKETS))).encode(),'code/plan.py':b'synthetic-code'}
         proof=dict(frame_sha256=self.capture.digest(data['frame.json']),requested_slot_map_sha256=self.capture.digest(data['slot-map.json']),contract_sha256=self.capture.digest(data['classifier-contract.json']),older_metadata_proof=dict(metadata_files={n:self.capture.digest(v) for n,v in source.items()},early_decision_rule_source_sha256=self.capture.digest(data['code/plan.py'])))
         data['certainty-source-proof.json']=json.dumps(proof).encode()
         self.assertTrue(m.verify(data,source,rows,{},maps,frame))
+        # Exercise actual packet validation with internally consistent frozen pins.
+        def packet(f, rs, ms):
+            planner=self.load('planner');runner=self.load('runner');values=copy.deepcopy(data)
+            protocol=json.loads(values['protocol.json']);protocol.update(execution_status='reviewed_for_execution',sample_sizes={f[0]['stratum']:1})
+            draw=dict(seed='a'*64,frame=planner.digest(planner.frame_rows(f)),protocol=planner.digest(protocol),sample_sizes=protocol['sample_sizes'])
+            selected=planner.select(f,draw,protocol['sample_sizes'],committed_frame=draw['frame'],committed_protocol=draw['protocol'],committed_seed_record=planner.digest(draw),protocol=protocol)
+            for name,value in [('frame.json',f),('requests.json',rs),('mappings.json',ms),('protocol.json',protocol),('draw.json',draw),('selected.json',selected),('policy.json',dict(snapshot_lag_ids=[],event_not_found_ids=[],max_missing=dict(snapshot_lag=0,event_not_found=0)))]:
+                values[name]=json.dumps(value).encode()
+            pr=json.loads(values['certainty-source-proof.json']);pr['frame_sha256']=self.capture.digest(values['frame.json']);values['certainty-source-proof.json']=json.dumps(pr).encode()
+            manifest=dict(frame_sha256=draw['frame'],protocol_sha256=draw['protocol'],seed_record_sha256=planner.digest(draw),request_count=len(rs),max_new_credits=sum(r['max_new_credits'] for r in rs),request_list_sha256=self.capture.digest(values['requests.json']),request_set_sha256=self.capture.identity(rs))
+            values['manifest.json']=json.dumps(manifest).encode();values['policy/PRIMARY-CONTRACT.json']=(Path(__file__).parent/'PRIMARY-CONTRACT.json').read_bytes()
+            return runner.packet(values,source)
+        pm=[dict(maps[0],reason=None)]
+        self.assertTrue(packet(frame,rows,pm)['execution_protocol_ready'])
+        redundant=self.plan.make_request('odds',self.plan.ts(early),books=['draftkings'],markets=['player_pass_yds'],event_id='abc',sport=sport)
+        with self.assertRaisesRegex(ValueError,'internal paid'):
+            packet(frame,rows+[redundant],[dict(pm[0],request_ids=pm[0]['request_ids']+[redundant['request_id']])])
+        paidreuse=[dict(pm[0],reused_slots=[dict(event_id='abc',sport=sport,requested_utc=early,books=['draftkings'],markets=['player_pass_yds'])])]
+        with self.assertRaisesRegex(ValueError,'paid/reused'):packet(frame,rows,paidreuse)
+        for slot,wrongtime in [('T24','2023-10-02T15:00:00Z'),('CLOSE_T10','2023-10-02T15:45:00Z')]:
+            wrongframe=copy.deepcopy(frame)
+            for op in wrongframe[0]['source_opportunities']:
+                if op['slot']==slot:op['requested_utc']=wrongtime
+            wrongrows=[self.plan.make_request('odds',self.plan.ts(op['requested_utc']),books=['draftkings'],markets=self.mapping.MARKETS,event_id='abc',sport=sport) for op in wrongframe[0]['source_opportunities']]
+            with self.assertRaisesRegex(ValueError,'slot clock'):
+                packet(wrongframe,wrongrows,[dict(game_id=gid,request_ids=[r['request_id'] for r in wrongrows],reason=None)])
+        wrongframe=copy.deepcopy(frame);wrongframe[0]['source_opportunities'].append(copy.deepcopy(ops[0]))
+        with self.assertRaisesRegex(ValueError,'exactly one'):packet(wrongframe,rows,pm)
+        self.assertTrue(self.load('overlap').check_internal(rows,[pm[0],pm[0]]))
         wrong=copy.deepcopy(rows);wrong[0]['event_id']='future-close-alias'
         with self.assertRaises(ValueError):m.verify(data,source,wrong,{},maps,frame)
         wrong=copy.deepcopy(rows);wrong[0]['params']['markets']='player_pass_yds'
@@ -68,6 +97,8 @@ class BindingTests(unittest.TestCase):
             fingerprint=self.capture.identity({str(raw):self.capture.sha(raw)})
             other=self.plan.make_request('odds',self.plan.ts(row['requested_utc']),books=['fanduel'],markets=['player_pass_yds'],event_id='abc')
             self.assertEqual(overlap.check([other],[rawroot],expected_inventory_sha256=fingerprint),fingerprint)
+            redundant=self.plan.make_request('odds',self.plan.ts(row['requested_utc']),books=['draftkings'],markets=['player_pass_yds','player_receptions'],event_id='abc')
+            with self.assertRaisesRegex(ValueError,'internal paid'):overlap.check([row,redundant],[rawroot],expected_inventory_sha256=fingerprint)
             with self.assertRaisesRegex(ValueError,'overlap'):overlap.check([row],[rawroot],expected_inventory_sha256=fingerprint)
             with self.assertRaisesRegex(ValueError,'inventory changed'):overlap.check([other],[rawroot],expected_inventory_sha256='0'*64)
             sealed=rawroot/row['sport']/row['source']/'2026-09-01'/'sealed.parquet';sealed.parent.mkdir();sealed.write_bytes(b'never parse this')
@@ -79,7 +110,7 @@ class BindingTests(unittest.TestCase):
         originals=[dict(request_id=rid,sport=sport,requested_utc=at,purposes=[purpose],source='oddsapi/hist_odds') for rid,at,purpose in [('early',early,'daily_16UTC'),('close',close,'pregame_close_proxy')]]
         frame=[dict(game_id='g',season=2020,stratum='older/'+sport+'/2020',scheduled_utc=kick,classification='unknown',binding=True)]
         slotmap=[dict(game_id='g',binding=True,slots={slot:dict(request_id=rid,requested_utc=at,provider_id='abc',binding=obs) for slot,rid,at in [('EARLY','early',early),('CLOSE','close',close)]})]
-        source={'provider-observations.json':json.dumps([obs]).encode(),'request-manifest.json':json.dumps(dict(requests=originals)).encode()}
+        source={'provider-observations.json':json.dumps([obs]).encode(),'request-manifest.json':json.dumps(dict(requests=originals)).encode(),'canonical-games.json':b'[]'}
         data={'frame.json':json.dumps(frame).encode(),'slot-map.json':json.dumps(slotmap).encode(),'classifier-contract.json':json.dumps(dict(market='totals',reference='pinnacle',replace_failed_slots=False,book_panel=['draftkings'])).encode(),'protocol.json':json.dumps(dict(candidate_books=['draftkings'],primary_markets=list(self.mapping.MARKETS))).encode(),'code/plan.py':b'synthetic-code'}
         proof=dict(frame_sha256=self.capture.digest(data['frame.json']),requested_slot_map_sha256=self.capture.digest(data['slot-map.json']),contract_sha256=self.capture.digest(data['classifier-contract.json']),older_metadata_proof=dict(metadata_files={n:self.capture.digest(v) for n,v in source.items()},early_decision_rule_source_sha256=self.capture.digest(data['code/plan.py'])))
         data['certainty-source-proof.json']=json.dumps(proof).encode();maps=[dict(game_id='g',request_ids=['early','close'])]
