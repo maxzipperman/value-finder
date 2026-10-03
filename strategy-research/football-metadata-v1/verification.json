@@ -10,7 +10,15 @@
     "strategy-research/football-metadata-v1/listing-gaps",
     "strategy-research/nfl-props-archive-v1/plan.py",
     "strategy-research/football_archive/acquisition/football-archive-v4",
-    "ops/process/process_guard.py"
+    "ops/process/process_guard.py",
+    "strategy-research/football-metadata-v1/history.py",
+    "strategy-research/football-metadata-v1/test_history.py",
+    "strategy-research/football_archive/f2_handoff.py",
+    "strategy-research/football_archive/union-v1",
+    "strategy-research/football_archive/execution-v1",
+    "strategy-research/football_archive/recovery-v1",
+    "strategy-research/football_archive/recovery-v2",
+    "strategy-research/football_archive/followups"
   ],
   "commands": [
     [
@@ -22,7 +30,7 @@
       "-s",
       "strategy-research/football-metadata-v1",
       "-p",
-      "test_metadata.py",
+      "test_*.py",
       "-v"
     ]
   ],

@@ -180,3 +180,11 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
 
 **N0 acquisition preparation (Oct2,2026):** the fixed Jan5–11,2026 NBA2025–26 sample has56 scheduled event identities and754 exact h2h requests /7540-credit maximum, still non-executable pending a reviewed cumulative driver, clean latest predecessor and exact hub approval. Free Kalshi inputs are cached for112 markets (259778 price minutes), with no paid credits or strategy results. See [candidate packet](strategy-research/nba_sample/README.md).
+
+**PR132 shared-history repair (Oct 2, review pending):** listing metadata remains
+exactly 1,544 requests. Completed prior attempts now require full cache/receipt,
+billing and response classification; recognized F2 partials use the reviewed deep
+union verifier. Unknown older partials remain blocked pending separate PR129
+certification and downstream integration. New head needs independent review,
+read-only positive global acceptance and fresh exact hub authority; no worker
+purchase/runtime transition or weather change.

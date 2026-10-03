@@ -56,3 +56,27 @@ reservation/receipt crash, timeout/no resend, receipt/cache mutation, completed
 exhaustion and a two-request synthetic driver. Its loader/store/authority inputs
 are mocked in that driver rehearsal; separate closure/global checks cover their
 adverse paths. It is **not a 1,544-call throughput test or completed live acceptance**.
+
+## Shared-history review repair (October 2)
+
+Completed historical attempts now require full saved response bytes, exact
+receipt/cache/request identity, readable billing equal to the ledger, and the
+completed HTTP/body/snapshot classification. The original completed v4 ledger
+is pinned to its previously reviewed immutable digest. Its explicit approved
+missing format is handled separately; an observed uncached 5xx is the only
+response-less exception and cannot become a completed response.
+
+The two recognized partial F2 roots must pass the independently pinned PR119
+whole-union gate. That gate captures its complete reviewed dependency packet and
+verifies transition certificates, original commits, preserved stopped ledgers,
+original approval/run and initialization evidence, all response receipts, exact
+missing policy and full cumulative ancestry. Unknown event/older partial families
+halt even in the light per-send state check. PR129's older recovery is deliberately
+unsupported until its separate review and certified downstream integration are
+available; status strings or a fresh global snapshot approval cannot admit it.
+
+The captured F2 gate is a new declared dependency and independent-review item.
+Synthetic certificate/cache adverse paths are saved with process evidence. They
+do not certify the real shared store: positive read-only global acceptance remains
+a hub prerequisite after the older pending purchase is separately reconciled.
+No paid authority, runtime transition, resend or broader metadata stage is added.

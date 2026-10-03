@@ -25,10 +25,12 @@ def verified(packet, root, bundle):
     canonical=lambda x:json.dumps(x,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()
     if cert['root']!=root or hashlib.sha256(canonical(cert['files'])).hexdigest()!=root:raise ValueError('Wrong packet root')
     code=Path(__file__).parent
-    if {p.name for p in code.glob('*.py') if not p.name.startswith('test_')}!={'entry.py','engine.py','capture.py','prepare.py'}:
+    if {p.name for p in code.glob('*.py') if not p.name.startswith('test_')}!={'entry.py','engine.py','capture.py','prepare.py','history.py'}:
         raise ValueError('Undeclared metadata executable')
     names={'code/entry.py':code/'entry.py','code/engine.py':code/'engine.py','code/capture.py':code/'capture.py',
            'code/plan.py':code.parent/'nfl-props-archive-v1/plan.py','code/prepare.py':code/'prepare.py'}
+    names['code/history.py']=code/'history.py'
+    names['code/f2_gate.py']=code.parent/'football_archive/f2_handoff.py'
     expected_packet={'manifest.json','request-list.csv','policy.json','FREEZE.json'}
     if {p.name for p in packet.iterdir()}!=expected_packet:raise ValueError('Packet inventory changed')
     names.update({n:packet/n for n in expected_packet-{'FREEZE.json'}})
@@ -49,7 +51,7 @@ def verified(packet, root, bundle):
     py={n:b for n,b in source.items() if n.endswith('.py')}
     modules={(n[:-12] if n.endswith('/__init__.py') else n[:-3]).replace('/','.'):b for n,b in py.items()}
     paths={(n[:-12] if n.endswith('/__init__.py') else n[:-3]).replace('/','.'):bundle/n for n in py}
-    for n in ('engine','capture','plan'):
+    for n in ('engine','capture','plan','history','f2_gate'):
         modules[n]=data['code/'+n+'.py'];paths[n]=names['code/'+n+'.py']
     load=capture.closed_modules(modules,paths)
     return load('engine'),load('executor'),data,source,load

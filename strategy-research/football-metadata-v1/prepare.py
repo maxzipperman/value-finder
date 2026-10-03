@@ -43,7 +43,8 @@ def prepare(folder):
             'billing':'full 1-credit reservation retained even when empty/lagged response bills zero',
             'scope':'NFL/CFB metadata only; May3 2023 through Feb9 2026; no 2026-season price analysis'}
     (folder/'manifest.json').write_bytes(canonical(m)+b'\n');(folder/'policy.json').write_bytes(canonical(policy)+b'\n')
-    paths={'code/'+n:here/n for n in ('entry.py','engine.py','capture.py','prepare.py')}
+    paths={'code/'+n:here/n for n in ('entry.py','engine.py','capture.py','prepare.py','history.py')}
+    paths['code/f2_gate.py']=here.parent/'football_archive/f2_handoff.py'
     paths['code/plan.py']=props/'plan.py'
     paths.update({n:folder/n for n in ('manifest.json','request-list.csv','policy.json')})
     paths['source/FREEZE.json']=here.parent/'football_archive/acquisition/football-archive-v4/FREEZE.json'

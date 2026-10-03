@@ -15,6 +15,7 @@ import subprocess
 import time
 import plan
 import capture
+import history
 
 ROOT_BASE=Path.home()/'Library/Application Support/ValueFinder/football-acquisition-state'
 SOURCE_ROOT=plan.SOURCE_ROOT
@@ -95,6 +96,8 @@ def global_inventory(exclude=None, verify_receipts=True, source_manifest=None):
     if any(s.get('pending') or s.get('stopped') for s in states.values()):
         raise ValueError('Unresolved global purchase; never new-root escape')
     original=states[SOURCE_ROOT]
+    if capture.sha(ledgers[SOURCE_ROOT])!=history.SOURCE_LEDGER_SHA256:
+        raise ValueError('Reviewed original completed ledger changed')
     if len(original.get('attempts',{}))!=2761 or len(original.get('cache_reuse',{}))!=12:
         raise ValueError('Completed original acquisition lost coverage; no fresh-store reset')
     if source_manifest is not None:
@@ -103,6 +106,8 @@ def global_inventory(exclude=None, verify_receipts=True, source_manifest=None):
         reuse={r['request_id']:r['cache_sha256'] for r in old_rows if r['priority']==1 and not r['max_new_credits']}
         if set(original['attempts'])!=paid or original['cache_reuse']!=reuse:
             raise ValueError('Original coverage differs from immutable manifest')
+    # Partial statuses are certificates, never a general restart class.
+    history.certified_partials(states,ledgers,verify_receipts)
     snapshots={'ledgers':{},'registrations':{}}
     for root,state in states.items():
         marker=capture.read(markers[root])
@@ -118,13 +123,9 @@ def global_inventory(exclude=None, verify_receipts=True, source_manifest=None):
             if a['status'] not in ('completed','missing') or bill>reserve or reserve==0:raise ValueError('Nonterminal or invalid shared debit')
             if not verify_receipts:
                 continue
-            receipt=ledgers[root].parent/'receipts'/(rid+'.json')
-            if capture.sha(receipt)!=a['receipt_sha256']:raise ValueError('Shared receipt changed')
-            proof=capture.read(receipt)
-            if proof.get('request_id')!=rid:raise ValueError('Shared receipt identity differs')
-            if a.get('response_path'):
-                if capture.sha(a['response_path'])!=a['response_sha256'] or proof.get('record_sha256',proof.get('response_sha256'))!=a['response_sha256']:
-                    raise ValueError('Shared cache evidence changed')
+            history.response_evidence(rid,a,ledgers[root].parent,
+                source_row=next((r for r in old_rows if r['request_id']==rid),None) if root==SOURCE_ROOT and source_manifest is not None else None,
+                original=root==SOURCE_ROOT,certified_f2=root in history.F2_ROOTS)
         snapshots['ledgers'][root]=capture.sha(ledgers[root]);snapshots['registrations'][root]=capture.sha(markers[root])
     def chain(root):
         seen=set()
@@ -266,7 +267,8 @@ def run(packet_path,root,bundle,auth,*,key,verify,fake_session=None,checkpoint=l
         base.validate_authorization(internal,bridge,root,commit)
         base.validate_reconciliation(auth['account_reconciliation'],root)
         paths=[Path(packet_path)/n for n in ('manifest.json','policy.json','request-list.csv','FREEZE.json')]
-        paths.extend(Path(__file__).parent/n for n in ('entry.py','engine.py','capture.py','prepare.py'))
+        paths.extend(Path(__file__).parent/n for n in ('entry.py','engine.py','capture.py','prepare.py','history.py'))
+        paths.append(Path(history.f2_gate.__file__))
         paths.append(Path(__file__).parent.parent/'nfl-props-archive-v1/plan.py')
         repo=subprocess.check_output(['git','-C',str(packet_path),'rev-parse','--show-toplevel'],text=True).strip()
         relative=[str(p.resolve().relative_to(repo)) for p in paths]

@@ -92,8 +92,10 @@ class MetadataTests(unittest.TestCase):
             with self.subTest(mutation=mutation),tempfile.TemporaryDirectory(dir='/private/tmp') as d:
                 directory=Path(d);code=directory/'football-metadata-v1';props=directory/'nfl-props-archive-v1'
                 code.mkdir();props.mkdir()
-                for name in ('entry.py','engine.py','capture.py','prepare.py'):shutil.copyfile(HERE/name,code/name)
+                for name in ('entry.py','engine.py','capture.py','prepare.py','history.py'):shutil.copyfile(HERE/name,code/name)
                 shutil.copyfile(HERE.parent/'nfl-props-archive-v1/plan.py',props/'plan.py')
+                archive=directory/'football_archive';archive.mkdir()
+                shutil.copyfile(HERE.parent/'football_archive/f2_handoff.py',archive/'f2_handoff.py')
                 bundle=directory/'bundle';shutil.copytree(self.bundle,bundle)
                 if mutation=='shared_code':(bundle/'executor.py').write_bytes((bundle/'executor.py').read_bytes()+b'\nraise RuntimeError("SENTINEL EXECUTED")\n')
                 elif mutation=='own_code':(code/'engine.py').write_bytes((code/'engine.py').read_bytes()+b'\nraise RuntimeError("SENTINEL EXECUTED")\n')
