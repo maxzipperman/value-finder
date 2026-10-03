@@ -1,0 +1,22 @@
+{
+  "hard-review": [
+    {
+      "case": "line localization only; manual explanation review required",
+      "passed": true,
+      "findings": [
+        {
+          "line": 6,
+          "explanation": "Selection logic fails to filter by eligibility (observed_at <= asof < expires_at) before choosing the latest row. A future or expired row with a later observed_at will incorrectly suppress earlier eligible rows for the same book."
+        },
+        {
+          "line": 12,
+          "explanation": "The condition `observed <= asof <= expires` is incorrect because it allows `asof == expires`, violating the requirement that `asof < expires_at` for eligibility."
+        },
+        {
+          "line": 6,
+          "explanation": "Tie-breaking logic is missing: when observed_at instants are equal, the code does not select the smallest id, nor does it preserve the first input row order for identical instant/id cases."
+        }
+      ]
+    }
+  ]
+}

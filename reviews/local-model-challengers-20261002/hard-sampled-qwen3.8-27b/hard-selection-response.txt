@@ -1,0 +1,105 @@
+```python
+import math
+from datetime import datetime, timezone
+
+
+def select_books(rows, asof):
+    if not isinstance(asof, datetime) or asof.utcoffset() is None:
+        raise ValueError("asof must be a timezone-aware datetime")
+
+    asof_utc = asof.astimezone(timezone.utc)
+
+    def _parse_tz_aware_iso(s):
+        if not isinstance(s, str):
+            return None
+        try:
+            t = s
+            if t.endswith('Z') or t.endswith('z'):
+                t = t[:-1] + '+00:00'
+            dt = datetime.fromisoformat(t)
+            if dt.utcoffset() is None:
+                return None
+            return dt.astimezone(timezone.utc)
+        except (ValueError, TypeError, OverflowError):
+            return None
+
+    def _valid_odds(val):
+        if isinstance(val, bool):
+            return False
+        if isinstance(val, int):
+            try:
+                return math.isfinite(val) and abs(val) >= 100
+            except (OverflowError, ValueError):
+                return False
+        if isinstance(val, float):
+            try:
+                return math.isfinite(val) and abs(val) >= 100
+            except (OverflowError, ValueError):
+                return False
+        if isinstance(val, str):
+            try:
+                f = float(val)
+            except (ValueError, TypeError, OverflowError):
+                return False
+            try:
+                return math.isfinite(f) and abs(f) >= 100
+            except (OverflowError, ValueError):
+                return False
+        return False
+
+    eligible = []
+
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+
+        book = row.get('book')
+        if not isinstance(book, str) or not book:
+            continue
+
+        rid = row.get('id')
+        if not isinstance(rid, str) or not rid:
+            continue
+
+        if 'odds' not in row:
+            continue
+        if not _valid_odds(row['odds']):
+            continue
+
+        if 'observed_at' not in row:
+            continue
+        obs = _parse_tz_aware_iso(row['observed_at'])
+        if obs is None:
+            continue
+
+        if 'expires_at' not in row:
+            continue
+        exp = _parse_tz_aware_iso(row['expires_at'])
+        if exp is None:
+            continue
+
+        if not (obs <= asof_utc < exp):
+            continue
+        if not (obs < exp):
+            continue
+
+        eligible.append((book, obs, rid, idx, row))
+
+    best = {}
+
+    for book, obs, rid, idx, row in eligible:
+        if book not in best:
+            best[book] = (obs, rid, idx, row)
+        else:
+            p_obs, p_rid, p_idx, _ = best[book]
+            if obs > p_obs:
+                best[book] = (obs, rid, idx, row)
+            elif obs == p_obs:
+                if rid < p_rid:
+                    best[book] = (obs, rid, idx, row)
+                elif rid == p_rid:
+                    if idx < p_idx:
+                        best[book] = (obs, rid, idx, row)
+
+    return {b: best[b][3] for b in best}
+```

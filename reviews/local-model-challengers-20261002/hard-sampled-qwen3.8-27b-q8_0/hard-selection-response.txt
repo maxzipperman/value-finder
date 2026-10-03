@@ -1,0 +1,80 @@
+```python
+import math
+from datetime import datetime, timezone
+
+
+def select_books(rows, asof):
+    if not isinstance(asof, datetime) or asof.utcoffset() is None:
+        raise ValueError("asof must be a timezone-aware datetime")
+
+    asof_utc = asof.astimezone(timezone.utc)
+
+    def _valid_odds(v):
+        if isinstance(v, bool):
+            return False
+        if isinstance(v, int):
+            return abs(v) >= 100
+        if isinstance(v, float):
+            return math.isfinite(v) and abs(v) >= 100
+        if isinstance(v, str):
+            try:
+                f = float(v)
+            except (ValueError, OverflowError):
+                return False
+            return math.isfinite(f) and abs(f) >= 100
+        return False
+
+    def _parse_aware(s):
+        if not isinstance(s, str):
+            return None
+        t = s
+        if t.endswith('Z') or t.endswith('z'):
+            t = t[:-1] + '+00:00'
+        try:
+            dt = datetime.fromisoformat(t)
+        except (ValueError, TypeError):
+            return None
+        if dt.tzinfo is None or dt.utcoffset() is None:
+            return None
+        return dt
+
+    best = {}
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        book = row.get('book')
+        if not isinstance(book, str) or not book:
+            continue
+
+        row_id = row.get('id')
+        if not isinstance(row_id, str) or not row_id:
+            continue
+
+        if not _valid_odds(row.get('odds')):
+            continue
+
+        obs_dt = _parse_aware(row.get('observed_at'))
+        if obs_dt is None:
+            continue
+
+        exp_dt = _parse_aware(row.get('expires_at'))
+        if exp_dt is None:
+            continue
+
+        obs_utc = obs_dt.astimezone(timezone.utc)
+        exp_utc = exp_dt.astimezone(timezone.utc)
+
+        if not (obs_utc <= asof_utc and asof_utc < exp_utc and obs_utc < exp_utc):
+            continue
+
+        if book not in best:
+            best[book] = (obs_utc, row_id, row)
+        else:
+            cur_obs, cur_id, _ = best[book]
+            if obs_utc > cur_obs or (obs_utc == cur_obs and row_id < cur_id):
+                best[book] = (obs_utc, row_id, row)
+
+    return {b: v[2] for b, v in best.items()}
+```

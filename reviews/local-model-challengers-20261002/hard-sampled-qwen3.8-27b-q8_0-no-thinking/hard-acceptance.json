@@ -1,0 +1,26 @@
+{
+  "hard-review": [
+    {
+      "case": "line localization only; manual explanation review required",
+      "passed": true,
+      "findings": [
+        {
+          "line": 6,
+          "explanation": "Eligibility (observed_at <= asof < expires_at) is not checked during the selection of the latest row. A future or expired row with a later observed_at will incorrectly suppress earlier eligible rows."
+        },
+        {
+          "line": 10,
+          "explanation": "datetime.fromisoformat returns naive datetimes for inputs without timezone info, causing TypeError when comparing against the aware asof datetime in line 12. The code does not handle arbitrary offsets or Z correctly to ensure awareness."
+        },
+        {
+          "line": 12,
+          "explanation": "The condition observed <= asof <= expires uses <= for expires_at, but the contract requires asof < expires_at (strict inequality)."
+        },
+        {
+          "line": 6,
+          "explanation": "Tie-breaking logic is missing: when observed_at instants are equal, the code does not select the smallest id, nor does it preserve the first input row for identical instant/id."
+        }
+      ]
+    }
+  ]
+}

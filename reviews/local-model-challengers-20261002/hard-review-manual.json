@@ -133,5 +133,40 @@
     ],
     "inaccurate_claims": [],
     "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-sampled-qwen3.8-27b-no-thinking": {
+    "true_defects": 3,
+    "independent_false_findings": 0,
+    "covered": [
+      "eligibility_after_latest",
+      "inclusive_expiry",
+      "missing_id_tie_break"
+    ],
+    "missed": [
+      "lexical_offset_order",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Tie finding overstates lack of first-input preference for identical timestamp strings: strict > retains that case."
+    ],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-sampled-qwen3.8-27b-q8_0-no-thinking": {
+    "true_defects": 3,
+    "independent_false_findings": 1,
+    "covered": [
+      "eligibility_after_latest",
+      "inclusive_expiry",
+      "missing_id_tie_break"
+    ],
+    "missed": [
+      "lexical_offset_order",
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Inputs guarantee aware ISO clocks, and Python3.14 handles offsets and Z; the naive-clock finding is outside contract and falsely claims offset/Z handling is wrong.",
+      "Tie finding overstates missing first-input retention for identical strings."
+    ],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
   }
 }

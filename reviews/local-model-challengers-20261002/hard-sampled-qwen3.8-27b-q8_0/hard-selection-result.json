@@ -1,0 +1,1562 @@
+{
+  "model": "qwen3.8:27b-q8_0",
+  "created_at": "2026-10-03T08:32:48.324995Z",
+  "message": {
+    "role": "assistant",
+    "content": "```python\nimport math\nfrom datetime import datetime, timezone\n\n\ndef select_books(rows, asof):\n    if not isinstance(asof, datetime) or asof.utcoffset() is None:\n        raise ValueError(\"asof must be a timezone-aware datetime\")\n\n    asof_utc = asof.astimezone(timezone.utc)\n\n    def _valid_odds(v):\n        if isinstance(v, bool):\n            return False\n        if isinstance(v, int):\n            return abs(v) >= 100\n        if isinstance(v, float):\n            return math.isfinite(v) and abs(v) >= 100\n        if isinstance(v, str):\n            try:\n                f = float(v)\n            except (ValueError, OverflowError):\n                return False\n            return math.isfinite(f) and abs(f) >= 100\n        return False\n\n    def _parse_aware(s):\n        if not isinstance(s, str):\n            return None\n        t = s\n        if t.endswith('Z') or t.endswith('z'):\n            t = t[:-1] + '+00:00'\n        try:\n            dt = datetime.fromisoformat(t)\n        except (ValueError, TypeError):\n            return None\n        if dt.tzinfo is None or dt.utcoffset() is None:\n            return None\n        return dt\n\n    best = {}\n\n    for row in rows:\n        if not isinstance(row, dict):\n            continue\n\n        book = row.get('book')\n        if not isinstance(book, str) or not book:\n            continue\n\n        row_id = row.get('id')\n        if not isinstance(row_id, str) or not row_id:\n            continue\n\n        if not _valid_odds(row.get('odds')):\n            continue\n\n        obs_dt = _parse_aware(row.get('observed_at'))\n        if obs_dt is None:\n            continue\n\n        exp_dt = _parse_aware(row.get('expires_at'))\n        if exp_dt is None:\n            continue\n\n        obs_utc = obs_dt.astimezone(timezone.utc)\n        exp_utc = exp_dt.astimezone(timezone.utc)\n\n        if not (obs_utc <= asof_utc and asof_utc < exp_utc and obs_utc < exp_utc):\n            continue\n\n        if book not in best:\n            best[book] = (obs_utc, row_id, row)\n        else:\n            cur_obs, cur_id, _ = best[book]\n            if obs_utc > cur_obs or (obs_utc == cur_obs and row_id < cur_id):\n                best[book] = (obs_utc, row_id, row)\n\n    return {b: v[2] for b, v in best.items()}\n```",
+    "thinking": "Let me carefully analyze the requirements:\n\n1. Function `select_books(rows, asof)` \n2. `rows` is a list of potentially malformed records\n3. Return dict: book -> ORIGINAL selected row (identity matters)\n4. For each book, choose the latest ELIGIBLE observed_at\n5. Tie-breaking: lexicographically smallest id, then first input row\n6. Fields:\n   - `book`: nonempty string\n   - `id`: nonempty string\n   - `odds`: finite int/float/numeric string with abs>=100, bool and other types invalid\n   - `observed_at`: timezone-aware ISO string, Z and offsets allowed\n   - `expires_at`: timezone-aware ISO string, Z and offsets allowed\n7. Skip malformed rows\n8. Eligibility: observed_at <= asof < expires_at AND observed_at < expires_at\n9. Compare all clocks as UTC absolute instants\n10. `asof` must be a datetime with non-None utcoffset or raise ValueError, even for empty rows\n11. Future, expired or malformed later records MUST NOT suppress older eligible records\n12. Never mutate rows or row contents\n13. Numeric conversions outside float range are malformed, not a reason to crash\n14. Standard library math/datetime only, no I/O or tools\n15. Return only source, no explanations\n\nLet me think through the details:\n\n**asof validation:**\n- Must be a datetime object\n- Must have non-None utcoffset()\n- If not, raise ValueError\n- This check happens even if rows is empty\n\n**Row validation (malformed = skip):**\n- Each row must be a dict (or have the fields?)\n- `book`: nonempty string\n- `id`: nonempty string\n- `odds`: finite int/float/numeric string with abs>=100\n  - bool is invalid (bool is subclass of int in Python)\n  - other types invalid (like list, dict, None, etc.)\n  - Must be finite (not inf, not nan)\n  - abs value must be >= 100\n  - Numeric string: must be parseable as a finite number with abs>=100\n  - Numeric string that overflows float: malformed (not crash)\n- `observed_at`: timezone-aware ISO string\n  - Must be a string\n  - Must parse as ISO with timezone info (Z or offset)\n- `expires_at`: timezone-aware ISO string\n  - Same as observed_at\n\n**Eligibility:**\n- observed_at <= asof < expires_at\n- observed_at < expires_at\n- All compared as UTC absolute instants\n\n**Selection per book:**\n- Latest eligible observed_at\n- Tie: lexicographically smallest id\n- Tie (both observed_at and id same): first input row (earliest index)\n\n**Never mutate rows or row contents** - just read from them.\n\n**Return dict** mapping book -> the original row object (identity matters, so we return the actual object from the list)\n\nLet me think about parsing:\n\nFor `observed_at` and `expires_at`:\n- Must be a string\n- Must be timezone-aware (have tzinfo)\n- ISO format with Z or offset\n- Python 3.11+ `datetime.fromisoformat` handles Z, but earlier versions don't\n- Let me use `datetime.fromisoformat` and handle Z by replacing with +00:00 if needed\n- Actually, let me be careful. The spec says \"Z and offsets allowed\". So I should handle both.\n- For Python < 3.11, `fromisoformat` doesn't handle 'Z'. I'll replace trailing 'Z' with '+00:00'.\n- After parsing, check that `tzinfo` is not None and `utcoffset()` is not None.\n\nFor `odds`:\n- If isinstance(row['odds'], bool): invalid\n- If isinstance(row['odds'], (int, float)): check finite and abs >= 100\n- If isinstance(row['odds'], str): try to convert to float, check finite and abs >= 100\n  - If conversion fails or overflows: malformed\n- Other types: invalid\n\nWait, \"finite int/float/numeric string with abs>=100, bool and other types invalid\"\n\nSo:\n- int (not bool): valid if finite (int is always finite) and abs >= 100\n- float: valid if finite (not nan, not inf) and abs >= 100\n- string: must be a \"numeric string\" - parseable as a number, finite, abs >= 100\n  - If the string represents a number outside float range, it's malformed (not crash)\n- bool: invalid\n- other types: invalid\n\nFor numeric string parsing:\n- Try `float(s)` - if it raises, malformed\n- If it's inf or nan, malformed\n- If abs < 100, malformed (not eligible, but the row is still \"valid\" format-wise? No wait...)\n\nActually, re-reading: \"odds finite int/float/numeric string with abs>=100, bool and other types invalid\"\n\nThis is defining what a valid odds field looks like. If odds doesn't meet these criteria, the row is malformed and should be skipped.\n\nSo if odds is a string \"50\", that's a valid numeric string but abs < 100, so the row is malformed.\nIf odds is a string \"1e400\", that overflows to inf, so it's not finite, so malformed.\nIf odds is the string \"abc\", it can't be parsed, so malformed.\n\nLet me also consider: what if a field is missing from the row? That would make the row malformed.\n\nWhat if a row isn't a dict? That would make it malformed.\n\nLet me code this up:\n\n```python\nimport math\nfrom datetime import datetime, timezone\n\ndef select_books(rows, asof):\n    # Validate asof\n    if not isinstance(asof, datetime) or asof.utcoffset() is None:\n        raise ValueError(\"asof must be a timezone-aware datetime\")\n    \n    asof_utc = asof.astimezone(timezone.utc)\n    \n    result = {}\n    \n    for row in rows:\n        # Must be a dict\n        if not isinstance(row, dict):\n            continue\n        \n        # Validate book\n        book = row.get('book')\n        if not isinstance(book, str) or not book:\n            continue\n        \n        # Validate id\n        row_id = row.get('id')\n        if not isinstance(row_id, str) or not row_id:\n            continue\n        \n        # Validate odds\n        odds_raw = row.get('odds')\n        if isinstance(odds_raw, bool):\n            continue\n        if isinstance(odds_raw, int):\n            if math.isinf(odds_raw) or abs(odds_raw) < 100:\n                continue\n            # int is always finite\n        elif isinstance(odds_raw, float):\n            if not math.isfinite(odds_raw) or abs(odds_raw) < 100:\n                continue\n        elif isinstance(odds_raw, str):\n            try:\n                odds_val = float(odds_raw)\n            except (ValueError, OverflowError):\n                continue\n            if not math.isfinite(odds_val) or abs(odds_val) < 100:\n                continue\n        else:\n            continue\n        \n        # Validate observed_at\n        obs_raw = row.get('observed_at')\n        if not isinstance(obs_raw, str):\n            continue\n        try:\n            obs_str = obs_raw\n            if obs_str.endswith('Z') or obs_str.endswith('z'):\n                obs_str = obs_str[:-1] + '+00:00'\n            obs_dt = datetime.fromisoformat(obs_str)\n        except (ValueError, TypeError):\n            continue\n        if obs_dt.tzinfo is None or obs_dt.utcoffset() is None:\n            continue\n        obs_utc = obs_dt.astimezone(timezone.utc)\n        \n        # Validate expires_at\n        exp_raw = row.get('expires_at')\n        if not isinstance(exp_raw, str):\n            continue\n        try:\n            exp_str = exp_raw\n            if exp_str.endswith('Z') or exp_str.endswith('z'):\n                exp_str = exp_str[:-1] + '+00:00'\n            exp_dt = datetime.fromisoformat(exp_str)\n        except (ValueError, TypeError):\n            continue\n        if exp_dt.tzinfo is None or exp_dt.utcoffset() is None:\n            continue\n        exp_utc = exp_dt.astimezone(timezone.utc)\n        \n        # Eligibility: observed_at <= asof < expires_at AND observed_at < expires_at\n        if not (obs_utc <= asof_utc and asof_utc < exp_utc and obs_utc < exp_utc):\n            continue\n        \n        # This row is eligible. Now select per book.\n        # We need: latest observed_at, then lex smallest id, then first input row\n        if book not in result:\n            result[book] = row\n        else:\n            # Compare with current best\n            # We need to track the observed_at and id of the current best\n            # Actually, let me restructure to track metadata\n            pass\n    \n    return result\n```\n\nHmm, I need to track the metadata for comparison. Let me restructure.\n\nFor each book, I need to track:\n- The selected row (original object)\n- Its observed_at (UTC)\n- Its id\n- Its input index (for tie-breaking)\n\nWhen a new eligible row comes in for the same book:\n- If new observed_at > current best observed_at: replace\n- If new observed_at == current best observed_at:\n  - If new id < current best id: replace\n  - If new id == current best id: don't replace (first input row wins, and since we're iterating in order, the first one is already there)\n\nWait, \"first input row if both observed time and id tie\" - this means if we see two rows with same book, same observed_at, same id, we keep the one that appeared first in the input. Since we iterate in order, if we only replace when strictly better, the first one stays.\n\nLet me restructure:\n\n```python\ndef select_books(rows, asof):\n    if not isinstance(asof, datetime) or asof.utcoffset() is None:\n        raise ValueError(\"asof must be a timezone-aware datetime\")\n    \n    asof_utc = asof.astimezone(timezone.utc)\n    \n    # book -> (observed_at_utc, id, row)\n    best = {}\n    \n    for row in rows:\n        if not isinstance(row, dict):\n            continue\n        \n        book = row.get('book')\n        if not isinstance(book, str) or not book:\n            continue\n        \n        row_id = row.get('id')\n        if not isinstance(row_id, str) or not row_id:\n            continue\n        \n        odds_raw = row.get('odds')\n        if not _valid_odds(odds_raw):\n            continue\n        \n        obs_dt = _parse_aware_datetime(row.get('observed_at'))\n        if obs_dt is None:\n            continue\n        \n        exp_dt = _parse_aware_datetime(row.get('expires_at'))\n        if exp_dt is None:\n            continue\n        \n        obs_utc = obs_dt.astimezone(timezone.utc)\n        exp_utc = exp_dt.astimezone(timezone.utc)\n        \n        # Eligibility\n        if not (obs_utc <= asof_utc and asof_utc < exp_utc and obs_utc < exp_utc):\n            continue\n        \n        # Selection\n        if book not in best:\n            best[book] = (obs_utc, row_id, row)\n        else:\n            cur_obs, cur_id, cur_row = best[book]\n            if obs_utc > cur_obs:\n                best[book] = (obs_utc, row_id, row)\n            elif obs_utc == cur_obs:\n                if row_id < cur_id:\n                    best[book] = (obs_utc, row_id, row)\n                # if row_id == cur_id, keep first (already there)\n    \n    return {book: data[2] for book, data in best.items()}\n```\n\nWait, I need to be careful with `math.isinf` on ints. Actually, in Python, ints can be arbitrarily large, so `math.isinf` doesn't apply. But the spec says \"finite int/float/numeric string\". For int, it's always finite. For float, we check `math.isfinite`. For numeric string, we convert to float and check.\n\nActually wait - can an int be \"infinite\"? No, Python ints are arbitrary precision. So any int is finite. The \"finite\" constraint only really matters for float and string-to-float conversion.\n\nLet me also think about edge cases:\n- `odds` is `float('inf')` \u2192 not finite \u2192 malformed\n- `odds` is `float('nan')` \u2192 not finite \u2192 malformed\n- `odds` is `100` \u2192 abs >= 100 \u2192 valid\n- `odds` is `99` \u2192 abs < 100 \u2192 malformed\n- `odds` is `-100` \u2192 abs >= 100 \u2192 valid\n- `odds` is `\"200\"` \u2192 parse to 200.0, finite, abs >= 100 \u2192 valid\n- `odds` is `\"1e400\"` \u2192 float(\"1e400\") gives inf in Python \u2192 not finite \u2192 malformed\n- `odds` is `\"abc\"` \u2192 ValueError \u2192 malformed\n- `odds` is `True` \u2192 bool \u2192 invalid\n- `odds` is `[1,2]` \u2192 other type \u2192 invalid\n- `odds` is `None` \u2192 other type \u2192 invalid\n\nWait, actually `float(\"1e400\")` - does it raise OverflowError or return inf? Let me think... In Python, `float(\"1e400\")` returns `inf`. It doesn't raise an exception. So I need to check `math.isfinite` after conversion.\n\nActually, let me verify: in CPython, `float(\"1e400\")` returns `inf`. Yes, that's correct. So I just need to check `math.isfinite`.\n\nBut wait, what about `float(\"1e-400\")`? That would underflow to 0.0. abs(0.0) < 100, so it's malformed. Fine.\n\nWhat about the string being empty? `float(\"\")` raises ValueError. Good.\n\nWhat about strings with whitespace like \"  200  \"? `float(\"  200  \")` works in Python and gives 200.0. Is that a valid \"numeric string\"? I'll say yes, since Python's float() accepts it.\n\nWhat about \"1_000\"? In Python 3.6+, `float(\"1_000\")` works and gives 1000.0. I'll accept it since Python's standard conversion handles it.\n\nNow for the datetime parsing. Let me think about what `datetime.fromisoformat` handles:\n- Python 3.7+: handles basic ISO 8601\n- Python 3.11+: handles 'Z' suffix and more formats\n\nTo be safe, I'll handle 'Z' manually by replacing it.\n\nWhat about strings like \"2023-01-01T00:00:00\" (no timezone)? After `fromisoformat`, `tzinfo` would be None, so we'd skip it. Good.\n\nWhat about \"2023-01-01T00:00:00+05:00\"? After `fromisoformat`, `tzinfo` would be a `timezone` object. `utcoffset()` would be non-None. Good.\n\nWhat about \"2023-01-01T00:00:00Z\"? After replacing Z with +00:00, it becomes \"2023-01-01T00:00:00+00:00\". Good.\n\nWhat about just a date \"2023-01-01\"? `fromisoformat` would parse it as a datetime with time 00:00:00, but tzinfo would be None. So we'd skip it. Good, since it's not timezone-aware.\n\nLet me also consider: what if the row has extra fields? That's fine, we just ignore them.\n\nWhat if `book` field exists but is not a string (e.g., an int)? We skip. Good.\n\nNow, \"Never mutate rows or row contents\" - I'm only reading from rows, never writing. Good.\n\n\"Return only source, no explanations\" - I'll just output the Python code.\n\nLet me also think about: \"Future, expired or malformed later records MUST NOT suppress older eligible records for that book.\"\n\nThis means: if row 5 is malformed for book \"A\", and row 3 is eligible for book \"A\", row 5 doesn't affect the selection. Since we skip malformed rows, this is naturally handled. Similarly, if row 7 is eligible but for a future time (observed_at > asof), it's not eligible, so it doesn't affect selection. This is also naturally handled by our eligibility check.\n\nActually wait - \"Future\" means observed_at > asof. In that case, `obs_utc <= asof_utc` is False, so the row is not eligible. Good.\n\n\"Expired\" means asof >= expires_at. In that case, `asof_utc < exp_utc` is False, so not eligible. Good.\n\nOne more thing: the spec says \"choosing separately for each book the latest ELIGIBLE observed_at\". So we only consider eligible rows. Non-eligible rows are simply ignored for selection purposes.\n\nLet me also double-check: \"tie lexicographically smallest id\" - this means if two rows have the same observed_at for the same book, we pick the one with the lexicographically smaller id string.\n\n\"then first input row if both observed time and id tie\" - if observed_at AND id are both the same, pick the one that appeared first in the input list.\n\nMy logic handles this: I only replace if `obs_utc > cur_obs` (strictly later) or if `obs_utc == cur_obs and row_id < cur_id` (strictly smaller id). If both are equal, I don't replace, so the first one stays.\n\nLet me finalize the code:\n\n```python\nimport math\nfrom datetime import datetime, timezone\n\n\ndef select_books(rows, asof):\n    if not isinstance(asof, datetime) or asof.utcoffset() is None:\n        raise ValueError(\"asof must be a timezone-aware datetime\")\n\n    asof_utc = asof.astimezone(timezone.utc)\n\n    def _valid_odds(v):\n        if isinstance(v, bool):\n            return False\n        if isinstance(v, int):\n            return abs(v) >= 100\n        if isinstance(v, float):\n            return math.isfinite(v) and abs(v) >= 100\n        if isinstance(v, str):\n            try:\n                f = float(v)\n            except (ValueError, OverflowError):\n                return False\n            return math.isfinite(f) and abs(f) >= 100\n        return False\n\n    def _parse_aware(s):\n        if not isinstance(s, str):\n            return None\n        t = s\n        if t.endswith('Z') or t.endswith('z'):\n            t = t[:-1] + '+00:00'\n        try:\n            dt = datetime.fromisoformat(t)\n        except (ValueError, TypeError):\n            return None\n        if dt.tzinfo is None or dt.utcoffset() is None:\n            return None\n        return dt\n\n    best = {}\n\n    for row in rows:\n        if not isinstance(row, dict):\n            continue\n\n        book = row.get('book')\n        if not isinstance(book, str) or not book:\n            continue\n\n        row_id = row.get('id')\n        if not isinstance(row_id, str) or not row_id:\n            continue\n\n        if not _valid_odds(row.get('odds')):\n            continue\n\n        obs_dt = _parse_aware(row.get('observed_at'))\n        if obs_dt is None:\n            continue\n\n        exp_dt = _parse_aware(row.get('expires_at'))\n        if exp_dt is None:\n            continue\n\n        obs_utc = obs_dt.astimezone(timezone.utc)\n        exp_utc = exp_dt.astimezone(timezone.utc)\n\n        if not (obs_utc <= asof_utc and asof_utc < exp_utc and obs_utc < exp_utc):\n            continue\n\n        if book not in best:\n            best[book] = (obs_utc, row_id, row)\n        else:\n            cur_obs, cur_id, _ = best[book]\n            if obs_utc > cur_obs or (obs_utc == cur_obs and row_id < cur_id):\n                best[book] = (obs_utc, row_id, row)\n\n    return {b: v[2] for b, v in best.items()}\n```\n\nWait, I should double-check: `observed_at < expires_at` is already implied by `observed_at <= asof < expires_at`. Because if obs <= asof and asof < exp, then obs < exp. So the condition `obs_utc < exp_utc` is redundant. But the spec lists it explicitly, so I'll include it for clarity/safety. Actually it's mathematically redundant, but including it doesn't hurt.\n\nActually, let me re-read: \"Eligibility is observed_at <= asof < expires_at and observed_at < expires_at\"\n\nThe second condition is indeed redundant given the first. But I'll include it as stated.\n\nOne more edge case: what if `rows` is not a list but some other iterable? The spec says \"rows is a list\" so I'll assume it's a list. But even if it's a tuple or other iterable, my `for row in rows` would work.\n\nWhat if `rows` is None? The spec says it's a list, so I won't handle that case. But to be safe... actually the spec says \"rows is a list of potentially malformed records\" so I'll trust it's a list.\n\nI think the code is complete. Let me review once more:\n\n1. \u2705 `asof` validation with ValueError\n2. \u2705 Skip non-dict rows\n3. \u2705 Validate book (nonempty string)\n4. \u2705 Validate id (nonempty string)\n5. \u2705 Validate odds (finite, abs>=100, not bool, not other types)\n6. \u2705 Validate observed_at (timezone-aware ISO string)\n7. \u2705 Validate expires_at (timezone-aware ISO string)\n8. \u2705 Eligibility check\n9. \u2705 Selection: latest observed_at, tie lex smallest id, tie first input\n10. \u2705 Never mutate\n11. \u2705 Return dict book -> original row\n12. \u2705 Standard library only (math, datetime)\n13. \u2705 No I/O\n\nI think this is good. Let me write the final version."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 319489708000,
+  "load_duration": 9130123333,
+  "prompt_eval_count": 261,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 561921000,
+  "eval_count": 5763,
+  "eval_duration": 309785552000,
+  "memory_samples": [
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    },
+    {
+      "size": 30290151996,
+      "size_vram": 30290151996,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 320.44452424999326,
+  "request_deadline_seconds": 600
+}

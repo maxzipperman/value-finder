@@ -1,0 +1,91 @@
+{
+  "model": "qwen3.8:27b-q8_0",
+  "created_at": "2026-10-03T08:33:22.240054Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n[\n  {\n    \"line\": 6,\n    \"explanation\": \"Eligibility (observed_at <= asof < expires_at) is not checked during the selection of the latest row. A future or expired row with a later observed_at will incorrectly suppress earlier eligible rows.\"\n  },\n  {\n    \"line\": 10,\n    \"explanation\": \"datetime.fromisoformat returns naive datetimes for inputs without timezone info, causing TypeError when comparing against the aware asof datetime in line 12. The code does not handle arbitrary offsets or Z correctly to ensure awareness.\"\n  },\n  {\n    \"line\": 12,\n    \"explanation\": \"The condition observed <= asof <= expires uses <= for expires_at, but the contract requires asof < expires_at (strict inequality).\"\n  },\n  {\n    \"line\": 6,\n    \"explanation\": \"Tie-breaking logic is missing: when observed_at instants are equal, the code does not select the smallest id, nor does it preserve the first input row for identical instant/id.\"\n  }\n]\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 19546542875,
+  "load_duration": 5846882958,
+  "prompt_eval_count": 410,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 691860000,
+  "eval_count": 245,
+  "eval_duration": 12996370000,
+  "memory_samples": [
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 20.172495000006165,
+  "request_deadline_seconds": 600
+}
