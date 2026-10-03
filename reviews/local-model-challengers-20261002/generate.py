@@ -40,6 +40,8 @@ def main():
     parser.add_argument('--hard-pair', action='store_true')
     parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'] + list(HARD_TASKS))
     args = parser.parse_args()
+    if args.hard_pair:
+        PROTOCOL['deadline_seconds'] = 600
     selected = args.models or PROTOCOL['models']
     inventory = api('tags')['models']
     available = {m['name']: m for m in inventory}
@@ -94,6 +96,7 @@ def main():
                     result = future.result()
                 result['memory_samples'] = samples
                 result['wall_seconds'] = time.monotonic() - start
+                result['request_deadline_seconds'] = PROTOCOL['deadline_seconds']
                 result_path.write_text(json.dumps(result, indent=2) + '\n')
                 (out / (task + '-response.txt')).write_text(result.get('message', {}).get('content', ''))
                 print(json.dumps({'status': 'collected', 'model': model, 'task': task,
