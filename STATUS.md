@@ -8,6 +8,8 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 **Process (Oct 2, prospective):** [GOVERNANCE.md](GOVERNANCE.md) centralizes risk-tier review, reusable verification and compact handoffs. [Future tooling](ops/process/README.md) separates purchase identity from supporting provenance and validates preplanned recovery; completed freezes and current paid executors remain unchanged.
 
+**CFB weather input completeness (Oct 2, PR #136 / #135):** separate prospective repair rejects partial/nonfinite wind and accumulation windows, preserves complete-input values and retains explicit missing diagnostics; replay checks each lead independently. [Repair/adoption draft](reviews/forecast-coverage-2026-10-02/REPAIR.md) and [outcome-blind coverage evidence](reviews/forecast-coverage-2026-10-02/COVERAGE.md) are prepared. Installed jobs, registered versions, prior results and paid freezes remain unchanged. Independent current-head review and a dated prospective hub adoption decision precede any live use; NFL analogues remain a separately scoped repair. No paid calls or outcomes.
+
 ## Projects
 
 **Current acquisition sequencing (owner, October 2):** remaining bulk purchases
@@ -217,6 +219,8 @@ Reuse the 2025 F3a cache baseline; measure unobserved 2023–24 NFL/CFB cells th
 stratified sampling. Actual usable pairs/freshness/book/settlement support gate
 large purchases. The existing 1,544/7,032 metadata proposals are not selected paid
 scope. PR132 continues safety repair only; weather is a separate next PR.
+
+**Hub acquisition update (October2):** PR132 safety repair and PR134 successor/coverage-first preparation are merged. PR133 merged coverage/settlement primitives still leave real grading disabled pending timing registration. The285-game2025NFL known F3a REG/playoff frame census provides fresh two-family entry/close quote pairs in215games across retail books, but66 at fixedDraftKings (close-only192). These support different analysis uses. The bounded coverage-pilot adapter and exact reconciled sample/cap remain under preparation; no new paid calls were made. See [running progress](HUB_PROGRESS.md).
 
 **Prospective coverage pilot design (Oct 2, DRAFT):**
 [New sibling adapter architecture](strategy-research/coverage-pilot-v1/DESIGN.md)

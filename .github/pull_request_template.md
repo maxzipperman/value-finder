@@ -1,4 +1,4 @@
-<!-- Keep updates to differences; link existing evidence. -->
+<!-- Use GitHub draft/ready state. Keep updates to differences; link existing evidence. -->
 Closes #
 
 - Scope: problem → resulting behavior.
@@ -8,4 +8,3 @@ Closes #
 - Blockers: none, or reproducible defect and smallest correction.
 - Budget: zero, or exact list/content identity/new credits/reuse/cumulative limits.
 - Next: named action and owner.
-- [ ] Ready for review; required approval is separate from this checkbox.
