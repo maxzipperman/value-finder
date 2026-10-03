@@ -41,11 +41,17 @@ def main():
     parser.add_argument('--recovery-run', action='store_true')
     parser.add_argument('--native-defaults', action='store_true')
     parser.add_argument('--qwen-sampling', action='store_true')
+    parser.add_argument('--extended-budget', action='store_true')
     parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'] + list(HARD_TASKS))
     args = parser.parse_args()
     if args.hard_pair:
         PROTOCOL['deadline_seconds'] = 600
     selected = args.models or PROTOCOL['models']
+    if args.extended_budget:
+        if not args.hard_pair or selected != ['ornith-1.5:35b'] or args.no_thinking or args.native_defaults or args.qwen_sampling or args.recovery_run:
+            parser.error('Extended budget is the declared Ornith thinking hard diagnostic only')
+        PROTOCOL['deadline_seconds'] = 600
+        PROTOCOL['options'] = PROTOCOL['options'] | {'num_ctx': 32768, 'num_predict': 16384}
     if args.qwen_sampling and (not args.hard_pair or any(not m.startswith('qwen3.8:') for m in selected)):
         parser.error('Qwen sampling diagnostic requires hard-pair and explicit Qwen3.8 models')
     inventory = api('tags')['models']
@@ -78,6 +84,8 @@ def main():
                 prefix = 'hard-native-'
             if args.qwen_sampling:
                 prefix = 'hard-sampled-'
+            if args.extended_budget:
+                prefix = 'hard-extended-'
             out = ROOT / (prefix + model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
             out.mkdir(exist_ok=True)
             result_path = out / (task + '-result.json')
