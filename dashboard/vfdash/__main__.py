@@ -26,13 +26,15 @@ def main(argv=None):
     ap.add_argument("--home", type=Path, default=Path.home(),
                     help="home folder for ~/Library/LaunchAgents, ~/Library/Logs and ~/.cache/value-finder")
     ap.add_argument("--operations-root", type=Path, help="Reviewed repository containing current STATUS and queue; live data still comes from --root")
+    ap.add_argument("--disable-scorers", action="store_true", help="Never launch scorer previews; show collection status only")
     a = ap.parse_args(argv)
     if not 1 <= a.port <= 65535:
         ap.error("--port must be between 1 and 65535")
     root = a.root.expanduser().resolve()
     cfg = Config(root=root, scorer_root=(a.scorer_root or root).expanduser().resolve(),
                  home=a.home.expanduser().resolve(), content=HERE.parent / "content", tz=local_zone(), port=a.port,
-                 operations_root=a.operations_root.expanduser().resolve() if a.operations_root else None)
+                 operations_root=a.operations_root.expanduser().resolve() if a.operations_root else None,
+                 disable_scorers=a.disable_scorers)
     try:
         serve(Store(cfg), a.port)
     except PortInUse:

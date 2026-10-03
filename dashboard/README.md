@@ -252,3 +252,41 @@ Deployment still requires hub review/coordination. For an isolated UI review use
 `--scorer-root` pointing at a missing directory to disable scorer launches; warnings
 then describe the preview, not production health. The start-at-login installer is
 unchanged by this PR.
+
+## Actionable collector status (#162)
+
+The follow-up links collector deployment to issue #124 / PR #125 and identifies
+hub ownership. Process state, expected collection windows and successful-collection
+receipts remain separate. Missing receipt metadata is unknown, never zero missed
+windows or proof of successful collection. Scoring mode and reviewed source/deployment
+provenance will be shown explicitly. No collector or paid execution is added here.
+
+
+### Metadata receipt contract (producer deployment is separate)
+
+The dashboard reads only these optional fixed files beneath the user's home:
+`Library/Application Support/ValueFinder/collector-status/{triggerpoll,propslog,nbacollector}.json`.
+Each is at most 16 KiB, a regular file with no linked ancestors, and contains
+exactly `version` (integer 1), `label` (matching launchd label), `recorded_utc`,
+`state` (`waiting`, `collected`, `failed`, `blocked`), `last_attempt_utc`,
+`last_success_utc`, `next_expected_utc`, `missed_windows`, `window_start_utc`,
+and `window_end_utc`. Times are timezone-aware ISO strings; all except
+`recorded_utc` may be null. Counts may be null (unknown); a nonnegative integer
+missed count requires an explicit covered start/end interval. Success cannot
+follow attempt, events cannot follow recording, and a collected state needs a
+successful latest attempt. Duplicate fields, invalid chronology, future records,
+links, pipes and oversized documents are refused. Records over one hour old are
+shown as stale reports, never proof of current collection. This is a display age
+window, not a collector cadence or research rule. Zero misses is asserted only
+by a valid producer receipt with its coverage interval. No reader opens sealed
+quotes, player records or outcomes. Local receipts report evidence; they do not
+authenticate themselves or authorize execution. No producer is added by this PR.
+
+`--disable-scorers` explicitly prevents both synchronous and background previews,
+including cached scorer output. This is separate from collection monitoring.
+An optional `DEPLOYMENT.json` in the code release root contains exactly integer
+`version: 1`, a full `commit`, `deployed_utc`, and `status_sha256`. It is local
+display provenance, not authenticated approval. The STATUS link names that commit
+only while its bytes match the recorded digest. The dashboard never creates or
+updates this file; the authorized deployment step supplies it. STATUS remains a
+pinned document and page refresh does not update it.
