@@ -221,7 +221,9 @@ scope. PR132 continues safety repair only; weather is a separate next PR.
 **Prospective coverage pilot design (Oct 2, DRAFT):**
 [New sibling adapter architecture](strategy-research/coverage-pilot-v1/DESIGN.md)
 preserves the installed older recovery and executed freezes. Reuse the NFL2025
-285-game census; do not buy another50 games. Conditional revised planning bound
-52,844 credits is not an executable cap. Selector/frame, statistical classifier and
-prospective pilot-union integration require review before any seed/list/paid authority.
+285-game census; do not buy another50 games. Preferred six-market existing-frame planning bound41,300 credits (or46,700
+if older mapping requires three original IDs/game) is not an executable cap. Pure
+selection, receipt/inventory and guarded-transport primitives are implemented; final
+classifier, frozen bootstrap, exact union and independent review remain required
+before seed/list/paid authority.
 All full listing/availability/bulk purchases remain held for coverage measurement.

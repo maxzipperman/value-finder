@@ -18,7 +18,19 @@
       "-s",
       "strategy-research/coverage-pilot-v1",
       "-p",
-      "test_*.py",
+      "test_planner.py",
+      "-v"
+    ],
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "strategy-research/coverage-pilot-v1",
+      "-p",
+      "test_timing.py",
       "-v"
     ]
   ],

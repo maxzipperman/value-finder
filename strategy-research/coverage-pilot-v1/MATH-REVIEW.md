@@ -35,8 +35,9 @@ requires both rates to meet the declared utility floor. Marginal cost upper boun
 = all projected NEW credits for that cohort (pilot plus residual) / unknown lower
 count. Known2025 successes never enter that cost denominator. Zero lower count is
 inconclusive/hold, not zero-cost success. A fully known census grants no new purchase.
-The cost100/320 thresholds still need explicit ratification; callers currently
-supply them rather than implicitly treating the earlier draft as authority.
+Hub ratified cost ceilings100 older and244 six-market props including selected
+availability. The pure function receives these explicitly; PRIMARY-CONTRACT.json
+records them. A caller must bind them to its immutable classifier contract.
 
 ## Conditions that remain material
 
@@ -68,8 +69,9 @@ probabilities through population8. Exhaustive true-K/sample/outcome checks throu
 population12 verify coverage for alpha1/20,1/600,1/300, plus monotonicity, exact
 alpha equality, census endpoints, fixed allocation and marginal-cost protection.
 No real odds or outcomes were inspected. Saved process_guard evidence:
-`/private/tmp/coverage-pilot-bounds-tests.json`, tested identity
-`78bd1927d842b3f184cd44d9ae9d05c88a7ecc70f1e58799f1c940facf6058a6`.
+`/private/tmp/coverage-pilot-bounds-tests.json`; latest tested identity is recorded
+in that artifact and the PR handoff. Evidence was renewed after the six-market
+contract/cost ceiling changed.
 Existing planner/timing evidence remains separate; no unchanged suite repeated.
 
 Primary reference for the sampling probability:

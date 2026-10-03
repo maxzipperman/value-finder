@@ -41,10 +41,12 @@ def frame_rows(rows):
     return [indexed[k] for k in sorted(indexed)]
 
 
-def select(rows, record, sizes, *, committed_frame, committed_protocol, committed_seed_record):
+def select(rows, record, sizes, *, committed_frame, committed_protocol, committed_seed_record, protocol):
     """Replay an externally committed seed; never generate or replace one."""
     if digest(record) != committed_seed_record:
         raise InvalidPlan("seed record changed")
+    if digest(protocol) != committed_protocol or protocol.get("sample_sizes") != sizes or record.get("sample_sizes") != sizes:
+        raise InvalidPlan("committed stratum allocation differs")
     frame = frame_rows(rows)
     if digest(frame) != committed_frame or record['frame'] != committed_frame:
         raise InvalidPlan('frame changed')

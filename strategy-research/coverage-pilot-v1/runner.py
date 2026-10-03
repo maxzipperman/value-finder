@@ -1,0 +1,58 @@
+"""Offline packet validator for the prospective pilot. No paid entrypoint yet.
+
+The final classifier/frame integration and end-to-end execution/restart tests must
+be reviewed before adding a callable purchase loop. No secrets are accepted here.
+"""
+import json
+import capture
+import plan
+import planner
+import receipts
+import mapping
+
+
+def packet(data, source):
+    manifest=json.loads(data['manifest.json']);rows=json.loads(data['requests.json'])
+    policy=json.loads(data['policy.json']);protocol=json.loads(data['protocol.json'])
+    frame=json.loads(data['frame.json']);draw=json.loads(data['draw.json'])
+    selected=json.loads(data['selected.json']);mappings=json.loads(data['mappings.json'])
+    result=planner.select(frame,draw,protocol['sample_sizes'],committed_frame=manifest['frame_sha256'],
+                          committed_protocol=manifest['protocol_sha256'],committed_seed_record=manifest['seed_record_sha256'],protocol=protocol)
+    if selected!=result:raise ValueError('frozen selected frame differs')
+    by_game=planner.unique(mappings,'game_id')
+    if set(by_game)!=set(selected['selected']):raise ValueError('selected mapping denominator differs')
+    originals={r['request_id']:r for r in json.loads(source['request-manifest.json'])['requests']}
+    indexed=planner.unique(rows,'request_id')
+    for row in rows:
+        if row['source']=='oddsapi/hist_odds':
+            original=originals.get(row['request_id'])
+            if original is None or original['priority']!=2 or not original['max_new_credits']:
+                raise ValueError('not an original paid older ID')
+            if row!=dict(original,url=plan.BASE+original['path']):
+                raise ValueError('original older row changed')
+        elif row['source']=='oddsapi/hist_event_odds':
+            markets=row['params']['markets'].split(',');books=row['params']['bookmakers'].split(',')
+            if not set(markets)<=set(mapping.MARKETS):raise ValueError('primary six markets only')
+            expected=plan.make_request('odds',plan.ts(row['requested_utc']),books=books,markets=markets,event_id=row['event_id'],sport=row['sport'])
+            if expected!=row:raise ValueError('props request reconstruction differs')
+        else:raise ValueError('separate metadata stage not enabled')
+    referenced=set()
+    for op in mappings:
+        ids=op['request_ids']
+        if len(ids)!=len(set(ids)) or not set(ids)<=indexed.keys():raise ValueError('mapped request differs')
+        if (not ids)!=bool(op['reason']):raise ValueError('missing explicit zero-row reason')
+        referenced.update(ids)
+    if referenced!=set(indexed):raise ValueError('unmapped paid request')
+    cap=sum(r['max_new_credits'] for r in rows)
+    if (manifest['request_count']!=len(rows) or manifest['max_new_credits']!=cap
+            or manifest['request_list_sha256']!=capture.digest(data['requests.json'])
+            or manifest['request_set_sha256']!=capture.identity(rows)):
+        raise ValueError('exact list/set/cap differs')
+    receipts.validate_policy(rows,policy)
+    contract=json.loads(data['policy/PRIMARY-CONTRACT.json'])
+    if (contract['props_cost_ceiling']!=244 or contract['older_cost_ceiling']!=100
+            or set(contract['primary_markets'])!=set(mapping.MARKETS)):
+        raise ValueError('primary contract changed')
+    return {'status':'offline_validated_not_paid_ready','requests':len(rows),'max_new_credits':cap,
+            'selected_denominator':len(mappings),'full_denominator':selected['denominator'],
+            'paid_entrypoint_available':False,'final_classifier_integration_required':True}
