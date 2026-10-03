@@ -1,0 +1,70 @@
+{
+  "reviewer": "author complete manual semantic inspection; not independent validation",
+  "task": "review",
+  "all_findings_inspected": true,
+  "distinct_real_causes": 8,
+  "seeded_causes": 10,
+  "true_findings": 7,
+  "false_findings": 1,
+  "duplicate_findings": 0,
+  "non_defect_annotations": 0,
+  "correct_times_component_flagged": true,
+  "finding_audit": [
+    {
+      "index": 1,
+      "classification": "false",
+      "reason": "Python3.14 datetime.fromisoformat accepts trailing Z; verified directly. Correct times.py is falsely flagged."
+    },
+    {
+      "index": 2,
+      "classification": "real",
+      "cause": "negative odds formula"
+    },
+    {
+      "index": 3,
+      "classification": "real_combined",
+      "causes": [
+        "lexical offset ordering",
+        "eligibility after book dedupe"
+      ],
+      "caveat": "Two independent causes combined in one finding despite one-cause-per-finding instruction."
+    },
+    {
+      "index": 4,
+      "classification": "real",
+      "cause": "job-scoped run id dedupe"
+    },
+    {
+      "index": 5,
+      "classification": "real",
+      "cause": "last duplicate time tie"
+    },
+    {
+      "index": 6,
+      "classification": "real",
+      "cause": "stale job retry overwrite",
+      "caveat": "Ancillary status preference/status hierarchy claim is false; contract explicitly forbids status preference. Ranking by attempt/time/run_id is the real cause."
+    },
+    {
+      "index": 7,
+      "classification": "real",
+      "cause": "pending classified failed"
+    },
+    {
+      "index": 8,
+      "classification": "real",
+      "cause": "partial downloaded rows omitted"
+    }
+  ],
+  "missed_causes": [
+    "missing quote tie rules",
+    "inclusive expiry"
+  ],
+  "evidence": [
+    "review-response.txt",
+    "../../ceiling/review-source.json",
+    "../../ceiling/review-inventory.json",
+    "../../ceiling/review-validation.json"
+  ],
+  "schema_check_is_not_semantic_credit": true
+}

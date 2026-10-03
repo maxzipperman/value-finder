@@ -1,0 +1,48 @@
+[
+  {
+    "case": "schema only; each cause/false/duplicate finding requires manual semantic review",
+    "passed": true,
+    "findings": [
+      {
+        "file": "times.py",
+        "line": 6,
+        "explanation": "datetime.fromisoformat does not accept ISO8601 strings with a trailing 'Z' timezone designator; the implementation fails to handle such strings, violating the requirement that asof and timestamps may include 'Z'."
+      },
+      {
+        "file": "quotes.py",
+        "line": 13,
+        "explanation": "The probability calculation for negative American odds is incorrect; it uses 100/((-v)+100) instead of (-v)/((-v)+100), producing wrong probabilities for negative odds."
+      },
+      {
+        "file": "quotes.py",
+        "line": 21,
+        "explanation": "The deduplication logic compares the raw string values of 'observed_at' and ignores eligibility; it should parse timestamps to datetime objects and filter eligible rows before selecting the greatest observed_at per book."
+      },
+      {
+        "file": "runs.py",
+        "line": 19,
+        "explanation": "The deduplication key incorrectly concatenates job and run_id; deduplication should be based solely on run_id, as run_id is global across jobs."
+      },
+      {
+        "file": "runs.py",
+        "line": 20,
+        "explanation": "The tie rule uses '>=' to replace a row with the same observed_at, violating the requirement that ties should retain the first eligible input row."
+      },
+      {
+        "file": "runs.py",
+        "line": 24,
+        "explanation": "The selection logic ignores attempt ordering, status preference, and lexicographic run_id tie-breaking; it simply picks the unique row per job without considering the latest attempt or status hierarchy."
+      },
+      {
+        "file": "pipeline.py",
+        "line": 10,
+        "explanation": "The failures list incorrectly includes pending jobs; it should include only jobs with status 'failed'."
+      },
+      {
+        "file": "pipeline.py",
+        "line": 10,
+        "explanation": "The successful_rows count only sums rows with status 'ok', excluding 'partial' jobs that should also contribute to the successful rows total."
+      }
+    ]
+  }
+]

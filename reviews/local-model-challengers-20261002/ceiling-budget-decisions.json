@@ -72,5 +72,41 @@
       "ceiling-local/gpt-oss-20b/regression-acceptance.json"
     ],
     "reviewer": "author progress inspection; not independent validation"
+  },
+  "gpt-oss:20b|review|64k": {
+    "proceed": false,
+    "reason": "Stop final review covers8/10 causes with one false Z warning, combines two causes, and adds false status-hierarchy claim. Completed semantic answer is not a resource escalation target.",
+    "evidence": [
+      "ceiling-local/gpt-oss-20b/review-result.json",
+      "ceiling-local/gpt-oss-20b/manual-review.json"
+    ],
+    "reviewer": "author semantic inspection"
+  },
+  "gemma4:26b|implementation|64k": {
+    "proceed": false,
+    "reason": "Stop after3067 tokens. Returns five files instead of exactfour; contains missing positive-attempt and overflow checks and rejects valid whitespace event. Completed packaging/semantic error, not cap exhaustion.",
+    "evidence": [
+      "ceiling-local/gemma4-26b/implementation-result.json",
+      "ceiling-local/gemma4-26b/implementation-acceptance.json"
+    ],
+    "reviewer": "author complete source/manual inspection"
+  },
+  "gemma4:26b|regression|64k": {
+    "proceed": false,
+    "reason": "Stop after2084 tokens. Markdown fence violates JSON-only delivery; draft has prohibited traceback import and wrong successful_rows expectation10 versus correct13. No oracle/mutation credit; completed answer not escalation target.",
+    "evidence": [
+      "ceiling-local/gemma4-26b/regression-result.json",
+      "ceiling-local/gemma4-26b/regression-acceptance.json"
+    ],
+    "reviewer": "author complete source/manual inspection"
+  },
+  "gemma4:26b|review|64k": {
+    "proceed": false,
+    "reason": "Stop after466 tokens. Markdown fence violates delivery; manual visible review5/10 causes with2false findings. Misses semantic causes, not truncation.",
+    "evidence": [
+      "ceiling-local/gemma4-26b/review-result.json",
+      "ceiling-local/gemma4-26b/review-acceptance.json"
+    ],
+    "reviewer": "author complete source/manual inspection"
   }
 }

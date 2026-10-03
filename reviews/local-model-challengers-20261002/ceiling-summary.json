@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 8,
+    "result": 12,
     "error": 0,
     "pending": 1,
-    "not_started": 21
+    "not_started": 17
   },
   "records": [
     {
@@ -12087,7 +12087,7 @@
       "family": "local",
       "model": "gpt-oss:20b",
       "task": "review",
-      "status": "pending",
+      "status": "result",
       "folder": "ceiling-local/gpt-oss-20b",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
@@ -12104,13 +12104,1323 @@
           "num_predict": 32768
         }
       },
-      "request_sha256": "f9d5a40a49f8dd1589622085106a7cf516c7ad29cd36161c52706f0ab0c41246"
+      "request_sha256": "f9d5a40a49f8dd1589622085106a7cf516c7ad29cd36161c52706f0ab0c41246",
+      "returned_model": "gpt-oss:20b",
+      "wall_seconds": 199.57723416702356,
+      "finish_reason": "stop",
+      "final_answer_bytes": 1715,
+      "load_seconds": 1.32158925,
+      "generation_seconds": 196.605651,
+      "generated_tokens": 19673,
+      "prompt_tokens": 2438,
+      "preflight_memory_free_percentage": 81,
+      "sampled_memory": [
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        },
+        {
+          "name": "gpt-oss:20b",
+          "size": 13310088969,
+          "size_vram": 13310088969,
+          "context_length": 65536
+        }
+      ],
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "schema only; each cause/false/duplicate finding requires manual semantic review",
+            "passed": true,
+            "findings": [
+              {
+                "file": "times.py",
+                "line": 6,
+                "explanation": "datetime.fromisoformat does not accept ISO8601 strings with a trailing 'Z' timezone designator; the implementation fails to handle such strings, violating the requirement that asof and timestamps may include 'Z'."
+              },
+              {
+                "file": "quotes.py",
+                "line": 13,
+                "explanation": "The probability calculation for negative American odds is incorrect; it uses 100/((-v)+100) instead of (-v)/((-v)+100), producing wrong probabilities for negative odds."
+              },
+              {
+                "file": "quotes.py",
+                "line": 21,
+                "explanation": "The deduplication logic compares the raw string values of 'observed_at' and ignores eligibility; it should parse timestamps to datetime objects and filter eligible rows before selecting the greatest observed_at per book."
+              },
+              {
+                "file": "runs.py",
+                "line": 19,
+                "explanation": "The deduplication key incorrectly concatenates job and run_id; deduplication should be based solely on run_id, as run_id is global across jobs."
+              },
+              {
+                "file": "runs.py",
+                "line": 20,
+                "explanation": "The tie rule uses '>=' to replace a row with the same observed_at, violating the requirement that ties should retain the first eligible input row."
+              },
+              {
+                "file": "runs.py",
+                "line": 24,
+                "explanation": "The selection logic ignores attempt ordering, status preference, and lexicographic run_id tie-breaking; it simply picks the unique row per job without considering the latest attempt or status hierarchy."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 10,
+                "explanation": "The failures list incorrectly includes pending jobs; it should include only jobs with status 'failed'."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 10,
+                "explanation": "The successful_rows count only sums rows with status 'ok', excluding 'partial' jobs that should also contribute to the successful rows total."
+              }
+            ]
+          }
+        ]
+      },
+      "manual_review": {
+        "reviewer": "author complete manual semantic inspection; not independent validation",
+        "task": "review",
+        "all_findings_inspected": true,
+        "distinct_real_causes": 8,
+        "seeded_causes": 10,
+        "true_findings": 7,
+        "false_findings": 1,
+        "duplicate_findings": 0,
+        "non_defect_annotations": 0,
+        "correct_times_component_flagged": true,
+        "finding_audit": [
+          {
+            "index": 1,
+            "classification": "false",
+            "reason": "Python3.14 datetime.fromisoformat accepts trailing Z; verified directly. Correct times.py is falsely flagged."
+          },
+          {
+            "index": 2,
+            "classification": "real",
+            "cause": "negative odds formula"
+          },
+          {
+            "index": 3,
+            "classification": "real_combined",
+            "causes": [
+              "lexical offset ordering",
+              "eligibility after book dedupe"
+            ],
+            "caveat": "Two independent causes combined in one finding despite one-cause-per-finding instruction."
+          },
+          {
+            "index": 4,
+            "classification": "real",
+            "cause": "job-scoped run id dedupe"
+          },
+          {
+            "index": 5,
+            "classification": "real",
+            "cause": "last duplicate time tie"
+          },
+          {
+            "index": 6,
+            "classification": "real",
+            "cause": "stale job retry overwrite",
+            "caveat": "Ancillary status preference/status hierarchy claim is false; contract explicitly forbids status preference. Ranking by attempt/time/run_id is the real cause."
+          },
+          {
+            "index": 7,
+            "classification": "real",
+            "cause": "pending classified failed"
+          },
+          {
+            "index": 8,
+            "classification": "real",
+            "cause": "partial downloaded rows omitted"
+          }
+        ],
+        "missed_causes": [
+          "missing quote tie rules",
+          "inclusive expiry"
+        ],
+        "evidence": [
+          "review-response.txt",
+          "../../ceiling/review-source.json",
+          "../../ceiling/review-inventory.json",
+          "../../ceiling/review-validation.json"
+        ],
+        "schema_check_is_not_semantic_credit": true
+      }
     },
     {
       "family": "local",
       "model": "gemma4:26b",
       "task": "implementation",
-      "status": "not_started",
+      "status": "result",
       "folder": "ceiling-local/gemma4-26b",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c",
@@ -12126,13 +13436,163 @@
           "num_ctx": 65536,
           "num_predict": 32768
         }
+      },
+      "request_sha256": "3fd04726525c6137f825de046e8e66339f219d60fd21e6ef57f46623ddea3aac",
+      "returned_model": "gemma4:26b",
+      "wall_seconds": 27.234345540986396,
+      "finish_reason": "stop",
+      "final_answer_bytes": 9021,
+      "load_seconds": 5.116566875,
+      "generation_seconds": 21.565726,
+      "generated_tokens": 3067,
+      "prompt_tokens": 1183,
+      "preflight_memory_free_percentage": 80,
+      "sampled_memory": [
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        }
+      ],
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: four source files required"
+          }
+        ]
       }
     },
     {
       "family": "local",
       "model": "gemma4:26b",
       "task": "regression",
-      "status": "not_started",
+      "status": "result",
       "folder": "ceiling-local/gemma4-26b",
       "prompt_sha256": "123cf6e07cdf909838ea44a69bf18498231fb9551e4d3f1d9be3d6b053be96f3",
       "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c",
@@ -12148,13 +13608,133 @@
           "num_ctx": 65536,
           "num_predict": 32768
         }
+      },
+      "request_sha256": "e7c75e618855d31dfd8044234192ff6a7ee6772342538524094f13958ba83c77",
+      "returned_model": "gemma4:26b",
+      "wall_seconds": 19.163900749990717,
+      "finish_reason": "stop",
+      "final_answer_bytes": 6364,
+      "load_seconds": 2.604913375,
+      "generation_seconds": 15.337509,
+      "generated_tokens": 2084,
+      "prompt_tokens": 1213,
+      "preflight_memory_free_percentage": 67,
+      "sampled_memory": [
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        }
+      ],
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
       }
     },
     {
       "family": "local",
       "model": "gemma4:26b",
       "task": "review",
-      "status": "not_started",
+      "status": "result",
       "folder": "ceiling-local/gemma4-26b",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c",
@@ -12170,13 +13750,132 @@
           "num_ctx": 65536,
           "num_predict": 32768
         }
+      },
+      "request_sha256": "fc55e604930859836041df293771ddf52be2fea25178602103898bcb50ae482b",
+      "returned_model": "gemma4:26b",
+      "wall_seconds": 8.071272959001362,
+      "finish_reason": "stop",
+      "final_answer_bytes": 1766,
+      "load_seconds": 2.601770125,
+      "generation_seconds": 4.007199,
+      "generated_tokens": 466,
+      "prompt_tokens": 2642,
+      "preflight_memory_free_percentage": 80,
+      "sampled_memory": [
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        },
+        {
+          "name": "gemma4:26b",
+          "size": 2064750999,
+          "size_vram": 2064750999,
+          "context_length": 65536
+        }
+      ],
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      },
+      "manual_review": {
+        "reviewer": "author complete manual source/semantic inspection; not independent validation",
+        "task": "review",
+        "delivery": "Markdown JSON fence fails declared JSON-only packaging; unmodified acceptance0/1. Semantic audit of visible findings reported separately, not accepted machine delivery.",
+        "all_findings_inspected": true,
+        "distinct_real_causes": 5,
+        "seeded_causes": 10,
+        "false_findings": 2,
+        "duplicate_findings": 0,
+        "non_defect_annotations": 0,
+        "correct_times_component_flagged": false,
+        "finding_audit": [
+          {
+            "index": 1,
+            "classification": "real",
+            "cause": "eligibility after book dedupe"
+          },
+          {
+            "index": 2,
+            "classification": "false",
+            "reason": "Reducing rows does not itself violate first exact-instant/ID retention. Preliminary strict greater raw-time comparison preserves identical timestamp strings; no offset/lexical ordering explanation supplied. Rebinding local rows is not input mutation."
+          },
+          {
+            "index": 3,
+            "classification": "false",
+            "reason": "Second-pass strict smaller-ID comparison cannot overwrite equal-ID/instant ties; it preserves first exact ties. This does not identify missing ID tie in preliminary pass."
+          },
+          {
+            "index": 4,
+            "classification": "real",
+            "cause": "job-scoped run id dedupe",
+            "valid_additional_consequence": "Unseparated concatenation can also collide for distinct job/run_id pairs."
+          },
+          {
+            "index": 5,
+            "classification": "real",
+            "cause": "last duplicate time tie"
+          },
+          {
+            "index": 6,
+            "classification": "real",
+            "cause": "stale job retry overwrite",
+            "caveat": "if True unconditionally overwrites selection; calling it a no-op is imprecise."
+          },
+          {
+            "index": 7,
+            "classification": "real",
+            "cause": "partial downloaded rows omitted"
+          }
+        ],
+        "missed_causes": [
+          "negative odds formula",
+          "lexical offset ordering",
+          "missing quote tie rules",
+          "inclusive expiry",
+          "pending classified failed"
+        ],
+        "evidence": [
+          "review-response.txt",
+          "../../ceiling/review-source.json",
+          "../../ceiling/review-inventory.json",
+          "../../ceiling/review-validation.json"
+        ],
+        "schema_check_is_not_semantic_credit": true
       }
     },
     {
       "family": "local",
       "model": "qwen3.8:27b-q8_0",
       "task": "implementation",
-      "status": "not_started",
+      "status": "pending",
       "folder": "ceiling-local/qwen3.8-27b-q8_0",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": "8f5fb6b71ea00052cbe8545738c55ce61112c4e571cb60ca4dad00b131766039",
@@ -12198,7 +13897,8 @@
           "repeat_penalty": 1,
           "draft_num_predict": 0
         }
-      }
+      },
+      "request_sha256": "d9e566cac93b5a6b248c263b724c3d320e7a3b9dd842451553852b5af105b0e7"
     },
     {
       "family": "local",

@@ -1,0 +1,11 @@
+```json
+[
+  {"file": "quotes.py", "line": 21, "explanation": "The logic pre-filters rows by book before checking event/asof/validity, which can cause valid quotes for the target event to be discarded if a different event has a later observed_at for that book."},
+  {"file": "quotes.py", "line": 23, "explanation": "The pre-filtering step mutates the local 'rows' variable by reducing it to one row per book, which violates the requirement to consider all eligible records for tie-breaking (specifically the first-input tie exception)."},
+  {"file": "quotes.py", "line": 37, "explanation": "The tie-breaking logic for equal observed_at uses lexicographical comparison of 'id', but the contract requires keeping the first eligible input row in the event of an absolute-time/id tie."},
+  {"file": "runs.py", "line": 19, "explanation": "The deduplication key 'identity' is constructed as 'job' + 'run_id', which fails to correctly isolate unique run_ids if they are global across jobs as specified; it also risks collisions (e.g., job='A', run_id='B1' vs job='AB', run_id='1')."},
+  {"file": "runs.py", "line": 20, "explanation": "The deduplication logic uses 'observed >= stamps[identity]', which incorrectly allows later records to overwrite earlier ones on exact time ties, violating the 'retaining first eligible input row' rule."},
+  {"file": "runs.py", "line": 27, "explanation": "The selection logic for jobs is a no-op ('if True') that simply picks the last processed identity for a job, failing to implement the required ranking by attempt, observed_at, and run_id."},
+  {"file": "pipeline.py", "line": 10, "explanation": "The 'successful_rows' calculation only sums 'ok' status rows, whereas the contract requires summing 'ok' OR 'partial' status rows."}
+]
+```

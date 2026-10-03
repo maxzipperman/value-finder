@@ -212,3 +212,9 @@ PR147 follow-up: Qwen3.8Q4 regression also stop-empty below32K; review9/10 cause
 
 
 PR147 ceiling checkpoint: GPT-OSS medium implementation/regression both length32K empty finals (~349s/~347s). Implementation thinking10092 literal - Enough. repetitions; regression six repeated suite headers.64K denied for repetition/no progress, no hidden-source salvage. Review queued separately, other integrated models/API still pending; no final handoff.
+
+
+PR147 GPT-OSS medium integrated review completed200s:8/10 real causes across7actionable findings,1false Z warning on correct component, ancillary false status hierarchy; no64K reroll. Gemmafast next in active queue98555. Final allocation/report pending.
+
+
+PR147 Gemmafast integrated tasks author inspected:27s implementation wrongfivefilebundle,19s regression fencedJSON/wrongpartialtotal,8s review fencedJSON; visible manualreview5/10 real+2false tieclaims. No source execution/oraclecredit or64K escalation. Integrated12results saved, Q8 next; all required API/dynamicdiagnostics still pending.

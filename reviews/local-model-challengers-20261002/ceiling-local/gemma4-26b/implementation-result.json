@@ -1,0 +1,148 @@
+{
+  "model": "gemma4:26b",
+  "created_at": "2026-10-03T11:15:46.749631Z",
+  "message": {
+    "role": "assistant",
+    "content": "{\n\"times.py\": \"from datetime import datetime, timezone\\n\\ndef instant(value):\\n    if isinstance(value, datetime):\\n        dt = value\\n    elif isinstance(value, str):\\n        try:\\n            dt = datetime.fromisoformat(value.replace('Z', '+00:00'))\\n        except ValueError:\\n            raise ValueError(\\\"Invalid ISO8601 string\\\")\\n    else:\\n        raise ValueError(\\\"Unsupported type\\\")\\n\\n    if dt.tzinfo is None or dt.utcoffset() is None:\\n        raise ValueError(\\\"Timezone required\\\")\\n    \\n    return dt.astimezone(timezone.utc)\",\n\"quotes.py\": \"import math\\nfrom times import instant\\n\\ndef probability(value):\\n    if isinstance(value, bool):\\n        raise ValueError(\\\"Bool not allowed\\\")\\n    try:\\n        v = float(value)\\n    except (ValueError, TypeError):\\n        raise ValueError(\\\"Invalid numeric type\\\")\\n    \\n    if not math.isfinite(v) or abs(v) < 100:\\n        raise ValueError(\\\"Value out of bounds or non-finite\\\")\\n    \\n    if v > 0:\\n        return 100.0 / (v + 100.0)\\n    else:\\n        return (-v) / ((-v) + 100.0)\\n\\ndef select(rows, event, asof):\\n    asof_dt = instant(asof)\\n    eligible = []\\n    \\n    for row in rows:\\n        try:\\n            if not isinstance(row, dict):\\n                continue\\n            if not (isinstance(row.get('id'), str) and row['id]):\\n                continue\\n            if not (isinstance(row.get('book'), str) and row['book']):\\n                continue\\n            if not (isinstance(row.get('event'), str) and row['event'] == event):\\n                continue\\n            \\n            obs = instant(row['observed_at'])\\n            exp = instant(row['expires_at'])\\n            upd = instant(row['last_update'])\\n            prob = probability(row['odds'])\\n            \\n            if obs <= asof_dt < exp and upd <= obs:\\n                eligible.append({\\n                    'row': row,\\n                    'book': row['book'],\\n                    'id': row['id'],\\n                    'obs': obs,\\n                    'prob': prob\\n                })\\n        except (ValueError, KeyError, TypeError):\\n            continue\\n\\n    books = {}\\n    for item in eligible:\\n        b = item['book']\\n        if b not in books:\\n            books[b] = item\\n        else:\\n            curr = books[b]\\n            if item['obs'] > curr['obs']:\\n                books[b] = item\\n            elif item['obs'] == curr['obs']:\\n                if item['id'] < curr['id']:\\n                    books[b] = item\\n                # else: keep first (curr)\\n    \\n    return {b: {'row': v['row'], 'probability': v['prob']} for b, v in books.items()}\",\n\"runs.py\": \"from times import instant\\n\\ndef reconcile(rows, asof):\\n    asof_dt = instant(asof)\\n    valid_rows = []\\n    \\n    for row in rows:\\n        try:\\n            if not isinstance(row, dict):\\n                continue\\n            rid = row.get('run_id')\\n            job = row.get('job')\\n            if not (isinstance(rid, str) and rid) or not (isinstance(job, str) and job):\\n                continue\\n            \\n            attempt = row.get('attempt')\\n            if isinstance(attempt, bool) or not isinstance(attempt, int):\\n                continue\\n            \\n            obs = instant(row['observed_at'])\\n            if obs > asof_dt:\\n                continue\\n                \\n            status = row.get('status')\\n            if status not in ('ok', 'partial', 'failed', 'pending'):\\n                continue\\n                \\n            dl = row.get('downloaded_rows')\\n            if isinstance(dl, bool) or not isinstance(dl, int) or dl < 0:\\n                continue\\n            \\n            if status in ('failed', 'pending') and dl != 0:\\n                continue\\n\\n            valid_rows.append({'row': row, 'rid': rid, 'job': job, 'att': attempt, 'obs': obs})\\n        except (ValueError, KeyError, TypeError):\\n            continue\\n\\n    # Deduplicate run_id: greatest obs wins, tie-break first input\\n    deduped_rid = {}\\n    for item in valid_rows:\\n        rid = item['rid']\\n        if rid not in deduped_rid:\\n            deduped_rid[rid] = item\\n        else:\\n            curr = deduped_rid[rid]\\n            if item['obs'] > curr['obs']:\\n                deduped_rid[rid] = item\\n            elif item['obs'] == curr['obs']:\\n                pass # keep first\\n\\n    # Group by job and select latest attempt\\n    job_map = {}\\n    for rid, item in deduped_rid.items():\\n        job = item['job']\\n        if job not in job_map:\\n            job_map[job] = item\\n        else:\\n            curr = job_map[job]\\n            # latest attempt -> greatest obs -> smallest rid\\n            if item['att'] > curr['att']:\\n                job_map[job] = item\\n            elif item['att'] == curr['att']:\\n                if item['obs'] > curr['obs']:\\n                    job_map[job] = item\\n                elif item['obs'] == curr['obs']:\\n                    if item['rid'] < curr['rid']:\\n                        job_map[job] = item\\n                        \\n    return {v['job']: v['row'] for v in job_map.values()}\",\n\"pipeline.py\": \"import quotes\\nimport runs\\nfrom times import instant\\n\\ndef snapshot(quote_rows, run_rows, event, asof):\\n    # Validate asof and event first\\n    instant(asof)\\n    if not isinstance(event, str) or not event.strip():\\n        raise ValueError(\\\"Invalid event\\\")\\n\\n    q_sel = quotes.select(quote_rows, event, asof)\\n    r_sel = runs.reconcile(run_rows, asof)\\n\\n    success_rows = 0\\n    failures = []\\n    partials = []\\n    unknowns = []\\n\\n    for job, row in r_sel.items():\\n        status = row['status']\\n        if status in ('ok', 'partial'):\\n            success_rows += row['downloaded_rows']\\n        \\n        if status == 'failed':\\n            failures.append(job)\\n        elif status == 'partial':\\n            partials.append(job)\\n        elif status == 'pending':\\n            unknowns.append(job)\\n\\n    return {\\n        'quotes': q_sel,\\n        'runs': r_sel,\\n        'successful_rows': success_rows,\\n        'failures': sorted(failures),\\n        'partial_jobs': sorted(partials),\\n        'unknown_jobs': sorted(unknowns)\\n    }\",\n\"tests.py\": \"import datetime\\nimport math\\nimport copy\\n\\ndef run_tests(candidate):\\n    # 1. Validation Tests\\n    try:\\n        candidate([], [], \\\"\\\", datetime.datetime.now(datetime.timezone.utc))\\n        raise AssertionError(\\\"Should fail on empty event\\\")\\n    except ValueError:\\n        pass\\n\\n    try:\\n        candidate([], [], \\\"e\\\", \\\"not-a-date\\\")\\n        raise AssertionError(\\\"Should fail on invalid asof\\\")\\n    except ValueError:\\n        pass\\n\\n    # 2. Quotes Tests\\n    asof = datetime.datetime(2023, 1, 1, 12, 0, tzinfo=datetime.timezone.utc)\\n    q_rows = [\\n        {'id': '1', 'book': 'B1', 'event': 'E1', 'observed_at': '2023-01-01T11:00:00Z', 'expires_at': '2023-01-01T13:00:00Z', 'last_update': '2023-01-01T11:00:00Z', 'odds': 100},\\n        {'id': '2', 'book': 'B1', 'event': 'E1', 'observed_at': '2023-01-01T11:30:00Z', 'expires_at': '2023-01-01T13:00:00Z', 'last_update': '2023-01-01T11:30:00Z', 'odds': 200},\\n        {'id': '3', 'book': 'B1', 'event': 'E1', 'observed_at': '2023-01-01T11:30:00Z', 'expires_at': '2023-01-01T13:00:00Z', 'last_update': '2023-01-01T11:30:00Z', 'odds': 300}, # Tie id\\n        {'id': '4', 'book': 'B1', 'event': 'E1', 'observed_at': '2023-01-01T14:00:00Z', 'expires_at': '2023-01-01T15:00:00Z', 'last_update': '2023-01-01T14:00:00Z', 'odds': 100}, # Future\\n    ]\\n    res = candidate(q_rows, [], \\\"E1\\\", asof)\\n    assert res['quotes']['B1']['probability'] == 100.0 / (200.0 + 100.0)\\n    assert res['quotes']['B1']['row']['id'] == '2'\\n\\n    # 3. Runs Tests\\n    r_rows = [\\n        {'run_id': 'r1', 'job': 'j1', 'attempt': 1, 'observed_at': '2023-01-01T10:00:00Z', 'status': 'ok', 'downloaded_rows': 10},\\n        {'run_id': 'r1', 'job': 'j1', 'attempt': 2, 'observed_at': '2023-01-01T11:00:00Z', 'status': 'failed', 'downloaded_rows': 0},\\n        {'run_id': 'r2', 'job': 'j2', 'attempt': 1, 'observed_at': '2023-01-01T10:00:00Z', 'status': 'partial', 'downloaded_rows': 5},\\n        {'run_id': 'r3', 'job': 'j3', 'attempt': 1, 'observed_at': '2023-01-01T10:00:00Z', 'status': 'pending', 'downloaded_rows': 0},\\n    ]\\n    res = candidate([], r_rows, \\\"E1\\\", asof)\\n    assert res['successful_rows'] == 5\\n    assert 'j1' in res['failures']\\n    assert 'j2' in res['partial_jobs']\\n    assert 'j3' in res['unknown_jobs']\\n    assert res['runs']['j1']['status'] == 'failed'\\n\\n    # 4. Complex Tie-breaking\\n    r_rows_tie = [\\n        {'run_id': 'r1', 'job': 'j1', 'attempt': 1, 'observed_at': '2023-01-01T10:00:00Z', 'status': 'ok', 'downloaded_rows': 10},\\n        {'run_id': 'r1', 'job': 'j1', 'attempt': 1, 'observed_at': '2023-01-01T10:00:00Z', 'status': 'ok', 'downloaded_rows': 20}, # Duplicate\\n    ]\\n    res = candidate([], r_rows_tie, \\\"E1\\\", asof)\\n    assert res['successful_rows'] == 10 # First input rule\\n\\n    print(\\\"All tests passed\\\")\"\n}"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 27139655250,
+  "load_duration": 5116566875,
+  "prompt_eval_count": 1183,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 448742000,
+  "eval_count": 3067,
+  "eval_duration": 21565726000,
+  "wall_seconds": 27.234345540986396,
+  "memory_samples": [
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    },
+    {
+      "name": "gemma4:26b",
+      "size": 2064750999,
+      "size_vram": 2064750999,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 80,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}
