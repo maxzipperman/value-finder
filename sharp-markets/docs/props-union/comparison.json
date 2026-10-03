@@ -1,0 +1,27 @@
+{
+  "accepted_readiness_sha256": "acd2009728d88370465ce8da85e16d61ec2ca7489b3491005b304cdd9622530c",
+  "scope": "NFL primary2023\u201325 quote pairs only; stricter conflicting-duplicate exclusion",
+  "game_pair_counts_reproduce_accepted": true,
+  "metric_deltas": [
+    {
+      "season": 2025,
+      "slot": "T24",
+      "market": "player_rush_yds",
+      "book": "pinnacle",
+      "metric": "complete_pair_keys",
+      "before": 331,
+      "after": 330
+    },
+    {
+      "season": 2025,
+      "slot": "T24",
+      "market": "player_rush_yds",
+      "book": "pinnacle",
+      "metric": "provider_label_games_with_quote_pairs",
+      "before": 331,
+      "after": 330
+    }
+  ],
+  "original_final_unchanged": true,
+  "original_pilot_relook": false
+}
