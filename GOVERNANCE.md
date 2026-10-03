@@ -1,7 +1,7 @@
 # Value Finder governance
 
 Authoritative coordination and review policy, prospectively authorized by the owner
-October 2, 2026. Project research rules and dated registrations still apply.
+October 3, 2026. Project research rules and dated registrations still apply.
 This change creates no purchase, registration, live-job or betting authority.
 
 ## Roles and review
@@ -12,37 +12,47 @@ Claude/auditor workers, merges consequential changes and maintains the single
 
 | Risk | Examples | Merge evidence |
 |---|---|---|
-| Ordinary | Explanatory docs, presentation, isolated utilities with no research or execution effect | Relevant checks and one reviewer |
-| Research | Calculations, identity, eligibility, scoring, rule-changing documentation | Independent technical review and hub approval |
-| Execution | Purchases, registration, live changes; governance affecting their controls | Independent technical review, hub approval and exact execution authority where applicable |
+| Explanatory | Status/history or prose with no code, research, eligibility or control effect | Relevant automated checks; no mandatory technical reviewer |
+| Ordinary code | Presentation and isolated utilities with no research or execution effect | One independent technical review and relevant CI |
+| Research | Calculations, identity, eligibility, settlement, scoring, registrations and rule-changing documentation | One independent technical review and relevant CI; separate hub adoption where required |
+| Execution | Purchases, freeze/recovery, live changes; governance affecting their controls | One independent technical review and relevant CI; separate exact hub execution/spend authority |
 
-For research/execution changes, retain both independent technical review and hub
-approval. Each reviewer posts `AGREE <full current head sha>`, or may substitute
-that same reviewer's formal GitHub **Approve** review only when the hub verifies:
+Classify by effect, not extension. Execution paths and their tests impose an
+execution floor; research/scoring/eligibility/registration paths impose a research
+floor. Markdown can change a rule. Path rules are floors, never permission to
+self-downgrade. Uncertain changes retain independent review. The author proposes
+the tier; an independent reviewer or hub resolves any uncertainty or downgrade.
+
+For code/research/execution changes, require one independent technical reviewer.
+The hub need not repeat that technical review or post a second technical AGREE.
+The reviewer posts `AGREE <full current head sha>`, or may substitute their formal
+GitHub **Approve** review only when the merger verifies:
 
 - the reviewer's latest effective opinionated review is `APPROVED` and its
   `commit_id` equals the full current PR head; dismissed or obsolete reviews do
   not count, and no later withdrawal or `CHANGES_REQUESTED` review supersedes it.
   The hub verifies the reviewer's continuing agreement at merge time;
 - the reviewer uses a distinct, independently authenticated account, independent
-  of the author and the other required reviewer;
+  of the author;
 - the review includes a one-line rubric identifying scope checked, evidence/checks
   verified and protections preserved.
 
-A native approval replaces only that reviewer's AGREE comment, never the other
-required role. One person cannot supply both independent and hub review, and the
-author cannot supply their own independent review or self-approve. Reviewers using
+A native approval replaces only the independent review, never spending or adoption
+authority. The author cannot supply their own independent review or self-approve. Reviewers using
 the shared `maxzipperman` account retain exact-head AGREE comments that identify
 their role; a shared-account native approval cannot establish independence.
-New commits invalidate exact-head approvals and require renewed agreement, **not
-repeating unchanged tests**. The hub merges these changes. Ordinary changes need
-one approval and can be merged by the responsible assistant. This approval-policy
-change itself uses the prior dual current-head AGREE rule. When impact is
-uncertain, use the higher tier.
-Rule-changing docs are never ordinary. Tests inherit the risk tier of the invariant
-they guard: weakening a spending, eligibility or scoring assertion needs independent
-review and hub approval, even though purchase identity stays unchanged. Merge
-agreement is not paid authority.
+New commits require a current-head review disposition; verified unchanged
+substantive evidence can be reused without repeating tests or logic review.
+Evidence reuse never manufactures authenticated approval. The hub still merges
+consequential changes, adopts registrations/research changes where required, and
+alone authorizes paid execution. These are separate actions, not a second technical
+AGREE ceremony. Ordinary code and explanatory changes may be merged by the
+responsible assistant once their applicable evidence passes. Tests inherit the
+tier of the invariant they guard. Merge agreement is not paid authority.
+
+**This migration uses the prior dual rule:** independent and hub must each post
+`AGREE <full current head sha>` before its merge. The lighter rule applies only
+after that merge; it does not retroactively change any executed packet.
 
 ## Reuse verification instead of repeating it
 
