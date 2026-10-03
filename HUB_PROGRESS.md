@@ -44,7 +44,7 @@ Amounts below are **maximum new credits or planning bounds**, not amounts alread
 | Small gap-filling coverage pilot | **To be frozen** | Reuse existing evidence first. Exact finite sample and cap require review; pilot inputs should be reused by the final archive. |
 |---|---:|---|
 | Finish older 2020–2022 football | **53,580** | 1,786 never-sent requests. PR #129 merged; exact offline reconciliation installed. Actual successor frozen in PR #134; independent review, new coverage gate and fresh paid approval remain. |
-| NFL/CFB listing discovery | **1,544** | Exact first metadata stage in PR #132. Auditor reproduced cache/ancestry validation blockers; worker repairing them. Also waits on representative coverage measurement and the approved global predecessor. |
+| NFL/CFB listing discovery | **1,544** | Exact first metadata stage in PR #132. Both cache/ancestry validation blockers repaired at PR #132 head 3f63f6a; independent review pending. Also waits on representative coverage measurement and the approved global predecessor. |
 | NFL/CFB market availability at two times | **7,032 currently proposed** | Full stage held for coverage-first planning; separate metadata stage after pilot/listing reconciliation. Newly discovered events can expand this list and cap. Returns availability, not prices/player counts. |
 | All supported NFL/CFB props, 2023–2025, day-before + scheduled close | **2,747,340 planning bound** | NFL 1,011,870 + CFB 1,735,470, after compatible prior-cache reuse, up to ten selected books. Actual billing depends on returned markets. Exact universe, books and price list follow discovery. |
 | Optional earlier timing: eight core markets at 72/48/6/1 hours | **1,112,960 planning bound** | Keeps broad baseline and adds timing depth. Requires coverage and settlement support; extra early-time metadata and new events are not included. Weather-dependent T72 tests need archived forecasts. |
@@ -55,7 +55,7 @@ Amounts below are **maximum new credits or planning bounds**, not amounts alread
 
 The existing **250,000-credit first-tranche ceiling** must be prospectively extended through a reviewed budget before a larger props run. Small stages do not authorize that extension. Twenty-book broad coverage has a 5,528,880-credit bound; all markets at all six times has an 8,260,260-credit bound. Neither fits this month at those maxima.
 
-Conditional NBA full-season and hourly featured-football purchases remain behind their existing gates and are **not included** above. If earned, rebalance against actual remaining credits and overlaps before purchase. Reset date is not yet confirmed; do not assume calendar month-end.
+Conditional NBA full-season and hourly featured-football purchases remain behind their existing gates and are **not included** above. If earned, rebalance against actual remaining credits and overlaps before purchase. The provider’s [official FAQ](https://the-odds-api.com/manage/faqs.html) says credits reset on the first of every month, so the standard next reset is **November 1, 2026**. Exact reset hour/timezone and account renewal/cancellation status have not been verified. Target completion by **October 29 Pacific** to leave a buffer.
 
 ## Coverage gate before bulk acquisition
 
@@ -81,7 +81,7 @@ The existing 480 older responses are a chronological sample; the 570 props respo
 3. **Worker → auditor → hub:** correct college forecast missingness. Reproduced bug: partial wind is accepted and entirely missing precipitation becomes zero. Preserve complete-input behavior; no retroactive rule changes or live deployment yet.
 4. **Auditor as implementation worker → independent reviewer → hub:** repair props analysis inputs and settlement. Missing statistics must stay missing, not become zero; over-only/yes-no markets must not acquire invented under sides.
 5. **Hub:** preregister the acquisition coverage gate, then choose the exact incremental broad/depth price list using measured paired availability, confidence bounds, settlement support, cache reuse and budget. Extra snapshots are correlated observations, not extra independent games.
-6. **Hub:** confirm allowance reset date and update this artifact after each run or verified analysis. Keep 2026 football outcomes sealed, requests cache-first and purchases sequential.
+6. **Hub:** standard monthly reset policy verified as November 1; exact account timing/renewal still unverified. Target October 29 Pacific and update this artifact after each run or verified analysis. Keep 2026 football outcomes sealed, requests cache-first and purchases sequential.
 
 ## Evidence and links
 

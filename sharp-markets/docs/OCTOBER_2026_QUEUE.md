@@ -54,7 +54,7 @@ extension before larger props execution. Monthly ceiling **4,440,000** and reser
 
 ## Schedule and gate decisions
 
-Dates are targets, not permission to skip a dependency. Use the actual allowance reset date once confirmed.
+Dates are targets, not permission to skip a dependency. The [official FAQ](https://the-odds-api.com/manage/faqs.html) states that credits reset on the first of each month: standard next reset November 1, 2026. Exact hour/timezone and account renewal/cancellation are not verified; aim to finish by October 29 Pacific.
 
 - **Now through October 7:** freeze/review the first lists, reconcile all local caches, and execute ready
   Phase 1 runs consecutively. Prepare the older runner concurrently with list review; do not wait for a backup.
