@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "2029937cdb1d447466afb6906b1f8ef36916a91d83349d96bec25bb182be9672",
+  "evidence_digest": "158011cdd4cd824d9c1f23a599085e24299a6296a113b9e99dfe4369ed8b03ad",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -324,10 +324,10 @@
       "docs/status-archive/2026-10-03-before-simplification.md": "0928b45e0f739736db6470569dd5a03fb9df949a152b7780039c2c697e042545",
       "docs/status-archive/manifest.json": "6c1fd22283dcc676e5f902d64e591d887e2c33332b99fa696b6cf016abc8ecc5",
       "nfl-weather/PREREGISTRATION_PROPS.md": "c65f725ad73682daaaabc1f5faf406b5ee272e048f844d389fea0ae96eeff033",
-      "ops/process/governance_guard.py": "ebee24a75bc214ae0afe5a378c33fa0ca0d0ffc1becbe244bedddb949e6f66d7",
+      "ops/process/governance_guard.py": "4f48189c10d7f6c77f3e4662a9ee5475301c939a1fb2eb5285bef16caa220e47",
       "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
-      "ops/process/review-policy.json": "8186a555d82053ba71e2b0825112cb93579d187f7867e73fea49e50bfd387f77",
-      "ops/process/test_governance_guard.py": "74cd446c1fa8350e81d702a6278db22ecb5d756cbead3478baf163f57b72659f",
+      "ops/process/review-policy.json": "e47b772fd89618bd09da3de16c2722bc11b5cf061987236e20a3275e7b341185",
+      "ops/process/test_governance_guard.py": "aa6f03df20068df04ec2f75d7af5ab4a7f86a5f930fa412683add3e89a3ca7c6",
       "ops/process/test_process_guard.py": "323cea008c78329aecbe855858a3cb5aa84d01f87faf242339e31751cc2ff408",
       "ops/process/test_startup_guard.py": "ed03d5f46d242882496b3b79fcaca94d60585d0c598ed02f0cc35f0895b53c6e",
       "ops/process/test_status_contract.py": "cea4238b36c10d422dd20805706cc653a5657bb5465909a3c9d787d07827a88f",
@@ -338,7 +338,7 @@
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T18:39:28.560844+00:00",
+  "recorded_at": "2026-10-03T18:44:47.726332+00:00",
   "results": [
     {
       "argv": [
@@ -354,15 +354,15 @@
         "-v"
       ],
       "exit_code": 0,
-      "stderr_sha256": "dd5f8a2f8b0f5fcb4fd3e9cf7c141c6a16c2b6191cfda9f4de4171a08057e57b",
+      "stderr_sha256": "f1fe90cffab525930ca22959b384fa7608365f300f821ed9c3862d171ed74d9c",
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "unittest_count": [
-        34
+        36
       ]
     }
   ],
-  "tested_commit": "8544dd4f976d6a010837a6af6c578f2109f1ae6c",
-  "tested_identity": "46d2319757c3fc58bb7ad67acb6072e722f5436b4174a362312375ae3d510f92",
+  "tested_commit": "34c1d6598f1d32682a0055c29c68fa39c5c8d5bf",
+  "tested_identity": "0ef250ced27ffc5e6acccff4fb2ebfe1cf501f04244efb4a25d0a8aa6e7df53b",
   "version": 1,
   "worktree_clean": true
 }
