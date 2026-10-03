@@ -93,22 +93,27 @@ def fetch(games: pd.DataFrame, pause=1.0):
         time.sleep(pause)
 
 
-def summarize_prev(js: dict | None, kick_utc) -> dict:
-    """Mean forecast wind over the kickoff hour and the next 3, per lead (NaN when that lead is missing)."""
+def summarize_prev_checked(js: dict | None, kick_utc) -> dict:
+    """Per-lead four-hour completeness; diagnostics never inspect outcomes."""
+    from cfbweather.weather import hourly_frame, required_values
     out = {f"fc{n}_raw": np.nan for n in LEADS}
-    if not js or "hourly" not in js:
-        return out
-    h = pd.DataFrame(js["hourly"])
-    h.index = pd.to_datetime(h.time)
-    k0 = pd.Timestamp(kick_utc).tz_convert("UTC").tz_localize(None).floor("h")
-    if k0 not in h.index:
-        return out
-    win = h.loc[k0:k0 + pd.Timedelta(hours=3)]
+    h, k0, error = hourly_frame(js, kick_utc)
+    fields = {}
     for n in LEADS:
-        col = f"wind_speed_10m_previous_day{n}"
-        if col in h and pd.notna(h.at[k0, col]):
-            out[f"fc{n}_raw"] = win[col].mean()
-    return out
+        key = f"fc{n}_raw"
+        if error:
+            fields[key] = dict(required=4, present=0, finite=0, reason=error)
+            continue
+        hours = pd.date_range(k0, periods=4, freq="h")
+        values, fields[key] = required_values(h, hours, f"wind_speed_10m_previous_day{n}")
+        if values is not None:
+            out[key] = values.mean()
+    return dict(values=out, fields=fields)
+
+
+def summarize_prev(js: dict | None, kick_utc) -> dict:
+    """Mean wind over all four intended hours; incomplete leads remain NaN."""
+    return summarize_prev_checked(js, kick_utc)["values"]
 
 
 def replay(games: pd.DataFrame, cal: dict, resid_sorted: np.ndarray) -> pd.DataFrame:

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "scopes": ["cfb-weather/cfbweather", "cfb-weather/scripts/forecast_replay.py", "cfb-weather/tests/test_weather_completeness.py", "cfb-weather/tests/test_forecast_replay.py", "cfb-weather/requirements.txt", "ops/process/process_guard.py", "reviews/forecast-coverage-2026-10-02/verification.json"],
+  "commands": [["{python}", "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider", "cfb-weather/tests/test_weather_completeness.py", "cfb-weather/tests/test_forecast_replay.py::test_decision_time_is_after_the_forecast_run_publishes", "cfb-weather/tests/test_forecast_replay.py::test_gates_match_the_board"]],
+  "environment": {"PYTHONHASHSEED":"0", "PYTHONDONTWRITEBYTECODE":"1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD":"1"}
+}

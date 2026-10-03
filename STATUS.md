@@ -8,6 +8,8 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 **Process (Oct 2, prospective):** [GOVERNANCE.md](GOVERNANCE.md) centralizes risk-tier review, reusable verification and compact handoffs. [Future tooling](ops/process/README.md) separates purchase identity from supporting provenance and validates preplanned recovery; completed freezes and current paid executors remain unchanged.
 
+**CFB weather input completeness (Oct 2, PR #136 / #135):** separate prospective repair rejects partial/nonfinite wind and accumulation windows, preserves complete-input values and retains explicit missing diagnostics; replay checks each lead independently. [Repair/adoption draft](reviews/forecast-coverage-2026-10-02/REPAIR.md) and [outcome-blind coverage evidence](reviews/forecast-coverage-2026-10-02/COVERAGE.md) are prepared. Installed jobs, registered versions, prior results and paid freezes remain unchanged. Independent current-head review and a dated prospective hub adoption decision precede any live use; NFL analogues remain a separately scoped repair. No paid calls or outcomes.
+
 ## Projects
 
 | Folder | Question | Where it stands | Next step |

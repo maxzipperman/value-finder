@@ -26,7 +26,7 @@ from .config import OUT, PROC, RAW, ROOT
 from .features import add_weather_features
 from .market import MIN_UNDER_ODDS, ev_under, pricing_cohort, valid_odds
 from .runlog import keep_forecast
-from .weather import summarize
+from .weather import summarize_checked
 
 RULES_VERSION = "cfb-v3-2026-09-28"   # PREREGISTRATION.md amendment 3: the pricing model and clarifications
 REGISTERED_VERSIONS = ("cfb-v1-2026-09-28", "cfb-v2-2026-09-28", "cfb-v3-2026-09-28")   # rows the scorer accepts
@@ -180,23 +180,26 @@ def compute(days=8, refresh=True, prices=True):
     for r in up[~up.dome & ~up.tbd & up.lat.notna()].itertuples():
         day = r.start_utc.strftime("%Y-%m-%d")
         js = fetch.om_forecast(r.lat, r.lon, day) if refresh else None
-        w = summarize(js, r.start_utc) if js else None
+        checked = summarize_checked(js, r.start_utc)
+        w = checked["values"]
+        if not w:
+            wx.append(dict(game_id=r.game_id, wx_missing_reason=checked["missing_reason"]))
         if w:
             # provenance: the forecast file this row used, its content hash and when it was fetched
             f = RAW / "openmeteo" / "forecast" / f"{r.lat:.3f}_{r.lon:.3f}_{day}.json"
             h, fetched = keep_forecast(f)
             wx.append(dict(game_id=r.game_id, **w, wx_file=str(f), wx_hash=h, wx_fetched_utc=fetched,
-                           wx_wind_dir=wind_dir_at(js, r.start_utc)))
+                           wx_wind_dir=wind_dir_at(js, r.start_utc), wx_missing_reason=""))
     up = up.merge(pd.DataFrame(wx, columns=["game_id", "om_wind", "om_temp", "om_precip", "om_snow", "om_gust",
-                                            "wx_file", "wx_hash", "wx_fetched_utc", "wx_wind_dir"]),
+                                            "wx_file", "wx_hash", "wx_fetched_utc", "wx_wind_dir", "wx_missing_reason"]),
                   on="game_id", how="left")
-    for c in ("wx_file", "wx_hash", "wx_fetched_utc"):
+    for c in ("wx_file", "wx_hash", "wx_fetched_utc", "wx_missing_reason"):
         up[c] = up[c].fillna("")
     up["wx_src"] = np.select([up.dome, up.lat.isna(), up.tbd, up.om_wind.notna()],
                              ["indoor", "no_venue", "time_tbd", "forecast"], "no_forecast")
     up["wx_wind"] = (cal["wind_intercept"] + cal["wind_slope"] * up.om_wind).clip(lower=0)
     up["wx_temp"] = cal["temp_intercept"] + cal["temp_slope"] * up.om_temp
-    up["wx_precip"], up["wx_snow"] = up.om_precip.fillna(0), up.om_snow.fillna(0)
+    up["wx_precip"], up["wx_snow"] = up.om_precip, up.om_snow
     up["indoor"], up["roof_open"] = up.dome.astype(int), 0
     up = add_weather_features(up)
 

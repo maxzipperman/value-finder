@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "scopes": ["reviews/forecast-coverage-2026-10-02/projected_coverage.py", "reviews/forecast-coverage-2026-10-02/test_projected_coverage.py", "reviews/forecast-coverage-2026-10-02/verification-coverage.json", "ops/process/process_guard.py"],
+  "commands": [["{python}", "-B", "-m", "unittest", "discover", "-s", "reviews/forecast-coverage-2026-10-02", "-p", "test_projected_coverage.py", "-v"]],
+  "environment": {"PYTHONHASHSEED":"0", "PYTHONDONTWRITEBYTECODE":"1"}
+}
