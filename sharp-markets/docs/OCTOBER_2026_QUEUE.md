@@ -1,3 +1,7 @@
+> Planning reference retained for context. [STATUS.md](../../STATUS.md#paid-data--sole-current-queue)
+> owns the sole current purchase queue. Historical estimates and approvals below
+> are not authority to repeat a purchase or bypass the current outcome-blind gate.
+
 # October credit queue — Codex hub
 
 Updated October 2, 2026, after the owner's instruction to prioritize efficient use of the prepaid month.

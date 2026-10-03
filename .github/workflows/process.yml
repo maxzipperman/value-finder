@@ -1,10 +1,8 @@
 name: Process guards
 on:
   pull_request:
-    paths: ['ops/process/**', '.github/workflows/process.yml', 'GOVERNANCE.md', 'AGENTS.md', 'CLAUDE.md', '.claude/commands/hub.md', '.github/pull_request_template.md']
   push:
     branches: [main]
-    paths: ['ops/process/**', '.github/workflows/process.yml']
 permissions:
   contents: read
 jobs:
@@ -12,9 +10,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Bind adopted base and actual merge-result inputs; audit immutable paths
+        id: review_identity
+        env:
+          REVIEW_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python -B ops/process/governance_guard.py review-key --base "$REVIEW_BASE" --output review-inputs.json
+          python -B ops/process/governance_guard.py audit --base "$REVIEW_BASE" --output immutable-audit.json
+          python -c 'import json, os; open(os.environ["GITHUB_OUTPUT"], "a").write("key=" + json.load(open("review-inputs.json"))["relevant_identity"] + "\n")'
+      - uses: actions/cache/restore@v4
+        id: review_evidence
+        with:
+          path: prior-review-inputs.json
+          key: review-inputs-v1-${{ steps.review_identity.outputs.key }}
+      - name: Compare reusable review scope without granting approval
+        env:
+          REVIEW_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if test -f prior-review-inputs.json; then
+            python -B ops/process/governance_guard.py verify-review --base "$REVIEW_BASE" --saved prior-review-inputs.json --output review-reuse.json
+          else
+            printf '%s\n' '{"reusable_evidence":false,"authorization":false,"reason":"No prior complete-input artifact"}' > review-reuse.json
+          fi
+          cp review-inputs.json prior-review-inputs.json
+      - uses: actions/cache/save@v4
+        if: steps.review_evidence.outputs.cache-hit != 'true'
+        with:
+          path: prior-review-inputs.json
+          key: review-inputs-v1-${{ steps.review_identity.outputs.key }}
       - name: Compute complete verification identity
         id: identity
         run: |
@@ -37,6 +65,11 @@ jobs:
           path: process-evidence.json
           key: process-evidence-v1-${{ steps.identity.outputs.key }}
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: process-verification-${{ github.sha }}
-          path: process-evidence.json
+          path: |
+            process-evidence.json
+            review-inputs.json
+            review-reuse.json
+            immutable-audit.json
