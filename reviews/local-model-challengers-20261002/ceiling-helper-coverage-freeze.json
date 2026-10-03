@@ -1,0 +1,9 @@
+{
+  "sha256": {
+    "CEILING_HELPER_COVERAGE.md": "8ff14a8ab6049bdae4ecd9f97581ffdd15f415037459f5c83c19e069f6de979c",
+    "ceiling_helper_coverage.py": "5ed18e98886d4ddeef679e9c97aee23461ba359138473ae3fedaa65fd66b123f",
+    "ceiling_type_name_diagnostic.py": "cf63dc992522cf304c2aefb97c811e1e33c1c2e18f1c210ce7f5b97632e612f3",
+    "ceiling-space-bunny/implementation-response.txt": "efd08b92bfd51b1df7b5cbcb832511c8b91a4f11cb1e8b495abb84775f9b3d24"
+  },
+  "note": "Declared exact-source four-probe helper diagnostic before execution, no AST relaxation."
+}
