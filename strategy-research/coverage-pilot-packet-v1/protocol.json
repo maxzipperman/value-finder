@@ -8,7 +8,7 @@
     "betrivers",
     "espnbet"
   ],
-  "execution_status": "pending_predraw_review",
+  "execution_status": "reviewed_for_execution",
   "existing_frame_alpha": {
     "family": "1/50",
     "per_slot": "1/600",
@@ -65,7 +65,7 @@
     "probe_additional_debit": 0,
     "probe_counted_once": 1687
   },
-  "review_status": "pending_hub_and_independent_agreement",
+  "review_status": "hub_and_independent_agreement",
   "sample_sizes": {
     "older/americanfootball_ncaaf/2020": 30,
     "older/americanfootball_ncaaf/2021": 30,

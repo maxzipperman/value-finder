@@ -2,18 +2,17 @@
 
 Research/execution risk: this builds a request list, but never sends it. New PR
 review is required before using the helper. The merged executor remains unchanged.
-`protocol.json` is **pending pre-draw review**, with exact frame/code/raw pins,
+`protocol.json` records **hub and independent pre-draw agreement**, with exact frame/code/raw pins,
 seven books, six markets, price-only scope,30×six older strata,50×five unknown
 props strata, and0 for the NFL2025 census. The missing caps are separately
 max(1,ceil(eligible_count/20)) when positive, else0; lag applies to all selected new
 requests, zero-bill EVENT_NOT_FOUND404 only to selected new props. All other errors
 halt. No retries/replacement; all selected denominators remain. No seed exists.
 
-Hub and independent reviewer must agree on the exact protocol before hub changes
-execution_status to reviewed_for_execution, pins that FINAL file's canonical/raw
-identities, and draws once. The pending protocol hash is not the final commitment.
-Review source/frame pins, alpha/floors and finite missing policy before drawing.
-The helper rejects the pending status before accessing a seed or live state.
+The agreed protocol now records execution_status reviewed_for_execution. Renew
+current-head agreement and pin this FINAL file's canonical/raw identities before
+hub draws once. Earlier pending protocol hashes are superseded. The builder still
+rejects an unreviewed protocol before accessing a seed or live state.
 
 `build.py` consumes an externally supplied seed record and its digest. It uses the
 fixed existing global lock opened read-only, authenticates the complete baseline
