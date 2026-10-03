@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "1849573a980e4f3b278932d6f6aa10d43bdf7abe1ff6fa21daf12598a08f80f1",
+  "evidence_digest": "2029937cdb1d447466afb6906b1f8ef36916a91d83349d96bec25bb182be9672",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -317,26 +317,28 @@
     "files": {
       ".github/workflows/process.yml": "4da28b672694421a9d74dc29e68f910e877d1d44be6458b1f70f8803cc1e83af",
       "GOVERNANCE.md": "f521aa7206795a590eef021bdfd9db2d60f36f47889e77d6dde6ebf584b85254",
-      "STATUS.md": "827b47afe6ec8ae58341c6d0b8fd8a109108334945b055f2a7e388773e4a2b32",
+      "STATUS.md": "5cadc9cc7421bced4b9d44b2384fd6655d2b3f57ba8c0121bae8b7a0224e061c",
       "dashboard/vfdash/__init__.py": "d17f21fe42a5a71589071b9870c39e685ce501622eb8e43fe4a96f25d98996e4",
       "dashboard/vfdash/status_md.py": "46a105350e48a15e93adb6f3f0548d80f65b5f6ba52fa3d30793266d43a4dac8",
       "dashboard/vfdash/words.py": "ae5f56809163d2394fc621916955a8fb4f1214e64394716282d945a592f7707f",
       "docs/status-archive/2026-10-03-before-simplification.md": "0928b45e0f739736db6470569dd5a03fb9df949a152b7780039c2c697e042545",
       "docs/status-archive/manifest.json": "6c1fd22283dcc676e5f902d64e591d887e2c33332b99fa696b6cf016abc8ecc5",
+      "nfl-weather/PREREGISTRATION_PROPS.md": "c65f725ad73682daaaabc1f5faf406b5ee272e048f844d389fea0ae96eeff033",
       "ops/process/governance_guard.py": "ebee24a75bc214ae0afe5a378c33fa0ca0d0ffc1becbe244bedddb949e6f66d7",
       "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
       "ops/process/review-policy.json": "8186a555d82053ba71e2b0825112cb93579d187f7867e73fea49e50bfd387f77",
       "ops/process/test_governance_guard.py": "74cd446c1fa8350e81d702a6278db22ecb5d756cbead3478baf163f57b72659f",
       "ops/process/test_process_guard.py": "323cea008c78329aecbe855858a3cb5aa84d01f87faf242339e31751cc2ff408",
       "ops/process/test_startup_guard.py": "ed03d5f46d242882496b3b79fcaca94d60585d0c598ed02f0cc35f0895b53c6e",
-      "ops/process/test_status_contract.py": "55d73d51e2285d93d2d3f144e73729479327b8d49d88b84ce8114904daacbc61",
-      "ops/process/verification.json": "2f753aa76fa85ec53ac33ff1250f27267e6b584e1134085f9e130fe376f15f8d",
+      "ops/process/test_status_contract.py": "cea4238b36c10d422dd20805706cc653a5657bb5465909a3c9d787d07827a88f",
+      "ops/process/verification.json": "ce09e95332b391e2663442712bf8721a587f23e193c1fcdaab83fcc86278a5be",
+      "sharp-markets/src/markets/research/props_grade/registration.py": "f4d90991d3b6d01d373848f4d4d6a7261e05dcf1260f268b026a5f22c0fb6bf7",
       "strategy-research/coverage-pass-execution-v1/bootstrap.py": "48ba33f06b02c1024d49f2758ddd3a5106fcc34ab6c0f09420e71c6407d41213",
       "strategy-research/coverage-pass-execution-v1/orchestration.py": "63011b68ee34ce6841ef642bcac99cf4b283a1b56fe448001d4623c9eedcb03e"
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T10:37:37.918268+00:00",
+  "recorded_at": "2026-10-03T18:39:28.560844+00:00",
   "results": [
     {
       "argv": [
@@ -352,15 +354,15 @@
         "-v"
       ],
       "exit_code": 0,
-      "stderr_sha256": "4f3fa359930678b56593a69b6d1506440edb9a4c51c027a0227d8d0c1b6b36df",
+      "stderr_sha256": "dd5f8a2f8b0f5fcb4fd3e9cf7c141c6a16c2b6191cfda9f4de4171a08057e57b",
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "unittest_count": [
-        33
+        34
       ]
     }
   ],
-  "tested_commit": "3758ac264d64513674f31280893abca2b746abcc",
-  "tested_identity": "a44672149368452fd6f0370b25421235a1a6ff47589c6bb20d019447135f2f22",
+  "tested_commit": "8544dd4f976d6a010837a6af6c578f2109f1ae6c",
+  "tested_identity": "46d2319757c3fc58bb7ad67acb6072e722f5436b4174a362312375ae3d510f92",
   "version": 1,
   "worktree_clean": true
 }
