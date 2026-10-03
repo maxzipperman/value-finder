@@ -37,6 +37,8 @@ What to expect: in 2025 replays, NFL Rule B signalled 17 times in Weeks 5–18, 
 
 **Paid data (updated Oct 1, 2026, Codex hub).** The 5M plan is bought. The audited football archive recent slice is complete: all 2,761 paid requests handled (2,760 valid plus one approved missing), with 12 reused responses and 82,830 new credits. The one-time approval on [PR #99](https://github.com/maxzipperman/value-finder/pull/99) is exhausted. Its frozen bundle root remains `4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d` and needs no repurchase.
 
+**October 2 acquisition-only extension:** the owner requests NFL **and CFB** 2023–2025 player props, both OU sides, yardage/kicking and other supported markets within the prepaid monthly scope. This overrides F6’s NFL-profitability/old-probe purchase gate as well as the old F3b acquisition gate; it changes no registered analysis criteria or 2026 seal. [PR #132](https://github.com/maxzipperman/value-finder/pull/132) prepares T24/close first, separate earlier-time costs and finite metadata lists; no purchase is authorized until exact list/cap and reviewed executor are approved by the hub. See [cost proposal](strategy-research/nfl-props-archive-v1/COSTS.md). The proposed [first metadata executor](strategy-research/football-metadata-v1/README.md) is listing-only (1,544 credits); market availability is a later separately frozen stage. Independent executor review and settled shared state remain required.
+
 **Current queue (Oct 2; public receipt index):** [F2 is completed](https://github.com/maxzipperman/value-finder/pull/99#issuecomment-5959588751) and [F3a is completed](https://github.com/maxzipperman/value-finder/pull/99#issuecomment-5960232356). [Older acquisition is halted](https://github.com/maxzipperman/value-finder/pull/99#issuecomment-5960754995); the next code proposal is [separate lag reconciliation and continuation #129](https://github.com/maxzipperman/value-finder/pull/129), preserving the original freeze. Its already proposed remaining scope is 1,786 requests /53,580-credit maximum. [N0 follow-on #128](https://github.com/maxzipperman/value-finder/pull/128) retains the public 754-request /7,540-credit candidate and must wait for the **actual completed older successor root and final ledger**, not assume that the halted original root will complete. Combined proposed remaining cap: 61,120 credits. Code review is separate from fresh offline transition, actual packet preparation and exact paid/content/account/policy authority. No new account-counter or local certificate details are published here.
 
 **Historical acquisition/handoff notes below:** old next-step instructions for F2 and F3a are superseded by the linked public completion receipts and current queue above.
@@ -181,3 +183,18 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
 
 **N0 acquisition preparation (Oct2,2026):** the fixed Jan5–11,2026 NBA2025–26 sample has56 scheduled event identities and754 exact h2h requests /7540-credit maximum, still non-executable pending a reviewed cumulative driver, clean latest predecessor and exact hub approval. Free Kalshi inputs are cached for112 markets (259778 price minutes), with no paid credits or strategy results. See [candidate packet](strategy-research/nba_sample/README.md).
+
+**PR132 shared-history repair (Oct 2, review pending):** listing metadata remains
+exactly 1,544 requests. Completed prior attempts now require full cache/receipt,
+billing and response classification; recognized F2 partials use the reviewed deep
+union verifier. Merged PR129's exact installed older partial uses the captured certified verifier;
+its successor is accepted only with actual completion and exact local proof bindings. Unknown partials remain blocked. New head needs independent review,
+read-only positive global acceptance and fresh exact hub authority; no worker
+purchase/runtime transition or weather change.
+
+**Owner coverage-first hold (Oct 2):** all new paid execution is held pending the
+hub's outcome-blind coverage protocol and separately reviewed finite cheap pilot.
+Reuse the 2025 F3a cache baseline; measure unobserved 2023–24 NFL/CFB cells through
+stratified sampling. Actual usable pairs/freshness/book/settlement support gate
+large purchases. The existing 1,544/7,032 metadata proposals are not selected paid
+scope. PR132 continues safety repair only; weather is a separate next PR.

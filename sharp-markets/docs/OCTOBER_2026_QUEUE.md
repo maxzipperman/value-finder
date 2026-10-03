@@ -79,3 +79,16 @@ Any sealed-data acquisition needs its own explicit scope/approval and isolated s
 
 The hub owns list approvals, accounting, execution and this queue. The auditor reviews each current head.
 Workers report implementation/list blockers through PRs; they do not create overlapping purchase plans.
+
+## October 2 owner extension: NFL and CFB props
+
+Both sports’ 2023–2025 props acquisition is independent of the old F3b/F6
+profitability/probe purchase gates. T24/close comes first, all supported domestic
+books plus sharp benchmarks, with market-specific compatible cache union. Both
+OU sides share a market request. Four earlier-time additions and optional
+worldwide/DFS/exchange coverage require separate incremental costs. See
+[PR #132](https://github.com/maxzipperman/value-finder/pull/132) and its
+[cost proposal](../../strategy-research/nfl-props-archive-v1/COSTS.md). Existing
+analysis registrations/criteria and the 2026 seal remain unchanged. Prepared
+metadata lists are not paid authority; independent executor review and exact
+hub approval remain required.
