@@ -6,9 +6,11 @@ Only new output-directory files are written; live acquisition state is read-only
 import argparse
 import fcntl
 import hashlib
-import importlib.util
+import stat
+import types
 import json
 import os
+import subprocess
 from pathlib import Path
 
 
@@ -19,25 +21,62 @@ def canonical(v):
 def sha(raw):return hashlib.sha256(raw).hexdigest()
 
 
-def module(path,name):
-    spec=importlib.util.spec_from_file_location(name,path)
-    result=importlib.util.module_from_spec(spec);spec.loader.exec_module(result)
+
+def regular(path):
+    path=Path(path).absolute()
+    if any(p.is_symlink() for p in (path,*path.parents)):raise ValueError('symlink source input')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):raise ValueError('regular source input required')
+        with os.fdopen(fd,'rb',closefd=False) as handle:return handle.read()
+    finally:os.close(fd)
+
+
+def captured_module(raw,path,name):
+    result=types.ModuleType(name);result.__file__=str(path)
+    exec(compile(raw,str(path),'exec'),result.__dict__)
     return result
 
 
+def pinned_module(raw,path,name,expected):
+    if sha(raw)!=expected:raise ValueError('reviewed bootstrap/capture hash differs')
+    return captured_module(raw,path,name)
+
+def validate_output(repo, output):
+    """New directory inside an isolated Git root only; run before any seed/history."""
+    repo=Path(repo);output=Path(output)
+    if '..' in repo.parts or '..' in output.parts:raise ValueError('parent traversal forbidden')
+    repo=repo.absolute()
+    if not output.is_absolute():output=repo/output
+    output=output.absolute()
+    for path in (repo,output):
+        if any(p.is_symlink() for p in (path,*path.parents)):raise ValueError('symlink output/repository ancestor')
+    live=Path.home()/'code/value-finder'
+    runtime=Path.home()/'Library/Application Support/ValueFinder/football-acquisition-state'
+    for path in (repo,output):
+        if any(path==denied or denied in path.parents for denied in (live,runtime)):
+            raise ValueError('live checkout/runtime output forbidden')
+    if output==repo or repo not in output.parents:raise ValueError('output must be strictly inside isolated repository')
+    if output.exists():raise ValueError('output must be a new directory')
+    top=Path(subprocess.check_output(['git','rev-parse','--show-toplevel'],cwd=repo,text=True).strip()).absolute()
+    if top!=repo:raise ValueError('explicit isolated Git root required')
+    return repo,output
+
 def closure(repo,protocol):
     pilot=repo/'strategy-research/coverage-pilot-v1';meta=repo/'strategy-research/football-metadata-v1'
-    boot=module(pilot/'bootstrap.py','packet_bootstrap')
+    boot_path=pilot/'bootstrap.py'
+    boot_raw=regular(boot_path)
+    boot=pinned_module(boot_raw,boot_path,'packet_bootstrap',protocol['source_code_sha256']['bootstrap'])
     paths={n:pilot/(n+'.py') for n in boot.MODULES}
     paths.update(capture=meta/'capture.py',history=meta/'history.py',plan=repo/'strategy-research/nfl-props-archive-v1/plan.py',f2_gate=repo/'strategy-research/football_archive/f2_handoff.py',older_recovery=repo/'strategy-research/football_archive/older-recovery-v1/recovery.py')
-    raw={n:boot.regular(path) for n,path in paths.items()}
+    raw={n:(boot_raw if n=='bootstrap' else regular(path)) for n,path in paths.items()}
     if {n:sha(b) for n,b in raw.items()}!=protocol['source_code_sha256']:raise ValueError('reviewed code closure changed')
     bundle=repo/'strategy-research/football_archive/acquisition/football-archive-v4'
-    cert=json.loads(boot.regular(bundle/'FREEZE.json'))
+    cert=json.loads(regular(bundle/'FREEZE.json'))
     if sha(boot.canonical(cert['file_sha256']))!=boot.SOURCE_ROOT or cert['bundle_root_sha256']!=boot.SOURCE_ROOT:raise ValueError('immutable root differs')
-    source={n:boot.regular(bundle/n) for n in cert['file_sha256']}
+    source={n:regular(bundle/n) for n in cert['file_sha256']}
     if {n:sha(b) for n,b in source.items()}!=cert['file_sha256']:raise ValueError('immutable source differs')
-    capture=module(meta/'capture.py','packet_capture')
+    capture=pinned_module(raw['capture'],paths['capture'],'packet_capture',protocol['source_code_sha256']['capture'])
     mods=dict(raw)
     for n,b in source.items():
         if n.endswith('.py'):
@@ -76,7 +115,11 @@ def selected_union(frame,selected,slotmap,originals,history,load,books):
         g=games[gid];sport=g['stratum'].split('/')[1]
         item=dict(game_id=gid,request_ids=[],reason=None)
         if g['stratum'].startswith('older/'):
-            slots=oldmap[gid]['slots'];ids=[slots[s]['request_id'] for s in ('EARLY','CLOSE')]
+            slots=oldmap[gid]['slots']
+            item['metadata_disposition']=mapping.older_metadata_disposition(g,slots)
+            if item['metadata_disposition']['classification']=='failure':
+                item['reason']='metadata_ineligible';mappings.append(item);continue
+            ids=[slots[s]['request_id'] for s in ('EARLY','CLOSE')]
             item.update(reused_request_ids=[],reused_evidence=[])
             for rid in ids:
                 if rid in attempts:
@@ -113,6 +156,22 @@ def selected_union(frame,selected,slotmap,originals,history,load,books):
     return rows,mappings
 
 
+
+def frozen_probe_history(context,load):
+    """Expose immutable zero-credit old slots with separate authenticated claims."""
+    capture=load('capture');source=context['files'];result=[]
+    manifest=source['request-manifest.json'];ledger=source['probe-spending-ledger.json']
+    attempts={a['request_id']:a for a in json.loads(ledger)['attempts']}
+    root=json.loads(context['freeze'])['bundle_root_sha256']
+    for row in json.loads(manifest)['requests']:
+        if row['priority']!=2 or row['max_new_credits']!=0:continue
+        rid=row['request_id']
+        if rid not in attempts:raise ValueError('frozen reuse lacks probe attempt')
+        claim=dict(kind='frozen_probe',source_bundle_root=root,request_id=rid,cache_source=row['cache_source'],cache_sha256=row['cache_sha256'],request_manifest_sha256=capture.digest(manifest),probe_ledger_sha256=capture.digest(ledger),probe_attempt_sha256=capture.identity(attempts[rid]))
+        rec=load('evidence').frozen_probe_record(claim,context)
+        result.append(dict(rec,request_id=rid,status='completed',claim=claim))
+    return result
+
 def authenticated_history(root_base,snapshot,capture):
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -136,7 +195,8 @@ def authenticated_history(root_base,snapshot,capture):
 
 
 def assemble(args):
-    repo=args.repo.resolve();protocol_raw=args.protocol.read_bytes();protocol=json.loads(protocol_raw)
+    repo,args.output=validate_output(args.repo,args.output)
+    protocol_raw=regular(args.protocol);protocol=json.loads(protocol_raw)
     if sha(protocol_raw)!=args.protocol_sha256:raise ValueError('external protocol file pin differs')
     if protocol['execution_status']!='reviewed_for_execution':raise ValueError('predraw protocol review still pending')
     boot,load,source,bundle,paths=closure(repo,protocol);capture=load('capture');planner=load('planner')
@@ -159,8 +219,10 @@ def assemble(args):
         def verify(ledgers,markers):return load('baseline').verify_base(ledgers,markers,snapshot,source['request-manifest.json'],bindings)
         snap,carry=load('evidence').global_union(root_base,snapshot,{},verify)
         history=authenticated_history(root_base,snap,capture)
+        context={'freeze':boot.regular(bundle/'FREEZE.json'),'files':source}
+        history.extend(frozen_probe_history(context,load))
         rows,mappings=selected_union(frame,selected,json.loads(data['slot-map.json']),json.loads(source['request-manifest.json'])['requests'],history,load,protocol['candidate_books'])
-        load('evidence').authenticate_reuse(root_base,snap,mappings)
+        load('evidence').authenticate_reuse(root_base,snap,mappings,frozen_source=context)
         cap=sum(r['max_new_credits'] for r in rows)
         if not rows or cap+carry['conservative_debit']>250000:raise ValueError('empty paid list or cumulative ceiling exceeded')
         rawroots=sorted({str((root_base/r/'data/raw').absolute()) for r in snap['ledgers']}|{str((Path.home()/'code/value-finder/sharp-markets/data/raw').absolute()),str((args.probe_bundle/'data/raw').absolute())})
@@ -181,10 +243,11 @@ def assemble(args):
         data.update({n:canonical(v) for n,v in objects.items()})
         # Match bootstrap.verified's exact logical file set, including every dependency.
         files={n:sha(b) for n,b in data.items()}
-        files.update({'code/'+n+'.py':capture.sha(path) for n,path in paths.items() if n in boot.MODULES|{'capture','history','plan','f2_gate','older_recovery'}})
+        files.update({'code/'+n+'.py':protocol['source_code_sha256'][n] for n in boot.MODULES|{'capture','history','plan','f2_gate','older_recovery'}})
         files['policy/older-PROTOCOL.md']=capture.sha(repo/'strategy-research/football_archive/older-recovery-v1/PROTOCOL.md')
         files['policy/PRIMARY-CONTRACT.json']=capture.sha(repo/'strategy-research/coverage-pilot-v1/PRIMARY-CONTRACT.json')
         files['source/FREEZE.json']=capture.sha(bundle/'FREEZE.json');root=sha(boot.canonical(files))
+        validate_output(repo,args.output)
         args.output.mkdir(mode=0o700)  # exclusive new directory, never overwrite/rebuild silently
         for name,raw in data.items():
             with (args.output/name).open('xb') as handle:handle.write(raw);handle.flush();os.fsync(handle.fileno())

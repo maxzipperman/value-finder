@@ -15,7 +15,7 @@ def early_rank(row, kickoff):
     return (abs(kickoff-at-timedelta(hours=24)), at, row['request_id'])
 
 
-def older_slots(game, originals, close_ids, *, primary_close_id, include_diagnostics=False):
+def older_slots(game, originals, close_ids, *, primary_close_id, include_diagnostics=False, primary_close_anchor=None):
     """Pick nearest original daily time to T24, with immutable-ID tie break.
 
     close_ids is the frozen game-to-original-close map. primary_close_id must be
@@ -31,9 +31,11 @@ def older_slots(game, originals, close_ids, *, primary_close_id, include_diagnos
     kickoff = utc(game['scheduled_utc'])
     if len(close_ids) != len(set(close_ids)) or any(r not in rows for r in close_ids):
         raise InvalidPlan('unknown/duplicate original close')
+    close_anchor=utc(primary_close_anchor) if primary_close_anchor is not None else kickoff
     for rid in close_ids:
         r = rows[rid]
-        if r['sport'] != game['sport'] or not timedelta(minutes=5) <= kickoff-utc(r['requested_utc']) <= timedelta(minutes=20):
+        anchor=close_anchor if rid==primary_close_id else kickoff
+        if r['sport'] != game['sport'] or not timedelta(minutes=5) <= anchor-utc(r['requested_utc']) <= timedelta(minutes=20):
             raise InvalidPlan('close mapping outside scheduled proxy')
     if (primary_close_id not in close_ids or 'pregame_close_proxy' not in rows[primary_close_id].get('purposes',[])):
         raise InvalidPlan('frozen provider-anchor primary close required')
@@ -153,3 +155,23 @@ def selected_availability(opportunities, attempted_ids, make_request):
             rows[rid]=row;mappings.append({'opportunity_id':oid,'request_ids':[rid],'reason':None})
     return {'requests':[rows[k] for k in sorted(rows)],'mappings':mappings,
             'max_new_credits':len(rows),'opportunity_denominator':len(ops)}
+
+
+def older_metadata_disposition(game,slots):
+    """Frozen known-clock veto; source bindings must be authenticated upstream.
+
+    Whole paired game is a failure if either original slot is known ineligible.
+    Selection/frame stays unchanged; no replacement and no quote inspection.
+    """
+    independent=utc(game['scheduled_utc']);reasons=[]
+    for name in ('EARLY','CLOSE'):
+        slot=slots[name];decision=utc(slot['requested_utc']);binding=slot['binding']
+        provider=utc(binding['provider_kickoff_utc'])
+        if utc(binding['returned_utc'])>decision:reasons.append(name+':binding_after_decision')
+        if abs(provider-independent)>timedelta(minutes=5):reasons.append(name+':provider_independent_conflict')
+        if decision>=min(provider,independent):reasons.append(name+':not_strictly_pregame')
+        if name=='EARLY' and not timedelta(hours=18)<=independent-decision<=timedelta(hours=54):
+            reasons.append(name+':outside_early_horizon')
+        if name=='CLOSE' and not timedelta(minutes=5)<=provider-decision<=timedelta(minutes=20):
+            reasons.append(name+':outside_provider_close_proxy')
+    return {'classification':'failure' if reasons else 'unknown','reasons':sorted(set(reasons))}

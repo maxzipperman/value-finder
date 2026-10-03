@@ -190,7 +190,7 @@ class IntegrationTests(unittest.TestCase):
 
     def test_final_look_reuse_and_exclusive_write(self):
         args=dict(frame_sha256='a'*64,protocol_sha256='b'*64,draw_sha256='c'*64,evidence_sha256='d'*64,
-                  selected_ids=['g'],classifications={'g':False},saved_bounds={'lower':0})
+                  selected_ids=['g'],classifications={'g':False},saved_bounds={'lower':0},mappings=[{'game_id':'g'}])
         record=self.evidence.final_record(**args)
         self.assertEqual(record,self.evidence.final_record(**args,previous=record))
         with self.assertRaises(ValueError):self.evidence.final_record(**dict(args,classifications={'g':True}),previous=record)

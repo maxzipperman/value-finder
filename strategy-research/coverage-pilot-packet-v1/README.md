@@ -60,3 +60,14 @@ The builder prints exact root/list/cap/denominators/carried debit, not approval.
 Hub must review/freeze the actual packet and obtain live exact paid authority/account
 reconciliation. Current code/packet/global/cache checks run again in the merged
 executor before keys or HTTP. No automatic statistical look or later-tranche release.
+
+Review repairs: output must be a new directory strictly inside the passed Git root,
+with no parent traversal/symlink ancestors/live checkout/runtime targets, checked
+before seed or history. Bootstrap and capture are no-follow read/hash verified
+before execution and executed only from captured bytes. Frozen probe reuse has its
+own immutable root/manifest/cache/ledger/attempt proof; no fabricated receipt or
+extra debit. Ordinary receipt claims are unchanged. Provider-primary close mapping
+uses its authenticated provider anchor; both-slot known schedule vetoes produce
+whole-game zero purchase/failure with selected denominator retained. No frame hash
+or selection changes. Final-look mappings are mandatory; metadata zeros must be
+false classifications and mapping identity is bound into saved bounds provenance.

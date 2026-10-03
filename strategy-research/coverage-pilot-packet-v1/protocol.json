@@ -24,6 +24,16 @@
   "final_look": "one_authenticated_terminal_classification_bound_record_no_automatic_release",
   "frame_canonical_sha256": "e16012f47c36c09b092065fe30348b46c885fa19f10d1d3836936ceb9da5109b",
   "immutable_v4_root": "4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d",
+  "metadata_zero_rule": {
+    "frame_classification_unchanged": true,
+    "independent_clock": "authenticated_immutable_canonical_schedule",
+    "provider_clock": "separate_authenticated_EARLY_and_provider_primary_CLOSE_binding",
+    "replacement_or_redraw": false,
+    "scope": "selected_older_game",
+    "shared_requests": "allowed_only_for_another_eligible_game",
+    "veto": "either_slot_provider_independent_conflict_gt300s_or_not_strictly_before_both_clocks_or_binding_after_decision_or_EARLY_outside18_54h_or_provider_CLOSE_outside5_20min",
+    "whole_game_disposition": "request_ids_empty_reason_metadata_ineligible_classification_failure_retain_selected_denominator"
+  },
   "missing_policy": {
     "counter_cap_rule": "max(1,ceil(N/20)) when eligible_ID_count N>0 else0, separately per reason",
     "event_not_found": "selected_new_event_odds_IDs_HTTP404_EVENT_NOT_FOUND_zero_bill",
@@ -49,6 +59,12 @@
   "props_utility_floor": "1/2",
   "redraw": false,
   "replace_failed_slots": false,
+  "reuse_provenance": {
+    "frozen_probe": "immutable_v4root_manifest_cache_bytes_probeledger_exact_attempt_metadata",
+    "ordinary": "authenticated_terminal_global_ledger_raw_receipt",
+    "probe_additional_debit": 0,
+    "probe_counted_once": 1687
+  },
   "review_status": "pending_hub_and_independent_agreement",
   "sample_sizes": {
     "older/americanfootball_ncaaf/2020": 30,
@@ -74,14 +90,14 @@
     "capture": "68aebbaf33c4d3a8b0d7de9e44f59dd32a64ca59029e59455655617342a5e00c",
     "certainty": "66299ec31c568035519c2c39766d646a3fbddb6c130ae7b1a680f469b3c49b9b",
     "classifier": "3022001dd610bd57bdc9aa301e761f987f5977cabc200b81b2806218511e7ac2",
-    "evidence": "01fcca1adba74628b9bb3be3d7c0b8c2203e11e8c30b5698df815c3aa2fa5bc0",
+    "evidence": "6cf2691cdbdabc1b0dce024066defef5f3152edb0a151fa8fe558b1ab1d8254c",
     "execution": "58da1aaa70b85a63fa783633d9e47ab23a48274cf3fe48d0d73b6ad58bc9900f",
     "f2_gate": "49d0ed2c01a1aee22246a72ca0913f5e3c5659acc92a1b7dd75a643336ba1bfb",
-    "frame_binding": "62ca4a661547e1bd9c73162161670dc012f35c2e3909c018fd7e37b0355bba67",
+    "frame_binding": "face01b99eae953338b409d6cc517a28998fbbe86b7f81b80ebfc8c6f7a860a7",
     "history": "38aba6897491ea3921924c3bd2a4595b988c441abe2501644dd0b8cfdaf734e3",
-    "mapping": "2bc43f3f81ae4ddd20e35e45c67612b10c8939a706737e554169ed6bfd1c40dc",
+    "mapping": "5f44775c7cdc1880819e13eb9ab23a42918bf1595acff352a7073ace33279413",
     "older_recovery": "ad1600a96fe03370a34f0c479b57709d9e30313a34f1683a9ecfb85c89c5a4a2",
-    "orchestration": "00b6b0b514155e9184e43f182add89d1fa2930380c7e51ab264dffc091f6d477",
+    "orchestration": "ae7d3a3ccd06b37e363bdb81373b54c1c2bfaee29989a6e3b140d2cd628d62ec",
     "overlap": "9bec54f3e53f5bafc21599118d564a50f1c0da012fc5233d5260d62df3f57851",
     "plan": "631e529cbd35b7c84035f56331c38beb5081c518cea2d4e7b78ada126178f521",
     "planner": "106b2dd1675eed12e53a30c09921564525b6429852af15f9a77d92167a799b7c",
