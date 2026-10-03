@@ -255,3 +255,19 @@ All full listing/availability/bulk purchases remain held for coverage measuremen
 PR #142 is merged and its exact certified offline transition is installed under [hub authority](https://github.com/maxzipperman/value-finder/pull/142#issuecomment-5966047530). Pilot observed charges remain **210**, full reservations **270**, conservative cumulative carry **170,576**. No new paid call was made during reconciliation or successor assembly. The stopped response remains missing/ineligible and its selected game remains a coverage failure.
 
 The new `strategy-research/coverage-pilot-packet-v1/pilot-successor-142` packet has root `f490e0daaec2d7721d0298da1abbfbce47a7de13124a412641d5edb33addb380`: **729 untouched requests / 36,810 maximum new credits**. Frame, protocol, draw and selected files are byte-identical to the original; all seven attempted IDs are excluded. Actual captured packet validation and current historical/cache union passed. Independent exact-packet review and fresh hub paid authority remain before execution. No coverage conclusion or later tranche release is claimed.
+
+
+**Exact PR150 authority-timeout recovery proposed (October 3, PR151):**
+The paid executor stopped after 11 completed requests (660 billed), with all 12
+reservations retained (720 total). The pending60 request has no send_started or
+saved response; it remains unavailable and must never be resent. The separate
+[recovery packet](strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/manifest.json)
+contains only 1,290 never-attempted requests, capped at66,480 credits: NFL2023–24
+props followed by the already accepted NFL2020–22/CFB2020 totals. All12 attempted
+IDs are excluded,11 real receipts reused, and all game denominators retained.
+Conservative carry is208,106; the cumulative ceiling remains274,686.
+The original stopped journal/registration/initialization remain byte-identical.
+Independent exact-head/root review, explicit hub-only metadata acceptance/install,
+guarded real orchestration preflight, and new exact list/budget/commit paid
+authority remain before downloads. No worker paid call or runtime mutation.
+See [recovery report](reviews/pass150-timeout-recovery/REPORT.md).
