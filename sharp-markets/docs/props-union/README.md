@@ -56,7 +56,7 @@ players. Available quotes are not fills; scheduled proxies are not first-play pr
 | NFL primary outcome sources | Declared columns only | Verify finite/null/conflicting record handling after amendment, not by reading outcomes in this PR |
 | Pooled discovery inference | Not implemented/adopted | Fixed eight-cell procedure and reviewed game/day dependence; no model/subset search disguised as robustness |
 | CFB/other markets | Unsupported here | Separate reviewed stat/identity/terms protocol; held CFB remains held |
-| Older totals | Separate finite follow-on | Two-market/slot union adapter with independent game/settlement linkage, price-engine root/cohort/timing amendment; do not expand this PR |
+| Older totals | Separate finite follow-on | Finite NFL2020–22+CFB2020 totals:1514 fixed games ×2 slots(EARLY18–54h,CLOSE_T10), ten-book panel; independent game/settlement linkage and price-engine cohort/root amendment. No held CFB2021/22 or props expansion |
 
 Committed roster is `sharp-markets/config/props/nfl_rosters_2023_2025.csv`; its
 existence and earlier implementation do not verify quote-specific linkage. Neither
@@ -98,3 +98,7 @@ Minimal hub decisions: adopt timing/stat clarification; reconcile baseline/origi
 header and proposed K; activate conditional original book note after those decisions.
 The remaining linkage/main-line/terms checks are implementation tasks, not reasons
 to ask the owner to manually audit each row. No further purchase is recommended.
+
+Compute: the quote check decodes1707 cached records with CPU/pyarrow; no GPU,
+new provider call or purchase is needed. Future outcome inference/replicate budget
+remains a separately adopted finite procedure, not an open-ended model search.

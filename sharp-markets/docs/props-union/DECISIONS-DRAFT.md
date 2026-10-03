@@ -77,7 +77,7 @@ preserving its lineage; do not silently choose271,294,314 or a new family/FDR ru
 No original engine verdict is recomputed by this draft.
 
 Source lineage: [main STATUS](https://github.com/maxzipperman/value-finder/blob/11474c60567878d0fa5c7a14dceec982eb646980/STATUS.md),
-[original props accounting](../../../../nfl-weather/PREREGISTRATION_PROPS.md#4-variants-and-the-bar),
+[original props accounting](../../../nfl-weather/PREREGISTRATION_PROPS.md#4-variants-and-the-bar),
 [PR96 trial ledger](https://github.com/maxzipperman/value-finder/blob/08aec17094989894bb1d81e041b5065e240cd160/strategy-research/expanded_lab/registration_evidence/trial_ledger.json),
 [PR96 completed manifest](https://github.com/maxzipperman/value-finder/blob/08aec17094989894bb1d81e041b5065e240cd160/strategy-research/expanded_lab/registration_evidence/manifest.json).
 Independent worker checklist: project research-lab/reviews/variant-lineage-and-role-readiness-review.md.
