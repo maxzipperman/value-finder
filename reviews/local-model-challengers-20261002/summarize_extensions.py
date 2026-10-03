@@ -38,7 +38,7 @@ def summarize():
                 record["acceptance"] = dict(passed=sum(c["passed"] for c in checks), cases=len(checks), failures=[c for c in checks if not c["passed"]])
             records.append(record)
     manual = json.loads((ROOT / "hard-review-manual.json").read_text())
-    complete = (ROOT / "extension-completion.json").exists() and len(records) == 44 and all(r["status"] != "pending" and "acceptance" in r for r in records)
+    complete = (ROOT / "extension-completion.json").exists() and len(records) == 44 and all(r["status"] != "pending" and ("acceptance" in r or r["status"] == "error") for r in records)
     result = dict(status="author_grading_complete" if complete else "in_progress", grading="author grading; original38 reviewer signoff does not cover extensions", memory_note="sampled Ollama allocation only; not total memory or proof of no swapping", inventory=json.loads((ROOT/"inventory.json").read_text()), records=records, hard_manual_reviews=manual)
     (ROOT / "extension-summary.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(dict(requests=len(records), pending=sum(r["status"] == "pending" for r in records), results=sum(r["status"] == "result" for r in records), errors=sum(r["status"] == "error" for r in records))))

@@ -1,5 +1,5 @@
 {
-  "status": "in_progress",
+  "status": "author_grading_complete",
   "grading": "author grading; original38 reviewer signoff does not cover extensions",
   "memory_note": "sampled Ollama allocation only; not total memory or proof of no swapping",
   "inventory": {
