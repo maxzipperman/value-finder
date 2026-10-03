@@ -39,18 +39,19 @@ def key_from_file():
     return values[0]
 
 
-def main():
-    raw = (ROOT / 'openrouter-requests.json').read_bytes()
-    if hashlib.sha256(raw).hexdigest() != LIST_HASH:
+def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-space-bunny-alpha', count=7, token_cap=8192):
+    out = ROOT / output
+    raw = (ROOT / request_file).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != list_hash:
         raise RuntimeError('request list changed; review required')
     entries = [item for item in json.loads(raw)['requests'] if item['model'] == MODEL]
-    assert len(entries) == 7
+    assert len(entries) == count
     for item in entries:
         body = item['body']
         assert body['model'] == MODEL and set(body) == {'model', 'messages', 'stream', 'temperature', 'max_tokens', 'reasoning', 'provider'}
         assert body['provider']['max_price'] == {'prompt': 0, 'completion': 0, 'request': 0, 'image': 0}
-        assert body['provider']['allow_fallbacks'] is False and body['max_tokens'] == 8192
-    OUT.mkdir(exist_ok=True)
+        assert body['provider']['allow_fallbacks'] is False and body['max_tokens'] == token_cap
+    out.mkdir(exist_ok=True)
     key = key_from_file()
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 
@@ -66,15 +67,15 @@ def main():
                 raise RuntimeError('response size limit')
             return json.loads(data.decode().replace(key, '[REDACTED]'))
 
-    with (OUT / '.collection.lock').open('a') as lock:
+    with (ROOT / 'openrouter-space-bunny-alpha' / '.collection.lock').open('a') as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(lock, fcntl.LOCK_EX | (fcntl.LOCK_NB if count == 7 else 0))
         except BlockingIOError:
             print(json.dumps({'status': 'busy'}), flush=True)
             return
         for item in entries:
             task = item['task']
-            prefix = OUT / task
+            prefix = out / task
             # A saved request without a terminal artifact is an uncertain attempt.
             if any(Path(str(prefix) + suffix).exists() for suffix in ('-request.json', '-result.json', '-error.json')):
                 continue
