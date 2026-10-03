@@ -25,6 +25,7 @@ No API is called. Paper only: nothing here places, sizes or routes a bet.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import subprocess
 import tempfile
@@ -269,7 +270,7 @@ def loaded_section(ld: L.Loaded, calls: list) -> list[str]:
                    "covers only what is.")
     f3b = {s: n for s, n in sorted(missing.items()) if s != L.F3A}
     if f3b:
-        out.append("2023-24 (F3b, bought only through the gate): planned calls not cached: "
+        out.append("2023-24 (separate owner-authorized acquisition): planned calls not cached: "
                    + ", ".join(f"{s} {n:,}" for s, n in f3b.items()) + ".")
     if ld.skipped:
         out.append("Rows not read, by reason: " + "; ".join(f"{k} {v:,}" for k, v in sorted(ld.skipped.items())) + ".")
@@ -340,7 +341,7 @@ def results_section(df: pd.DataFrame, unmatched_games, ro: pd.DataFrame, b: regi
     out += text_table(grade.controls(df), [c for c in COLS if c != "p"], 4)
     out += ["", "## Mechanism readout (2.8): the line against the player's same-season median",
             "Over the graded close lines; the median over every 2023-25 game of that season in which he has a "
-            "player_week row (playoffs included; no attempt = 0). Descriptive: the median is known only after the "
+            "player_week row (playoffs included; only known finite statistics). Descriptive: the median is known only after the "
             "season.", ""]
     out += text_table(ro.assign(season=ro.season.astype(str)), ["market", "season", "lines", "no_median",
                                                                  "mean_line_minus_median", "share_above"], 3)
@@ -371,10 +372,10 @@ def gate_lines(g: dict) -> list[str]:
            f"{p['roi']:+.4f}). Per market: " + "; ".join(f"{m} {t['excess']:+.4f} (n {t['n']:,}, ROI {_f(t['roi'], 4)})"
                                                           for m, t in g["markets"].items()) + "."]
     out += [f"  {'pass' if ok else 'FAIL'}  {k}" for k, ok in g["checks"].items()]
-    out.append("Gate: PASSES (F3b may be bought in October)." if g["passes"] else
-               "Gate: FAILS (F3b moves to March; only the kicking markets, #21, stay in play; #10 is set aside with no "
+    out.append("Gate: PASSES (descriptive; acquisition override applies)." if g["passes"] else
+               "Gate: FAILS (descriptive; does not block acquisition; no "
                "Act or Drop verdict).")
-    out.append("The gate decides only the F3b purchase. None of its numbers is a test (section 3).")
+    out.append("Owner override (October 2, PR 131) supersedes the purchase prerequisite. Research criteria are unchanged; these gate numbers establish no edge.")
     return out
 
 
@@ -382,7 +383,7 @@ def decision_lines(d: dict, b: registration.Bar) -> list[str]:
     if d.get("withheld"):
         return [f"Verdict withheld: {d['why']}."]
     if not d["read"]:
-        return [f"Not read: {d['why']}. The F3a read on 2025 alone decides only the F3b purchase (section 3)."]
+        return [f"Not read: {d['why']}. F3a alone cannot supply the full three-season verdict; acquisition is separately authorized."]
     p = d["pooled"]
     out = [f"Condition 1: pooled p {_f(p['p'], 6)} (larger SE) against the bar {_f(b.alpha, 6)}: "
            f"{'met' if d['condition_1'] else 'not met'}.", "Condition 2, five checks (positive excess, p < 0.01):"]
@@ -403,6 +404,13 @@ def excluded_listing(df: pd.DataFrame) -> list[str]:
 
 
 def main(args) -> int:
+    if getattr(args, "archive_runtime", None):
+        if args.fixture or args.book_recorded or args.out:
+            raise ValueError("Archive handoff is coverage only; no grading, fixture mixing or report writes")
+        from . import archive
+        _, report = archive.read_archive(Path(args.archive_runtime))
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
     if args.fixture:
         from . import fixture
         tmp = Path(tempfile.mkdtemp(prefix="props-grade-fixture-"))
@@ -412,6 +420,8 @@ def main(args) -> int:
                       out=Path(args.out) if args.out else tmp / "report")
         return grade_command(fx.cfg, fx.cache, paths, book_recorded=args.book_recorded or fx.book,
                              list_excluded=args.list_excluded, fixture=True, now=fixture.NOW)
+    if args.book_recorded:
+        raise ValueError("Real grading disabled pending independent review and hub registration of props repair amendment")
     paths = Paths(out=Path(args.out)) if args.out else Paths()
     return grade_command(bulk.load_config(), RawCache(), paths, book_recorded=args.book_recorded,
                          list_excluded=args.list_excluded)
