@@ -12,7 +12,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from openrouter_free import ROOT, LIST_HASH, NoRedirect, key_from_file
-from openrouter_budget import reserve_ok, audited_terminal
+from openrouter_budget import reserve_ok, audited_terminal, deferral, baseline_terminal
 
 MODELS = {'deepseek/deepseek-v4.1-flash', 'z-ai/glm-5.3-flash', 'xiaomi/mimo-v2.6-flash'}
 OUT = ROOT / 'openrouter-paid'
@@ -35,13 +35,19 @@ def reservation(item):
     return ((len(body['messages'][0]['content'].encode()) + 256) * prices['prompt'] + body['max_tokens'] * prices['completion']) / 1_000_000
 
 
-def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False):
+def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False, mimo_only=False):
     out = ROOT / output
     raw = (ROOT / request_file).read_bytes()
     if hashlib.sha256(raw).hexdigest() != list_hash:
         raise RuntimeError('request list changed; review required')
     entries = [x for x in json.loads(raw)['requests'] if x['model'] in MODELS]
     assert len(entries) == (18 if conditional else 21) and sum(reservation(x) for x in entries) < CAP
+    if mimo_only:
+        if conditional or output != 'openrouter-paid':
+            raise RuntimeError('subset only applies to original baseline')
+        selected=deferral(ROOT)['selected_models']
+        entries=[x for x in entries if x['model'] in selected]
+        assert len(entries)==7
     if conditional:
         decisions = json.loads((ROOT / 'openrouter-budget-decisions.json').read_text())
         chosen = []
@@ -98,7 +104,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
         free = ROOT / 'openrouter-space-bunny-alpha'
         if conditional:
             baseline = json.loads((ROOT / 'openrouter-paid/billing.json').read_text())
-            if len(baseline['attempts']) != 21 or not audited_terminal(ROOT, baseline):
+            if not baseline_terminal(ROOT, baseline):
                 print(json.dumps({'status': 'baseline_not_complete'}), flush=True)
                 return
             diagnostic = ROOT / 'openrouter-space-bunny-alpha-16k'

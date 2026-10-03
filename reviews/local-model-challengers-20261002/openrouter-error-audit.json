@@ -3,5 +3,10 @@
     "continue_distinct_missing_only": true,
     "error_sha256": "5e41d065434136b9c9732ca5425af7902ab94c7bb4e0d0f914d0b29e96beb23f",
     "reason": "HTTP520 provider Relace failed after0.328s. No answer/reasoning to evaluate. Preserve original stopped attempt and full maximum reservation; never resubmit this request. Continue only frozen requests with no saved request/result/error under cumulative$1 guard. This is an author error audit, not provider-independent confirmation of zero billing."
+  },
+  "z-ai/glm-5.3-flash|regression": {
+    "continue_distinct_missing_only": true,
+    "error_sha256": "1be6060bc4d59a3d851357511f13520212b6bf640ab70685ea7bfa12da28703a",
+    "reason": "Second distinct request returns Relace HTTP520 in0.487s. Preserve failure and maximum reservation, no retry. Only unattempted original MiMo requests may proceed under declared GLM deferral and cumulative guard."
   }
 }

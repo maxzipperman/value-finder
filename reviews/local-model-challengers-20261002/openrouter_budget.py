@@ -67,3 +67,27 @@ def audited_terminal(root, ledger, folder='openrouter-paid'):
         if amount(attempt['accounted_usd']) < amount(attempt['maximum_estimate_usd']):
             return False
     return True
+
+
+DEFERRAL_HASH = "17c6b7e3baa74fe28c5ed91c59efe9b1288d7818f908edf76810bdba318b03ff"
+
+def deferral(root):
+    raw=(root/'openrouter-provider-deferral.json').read_bytes()
+    if hashlib.sha256(raw).hexdigest()!=DEFERRAL_HASH:
+        raise RuntimeError('provider deferral changed; review required')
+    d=json.loads(raw)
+    original=(root/'openrouter-requests.json').read_bytes()
+    if hashlib.sha256(original).hexdigest()!=d['original_list_sha256'] or d['selected_models']!=['xiaomi/mimo-v2.6-flash']:
+        raise RuntimeError('subset is not matched baseline')
+    return d
+
+def baseline_terminal(root,ledger):
+    if not audited_terminal(root,ledger):
+        return False
+    planned=[x for x in json.loads((root/'openrouter-requests.json').read_text())['requests'] if x['model']!='stealth/space-bunny-alpha']
+    attempted={(a['model'],a['task']) for a in ledger['attempts']}
+    deferred={(x['model'],x['task']) for x in deferral(root)['deferred']}
+    for item in planned:
+        if (item['model'],item['task']) not in attempted|deferred:
+            return False
+    return attempted.isdisjoint(deferred) and len(attempted)+len(deferred)==21

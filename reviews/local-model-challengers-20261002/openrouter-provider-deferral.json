@@ -1,0 +1,29 @@
+{
+  "reason": "Two distinct Relace520s indicate repeatedly unavailable GLM provider. No retries, fallbacks or provider changes. Defer four remaining GLM baseline requests; collect seven originally frozen MiMo requests once. Failures/deferred counts stay in final denominator. Defer is an unavailable-provider classification, not a semantic model score.",
+  "original_list_sha256": "01a4e1c63a82ee48dee3c610f25ed56d7b39028a050305ae02cd4ca118137f3c",
+  "selected_models": [
+    "xiaomi/mimo-v2.6-flash"
+  ],
+  "deferred": [
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "review",
+      "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac"
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "extraction",
+      "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa"
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "hard-selection",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3"
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "hard-review",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230"
+    }
+  ]
+}
