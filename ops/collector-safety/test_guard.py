@@ -298,6 +298,24 @@ class IntegrationTests(unittest.TestCase):
                 release.set();self.assertEqual(first.result()['action'],'idle')
             self.assertTrue((Path(td)/'tick.lock').exists())
 
+    def test_actual_nba_paid_entry_cannot_reach_transport(self):
+        s=Session()
+        f=self.extract(Path('sharp-markets/src/markets/collector.py'),'_odds_get',
+                       {'paid_get':g.paid_get,'ODDS_BASE':'https://api.the-odds-api.com/v4'})
+        obj=SimpleNamespace(key=KEY,odds=s,limiter=None)
+        with self.assertRaisesRegex(g.Blocked,'enforcement bridge not implemented'):
+            f(obj,'/sports/basketball_nba/odds',PARAMS,request_slot='x')
+        self.assertEqual(s.calls,[])
+
+    def test_actual_installer_metadata_preflight_is_unconditionally_held(self):
+        # Execute only its read-only Python metadata preflight, NEVER the installer.
+        import sys
+        script=(ROOT/'ops/install_live_uses.sh').read_text()
+        preflight=script.split("<<'PYGUARD'\n",1)[1].split('\nPYGUARD',1)[0]
+        self.assertLess(script.index('require_bridge()'),script.index('k="$(env_key'))
+        with patch.object(sys,'argv',['synthetic-metadata-preflight',str(ROOT)]),self.assertRaisesRegex(RuntimeError,'enforcement bridge not implemented'):
+            exec(compile(preflight,'installer-metadata-preflight','exec'),{})
+
     def test_named_paths_stable_slots_and_kernel_lock_are_connected(self):
         sources={p:(ROOT/p).read_text() for p in ('nfl-weather/scripts/log_props.py','nfl-weather/nflweather/oddsapi.py','cfb-weather/cfbweather/live.py','sharp-markets/src/markets/collector.py')}
         self.assertIn('collector_label="nfl-props", request_slot=f"{ev[\'id\']}:{h}"',sources['nfl-weather/scripts/log_props.py'])
