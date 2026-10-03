@@ -73,6 +73,9 @@ def synthetic_run(tmp_path, monkeypatch):
     monkeypatch.setattr(stage, "seed", lambda *args, **kwargs: predecessor)
     monkeypatch.setattr(stage, "reconcile", lambda *args: {"exact_cache_overlap": 0})
     monkeypatch.setattr(execute, "source_executor", lambda *args: base)
+    # Synthetic transport tests do not read ignored native probe parquet.
+    # Dedicated tests below exercise the unmodified complete-file capture gate.
+    monkeypatch.setattr(execute, "verified_v4_bytes", lambda *args: {})
     monkeypatch.setattr(execute, "checkout_clean", lambda *args: "b" * 40)
     monkeypatch.setattr(execute, "global_settled", lambda *args: None)
     monkeypatch.setattr(base, "runtime_path", lambda *args: stage.RUNTIME_BASE / root)

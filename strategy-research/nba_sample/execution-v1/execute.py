@@ -73,7 +73,8 @@ def source_executor(bundle):
 def checkout_clean(packet):
     repo = Path(subprocess.check_output(["git", "-C", str(packet), "rev-parse", "--show-toplevel"], text=True).strip())
     paths = [packet / name for name in (*stage.FILES, "FREEZE.json")]
-    paths.extend([Path(__file__), Path(stage.__file__), stage.F2_HANDOFF_PATH])
+    paths.extend([Path(__file__), Path(stage.__file__), stage.F2_HANDOFF_PATH,
+                  stage.successor151.HERE / "successor151.py", stage.successor151.HERE / "successor151-pins.json"])
     relative = [str(p.resolve().relative_to(repo)) for p in paths]
     subprocess.run(["git", "-C", str(repo), "ls-files", "--error-unmatch", "--", *relative],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -119,6 +120,8 @@ def internal_rows(rows):
 def run(packet, root, bundle, authorization, *, key, fake_session=None, checkpoint=lambda _: None):
     packet, bundle = Path(packet).resolve(), Path(bundle).resolve()
     manifest, rows, predecessor = stage.verify_packet(packet, root)
+    if predecessor.get("kind") == "exact_successor151_preparation_only":
+        raise ValueError("Successor151 preparation only; ceiling/executor adoption required before execution")
     base = source_executor(bundle)
     commit = checkout_clean(packet)
     runtime = base.runtime_path(root)
