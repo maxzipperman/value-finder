@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "7da0e141739e2e95f22da5da48bdb42086983bd9f6afd1e85615d3288d5b425e",
+  "evidence_digest": "80309d9126d968318a6202dac0b0b318a3c724804672b77990d81d28e4dd83c7",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -315,28 +315,35 @@
       "python": "3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.6.3.2)]"
     },
     "files": {
-      ".github/workflows/props-union.yml": "b1cd14704359301ff2774e0f9c823b432f3060aae042b0fe572bdce08a45e1ad",
+      ".github/workflows/props-union.yml": "c36006142822384d10d451ff1334f6bc6d70dad4b62b59a70657f9acb09f5290",
       "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
       "reviews/post151-readiness/diagnostic.py": "dd2f5e6f410b7dca64250a610651d43c5c55a078063ece22838c09b238cb22fe",
       "reviews/post151-readiness/readiness.json": "acd2009728d88370465ce8da85e16d61ec2ca7489b3491005b304cdd9622530c",
       "sharp-markets/docs/props-union/DECISIONS-DRAFT.md": "09fcf1e3895b9c493fef6817edbad2f769a9265b6c5ae63a2f53fd9c4a0035cb",
       "sharp-markets/docs/props-union/PLAN.md": "3a13ab94b13e82f382d0c4372b2d9a1eade1ca901777b6bb49799e7b852c3c5e",
-      "sharp-markets/docs/props-union/README.md": "0a2f3cef4e725c4963442fc8f3ce312677fd20a8de4bafd8edc93548472b9935",
+      "sharp-markets/docs/props-union/README.md": "b5a235b42365fc7ee6f8f45b53c26a48f20de2834ea68eaf25aea1d9a724246d",
       "sharp-markets/docs/props-union/comparison.json": "6add3e6c395ad0a3d74530f111901c4820e6f19e8733f303a98e55fbf1d60c8b",
       "sharp-markets/docs/props-union/discovery-matrix.json": "c6880624fe77837eba24f9dae00559b53f7e85831a00189e102c383358544b71",
-      "sharp-markets/docs/props-union/dry-run.json": "3391b3e1714439890659dd56d834b8258f0475a59b29eabf807b5c8a49fb22b2",
-      "sharp-markets/docs/props-union/eligibility.json": "f5fac5775b8a9611f0837408ae5dae14001a2a16645c029061244acfb9cb5fee",
-      "sharp-markets/docs/props-union/verification.json": "0a97359939c8f104e457137f144aea3a179608e0bfec1dbcf05c57ea9d21c923",
+      "sharp-markets/docs/props-union/dry-run.json": "25a2d7f385b56273d5e560cb93bce03c90e967cebd6ff660e9f95970d3ef512c",
+      "sharp-markets/docs/props-union/eligibility.json": "1df214493cea27f83826f1ab730b109252948cad7bd9359e30c5212715da49a1",
+      "sharp-markets/docs/props-union/verification.json": "e332bca8e46babe76ea4b357ce453c35436b9ff8bf5f1665eacdae3a2bdbcc64",
       "sharp-markets/src/markets/research/props_grade/archive.py": "8e05a8fad98f4980319e8930b71b2b9db816074a39293a1ddcf0ec31cefe2992",
-      "sharp-markets/src/markets/research/props_grade/union.py": "84a3f704657fffefda609f924b07123d39d0d862c71c72b93f37f7a0711e7fdb",
-      "sharp-markets/tests/props_union/test_union.py": "d81540b51da3345c726690c49e9ea6a213b40cacb5a17775cc7c476d2ad062df",
+      "sharp-markets/src/markets/research/props_grade/union.py": "e378123debe72957ff62ad4770dde4b403a9f5df157ea9c617f454295c3a80f5",
+      "sharp-markets/tests/props_union/test_union.py": "4f0f43569bf83101fe1783d3a3f6a866f4060f166a1d9c0df502dfaf2ec23185",
+      "strategy-research/coverage-pass-residual-v1/passing-groups-2020-24/denominators.json": "2b19c8eb67dc60c432e4431d968dc09783d572c1023ef35a906b4267e3971995",
       "strategy-research/coverage-pilot-completion-v1/report.py": "2370ab54c14fc491d9e9b35f9ac929b687c159059aff7ed8aff8f82512f20691",
+      "strategy-research/coverage-pilot-packet-v1/pilot-successor-142/frame.json": "e16012f47c36c09b092065fe30348b46c885fa19f10d1d3836936ceb9da5109b",
       "strategy-research/coverage-pilot-v1/classifier.py": "3022001dd610bd57bdc9aa301e761f987f5977cabc200b81b2806218511e7ac2",
-      "strategy-research/coverage-pilot-v1/timing.py": "45926bd9c8444dcda71f253a3c55e3c6d5f3942ade4b800b4ab3290f249cef58"
+      "strategy-research/coverage-pilot-v1/timing.py": "45926bd9c8444dcda71f253a3c55e3c6d5f3942ade4b800b4ab3290f249cef58",
+      "strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json": "99855ed3aeb7c1051f473cc6a2409340f963d930eea6ce2e622e0b547886e574",
+      "strategy-research/football_archive/acquisition/football-archive-v4/canonical-games.json": "c2e3ce27b12a4c47da09f3fe26c148f6c4f2f4b1802cd91f96dc209bb9fe8395",
+      "strategy-research/football_archive/acquisition/football-archive-v4/provider-observations.json": "fc9304cd32a2125d5c6f986102e204dac2335d55cd880475c2421725bb2b266d",
+      "strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/successor-mappings.json": "a96cc4f9a76ab5de4132a48956add37117ce81a16dbb28d892d976ee2317bfc5",
+      "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json": "529f45db28ceaf594ea654259cd4212ee167e357fd24999a339984a8e8452423"
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T19:29:05.332573+00:00",
+  "recorded_at": "2026-10-03T19:40:13.482841+00:00",
   "results": [
     {
       "argv": [
@@ -352,15 +359,15 @@
         "-v"
       ],
       "exit_code": 0,
-      "stderr_sha256": "a275e61860df362307088cd3a537a13dbeae4d2d5d26ac818ad79f88cd9fa2d2",
+      "stderr_sha256": "569dd5105adcf33f6814317624a7ef5a851e1f83c10db6e9c55df8220e796238",
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "unittest_count": [
-        10
+        12
       ]
     }
   ],
-  "tested_commit": "3e5186e95cf0ad7a319577d025492e81571d671c",
-  "tested_identity": "78f1155e087dafc8047f7485235b19120c65633de8452ce1a8a12c93838e1532",
+  "tested_commit": "445b1d6c8c9481ceb725864815da79a2924b8405",
+  "tested_identity": "063b45cd3492f3a544071b0b90cc58e0ce8a0d9e12d3fb73e8cb6dd943ec256a",
   "version": 1,
   "worktree_clean": true
 }
