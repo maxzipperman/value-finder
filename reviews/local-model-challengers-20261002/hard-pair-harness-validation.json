@@ -1,0 +1,9 @@
+{
+  "cases": 78,
+  "oracle_passed": true,
+  "smoke_mutants": {
+    "last_input_wins": true,
+    "drops_all": true,
+    "copies_rows": true
+  }
+}

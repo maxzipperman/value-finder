@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from expanded import TASKS
 from real_helper import PROMPT
+from hard_pair import TASKS as HARD_TASKS
 
 ROOT = Path(__file__).resolve().parent
 PROTOCOL = json.loads((ROOT / 'protocol.json').read_text())
@@ -36,7 +37,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--models', nargs='+', choices=PROTOCOL['models'])
     parser.add_argument('--no-thinking', action='store_true')
-    parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'])
+    parser.add_argument('--hard-pair', action='store_true')
+    parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'] + list(HARD_TASKS))
     args = parser.parse_args()
     selected = args.models or PROTOCOL['models']
     inventory = api('tags')['models']
@@ -62,19 +64,19 @@ def main():
             raise ValueError('installed model inventory changed; review required')
         current = recorded | current
     snapshot.write_text(json.dumps(current, indent=2) + '\n')
-    for task in (args.tasks or PROTOCOL['tasks']):
+    for task in (args.tasks or (list(HARD_TASKS) if args.hard_pair else PROTOCOL['tasks'])):
         for model in selected:
-            out = ROOT / (model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
+            out = ROOT / (('hard-pair-' if args.hard_pair else '') + model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
             out.mkdir(exist_ok=True)
             result_path = out / (task + '-result.json')
             error_path = out / (task + '-error.json')
             if result_path.exists() or error_path.exists():
                 continue
-            prompt = PROMPT if task == 'real-helper' else TASKS[task]
+            prompt = PROMPT if task == 'real-helper' else (HARD_TASKS[task] if task in HARD_TASKS else TASKS[task])
             body = dict(model=model, messages=[dict(role='user', content=prompt)],
                         stream=False, keep_alive=0,
                         think=False if args.no_thinking else ('medium' if model.startswith('gpt-oss:') else True),
-                        options=PROTOCOL['options'])
+                        options=PROTOCOL['options'] | ({'draft_num_predict': 0} if args.hard_pair else {}))
             (out / (task + '-request.json')).write_text(json.dumps(body, indent=2) + '\n')
             start = time.monotonic()
             try:
