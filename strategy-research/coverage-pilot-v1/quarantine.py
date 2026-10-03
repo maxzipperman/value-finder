@@ -89,7 +89,10 @@ def verify_approval(binding, *, fetch=None):
     if pin!=binding['certificate_sha256']:raise ValueError('certificate pin differs')
     approval=binding['approval'];url=approval['comment_url'];body=approval['comment_body']
     expected=f"APPROVED offline reconciliation: certificate {pin}, before-ledger {BEFORE}, after-ledger {cert['after_ledger_sha256']}, receipt {cert['receipt_sha256']}, no resend"
-    if not re.fullmatch(r'https://github\.com/maxzipperman/value-finder/pull/[0-9]+#issuecomment-[0-9]+',url) or expected not in body.splitlines():raise ValueError('exact offline approval required')
+    if (not re.fullmatch(r'https://github\.com/maxzipperman/value-finder/pull/[0-9]+#issuecomment-[0-9]+',url)
+            or body.splitlines().count(expected)!=1
+            or re.search(r'\b(HALTED|EXHAUSTED|REVOKED|NOT APPROVED|NOT READY)\b',body,re.I)):
+        raise ValueError('exact active offline approval required')
     cid=url.rsplit('-',1)[-1]
     live=fetch(cid) if fetch else json.loads(subprocess.check_output(['gh','api',f'repos/maxzipperman/value-finder/issues/comments/{cid}'],text=True))
     if live.get('html_url')!=url or live.get('body')!=body or live.get('user',{}).get('login')!='maxzipperman':raise ValueError('offline approval changed')

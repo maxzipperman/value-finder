@@ -75,6 +75,20 @@ class RecoveryTests(unittest.TestCase):
         binding['certificate_sha256']='0'*64
         with self.assertRaises(ValueError):self.q.verify_approval(binding,fetch=lambda _:live)
 
+    def test_newly_captured_approval_with_revocation_is_inactive(self):
+        cert=dict(after_ledger_sha256='a'*64,receipt_sha256='b'*64);pin=self.load('capture').identity(cert)
+        line=f"APPROVED offline reconciliation: certificate {pin}, before-ledger {self.q.BEFORE}, after-ledger {'a'*64}, receipt {'b'*64}, no resend"
+        url='https://github.com/maxzipperman/value-finder/pull/1#issuecomment-2'
+        for marker in ('REVOKED','revoked','HALTED','EXHAUSTED','NOT APPROVED','NOT READY'):
+            body=line+'\n'+marker
+            binding=dict(certificate=cert,certificate_sha256=pin,approval=dict(comment_url=url,comment_body=body))
+            live=dict(html_url=url,body=body,user=dict(login='maxzipperman'))
+            with self.subTest(marker=marker),self.assertRaisesRegex(ValueError,'active offline approval'):
+                self.q.verify_approval(binding,fetch=lambda _:live)
+        body=line+'\n'+line
+        binding=dict(certificate=cert,certificate_sha256=pin,approval=dict(comment_url=url,comment_body=body))
+        with self.assertRaises(ValueError):self.q.verify_approval(binding,fetch=lambda _: {})
+
     def test_exact_transition_retains_reservations_and_does_not_mutate_input(self):
         from types import SimpleNamespace
         attempts={str(i):dict(status='completed',reserved_credits=40,billed_credits=30) for i in range(6)}
