@@ -6,6 +6,7 @@ import collections
 import logging
 import sys
 from datetime import date
+from pathlib import Path
 
 from .context import Context
 from .games import select_games
@@ -318,6 +319,8 @@ def main(argv: list[str] | None = None) -> None:
     pg.add_argument("--fixture", action="store_true", help="run on a synthetic fixture instead (nothing in it is data)")
     pg.add_argument("--out", default=None, help="output folder (default reports/props_grade; a scratch folder with "
                     "--fixture)")
+    pg.add_argument("--archive-runtime", type=Path, default=None,
+                    help="receipt-bound F3a 2025 coverage only; grading blocked pending timing amendment")
     pg.set_defaults(fn=cmd_props_grade)
 
     args = p.parse_args(argv)

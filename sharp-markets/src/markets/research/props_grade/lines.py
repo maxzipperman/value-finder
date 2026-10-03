@@ -62,8 +62,9 @@ MISSING = "missing price"
 TIE = "two equally close main lines"
 UNMATCHED = "unmatched player"
 VOID = "void (player didn't play)"
+MISSING_STAT = "missing or conflicting statistic"
 PUSH = "push"
-REASONS = (GAME, MOVED, NO_POINT, NO_LINE, MISSING, TIE, UNMATCHED, VOID, PUSH)
+REASONS = (GAME, MOVED, NO_POINT, NO_LINE, MISSING, TIE, UNMATCHED, VOID, MISSING_STAT, PUSH)
 
 ROW_COLS = ["event_id", "label", "role", "kick", "commence", "snap", "requested", "home_team", "away_team", "book",
             "market", "description", "side", "point", "price"]
