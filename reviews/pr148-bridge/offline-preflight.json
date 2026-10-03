@@ -1,0 +1,13 @@
+{
+  "root": "22248e70d445679b488f7900acec69f8e22de957ddf88431ad785f99e61f8935",
+  "bootstrap_sha256": "142231525b3ec1c3f5caff4db5f9d2ffafa2790321d56c2d24d6927355a8a383",
+  "request_count": 1302,
+  "max_new_credits": 67200,
+  "conservative_carry": 207386,
+  "paid_authority": false,
+  "offline_preflight": true,
+  "live_account_verified": false,
+  "runtime_writes": 0,
+  "paid_calls": 0,
+  "source": "actual reserve-fix assemble.py stdout; locally produced evidence requires independent authentication"
+}
