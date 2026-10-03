@@ -102,3 +102,13 @@ to ask the owner to manually audit each row. No further purchase is recommended.
 Compute: the quote check decodes1707 cached records with CPU/pyarrow; no GPU,
 new provider call or purchase is needed. Future outcome inference/replicate budget
 remains a separately adopted finite procedure, not an open-ended model search.
+
+Post-review portability repair: `union.DURABLE_INPUTS` maps the five used logical
+metadata inputs to exact tracked repository-relative files. It verifies their
+original accepted hashes before use; the source schedule/observations also remain
+pinned. Original absolute acquisition paths are retained as provenance only. No
+runtime search, alternate identity, original-path fallback or unverified current
+bytes are accepted. Missing/mismatched tracked inputs stop the read. CI triggers
+cover every declared test dependency, including the completion saved-record reader
+and the durable metadata/schedule sources. Independent-checkout/mismatch regressions
+exercise the resolver without the original temporary directories.

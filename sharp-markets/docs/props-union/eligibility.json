@@ -1208,6 +1208,13 @@
       "slot": "T24"
     }
   ],
+  "durable_input_mapping": {
+    "baseline.json": "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json",
+    "denominators.json": "strategy-research/coverage-pass-residual-v1/passing-groups-2020-24/denominators.json",
+    "frame.json": "strategy-research/coverage-pilot-packet-v1/pilot-successor-142/frame.json",
+    "mappings.json": "strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/successor-mappings.json",
+    "source/FREEZE.json": "strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json"
+  },
   "eligible_quote_rows": 291918,
   "fixed_games": {
     "2023": 294,
@@ -1240,9 +1247,39 @@
   },
   "mode": "eligibility",
   "original_final_sha256": "100a53275119fba283b3e8938cfee994f0d1a535201f2bab2e8769bfba9fdbdb",
+  "original_input_provenance": {
+    "baseline.json": {
+      "path": "/private/tmp/vf-pass150-recovery/strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json",
+      "sha256": "529f45db28ceaf594ea654259cd4212ee167e357fd24999a339984a8e8452423"
+    },
+    "denominators.json": {
+      "path": "/private/tmp/vf-captured-path-fix/strategy-research/coverage-pass-residual-v1/passing-groups-2020-24/denominators.json",
+      "sha256": "2b19c8eb67dc60c432e4431d968dc09783d572c1023ef35a906b4267e3971995"
+    },
+    "frame.json": {
+      "path": "/private/tmp/vf-captured-path-fix/strategy-research/coverage-pilot-packet-v1/pilot-successor-142/frame.json",
+      "sha256": "e16012f47c36c09b092065fe30348b46c885fa19f10d1d3836936ceb9da5109b"
+    },
+    "mappings.json": {
+      "path": "/private/tmp/vf-pass150-recovery/strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/successor-mappings.json",
+      "sha256": "a96cc4f9a76ab5de4132a48956add37117ce81a16dbb28d892d976ee2317bfc5"
+    },
+    "requests.json": {
+      "path": "/private/tmp/vf-pass150-recovery/strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/untouched-requests.json",
+      "sha256": "d37ddb53e3a645f4c924fd7f99443347cefb84cf69c49165139b59f8f7aa4444"
+    },
+    "slot-map.json": {
+      "path": "/private/tmp/vf-captured-path-fix/strategy-research/coverage-pilot-packet-v1/pilot-successor-142/slot-map.json",
+      "sha256": "3c16c0baef6c2e721454402673eb78322daf9fdab913bd87813152073d9a5186"
+    },
+    "source/FREEZE.json": {
+      "path": "/private/tmp/vf-captured-path-fix/strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json",
+      "sha256": "99855ed3aeb7c1051f473cc6a2409340f963d930eea6ce2e622e0b547886e574"
+    }
+  },
   "outcomes_read": false,
   "raw_quote_rows_exported": false,
-  "reader_sha256": "84a3f704657fffefda609f924b07123d39d0d862c71c72b93f37f7a0711e7fdb",
+  "reader_sha256": "e378123debe72957ff62ad4770dde4b403a9f5df157ea9c617f454295c3a80f5",
   "row_exclusions": {
     "conflicting_duplicate_quote": 4,
     "kickoff_conflict": 5690,

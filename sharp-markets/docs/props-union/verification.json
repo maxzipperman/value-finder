@@ -18,7 +18,14 @@
     "sharp-markets/docs/props-union/dry-run.json",
     "sharp-markets/docs/props-union/eligibility.json",
     "sharp-markets/docs/props-union/comparison.json",
-    "sharp-markets/docs/props-union/verification.json"
+    "sharp-markets/docs/props-union/verification.json",
+    "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json",
+    "strategy-research/coverage-pilot-packet-v1/pilot-successor-142/frame.json",
+    "strategy-research/coverage-pass-residual-v1/passing-groups-2020-24/denominators.json",
+    "strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/successor-mappings.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/canonical-games.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4/provider-observations.json"
   ],
   "commands": [
     [

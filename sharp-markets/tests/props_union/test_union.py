@@ -171,6 +171,42 @@ class UnionTests(unittest.TestCase):
         self.assertEqual(report['reader_sha256'],A.digest(A.regular(SOURCE/'union.py')))
         self.assertEqual(report['archive_reader_sha256'],A.digest(A.regular(SOURCE/'archive.py')))
 
+    def test_durable_inputs_use_independent_checkout_after_original_paths_removed(self):
+        evidence=json.loads((ROOT/'reviews/post151-readiness/readiness.json').read_text())
+        provenance=copy.deepcopy(evidence['provenance'])
+        with tempfile.TemporaryDirectory() as name:
+            repo=Path(name).resolve()/'independent-checkout';repo.mkdir()
+            old=Path(name).resolve()/'removed-original-checkout';old.mkdir();old.rmdir()
+            for logical,relative in U.DURABLE_INPUTS.items():
+                target=repo/relative;target.parent.mkdir(parents=True,exist_ok=True)
+                expected=A.regular(ROOT/relative);target.write_bytes(expected)
+                provenance['bound_inputs'][logical]['path']=str(old/logical)
+                self.assertEqual(U.resolved_input(logical,provenance,repo),expected)
+            # Same path with different bytes cannot fall back to a surviving original.
+            logical='frame.json';(repo/U.DURABLE_INPUTS[logical]).write_text('{}')
+            with self.assertRaisesRegex(ValueError,'hash mismatch'):
+                U.resolved_input(logical,provenance,repo)
+            (repo/U.DURABLE_INPUTS[logical]).unlink()
+            with self.assertRaisesRegex(ValueError,'regular'):
+                U.resolved_input(logical,provenance,repo)
+            with self.assertRaisesRegex(ValueError,'Undeclared'):
+                U.resolved_input('alternate-frame.json',provenance,repo)
+
+    def test_ci_triggers_cover_every_declared_verification_dependency(self):
+        import ast
+        import fnmatch
+        workflow=(ROOT/'.github/workflows/props-union.yml').read_text()
+        paths=ast.literal_eval(next(line.split('paths:',1)[1].strip()
+                                    for line in workflow.splitlines() if 'paths:' in line))
+        config=json.loads((ROOT/'sharp-markets/docs/props-union/verification.json').read_text())
+        for scope in config['scopes']:
+            target=ROOT/scope
+            files=[p.relative_to(ROOT).as_posix() for p in target.rglob('*') if p.is_file()] if target.is_dir() else [scope]
+            self.assertTrue(files,scope)
+            for file in files:
+                self.assertTrue(any(fnmatch.fnmatchcase(file,pattern) for pattern in paths),file)
+        self.assertIn('strategy-research/coverage-pilot-completion-v1/**',paths)
+
     def test_receipt_byte_checks_reject_changes_and_symlinks(self):
         with tempfile.TemporaryDirectory() as name:
             p=Path(name).resolve()/'receipt';p.write_bytes(b'original'); pin=A.digest(p.read_bytes())

@@ -1,7 +1,7 @@
 name: Props union eligibility
 on:
   pull_request:
-    paths: ['sharp-markets/src/markets/research/props_grade/archive.py', 'sharp-markets/src/markets/research/props_grade/union.py', 'sharp-markets/tests/props_union/**', 'sharp-markets/docs/props-union/**', 'strategy-research/coverage-pilot-v1/**', 'reviews/post151-readiness/**', '.github/workflows/props-union.yml', 'ops/process/process_guard.py']
+    paths: ['sharp-markets/src/markets/research/props_grade/archive.py', 'sharp-markets/src/markets/research/props_grade/union.py', 'sharp-markets/tests/props_union/**', 'sharp-markets/docs/props-union/**', 'strategy-research/coverage-pilot-v1/**', 'strategy-research/coverage-pilot-completion-v1/**', 'strategy-research/pass150-timeout-recovery-v1/**', 'strategy-research/coverage-pass-residual-v1/**', 'strategy-research/coverage-pilot-packet-v1/**', 'strategy-research/football_archive/acquisition/football-archive-v4/**', 'reviews/post151-readiness/**', '.github/workflows/props-union.yml', 'ops/process/process_guard.py']
 permissions:
   contents: read
 jobs:

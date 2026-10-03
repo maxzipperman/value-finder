@@ -22,6 +22,15 @@ RUNTIME = Path.home() / 'Library/Application Support/ValueFinder/football-acquis
 SEASONS = (2023, 2024, 2025)
 DENOMINATORS = {2023: 294, 2024: 308, 2025: 285}
 SLOTS = ('T24', 'CLOSE_T10')
+# Reviewed logical-input mapping; original absolute paths remain provenance only.
+DURABLE_INPUTS = {
+    'baseline.json': 'strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json',
+    'frame.json': 'strategy-research/coverage-pilot-packet-v1/pilot-successor-142/frame.json',
+    'denominators.json': 'strategy-research/coverage-pass-residual-v1/passing-groups-2020-24/denominators.json',
+    'mappings.json': 'strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/successor-mappings.json',
+    'source/FREEZE.json': 'strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json',
+}
+SOURCE_DIR = 'strategy-research/football_archive/acquisition/football-archive-v4'
 HOLDS = ('timing_stat_amendment_not_adopted', 'candidate_book_note_inactive',
          'registration_variant_lineage_unresolved', 'roster_game_player_identity_unverified',
          'mainline_selection_not_applied', 'participation_unverified', 'book_settlement_terms_unverified')
@@ -59,18 +68,24 @@ def load_pure(path, name, pin):
     return module
 
 
+def resolved_input(name, provenance, repo=REPO):
+    """Use exactly reviewed repo bytes, verified before use; never original tmp paths."""
+    if name not in DURABLE_INPUTS: raise ValueError('Undeclared logical input')
+    return A.checked(Path(repo) / DURABLE_INPUTS[name], provenance['bound_inputs'][name]['sha256'])
+
+
 def metadata(runtime):
     evidence = json.loads(A.checked(READINESS, READINESS_SHA))
     if evidence['root'] != ROOT or evidence['grading_enabled'] or evidence['provenance']['native_outcomes_read']:
         raise ValueError('Wrong accepted readiness evidence')
     provenance = evidence['provenance']; bound = provenance['bound_inputs']
-    def read(name): return json.loads(A.checked(Path(bound[name]['path']), bound[name]['sha256']))
+    def read(name): return json.loads(resolved_input(name, provenance))
     frame, denoms, maps, baseline, source_freeze = (read(n) for n in
         ('frame.json', 'denominators.json', 'mappings.json', 'baseline.json', 'source/FREEZE.json'))
     selected = {d['game_id'] for d in denoms if d['stratum'].startswith(f'props/{A.NFL}/')}
     games = [g for g in frame if g['game_id'] in selected or g['stratum'] == f'props/{A.NFL}/2025']
     validate_games(games)
-    source_dir = Path(bound['source/FREEZE.json']['path']).parent
+    source_dir = REPO / SOURCE_DIR
     canonical = json.loads(A.checked(source_dir / 'canonical-games.json', provenance['canonical_metadata_sha256']))
     observations = json.loads(A.checked(source_dir / 'provider-observations.json', provenance['provider_observations_sha256']))
     pins = source_freeze['file_sha256']
@@ -218,7 +233,8 @@ def project(runtime, mode):
     for root, pin in provenance['ledger_pins'].items(): A.checked(runtime / root / 'spending-ledger.json', pin)
     summary = dict(mode=mode, fixed_games=DENOMINATORS, fixed_opportunities=sum(DENOMINATORS.values())*2,
         statuses=dict(statuses), authenticated_records=len(cache), accepted_readiness_sha256=READINESS_SHA,
-        ledger_pins=provenance['ledger_pins'], classifier_sha256=provenance['classifier_sha256'],
+        ledger_pins=provenance['ledger_pins'], durable_input_mapping=DURABLE_INPUTS,
+        original_input_provenance=provenance['bound_inputs'], classifier_sha256=provenance['classifier_sha256'],
         timing_sha256=provenance['timing_sha256'], original_final_sha256=provenance['original_final_sha256'],
         reader_sha256=A.digest(A.regular(Path(__file__))), archive_reader_sha256=A.digest(A.regular(Path(A.__file__))),
         grading_enabled=False, outcomes_read=False, actual_play_certified=False, book='draftkings',
