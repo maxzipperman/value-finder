@@ -1,0 +1,9 @@
+{
+  "sha256": {
+    "DEEPSEEK_HELPER_COVERAGE.md": "57f56934bdf7947f9edac79d9e46d094fe5564f773a1f99fca1576776914417b",
+    "ceiling_deepseek_helper_coverage.py": "b775401af9c1d551713c7cda8224430bb0338c4522b6273d3357a357ecb5bb6d",
+    "ceiling_type_name_diagnostic.py": "cf63dc992522cf304c2aefb97c811e1e33c1c2e18f1c210ce7f5b97632e612f3",
+    "openrouter-ceiling/deepseek--deepseek-v4.1-flash/implementation-response.txt": "52ee4051d5c9d1e97c707292c18fff72a28f2ef44ce8768a8f8994ee9288067d"
+  },
+  "note": "Declared exact captured DeepSeek source, same four probes, unchanged restrictions before execution."
+}

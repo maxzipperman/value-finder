@@ -1,0 +1,7 @@
+# DeepSeek direct-helper coverage, declared before execution
+
+The complete DeepSeek four-file implementation was manually inspected before the unchanged restricted197-check grader. It passes197/197 pipeline/support checks. The source has the same suspected direct-helperasof validation/normalization gap as Q8: only pipeline validates and normalizes asof. Preserve original score.
+
+Declare the same four already used extra helper probes against ONLY the exact captured DeepSeek responseSHA52ee4051d5c9d1e97c707292c18fff72a28f2ef44ce8768a8f8994ee9288067d. Invalid asof must be rejected on empty select/reconcile; valid ISO asof with one valid row must produce original row identity. No new inference, grading feedback, source repair or normalization. Keep original AST/runtime-import bans without compatibility exceptions. Exact script/plan/response and existing helper-function source hashes are frozen before execution. Verify unchanged integrated freeze. Reference4/4 and two trusted deliberately faulty controls must yield expected failures before candidate checks. One ordinary restricted/no-network/no-credential15s run.
+
+Save separate implementation-helper-coverage.json; original197 denominator unchanged. Post-observation author coverage, not independent signoff, exhaustive interface acceptance or causal precision/model ranking. No arbitrary candidate arguments or automatically generalized AST permission. Earlier Space Bunny/Q8 artifacts unchanged.
