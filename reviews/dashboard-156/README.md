@@ -63,3 +63,15 @@ into the verification scope. The current operations-evidence.json supersedes the
 historical test identity above. Dashboard CI runs the affected API, parser,
 operations, read-only, secret-boundary and static suites plus JS syntax validation.
 No runtime, job, scorer or deployment changes were made during these repairs.
+
+## Terminal-state and NBA metadata follow-up
+
+Recognize emitted older_epoch_complete and metadata_complete states. Completed
+means the journal reports a terminal batch, not that every response is present:
+missing counts remain visible, and pending attempts/top-level pending prevent the
+completed label. NBA collector output metadata now includes its runs.csv; only
+file metadata is inspected, and neither output freshness nor exit zero proves
+successful collection or liveness. Synthetic checks cover all supported terminal
+states with completed/missing/pending attempts, top-level pending, and NBA
+present/absent/linked run logs. Refreshed affected evidence: 158 checks plus JS
+syntax; unchanged process evidence is reusable. No runtime/deployment changes.

@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+import pytest
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -241,3 +242,41 @@ def test_directory_and_socket_are_not_read(tmp_path):
         with tempfile.TemporaryDirectory(dir='/tmp') as d:
             p=Path(d).resolve()/'s';sock.bind(str(p))
             assert op.bounded(p).data is None
+
+
+@pytest.mark.parametrize('state', ['event_epoch_complete', 'pilot_complete',
+    'recent_complete_stopped_before_older', 'older_epoch_complete', 'metadata_complete'])
+@pytest.mark.parametrize('attempt,expected', [('completed', 'completed'), ('missing', 'completed'), ('pending', 'unconfirmed')])
+def test_emitted_terminal_states_preserve_missing_and_pending(home, state, attempt, expected):
+    journal(home, status=state, attempt=attempt)
+    row = op.acquisition(home, NOW, timezone.utc)['batches'][0]
+    assert row['state'] == expected
+    assert row['recorded_state'] == state
+    assert row[attempt] == 1
+    assert row['completed'] == int(attempt == 'completed')
+
+
+@pytest.mark.parametrize('state', ['older_epoch_complete', 'metadata_complete'])
+def test_new_terminal_states_with_top_level_pending_remain_unconfirmed(home, state):
+    p = journal(home, status=state)
+    data = json.loads(p.read_text()); data['pending'] = ['b'*64]
+    p.write_text(json.dumps(data))
+    assert op.acquisition(home, NOW, timezone.utc)['batches'][0]['state'] == 'unconfirmed'
+
+
+def test_nba_run_log_metadata_visible_without_collection_success(root, home):
+    p = root / 'sharp-markets/data/collector/nba/runs.csv'
+    write(p, 'PRIVATE_BODY_NOT_PARSED')
+    os.utime(p, (NOW.timestamp(), NOW.timestamp()))
+    store = make_store(root, home, clock=Clock(NOW))
+    store.snapshot().launchctl.listed['com.valuefinder.nbacollector'] = {'pid':None, 'status':0}
+    row = api.jobs(api.Screen(store))[-1]
+    assert op.collector_outputs(root)['com.valuefinder.nbacollector'] == NOW.timestamp()
+    assert 'Last output file update: Not verified' not in row['result']
+    assert 'Collection success is unverified' in row['result'] and row['level'] == 'warn'
+    assert not row['running'] and 'PRIVATE_BODY' not in json.dumps(row)
+    p.unlink()
+    assert op.collector_outputs(root)['com.valuefinder.nbacollector'] is None
+    target = root / 'private-log'; write(target, 'private')
+    p.symlink_to(target)
+    assert op.collector_outputs(root)['com.valuefinder.nbacollector'] is None

@@ -34,7 +34,8 @@ LABELS = {
     'c75ef924f5': 'Passing coverage groups · original batch',
     'c7d3ea3d93': 'Passing coverage groups · successor',
 }
-COMPLETE = {'event_epoch_complete', 'pilot_complete', 'recent_complete_stopped_before_older'}
+COMPLETE = {'event_epoch_complete', 'pilot_complete', 'recent_complete_stopped_before_older',
+            'older_epoch_complete', 'metadata_complete'}
 RECONCILED = {'event_epoch_partial_reconciled', 'older_epoch_partial_reconciled', 'pilot_partial_reconciled'}
 
 
@@ -246,6 +247,7 @@ def collector_outputs(root):
     paths = {
         'com.valuefinder.triggerpoll': ['nfl-weather/data/forward/trigger_polls.csv', 'cfb-weather/data/forward/trigger_polls.csv'],
         'com.valuefinder.propslog': ['nfl-weather/data/forward/props_log.csv'],
+        'com.valuefinder.nbacollector': ['sharp-markets/data/collector/nba/runs.csv'],
     }
     out = {}
     for label, files in paths.items():
