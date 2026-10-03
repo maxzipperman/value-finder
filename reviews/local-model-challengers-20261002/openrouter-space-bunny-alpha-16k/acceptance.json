@@ -1,0 +1,30 @@
+{
+  "multifile": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length16384 empty final; reasoning not delivered source"
+    }
+  ],
+  "debugging": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length16384 empty final; reasoning not delivered source"
+    }
+  ],
+  "regression": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length16384 empty final; reasoning not delivered source"
+    }
+  ],
+  "hard-selection": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length16384 empty final; reasoning not delivered source"
+    }
+  ]
+}

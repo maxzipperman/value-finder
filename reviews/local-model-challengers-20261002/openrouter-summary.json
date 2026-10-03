@@ -1119,7 +1119,7 @@
       "task": "regression",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/z-ai--glm-5.3-flash",
-      "status": "not_started",
+      "status": "error",
       "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
       "settings": {
         "model": "z-ai/glm-5.3-flash",
@@ -1141,7 +1141,11 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "ec35fd168c8b5c197feb19fde7a66b7170dd8f65f93680fead1f5190a4cecf7e",
+      "error_type": "HTTPError",
+      "http_status": 520,
+      "wall_seconds": 0.4872623750125058
     },
     {
       "model": "z-ai/glm-5.3-flash",
@@ -1517,6 +1521,17 @@
           "image_tokens": 0,
           "audio_tokens": 0
         }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Length16384 empty final; reasoning not delivered source"
+          }
+        ]
       }
     },
     {
@@ -1574,6 +1589,17 @@
           "image_tokens": 0,
           "audio_tokens": 0
         }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Length16384 empty final; reasoning not delivered source"
+          }
+        ]
       }
     },
     {
@@ -1631,6 +1657,17 @@
           "image_tokens": 0,
           "audio_tokens": 0
         }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Length16384 empty final; reasoning not delivered source"
+          }
+        ]
       }
     },
     {
@@ -1688,6 +1725,17 @@
           "image_tokens": 0,
           "audio_tokens": 0
         }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Length16384 empty final; reasoning not delivered source"
+          }
+        ]
       }
     }
   ],
