@@ -48,3 +48,10 @@ original bounds are reused, never rerun until pass. Marginal cost uses newly usa
 unknown-cohort games, never already-purchased census successes. These sequencing
 corrections supersede the listing-inclusive illustration in DESIGN.md; none grants
 paid authority. Final classifier and error contract still need independent approval.
+
+Math checkpoint: bounds.py implements exact hypergeometric inversion, fixed alpha
+allocations, census behavior, marginal cost/utility and weighted reporting without
+pooled release. Six additional tests passed (separate evidence). MATH-REVIEW.md
+independently assesses the statistician's proposal; another reviewer must review
+this implementation. PRIMARY-CONTRACT.json fixes six proposed markets and41,300
+existing-frame gross illustration, superseding prior eight-market estimates.

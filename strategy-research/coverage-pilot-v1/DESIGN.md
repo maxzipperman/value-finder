@@ -5,6 +5,20 @@ request selection or paid authority. LOCAL-BECAUSE: implementation must authenti
 Mac-only cached receipts and historical accounting. No keys, provider calls,
 outcomes, sealed seasons, runtime mutation or live jobs in this design work.
 
+## Current contract (supersedes earlier cost illustrations below)
+
+Hub adopted six NFL markets for unknown2023/24 and the same six CFB markets for
+quote coverage only. Existing-frame pilot first:500 availability +30,000 props
++10,800 older = **41,300 gross**, before cache and no-request reasons. No listing
+stage is included or enabled. All figures require the exact union and two-slot
+older mapping to hold; three-slot mapping increases the estimate. Current carried
+170,306 +41,300 =211,606 before other usage, leaving38,394 under250,000.
+
+See PRIMARY-CONTRACT.json and MATH-REVIEW.md for the .02 existing/.02 added/.01
+optional allocation,60%older/50%props utility floors, marginal-cost denominator and
+season-specific releases from the same simultaneous bounds. Earlier eight-market
+and listing-inclusive figures below are superseded planning scenarios, not mandates.
+
 ## Boundary and sequence
 
 Build a NEW sibling adapter. Do not modify installed PR129 recovery.py/PROTOCOL,
