@@ -58,7 +58,7 @@ Spawn one worker per issue.
 ## 4. When a worker reports
 
 1. Review its PR against the brief. Check that the numbers reproduce, the tests pass, no rule was edited without a dated amendment, and no secrets or raw data were committed.
-2. Apply GOVERNANCE.md review tier and current-head agreements. The hub merges consequential changes; merge only after required approval. Update STATUS.md in the PR when state changes, and refresh only the isolated checkout.
+2. Apply GOVERNANCE.md effect-based tier: one independent technical review and relevant CI for code/research/execution, automated checks for purely explanatory status/docs. Reuse complete-input evidence; do not repeat unchanged technical review or add a second hub technical AGREE. The hub merges/adopts consequential changes and separately records exact spending authority. The migration itself retains the old dual exact-head rule. Update STATUS.md only for current state changes, preserve its parser contracts and append history to the archive; refresh only the isolated checkout.
 3. If it isn't, send the fixes back to the same worker rather than starting a new one.
 4. When a research pull request merges, add or update its entry in `dashboard/content/evidence.json`, the list the dashboard's Research screen shows. Quote each number as its source file writes it; `uv run --project dashboard pytest -q` checks that.
 5. A "Waiting on you" item in `STATUS.md` that has a deadline carries "due" and the date in its bold title, for example **The Oct 20 gate decisions (due Tue Oct 20, 2026).** The dashboard shows that date beside the item.

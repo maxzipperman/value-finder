@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Future shape only; not authenticated purchase authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "authorization_id", "issuer", "issued_at", "expires_at", "status", "executing_commit", "purchase_identity", "request_list_sha256", "request_set_sha256", "budget", "revocation"],
+  "properties": {
+    "version": {"const": 1},
+    "authorization_id": {"type": "string", "minLength": 1},
+    "issuer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["platform", "immutable_actor_id", "role", "original_event_uri", "body_sha256"],
+      "properties": {
+        "platform": {"const": "github"},
+        "immutable_actor_id": {"type": "integer", "minimum": 1},
+        "role": {"const": "hub"},
+        "original_event_uri": {"type": "string", "format": "uri"},
+        "body_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["approved", "revoked", "consumed"]},
+    "executing_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "purchase_identity": {"$ref": "#/$defs/sha256"},
+    "request_list_sha256": {"$ref": "#/$defs/sha256"},
+    "request_set_sha256": {"$ref": "#/$defs/sha256"},
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_new_credits", "prior_reserved_including_probe", "cumulative_ceiling", "monthly_ceiling", "reserve_floor"],
+      "properties": {
+        "max_new_credits": {"type": "integer", "minimum": 1},
+        "prior_reserved_including_probe": {"type": "integer", "minimum": 0},
+        "cumulative_ceiling": {"type": "integer", "minimum": 1},
+        "monthly_ceiling": {"type": "integer", "minimum": 1},
+        "reserve_floor": {"type": "integer", "minimum": 0}
+      }
+    },
+    "revocation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["live_check_before_each_send", "fail_closed_on_unavailable", "authenticated_later_event_required"],
+      "properties": {
+        "live_check_before_each_send": {"const": true},
+        "fail_closed_on_unavailable": {"const": true},
+        "authenticated_later_event_required": {"const": true}
+      }
+    }
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

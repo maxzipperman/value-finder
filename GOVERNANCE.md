@@ -67,6 +67,15 @@ Never treat a passing artifact as proof of operational safety. A hash is integri
 not authentication: use trusted CI run provenance or independently verified local
 results. No proof is reusable across an undeclared dependency change.
 
+The existing process CI compares complete tracked input identities using the
+adopted base policy and the actual merge-result tree, including dependency, test,
+workflow, policy, registration and eligibility changes. There is no blanket
+Markdown exemption; authors cannot add their own exclusion. Reuse is only review
+evidence, never another agent's authenticated approval. Current reviewer opinion
+and trusted original provenance remain required. Unknown effects require review.
+Untracked/native inputs still need separate native evidence. See
+[process tooling](ops/process/README.md) and [role setup](ops/process/IDENTITIES.md).
+
 ## Purchase and recovery boundaries
 
 Only the hub executes paid requests within the owner's authorized scope. Before
