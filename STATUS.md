@@ -189,3 +189,6 @@ Local model extension author grading complete (PR147):44 additional requests,38 
 
 
 OpenRouter checkpoint (PR147): free baseline7 complete; paid DeepSeek implementation/debugging length8192 with no deliverable, reported combined cost$0.01279044; remaining declared paid requests and queued free16k diagnostics continue serially. Max authorized completed-results handoff to hub chat with job-reallocation guidance favoring capable local/free/cheap models. No partial cloud routing claims; full grading and final handoff pending.
+
+
+Owner added capability-ceiling round to model evaluation (PR147): harder integrated synthetic pipeline implementation/audit/test drafting, larger local/API resource profiles, all before final allocation handoff. Prospective design in reviews/local-model-challengers-20261002/CAPABILITY_CEILING_PLAN.md; reference/hidden harness/request list must be validated/frozen before inference. Owner total API$1 remains cumulative; combined reservation guard required before additional stress spending. Conditional API32k progress-gated collector prepared; no qualified32k request yet, two runaway-digit cases denied. Existing baseline/free16k queues continue unchanged, no competing inference.

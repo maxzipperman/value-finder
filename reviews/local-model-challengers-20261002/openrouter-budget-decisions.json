@@ -1,0 +1,18 @@
+{
+  "deepseek/deepseek-v4.1-flash|debugging|32k": {
+    "proceed": false,
+    "reason": "Greedy baseline thinking ends in a contiguous run of19067 zero characters with empty final answer. This is runaway digit expansion rather than meaningful unfinished delivery; more tokens alone not justified. Preserve baseline. Different sampling/configuration could be studied separately, no feedback supplied.",
+    "evidence": [
+      "openrouter-paid/deepseek--deepseek-v4.1-flash/debugging-result.json"
+    ],
+    "reviewer": "author progress inspection"
+  },
+  "deepseek/deepseek-v4.1-flash|regression|32k": {
+    "proceed": false,
+    "reason": "Greedy baseline thinking ends in a contiguous run of4887 zero characters with empty final answer. This is runaway digit expansion rather than meaningful unfinished delivery; more tokens alone not justified. Preserve baseline. Different sampling/configuration could be studied separately, no feedback supplied.",
+    "evidence": [
+      "openrouter-paid/deepseek--deepseek-v4.1-flash/regression-result.json"
+    ],
+    "reviewer": "author progress inspection"
+  }
+}

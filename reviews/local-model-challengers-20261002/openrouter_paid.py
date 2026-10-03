@@ -34,20 +34,40 @@ def reservation(item):
     return ((len(body['messages'][0]['content'].encode()) + 256) * prices['prompt'] + body['max_tokens'] * prices['completion']) / 1_000_000
 
 
-def main():
-    raw = (ROOT / 'openrouter-requests.json').read_bytes()
-    if hashlib.sha256(raw).hexdigest() != LIST_HASH:
+def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False):
+    out = ROOT / output
+    raw = (ROOT / request_file).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != list_hash:
         raise RuntimeError('request list changed; review required')
     entries = [x for x in json.loads(raw)['requests'] if x['model'] in MODELS]
-    assert len(entries) == 21 and sum(reservation(x) for x in entries) < CAP
+    assert len(entries) == (18 if conditional else 21) and sum(reservation(x) for x in entries) < CAP
+    if conditional:
+        decisions = json.loads((ROOT / 'openrouter-budget-decisions.json').read_text())
+        chosen = []
+        for item in entries:
+            decision = decisions.get(item['model'] + '|' + item['task'] + '|32k', {})
+            if decision.get('proceed') is not True:
+                continue
+            if not isinstance(decision.get('reason'), str) or not decision['reason'].strip() or not decision.get('evidence'):
+                raise RuntimeError('manual progress reason/evidence required')
+            base = ROOT / 'openrouter-paid' / item['model'].replace('/', '--')
+            result = json.loads((base / (item['task'] + '-result.json')).read_text())
+            prior = json.loads((base / (item['task'] + '-request.json')).read_text())
+            if result['choices'][0].get('finish_reason') != 'length' or prior['prompt_sha256'] != item['prompt_sha256']:
+                raise RuntimeError('not a matched capped baseline')
+            chosen.append(item)
+        entries = chosen
+        if not entries:
+            print(json.dumps({'status': 'no_manually_qualified_tasks'}), flush=True)
+            return
     for item in entries:
         body = item['body']
         assert body['model'] == item['model'] and set(body) == {'model', 'messages', 'stream', 'temperature', 'max_tokens', 'reasoning', 'provider', 'seed'}
-        assert body['max_tokens'] == 8192 and body['seed'] == 42 and body['temperature'] == 0
+        assert body['max_tokens'] == token_cap and body['seed'] == 42 and body['temperature'] == 0
         assert body['provider']['allow_fallbacks'] is False and body['provider']['require_parameters'] is True
         assert body['provider']['max_price']['request'] == body['provider']['max_price']['image'] == 0
-    OUT.mkdir(exist_ok=True)
-    if any(OUT.glob('*/*-error.json')):
+    out.mkdir(exist_ok=True)
+    if any(out.glob('*/*-error.json')):
         print(json.dumps({'status': 'saved_error_requires_review'}), flush=True)
         return
     key = key_from_file()
@@ -74,19 +94,28 @@ def main():
     with (ROOT / 'openrouter-space-bunny-alpha' / '.collection.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         free = ROOT / 'openrouter-space-bunny-alpha'
+        if conditional:
+            baseline = json.loads((ROOT / 'openrouter-paid/billing.json').read_text())
+            if len(baseline['attempts']) != 21 or any(a['status'] != 'completed' for a in baseline['attempts']):
+                print(json.dumps({'status': 'baseline_not_complete'}), flush=True)
+                return
+            diagnostic = ROOT / 'openrouter-space-bunny-alpha-16k'
+            if any(not (diagnostic / (task + '-result.json')).exists() and not (diagnostic / (task + '-error.json')).exists() for task in ('multifile', 'debugging', 'regression', 'hard-selection')):
+                print(json.dumps({'status': 'free16k_not_complete'}), flush=True)
+                return
         if not (free / 'hard-review-result.json').exists() and not any(free.glob('*-error.json')):
             print(json.dumps({'status': 'free_round_incomplete'}), flush=True)
             return
-        ledger_path = OUT / 'billing.json'
-        ledger = json.loads(ledger_path.read_text()) if ledger_path.exists() else {'cap_usd': CAP, 'owner_cap_usd': 1, 'list_sha256': LIST_HASH, 'initial': billing(), 'attempts': []}
-        if ledger['list_sha256'] != LIST_HASH or ledger['cap_usd'] != CAP:
+        ledger_path = out / 'billing.json'
+        ledger = json.loads(ledger_path.read_text()) if ledger_path.exists() else {'cap_usd': CAP, 'owner_cap_usd': 1, 'list_sha256': list_hash, 'initial': billing(), 'attempts': []}
+        if ledger['list_sha256'] != list_hash or ledger['cap_usd'] != CAP:
             raise RuntimeError('billing ledger mismatch')
         if any(x['status'] != 'completed' for x in ledger['attempts']):
             print(json.dumps({'status': 'uncertain_attempt_requires_review'}), flush=True)
             return
         ledger_path.write_text(json.dumps(ledger, indent=2) + '\n')
         for item in entries:
-            folder = OUT / item['model'].replace('/', '--')
+            folder = out / item['model'].replace('/', '--')
             folder.mkdir(exist_ok=True)
             prefix = folder / item['task']
             if any(Path(str(prefix) + suffix).exists() for suffix in ('-request.json', '-result.json', '-error.json')):

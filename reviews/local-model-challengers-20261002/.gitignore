@@ -6,3 +6,5 @@ __pycache__/
 openrouter-paid/billing.json
 
 .collection.lock
+
+openrouter-paid32k/billing.json
