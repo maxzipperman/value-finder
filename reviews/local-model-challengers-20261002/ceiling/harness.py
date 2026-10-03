@@ -160,6 +160,8 @@ def source_bundle():return {p.name:p.read_text() for p in (ROOT/'reference').glo
 
 # Single independent substitutions. Each must be killed by trusted checks before inference.
 MUTATIONS={
+ 'lexical_quote_order':('quotes.py','observed>old[0]',"row['observed_at']>picked[key]['row']['observed_at']"),
+ 'ignore_quote_id_tie':('quotes.py'," or (observed==old[0] and row['id']<old[1])",''),
  'inclusive_expiry':('quotes.py','at<expiry','at<=expiry'),
  'ignore_update_vintage':('quotes.py','and update<=observed',''),
  'future_quotes':('quotes.py','observed<=at<expiry','at<expiry'),
@@ -183,6 +185,11 @@ def mutants():
     for name,(file,old,new) in MUTATIONS.items():
         assert base[file].count(old)==1,(name,'nonunique mutation')
         bundle=base|{file:base[file].replace(old,new)};out[name]=load(bundle)
+    bundle=base.copy()
+    old="            if not (observed<=at<expiry and update<=observed):\n                continue\n"
+    assert bundle['quotes.py'].count(old)==1
+    bundle['quotes.py']=bundle['quotes.py'].replace(old,'').replace('    return picked',"    return {key:item for key,item in picked.items() if instant(item['row']['observed_at'])<=at<instant(item['row']['expires_at']) and instant(item['row']['last_update'])<=instant(item['row']['observed_at'])}")
+    out['filter_after_quote_reduction']=load(bundle)
     return out
 
 

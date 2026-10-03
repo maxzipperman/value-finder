@@ -1,0 +1,27 @@
+{
+  "sha256": {
+    "ceiling/CONTRACT.md": "f39854904ad3980e66407f4a29fd79c03745340191c06a5823f1c678b901d21a",
+    "ceiling/grade.py": "c45eaa82b25df9225aeabfee7acd4a27da69b2c0861753eb7f55559f5475ea6f",
+    "ceiling/harness.py": "6702a0acfc19e4c2e9bf5c8629d3d939546a87c237654b379ef1ed4a0b89a8ed",
+    "ceiling/prompts.json": "5159cfd6a6bdb05beee2c20a1024163b1c7773db57d3a1a26bbf9872446db46b",
+    "ceiling/reference/pipeline.py": "c891456285ba5f4221e183a8a63dc21a22ff26ea16c28637365e01ea06101cc8",
+    "ceiling/reference/quotes.py": "26036a33352a5ed528413964b7ea5276ecef9025ae61f170efb2f49cc350d162",
+    "ceiling/reference/runs.py": "d56b87356bb3547ad0c9d8af4df423877081554dcf4f0d3c03d2698459a35946",
+    "ceiling/reference/times.py": "461b076f1e7e9b0b526e492da1189e92b5e42a84783cd5c5826513aab87ef848",
+    "ceiling/review-inventory.json": "515cca1c70c481c6cbf3a6e8c333350ff16767b5c42d8aa0401cb9068726b996",
+    "ceiling/review-source.json": "f0e2de8b9dcd4dd3afd9abf6b92f5eaf73247b88f293aa3168975c2036145ea6",
+    "ceiling/review-validation.json": "41749154fdbb329c84866457ef60f61b10621535be6ad0dd8eefb223733e40c0",
+    "ceiling/validation.json": "0d7110dea1b04b46ad048c60fff02a7627f4ec48d40d15fbee4ad8cfbeb31b6a",
+    "ceiling-api-requests.json": "6598a6f7d46f5c3df685fc33100219f4eea6d9d481d4d35c916f0872ec997601",
+    "ceiling-local-requests.json": "ca2412b630c3b6f13ebd347f4640be12c8be9c3582d148b47623e11380586d69",
+    "ceiling_api.py": "c9bcf3c4262c769c6e40f034e381f2913958f6f2220031439d3c0c7df0d2ba0e",
+    "ceiling_local.py": "27f47bd9698432ca0cfc115a182bd6501fac620914b880d8be7c98017b3e7e78",
+    "inventory.json": "3d2c0c2b782065f79d5806da2a5d43d250e8214a1ff7e69f6383098ece7b065a",
+    "openrouter-glm-endpoints.json": "5fff0e38f2c46784c46c616fadd165db123b0c04256153af97e4df3be24c7f7a",
+    "openrouter-inventory.json": "b7dd5e5308fa52d46ecb5d2640ef418551ef84010e8b6c2ed9d4b9345aa30279",
+    "openrouter_budget.py": "e5f70bbed7b5118abaaa36e1fe2558fc53a7747d193325f1023787ddcc21e496",
+    "openrouter_free.py": "6412962e97196f1b8d6882b4f5ed523470c00489f561534e9b35625c3a67201e",
+    "openrouter_paid.py": "99100e8fd9091f969234d824b7d90babdf7c2f128b6799f0a1b8ed9f3ff2136e"
+  },
+  "note": "Frozen before stress inference. Does not contain outcome data/hidden feedback in requests. Author validation, independent signoff pending."
+}

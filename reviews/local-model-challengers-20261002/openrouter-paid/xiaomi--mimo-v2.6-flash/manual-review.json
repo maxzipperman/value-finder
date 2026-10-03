@@ -1,0 +1,29 @@
+{
+  "review": {
+    "real_seeded_causes": 4,
+    "additional_valid_causes": [
+      "Lexical rather than absolute snapshot ordering"
+    ],
+    "false_findings": 0,
+    "duplicate_findings": 0,
+    "inaccuracies": [
+      "Claim that latest is never returned overstates cases with a single eligible row/all equal snapshots."
+    ],
+    "formatting": [
+      "Markdown JSON fence despite JSON-only request"
+    ],
+    "reviewer": "author semantic review against frozen supplied contract"
+  },
+  "hard-review": {
+    "real_causes": 5,
+    "false_findings": 0,
+    "duplicate_findings": 0,
+    "inaccuracies": [
+      "Negative probability statement should except -100 where both formulas equal0.5."
+    ],
+    "formatting": [
+      "Markdown JSON fence despite JSON-only request"
+    ],
+    "reviewer": "author semantic review against frozen hard contract"
+  }
+}

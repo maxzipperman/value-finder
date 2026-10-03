@@ -1,8 +1,14 @@
 {
   "cases": 182,
   "oracle_passed": 182,
-  "mutants": 16,
+  "mutants": 19,
   "mutant_failures": {
+    "lexical_quote_order": [
+      "abs offset latest"
+    ],
+    "ignore_quote_id_tie": [
+      "absolute tie smallest id"
+    ],
     "inclusive_expiry": [
       "expiry exact cannot suppress",
       "interaction expiryok0",
@@ -526,11 +532,41 @@
       "permutation/replay True1",
       "permutation/replay True2",
       "permutation/replay True5"
+    ],
+    "filter_after_quote_reduction": [
+      "future cannot suppress",
+      "expiry exact cannot suppress",
+      "update vintage cannot suppress",
+      "first invalid quote tie skipped",
+      "interaction futureok0",
+      "interaction futureok-5",
+      "interaction futurepartial0",
+      "interaction futurepartial-5",
+      "interaction futurefailed0",
+      "interaction futurefailed-5",
+      "interaction futurepending0",
+      "interaction futurepending-5",
+      "interaction expiryok0",
+      "interaction expiryok-5",
+      "interaction expirypartial0",
+      "interaction expirypartial-5",
+      "interaction expiryfailed0",
+      "interaction expiryfailed-5",
+      "interaction expirypending0",
+      "interaction expirypending-5",
+      "interaction vintageok0",
+      "interaction vintageok-5",
+      "interaction vintagepartial0",
+      "interaction vintagepartial-5",
+      "interaction vintagefailed0",
+      "interaction vintagefailed-5",
+      "interaction vintagepending0",
+      "interaction vintagepending-5"
     ]
   },
   "sha256": {
     "CONTRACT.md": "f39854904ad3980e66407f4a29fd79c03745340191c06a5823f1c678b901d21a",
-    "harness.py": "ba4d536ff9aa5d9f0decd472480039bab2ba0b55ca3e79046eaf9455b7e944a0",
+    "harness.py": "6702a0acfc19e4c2e9bf5c8629d3d939546a87c237654b379ef1ed4a0b89a8ed",
     "reference/pipeline.py": "c891456285ba5f4221e183a8a63dc21a22ff26ea16c28637365e01ea06101cc8",
     "reference/quotes.py": "26036a33352a5ed528413964b7ea5276ecef9025ae61f170efb2f49cc350d162",
     "reference/runs.py": "d56b87356bb3547ad0c9d8af4df423877081554dcf4f0d3c03d2698459a35946",

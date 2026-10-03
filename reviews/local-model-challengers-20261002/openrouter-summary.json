@@ -1530,6 +1530,47 @@
           "image_tokens": 0,
           "audio_tokens": 0
         }
+      },
+      "acceptance": {
+        "passed": 5,
+        "cases": 5,
+        "checks": [
+          {
+            "case": "future/update-after-snapshot not gated",
+            "passed": true
+          },
+          {
+            "case": "negative odds wrong probability",
+            "passed": true
+          },
+          {
+            "case": "input mutated",
+            "passed": true
+          },
+          {
+            "case": "oldest snapshot chosen",
+            "passed": true
+          },
+          {
+            "case": "all findings point to seeded causes",
+            "passed": true
+          }
+        ]
+      },
+      "manual_review": {
+        "real_seeded_causes": 4,
+        "additional_valid_causes": [
+          "Lexical rather than absolute snapshot ordering"
+        ],
+        "false_findings": 0,
+        "duplicate_findings": 0,
+        "inaccuracies": [
+          "Claim that latest is never returned overstates cases with a single eligible row/all equal snapshots."
+        ],
+        "formatting": [
+          "Markdown JSON fence despite JSON-only request"
+        ],
+        "reviewer": "author semantic review against frozen supplied contract"
       }
     },
     {
@@ -1588,6 +1629,16 @@
           "image_tokens": 0,
           "audio_tokens": 0
         }
+      },
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "exact fact extraction and schema",
+            "passed": true
+          }
+        ]
       }
     },
     {
@@ -1595,7 +1646,7 @@
       "task": "hard-selection",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "pending",
+      "status": "result",
       "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1618,14 +1669,53 @@
         "seed": 42
       },
       "deadline_seconds": 600,
-      "request_sha256": "7c43b7b2cfa67c1a1c54ba8d4049d8419ebaf3ce2c4d270b89edfff103b82173"
+      "request_sha256": "7c43b7b2cfa67c1a1c54ba8d4049d8419ebaf3ce2c4d270b89edfff103b82173",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 100.55375716701383,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 258,
+        "completion_tokens": 8192,
+        "total_tokens": 8450,
+        "cost": 0.00232472,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00232472,
+          "upstream_inference_prompt_cost": 3.096e-05,
+          "upstream_inference_completions_cost": 0.00229376
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 8193,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Length8192 empty final"
+          }
+        ]
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "hard-review",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "not_started",
+      "status": "result",
       "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1647,7 +1737,80 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "84ac8d29752d05c648b40c21f4f6e664e1fab7f60f271ce89da45f143c14b296",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 107.65888345899293,
+      "finish_reason": "stop",
+      "final_answer_bytes": 1860,
+      "usage": {
+        "prompt_tokens": 392,
+        "completion_tokens": 7331,
+        "total_tokens": 7723,
+        "cost": 0.00209972,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00209972,
+          "upstream_inference_prompt_cost": 4.704e-05,
+          "upstream_inference_completions_cost": 0.00205268
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6857,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "line localization only; manual explanation review required",
+            "passed": true,
+            "findings": [
+              {
+                "line": 6,
+                "explanation": "The newest row per book is chosen by lexicographic comparison of the raw observed_at strings rather than by parsed absolute instants; with mixed offsets/Z suffixes or differing fractional-second spellings (e.g. '...T14:00:00+02:00' vs '...T12:30:00Z', or '.5Z' vs 'Z', 'T' vs space separator) string order is not chronological, so a chronologically earlier row can be treated as latest and equal instants written differently are not recognized as ties."
+              },
+              {
+                "line": 6,
+                "explanation": "No id tie-break: when two rows of the same book share the same observed_at instant the contract requires the smallest id to win, but the strict '>' test simply keeps the first-encountered row, so id ordering is never consulted (only the identical-string case accidentally falls back to the first input row)."
+              },
+              {
+                "line": 7,
+                "explanation": "A single row per book is committed to latest[] before eligibility is known, and the eligibility test at line 12 is applied only to that pre-selected row; if the newest row is in the future or already expired the whole book is omitted instead of falling back to the latest eligible row, so ineligible rows suppress eligible alternatives (an interaction of this premature reduction with the later filter, compounded by the string-based ordering above)."
+              },
+              {
+                "line": 12,
+                "explanation": "The upper bound is inclusive ('asof <= expires') while the contract requires observed_at <= asof < expires_at, so a row whose expires_at equals asof is wrongly counted as eligible."
+              },
+              {
+                "line": 13,
+                "explanation": "Implied probability is always computed as 100/(|odds|+100); that formula is valid only for positive American odds \u2014 negative odds -X must yield X/(X+100), so abs() discards the sign and e.g. -150 returns 0.4 instead of 0.6."
+              }
+            ]
+          }
+        ]
+      },
+      "manual_review": {
+        "real_causes": 5,
+        "false_findings": 0,
+        "duplicate_findings": 0,
+        "inaccuracies": [
+          "Negative probability statement should except -100 where both formulas equal0.5."
+        ],
+        "formatting": [
+          "Markdown JSON fence despite JSON-only request"
+        ],
+        "reviewer": "author semantic review against frozen hard contract"
+      }
     },
     {
       "model": "stealth/space-bunny-alpha",

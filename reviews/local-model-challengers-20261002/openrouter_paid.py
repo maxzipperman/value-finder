@@ -35,13 +35,13 @@ def reservation(item):
     return ((len(body['messages'][0]['content'].encode()) + 256) * prices['prompt'] + body['max_tokens'] * prices['completion']) / 1_000_000
 
 
-def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False, mimo_only=False):
+def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False, mimo_only=False, ceiling=False):
     out = ROOT / output
     raw = (ROOT / request_file).read_bytes()
     if hashlib.sha256(raw).hexdigest() != list_hash:
         raise RuntimeError('request list changed; review required')
     entries = [x for x in json.loads(raw)['requests'] if x['model'] in MODELS]
-    assert len(entries) == (18 if conditional else 21) and sum(reservation(x) for x in entries) < CAP
+    assert len(entries) == (9 if ceiling else 18 if conditional else 21) and sum(reservation(x) for x in entries) < CAP
     if mimo_only:
         if conditional or output != 'openrouter-paid':
             raise RuntimeError('subset only applies to original baseline')
@@ -69,8 +69,9 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
             return
     for item in entries:
         body = item['body']
-        assert body['model'] == item['model'] and set(body) == {'model', 'messages', 'stream', 'temperature', 'max_tokens', 'reasoning', 'provider', 'seed'}
-        assert body['max_tokens'] == token_cap and body['seed'] == 42 and body['temperature'] == 0
+        expected = {'model', 'messages', 'stream', 'temperature', 'max_tokens', 'reasoning', 'provider', 'seed'} | ({'top_p'} if ceiling else set())
+        assert body['model'] == item['model'] and set(body) == expected
+        assert body['max_tokens'] == token_cap and body['seed'] == 42 and body['temperature'] == (1 if ceiling else 0)
         assert body['provider']['allow_fallbacks'] is False and body['provider']['require_parameters'] is True
         assert body['provider']['max_price']['request'] == body['provider']['max_price']['image'] == 0
     out.mkdir(exist_ok=True)
@@ -102,7 +103,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
     with (ROOT / 'openrouter-space-bunny-alpha' / '.collection.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         free = ROOT / 'openrouter-space-bunny-alpha'
-        if conditional:
+        if conditional or ceiling:
             baseline = json.loads((ROOT / 'openrouter-paid/billing.json').read_text())
             if not baseline_terminal(ROOT, baseline):
                 print(json.dumps({'status': 'baseline_not_complete'}), flush=True)
@@ -160,6 +161,8 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
                 Path(str(prefix) + '-result.json').write_text(json.dumps(result, indent=2) + '\n')
                 if 'error' in result or result.get('model') not in (item['model'], frozen['canonical_slug']):
                     raise RuntimeError('upstream error or unexpected response model')
+                if ceiling and item['model']=='z-ai/glm-5.3-flash' and result.get('provider')!='DeepInfra':
+                    raise RuntimeError('unexpected pinned GLM provider')
                 cost = number(result['usage']['cost'])
                 attempt['reported_usd'] = cost
                 attempt['accounted_usd'] = max(cost, amount)

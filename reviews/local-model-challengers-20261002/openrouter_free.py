@@ -39,7 +39,7 @@ def key_from_file():
     return values[0]
 
 
-def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-space-bunny-alpha', count=7, token_cap=8192):
+def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-space-bunny-alpha', count=7, token_cap=8192, ceiling=False):
     out = ROOT / output
     raw = (ROOT / request_file).read_bytes()
     if hashlib.sha256(raw).hexdigest() != list_hash:
@@ -48,7 +48,8 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
     assert len(entries) == count
     for item in entries:
         body = item['body']
-        assert body['model'] == MODEL and set(body) == {'model', 'messages', 'stream', 'temperature', 'max_tokens', 'reasoning', 'provider'}
+        expected={'model', 'messages', 'stream', 'temperature', 'max_tokens', 'reasoning', 'provider'} | ({'top_p'} if ceiling else set())
+        assert body['model'] == MODEL and set(body) == expected
         assert body['provider']['max_price'] == {'prompt': 0, 'completion': 0, 'request': 0, 'image': 0}
         assert body['provider']['allow_fallbacks'] is False and body['max_tokens'] == token_cap
     out.mkdir(exist_ok=True)
@@ -109,7 +110,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
                 error = {'type': type(exc).__name__, 'wall_seconds': time.monotonic() - start}
                 if isinstance(exc, urllib.error.HTTPError):
                     error['http_status'] = exc.code
-                    error['body'] = exc.read(8192).decode(errors='replace').replace(key, '[REDACTED]')
+                    error['body'] = '[HTTP error body omitted to avoid account identifiers]'
                 else:
                     error['message'] = str(exc).replace(key, '[REDACTED]')
                 Path(str(prefix) + '-error.json').write_text(json.dumps(error, indent=2) + '\n')

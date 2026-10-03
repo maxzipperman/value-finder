@@ -1,0 +1,24 @@
+```json
+[
+  {
+    "line": 6,
+    "explanation": "The newest row per book is chosen by lexicographic comparison of the raw observed_at strings rather than by parsed absolute instants; with mixed offsets/Z suffixes or differing fractional-second spellings (e.g. '...T14:00:00+02:00' vs '...T12:30:00Z', or '.5Z' vs 'Z', 'T' vs space separator) string order is not chronological, so a chronologically earlier row can be treated as latest and equal instants written differently are not recognized as ties."
+  },
+  {
+    "line": 6,
+    "explanation": "No id tie-break: when two rows of the same book share the same observed_at instant the contract requires the smallest id to win, but the strict '>' test simply keeps the first-encountered row, so id ordering is never consulted (only the identical-string case accidentally falls back to the first input row)."
+  },
+  {
+    "line": 7,
+    "explanation": "A single row per book is committed to latest[] before eligibility is known, and the eligibility test at line 12 is applied only to that pre-selected row; if the newest row is in the future or already expired the whole book is omitted instead of falling back to the latest eligible row, so ineligible rows suppress eligible alternatives (an interaction of this premature reduction with the later filter, compounded by the string-based ordering above)."
+  },
+  {
+    "line": 12,
+    "explanation": "The upper bound is inclusive ('asof <= expires') while the contract requires observed_at <= asof < expires_at, so a row whose expires_at equals asof is wrongly counted as eligible."
+  },
+  {
+    "line": 13,
+    "explanation": "Implied probability is always computed as 100/(|odds|+100); that formula is valid only for positive American odds — negative odds -X must yield X/(X+100), so abs() discards the sign and e.g. -150 returns 0.4 instead of 0.6."
+  }
+]
+```

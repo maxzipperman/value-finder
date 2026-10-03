@@ -200,3 +200,6 @@ Original local82 attempts remain final/frozen. Cloud baseline paused on GLM prov
 
 
 PR147 follow-up: GLM4 unattempted baseline requests classified provider-unavailable after2 distinct520 failures; MiMo-only original7 collection active. Synthetic ceiling harness passes182 reference cases and kills16 mutants; full interface checks197. Draft10-cause review/control and prompts built; resource/model manifest/freeze and inference pending. No final allocation or independent extension signoff.
+
+
+PR147 October3 ceiling freeze: baseline terminal17 paid attempts+4GLM provider-unavailable deferrals, reported$0.055236609,reserved$0.10296242. MiMo reviews4seeded+offset and hard5/5, exact extraction; coding empty8192. New integrated182-case/19-mutant round frozen before inference:18local +12API,local32K/64Kctx,API64K/3600s,paid9 maximum estimate$0.40233936 under combined owner$1 guard. GLM stress explicitly pins DeepInfraFP4 after preserved Relace errors. Author-only methodology; final hub allocation pending.
