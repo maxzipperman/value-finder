@@ -60,6 +60,9 @@ def capture(tmp_path, monkeypatch, capsys, now, events):
     fwd = tmp_path / "data" / "forward"
     text = (fwd / "closes.csv").read_text() if (fwd / "closes.csv").exists() else ""
     state = json.loads((fwd / "close_state.json").read_text()) if (fwd / "close_state.json").exists() else None
+    # Existing registration assertions concern captured/tries; the application
+    # journal is verified by the real-admission crash/restart tests below.
+    if state is not None: state.pop("applied_observations", None)
     return text, state, capsys.readouterr().out
 
 
@@ -94,12 +97,12 @@ def test_two_feed_events_equally_near_kickoff_are_left_unmatched_and_reported(tm
     events = [event("Alabama", "Auburn", "2026-11-28T20:30:00Z", RIGHT),
               event("Alabama", "Auburn", "2026-11-28T20:30:00Z", WRONG, eid="relisted"),
               event("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)]
-    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-11-28T20:12:00Z", events)
     assert text.splitlines()[1] == ",401,2026-11-28T20:30:00Z,Alabama,Auburn,,,,"         # recorded as missing
     assert scorer_reads(tmp_path) == {402: 55.5}
     assert "2 are equally good and equally near the kickoff, so none is kept and the close is missing" in out
     assert state == {"captured": [], "tries": {"2026-11-28T20:30Z": 1}}       # retried, as for any missing close
-    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-11-28T20:25:00Z", events)
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-11-28T20:27:00Z", events)
     assert state["tries"]["2026-11-28T20:30Z"] == 2 and "2026-11-28T20:30Z" in state["captured"]   # at most two calls
     assert scorer_reads(tmp_path) == {402: 55.5}
 
@@ -217,7 +220,9 @@ def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
     assert "feed event" not in out and "listing" not in out
 
 
-# ------------------------------------------------------------------ ordinary slots: unchanged, byte for byte
+# ------------------------------------------------------------------ ordinary rows per conclusive observation
+# Two-observation fixtures use eligible successive scheduled ticks; same-tick
+# restarts are covered separately and must not count as another observation.
 # The expected files are what origin/main's script (commit e83c7f8, before this change) wrote from these same
 # made-up responses. Feed events of games not due (Michigan, earlier that day) and a feed name no school matches are
 # ignored.
@@ -233,17 +238,17 @@ ORDINARY = {
         "2026-11-28T20:15:00Z,402,2026-11-28T20:30:00Z,Georgia,Georgia Tech,draftkings,55.5,-112,-108\n",
         {"captured": ["2026-11-28T20:30Z"], "tries": {"2026-11-28T20:30Z": 1}}),
     "no rule-book price for one game: retried once, then closed": (
-        [(NOW, [event("Alabama", "Auburn", "2026-11-28T20:30:00Z", RIGHT),
+        [("2026-11-28T20:12:00Z", [event("Alabama", "Auburn", "2026-11-28T20:30:00Z", RIGHT),
                 event("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", {"fanduel": (55.5, -110, -110)})]),
-         ("2026-11-28T20:25:00Z", [event("Alabama", "Auburn", "2026-11-28T20:31:00Z", RIGHT),
+         ("2026-11-28T20:27:00Z", [event("Alabama", "Auburn", "2026-11-28T20:31:00Z", RIGHT),
                                    event("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z",
                                            {"fanduel": (55.0, -110, -110)})]),
-         ("2026-11-28T20:27:00Z", [event("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)])],
+         ("2026-11-28T20:42:00Z", [event("Georgia", "Georgia Tech", "2026-11-28T20:30:00Z", UGA)])],
         HEADER
-        + "2026-11-28T20:15:00Z,401,2026-11-28T20:30:00Z,Alabama,Auburn,pinnacle,48.5,-105.0,-115.0\n"
-        "2026-11-28T20:15:00Z,402,2026-11-28T20:30:00Z,Georgia,Georgia Tech,,,,\n"
-        "2026-11-28T20:25:00Z,401,2026-11-28T20:30:00Z,Alabama,Auburn,pinnacle,48.5,-105.0,-115.0\n"
-        "2026-11-28T20:25:00Z,402,2026-11-28T20:30:00Z,Georgia,Georgia Tech,,,,\n"
+        + "2026-11-28T20:12:00Z,401,2026-11-28T20:30:00Z,Alabama,Auburn,pinnacle,48.5,-105.0,-115.0\n"
+        "2026-11-28T20:12:00Z,402,2026-11-28T20:30:00Z,Georgia,Georgia Tech,,,,\n"
+        "2026-11-28T20:27:00Z,401,2026-11-28T20:30:00Z,Alabama,Auburn,pinnacle,48.5,-105.0,-115.0\n"
+        "2026-11-28T20:27:00Z,402,2026-11-28T20:30:00Z,Georgia,Georgia Tech,,,,\n"
         ",404,2026-11-28T20:45:00Z,Navy,Army,,,,\n"
         ",404,2026-11-28T20:45:00Z,Navy,Army,,,,\n",
         {"captured": ["2026-11-28T20:30Z", "2026-11-28T20:45Z"],
@@ -265,3 +270,69 @@ def test_an_ordinary_slot_writes_exactly_what_it_wrote_before(tmp_path, monkeypa
         assert "feed event" not in out and "listing" not in out  # no duplicate, nothing to report
     assert text == want_csv
     assert state == want_state
+
+
+@pytest.mark.parametrize('crash_after',[None,'csv','state'])
+def test_real_account_close_restart_does_not_resend_reapply_or_consume_second_try(tmp_path,monkeypatch,crash_after):
+    from cfbweather import quota
+    from ops import close_observation
+    from ops.shared_account_testkit import synthetic_account
+    monkeypatch.setattr(config,'ROOT',tmp_path);monkeypatch.setattr(fetch,'RAW',tmp_path/'raw')
+    monkeypatch.setattr(build,'schedules',lambda:SCHEDULE.copy())
+    monkeypatch.setattr(board,'odds_team_names',lambda:NAMES)
+    monkeypatch.setenv('ODDS_API_KEY','SYNTHETIC_CLOSE')
+    monkeypatch.setattr(quota,'STATE',tmp_path/'quota.json');monkeypatch.setattr(quota,'check',lambda:None)
+    params=dict(bookmakers=','.join(fetch.LIVE_BOOKS),markets='totals',oddsFormat='american',dateFormat='iso')
+    def run(now):
+        monkeypatch.setattr(sys,'argv',['capture_close.py','--now',now])
+        try:runpy.run_path(str(ROOT/'scripts'/'capture_close.py'),run_name='__main__')
+        except SystemExit:pass
+    with synthetic_account(tmp_path/'account','SYNTHETIC_CLOSE',params) as (session,account):
+        monkeypatch.setattr(fetch,'session',session)
+        session.body=json.dumps([event('Alabama','Auburn','2026-11-28T20:30:00Z',RIGHT)]) # Georgia missing
+        if crash_after:
+            original=close_observation._write
+            def crash(path,text):
+                original(path,text)
+                if path.name==('closes.csv' if crash_after=='csv' else 'close_state.json'):
+                    raise OSError('synthetic death after durable '+crash_after)
+            with monkeypatch.context() as patcher:
+                patcher.setattr(close_observation,'_write',crash)
+                with pytest.raises(OSError):run('2026-11-28T20:12:00Z')
+        else:run('2026-11-28T20:12:00Z')
+        csv=tmp_path/'data'/'forward'/'closes.csv';before=csv.read_bytes()
+        run('2026-11-28T20:12:30Z')
+        state=json.loads((csv.parent/'close_state.json').read_text())
+        assert state['tries']=={'2026-11-28T20:30Z':1} and state['captured']==[]
+        assert csv.read_bytes()==before and len(session.calls)==1 and len(account()['attempts'])==1
+        run('2026-11-28T20:27:00Z')
+        state=json.loads((csv.parent/'close_state.json').read_text())
+        assert state['tries']['2026-11-28T20:30Z']==2 and '2026-11-28T20:30Z' in state['captured']
+        assert len(session.calls)==2 and len(account()['attempts'])==2
+        assert len(state['applied_observations'])==2
+
+
+@pytest.mark.parametrize('failure',[False,True])
+def test_real_empty_receipt_is_marked_but_uncertain_fallback_is_not(tmp_path,monkeypatch,failure):
+    from cfbweather import quota
+    from ops.shared_account_testkit import synthetic_account
+    monkeypatch.setattr(config,'ROOT',tmp_path);monkeypatch.setattr(fetch,'RAW',tmp_path/'raw')
+    monkeypatch.setattr(build,'schedules',lambda:SCHEDULE.copy());monkeypatch.setattr(board,'odds_team_names',lambda:NAMES)
+    monkeypatch.setenv('ODDS_API_KEY','SYNTHETIC_CLOSE');monkeypatch.setattr(quota,'check',lambda:None)
+    monkeypatch.setattr(quota,'STATE',tmp_path/'quota.json')
+    params=dict(bookmakers=','.join(fetch.LIVE_BOOKS),markets='totals',oddsFormat='american',dateFormat='iso')
+    def run(now):
+        monkeypatch.setattr(sys,'argv',['capture_close.py','--now',now])
+        try:runpy.run_path(str(ROOT/'scripts'/'capture_close.py'),run_name='__main__')
+        except SystemExit:pass
+    with synthetic_account(tmp_path/'account','SYNTHETIC_CLOSE',params) as (session,account):
+        monkeypatch.setattr(fetch,'session',session)
+        if failure:session.failure=TimeoutError('synthetic uncertainty')
+        run('2026-11-28T20:12:00Z');run('2026-11-28T20:12:30Z')
+        state=tmp_path/'data'/'forward'/'close_state.json'
+        assert len(session.calls)==1
+        if failure:assert not state.exists()
+        else:assert len(json.loads(state.read_text())['applied_observations'])==1
+        run('2026-11-28T20:27:00Z')
+        assert len(session.calls)==(1 if failure else 2)
+        if failure:assert next(iter(account()['attempts'].values()))['state']=='pending'

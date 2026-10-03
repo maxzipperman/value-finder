@@ -289,6 +289,7 @@ class GuardTests(unittest.TestCase):
         kicks=['synthetic-kickoff'];tries={}
         a=g.close_slot(kicks,tries,t);b=g.close_slot(kicks,tries,t+timedelta(minutes=15))
         self.assertNotEqual(a,b)
+        self.assertEqual(a,g.close_slot(['newly-due'],{'newly-due':1},t+timedelta(seconds=1)))
         s=Session();self.send(s,label='nfl-close',slot=a);self.send(s,label='nfl-close',slot=a)
         self.send(s,label='nfl-close',slot=b)
         self.assertEqual(len(s.calls),2)  # planned observation, no automatic resend
@@ -480,7 +481,7 @@ class RolePropagationTests(unittest.TestCase):
             now=datetime.now(timezone.utc)
             ns=dict(oddsapi=SimpleNamespace(live=capture),fetch=SimpleNamespace(odds_api_totals=capture),
                     odds_team_names=lambda:{},close_slot=g.close_slot,slots=['kick'],state={'tries':{}},
-                    now=SimpleNamespace(to_pydatetime=lambda:now))
+                    now=SimpleNamespace(to_pydatetime=lambda:now),observation=g.close_slot(['kick'],{},now))
             eval(compile(ast.Expression(body=node),str(path),'eval'),ns)
             self.assertEqual(seen[0]['role'],f'{sport}-close')
             self.assertEqual(seen[0]['request_slot'],g.close_slot(['kick'],{},now))

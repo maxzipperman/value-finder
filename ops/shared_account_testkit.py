@@ -36,6 +36,7 @@ def synthetic_account(root, key, params, *, ceiling=900):
     class FakeSession:
         calls=[]
         failure=None
+        body="[]"
         def get_adapter(self,url):return SimpleNamespace(max_retries=SimpleNamespace(total=0))
         def get(self,url,**kwargs):
             attempts=state()['attempts']
@@ -45,7 +46,7 @@ def synthetic_account(root, key, params, *, ceiling=900):
             if self.failure:raise self.failure
             used=100+sum(a['reserved'] for a in attempts.values())
             pending=next(a for a in attempts.values() if a['state']=='pending')
-            return SimpleNamespace(status_code=200,text='[]',headers={
+            return SimpleNamespace(status_code=200,text=self.body,headers={
                 'x-requests-last':str(pending['reserved']),
                 'x-requests-used':str(used),'x-requests-remaining':str(50000-used)})
     session=FakeSession()

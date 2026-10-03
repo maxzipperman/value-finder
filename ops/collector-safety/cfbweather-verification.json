@@ -30,6 +30,7 @@
     "cfb-weather/tests/test_quota.py",
     "nfl-weather/scripts/alerts.py",
     "nfl-weather/scripts/capture_close.py",
+    "ops/close_observation.py",
     "ops/collector-safety/cfbweather-verification.json",
     "ops/collector_guard.py",
     "ops/install_live_uses.sh",

@@ -166,13 +166,13 @@ def slot(now, seconds):
 
 
 def close_slot(kickoff_slots, tries, now):
-    """Identity for one scheduled close observation, stable within its 15m tick.
+    """Identity for one scheduled close observation, independent of mutable selection/state.
 
     A next scheduled tick may observe again after a conclusive empty answer;
     pending/failed account state still blocks all later IDs before transport.
     This helper never decides eligibility or updates the registered try count.
     """
-    return "|".join(f"{s}:{tries.get(s, 0)}" for s in sorted(kickoff_slots)) + ":" + slot(now, 900)
+    return "close:" + slot(now, 900)
 
 
 class Response:

@@ -48,9 +48,14 @@ remain the original provider headers, not a new bill.
 No launchd schedules, windows, selections, registration/scoring files or executed
 freezes change. Alerts identify their existing four-hour observation window;
 trigger polls use their existing ten-minute windows; props retain event/offset IDs;
-NBA retains its configured cadence. Close IDs include due kickoff slots, persisted
-try numbers and the scheduled fifteen-minute observation tick. A restart in that
-observation reuses a complete receipt. A later scheduled observation after a
+NBA retains its configured cadence. Close IDs depend only on the scheduled fifteen-minute observation tick; mutable
+try counts and due-slot membership cannot change the ID. Exact URL/params remain
+bound by the account journal, so different requests cannot become cache hits. A restart in that
+observation reuses a complete receipt. A separate durable close application record
+binds original before/after CSV and state bytes; recovery finishes that same record
+without another append or try increment. State records applied observation IDs.
+Successful empty CFB responses are marked without changing existing empty-feed try
+handling; quota/blocked/uncertain fallback frames are not marked. A later scheduled observation after a
 conclusive empty answer gets a distinct ID. An uncertain first send blocks either
 ID. The helper neither decides eligibility nor updates tries: both close scripts
 retain MAX_TRIES2 and scheduled 2–20-minute eligibility, with existing matching and

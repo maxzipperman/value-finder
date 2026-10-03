@@ -58,6 +58,7 @@
     "nfl-weather/tests/test_live.py",
     "nfl-weather/tests/test_oddsapi.py",
     "nfl-weather/tests/test_quota.py",
+    "ops/close_observation.py",
     "ops/collector-safety/cfbweather-verification.json",
     "ops/collector-safety/nflweather-verification.json",
     "ops/collector-safety/test_guard.py",

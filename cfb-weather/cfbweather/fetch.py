@@ -249,7 +249,9 @@ def odds_api_totals(team_names: dict, *, role=None, request_slot=None):
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps({"snapshot_utc": stamp, "credits_last": r.headers.get("x-requests-last"),
                                 "credits_remaining": r.headers.get("x-requests-remaining"), "data": r.json()}))
-    return parse_odds_api(r.json(), team_names, stamp)[cols]
+    result = parse_odds_api(r.json(), team_names, stamp)[cols]
+    result.attrs["admission_conclusive"] = True
+    return result
 
 
 def parse_odds_api(events, team_names, stamp, min_odds=-115):

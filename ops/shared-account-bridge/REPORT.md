@@ -1,4 +1,7 @@
-# Stage 1 implementation evidence
+# Stage 1 initial implementation evidence
+
+**Historical initial head c36b502; NOT READY in independent review (one P2).
+Superseded by REPORT_REPAIR.md and repair evidence.**
 
 Issue #166 / PR #167. October 3, 2026. Author implementation report;
 independent technical disposition and CI are separate.

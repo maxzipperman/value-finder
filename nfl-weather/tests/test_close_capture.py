@@ -58,6 +58,9 @@ def capture(tmp_path, monkeypatch, capsys, now, events):
     fwd = tmp_path / "data" / "forward"
     text = (fwd / "closes.csv").read_text() if (fwd / "closes.csv").exists() else ""
     state = json.loads((fwd / "close_state.json").read_text()) if (fwd / "close_state.json").exists() else None
+    # Existing registration assertions concern captured/tries; the application
+    # journal is verified by the real-admission crash/restart tests below.
+    if state is not None: state.pop("applied_observations", None)
     return text, state, capsys.readouterr().out
 
 
@@ -93,12 +96,12 @@ def test_two_feed_events_equally_near_kickoff_are_left_unmatched_and_reported(tm
     events = [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
               event("e2", "CHI", "PHI", "2026-10-11T17:00:00Z", WRONG),
               event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
-    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:42:00Z", events)
     assert text.splitlines()[1] == "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,"     # recorded as missing
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
     assert "2 are equally good and equally near the kickoff, so none is kept and the close is missing" in out
     assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}       # retried, as for any missing close
-    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", events)
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:57:00Z", events)
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}   # at most two calls
     assert scorer_reads(tmp_path) == {"2026_05_DET_GB": 39.5}
 
@@ -207,22 +210,22 @@ def test_a_feed_with_no_usable_event_records_the_slot_and_says_what_happened(tmp
     the state is written as for any incomplete slot: tried once more, then closed."""
     blank = ("2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,,,,,,\n"
              "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,,,,,,\n")
-    text, state, out = capture(tmp_path, monkeypatch, capsys, NOW, events)
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:42:00Z", events)
     assert text == HEADER + blank
     assert state == {"captured": [], "tries": {"2026-10-11T17:00Z": 1}}
     assert "Pinnacle close for 0/2 games, 0 books logged, for 2026-10-11T17:00Z" in out
     assert said in out and out.count("close capture:") == 2                 # the summary line and this one note
-    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", events)
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:57:00Z", events)
     assert text == HEADER + blank + blank
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}   # at most two calls
     assert oddsapi.parse.__name__ == "parse"                               # the parser is left as it was
 
 
 def test_a_feed_with_no_events_and_then_a_price_records_the_price(tmp_path, monkeypatch, capsys):
-    capture(tmp_path, monkeypatch, capsys, NOW, [])
+    capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:42:00Z", [])
     events = [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
               event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)]
-    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:58:00Z", events)
+    text, state, out = capture(tmp_path, monkeypatch, capsys, "2026-10-11T16:57:00Z", events)
     assert scorer_reads(tmp_path) == {"2026_05_PHI_CHI": 42.5, "2026_05_DET_GB": 39.5}
     assert state == {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}
 
@@ -246,7 +249,9 @@ def test_start_times_in_two_formats_both_match(tmp_path, monkeypatch, capsys):
     assert "feed event" not in out and "listing" not in out
 
 
-# ------------------------------------------------------------------ ordinary slots: unchanged, byte for byte
+# ------------------------------------------------------------------ ordinary rows per conclusive observation
+# Two-observation fixtures use eligible successive scheduled ticks; same-tick
+# restarts are covered separately and must not count as another observation.
 # The expected files are what origin/main's script (commit e83c7f8, before this change) wrote from these same
 # made-up responses. Feed events of games not due (DAL at NYG later that day, BUF at KC next week) are ignored.
 HEADER = "game_id,kick_utc,home_team,away_team,capture_utc,book,close_total,close_under,close_over,book_update\n"
@@ -264,20 +269,20 @@ ORDINARY = {
         "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,2026-10-11T1650Z,draftkings,39.5,-112,-108,2026-10-11T16:48:30Z\n",
         {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 1}}),
     "no Pinnacle for one game: retried once, then closed": (
-        [(NOW, [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
+        [("2026-10-11T16:42:00Z", [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
                 event("e3", "GB", "DET", "2026-10-11T17:00:00Z", {"draftkings": (39.5, -112, -108)})]),
-         ("2026-10-11T16:58:00Z", [event("e1", "CHI", "PHI", "2026-10-11T17:01:00Z", RIGHT),
+         ("2026-10-11T16:57:00Z", [event("e1", "CHI", "PHI", "2026-10-11T17:01:00Z", RIGHT),
                                    event("e3", "GB", "DET", "2026-10-11T17:00:00Z", {"draftkings": (40.0, -110, -110)})]),
          ("2026-10-11T16:59:00Z", [event("e3", "GB", "DET", "2026-10-11T17:00:00Z", GB)])],
         HEADER
-        + "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,pinnacle,42.5,-106,-106,2026-10-11T16:48:30Z\n"
-        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,draftkings,42.5,-110,-110,2026-10-11T16:48:30Z\n"
-        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1650Z,fanduel,43.0,-112,-108,2026-10-11T16:48:30Z\n"
-        "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,2026-10-11T1650Z,draftkings,39.5,-112,-108,2026-10-11T16:48:30Z\n"
-        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1658Z,pinnacle,42.5,-106,-106,2026-10-11T16:48:30Z\n"
-        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1658Z,draftkings,42.5,-110,-110,2026-10-11T16:48:30Z\n"
-        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1658Z,fanduel,43.0,-112,-108,2026-10-11T16:48:30Z\n"
-        "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,2026-10-11T1658Z,draftkings,40.0,-110,-110,2026-10-11T16:48:30Z\n",
+        + "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1642Z,pinnacle,42.5,-106,-106,2026-10-11T16:48:30Z\n"
+        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1642Z,draftkings,42.5,-110,-110,2026-10-11T16:48:30Z\n"
+        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1642Z,fanduel,43.0,-112,-108,2026-10-11T16:48:30Z\n"
+        "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,2026-10-11T1642Z,draftkings,39.5,-112,-108,2026-10-11T16:48:30Z\n"
+        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1657Z,pinnacle,42.5,-106,-106,2026-10-11T16:48:30Z\n"
+        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1657Z,draftkings,42.5,-110,-110,2026-10-11T16:48:30Z\n"
+        "2026_05_PHI_CHI,2026-10-11T17:00:00Z,CHI,PHI,2026-10-11T1657Z,fanduel,43.0,-112,-108,2026-10-11T16:48:30Z\n"
+        "2026_05_DET_GB,2026-10-11T17:00:00Z,GB,DET,2026-10-11T1657Z,draftkings,40.0,-110,-110,2026-10-11T16:48:30Z\n",
         {"captured": ["2026-10-11T17:00Z"], "tries": {"2026-10-11T17:00Z": 2}}),
     "a game the feed doesn't list": (
         [(NOW, [event("e1", "CHI", "PHI", "2026-10-11T17:00:00Z", RIGHT),
@@ -299,3 +304,64 @@ def test_an_ordinary_slot_writes_exactly_what_it_wrote_before(tmp_path, monkeypa
         assert "feed event" not in out and "listing" not in out  # no duplicate, nothing to report
     assert text == want_csv
     assert state == want_state
+
+
+@pytest.mark.parametrize('crash_after',[None,'csv','state'])
+def test_real_account_close_restart_does_not_resend_reapply_or_consume_second_try(tmp_path,monkeypatch,crash_after):
+    from nflweather import quota
+    from ops import close_observation
+    from ops.shared_account_testkit import synthetic_account
+    from ops import collector_guard
+    monkeypatch.setattr(config,'ROOT',tmp_path);monkeypatch.setattr(config,'RAW',tmp_path/'raw')
+    monkeypatch.setattr(oddsapi,'CACHE',tmp_path/'raw'/'oddsapi')
+    monkeypatch.setattr(oddsapi,'api_key',lambda:'SYNTHETIC_CLOSE')
+    monkeypatch.setattr(quota,'STATE',tmp_path/'quota.json');monkeypatch.setattr(quota,'check',lambda:None)
+    (tmp_path/'raw').mkdir();GAMES.to_csv(tmp_path/'raw'/'games.csv',index=False)
+    params=dict(bookmakers=','.join(oddsapi.LIVE_BOOKS),markets='totals',oddsFormat='american',dateFormat='iso')
+    def run(now):
+        monkeypatch.setattr(sys,'argv',['capture_close.py','--now',now])
+        try:runpy.run_path(str(ROOT/'scripts'/'capture_close.py'),run_name='__main__')
+        except SystemExit:pass
+    with synthetic_account(tmp_path/'account','SYNTHETIC_CLOSE',params) as (session,account):
+        monkeypatch.setattr(oddsapi,'session',session)
+        session.body=json.dumps([event('e1','CHI','PHI','2026-10-11T17:00:00Z',RIGHT)]) # GB missing
+        if crash_after:
+            original=close_observation._write
+            def crash(path,text):
+                original(path,text)
+                if path.name==('closes.csv' if crash_after=='csv' else 'close_state.json'):
+                    raise OSError('synthetic death after durable '+crash_after)
+            with monkeypatch.context() as patcher:
+                patcher.setattr(close_observation,'_write',crash)
+                with pytest.raises(OSError):run('2026-10-11T16:42:00Z')
+        else:run('2026-10-11T16:42:00Z')
+        csv=tmp_path/'data'/'forward'/'closes.csv';before=csv.read_bytes()
+        run('2026-10-11T16:42:30Z') # same observation even though tries changed
+        state=json.loads((csv.parent/'close_state.json').read_text())
+        assert state['tries']=={'2026-10-11T17:00Z':1} and state['captured']==[]
+        assert csv.read_bytes()==before and len(session.calls)==1 and len(account()['attempts'])==1
+        run('2026-10-11T16:57:00Z') # later eligible scheduled observation
+        state=json.loads((csv.parent/'close_state.json').read_text())
+        assert state['tries']=={'2026-10-11T17:00Z':2} and state['captured']==['2026-10-11T17:00Z']
+        assert len(session.calls)==2 and len(account()['attempts'])==2
+        assert len(state['applied_observations'])==2
+        assert len(pd.read_csv(csv))==2*len(pd.read_csv(__import__('io').BytesIO(before)))
+        assert collector_guard.close_slot([],{},pd.Timestamp('2026-10-11T16:42Z').to_pydatetime())==collector_guard.close_slot(['changed'],{'changed':1},pd.Timestamp('2026-10-11T16:42:30Z').to_pydatetime())
+
+
+def test_actual_uncertain_close_blocks_same_and_later_tick_without_output_application(tmp_path,monkeypatch):
+    from nflweather import quota
+    from ops.shared_account_testkit import synthetic_account
+    monkeypatch.setattr(config,'ROOT',tmp_path);monkeypatch.setattr(config,'RAW',tmp_path/'raw')
+    monkeypatch.setattr(oddsapi,'CACHE',tmp_path/'raw'/'oddsapi');monkeypatch.setattr(oddsapi,'api_key',lambda:'SYNTHETIC_CLOSE')
+    monkeypatch.setattr(quota,'STATE',tmp_path/'quota.json');monkeypatch.setattr(quota,'check',lambda:None)
+    (tmp_path/'raw').mkdir();GAMES.to_csv(tmp_path/'raw'/'games.csv',index=False)
+    params=dict(bookmakers=','.join(oddsapi.LIVE_BOOKS),markets='totals',oddsFormat='american',dateFormat='iso')
+    with synthetic_account(tmp_path/'account','SYNTHETIC_CLOSE',params) as (session,account):
+        monkeypatch.setattr(oddsapi,'session',session);session.failure=TimeoutError('synthetic uncertainty')
+        for now in ['2026-10-11T16:42:00Z','2026-10-11T16:42:30Z','2026-10-11T16:57:00Z']:
+            monkeypatch.setattr(sys,'argv',['capture_close.py','--now',now])
+            with pytest.raises(SystemExit):runpy.run_path(str(ROOT/'scripts'/'capture_close.py'),run_name='__main__')
+        assert len(session.calls)==1 and next(iter(account()['attempts'].values()))['state']=='pending'
+        assert not (tmp_path/'data'/'forward'/'close_state.json').exists()
+        assert not (tmp_path/'data'/'forward'/'closes.csv').exists()
