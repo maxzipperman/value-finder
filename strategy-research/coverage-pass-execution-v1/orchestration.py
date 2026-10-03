@@ -19,6 +19,24 @@ import transport
 import runner
 
 
+def remaining_checks(ledger,cap):
+    """Budget adds untouched reservations; floor includes unpaid pending exposure."""
+    untouched=cap-ledger.reserved()
+    if untouched<0:raise ValueError('reserved cost exceeds exact cap')
+    pending=0
+    for attempt in ledger.state['attempts'].values():
+        if attempt['status']=='pending':pending+=attempt['reserved_credits']
+        elif attempt['status'] not in {'completed','missing'}:raise ValueError('uncertain exposure state')
+    # Existing reserved credits already enter cumulative debit; do not add them twice.
+    ledger.budget_check(untouched,check_floor=False)
+    # conservative_remaining already deducts completed billing (including counter lag).
+    # Only pending+untouched are future costs; terminal unused reservations are not bills.
+    exposure=untouched+pending
+    if ledger.state['provider_remaining'] is not None and ledger.conservative_remaining()-exposure<ledger.protocol['budgets']['account_reserve_floor']:
+        raise ValueError('full pending and untouched purchase would breach reserve')
+    return dict(untouched=untouched,pending_unpaid=pending,future_exposure=exposure)
+
+
 def run(packet_path,root,bundle,auth,*,key_factory,http_factory):
     runner,base,data,source,load=bootstrap.verified(packet_path,root,bundle)
     runner.packet(data,source)
@@ -118,9 +136,7 @@ def run(packet_path,root,bundle,auth,*,key_factory,http_factory):
                     if capture.sha(root_base/old/'spending-ledger.json')!=global_snapshot['ledgers'][old] or capture.sha(root_base/'registrations'/(old+'.json'))!=global_snapshot['registrations'][old]:
                         raise ValueError('historical ledger/registration changed')
                 current_check(allow_pending=True)
-                remaining=manifest['max_new_credits']-ledger.reserved()
-                ledger.budget_check(remaining)
-                if ledger.state['provider_remaining'] is not None and ledger.conservative_remaining()-remaining<531630:raise ValueError('full remaining purchase would breach reserve')
+                remaining_checks(ledger,manifest['max_new_credits'])
             unchanged();auth_check()
             if (runtime/'.env').exists():raise ValueError('implicit runtime credential file forbidden')
             os.environ.update(MARKETS_ROOT=str(runtime),MARKETS_DATA_DIR=str(runtime/'data'),MARKETS_REPORTS_DIR=str(runtime/'reports'))

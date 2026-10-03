@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "a92aaefa2f0964416c2ca7a2da1f0f4f8fb0be6e7ff0913182ae81941389de8b",
+  "evidence_digest": "86135ed557198250c2e5a27f1cc3d832986b6ec0e163d782374ac63b5eacaf78",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -92,18 +92,24 @@
     },
     "files": {
       "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
-      "strategy-research/coverage-pass-execution-v1/README.md": "9ccf3f1ef6aeaa9dde5dd481acaaba80e2a42c6a03fe2a7cc30e41b302aff0f1",
+      "strategy-research/coverage-pass-execution-v1/README.md": "e0c4f4e9653d1e8c68f3aee54788ac900ed69a5dcdf380fdcf4e6ad2bba94b97",
       "strategy-research/coverage-pass-execution-v1/assemble.py": "11e85fbea6456430d3b20829d637798826b8379cde78bb2ba9715349823e926b",
       "strategy-research/coverage-pass-execution-v1/bootstrap.py": "142231525b3ec1c3f5caff4db5f9d2ffafa2790321d56c2d24d6927355a8a383",
-      "strategy-research/coverage-pass-execution-v1/orchestration.py": "a2a771ccba27a92adc2bd2853b4c15005f686762f24847738c92098d5f2bd9c0",
+      "strategy-research/coverage-pass-execution-v1/orchestration.py": "41edb6bcb017a3dbe8f52b6a70fee74a4892af1464fa93b4b2d5c78b9e0968ca",
       "strategy-research/coverage-pass-execution-v1/passing-execution-2020-24/FREEZE.json": "e173703a70b2cfc4c508f1b95d65af26f5199f28a0a38984f2ab6c45561ec359",
       "strategy-research/coverage-pass-execution-v1/passing-execution-2020-24/baseline.json": "ec507443f091e64bec1edd448ff76aba31e048c658cc98fb8b42732c38475a97",
       "strategy-research/coverage-pass-execution-v1/passing-execution-2020-24/config.json": "5f6b7a1779e4b6a70a045a00922ff7702b2ec88cb387e0ce715e87a4d2a22966",
       "strategy-research/coverage-pass-execution-v1/passing-execution-2020-24/execution-protocol.json": "3ccff398fc053b9fb5b81571d5e2d02249db7fc5798a75f17fac8012de212416",
       "strategy-research/coverage-pass-execution-v1/passing-execution-2020-24/manifest.json": "497faab6a3d2bfe05556f8cf53d6158a94d98e7146cbde0a99dcd82b7ccb4d61",
       "strategy-research/coverage-pass-execution-v1/passing-execution-2020-24/overlap.json": "68f91cf43328c64deadaacad3ffe2bf597ccb2682dd7a5a77f49d1f772879793",
-      "strategy-research/coverage-pass-execution-v1/test_bridge.py": "4889594f9befd4721de7fa4ee8105329e110ff00a9001e7b27e7ad4d34dc80e7",
-      "strategy-research/coverage-pass-execution-v1/test_orchestration_bridge.py": "2c9459e5dac656be57ff00367009eeddf7c47a842da1b753ecc301e282de71b6",
+      "strategy-research/coverage-pass-execution-v1/passing-execution-reserve-fix/FREEZE.json": "9feef7ba135bb8082993b491661709af59bce08a27baa2da1ae5d0c4cb9db509",
+      "strategy-research/coverage-pass-execution-v1/passing-execution-reserve-fix/baseline.json": "ec507443f091e64bec1edd448ff76aba31e048c658cc98fb8b42732c38475a97",
+      "strategy-research/coverage-pass-execution-v1/passing-execution-reserve-fix/config.json": "5f6b7a1779e4b6a70a045a00922ff7702b2ec88cb387e0ce715e87a4d2a22966",
+      "strategy-research/coverage-pass-execution-v1/passing-execution-reserve-fix/execution-protocol.json": "3ccff398fc053b9fb5b81571d5e2d02249db7fc5798a75f17fac8012de212416",
+      "strategy-research/coverage-pass-execution-v1/passing-execution-reserve-fix/manifest.json": "497faab6a3d2bfe05556f8cf53d6158a94d98e7146cbde0a99dcd82b7ccb4d61",
+      "strategy-research/coverage-pass-execution-v1/passing-execution-reserve-fix/overlap.json": "68f91cf43328c64deadaacad3ffe2bf597ccb2682dd7a5a77f49d1f772879793",
+      "strategy-research/coverage-pass-execution-v1/test_bridge.py": "a8f42c545a2bca5611ae07788a2a2e0614e8d5d477b0b0f344acb602103a36bc",
+      "strategy-research/coverage-pass-execution-v1/test_orchestration_bridge.py": "22e1b2ac4e346b1147e029ff00e52629bc9b52734a1607ea86b95443ac3f20e4",
       "strategy-research/coverage-pass-execution-v1/validator.py": "ca9ed43dfde83b8a629e12f9284f8412c83aae8cf8022d0972be191504cdc7ec",
       "strategy-research/coverage-pass-execution-v1/verification.json": "191c7d497772376b05bc1918336003e47a5aede195dc98bd596eb590a500f803",
       "strategy-research/coverage-pass-residual-v1/EXECUTION_BRIDGE.md": "e91e40a7fa6f20ec0905a12b85b696b85b412672c072f5523adadd37f5705aea",
@@ -296,7 +302,7 @@
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T07:08:09.217451+00:00",
+  "recorded_at": "2026-10-03T07:18:49.258829+00:00",
   "results": [
     {
       "argv": [
@@ -312,15 +318,15 @@
         "-v"
       ],
       "exit_code": 0,
-      "stderr_sha256": "d99ae5e07a5328a19b24c9f149b5159e216e7efdc7372b8660dd379d83aa6632",
+      "stderr_sha256": "29379aed6d433b3d485c58cfa2331985a19217d0682a881470808a2b27257879",
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "unittest_count": [
-        11
+        13
       ]
     }
   ],
-  "tested_commit": "f9e6e1d6f2c499d361f650877904270731a27de7",
-  "tested_identity": "6394d0665f371772ed7f61850442ab0f0caf863f7842e1ad43b72f776ad4f8a3",
+  "tested_commit": "582a70000d88ffa3a5742a215d79730d4c843386",
+  "tested_identity": "8e5dc61233046ee5f3686f921fab0464768b98589983b46a2bc3cc24234b9d88",
   "version": 1,
   "worktree_clean": false
 }

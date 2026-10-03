@@ -30,13 +30,16 @@ class OrchestrationTests(unittest.TestCase):
                 # Overlap adapter is replaced below, so no live checkout cache is inspected.
                 bindings={'base_snapshot':snapshot,'expected_global_snapshot':snapshot,'historical_bindings':{},'pilot_bindings':{}}
                 cacheplan={'raw_roots':sorted(rawroots),'probe_bundle_root':str(folder/'probe'),'inventory_sha256':'f'*64}
-                manifest={'request_count':1,'max_new_credits':10,'request_list_sha256':'c'*64,'request_set_sha256':'d'*64}
-                policy={'snapshot_lag_ids':[row['request_id']],'event_not_found_ids':[row['request_id']],'max_missing':{'snapshot_lag':1,'event_not_found':1}}
-                data={k:json.dumps(v).encode() for k,v in {'manifest.json':manifest,'requests.json':[row],'policy.json':policy,'protocol.json':{'execution_status':'reviewed_for_execution'},'baseline.json':bindings,'overlap.json':cacheplan,'mappings.json':[]}.items()}
+                rows=[row]
+                if scenario=='fresh_floor':rows.append(plan.make_request('odds',plan.ts('2025-10-01T06:00:00Z'),books=['draftkings'],markets=['player_pass_yds'],event_id='second'))
+                cap=10*len(rows)
+                manifest={'request_count':len(rows),'max_new_credits':cap,'request_list_sha256':'c'*64,'request_set_sha256':'d'*64}
+                policy={'snapshot_lag_ids':[r['request_id'] for r in rows],'event_not_found_ids':[r['request_id'] for r in rows],'max_missing':{'snapshot_lag':1,'event_not_found':1}}
+                data={k:json.dumps(v).encode() for k,v in {'manifest.json':manifest,'requests.json':rows,'policy.json':policy,'protocol.json':{'execution_status':'reviewed_for_execution'},'baseline.json':bindings,'overlap.json':cacheplan,'mappings.json':[]}.items()}
                 source={n:(BUNDLE/n).read_bytes() for n in ('runtime-lock.json','protocol.json','probe-spending-ledger.json','request-manifest.json')};data['execution-protocol.json']=source['protocol.json'];source['input-provenance.json']=b'{"raw_probe_sources":[]}';data['source/FREEZE.json']=(BUNDLE/'FREEZE.json').read_bytes()
                 rec={'status':'approved','bundle_root_sha256':root,'baseline_mode':'capture_first_free_check','reason':'synthetic','owner_note':'synthetic','max_baseline_used':0,'billing_period_utc':base.datetime.now(base.timezone.utc).strftime('%Y-%m')}
-                hub=dict(status='approved',bundle_root_sha256=root,request_set_sha256=manifest['request_set_sha256'],request_list_sha256=manifest['request_list_sha256'],budget_credits=10,commit=commit,comment_url='https://github.com/maxzipperman/value-finder/pull/99#issuecomment-1',comment_body=f"APPROVED paid run: list {manifest['request_list_sha256']}, request-set {manifest['request_set_sha256']}, budget 10 credits, commit {commit}")
-                auth=dict(status='approved',bundle_root_sha256=root,priority=1,max_new_credits=10,human_authorization_evidence='synthetic',execution_commit=commit,account_reconciliation=rec,hub_go_ahead=hub)
+                hub=dict(status='approved',bundle_root_sha256=root,request_set_sha256=manifest['request_set_sha256'],request_list_sha256=manifest['request_list_sha256'],budget_credits=cap,commit=commit,comment_url='https://github.com/maxzipperman/value-finder/pull/99#issuecomment-1',comment_body=f"APPROVED paid run: list {manifest['request_list_sha256']}, request-set {manifest['request_set_sha256']}, budget {cap} credits, commit {commit}")
+                auth=dict(status='approved',bundle_root_sha256=root,priority=1,max_new_credits=cap,human_authorization_evidence='synthetic',execution_commit=commit,account_reconciliation=rec,hub_go_ahead=hub)
                 calls=[];keys=[];checks=[]
                 def authority(*args):checks.append('authority')
                 def baseline(*args):return snapshot,{'cumulative_debit_without_probe':205698 if scenario=='carry_drift' else 205699}
@@ -48,7 +51,7 @@ class OrchestrationTests(unittest.TestCase):
                 def http():
                     def get(url,**kw):
                         calls.append(url)
-                        if url.endswith('/sports'):return SimpleNamespace(status_code=200,text='[]',headers={'x-requests-last':'0','x-requests-used':'0','x-requests-remaining':'5000000'})
+                        if url.endswith('/sports'):return SimpleNamespace(status_code=200,text='[]',headers={'x-requests-last':'0','x-requests-used':'0','x-requests-remaining':str(531630+cap-5) if scenario=='fresh_floor' else '5000000'})
                         body={'timestamp':row['requested_utc'],'previous_timestamp':'2025-10-01T05:55:00Z','next_timestamp':'2025-10-01T06:05:00Z','data':{'id':'abc','sport_key':row['sport'],'commence_time':'2025-10-02T06:00:00Z','bookmakers':[]}}
                         return SimpleNamespace(status_code=200,text=json.dumps(body),headers={'x-requests-last':'10','x-requests-used':'10','x-requests-remaining':'4999990'})
                     return SimpleNamespace(adapters={'https':SimpleNamespace(max_retries=SimpleNamespace(total=0))},get=get,close=lambda:None)
@@ -64,7 +67,10 @@ class OrchestrationTests(unittest.TestCase):
                 with patch.object(m.bootstrap,'verified',verified),patch.object(base,'checkout_commit',lambda _:commit),patch.object(base,'execution_context',lambda *a:None),patch.object(base,'current_runtime',lambda:json.loads(source['runtime-lock.json'])),patch.object(m.authority,'check',authority),patch.object(m.baseline,'verify_base',baseline),patch.object(m.overlap,'check',overlap),patch.object(m.runner,'residual',lambda *a:True):
                     if scenario!='complete':
                         with self.assertRaises(Exception):m.run(folder/'packet',root,BUNDLE,auth,key_factory=key,http_factory=http)
-                        self.assertEqual(keys,[]);self.assertEqual(calls,[]);return
+                        if scenario=='fresh_floor':
+                            self.assertEqual(len(keys),1);self.assertEqual(calls,['https://api.the-odds-api.com/v4/sports']);saved=json.loads((runtime/'spending-ledger.json').read_text());self.assertEqual(len(saved['attempts']),1);self.assertIsNotNone(saved['pending'])
+                        else:self.assertEqual(keys,[]);self.assertEqual(calls,[])
+                        return
                     result=m.run(folder/'packet',root,BUNDLE,auth,key_factory=key,http_factory=http)
                     self.assertEqual(result['status'],'pilot_complete');self.assertEqual(len(calls),2)
                     self.assertGreaterEqual(keys[0],3)
@@ -83,6 +89,7 @@ class OrchestrationTests(unittest.TestCase):
     def test_cache_overlap_before_key(self):self.exercise('cache_overlap')
     def test_unknown_root_before_key(self):self.exercise('unknown_root')
     def test_unledgered_cache_before_key(self):self.exercise('orphan_cache')
+    def test_fresh_live_baseline_no_paid_send_when_full_exposure_unsupported(self):self.exercise('fresh_floor')
     def test_budget_overrun_before_key(self):self.exercise('over_budget')
 
     def test_preparation_packet_stops_before_key_or_http(self):

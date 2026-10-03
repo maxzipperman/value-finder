@@ -64,6 +64,24 @@ class BridgeTests(unittest.TestCase):
    changed=dict(data);changed[name]=bootstrap.canonical(value)
    with self.subTest(name=name),self.assertRaises(ValueError):v.packet(changed,source)
 
+ def test_actual_ledger_pending_exposure_and_resumed_baseline_no_double_bill(self):
+  load=loader();base=load('executor');m=load('orchestration');transport=load('transport')
+  ledger=object.__new__(base.Ledger);ledger.protocol=json.loads((BUNDLE/'protocol.json').read_bytes());ledger.protocol['budgets']['first_tranche_cumulative_credits']=274686
+  cap=67200;floor=531630;left=floor+67170
+  ledger.state=dict(probe_credits=1687,other_usage_reserved=205699,slice_cap=cap,provider_remaining=left,epoch=dict(start_remaining=left,start_billed=0,remaining_lowwater=left,external_peak=0),attempts={'pending':dict(status='pending',reserved_credits=60)})
+  with self.assertRaises(ValueError):m.remaining_checks(ledger,cap)
+  # Resumed baseline already includes previous40 billed; retained60 reservation
+  # stays in cumulative debit but is not a second future charge.
+  left=floor+67120
+  ledger.state['attempts']['old']=dict(status='completed',reserved_credits=60,billed_credits=40)
+  ledger.state.update(provider_remaining=left,epoch=dict(start_remaining=left,start_billed=40,remaining_lowwater=left,external_peak=0))
+  paid=[];http=SimpleNamespace(adapters={'https':SimpleNamespace(max_retries=SimpleNamespace(total=0))},get=lambda *a,**k:paid.append(a),close=lambda:None)
+  session=transport.guarded_session(base,lambda:None,lambda:m.remaining_checks(ledger,cap))(http,ledger,[])
+  with self.assertRaises(ValueError):session.get('https://api.the-odds-api.com/v4/historical/sports/americanfootball_nfl/odds',params={})
+  self.assertEqual(paid,[])
+  ledger.state.update(provider_remaining=floor+67140,epoch=dict(start_remaining=floor+67140,start_billed=40,remaining_lowwater=floor+67140,external_peak=0))
+  self.assertEqual(m.remaining_checks(ledger,cap),dict(untouched=67080,pending_unpaid=60,future_exposure=67140))
+
  def test_revoked_authority_stops_before_key(self):
   load=loader();m=load('orchestration');base=load('executor');seen=[]
   data={'protocol.json':b'{"execution_status":"reviewed_for_execution"}','manifest.json':b'{"max_new_credits":10}','requests.json':b'[]','policy.json':b'{}','baseline.json':b'{"expected_global_snapshot":{}}','overlap.json':b'{}'}
