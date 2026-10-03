@@ -1,0 +1,234 @@
+{
+  "evidence_digest": "94a1b75857aa300a0a351819136de3766d2878bf603ef717a43075dbfcb005e3",
+  "inputs": {
+    "command_binaries": {
+      "{python}": {
+        "path": "/private/tmp/vf-collector-safety/sharp-markets/.venv/bin/python",
+        "sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60"
+      }
+    },
+    "commands": [
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "pytest",
+        "strategy-research/nba_sample/successor-execution-v1/test_prospective.py",
+        "-o",
+        "addopts=",
+        "-p",
+        "no:cacheprovider",
+        "-q"
+      ]
+    ],
+    "configured_environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "strategy-research/nba_sample/successor-execution-v1:strategy-research/nba_sample/execution-v1/"
+    },
+    "effective_environment": {
+      "LANG": "C.UTF-8",
+      "PATH": "/bin:/usr/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "strategy-research/nba_sample/successor-execution-v1:strategy-research/nba_sample/execution-v1/"
+    },
+    "environment": {
+      "executable_sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60",
+      "packages": [
+        [
+          "PyYAML",
+          "6.0.3"
+        ],
+        [
+          "Pygments",
+          "2.21.0"
+        ],
+        [
+          "certifi",
+          "2026.7.22"
+        ],
+        [
+          "charset-normalizer",
+          "3.5.2"
+        ],
+        [
+          "duckdb",
+          "1.5.6"
+        ],
+        [
+          "idna",
+          "3.20"
+        ],
+        [
+          "iniconfig",
+          "2.3.0"
+        ],
+        [
+          "numpy",
+          "2.5.3"
+        ],
+        [
+          "packaging",
+          "26.3"
+        ],
+        [
+          "pandas",
+          "3.0.6"
+        ],
+        [
+          "pluggy",
+          "1.6.0"
+        ],
+        [
+          "pyarrow",
+          "25.0.1"
+        ],
+        [
+          "pytest",
+          "9.1.1"
+        ],
+        [
+          "python-dateutil",
+          "2.9.0.post0"
+        ],
+        [
+          "python-dotenv",
+          "1.2.4"
+        ],
+        [
+          "requests",
+          "2.34.2"
+        ],
+        [
+          "six",
+          "1.17.0"
+        ],
+        [
+          "urllib3",
+          "2.8.0"
+        ]
+      ],
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]"
+    },
+    "files": {
+      ".github/workflows/n0-preparation.yml": "c6966fd4d3daad64cc8a5f44c8138d05d6aee08b6031b23d51e76de92947b7fd",
+      "STATUS.md": "235ee855783edffaa82a2c3dac452415ef3daa01060f0b8b4558597116ebcff9",
+      "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
+      "reviews/post151-readiness/readiness.json": "acd2009728d88370465ce8da85e16d61ec2ca7489b3491005b304cdd9622530c",
+      "strategy-research/football_archive/acquisition/football-archive-v4/AUDIT-REPAIRS.md": "93b6cacc618e5223002569b32f552965846f562b182bf1f8e662aa550410a851",
+      "strategy-research/football_archive/acquisition/football-archive-v4/BILLING-REPAIR.md": "fd2edd8942c6f4dff2a31b73c9267eff37dd6534a3c7235e4481509de103b076",
+      "strategy-research/football_archive/acquisition/football-archive-v4/ELIGIBILITY.md": "8c14188f3520423c15c92ff1fcf4a2f51c7ee0dfaaee8466694e153e5b018e4a",
+      "strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json": "99855ed3aeb7c1051f473cc6a2409340f963d930eea6ce2e622e0b547886e574",
+      "strategy-research/football_archive/acquisition/football-archive-v4/README.md": "a0ed5f0803aa23771e314f2c5db1d6eeae554304f555167bbaa707f513c15bdc",
+      "strategy-research/football_archive/acquisition/football-archive-v4/REPAIR-PLAN.md": "6191c9366260db48e4de4ca2b6ac1162a6819dcc0e38865cf91bf48aed409650",
+      "strategy-research/football_archive/acquisition/football-archive-v4/aliases.json": "68d172edba7fcd65af995a5ef9413b66670f7022eba177ad58b6332afe79e125",
+      "strategy-research/football_archive/acquisition/football-archive-v4/alternate-close-summary.json": "ec2529840e95db12604584e037fdcf989870b35015636704081016bca1625a24",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/__init__.py": "29743241e3300dda93d6600f0a7df4b665fce03d367cffd27357bf709ead838c",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/cache.py": "b593dcfe81f0b6c48064184f9490fb5c3bd8ecd138a6cd5a9a8499791b814c53",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/http.py": "b530bef892b1602896b1c9d57888d85cd1f6c0fd072a23aae7fe52a91001fbc9",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/oddsapi/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/oddsapi/bulk.py": "4d2496d5b2705ce87e7be07ad02de78093ba070354b0dfafe369130fa0802f91",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/oddsapi/normalize.py": "82cf3e781b064774e990c4cce9c901fc3a68b1da2e345a782895fc44fd2f682e",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/settings.py": "c6384107e1a19a9bf54c9736eb7061091a9cbd6379c7af5f1d2bbf9ecb39f825",
+      "strategy-research/football_archive/acquisition/football-archive-v4/archive_markets/sport.py": "55b159d90c80c39b697ff9dfb97a336406ad08e0ceefe1d95a93793268439594",
+      "strategy-research/football_archive/acquisition/football-archive-v4/builder.py": "90492d4b65b920c584bf099f78eca7a43c2ab4f2e0ac9fcd9044a6db9df77efd",
+      "strategy-research/football_archive/acquisition/football-archive-v4/cache_handoff.py": "abfc4035c8ac947c69e874ab22d75cbc1c2f3aef2ef0023f32efee9b809be8bf",
+      "strategy-research/football_archive/acquisition/football-archive-v4/canonical-games.json": "c2e3ce27b12a4c47da09f3fe26c148f6c4f2f4b1802cd91f96dc209bb9fe8395",
+      "strategy-research/football_archive/acquisition/football-archive-v4/close-candidates.json": "0cf27a5f6bd441b114ff8a509fd8411d52013498659d81afaee62461053d901a",
+      "strategy-research/football_archive/acquisition/football-archive-v4/coverage-and-exclusions-summary.json": "e95b9cf21900d2b4f7cc4197ac5ee4d421e75599765968585bd1deedf554d529",
+      "strategy-research/football_archive/acquisition/football-archive-v4/coverage_report.py": "e3aa82ab9156324b0f833bfb605156d944666e62a662feab16d5395f436e01a1",
+      "strategy-research/football_archive/acquisition/football-archive-v4/eligibility-amendment.json": "35e497aefcd911ae04b6501c21e0646cd6153532e687eb64ec834db274d30a67",
+      "strategy-research/football_archive/acquisition/football-archive-v4/exclusions.json": "b7cb1244162c156a59e1a1441905fbcf9282a0be6bbfd3e75e42b41c8159698e",
+      "strategy-research/football_archive/acquisition/football-archive-v4/executor.py": "4a06d28228546fdcdd92fbfba303daa2e4273c8df071348d2021c763cd5b5332",
+      "strategy-research/football_archive/acquisition/football-archive-v4/export-redaction.json": "382ede3351a412f31aa4e6cea1ef28f9e0eed55eee745aaecc8133657688d330",
+      "strategy-research/football_archive/acquisition/football-archive-v4/input-provenance.json": "79498d148c587326ffc0129279e8b63d3e79b7c0ba0bdaac094a2e362c2ab9fa",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/cfb-weather-game-metadata.json": "7a85b559aadeb24fdf86576d97e2a4e243c8e82de4ddd0efc203c26990cdca42",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/cfb-weather-mos-timing.json": "c07b381de94c203b8d6b9c99d54d6a40aefb7ba9a4fe212315106ecbc6762b03",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/external-game-index.json": "f694e3a5463dd20a2df65a836e35c9cd9cd8a52295cc37e29432d0e3918434c0",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/legacy-weather-request-list.csv": "7b596dca2ef41dd7731fd75bfcbbccd1f613b59a23684bf1f46aa55bdcf8ca2a",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/nfl-team-table.csv": "ff06cbba8f4527d70257e3b31756edee61e4aa00a9a3e1ddec6ebecca60257c6",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/nfl-weather-game-metadata.json": "a9ad1f943bda1554492a3d82c319de279d3b3926d8febe7a4dab0058cad8bf59",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/nfl-weather-mos-timing.json": "176d6fa13b430273a9185cbc0688bda2bd6eface1a9ab12f17f38e76aae648a9",
+      "strategy-research/football_archive/acquisition/football-archive-v4/inputs/original-85-unmatched-close-rows.json": "660b6cb7698a20584e1d28c88d0f3da0eee3c6aea895ed93d1bcb505ac3fac33",
+      "strategy-research/football_archive/acquisition/football-archive-v4/legacy-close-reconciliation.json": "f0163b2722863c63abd3773fd628ed8576855b2387d263c84b54ca5d62cd098f",
+      "strategy-research/football_archive/acquisition/football-archive-v4/opportunity-registry.json": "50a3389b442c732598f71cf412f5c74d21fee0bab8c1192a60e0104420574684",
+      "strategy-research/football_archive/acquisition/football-archive-v4/original-85-close-resolution.json": "c189933c69c493d663ed6d86118354ca09ed98480e13ae6d3cf8c2da68ac2360",
+      "strategy-research/football_archive/acquisition/football-archive-v4/original-reviewed-certificate.json": "f9ef7cbbba473fbaf0c90a50780559a409efdbed22de83cc36ca3af1fc159bea",
+      "strategy-research/football_archive/acquisition/football-archive-v4/price_eligibility.py": "58985f65e76c6780e1967ad5b792666dab48ccd7101f12626fd6e1f3b11ebfd0",
+      "strategy-research/football_archive/acquisition/football-archive-v4/probe-billing-margin.json": "caf6331bc717b90bf53d8824881fbe66cbbbfd19adf596dbd05e4ae7fcad4446",
+      "strategy-research/football_archive/acquisition/football-archive-v4/probe-response-provenance.csv": "760652a18144e4fd3e7796af3a0c124587719b2508c687a6c763eba45fb4a4cb",
+      "strategy-research/football_archive/acquisition/football-archive-v4/probe-spending-ledger.json": "9b812bd11111f68afe722e80070cdb3a7cb29d50e7bf37f5c1d74e56d135fefd",
+      "strategy-research/football_archive/acquisition/football-archive-v4/protocol.json": "3e120d7216412b9dfbf1ae993c07ca5be6a5ca2b7d3219544805323af93b3568",
+      "strategy-research/football_archive/acquisition/football-archive-v4/provider-observations.json": "fc9304cd32a2125d5c6f986102e204dac2335d55cd880475c2421725bb2b266d",
+      "strategy-research/football_archive/acquisition/football-archive-v4/recent-unmatched-request-review.json": "eaffaf6668accd1b5a317184b124019afb3633d1c5d5b31ecb58e07e156c35bd",
+      "strategy-research/football_archive/acquisition/football-archive-v4/rehearsal-report.json": "b39d1a8726392d4d0aeea32c2d90b6442aa626e708798cca91684a5e8d9ad5da",
+      "strategy-research/football_archive/acquisition/football-archive-v4/request-list.csv": "81d557cffc1a57c6fb7547cc3be319158745c985bbc746513bda039a7c972910",
+      "strategy-research/football_archive/acquisition/football-archive-v4/request-manifest.json": "ab6e72a7e3bfc1f1b1ccdbc0a2b496eebd141097c80fc36dd96b684b4e25bb47",
+      "strategy-research/football_archive/acquisition/football-archive-v4/runtime-lock.json": "2a37eba87e33db8ce048d620c88cc5c485dd520f398bf1b22c4014a242c70a5f",
+      "strategy-research/football_archive/acquisition/football-archive-v4/test_v4.py": "02a3f4d3b74754237350bcc50da53e82dfcacae1a2a11f55ccb34ce1f11f48fa",
+      "strategy-research/football_archive/acquisition/football-archive-v4/unmatched-provider-ids.json": "0a6f377c5b727073abaeaaa71179f1153d17b738bc1022a626d39ab4ec914347",
+      "strategy-research/football_archive/acquisition/football-archive-v4/v2-origin-certificate.json": "bd46603bfa1b983de72188b47690a102720d976e5c91fa79631ef39cf90b3fe6",
+      "strategy-research/football_archive/acquisition/football-archive-v4/v3-origin-certificate.json": "f9ef7cbbba473fbaf0c90a50780559a409efdbed22de83cc36ca3af1fc159bea",
+      "strategy-research/football_archive/acquisition/football-archive-v4/v3-origin-request-manifest.json": "7f9ff22ad7ee587e84319efe53240e98b2c7eef81f69ef8b5dab8cdc138e565b",
+      "strategy-research/football_archive/acquisition/football-archive-v4/v3-registration-provenance.json": "1034ed72ecdde85ff445a03478e6abc254c5fc77243666710e301e2048769b2b",
+      "strategy-research/football_archive/acquisition/football-archive-v4/validator.py": "85d63b43f01ddd6fd571f8926a1c4efc9f71f4aa1eb6b71c14ceb465859969f9",
+      "strategy-research/football_archive/acquisition/football-archive-v4/vendor-provenance.json": "83905e66327b8b24d951c9f9529bc9859c2c3465b57d50aadaaa4565427c9c45",
+      "strategy-research/football_archive/f2_handoff.py": "49d0ed2c01a1aee22246a72ca0913f5e3c5659acc92a1b7dd75a643336ba1bfb",
+      "strategy-research/football_archive/followups/F2-pilot/cache-reconciliation.json": "46ed3e9192261a43890e718f944b876adc62bef0126d69a10c9dae51cc0335ed",
+      "strategy-research/football_archive/recovery-v1/F2-continuation/cache-reconciliation.json": "014b22d778b8a801db7269a23315c640674ac0b57e85eb4849f9dab15c6e39f6",
+      "strategy-research/football_archive/recovery-v2/F2-second-continuation/cache-reconciliation.json": "d8b5aadc705fc6c6188bf2ab9902ab3d3c62af81082631fa36c553742209d979",
+      "strategy-research/football_archive/union-v1/F3a/union-certificate.json": "800e087a7a7808b52063f7f35fa585ac7ca9b100f35a2c63dfab5e719c2c5fa6",
+      "strategy-research/nba_sample/exact_list.py": "a325fccdc8ccb3a5b254fdfcef0b32040124cd81166596c10f10ef213459924f",
+      "strategy-research/nba_sample/execution-v1/CEILING-DRAFT.md": "64e47535026805d67f798d5c9de917bdb79839541aa24edbc8c6b01ac7eaed6c",
+      "strategy-research/nba_sample/execution-v1/README.md": "0cdec76ec16dde4fccf0a7fbe3aaddb481d9fa76cca93831ff11b39e63c2fc71",
+      "strategy-research/nba_sample/execution-v1/execute.py": "e4ba9a7969e0a811c0b10274747fc90253e8428380c2bebf6aaecc14c77f2102",
+      "strategy-research/nba_sample/execution-v1/stage.py": "26536c5e9c8a6392bea944fecf7213bb47c98af53f04817c47c87396d5097779",
+      "strategy-research/nba_sample/execution-v1/successor151-pins.json": "61f0c1cc6f53b68c52eaa535b43eef4bf9a88e077255b419bf34e98e8ae124e0",
+      "strategy-research/nba_sample/execution-v1/successor151.py": "1d2e57e5689bd1ed105ef6ca1c0a222e5ee6494fb86cd137071fc5d1aa346db0",
+      "strategy-research/nba_sample/execution-v1/test_execute.py": "ca60194bb2ff969e49b2b0c89046bbe7ca872131f795973f086e18a2a4973d33",
+      "strategy-research/nba_sample/execution-v1/test_stage.py": "7c74310cd77e852a0bbf214bdbd8af959b32f0b59d62807c15ff9b9c595f32f8",
+      "strategy-research/nba_sample/execution-v1/test_successor151.py": "25d69ea7b3fdd1ae35adeec823133000fb25fd1c1bc478f91b56b7612bbd9a6c",
+      "strategy-research/nba_sample/execution-v1/verification.json": "092d32e385b96c94fd1ff3c6aebe596551de38b38389bb0c55da40c5d7ea4820",
+      "strategy-research/nba_sample/free-inputs-receipt.json": "71cfe69b30afd8701a4d88a2364d73a21af566eab398617a46685957b49c89e9",
+      "strategy-research/nba_sample/manifest.json": "3af23667237af91216a83b6d7d57e73806792bd6cb5c9b00d07e73aaf8cab45b",
+      "strategy-research/nba_sample/metadata.json": "c251339f57ccae7b7323e93907cb3cf2575ddb93551f6aaaa0705fe9da306e3b",
+      "strategy-research/nba_sample/request-list.csv": "b9232db3a473992a88c04640ff579d9a834ab7f61c723cd9032b73b7f115c7e5",
+      "strategy-research/nba_sample/requests.json": "9871c5e478f9e8ab93730520a4ef8b2e892f7f698a6cc90a6f7407cf01c6764a",
+      "strategy-research/nba_sample/successor-execution-v1/REPORT.md": "987cacdd76ccac6bf8ca4fad17dad38a977b9ccf74f5c6c99b5f9b342ebdf26e",
+      "strategy-research/nba_sample/successor-execution-v1/SCOPE.md": "ea11e1d7c8d2837a8492187e72b789776fdfcc18a2b6987c788d433bf8e77c38",
+      "strategy-research/nba_sample/successor-execution-v1/prospective.py": "3e6980baebe7934058c6c884a22316532c3a554cb8a0c66cbbfeef534e5a2763",
+      "strategy-research/nba_sample/successor-execution-v1/test_prospective.py": "e29c1c746544b81825cdd2e905924487dc128593c126622b84351eec56b73b84",
+      "strategy-research/nba_sample/successor-execution-v1/verification.json": "a224f854d0ccb9ce2fee2c66aacad6d994b89b44033331d97bfaa7d0b32341bd",
+      "strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json": "7cb292bf53c8f7352522516b3a799b00d0fab1370cd0e75742f9f8e0a25ae880",
+      "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json": "529f45db28ceaf594ea654259cd4212ee167e357fd24999a339984a8e8452423"
+    }
+  },
+  "passed": true,
+  "recorded_at": "2026-10-03T21:32:45.989538+00:00",
+  "results": [
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "pytest",
+        "strategy-research/nba_sample/successor-execution-v1/test_prospective.py",
+        "-o",
+        "addopts=",
+        "-p",
+        "no:cacheprovider",
+        "-q"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "3b382da6feaad215b9081b667d74a8f28ddd66ed3836ca37249c63a905cc077d",
+      "unittest_count": []
+    }
+  ],
+  "tested_commit": "cf69f885d6cbe947306202b0a594f52820c7df79",
+  "tested_identity": "673053336333cde6404002ba38a6bc9b39233b5b5b1c5fec364d8990a89445d9",
+  "version": 1,
+  "worktree_clean": true
+}
