@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "cb784ff452855266ddde968fcaab02a25ecf60cd6b516b61f0d065360f343183",
+  "evidence_digest": "7da0e141739e2e95f22da5da48bdb42086983bd9f6afd1e85615d3288d5b425e",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -319,9 +319,9 @@
       "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
       "reviews/post151-readiness/diagnostic.py": "dd2f5e6f410b7dca64250a610651d43c5c55a078063ece22838c09b238cb22fe",
       "reviews/post151-readiness/readiness.json": "acd2009728d88370465ce8da85e16d61ec2ca7489b3491005b304cdd9622530c",
-      "sharp-markets/docs/props-union/DECISIONS-DRAFT.md": "7d89339087996bb495737762081749e164738b72526b8693112b0997a8550e40",
+      "sharp-markets/docs/props-union/DECISIONS-DRAFT.md": "09fcf1e3895b9c493fef6817edbad2f769a9265b6c5ae63a2f53fd9c4a0035cb",
       "sharp-markets/docs/props-union/PLAN.md": "3a13ab94b13e82f382d0c4372b2d9a1eade1ca901777b6bb49799e7b852c3c5e",
-      "sharp-markets/docs/props-union/README.md": "2048e3f9768b52d7449f44d0ff12916e0f47782588e6dd07ccd14bf471c3f86b",
+      "sharp-markets/docs/props-union/README.md": "0a2f3cef4e725c4963442fc8f3ce312677fd20a8de4bafd8edc93548472b9935",
       "sharp-markets/docs/props-union/comparison.json": "6add3e6c395ad0a3d74530f111901c4820e6f19e8733f303a98e55fbf1d60c8b",
       "sharp-markets/docs/props-union/discovery-matrix.json": "c6880624fe77837eba24f9dae00559b53f7e85831a00189e102c383358544b71",
       "sharp-markets/docs/props-union/dry-run.json": "3391b3e1714439890659dd56d834b8258f0475a59b29eabf807b5c8a49fb22b2",
@@ -329,14 +329,14 @@
       "sharp-markets/docs/props-union/verification.json": "0a97359939c8f104e457137f144aea3a179608e0bfec1dbcf05c57ea9d21c923",
       "sharp-markets/src/markets/research/props_grade/archive.py": "8e05a8fad98f4980319e8930b71b2b9db816074a39293a1ddcf0ec31cefe2992",
       "sharp-markets/src/markets/research/props_grade/union.py": "84a3f704657fffefda609f924b07123d39d0d862c71c72b93f37f7a0711e7fdb",
-      "sharp-markets/tests/props_union/test_union.py": "371b4b91abe0b2a4abf31dc3076a6d12ad64b0ce5d0b26506f5347661430a43a",
+      "sharp-markets/tests/props_union/test_union.py": "d81540b51da3345c726690c49e9ea6a213b40cacb5a17775cc7c476d2ad062df",
       "strategy-research/coverage-pilot-completion-v1/report.py": "2370ab54c14fc491d9e9b35f9ac929b687c159059aff7ed8aff8f82512f20691",
       "strategy-research/coverage-pilot-v1/classifier.py": "3022001dd610bd57bdc9aa301e761f987f5977cabc200b81b2806218511e7ac2",
       "strategy-research/coverage-pilot-v1/timing.py": "45926bd9c8444dcda71f253a3c55e3c6d5f3942ade4b800b4ab3290f249cef58"
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T19:27:02.885122+00:00",
+  "recorded_at": "2026-10-03T19:29:05.332573+00:00",
   "results": [
     {
       "argv": [
@@ -352,15 +352,15 @@
         "-v"
       ],
       "exit_code": 0,
-      "stderr_sha256": "15fae957bcf652dd6596fcde12fde85b81546814f3ee11dbb1aed312ebaa2809",
+      "stderr_sha256": "a275e61860df362307088cd3a537a13dbeae4d2d5d26ac818ad79f88cd9fa2d2",
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "unittest_count": [
-        9
+        10
       ]
     }
   ],
-  "tested_commit": "e3c4f7ee89bab1304f8020700ed7a0c41f75fe1e",
-  "tested_identity": "74665b6292be8465455e21944562972b51a3e789d58cbc3435a6c259bac7a129",
+  "tested_commit": "3e5186e95cf0ad7a319577d025492e81571d671c",
+  "tested_identity": "78f1155e087dafc8047f7485235b19120c65633de8452ce1a8a12c93838e1532",
   "version": 1,
   "worktree_clean": true
 }
