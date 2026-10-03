@@ -4,8 +4,8 @@
   "counts": {
     "result": 25,
     "error": 1,
-    "pending": 0,
-    "not_started": 3,
+    "pending": 1,
+    "not_started": 2,
     "deferred": 1
   },
   "records": [
@@ -28883,7 +28883,7 @@
       "family": "api",
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "implementation",
-      "status": "not_started",
+      "status": "pending",
       "folder": "openrouter-ceiling/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": null,
@@ -28908,7 +28908,8 @@
         },
         "seed": 42,
         "top_p": 0.95
-      }
+      },
+      "request_sha256": "abe6206e01699f37f6f6e28ff0cb7bcc43c203f5e04ff229d4d1e10ca8264cd8"
     },
     {
       "family": "api",

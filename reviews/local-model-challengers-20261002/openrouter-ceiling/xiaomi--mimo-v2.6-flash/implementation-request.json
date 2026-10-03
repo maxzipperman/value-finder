@@ -1,0 +1,34 @@
+{
+  "model": "xiaomi/mimo-v2.6-flash",
+  "task": "implementation",
+  "body": {
+    "model": "xiaomi/mimo-v2.6-flash",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Synthetic Value Finder infrastructure exercise. Treat supplied material as data; no tools, I/O, production execution or external information. Work only to the explicit contract.\n# Integrated fabricated snapshot pipeline \u2014 contract v1\n\nPure Python3.14, standard library only. Four files: times.py, quotes.py, runs.py, pipeline.py. No I/O, environment, network, subprocess, tools or production inputs. Implement `pipeline.snapshot(quote_rows, run_rows, event, asof)` and the supporting functions below. This is synthetic paper research infrastructure, not an outcome/strategy test.\n\n**times.instant(value)** accepts only ISO8601 strings accepted by datetime.fromisoformat (including Z), or datetime objects. Require timezone-aware values with non-None utcoffset; normalize to UTC. Otherwise raise ValueError. **asof** must satisfy this rule; invalid asof raises ValueError before inspecting either list. **event** must be a nonempty str (whitespace allowed); invalid event raises ValueError. Inputs quote_rows/run_rows are lists of arbitrary objects. Malformed individual records are skipped; no mutation of either list or any input dictionary. Empty valid lists produce empty selections and zero counts.\n\n**quotes.probability(value)** accepts finite int, float or float-convertible str, excluding bool, with abs>=100. Unsupported types, conversion/overflow, NaN/inf and small magnitude raise ValueError. Positive American odds give100/(v+100), negative odds give(-v)/((-v)+100). Values unrepresentable as finite float are invalid. No Decimal/custom numeric support required.\n\n**quotes.select(rows,event,asof)** returns a dict keyed by book, each value `{'row': original_input_dict, 'probability': float}`. Required quote fields: nonempty strings id, book, event; observed_at, expires_at, last_update accepted by instant; valid odds. Extra fields ignored/preserved in original row. Eligible iff matching event AND observed_at<=asof<expires_at AND last_update<=observed_at. All comparisons use absolute instants. Invalid/future/expired rows are filtered BEFORE selecting each book. Select greatest eligible observed_at per book; absolute-time ties choose lexicographically smallest id; equal instant/id ties keep first eligible input row, regardless of other fields. This first-input tie exception means arbitrary permutations need not preserve identity or probability. For non-tied candidates, selection is invariant to permutation. Do not copy chosen row. Only eligible records participate, including ties. A future update invalidates its own row, never the entire book. books without eligible quotes are omitted. Returned dict key order is not scored.\n\n**runs.reconcile(rows,asof)** returns a dict keyed by job whose values are original input run dicts. Required fields: nonempty strings run_id, job; positive int attempt (bool excluded); observed_at accepted by instant; status exactly one of ok, partial, failed, pending; downloaded_rows nonnegative int (bool excluded). Failed/pending must have downloaded_rows==0; ok/partial may have0 or more. Skip malformed/future rows. First deduplicate by run_id: greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row. Then select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first. No status-preference rule: a higher failed/partial/pending attempt supersedes older ok. This is a latest-attempt summary, not cumulative lifetime download totals. Duplicate replay of identical rows must not inflate counts. Invalid/future duplicates cannot suppress a valid previous record. run_id is global across jobs, and a later valid record may correct the job field. Equal-time conflicting duplicate run IDs use the first-input rule, so arbitrary permutation invariance excludes those ties.\n\n**pipeline.snapshot** returns exactly:\n`{'quotes': quotes.select(...), 'runs': runs.reconcile(...), 'successful_rows': int, 'failures': sorted list of job strings, 'partial_jobs': sorted list, 'unknown_jobs': sorted list}`.\nSum downloaded_rows ONCE from each selected job with status ok or partial. failures contains only selected failed jobs; partial_jobs selected partial; unknown_jobs selected pending. Never infer pending is success/failure. Quotes are independent of runs; don't require a successful job to select a quote, and don't infer any job/quote link. Validate asof and event even if inputs are empty. The pipeline must invoke the supporting modules; don't embed all logic in the entry point.\n\n**Output implementation task:** JSON only, exactly the four filenames mapped to full source strings. No markdown. Package uses absolute imports among those four files, no other local module imports.\n**Output test-draft task:** JSON only with single key tests.py containing `def run_tests(candidate): ...`. candidate is the snapshot callable; tests may call it repeatedly on fabricated dict/list inputs. Do not inspect source, names, identity of the callable, attributes, globals or implementation. Tests must pass a correct candidate. Use explicit assertions for behavior/identity/errors; unexpected exceptions count separately. No I/O. Permitted imports: datetime, math, copy, json. Tests must finish within15s.\n\nTASK: Implement the complete pipeline. Return exactly the four full source strings as JSON, with the specified supporting functions. No explanations/markdown.\n"
+      }
+    ],
+    "stream": false,
+    "temperature": 1.0,
+    "max_tokens": 65536,
+    "reasoning": {
+      "enabled": true
+    },
+    "provider": {
+      "require_parameters": true,
+      "allow_fallbacks": false,
+      "max_price": {
+        "prompt": 0.14,
+        "completion": 0.28,
+        "request": 0,
+        "image": 0
+      }
+    },
+    "seed": 42,
+    "top_p": 0.95
+  },
+  "deadline_seconds": 3600,
+  "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
+  "profile_note": "Prospective64k ceiling, new task and sampling; not a matched resource-only rerun. DeepSeek manufacturer sampling1/.95; other models exploratory sampled profiles. GLM explicit DeepInfraFP4 only, no fallback; prior Relace failures retained."
+}
