@@ -42,11 +42,16 @@ def main():
     parser.add_argument('--native-defaults', action='store_true')
     parser.add_argument('--qwen-sampling', action='store_true')
     parser.add_argument('--extended-budget', action='store_true')
+    parser.add_argument('--time-extension', action='store_true')
     parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'] + list(HARD_TASKS))
     args = parser.parse_args()
     if args.hard_pair:
         PROTOCOL['deadline_seconds'] = 600
     selected = args.models or PROTOCOL['models']
+    if args.time_extension:
+        if args.hard_pair or args.no_thinking or args.qwen_sampling or args.extended_budget or selected != ['qwen3.8:27b-q8_0'] or args.tasks != ['regression']:
+            parser.error('Time extension is the declared Q8 original regression diagnostic only')
+        PROTOCOL['deadline_seconds'] = 600
     if args.extended_budget:
         if not args.hard_pair or selected != ['ornith-1.5:35b'] or args.no_thinking or args.native_defaults or args.qwen_sampling or args.recovery_run:
             parser.error('Extended budget is the declared Ornith thinking hard diagnostic only')
@@ -86,6 +91,8 @@ def main():
                 prefix = 'hard-sampled-'
             if args.extended_budget:
                 prefix = 'hard-extended-'
+            if args.time_extension:
+                prefix = 'time-extended-'
             out = ROOT / (prefix + model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
             out.mkdir(exist_ok=True)
             result_path = out / (task + '-result.json')
