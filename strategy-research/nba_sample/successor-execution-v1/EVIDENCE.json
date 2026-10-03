@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "94a1b75857aa300a0a351819136de3766d2878bf603ef717a43075dbfcb005e3",
+  "evidence_digest": "afe882ba7a5305d91661b81228672398b6cc1c7c8078fdc59b8f65b5d1a0de45",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -196,17 +196,17 @@
       "strategy-research/nba_sample/metadata.json": "c251339f57ccae7b7323e93907cb3cf2575ddb93551f6aaaa0705fe9da306e3b",
       "strategy-research/nba_sample/request-list.csv": "b9232db3a473992a88c04640ff579d9a834ab7f61c723cd9032b73b7f115c7e5",
       "strategy-research/nba_sample/requests.json": "9871c5e478f9e8ab93730520a4ef8b2e892f7f698a6cc90a6f7407cf01c6764a",
-      "strategy-research/nba_sample/successor-execution-v1/REPORT.md": "987cacdd76ccac6bf8ca4fad17dad38a977b9ccf74f5c6c99b5f9b342ebdf26e",
+      "strategy-research/nba_sample/successor-execution-v1/REPORT.md": "7063f0c0d070450c1e889a3d8983d59eac60eff406b495263fe449981c8e3f9d",
       "strategy-research/nba_sample/successor-execution-v1/SCOPE.md": "ea11e1d7c8d2837a8492187e72b789776fdfcc18a2b6987c788d433bf8e77c38",
-      "strategy-research/nba_sample/successor-execution-v1/prospective.py": "3e6980baebe7934058c6c884a22316532c3a554cb8a0c66cbbfeef534e5a2763",
-      "strategy-research/nba_sample/successor-execution-v1/test_prospective.py": "e29c1c746544b81825cdd2e905924487dc128593c126622b84351eec56b73b84",
+      "strategy-research/nba_sample/successor-execution-v1/prospective.py": "b8ebf2a987597af39da4a45ca2cb3d2d9684cb7787e26d6aecf595fbcf12c9b0",
+      "strategy-research/nba_sample/successor-execution-v1/test_prospective.py": "8d42f630e78028b5bb571124a9b51201cc4647fd6ac570222ce266fcaaf5692e",
       "strategy-research/nba_sample/successor-execution-v1/verification.json": "a224f854d0ccb9ce2fee2c66aacad6d994b89b44033331d97bfaa7d0b32341bd",
       "strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json": "7cb292bf53c8f7352522516b3a799b00d0fab1370cd0e75742f9f8e0a25ae880",
       "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json": "529f45db28ceaf594ea654259cd4212ee167e357fd24999a339984a8e8452423"
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T21:32:45.989538+00:00",
+  "recorded_at": "2026-10-03T21:44:25.135745+00:00",
   "results": [
     {
       "argv": [
@@ -223,12 +223,12 @@
       ],
       "exit_code": 0,
       "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "stdout_sha256": "3b382da6feaad215b9081b667d74a8f28ddd66ed3836ca37249c63a905cc077d",
+      "stdout_sha256": "d095bdb71ec157d4f0c04e14a0bbac8cf546bec68449fc1a34d3a393a8bd7512",
       "unittest_count": []
     }
   ],
-  "tested_commit": "cf69f885d6cbe947306202b0a594f52820c7df79",
-  "tested_identity": "673053336333cde6404002ba38a6bc9b39233b5b5b1c5fec364d8990a89445d9",
+  "tested_commit": "1c6b22d8159080f42e846204b8ba93ed8acce28c",
+  "tested_identity": "7b846d8075ed74b17efedd7803edaf1666fa20c19b077bcacfc239b145ab9047",
   "version": 1,
   "worktree_clean": true
 }
