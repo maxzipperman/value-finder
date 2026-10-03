@@ -71,7 +71,7 @@ Useful-credit gate is `projected_new_credits / lower_bound_newly_usable_games_in
 
 ## Commands and artifacts
 
-The following is the implemented minimal CLI contract. Review/merge the adapter and supply the hub-confirmed pins before use. Launch from a clean isolated checkout containing the reviewed adapter and merged packet, using the pinned football Python3.11 environment; never use the live checkout.
+The following is the implemented minimal CLI contract. Review/merge the adapter and supply the hub-confirmed pins before use. Launch from a clean isolated checkout containing the reviewed adapter and merged packet, using the exact football interpreter/package environment in the frozen runtime-lock.json (currently Python3.12.11); never use the live checkout.
 
 ```sh
 python -B strategy-research/coverage-pilot-completion-v1/report.py verify \
