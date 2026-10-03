@@ -58,3 +58,8 @@ Independent-review repair: a STATUS budget change from 100 to 1,000,000 now
 changes review identity, requires effect review and rejects evidence reuse. The
 positive exclusion fixture is a separately adopted explanatory document; it gives
 no exemption to STATUS or an author-added exclusion.
+
+Integration after PR155: the shortened STATUS retains its concise cached-readiness
+findings and grading/held-cohort limits, including the corrected within-book
+temporal-point meaning. Main was merged without restoring historical narrative;
+affected process evidence was renewed for these STATUS bytes.

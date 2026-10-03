@@ -35,6 +35,15 @@ stake or registration. Paper-only project policy remains in force.
 
 ## Paid data — sole current queue
 
+**Post-successor151 cached readiness (PR155, October 3):** Diagnostics preserve
+2,401 fixed game denominators, including missing/unbound slots. NFL rush/reception
+and older-total pairs are measured without outcomes. The 334 temporal-point games
+retain each book's own point across time; domestic and Pinnacle points may differ.
+T10-versus-registered-T5, inactive book/count notes, matching/settlement and draft
+price-engine adoption still block grading. Held CFB groups remain held. See the
+[readiness report](reviews/post151-readiness/REPORT.md). No pilot final re-look,
+new spend, registration or runtime change.
+
 The 5M month is already purchased. F1 recent is complete (2,761 paid requests,
 82,830 credits); its approval is exhausted and it must not be repurchased.
 F2 and F3a are also complete. Original receipts, probe accounting and conservative
