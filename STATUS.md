@@ -177,3 +177,11 @@ Tested and skipped: primetime unders, the holdover bias, West Coast night games,
 Any change that moves a project, a forward test or a backlog item updates this file in the same pull request. See [`CLAUDE.md`](CLAUDE.md).
 
 **N0 acquisition preparation (Oct2,2026):** the fixed Jan5–11,2026 NBA2025–26 sample has56 scheduled event identities and754 exact h2h requests /7540-credit maximum, still non-executable pending a reviewed cumulative driver, clean latest predecessor and exact hub approval. Free Kalshi inputs are cached for112 markets (259778 price minutes), with no paid credits or strategy results. See [candidate packet](strategy-research/nba_sample/README.md).
+
+**Props analysis repair (Oct 2, PR #133, DRAFT):** receipt-bound completed 2025 F3a
+coverage reader and explicit settlement primitives are under independent review.
+Pinnacle offered-line presence at purchased T10 is 2670/3785 receiving-yard and 1291/1789
+rushing-yard player-games; DraftKings is the mechanical candidate, pending the
+[draft timing/stat clarification](sharp-markets/docs/props-archive/AMENDMENT-DRAFT.md).
+Real props grading is disabled pending registration. Unsupported CFB/new markets
+remain ungradable; no outcome joins, sealed 2026 access, paid calls or runtime writes.

@@ -10,7 +10,7 @@
                                             season (roster.NameMap), or to a roster row with no player_id
   void (player didn't play)                 a matched player with no player_week row for that game
   push                                      the outcome equals the line
-A player with a player_week row but no attempt in the market is graded at 0 (the under wins at any positive line).
+An explicitly recorded zero is zero; absent or nonfinite statistics are excluded, never imputed.
 
 No lookahead: a line's grade uses the prices of its own snapshot (the close, or T-24h for the secondary) and the
 game's outcome; nothing else from after its close. The same-season median of 2.8 is known only after the season and
@@ -57,11 +57,18 @@ def assign(pl: pd.DataFrame, games: pd.DataFrame, names: NameMap, pw: pd.DataFra
     played = set(zip(pw.game_id, pw.player_id))
     void = (status == "") & ~pd.Series([k in played for k in zip(df.game_id, df.player_id)], index=df.index)
     status[void] = L.VOID
+    pw = pw.drop_duplicates().copy()
+    duplicate_players = set(zip(pw.loc[pw.duplicated(["game_id", "player_id"], keep=False), "game_id"],
+                                pw.loc[pw.duplicated(["game_id", "player_id"], keep=False), "player_id"]))
+    conflicting = pd.Series([k in duplicate_players for k in zip(df.game_id, df.player_id)], index=df.index)
+    status[(status == "") & conflicting] = L.MISSING_STAT
+    pw = pw.drop_duplicates(["game_id", "player_id"], keep=False)
     long = pw.melt(id_vars=["game_id", "player_id"], value_vars=list(STAT.values()), var_name="stat", value_name="y")
-    long = long.groupby(["game_id", "player_id", "stat"], as_index=False).y.sum(min_count=1)   # one row a game
     df = df.assign(stat=df.market.map(STAT)).merge(long, on=["game_id", "player_id", "stat"], how="left")
     status.index = df.index
-    df["y"] = np.where(status == "", df.y.fillna(0).astype(float), np.nan)   # a row with no attempt: 0
+    numeric = pd.to_numeric(df.y, errors="coerce").to_numpy(dtype=float, na_value=np.nan)
+    status[(status == "") & ~np.isfinite(numeric)] = L.MISSING_STAT
+    df["y"] = np.where(status == "", numeric, np.nan)
     push = (status == "") & (df.y == df.line)
     status[push] = L.PUSH
     df["status"] = status
@@ -111,11 +118,13 @@ def controls(graded: pd.DataFrame, role: str = L.CLOSE) -> pd.DataFrame:
 # ---------------------------------------------------------------- 2.8, the mechanism readout
 def season_medians(pw: pd.DataFrame) -> pd.DataFrame:
     """season, player_id, market -> the median of his outcome over every 2023-25 game (regular season and playoffs)
-    in which he has a player_week row (no attempt = 0)."""
+    in which he has a known finite statistic; missing statistics are not zero."""
+    pw = pw.drop_duplicates().copy()
+    pw = pw[~pw.duplicated(["game_id", "player_id"], keep=False)]
     parts = []
     for m, col in STAT.items():
         if m in L.PRIMARY:
-            med = pw.assign(v=pw[col].fillna(0).astype(float)).groupby(["season", "player_id"]).v.median()
+            med = pw.assign(v=pd.to_numeric(pw[col], errors="coerce").replace([np.inf, -np.inf], np.nan)).groupby(["season", "player_id"]).v.median()
             parts.append(med.rename("median").reset_index().assign(market=m))
     return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=["season", "player_id", "median",
                                                                                     "market"])

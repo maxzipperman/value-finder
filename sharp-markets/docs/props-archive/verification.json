@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "scopes": [
+    "sharp-markets/src",
+    "sharp-markets/config",
+    "sharp-markets/pyproject.toml",
+    "sharp-markets/uv.lock",
+    "sharp-markets/tests/test_props_grade.py",
+    "sharp-markets/tests/test_props_archive_repair.py",
+    "sharp-markets/docs/props-archive/verification.json",
+    "nfl-weather/PREREGISTRATION_PROPS.md",
+    "STATUS.md",
+    "ops/process/process_guard.py",
+    "strategy-research/football_archive/union-v1/F3a"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "pytest",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "sharp-markets/tests/test_props_archive_repair.py",
+      "sharp-markets/tests/test_props_grade.py"
+    ]
+  ],
+  "environment": {
+    "PYTHONPATH": "sharp-markets/src",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONHASHSEED": "0",
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"
+  }
+}
