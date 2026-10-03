@@ -1,0 +1,366 @@
+{
+  "evidence_digest": "1849573a980e4f3b278932d6f6aa10d43bdf7abe1ff6fa21daf12598a08f80f1",
+  "inputs": {
+    "command_binaries": {
+      "{python}": {
+        "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "sha256": "00c07e4d31048b15eebbe4c883f229338c5b2d598e9ee061da39b7fccba20cad"
+      }
+    },
+    "commands": [
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/process",
+        "-p",
+        "test_*.py",
+        "-v"
+      ]
+    ],
+    "configured_environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "effective_environment": {
+      "LANG": "C.UTF-8",
+      "PATH": "/bin:/usr/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "environment": {
+      "executable_sha256": "00c07e4d31048b15eebbe4c883f229338c5b2d598e9ee061da39b7fccba20cad",
+      "packages": [
+        [
+          "GitPython",
+          "3.1.46"
+        ],
+        [
+          "Jinja2",
+          "3.1.6"
+        ],
+        [
+          "MarkupSafe",
+          "3.0.3"
+        ],
+        [
+          "PyYAML",
+          "6.0.3"
+        ],
+        [
+          "Pygments",
+          "2.19.2"
+        ],
+        [
+          "altair",
+          "6.0.0"
+        ],
+        [
+          "annotated-doc",
+          "0.0.4"
+        ],
+        [
+          "annotated-types",
+          "0.7.0"
+        ],
+        [
+          "anyio",
+          "4.12.1"
+        ],
+        [
+          "attrs",
+          "25.4.0"
+        ],
+        [
+          "blinker",
+          "1.9.0"
+        ],
+        [
+          "cachetools",
+          "6.2.6"
+        ],
+        [
+          "certifi",
+          "2026.1.4"
+        ],
+        [
+          "charset-normalizer",
+          "3.4.4"
+        ],
+        [
+          "click",
+          "8.3.1"
+        ],
+        [
+          "distro",
+          "1.9.0"
+        ],
+        [
+          "duckduckgo_search",
+          "8.1.1"
+        ],
+        [
+          "filelock",
+          "3.23.0"
+        ],
+        [
+          "fsspec",
+          "2026.2.0"
+        ],
+        [
+          "gitdb",
+          "4.0.12"
+        ],
+        [
+          "h11",
+          "0.16.0"
+        ],
+        [
+          "hf-xet",
+          "1.2.0"
+        ],
+        [
+          "httpcore",
+          "1.0.9"
+        ],
+        [
+          "httpx",
+          "0.28.1"
+        ],
+        [
+          "huggingface_hub",
+          "1.4.1"
+        ],
+        [
+          "idna",
+          "3.11"
+        ],
+        [
+          "jiter",
+          "0.13.0"
+        ],
+        [
+          "jsonschema",
+          "4.26.0"
+        ],
+        [
+          "jsonschema-specifications",
+          "2025.9.1"
+        ],
+        [
+          "lxml",
+          "6.0.2"
+        ],
+        [
+          "markdown-it-py",
+          "4.0.0"
+        ],
+        [
+          "mdurl",
+          "0.1.2"
+        ],
+        [
+          "mlx",
+          "0.30.3"
+        ],
+        [
+          "narwhals",
+          "2.16.0"
+        ],
+        [
+          "numpy",
+          "2.4.1"
+        ],
+        [
+          "openai",
+          "2.21.0"
+        ],
+        [
+          "packaging",
+          "26.0"
+        ],
+        [
+          "pandas",
+          "2.3.3"
+        ],
+        [
+          "pillow",
+          "12.1.1"
+        ],
+        [
+          "pip",
+          "25.3"
+        ],
+        [
+          "primp",
+          "1.0.0"
+        ],
+        [
+          "protobuf",
+          "6.33.5"
+        ],
+        [
+          "pyarrow",
+          "23.0.0"
+        ],
+        [
+          "pybind11",
+          "3.0.1"
+        ],
+        [
+          "pydantic",
+          "2.12.5"
+        ],
+        [
+          "pydantic_core",
+          "2.41.5"
+        ],
+        [
+          "pydeck",
+          "0.9.1"
+        ],
+        [
+          "python-dateutil",
+          "2.9.0.post0"
+        ],
+        [
+          "pytz",
+          "2025.2"
+        ],
+        [
+          "referencing",
+          "0.37.0"
+        ],
+        [
+          "requests",
+          "2.32.5"
+        ],
+        [
+          "rich",
+          "14.3.2"
+        ],
+        [
+          "rpds-py",
+          "0.30.0"
+        ],
+        [
+          "shellingham",
+          "1.5.4"
+        ],
+        [
+          "six",
+          "1.17.0"
+        ],
+        [
+          "smmap",
+          "5.0.2"
+        ],
+        [
+          "sniffio",
+          "1.3.1"
+        ],
+        [
+          "streamlit",
+          "1.54.0"
+        ],
+        [
+          "tenacity",
+          "9.1.4"
+        ],
+        [
+          "toml",
+          "0.10.2"
+        ],
+        [
+          "tornado",
+          "6.5.4"
+        ],
+        [
+          "tqdm",
+          "4.67.3"
+        ],
+        [
+          "typer",
+          "0.23.1"
+        ],
+        [
+          "typer-slim",
+          "0.23.1"
+        ],
+        [
+          "typing-inspection",
+          "0.4.2"
+        ],
+        [
+          "typing_extensions",
+          "4.15.0"
+        ],
+        [
+          "tzdata",
+          "2025.3"
+        ],
+        [
+          "urllib3",
+          "2.6.3"
+        ],
+        [
+          "wheel",
+          "0.46.3"
+        ]
+      ],
+      "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+      "python": "3.14.2 (main, Dec  5 2025, 16:49:16) [Clang 17.0.0 (clang-1700.6.3.2)]"
+    },
+    "files": {
+      ".github/workflows/process.yml": "4da28b672694421a9d74dc29e68f910e877d1d44be6458b1f70f8803cc1e83af",
+      "GOVERNANCE.md": "f521aa7206795a590eef021bdfd9db2d60f36f47889e77d6dde6ebf584b85254",
+      "STATUS.md": "827b47afe6ec8ae58341c6d0b8fd8a109108334945b055f2a7e388773e4a2b32",
+      "dashboard/vfdash/__init__.py": "d17f21fe42a5a71589071b9870c39e685ce501622eb8e43fe4a96f25d98996e4",
+      "dashboard/vfdash/status_md.py": "46a105350e48a15e93adb6f3f0548d80f65b5f6ba52fa3d30793266d43a4dac8",
+      "dashboard/vfdash/words.py": "ae5f56809163d2394fc621916955a8fb4f1214e64394716282d945a592f7707f",
+      "docs/status-archive/2026-10-03-before-simplification.md": "0928b45e0f739736db6470569dd5a03fb9df949a152b7780039c2c697e042545",
+      "docs/status-archive/manifest.json": "6c1fd22283dcc676e5f902d64e591d887e2c33332b99fa696b6cf016abc8ecc5",
+      "ops/process/governance_guard.py": "ebee24a75bc214ae0afe5a378c33fa0ca0d0ffc1becbe244bedddb949e6f66d7",
+      "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
+      "ops/process/review-policy.json": "8186a555d82053ba71e2b0825112cb93579d187f7867e73fea49e50bfd387f77",
+      "ops/process/test_governance_guard.py": "74cd446c1fa8350e81d702a6278db22ecb5d756cbead3478baf163f57b72659f",
+      "ops/process/test_process_guard.py": "323cea008c78329aecbe855858a3cb5aa84d01f87faf242339e31751cc2ff408",
+      "ops/process/test_startup_guard.py": "ed03d5f46d242882496b3b79fcaca94d60585d0c598ed02f0cc35f0895b53c6e",
+      "ops/process/test_status_contract.py": "55d73d51e2285d93d2d3f144e73729479327b8d49d88b84ce8114904daacbc61",
+      "ops/process/verification.json": "2f753aa76fa85ec53ac33ff1250f27267e6b584e1134085f9e130fe376f15f8d",
+      "strategy-research/coverage-pass-execution-v1/bootstrap.py": "48ba33f06b02c1024d49f2758ddd3a5106fcc34ab6c0f09420e71c6407d41213",
+      "strategy-research/coverage-pass-execution-v1/orchestration.py": "63011b68ee34ce6841ef642bcac99cf4b283a1b56fe448001d4623c9eedcb03e"
+    }
+  },
+  "passed": true,
+  "recorded_at": "2026-10-03T10:37:37.918268+00:00",
+  "results": [
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/process",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "4f3fa359930678b56593a69b6d1506440edb9a4c51c027a0227d8d0c1b6b36df",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unittest_count": [
+        33
+      ]
+    }
+  ],
+  "tested_commit": "3758ac264d64513674f31280893abca2b746abcc",
+  "tested_identity": "a44672149368452fd6f0370b25421235a1a6ff47589c6bb20d019447135f2f22",
+  "version": 1,
+  "worktree_clean": true
+}
