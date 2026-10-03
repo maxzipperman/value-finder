@@ -1,0 +1,38 @@
+{
+  "actual_play_certified": false,
+  "close_role": "CLOSE_T10",
+  "coverage": {
+    "player_reception_yds": {
+      "any_panel_player_games": 3785,
+      "pinnacle_player_games": 2670
+    },
+    "player_rush_yds": {
+      "any_panel_player_games": 1789,
+      "pinnacle_player_games": 1291
+    }
+  },
+  "denominator_note": "Offered player-game names with a finite point at any registered-panel book; missing requests and no-offer opportunities remain in separate opportunity denominators. T10 acquisition coverage does not imply T5 coverage or actual-play certification.",
+  "eligibility_reasons": {
+    "kickoff_conflict": 1758,
+    "quote_age_at_snapshot": 125884
+  },
+  "grading_enabled": false,
+  "ledger_sha256": "8c8592a437646416d6dfb3b0cb989738a5c6cbf100851e874e35d6ac36ad7ba9",
+  "offered_quote_rows": 275247,
+  "opportunities_by_role": {
+    "CLOSE_T10": 285,
+    "T24": 285
+  },
+  "opportunities_without_quote_rows": 0,
+  "opportunity_count": 570,
+  "opportunity_status": {
+    "planned": 570
+  },
+  "outcomes_read": false,
+  "packet_root": "f955f28b2fba9f36b3cdcaa7cf29013de9b18b128a629204b0e098f6594259cd",
+  "proposed_book": "draftkings",
+  "request_status": {
+    "completed": 570
+  },
+  "timing_amendment_status": "DRAFT"
+}

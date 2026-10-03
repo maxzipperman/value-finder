@@ -1,0 +1,49 @@
+{
+  "status": "prospective-contract-pending-independent-code-review",
+  "sports": [
+    "NFL",
+    "CFB"
+  ],
+  "primary_markets": [
+    "player_pass_yds",
+    "player_rush_yds",
+    "player_reception_yds",
+    "player_receptions",
+    "player_field_goals",
+    "player_kicking_points"
+  ],
+  "cfb_use": "quote_coverage_only_pending_settlement_source_plan",
+  "existing_frame_alpha": {
+    "family": "1/50",
+    "slots": 12,
+    "per_slot": "1/600"
+  },
+  "added_props_frame_alpha": {
+    "family": "1/50",
+    "slots": 6,
+    "per_slot": "1/300"
+  },
+  "optional_fixed_family_reserved_alpha": "1/100",
+  "redistribute_unused_alpha": false,
+  "older_utility_floor": "3/5",
+  "props_utility_floor": "1/2",
+  "season_release": "same_predeclared_simultaneous_stratum_bounds",
+  "pool_use": "reporting_only_never_override_failed_season",
+  "cost_denominator": "lower_bound_newly_usable_games_in_initially_unknown_purchase_cohort",
+  "existing_frame_gross_illustration": {
+    "selected_availability": 500,
+    "six_market_props": 30000,
+    "older_two_original_slots": 10800,
+    "total": 41300
+  },
+  "paid_authority": false,
+  "pending": [
+    "exact_frame_and_classifier",
+    "finite_missing_policy",
+    "actual_selected_request_union",
+    "authenticated_one_look_record_and_bound_reuse"
+  ],
+  "older_cost_ceiling": 100,
+  "props_cost_ceiling": 244,
+  "pair_definition": "For each of at least two core families, at least one same provider-player label at the same book at both times; book/player may differ across families."
+}

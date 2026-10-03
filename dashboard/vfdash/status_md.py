@@ -76,19 +76,26 @@ def waiting_items(text: str, now: datetime, tz: tzinfo) -> list[dict]:
             first = words.first_sentence(after) or first
         out.append({"n": it["n"], "title": words.strip_markdown(it["title"]).rstrip().rstrip(".").rstrip(),
                     "first_sentence": first or "The item has no text after its title.",
+                    "detail": words.scrub(words.strip_markdown(rest)),
                     "due": None if due is None else f"Due {due:%a} {due:%b} {due.day}",
                     "due_iso": None if due is None else due.isoformat(), "due_level": level})
     return out
 
 
 def variants(text: str) -> int | None:
-    """The running count of variants tried: the last bold number in STATUS.md's "Variants" bullet."""
+    """The largest explicit cumulative total in the Variants bullet or later committed-variant setup."""
+    totals = []
     for ln in text.splitlines():
         if re.match(r"^\s*[-*]\s+\*\*Variants:?\*\*", ln):
             nums = re.findall(r"\*\*\s*(\d[\d,]*)\s*\*\*", ln)
             if nums:
-                return int(nums[-1].replace(",", ""))
-    return None
+                totals.append(int(nums[-1].replace(",", "")))
+        elif "committed variants" in ln:
+            # Later setup entries explicitly state their cumulative total, outside the older bullet.
+            m = re.search(r"=\s*\*\*(\d[\d,]*)\*\*", ln)
+            if m:
+                totals.append(int(m[1].replace(",", "")))
+    return max(totals) if totals else None
 
 
 def bar(n: int | None) -> str | None:

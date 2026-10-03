@@ -10,6 +10,4 @@ Free Kalshi history is already cached:112 markets across56 events,259778 price m
 
 Regeneration: prepare.py obtains free metadata cache-first; exact_list.py generates the candidate list; free_candles.py obtains the fixed free windows cache-first. Paid execution requires a separately reviewed shared cumulative driver, exact frozen packet, all current cache/ancestor overlap checks, the then-current clean predecessor and hub root/list/budget/commit approval. Current F2 stop blocks any new paid root until reviewed reconciliation.
 
-## Report for the hub
-
-READY for candidate-list and metadata review; NOT READY for paid execution. Maximum7540credits inside the existing8000N0cap; prior/cumulative use does not reset. No credentials, paid call, outcome join, grading or merge.
+The [candidate manifest](manifest.json), [metadata](metadata.json), [exact request list](request-list.csv), [request identities](requests.json) and [free-input receipt](free-inputs-receipt.json) are available for review. These preparation artifacts do not authorize paid execution; a reviewed executor, exact frozen packet and fresh live hub authority remain required under [governance](../../GOVERNANCE.md#purchase-and-recovery-boundaries).

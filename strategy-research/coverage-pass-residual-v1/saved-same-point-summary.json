@@ -1,0 +1,48 @@
+{
+  "final_artifact_sha256": "100a53275119fba283b3e8938cfee994f0d1a535201f2bab2e8769bfba9fdbdb",
+  "source": "saved details only; no classifier/bounds rerun",
+  "rows": [
+    {
+      "stratum": "older/americanfootball_ncaaf/2020",
+      "saved_status": "utility_pass",
+      "saved_selected_games": 30,
+      "saved_utility_success": 26,
+      "saved_same_point_success": 2
+    },
+    {
+      "stratum": "older/americanfootball_ncaaf/2021",
+      "saved_status": "hold",
+      "saved_selected_games": 30,
+      "saved_utility_success": 7,
+      "saved_same_point_success": 2
+    },
+    {
+      "stratum": "older/americanfootball_ncaaf/2022",
+      "saved_status": "hold",
+      "saved_selected_games": 30,
+      "saved_utility_success": 23,
+      "saved_same_point_success": 4
+    },
+    {
+      "stratum": "older/americanfootball_nfl/2020",
+      "saved_status": "utility_pass",
+      "saved_selected_games": 30,
+      "saved_utility_success": 28,
+      "saved_same_point_success": 5
+    },
+    {
+      "stratum": "older/americanfootball_nfl/2021",
+      "saved_status": "utility_pass",
+      "saved_selected_games": 30,
+      "saved_utility_success": 30,
+      "saved_same_point_success": 10
+    },
+    {
+      "stratum": "older/americanfootball_nfl/2022",
+      "saved_status": "utility_pass",
+      "saved_selected_games": 30,
+      "saved_utility_success": 30,
+      "saved_same_point_success": 16
+    }
+  ]
+}

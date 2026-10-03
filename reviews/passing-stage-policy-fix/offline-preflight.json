@@ -1,0 +1,13 @@
+{
+  "root": "87819945cdeec809ae3c45aebd09db5a8d4936625385ec7990af0f8e4063db8c",
+  "bootstrap_sha256": "142231525b3ec1c3f5caff4db5f9d2ffafa2790321d56c2d24d6927355a8a383",
+  "request_count": 1302,
+  "max_new_credits": 67200,
+  "conservative_carry": 207386,
+  "paid_authority": false,
+  "offline_preflight": true,
+  "live_account_verified": false,
+  "runtime_writes": 0,
+  "paid_calls": 0,
+  "source": "actual stage-amendment assemble.py stdout; independent provenance check required"
+}

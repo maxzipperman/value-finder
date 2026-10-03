@@ -1,0 +1,114 @@
+{
+  "authorization": false,
+  "coverage_gaps": [
+    {
+      "freeze": "strategy-research/coverage-pass-execution-v1/passing-execution-2020-24/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 58
+    },
+    {
+      "freeze": "strategy-research/coverage-pass-execution-v1/passing-execution-confirmed-path-fix/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 82
+    },
+    {
+      "freeze": "strategy-research/coverage-pass-execution-v1/passing-execution-path-fix/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 82
+    },
+    {
+      "freeze": "strategy-research/coverage-pass-execution-v1/passing-execution-reserve-fix/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 58
+    },
+    {
+      "freeze": "strategy-research/coverage-pass-execution-v1/passing-execution-stage-amendment/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 58
+    },
+    {
+      "freeze": "strategy-research/coverage-pass-residual-v1/passing-groups-2020-24/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 5
+    },
+    {
+      "freeze": "strategy-research/coverage-pilot-packet-v1/pilot-existing-frame/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 25
+    },
+    {
+      "freeze": "strategy-research/coverage-pilot-packet-v1/pilot-successor-142/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 26
+    },
+    {
+      "freeze": "strategy-research/football-metadata-v1/listing-gaps/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 10
+    },
+    {
+      "freeze": "strategy-research/football_archive/acquisition/football-archive-v3/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 24
+    },
+    {
+      "freeze": "strategy-research/football_archive/acquisition/football-archive-v4/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 24
+    },
+    {
+      "freeze": "strategy-research/football_archive/execution-v1/F2/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 7
+    },
+    {
+      "freeze": "strategy-research/football_archive/execution-v1/F3a/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 7
+    },
+    {
+      "freeze": "strategy-research/football_archive/followups/F2-pilot/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 6
+    },
+    {
+      "freeze": "strategy-research/football_archive/older-recovery-v1/older-continuation-2020-22/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 4
+    },
+    {
+      "freeze": "strategy-research/football_archive/older/older-2020-22/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 3
+    },
+    {
+      "freeze": "strategy-research/football_archive/recovery-v1/F2-continuation/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 6
+    },
+    {
+      "freeze": "strategy-research/football_archive/recovery-v2/F2-second-continuation/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 7
+    },
+    {
+      "freeze": "strategy-research/football_archive/union-v1/F3a/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 12
+    },
+    {
+      "freeze": "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 182
+    },
+    {
+      "freeze": "strategy-research/pass150-timeout-recovery-v1/untouched-successor/FREEZE.json",
+      "reason": "logical/external captured paths need native verification",
+      "unresolved_count": 182
+    }
+  ],
+  "frozen_scopes_checked": 21,
+  "mode": "shadow-for-incomplete-captures",
+  "runtime_safety_proven": false,
+  "violations": []
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "scopes": [
+    "strategy-research/coverage-pass-residual-v1",
+    "strategy-research/coverage-pilot-completion-v1",
+    "strategy-research/coverage-pilot-packet-v1",
+    "strategy-research/coverage-pilot-v1",
+    "strategy-research/football-metadata-v1/capture.py",
+    "strategy-research/football-metadata-v1/history.py",
+    "strategy-research/nfl-props-archive-v1/plan.py",
+    "strategy-research/football_archive/f2_handoff.py",
+    "strategy-research/football_archive/older-recovery-v1",
+    "strategy-research/football_archive/acquisition/football-archive-v4",
+    "ops/process/process_guard.py"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "strategy-research/coverage-pass-residual-v1",
+      "-p",
+      "test_build.py",
+      "-v"
+    ]
+  ],
+  "environment": {
+    "PYTHONHASHSEED": "0",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}

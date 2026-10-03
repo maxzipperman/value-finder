@@ -234,3 +234,14 @@ These figures assume one line per player per market at one book. The real counts
 ## 8. Dated notes
 
 *(After the F3a pull and before any F3a row is joined to an outcome: the book chosen by the rule in section 2.4, with its two coverage figures, dated. It records the rule's output and changes nothing else.)*
+
+### 2026-10-02 — outcome-blind archive coverage candidate (not active registration)
+
+Completed F3a CLOSE_T10 coverage gives Pinnacle 2670/3785 receiving-yard player-games
+and 1291/1789 rushing-yard player-games. The section 2.4 mechanical candidate is
+DraftKings because both fractions are below 80%. This is a **pending candidate**,
+not an active book-selection note: the purchased T10 versus original planned T5
+handoff and unknown-stat clarification require hub registration of the
+[draft amendment](../sharp-markets/docs/props-archive/AMENDMENT-DRAFT.md) first.
+No outcome was read; no primary criterion changed. The active reader remains
+coverage-only and refuses grading. Do not select again using outcomes or later years.

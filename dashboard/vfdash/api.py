@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 from . import backtests as backtests_mod
 from . import health as health_mod
 from . import signals as signals_mod
-from . import status_md, words
+from . import status_md, words, operations
 from .data import JOBS, PROJECTS, SPORT_OF, DEFAULT_RUN_TIMES, Snap, Store, schedule_words
 from .ledger import I, RULES, get
 
@@ -458,6 +458,22 @@ def jobs(scr: Screen) -> list[dict]:
                 result = "Nothing new to copy"
             if level != "ok":
                 result = f"{exit_words}. {result}"
+        if job.get("collector"):
+            stamp = snap.operations.get("collector_outputs", {}).get(lbl)
+            output_at = datetime.fromtimestamp(stamp, UTC) if stamp else None
+            output_words = scr.when(output_at) if output_at else "Not verified"
+            start = snap.operations.get("nba_start") if lbl.endswith("nbacollector") else None
+            future_start = bool(start and scr.now.astimezone(scr.tz).date().isoformat() < start)
+            process = "Running" if running else "Loaded; idle" if loaded else "Not loaded" if loaded is False else "Unknown"
+            result = process + ". " + (exit_words + ". " if loaded else "")
+            if future_start:
+                result += "Collection starts " + start + "; no collections expected yet. "
+            result += "Last output file update: " + output_words + ". Collection success is unverified; process status alone does not prove data arrived."
+            # Output can be legitimately quiet without a trigger/slot. Do not invent freshness deadlines.
+            if level == "ok" and not future_start:
+                level = "warn"  # no successful-collection receipt contract exists for these jobs yet
+            if future_start and loaded is True and status in (None, 0):
+                level = "ok"
         out.append({"label": lbl, "name": job["name"], "schedule": schedule_words(snap.plists.get(lbl)),
                     "loaded": loaded, "running": running, "state": printed.get("state", ""),
                     "runs_since_load": printed.get("runs", ""), "exit_status": status,
@@ -579,18 +595,31 @@ def live_signals(scr: Screen) -> list[dict]:
 
 # ---------------------------------------------------------------- the screens
 
+def source_freshness(scr):
+    op = scr.snap.operations
+    out = [x for x in (op.get("freshness"), op.get("plan_freshness"), op.get("action_freshness")) if x]
+    for project in PROJECTS:
+        r = scr.snap.runs.get(project)
+        at, _ = health_mod.last_run(r.data[1] if r and r.data else [])
+        out.append(operations.freshness(("NFL" if project == "nfl-weather" else "College football") + " alert records", at, scr.now, scr.tz, 24))
+    q = scr.snap.quota or {}
+    out.append(operations.freshness("Credit balance", words.parse_utc(q.get("utc", "")), scr.now, scr.tz, 24))
+    ev = scr.snap.evidence.data
+    dates = [words.parse_utc(str(x.get("date", "")) + "T00:00:00Z") for x in ev if isinstance(x, dict)] if isinstance(ev, list) else []
+    out.append(operations.freshness("Research evidence", max((x for x in dates if x), default=None), scr.now, scr.tz, 168, "Newest evidence date"))
+    return out
+
+
 def home(store: Store) -> dict:
     scr = Screen(store)
     s = summary(store, scr.snap, scr.now)                 # the same snapshot, minute and games as the rest
     at = latest_alert_run(scr.snap)
     tests, _ = scr.part("forward tests", lambda: forward_tests(scr, wait=False), ([], {}))
     job_list = scr.part("scheduled jobs", lambda: jobs(scr), [])
-    waiting = scr.part("“Waiting on you” list", lambda: status_md.waiting_items(
-        scr.snap.status_text or "", scr.now, scr.tz), [])
-    if scr.snap.status_text is None:
-        scr.notes.append(scr.snap.status_note or "STATUS.md could not be read.")
-    elif not waiting:
-        scr.notes.append("STATUS.md has no numbered items under “Waiting on you”.")
+    op = scr.snap.operations
+    waiting = op.get("actions", [])
+    if op.get("unclassified_actions"):
+        scr.notes.append("Unclassified owner items remain visible with “Status needs review”; the hub should confirm their current disposition.")
     ev, n, bar = scr.part("evidence list", lambda: evidence(scr), ([], None, None))
     ev_sorted = sorted((e for e in ev if e["kind"] != "pending"), key=lambda e: e["date"], reverse=True)
     q = scr.snap.quota or {}
@@ -613,7 +642,8 @@ def home(store: Store) -> dict:
             "credits": s["credits_remaining"],
             "credits_read": scr.when(words.parse_utc(q.get("utc", ""))) if q.get("utc") else None,
         },
-        "tests": tests, "jobs": job_list, "waiting": waiting, "evidence": ev_sorted[:5],
+        "tests": tests, "jobs": job_list, "waiting": waiting, "evidence": ev_sorted[:3],
+        "operations": op, "sources": source_freshness(scr),
         "evidence_total": len(ev), "variants": n, "bar": bar,
     })
 
@@ -862,12 +892,14 @@ def run_records(store: Store) -> dict:
 
 def pull(store: Store) -> dict:
     scr = Screen(store)
+    recorded = words.parse_utc(scr.snap.operations.get("freshness", {}).get("utc", ""))
     m = scr.snap.manifest
     if scr.snap.manifest_note:
         scr.notes.append(scr.snap.manifest_note)
     if not m or not m["pulls"]:
-        return scr.done({"header": scr.header("Last request", None), "started": False,
-                         "text": "The pull has not started. It is planned for Thursday, October 1.", "pulls": [],
+        return scr.done({"header": scr.header("Last acquisition record", recorded), "started": False,
+                         "text": "No entries in the legacy request log. This does not mean downloads have not started.", "pulls": [],
+                         "operations": scr.snap.operations, "sources": source_freshness(scr),
                          "total": None})
     pulls = sorted(m["pulls"], key=lambda p: (p["pull"] == "account", p["pull"]))
     for p in pulls:
@@ -875,8 +907,9 @@ def pull(store: Store) -> dict:
     total = {"requests": sum(p["requests"] for p in pulls), "billed": sum(p["billed"] for p in pulls),
              "upper": sum(p["upper"] for p in pulls), "unreadable": sum(p["unreadable"] for p in pulls),
              "lowest": min((p["lowest"] for p in pulls if p["lowest"] is not None), default=None)}
-    return scr.done({"header": scr.header("Last request", words.parse_utc(m["last_logged"])), "started": True,
-                     "text": "", "pulls": pulls, "total": total})
+    return scr.done({"header": scr.header("Last acquisition record", recorded or words.parse_utc(m["last_logged"])), "started": True,
+                     "text": "", "pulls": pulls, "total": total,
+                     "operations": scr.snap.operations, "sources": source_freshness(scr)})
 
 
 def research(store: Store) -> dict:

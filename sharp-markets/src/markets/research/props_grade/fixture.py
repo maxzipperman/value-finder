@@ -117,7 +117,7 @@ ROSTER = [
 ]
 # player_week: player -> (the fixture game's row: game, market stat, value), plus two more 2025 games for the median
 STAT = {REC: "receiving_yards", RUSH: "rushing_yards", PASS: "passing_yards", RECS: "receptions"}
-OUTCOMES = {   # player_id: {stat: [this game's value, week 3, week 4]}; None = a row with no attempt
+OUTCOMES = {   # player_id: {stat: [this game's value, week 3, week 4]}; None = unknown statistic, explicit 0 = verified zero
     "00-K1": {"receiving_yards": [40, 60, 70], "receptions": [4, 6, 7]},
     "00-K3": {"rushing_yards": [50, 50, 50]},
     "00-K4": {"passing_yards": [270, 240, 260]},
@@ -129,7 +129,7 @@ OUTCOMES = {   # player_id: {stat: [this game's value, week 3, week 4]}; None = 
     "00-P2": {"rushing_yards": [60, 80, 85]},
     "00-P3": {"rushing_yards": [20, 30, 40]},
     "00-D1": {"receiving_yards": [95, 70, 75]},
-    "00-D2": {"rushing_yards": [None, 40, 30]},
+    "00-D2": {"rushing_yards": [0, 40, 30]},
     "00-D3": {"receiving_yards": [25, 30, 35]},
     "00-U1": {"rushing_yards": [65, 70, 80]},
     "00-M1": {"receiving_yards": [90, 60, 70]},

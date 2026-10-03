@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "scopes": [
+    "ops/process/process_guard.py",
+    "ops/process/governance_guard.py",
+    "ops/process/test_process_guard.py",
+    "ops/process/test_governance_guard.py",
+    "ops/process/test_startup_guard.py",
+    "ops/process/test_status_contract.py",
+    "ops/process/review-policy.json",
+    "ops/process/verification.json",
+    ".github/workflows/process.yml",
+    "strategy-research/coverage-pass-execution-v1/orchestration.py",
+    "strategy-research/coverage-pass-execution-v1/bootstrap.py",
+    "dashboard/vfdash/status_md.py",
+    "dashboard/vfdash/words.py",
+    "STATUS.md",
+    "docs/status-archive/2026-10-03-before-simplification.md",
+    "docs/status-archive/manifest.json",
+    "GOVERNANCE.md",
+    "dashboard/vfdash/__init__.py",
+    "sharp-markets/src/markets/research/props_grade/registration.py",
+    "nfl-weather/PREREGISTRATION_PROPS.md"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "ops/process",
+      "-p",
+      "test_*.py",
+      "-v"
+    ]
+  ],
+  "environment": {
+    "PYTHONHASHSEED": "0",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}
