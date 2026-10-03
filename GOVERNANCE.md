@@ -16,12 +16,27 @@ Claude/auditor workers, merges consequential changes and maintains the single
 | Research | Calculations, identity, eligibility, scoring, rule-changing documentation | Independent technical review and hub approval |
 | Execution | Purchases, registration, live changes; governance affecting their controls | Independent technical review, hub approval and exact execution authority where applicable |
 
-For research/execution changes, the independent reviewer and hub each post
-`AGREE <full current head sha>`. New commits require renewed agreement, **not
-repeating unchanged tests**. The author cannot supply their own independent review.
-The hub merges these changes. Ordinary changes need one approval and can be merged
-by the responsible assistant. This governance change itself uses the prior dual
-current-head agreement rule. When impact is uncertain, use the higher tier.
+For research/execution changes, retain both independent technical review and hub
+approval. Each reviewer posts `AGREE <full current head sha>`, or may substitute
+that same reviewer's formal GitHub **Approve** review only when the hub verifies:
+
+- the review is currently `APPROVED`, not dismissed, and its `commit_id` equals
+  the full current PR head;
+- the reviewer uses a distinct, independently authenticated account, independent
+  of the author and the other required reviewer;
+- the review includes a one-line rubric identifying scope checked, evidence/checks
+  verified and protections preserved.
+
+A native approval replaces only that reviewer's AGREE comment, never the other
+required role. One person cannot supply both independent and hub review, and the
+author cannot supply their own independent review or self-approve. Reviewers using
+the shared `maxzipperman` account retain exact-head AGREE comments that identify
+their role; a shared-account native approval cannot establish independence.
+New commits invalidate exact-head approvals and require renewed agreement, **not
+repeating unchanged tests**. The hub merges these changes. Ordinary changes need
+one approval and can be merged by the responsible assistant. This approval-policy
+change itself uses the prior dual current-head AGREE rule. When impact is
+uncertain, use the higher tier.
 Rule-changing docs are never ordinary. Tests inherit the risk tier of the invariant
 they guard: weakening a spending, eligibility or scoring assertion needs independent
 review and hub approval, even though purchase identity stays unchanged. Merge
@@ -67,11 +82,16 @@ Current executors/approvals retain their own stricter semantics.
 
 ## Short handoffs and one source of truth
 
-Use `.github/pull_request_template.md`: change, current head, evidence, blockers,
-budget, next action. Updates report only differences and link prior evidence;
-read the relevant diff and artifact before entire transcripts. No unchanged-status
-messages. Worker check-ins are event driven; the hub still rechecks live paid
-approval when executing. Quiet local monitoring is separately proposed in PR #123;
+Use [the PR template](.github/pull_request_template.md): scope, risk, current head,
+evidence, blockers, budget and next action/owner. Authors use GitHub's draft/ready
+state instead of a readiness checkbox or repeated READY/NOT READY reports;
+ready for review does not mean approved to merge or execute. Keep future and
+unfrozen handoffs brief and link existing artifacts. Leave completed freezes and
+captured source closures byte-identical, including READMEs outside a nearby
+FREEZE inventory when an executed capture binds them. Updates report only
+differences and link prior evidence; read the relevant diff and artifact before
+entire transcripts. No unchanged-status messages. Worker check-ins are event driven;
+the hub still rechecks live paid approval when executing. Quiet local monitoring is separately proposed in PR #123;
 model routing remains PR #112, not this change.
 
 `GOVERNANCE.md` owns coordination; `CLAUDE.md` owns research/project conventions;
