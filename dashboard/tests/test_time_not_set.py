@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from conftest import Clock, cfb_row, make_store, nfl_row
+import json
+
+from conftest import Clock, cfb_row, make_store, nfl_row, write
 
 from vfdash import api
 
@@ -190,3 +192,18 @@ def test_the_board_never_shows_the_placeholder_as_a_kickoff():
     js = (Path(__file__).resolve().parents[1] / "vfdash" / "static" / "app.js").read_text()
     body = js.split("function drawBoard(", 1)[1].split("\n  }\n", 1)[0]
     assert "g.time_set === false" in body and "“Time not set”" not in body and '"Time not set"' in body
+
+
+def test_the_not_eligible_notice_shows_when_it_was_first_logged(root, home):
+    """cfb-weather amendment 7 (draft): the alert's key for a Rule HT game with no kickoff time set is "ht_time_tbd",
+    and the game page finds the first row logged with Rule HT status "time_tbd", as it does for "ht" and "SIGNAL"."""
+    add_rows(root, ht="time_tbd")
+    write(root / "cfb-weather" / "data" / "forward" / "alert_state.json",
+          json.dumps({"401000010": {"sent": ["ht_time_tbd"]}}))
+    store = at(root, home, datetime(2026, 10, 3, 17, 0, tzinfo=UTC))
+    status, d = api.game(store, "401000010")
+    assert status == 200
+    sent = d["alerts"]["sent"]
+    assert [s["words"] for s in sent] == ["Rule HT: not eligible, no kickoff time set"]
+    assert sent[0]["first_seen"].startswith("First logged on the run of Fri Oct 2")
+    assert api.FIRST_SEEN["ht_time_tbd"] == ("rule_ht", "time_tbd")

@@ -416,9 +416,11 @@ runpy.run_path(script, run_name="__main__")
 
 
 def live_copy(base):
-    """A copy of this project laid out like the live checkout, outside any git repository (so no nightly copy): the
-    scorer and its package, its own ledger in data/forward (41 Rule B signals) and the current season's cfbfastR
-    schedule, data/raw/cfbfastr/schedules_2026.parquet, refreshed an hour before the clock below."""
+    """A copy of this project laid out like the live checkout: the scorer and its package, its own ledger in
+    data/forward (41 Rule B signals) and the current season's cfbfastR schedule,
+    data/raw/cfbfastr/schedules_2026.parquet, refreshed an hour before the clock below. It sits in a git repository
+    with no ledgers branch (so no nightly copy), with kickoff_verifications.csv committed: a live run records only from
+    the committed file (amendment 7, draft)."""
     proj = base / "cfb-weather"
     shutil.copytree(ROOT / "cfbweather", proj / "cfbweather", ignore=shutil.ignore_patterns("__pycache__"))
     (proj / "scripts").mkdir()
@@ -430,6 +432,8 @@ def live_copy(base):
     (fwd / "sched.csv").unlink()
     t = pd.Timestamp("2026-12-21T16:00", tz="UTC").timestamp()
     os.utime(season, (t, t))
+    from test_readings import commit_verifications
+    commit_verifications(proj, (ROOT / "kickoff_verifications.csv").read_bytes(), within=base)
     return proj
 
 

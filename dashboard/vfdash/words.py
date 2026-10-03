@@ -248,6 +248,7 @@ RULE_HT_WORDS = {
     "below_threshold": "Total below the line",
     "price_too_high": "Price too high",
     "before_window": "Before the test starts (Week 6)",
+    "time_tbd": "Would signal, but no kickoff time is set (not eligible yet)",
 }
 LEAN_WORDS = {"UNDER lean": "Leans under", "OVER lean": "Leans over", "": "No lean"}
 # The lean model is run only for an outdoor NFL game with a forecast (wx_src "era5"); on any other game the job
@@ -354,7 +355,8 @@ def alert_words(key: str) -> str:
     """An alert key from alert_state.json in plain words."""
     k = (key or "").strip()
     fixed = {"ruleb": "Rule B signal", "ruleb_secondary": "Rule B signal at the backup price",
-             "ht": "Rule HT signal", "edge": "Model edge watch", "coldvis": "Cold visitor watch",
+             "ht": "Rule HT signal", "ht_time_tbd": "Rule HT: not eligible, no kickoff time set",
+             "edge": "Model edge watch", "coldvis": "Cold visitor watch",
              "leanUNDER": "Model lean watch: under", "leanOVER": "Model lean watch: over"}
     if k in fixed:
         return fixed[k]
