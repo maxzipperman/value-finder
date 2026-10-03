@@ -1,5 +1,7 @@
 # Value Finder — running progress and credit plan
 
+**Exact pilot packet, October 2:** PR137/140 are merged. The hub created the sole durable seed record (SHA256 `4c87095954e336a9e556941f58100f613f9791a1b93a2d44c96365c9ab77e10d`) after final protocol review and published its commitment before assembly. The deterministic packet selects430games from the full6790-identity frame:180older and250props, preserving the NFL2025 cached census. It contains736new requests (236older featured and500six-market props), capped at37,080credits; eight older slot references reuse authenticated history. No sampled metadata-zero games arose; the fixed failure rule remains bound. Packet root `f499935c05191d9583f891d9f859575ad7419472829fd802e39e2f62549eb22f`, list/set SHA `f602f04848acb0f13b58d37b6d89f1fa6a99661407301255ae6c68f840be71ba`. Actual read-only global/cache/reuse and captured packet checks passed; carried170,306 plus cap =207,386 against250,000 first-tranche ceiling. Paid authority remains false; current account/live authority and exact packet review still precede sends. No paid calls, outcomes or statistical release.
+
 Updated October 2, 2026, 7:31 PM Pacific. Maintained by hub chat.
 
 **Current position:** recent football odds, NFL alternate lines and the first NFL props slice are downloaded. The exact older offline reconciliation is complete. **Owner-directed hold: remaining bulk downloads wait for an outcome-blind coverage pilot and predeclared confidence-bound gate.** Executor and analysis repairs continue in parallel.

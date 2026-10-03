@@ -233,3 +233,5 @@ Synthetic orchestration is not a live paid preflight.
 All full listing/availability/bulk purchases remain held for coverage measurement.
 
 **Coverage pilot packet preparation (Oct2, prospective):** PR137 executor merged; successor offline builder and exact pre-draw protocol are under review. Protocol fixes price-only seven-book/six-market scope,30 per older stratum/50 per five unknown props strata/0 NFL2025 census, and separate5% missing caps. No production seed, list or paid authority exists. Hub alone records the once-only seed after protocol agreement.
+
+**Exact coverage pilot prepared (October2):** sole draw committed after PR137/140 review. Actual packet736requests/37,080maximum credits,430selected games; root/list and accounting in [HUB_PROGRESS](HUB_PROGRESS.md). Read-only cache/history and packet validation passed. Exact packet review/current account/live paid authority remain; no paid requests or automatic tranche release.

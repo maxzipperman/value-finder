@@ -37,7 +37,7 @@ Run one paid purchase at a time. Derive the actual list and cache deductions bef
 |---|---|---:|---|
 | Done | F2: NFL alternate spreads/totals | 0 additional | Complete union: 1,773 slots; 34,140 billed credits. Never repurchase completed or explicitly missing requests. |
 | Done | F3a: NFL 2025 six-market player props | 0 additional | 570 completed requests; 34,090 billed credits. Reuse compatible book/market/time coverage. |
-| First | Cache-only audit and representative coverage pilot | To be frozen; cached compute 0 | Predeclare sampling/clustering, usable paired coverage, confidence bounds and cost/yield gate. Gap-filling requests need exact approval. |
+| First | Fixed existing-frame coverage pilot | 37,080 | PR137/140 merged; sole committed draw selects430games. Actual packet736new requests (236older,500props), eight old reused slot references; exact packet review/current preflight/live paid authority pending. No redraw or automatic later-tranche release. |
 | After coverage gate | NFL/CFB listing discovery, then market availability | 1,544 listing; 7,032 currently proposed availability | PR #132 safety repairs first. New IDs need a separately bounded list; metadata is not price-pair proof. |
 | After coverage gate | Owner-requested NFL/CFB props archive (#130) | 2,747,340 two-time planning bound | Up to ten selected books; actual supported coverage/list/cap follow pilot and compatible cache reuse. Four earlier times for eight core markets add a separate 1,112,960 planning bound. |
 | After coverage gate / completed predecessor | N0: NBA January 5–11, 2026 sample week | 7,540 | 754 prepared requests; completed older successor ancestry and reviewed driver required. No generic football F1. |
