@@ -10,6 +10,18 @@ Paper-only sports-betting research. The goal is to find prices the market gets w
 
 ## Projects
 
+**Current acquisition sequencing (owner, October 2):** remaining bulk purchases
+wait for a predeclared outcome-blind coverage pilot and confidence-bound gate.
+Use cached inputs first; a finite reviewed gap-filling pilot measures usable paired
+quotes, freshness, missing denominators and settlement support. Metadata presence
+or a chronological/one-season cache alone is not representative all-archive proof.
+Recent F1, F2 and F3a are complete. The exact older offline reconciliation is
+installed under PR #129, preserving its charge/reservation and original evidence.
+PR #134 prepares 1,786 never-sent requests /53,580 maximum new credits, held for
+coverage review and fresh exact paid authority. PR #132 executor repairs and
+props/weather analysis repairs proceed separately. [Running progress](HUB_PROGRESS.md)
+mirrors verified purchases and estimates; the October queue remains authoritative.
+
 | Folder | Question | Where it stands | Next step |
 |---|---|---|---|
 | [`nfl-weather/`](nfl-weather/) | Do NFL totals under-price wind? This extends the 2014 thesis. | Thesis replicated and audited. Rule B (forecast wind ≥ 15 mph → under) is pre-registered as playbook v2. Alerts run 4×/day. | Forward test is scored from Week 5 (Oct 8). |

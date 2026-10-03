@@ -4,6 +4,15 @@ Updated October 2, 2026, after the owner's instruction to prioritize efficient u
 This is the current operational queue; it supersedes the old day-one F1/probe sequence. It is a plan,
 not an executable request list or paid approval. No new purchase is authorized by this document.
 
+**Owner coverage-first direction, October 2:** hold remaining bulk purchases until
+a predeclared, representative outcome-blind pilot supports useful coverage and
+cost per usable paired game. Use existing caches first; the small gap-filling
+pilot needs its own finite reviewed list, cap and exact authority. Metadata
+presence is not paired-price, freshness or settlement coverage. Chronological
+older responses and NFL-only 2025 props do not establish all-season/all-sport
+coverage. Fix safety/analysis code in parallel; no outcomes enter acquisition
+selection. This direction supersedes earlier execute-as-soon-as-ready wording.
+
 ## Owner decisions and completed work
 
 - **NFL props acquisition override (owner, October 2, #130 / PR #131):** "i override that old gate, i just want to download all the props". Prepare and acquire the available NFL player-prop archive from May 3, 2023 through a frozen cutoff independently of the 2025 F3a result. Include all provider-supported historical player-prop markets in the scope inventory, with books, game phases and snapshot cadence explicit. Reuse completed purchases; freeze the incremental list and cost before exact hub approval. The prior six-market F3b estimate of 102,600 is not the comprehensive archive budget. Research criteria, N1/F4 gates and sealed 2026 handling remain unchanged. See the [owner request](../../strategy-research/nfl-props-archive-owner-request-2026-10-02.md).
@@ -26,21 +35,26 @@ Run one paid purchase at a time. Derive the actual list and cache deductions bef
 
 | Order | Dataset / purpose | Maximum new credits | Dependency and current state |
 |---|---|---:|---|
-| 1 | F2: NFL alternate spreads/totals, T−24h and registered close slots | 48,000 | Prepare exact unsealed list, reuse existing provider inventory and caches; review kickoff/identity/close eligibility. Not executable yet. |
-| 2 | F3a: NFL 2025 six-market player-prop slice | 36,000 | Exact `2025` scope only; no automatic F3b expansion. Freeze list and coverage/book-selection procedure first. |
-| Earliest ready point between runs | Owner-requested NFL props archive (#130) | To be costed after cache reuse | No 2025 profitability prerequisite; explicit full market/book/phase/cadence scope, cutoff, incremental list, reviewed executor and exact hub approval required. |
-| 3 | N0: NBA January 5–11, 2026 sample week | 8,000 | Use the NBA pipeline's schedule A and existing cache, not generic football F1. Review exact list/cost. |
+| Done | F2: NFL alternate spreads/totals | 0 additional | Complete union: 1,773 slots; 34,140 billed credits. Never repurchase completed or explicitly missing requests. |
+| Done | F3a: NFL 2025 six-market player props | 0 additional | 570 completed requests; 34,090 billed credits. Reuse compatible book/market/time coverage. |
+| First | Cache-only audit and representative coverage pilot | To be frozen; cached compute 0 | Predeclare sampling/clustering, usable paired coverage, confidence bounds and cost/yield gate. Gap-filling requests need exact approval. |
+| After coverage gate | NFL/CFB listing discovery, then market availability | 1,544 listing; 7,032 currently proposed availability | PR #132 safety repairs first. New IDs need a separately bounded list; metadata is not price-pair proof. |
+| After coverage gate | Owner-requested NFL/CFB props archive (#130) | 2,747,340 two-time planning bound | Up to ten selected books; actual supported coverage/list/cap follow pilot and compatible cache reuse. Four earlier times for eight core markets add a separate 1,112,960 planning bound. |
+| After coverage gate / completed predecessor | N0: NBA January 5–11, 2026 sample week | 7,540 | 754 prepared requests; completed older successor ancestry and reviewed driver required. No generic football F1. |
 | 4 | HB1/HS1: qualifying 2024–25 heat-game closes | 16,000 | Free venue/forecast joins and registered trigger first; buy only qualifying slots, deduplicated by actual request identity. |
-| Parallel preparation; execute at earliest ready point between runs | Older F1: NFL/CFB 2020–22 daily/close slice | 68,010 | Existing exact 2,267 paid + 12 reused slots. Outcome-blind recent coverage acceptance and separately reviewed cumulative-ledger priority-2 runner required. No calendar wait for October 20. |
+| Prepared; held for coverage gate | Older F1: NFL/CFB 2020–22 remainder | 53,580 | PR #129 offline reconciliation installed: 480 completed plus one certified lag-missing response; 14,430 charges/reservations retained. PR #134 freezes 1,786 never-sent rows; exact authority separate. Original 12 cache-reuse responses preserved. |
 
-F2/F3a/N0/heat together reserve at most **108,000 new credits**, plus at most **68,010** for older F1.
-Including the completed recent F1, this is **258,840** in these named purchases; the probe, live alerts,
-external spending and other earlier purchases are additional and must remain in the cumulative account ledger.
-This leaves most of the 5M allowance for larger pulls whose data actually justify proceeding.
+At the installed older partial, terminal purchase charges plus the probe total
+**167,177 credits**; conservative cumulative budget debit is **170,306**.
+These are not current provider-balance measurements. The older remainder adds
+at most **53,580**, for **223,886** before other new stages/usage. The original
+**250,000-credit first-tranche ceiling** remains and needs a reviewed prospective
+extension before larger props execution. Monthly ceiling **4,440,000** and reserve
+**531,630** remain. Larger figures are bounds, not billing predictions or authority.
 
 ## Schedule and gate decisions
 
-Dates are targets, not permission to skip a dependency. Use the actual allowance reset date once confirmed.
+Dates are targets, not permission to skip a dependency. The [official FAQ](https://the-odds-api.com/manage/faqs.html) states that credits reset on the first of each month: standard next reset November 1, 2026. Exact hour/timezone and account renewal/cancellation are not verified; aim to finish by October 29 Pacific.
 
 - **Now through October 7:** freeze/review the first lists, reconcile all local caches, and execute ready
   Phase 1 runs consecutively. Prepare the older runner concurrently with list review; do not wait for a backup.
