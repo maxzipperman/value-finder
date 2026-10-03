@@ -1,0 +1,71 @@
+{
+  "reviewer": "author complete manual semantic inspection; not independent validation",
+  "task": "review",
+  "all_findings_inspected": true,
+  "distinct_real_causes": 9,
+  "seeded_causes": 10,
+  "false_findings": 0,
+  "duplicate_findings": 0,
+  "non_defect_annotations": 0,
+  "correct_times_component_flagged": false,
+  "finding_audit": [
+    {
+      "index": 1,
+      "classification": "real",
+      "cause": "negative odds formula"
+    },
+    {
+      "index": 2,
+      "classification": "real",
+      "cause": "eligibility after book dedupe"
+    },
+    {
+      "index": 3,
+      "classification": "real",
+      "cause": "lexical offset ordering"
+    },
+    {
+      "index": 4,
+      "classification": "real",
+      "cause": "inclusive expiry"
+    },
+    {
+      "index": 5,
+      "classification": "real",
+      "cause": "job-scoped run id dedupe"
+    },
+    {
+      "index": 6,
+      "classification": "real",
+      "cause": "last duplicate time tie"
+    },
+    {
+      "index": 7,
+      "classification": "real",
+      "cause": "stale job retry overwrite"
+    },
+    {
+      "index": 8,
+      "classification": "real",
+      "cause": "partial downloaded rows omitted"
+    },
+    {
+      "index": 9,
+      "classification": "real",
+      "cause": "pending classified failed"
+    }
+  ],
+  "missed_causes": [
+    "missing quote tie rules"
+  ],
+  "caveats": [
+    "Eligibility explanation mentions invalid odds though the review uses individually valid records. Valid wrong-event/future/expired alternatives suffice for the true cause; this is not credited as an extra defect."
+  ],
+  "evidence": [
+    "review-response.txt",
+    "../../ceiling/review-source.json",
+    "../../ceiling/review-inventory.json",
+    "../../ceiling/review-validation.json"
+  ],
+  "schema_check_is_not_semantic_credit": true
+}

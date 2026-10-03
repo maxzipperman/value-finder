@@ -1,0 +1,53 @@
+[
+  {
+    "case": "schema only; each cause/false/duplicate finding requires manual semantic review",
+    "passed": true,
+    "findings": [
+      {
+        "file": "quotes.py",
+        "line": 13,
+        "explanation": "Negative American odds formula computes 100/((-v)+100) but the contract specifies (-v)/((-v)+100). For v=-150 the code yields 0.4 while the correct value is 0.6."
+      },
+      {
+        "file": "quotes.py",
+        "line": 19,
+        "explanation": "The preliminary pass (lines 19-23) selects one row per book before any eligibility filtering (event match, time window, valid odds). An ineligible latest row for a book suppresses all eligible older rows for that same book, violating the contract requirement that invalid/future/expired rows be filtered BEFORE per-book selection."
+      },
+      {
+        "file": "quotes.py",
+        "line": 21,
+        "explanation": "Compares raw observed_at values (ISO-8601 strings that may carry different UTC offsets) using lexicographic order instead of comparing UTC-normalized instants, violating the contract rule 'All comparisons use absolute instants'."
+      },
+      {
+        "file": "quotes.py",
+        "line": 33,
+        "explanation": "Uses 'observed<=at<=expiry' (inclusive upper bound on expires_at) but the contract specifies observed_at<=asof<expires_at with a strict less-than on the expiry boundary."
+      },
+      {
+        "file": "runs.py",
+        "line": 19,
+        "explanation": "Deduplication key is row['job']+row['run_id'], but the contract states 'run_id is global across jobs' and that a later valid record may correct the job field. Deduplication should key on run_id alone so the same run_id with a corrected job is treated as one record."
+      },
+      {
+        "file": "runs.py",
+        "line": 20,
+        "explanation": "Condition 'observed>=stamps[identity]' overwrites the stored row on exact timestamp ties, retaining the later input row. The contract requires 'exact time ties retaining first eligible input row,' so the replacement condition should be strict '>'."
+      },
+      {
+        "file": "runs.py",
+        "line": 27,
+        "explanation": "'if True:' unconditionally overwrites picked[key] and ranks[key], so the last iterated identity for each job always wins regardless of attempt number, observed_at, or run_id. The contracted ordering (greatest attempt, then greatest observed_at, then lexicographically smallest run_id) is never applied."
+      },
+      {
+        "file": "pipeline.py",
+        "line": 10,
+        "explanation": "successful_rows sums downloaded_rows only for status=='ok', omitting status=='partial'. The contract requires summing downloaded_rows once for each selected job whose status is ok or partial."
+      },
+      {
+        "file": "pipeline.py",
+        "line": 10,
+        "explanation": "The failures list includes jobs with status in ('failed','pending'), but the contract states 'failures contains only selected failed jobs' and 'Never infer pending is success/failure.' Pending jobs belong exclusively in unknown_jobs, not failures."
+      }
+    ]
+  }
+]

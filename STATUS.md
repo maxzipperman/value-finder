@@ -206,3 +206,6 @@ PR147 October3 ceiling freeze: baseline terminal17 paid attempts+4GLM provider-u
 
 
 PR147 integrated ceiling checkpoint: active sequential queue98555, Qwen3.6fast three stop responses author inspected/graded: invalid implementation JSON, regression wrong file bundle, review5/10 real causes with2false/3duplicates/3non-defect annotations. Qwen3.8Q4 sampled thinking implementation stop below32K with empty final; no source salvaged, no cap escalation justified. Remaining26 stress requests pending/unstarted. See CEILING_RESULTS.md and ceiling-summary.json; final allocation and independent validation pending.
+
+
+PR147 follow-up: Qwen3.8Q4 regression also stop-empty below32K; review9/10 causes,0false/duplicates,289s. Six of18 conditional API32K targets prospectively qualified by saved baseline progress (DeepSeek multifile/hard-selection; MiMo multifile/debugging/regression/hard-selection),12 denied/deferred, maximum additional reserve$0.11718916; no32K collector started. Active integrated queue98555 continues GPT-OSS medium next, no competing inference or final handoff.

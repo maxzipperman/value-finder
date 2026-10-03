@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 4,
+    "result": 6,
     "error": 0,
     "pending": 1,
-    "not_started": 25
+    "not_started": 23
   },
   "records": [
     {
@@ -3944,7 +3944,7 @@
       "family": "local",
       "model": "qwen3.8:27b",
       "task": "regression",
-      "status": "pending",
+      "status": "result",
       "folder": "ceiling-local/qwen3.8-27b",
       "prompt_sha256": "123cf6e07cdf909838ea44a69bf18498231fb9551e4d3f1d9be3d6b053be96f3",
       "digest": "aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813",
@@ -3967,13 +3967,2052 @@
           "draft_num_predict": 0
         }
       },
-      "request_sha256": "736a012a72650cfe05a14832b0c485490ee954f2057f11713cdbd7f4a51ac937"
+      "request_sha256": "736a012a72650cfe05a14832b0c485490ee954f2057f11713cdbd7f4a51ac937",
+      "returned_model": "qwen3.8:27b",
+      "wall_seconds": 340.70299279200844,
+      "finish_reason": "stop",
+      "final_answer_bytes": 0,
+      "load_seconds": 1.799258834,
+      "generation_seconds": 336.514598,
+      "generated_tokens": 9629,
+      "prompt_tokens": 1156,
+      "preflight_memory_free_percentage": 81,
+      "sampled_memory": [
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        }
+      ],
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
     },
     {
       "family": "local",
       "model": "qwen3.8:27b",
       "task": "review",
-      "status": "not_started",
+      "status": "result",
       "folder": "ceiling-local/qwen3.8-27b",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": "aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813",
@@ -3995,13 +6034,1864 @@
           "repeat_penalty": 1,
           "draft_num_predict": 0
         }
+      },
+      "request_sha256": "90a6d7947e60a0a274a70e9f74b70619e698c87f135fa5b735c7e67f50779ec9",
+      "returned_model": "qwen3.8:27b",
+      "wall_seconds": 289.29377925000153,
+      "finish_reason": "stop",
+      "final_answer_bytes": 2788,
+      "load_seconds": 1.808543625,
+      "generation_seconds": 283.396718,
+      "generated_tokens": 8086,
+      "prompt_tokens": 2520,
+      "preflight_memory_free_percentage": 81,
+      "sampled_memory": [
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        },
+        {
+          "name": "qwen3.8:27b",
+          "size": 21714729696,
+          "size_vram": 21714729696,
+          "context_length": 65536
+        }
+      ],
+      "memory_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements",
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "schema only; each cause/false/duplicate finding requires manual semantic review",
+            "passed": true,
+            "findings": [
+              {
+                "file": "quotes.py",
+                "line": 13,
+                "explanation": "Negative American odds formula computes 100/((-v)+100) but the contract specifies (-v)/((-v)+100). For v=-150 the code yields 0.4 while the correct value is 0.6."
+              },
+              {
+                "file": "quotes.py",
+                "line": 19,
+                "explanation": "The preliminary pass (lines 19-23) selects one row per book before any eligibility filtering (event match, time window, valid odds). An ineligible latest row for a book suppresses all eligible older rows for that same book, violating the contract requirement that invalid/future/expired rows be filtered BEFORE per-book selection."
+              },
+              {
+                "file": "quotes.py",
+                "line": 21,
+                "explanation": "Compares raw observed_at values (ISO-8601 strings that may carry different UTC offsets) using lexicographic order instead of comparing UTC-normalized instants, violating the contract rule 'All comparisons use absolute instants'."
+              },
+              {
+                "file": "quotes.py",
+                "line": 33,
+                "explanation": "Uses 'observed<=at<=expiry' (inclusive upper bound on expires_at) but the contract specifies observed_at<=asof<expires_at with a strict less-than on the expiry boundary."
+              },
+              {
+                "file": "runs.py",
+                "line": 19,
+                "explanation": "Deduplication key is row['job']+row['run_id'], but the contract states 'run_id is global across jobs' and that a later valid record may correct the job field. Deduplication should key on run_id alone so the same run_id with a corrected job is treated as one record."
+              },
+              {
+                "file": "runs.py",
+                "line": 20,
+                "explanation": "Condition 'observed>=stamps[identity]' overwrites the stored row on exact timestamp ties, retaining the later input row. The contract requires 'exact time ties retaining first eligible input row,' so the replacement condition should be strict '>'."
+              },
+              {
+                "file": "runs.py",
+                "line": 27,
+                "explanation": "'if True:' unconditionally overwrites picked[key] and ranks[key], so the last iterated identity for each job always wins regardless of attempt number, observed_at, or run_id. The contracted ordering (greatest attempt, then greatest observed_at, then lexicographically smallest run_id) is never applied."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 10,
+                "explanation": "successful_rows sums downloaded_rows only for status=='ok', omitting status=='partial'. The contract requires summing downloaded_rows once for each selected job whose status is ok or partial."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 10,
+                "explanation": "The failures list includes jobs with status in ('failed','pending'), but the contract states 'failures contains only selected failed jobs' and 'Never infer pending is success/failure.' Pending jobs belong exclusively in unknown_jobs, not failures."
+              }
+            ]
+          }
+        ]
+      },
+      "manual_review": {
+        "reviewer": "author complete manual semantic inspection; not independent validation",
+        "task": "review",
+        "all_findings_inspected": true,
+        "distinct_real_causes": 9,
+        "seeded_causes": 10,
+        "false_findings": 0,
+        "duplicate_findings": 0,
+        "non_defect_annotations": 0,
+        "correct_times_component_flagged": false,
+        "finding_audit": [
+          {
+            "index": 1,
+            "classification": "real",
+            "cause": "negative odds formula"
+          },
+          {
+            "index": 2,
+            "classification": "real",
+            "cause": "eligibility after book dedupe"
+          },
+          {
+            "index": 3,
+            "classification": "real",
+            "cause": "lexical offset ordering"
+          },
+          {
+            "index": 4,
+            "classification": "real",
+            "cause": "inclusive expiry"
+          },
+          {
+            "index": 5,
+            "classification": "real",
+            "cause": "job-scoped run id dedupe"
+          },
+          {
+            "index": 6,
+            "classification": "real",
+            "cause": "last duplicate time tie"
+          },
+          {
+            "index": 7,
+            "classification": "real",
+            "cause": "stale job retry overwrite"
+          },
+          {
+            "index": 8,
+            "classification": "real",
+            "cause": "partial downloaded rows omitted"
+          },
+          {
+            "index": 9,
+            "classification": "real",
+            "cause": "pending classified failed"
+          }
+        ],
+        "missed_causes": [
+          "missing quote tie rules"
+        ],
+        "caveats": [
+          "Eligibility explanation mentions invalid odds though the review uses individually valid records. Valid wrong-event/future/expired alternatives suffice for the true cause; this is not credited as an extra defect."
+        ],
+        "evidence": [
+          "review-response.txt",
+          "../../ceiling/review-source.json",
+          "../../ceiling/review-inventory.json",
+          "../../ceiling/review-validation.json"
+        ],
+        "schema_check_is_not_semantic_credit": true
       }
     },
     {
       "family": "local",
       "model": "gpt-oss:20b",
       "task": "implementation",
-      "status": "not_started",
+      "status": "pending",
       "folder": "ceiling-local/gpt-oss-20b",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
@@ -4017,7 +7907,8 @@
           "num_ctx": 65536,
           "num_predict": 32768
         }
-      }
+      },
+      "request_sha256": "dd5215e5e43a4ca77e106bdaf400fc2b91a1fc23abf11370bd87f4295cd15b83"
     },
     {
       "family": "local",

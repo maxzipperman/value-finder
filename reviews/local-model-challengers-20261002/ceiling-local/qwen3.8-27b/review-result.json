@@ -1,0 +1,1733 @@
+{
+  "model": "qwen3.8:27b",
+  "created_at": "2026-10-03T11:00:23.712926Z",
+  "message": {
+    "role": "assistant",
+    "content": "[\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 13,\n    \"explanation\": \"Negative American odds formula computes 100/((-v)+100) but the contract specifies (-v)/((-v)+100). For v=-150 the code yields 0.4 while the correct value is 0.6.\"\n  },\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 19,\n    \"explanation\": \"The preliminary pass (lines 19-23) selects one row per book before any eligibility filtering (event match, time window, valid odds). An ineligible latest row for a book suppresses all eligible older rows for that same book, violating the contract requirement that invalid/future/expired rows be filtered BEFORE per-book selection.\"\n  },\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 21,\n    \"explanation\": \"Compares raw observed_at values (ISO-8601 strings that may carry different UTC offsets) using lexicographic order instead of comparing UTC-normalized instants, violating the contract rule 'All comparisons use absolute instants'.\"\n  },\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 33,\n    \"explanation\": \"Uses 'observed<=at<=expiry' (inclusive upper bound on expires_at) but the contract specifies observed_at<=asof<expires_at with a strict less-than on the expiry boundary.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 19,\n    \"explanation\": \"Deduplication key is row['job']+row['run_id'], but the contract states 'run_id is global across jobs' and that a later valid record may correct the job field. Deduplication should key on run_id alone so the same run_id with a corrected job is treated as one record.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 20,\n    \"explanation\": \"Condition 'observed>=stamps[identity]' overwrites the stored row on exact timestamp ties, retaining the later input row. The contract requires 'exact time ties retaining first eligible input row,' so the replacement condition should be strict '>'.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 27,\n    \"explanation\": \"'if True:' unconditionally overwrites picked[key] and ranks[key], so the last iterated identity for each job always wins regardless of attempt number, observed_at, or run_id. The contracted ordering (greatest attempt, then greatest observed_at, then lexicographically smallest run_id) is never applied.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 10,\n    \"explanation\": \"successful_rows sums downloaded_rows only for status=='ok', omitting status=='partial'. The contract requires summing downloaded_rows once for each selected job whose status is ok or partial.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 10,\n    \"explanation\": \"The failures list includes jobs with status in ('failed','pending'), but the contract states 'failures contains only selected failed jobs' and 'Never infer pending is success/failure.' Pending jobs belong exclusively in unknown_jobs, not failures.\"\n  }\n]",
+    "thinking": "Let me carefully audit each file against the contract specification.\n\n**times.py:**\n- Line 5-6: Accepts ISO8601 strings via `datetime.fromisoformat` and datetime objects. \u2713\n- Line 7: Checks `isinstance(value, datetime)`, `tzinfo is None`, `utcoffset() is None`. \u2713\n- Line 8: Normalizes to UTC via `astimezone(timezone.utc)`. \u2713\n- Line 10-11: Catches ValueError, TypeError, OverflowError and re-raises as ValueError. \u2713\n- This looks correct.\n\n**quotes.py:**\n- Line 5: Excludes bool, requires int, float, or str. \u2713\n- Line 8: Converts to float. \u2713\n- Line 11: Checks finite and abs>=100. \u2713\n- Line 13: `100/(v+100)` for positive, `100/((-v)+100)` for negative. Let me verify: \"Positive American odds give 100/(v+100), negative odds give (-v)/((-v)+100).\" \n  - For positive: 100/(v+100) \u2713\n  - For negative: (-v)/((-v)+100). If v=-150, then (-v)=150, (-v)+100=250, so 150/250=0.6. The code has `100/((-v)+100)`. That's 100/250=0.4. But the contract says (-v)/((-v)+100) = 150/250 = 0.6. So the code is WRONG on line 13 for negative odds.\n\nWait, let me re-read: \"Positive American odds give 100/(v+100), negative odds give (-v)/((-v)+100).\"\n\nSo for negative v (e.g., v = -150):\n- (-v) = 150\n- (-v) + 100 = 250\n- Result = 150/250 = 0.6\n\nThe code says: `100/((-v)+100)` which for v=-150 gives 100/250 = 0.4. That's WRONG.\n\nIt should be `(-v)/((-v)+100)` i.e. `-v / (-v + 100)`.\n\nSo line 13 has a bug: for negative odds, it uses `100/((-v)+100)` instead of `(-v)/((-v)+100)`.\n\nNow let me check the `select` function in quotes.py:\n\n- Line 16: `at=instant(asof)` \u2014 validates asof. \u2713\n- Line 17-18: Validates event. \u2713\n- Lines 19-23: This is a preliminary \"latest per book\" pass. But wait \u2014 the contract says \"Invalid/future/expired rows are filtered BEFORE selecting each book.\" Let me re-read the contract.\n\n\"Eligible iff matching event AND observed_at<=asof<expires_at AND last_update<=observed_at. All comparisons use absolute instants. Invalid/future/expired rows are filtered BEFORE selecting each book. Select greatest eligible observed_at per book; absolute-time ties choose lexicographically smallest id; equal instant/id ties keep first eligible input row, regardless of other fields.\"\n\nSo the contract says:\n1. First filter: only eligible rows (matching event, observed_at <= asof < expires_at, last_update <= observed_at, valid odds, valid fields)\n2. Then among eligible rows, select greatest observed_at per book\n3. Ties on observed_at \u2192 lexicographically smallest id\n4. Ties on both \u2192 first eligible input row\n\nNow looking at the code:\n- Lines 19-23: This does a preliminary pass selecting the latest observed_at per book using raw string comparison (`row['observed_at']>latest[row['book']]['observed_at']`). This is problematic because:\n  - It compares raw values (strings or datetimes) without converting to UTC first. String comparison of ISO timestamps doesn't work correctly across different timezone offsets.\n  - It doesn't filter for eligibility first \u2014 it includes all rows (even malformed ones, even those that don't match the event, even expired ones).\n  - It doesn't check if the row is a dict or has required fields.\n\nWait, but then lines 25-40 do the actual selection with proper validation. Let me re-read the code flow:\n\nLines 19-23: Creates `latest` dict by book, keeping the row with the greatest `observed_at` (raw comparison). Then `rows = list(latest.values())`.\n\nLines 24-40: Iterates over the `rows` list (which is now just one row per book from the preliminary pass), validates each, and does the actual selection.\n\nThis is a major problem. The preliminary pass on lines 19-23:\n1. Doesn't validate anything (no type checks, no field checks, no event matching, no time validation)\n2. Uses raw `row['observed_at']` comparison which could be strings with different timezone offsets\n3. If a row is not a dict, `row['book']` will raise TypeError (which is NOT caught here \u2014 it's outside the try/except)\n\nWait, actually looking more carefully:\n- Line 21: `row['book']` \u2014 if row is not a dict, this raises TypeError. This is NOT inside a try/except block. So if any row in the list is not a dict, this will crash the entire function.\n\nBut the contract says \"Malformed individual records are skipped\" and \"Inputs quote_rows/run_rows are lists of arbitrary objects.\" So non-dict objects should be skipped.\n\nLine 20: `for row in rows:` \u2014 iterates over all rows\nLine 21: `if row['book'] not in latest or row['observed_at']>latest[row['book']]['observed_at']:` \u2014 this will crash if row is not a dict (TypeError from `row['book']`), or if 'book' key is missing (KeyError), or if row['observed_at'] is not comparable.\n\nThis is a critical bug: the preliminary pass on lines 19-23 will crash on non-dict rows or rows missing required keys, instead of skipping them.\n\nBut wait \u2014 the contract says \"Inputs quote_rows/run_rows are lists of arbitrary objects. Malformed individual records are skipped.\" So the code must handle arbitrary objects gracefully.\n\nActually, let me re-read: the preliminary pass at lines 19-23 is BEFORE the validation loop at lines 24-40. The validation loop at line 26 checks `if not isinstance(row,dict): continue`. But the preliminary pass doesn't have this check.\n\nSo the bug is: lines 19-23 will raise unhandled exceptions (TypeError, KeyError) for non-dict rows or rows without 'book' or 'observed_at' keys.\n\nBut wait \u2014 the task says \"Inputs are individually valid records with string timestamps and aware ISO asof; duplicates, offsets, ties, multiple events, retry status transitions allowed. Do not flag hypothetical malformed inputs.\"\n\nHmm, so the task says inputs are individually valid records. But the contract says \"Malformed individual records are skipped\" and \"lists of arbitrary objects.\" Let me re-read the task instruction: \"Audit the four supplied modules below. Inputs are individually valid records with string timestamps and aware ISO asof; duplicates, offsets, ties, multiple events, retry status transitions allowed. Do not flag hypothetical malformed inputs.\"\n\nSo I should focus on the logic bugs with valid inputs, not on handling of malformed inputs. The \"arbitrary objects\" handling is a contract requirement but the task says not to flag hypothetical malformed inputs. Let me focus on logic errors with valid inputs.\n\nOK so with valid inputs (all dicts with required fields), let me re-examine:\n\nLines 19-23: The preliminary pass selects one row per book based on `row['observed_at']` comparison. But this compares the raw values. If timestamps are strings like \"2024-01-01T10:00:00+05:00\" and \"2024-01-01T05:30:00+00:00\", string comparison won't work correctly. The first is 05:00 UTC, the second is 05:30 UTC. String comparison: \"2024-01-01T10:00:00+05:00\" > \"2024-01-01T05:30:00+00:00\" (because '1' > '0' at position 11). So it would pick the first one (05:00 UTC) over the second (05:30 UTC), which is WRONG.\n\nBut wait, the task says \"string timestamps\" \u2014 so they're strings. And the comparison on line 21 is string-to-string comparison. This is a bug because different timezone offsets make string comparison incorrect.\n\nActually, wait. Let me re-read: \"Inputs are individually valid records with string timestamps.\" So the timestamps in the records are strings. The `instant()` function converts them to UTC datetimes. But the preliminary pass on line 21 compares the raw string values, not the converted UTC values.\n\nThis is a real bug: the preliminary \"latest per book\" selection uses raw string comparison instead of normalized UTC comparison.\n\nBut then... the second pass (lines 24-40) only operates on the rows that survived the preliminary pass. If the preliminary pass eliminated the wrong row, the second pass can't recover it.\n\nActually wait, let me re-read the code more carefully. The preliminary pass picks ONE row per book (the one with the \"greatest\" raw observed_at). Then the second pass validates that single row. If that row is invalid (e.g., expired, wrong event), it's skipped, and NO other row for that book is considered.\n\nBut the contract says: \"Invalid/future/expired rows are filtered BEFORE selecting each book.\" This means we should first filter out all invalid rows, THEN select the best among valid ones. The code does the opposite: it first selects the best (by raw comparison), then checks if it's valid. If the \"best\" row is invalid, it's lost.\n\nExample: Book A has two rows:\n- Row 1: observed_at = \"2024-01-01T12:00:00Z\", expires_at = \"2024-01-01T11:00:00Z\" (expired)\n- Row 2: observed_at = \"2024-01-01T10:00:00Z\", expires_at = \"2024-01-01T11:00:00Z\" (valid)\n\nThe preliminary pass picks Row 1 (greatest observed_at). The second pass finds it expired and skips it. Book A is omitted entirely. But per the contract, Row 2 should be selected.\n\nThis is a fundamental logic error.\n\nAlso, the preliminary pass doesn't filter by event. So if Book A has a row for event \"X\" (latest) and a row for event \"Y\" (older), and we're looking for event \"Y\", the preliminary pass picks the \"X\" row, the second pass rejects it (wrong event), and Book A is omitted. But the \"Y\" row should have been selected.\n\nSo the core issue with quotes.py select is: the two-pass approach is wrong. The contract requires: filter all rows for eligibility (event match, time window, valid odds, etc.), THEN select the best per book. The code does: select best per book (by raw comparison, no filtering), THEN check eligibility.\n\nLet me also check: the contract says \"observed_at<=asof<expires_at\" (asof is strictly less than expires_at). The code on line 33 has `observed<=at<=expiry` \u2014 this uses `<=` for expiry, meaning asof CAN equal expires_at. The contract says `asof<expires_at` (strict). So line 33 is wrong: it should be `observed<=at<expiry` not `observed<=at<=expiry`.\n\nLet me verify: \"Eligible iff matching event AND observed_at<=asof<expires_at AND last_update<=observed_at.\" Yes, the contract says `asof < expires_at` (strict less-than). The code has `at<=expiry`. That's a bug.\n\nNow for the negative odds formula:\nContract: \"negative odds give (-v)/((-v)+100)\"\nCode line 13: `100/((-v)+100)`\n\nFor v = -150: contract says 150/250 = 0.6, code gives 100/250 = 0.4. Bug.\n\nNow let me look at **runs.py**:\n\nLines 4-23: Deduplication by `identity = row['job']+row['run_id']`.\n\nWait, the contract says: \"First deduplicate by run_id: greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row.\"\n\nBut the code uses `identity = row['job']+row['run_id']` (line 19). This means the dedup key is (job, run_id), not just run_id. The contract says \"run_id is global across jobs.\" So if the same run_id appears with different job fields, they should be treated as the same run_id for deduplication. But the code treats them as different identities.\n\nWait, let me re-read: \"First deduplicate by run_id: greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row. Then select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first.\"\n\nAnd: \"run_id is global across jobs, and a later valid record may correct the job field.\"\n\nSo the dedup key should be run_id alone, not job+run_id. The code on line 19 uses `row['job']+row['run_id']` as the key, which means the same run_id with different job values are treated as different entries. This contradicts \"run_id is global across jobs.\"\n\nThis is a bug on line 19.\n\nNow the second pass (lines 24-28):\n```python\npicked={}; ranks={}\nfor identity,row in unique.items():\n    key=row['job']; stamp=stamps[identity]; rank=(row['attempt'],stamp,identity); old=ranks.get(key)\n    if True:\n        picked[key]=row;ranks[key]=rank\n```\n\nThe `if True` means it ALWAYS overwrites. So the last entry in `unique` for each job wins. But the contract says: \"select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first.\"\n\nThe rank tuple is `(row['attempt'], stamp, identity)` but it's never actually compared \u2014 `if True` bypasses any comparison. The last item iterated for a given job simply wins. Since dict iteration in Python 3.7+ is insertion order, this means the last inserted identity for that job wins, regardless of attempt number, timestamp, or run_id.\n\nThis is a major bug: the selection logic for \"latest attempt\" is completely broken. The `if True` should be a proper comparison like:\n```python\nif old is None or rank > old:\n```\nor similar.\n\nAlso, the rank uses `identity` (which is job+run_id string) as the third tiebreaker. The contract says \"lexicographically smallest run_id\" should win on ties. But using `identity` (job+run_id) as the tiebreaker and comparing with `>` would pick the lexicographically LARGEST, not smallest. And even if the comparison were correct, the `if True` makes it irrelevant.\n\nLet me also check: the contract says \"No status-preference rule: a higher failed/partial/pending attempt supersedes older ok.\" The code doesn't have any status-based logic in the selection, which is correct in principle, but the `if True` bug means nothing is actually compared.\n\nNow **pipeline.py**:\n\nLine 9: `quotes=select(quote_rows,event,at); runs=reconcile(run_rows,at)`\n- It passes `at` (the converted UTC datetime) to both functions. Both `select` and `reconcile` call `instant()` on it again. Since `at` is already a datetime, `instant()` will just normalize it (no-op). This is fine.\n\nLine 9: It passes `event` to `select`. \u2713\n\nLine 9: The contract says \"Validate asof and event even if inputs are empty.\" The code calls `instant(asof)` on line 6 and validates event on line 7. \u2713\n\nLine 10: `successful_rows=sum(row['downloaded_rows'] for row in runs.values() if row['status']=='ok')`\n\nThe contract says: \"Sum downloaded_rows ONCE from each selected job with status ok or partial.\"\n\nThe code only sums for `ok`, not for `partial`. This is a bug. It should be `row['status'] in ('ok','partial')`.\n\nLine 10: `'failures':sorted(job for job,row in runs.items() if row['status'] in ('failed','pending'))`\n\nThe contract says: \"failures contains only selected failed jobs.\" The code includes both 'failed' AND 'pending' in the failures list. But the contract also says \"unknown_jobs selected pending\" \u2014 pending should be in unknown_jobs, not failures.\n\nSo the failures list should only contain 'failed', not 'pending'. This is a bug.\n\nLine 10: `'unknown_jobs':sorted(job for job,row in runs.items() if row['status']=='pending')` \u2014 This is correct.\n\nSo the bug is that 'pending' appears in both 'failures' and 'unknown_jobs'.\n\nLet me also check: \"Never infer pending is success/failure.\" The code includes pending in failures, which violates this.\n\nNow let me also re-examine the `quotes.py` select function more carefully for the tie-breaking logic.\n\nThe contract says: \"Select greatest eligible observed_at per book; absolute-time ties choose lexicographically smallest id; equal instant/id ties keep first eligible input row, regardless of other fields.\"\n\nIn the second pass (lines 25-40), the code does:\n```python\nrank=(observed,row['id'])\nold=ranks.get(key)\nif old is None or observed>old[0] or (observed==old[0] and row['id']<old[1]):\n    ranks[key]=rank; picked[key]={'row':row,'probability':p}\n```\n\nThis looks correct for the tie-breaking logic IF the preliminary pass didn't eliminate valid rows. But since we only get one row per book from the preliminary pass, this comparison will almost never have multiple candidates. The logic is there but the preliminary pass defeats it.\n\nActually wait \u2014 can the preliminary pass ever leave multiple rows for the same book? No, it explicitly keeps only one per book. So the second pass will only ever see one row per book, and the comparison logic is effectively dead code (it will always find `old is None` for each book).\n\nThis confirms the structural bug: the two-pass approach is fundamentally wrong.\n\nLet me also check: does the code handle the case where `rows` is an empty list? \n- Line 19: `latest={}`\n- Line 20: `for row in rows:` \u2014 doesn't iterate\n- Line 23: `rows=list(latest.values())` \u2014 empty\n- Lines 25-40: doesn't iterate\n- Returns empty dict. \u2713\n\nNow, the contract says the pipeline must \"invoke the supporting modules; don't embed all logic in the entry point.\" The pipeline does call `select` and `reconcile`. \u2713\n\nLet me also check if there's a bug in the `probability` function regarding the \"abs>=100\" check. The contract says \"abs>=100\". The code has `abs(v)<100` raising an error, which means it requires `abs(v)>=100`. \u2713\n\nWhat about `v=100`? `abs(100)<100` is False, so it passes. Then `100/(100+100) = 0.5`. \u2713\nWhat about `v=-100`? `abs(-100)<100` is False, so it passes. Then since v<0 (not >0), we get `100/((-(-100))+100) = 100/(100+100) = 0.5`. But the contract says negative odds give `(-v)/((-v)+100)` = 100/200 = 0.5. So for v=-100, both formulas give 0.5. But for v=-150, contract gives 150/250=0.6, code gives 100/250=0.4. The bug is confirmed for v < -100.\n\nWait, actually let me re-read: \"Positive American odds give 100/(v+100), negative odds give (-v)/((-v)+100).\"\n\nFor positive v (e.g., +200): 100/(200+100) = 100/300 = 0.333...\nFor negative v (e.g., -150): (-v)/((-v)+100) = 150/(150+100) = 150/250 = 0.6\n\nCode for negative: `100/((-v)+100)` = 100/(150+100) = 100/250 = 0.4. Wrong.\n\nOK so let me compile my findings:\n\n1. **quotes.py line 13**: Negative odds formula is wrong. Should be `(-v)/((-v)+100)` but is `100/((-v)+100)`.\n\n2. **quotes.py line 21**: The preliminary pass compares raw `observed_at` values (strings with potentially different timezone offsets) instead of normalized UTC instants. String comparison across different offsets gives wrong ordering.\n\n3. **quotes.py lines 19-23**: The preliminary \"latest per book\" pass selects before filtering for eligibility (event match, time window, valid odds). If the latest row for a book is ineligible (wrong event, expired, etc.), it eliminates valid older rows. The contract requires filtering first, then selecting.\n\n4. **quotes.py line 33**: Uses `at<=expiry` (inclusive) but contract requires `asof<expires_at` (strict). Should be `at<expiry`.\n\n5. **runs.py line 19**: Dedup key is `row['job']+row['run_id']` but contract says \"run_id is global across jobs.\" Should dedup by `run_id` alone.\n\n6. **runs.py line 27**: `if True:` always overwrites, bypassing the attempt/timestamp/run_id comparison. The selection of \"latest attempt\" is broken \u2014 last iterated wins regardless of attempt number.\n\n7. **pipeline.py line 10**: `successful_rows` only sums `status=='ok'` but contract says \"status ok or partial.\"\n\n8. **pipeline.py line 10**: `failures` includes `status in ('failed','pending')` but contract says \"failures contains only selected failed jobs\" and \"Never infer pending is success/failure.\" Pending should only be in `unknown_jobs`.\n\nWait, let me double-check finding #2. The task says \"Inputs are individually valid records with string timestamps.\" So the timestamps ARE strings. And the comparison on line 21 is between two string values. If both strings have the same timezone offset (e.g., both UTC with 'Z'), string comparison works. But if they have different offsets, it doesn't.\n\nThe task says \"duplicates, offsets, ties, multiple events, retry status transitions allowed.\" So different offsets are explicitly in scope. This confirms the bug.\n\nActually, wait. Let me reconsider finding #2 vs #3. Are they the same root cause or different?\n\nFinding #2: Even if we only compare valid rows, the raw string comparison is wrong for different timezone offsets.\nFinding #3: The filtering is done after selection, so invalid rows can eliminate valid ones.\n\nThese are independent bugs. Even if you fixed #3 (filter first, then select), you'd still have #2 (wrong comparison for different offsets). And even if you fixed #2 (use UTC comparison), you'd still have #3 (invalid rows eliminate valid ones). So they are independent findings.\n\nActually, let me reconsider. If I fix #3 by filtering first, then the remaining rows are all valid. Among valid rows, I still need to select the best by observed_at. If I use raw string comparison (#2), it could still be wrong for different offsets. So yes, they're independent.\n\nBut wait \u2014 is finding #2 really independent? If I restructure to filter first then select, the comparison would naturally use `instant()` (as it does in the second pass on line 31). The issue is specifically in the preliminary pass on line 21. If I remove the preliminary pass entirely and do everything in one pass with proper validation first, then the comparison would be correct. So finding #2 is really a symptom of the structural issue in #3.\n\nHmm, but they're still distinct code locations with distinct causes. Line 21 uses raw comparison; the structural issue is the two-pass design. I'll list them separately since they're on different lines and have different explanations.\n\nActually, let me reconsider whether #2 is truly a separate issue. The contract says \"All comparisons use absolute instants.\" The preliminary pass on line 21 uses raw values. Even if the preliminary pass were the only pass, it would violate \"All comparisons use absolute instants.\" So it's a separate violation.\n\nBut I think the cleaner way to state this is:\n- The two-pass structure is wrong (filter should happen before select) \u2014 this is the main structural bug\n- The raw comparison in the preliminary pass violates \"All comparisons use absolute instants\" \u2014 this is a specific implementation bug\n\nI'll include both as separate findings.\n\nLet me also check: in the runs.py dedup, line 20: `if identity not in stamps or observed>=stamps[identity]:`\n- `observed>=stamps[identity]` \u2014 this means for exact ties, the LATER row wins (because `>=` includes equality). But the contract says \"exact time ties retaining first eligible input row.\" So for ties, the FIRST row should win. With `>=`, the second row overwrites the first. This is a bug!\n\nWait, let me think about this more carefully. The loop iterates in order. If row A (index 0) and row B (index 1) have the same run_id and same observed_at:\n- Process A: identity not in stamps, so set stamps[identity] = observed_A\n- Process B: observed_B >= stamps[identity] (equal), so overwrite with B\n\nSo B wins the tie, but the contract says A (first) should win. The condition should be `observed > stamps[identity]` (strict) for the \"greatest wins\" case, and for ties, the first one stays (because we don't overwrite on equal).\n\nSo line 20 has `>=` but should be `>`. This is a bug.\n\nWait, actually let me re-read: \"greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row.\"\n\nSo the rule is: greatest observed_at wins. On exact ties, first input row wins. The implementation should be:\n- If new observed > current best: replace\n- If new observed == current best: keep current (first)\n- If new observed < current best: keep current\n\nSo the condition to REPLACE should be `observed > stamps[identity]` (strict greater than). The code has `>=` which means on ties it replaces (keeping the later one). Bug confirmed.\n\nLet me add this as a finding.\n\nSo my final list:\n\n1. quotes.py line 13: Wrong negative odds formula\n2. quotes.py line 21: Raw string comparison instead of UTC-normalized\n3. quotes.py lines 19-23 (I'll point to line 21 or the block): Structural issue \u2014 select before filter\n4. quotes.py line 33: Inclusive comparison for expiry instead of strict\n5. runs.py line 19: Dedup key includes job, should be run_id only\n6. runs.py line 20: `>=` should be `>` for first-tie-wins\n7. runs.py line 27: `if True` bypasses all comparison logic\n8. pipeline.py line 10: successful_rows missing partial\n9. pipeline.py line 10: failures incorrectly includes pending\n\nWait, for #3, which line should I point to? The issue is the entire two-pass structure. The preliminary pass is lines 19-23. The specific problem is that it selects before validating. I'll point to line 19 as the start of the problematic block, or maybe line 21 where the actual selection happens without validation.\n\nActually, I think the most precise finding is about line 21: it selects based on raw observed_at without first checking eligibility. The fix would be to move all validation before any selection. I'll cite line 21.\n\nHmm, but I already have a finding on line 21 for the raw comparison. Let me separate them:\n- Line 21, finding A: uses raw values instead of UTC-normalized instants\n- Lines 19-23 (the whole preliminary pass), finding B: performs selection before eligibility filtering\n\nFor finding B, I'll cite line 19 as the start of the problematic preliminary pass.\n\nActually, re-reading the task: \"one independent cause per finding.\" So I need to make sure each finding is a distinct, independent cause.\n\nLet me finalize:\n\n1. **quotes.py line 13**: Negative American odds formula computes `100/((-v)+100)` instead of the contracted `(-v)/((-v)+100)`.\n\n2. **quotes.py line 21**: Preliminary per-book selection compares raw `observed_at` values (ISO strings with potentially different UTC offsets) lexicographically rather than comparing UTC-normalized instants, violating \"All comparisons use absolute instants.\"\n\n3. **quotes.py line 19**: The preliminary pass selects one row per book before any eligibility filtering (event match, time window, valid odds), so an ineligible latest row suppresses eligible older rows for the same book. Contract requires filtering invalid/future/expired rows BEFORE per-book selection.\n\n4. **quotes.py line 33**: Uses `observed<=at<=expiry` (inclusive upper bound) but the contract specifies `observed_at<=asof<expires_at` (strict less-than on expiry).\n\n5. **runs.py line 19**: Deduplication key is `row['job']+row['run_id']`, but the contract states \"run_id is global across jobs\" and a later valid record may correct the job field. Dedup should key on run_id alone.\n\n6. **runs.py line 20**: Condition `observed>=stamps[identity]` overwrites on exact timestamp ties, retaining the later input row. Contract requires \"exact time ties retaining first eligible input row,\" so the condition should be strict `>`.\n\n7. **runs.py line 27**: `if True:` unconditionally overwrites, bypassing the intended comparison of (attempt, observed_at, run_id). The last iterated identity for each job always wins regardless of attempt number or timestamp.\n\n8. **pipeline.py line 10**: `successful_rows` sums only `status=='ok'` rows, omitting `status=='partial'`. Contract requires summing downloaded_rows for both ok and partial.\n\n9. **pipeline.py line 10**: `failures` list includes jobs with `status in ('failed','pending')`, but contract specifies \"failures contains only selected failed jobs\" and \"Never infer pending is success/failure.\" Pending belongs only in unknown_jobs.\n\nLet me verify I'm not flagging anything that's actually correct:\n\n- times.py: Looks correct. No findings. \u2713\n- quotes.py probability function (lines 4-13): The formula bug on line 13 is the only issue. The type checking, bool exclusion, finite check, abs>=100 check are all correct. \u2713\n- quotes.py select: Multiple issues found. \u2713\n- runs.py: Multiple issues found. \u2713\n- pipeline.py: Two issues found. \u2713\n\nI think this is a complete and accurate audit. Let me format the JSON response."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 288680453084,
+  "load_duration": 1808543625,
+  "prompt_eval_count": 2520,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 3464306000,
+  "eval_count": 8086,
+  "eval_duration": 283396718000,
+  "wall_seconds": 289.29377925000153,
+  "memory_samples": [
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b",
+      "size": 21714729696,
+      "size_vram": 21714729696,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 81,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

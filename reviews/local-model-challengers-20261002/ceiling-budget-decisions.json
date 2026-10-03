@@ -34,5 +34,23 @@
       "ceiling-local/qwen3.8-27b/implementation-acceptance.json"
     ],
     "reviewer": "author delivery and tail inspection"
+  },
+  "qwen3.8:27b|regression|64k": {
+    "proceed": false,
+    "reason": "Server stop after9629 tokens below32768, empty final. Not reported length/time exhaustion; no reasoning salvage or blind reroll.",
+    "evidence": [
+      "ceiling-local/qwen3.8-27b/regression-result.json",
+      "ceiling-local/qwen3.8-27b/regression-acceptance.json"
+    ],
+    "reviewer": "author delivery/tail inspection"
+  },
+  "qwen3.8:27b|review|64k": {
+    "proceed": false,
+    "reason": "Completed stop review,9/10 causes and zero false/duplicate findings. Missed tie rule is a semantic omission, not a truncation; no resource reroll.",
+    "evidence": [
+      "ceiling-local/qwen3.8-27b/review-result.json",
+      "ceiling-local/qwen3.8-27b/manual-review.json"
+    ],
+    "reviewer": "author manual semantic inspection"
   }
 }
