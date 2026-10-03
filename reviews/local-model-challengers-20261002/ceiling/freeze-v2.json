@@ -19,14 +19,10 @@
     "inventory.json": "3d2c0c2b782065f79d5806da2a5d43d250e8214a1ff7e69f6383098ece7b065a",
     "openrouter-glm-endpoints.json": "5fff0e38f2c46784c46c616fadd165db123b0c04256153af97e4df3be24c7f7a",
     "openrouter-inventory.json": "b7dd5e5308fa52d46ecb5d2640ef418551ef84010e8b6c2ed9d4b9345aa30279",
-    "openrouter_budget.py": "9910009346a67e820d31490fd60e876c9bafaf2c3667ef738767d8a44245b8f6",
+    "openrouter_budget.py": "e5f70bbed7b5118abaaa36e1fe2558fc53a7747d193325f1023787ddcc21e496",
     "openrouter_free.py": "6412962e97196f1b8d6882b4f5ed523470c00489f561534e9b35625c3a67201e",
-    "openrouter_paid.py": "a2a49d23b86deb4a05a47cccad1b01e02fd0864327a363263c0f7e3925dad5f2",
-    "ceiling_queue.py": "723953ef48e7c7957f4f647202f4c9ac4b516e398dbddd23582be505134d7771",
-    "ceiling_mimo.py": "e008c4c6b785d4a82e7601dd46b926df5980a862d03704a55540e130635d4826",
-    "ceiling-error-audit.json": "3adb1711cef791cfb5342eb43e05e6753258efa66b521a7b059496b31f6ab39c",
-    "ceiling-provider-deferral.json": "20ec745611149b9b68d21e064005a29bd579aa86ed71c56691ebbbf9b35795c7",
-    "CEILING_CONTINUATION_PLAN.md": "3a6683d40dcc1fb78dcda9f00f0c0ec2c2cebe0fc23599ffa056d8c9e72f9ff1"
+    "openrouter_paid.py": "99100e8fd9091f969234d824b7d90babdf7c2f128b6799f0a1b8ed9f3ff2136e",
+    "ceiling_queue.py": "723953ef48e7c7957f4f647202f4c9ac4b516e398dbddd23582be505134d7771"
   },
-  "note": "Guard-only transition after terminal queue98555: declared MiMo subset and folder-specific audit after GLM429. Prompts/model modes/caps/reference/harness unchanged; preserve freeze-v2 and prior responses, no rerolls."
+  "note": "Frozen before stress inference. Does not contain outcome data/hidden feedback in requests. Author validation, independent signoff pending."
 }

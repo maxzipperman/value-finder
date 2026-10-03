@@ -1,0 +1,32 @@
+{
+  "grading": "author offline adverse and actual terminal-reservation preflight; not independent billing validation",
+  "checks": [
+    {
+      "case": "digest-bound stopped attempt accepted with full maximum reservation",
+      "passed": true
+    },
+    {
+      "case": "uncertain reserved attempt rejected",
+      "passed": true
+    },
+    {
+      "case": "under-reserved failed attempt rejected",
+      "passed": true
+    },
+    {
+      "case": "changed error digest rejected",
+      "passed": true
+    },
+    {
+      "case": "missing terminal error rejected",
+      "passed": true
+    }
+  ],
+  "actual_saved_error_audit_pass": true,
+  "selected_distinct_unattempted_requests": 3,
+  "combined_budget_all_three_fit": true,
+  "credential_access": false,
+  "inference_calls": 0,
+  "limitations": "No account metadata or per-attempt private billing published. Error cost unknown, maximum retained. Compilation is not inference.",
+  "actual_collector_preflight_before_key_pass": true
+}

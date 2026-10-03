@@ -1,0 +1,21 @@
+{
+  "original_list_sha256": "6598a6f7d46f5c3df685fc33100219f4eea6d9d481d4d35c916f0872ec997601",
+  "selected_models": [
+    "xiaomi/mimo-v2.6-flash"
+  ],
+  "selected_request_sha256": [
+    "4b4fbbd589d8fb842dd54b6a339a485ca7c9d9cd169e6797fe639eac4a28f776",
+    "181d7f305bd39750be4115be37e0626f0505a522430143bd8cea895d462c8957",
+    "b40b33273d15b22bcfbbaaf1b2c81596f5f32a28107235e296c5f992b8ce180f"
+  ],
+  "deferred": [
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "review",
+      "classification": "provider_unavailable_deferred",
+      "reason": "Unattempted review deferred after pinnedDeepInfra regression429; availability result, not semantic failure. No alternateprovider or retry authorized."
+    }
+  ],
+  "error_audit_sha256": "3adb1711cef791cfb5342eb43e05e6753258efa66b521a7b059496b31f6ab39c",
+  "guards": "Existing sharedlock, digest/list, price/provider/checkpoint, perphase.50 and combinedowner$1, maxreservation including unknownerrors, no saved request resubmission; collector continuation not implemented/executed yet."
+}

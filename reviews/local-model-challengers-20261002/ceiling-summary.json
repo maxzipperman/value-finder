@@ -2,10 +2,11 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 24,
-    "error": 0,
-    "pending": 1,
-    "not_started": 5
+    "result": 25,
+    "error": 1,
+    "pending": 0,
+    "not_started": 3,
+    "deferred": 1
   },
   "records": [
     {
@@ -28730,7 +28731,7 @@
       "family": "api",
       "model": "z-ai/glm-5.3-flash",
       "task": "implementation",
-      "status": "pending",
+      "status": "result",
       "folder": "openrouter-ceiling/z-ai--glm-5.3-flash",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": null,
@@ -28759,13 +28760,52 @@
         "seed": 42,
         "top_p": 0.95
       },
-      "request_sha256": "0662ebd465d1c429dac8031156f1239f003a7eefffc07087d216c15c8873bb72"
+      "request_sha256": "0662ebd465d1c429dac8031156f1239f003a7eefffc07087d216c15c8873bb72",
+      "returned_model": "z-ai/glm-5.3-flash",
+      "wall_seconds": 1271.641337417008,
+      "provider": "DeepInfra",
+      "finish_reason": "stop",
+      "final_answer_bytes": 10000,
+      "usage": {
+        "prompt_tokens": 1108,
+        "completion_tokens": 39042,
+        "total_tokens": 40150,
+        "cost": 0.0098436,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0098436,
+          "upstream_inference_prompt_cost": 8.31e-05,
+          "upstream_inference_completions_cost": 0.0097605
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 36435,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: disallowed name"
+          }
+        ]
+      }
     },
     {
       "family": "api",
       "model": "z-ai/glm-5.3-flash",
       "task": "regression",
-      "status": "not_started",
+      "status": "error",
       "folder": "openrouter-ceiling/z-ai--glm-5.3-flash",
       "prompt_sha256": "123cf6e07cdf909838ea44a69bf18498231fb9551e4d3f1d9be3d6b053be96f3",
       "digest": null,
@@ -28793,13 +28833,17 @@
         },
         "seed": 42,
         "top_p": 0.95
-      }
+      },
+      "request_sha256": "2340c53fe5d9f879e180dedfb190de23652398439a3433314e9ae20e5f43356e",
+      "error_type": "HTTPError",
+      "http_status": 429,
+      "wall_seconds": 0.22818566602654755
     },
     {
       "family": "api",
       "model": "z-ai/glm-5.3-flash",
       "task": "review",
-      "status": "not_started",
+      "status": "deferred",
       "folder": "openrouter-ceiling/z-ai--glm-5.3-flash",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": null,
@@ -28827,6 +28871,12 @@
         },
         "seed": 42,
         "top_p": 0.95
+      },
+      "provider_deferral": {
+        "model": "z-ai/glm-5.3-flash",
+        "task": "review",
+        "classification": "provider_unavailable_deferred",
+        "reason": "Unattempted review deferred after pinnedDeepInfra regression429; availability result, not semantic failure. No alternateprovider or retry authorized."
       }
     },
     {

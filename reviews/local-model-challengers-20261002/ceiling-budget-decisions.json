@@ -221,5 +221,21 @@
       "openrouter-ceiling/deepseek--deepseek-v4.1-flash/review-result.json",
       "openrouter-ceiling/deepseek--deepseek-v4.1-flash/manual-review.json"
     ]
+  },
+  "z-ai/glm-5.3-flash|implementation|128k": {
+    "proceed": false,
+    "reason": "Stopcompleted source below65536; benignASTcompatibilityreject plus visible missingpartial_jobs append and invalidlowercasez acceptance. Semanticcompletion, not capexhaustion; no reroll.",
+    "reviewer": "author fullsource inspection",
+    "evidence": [
+      "openrouter-ceiling/z-ai--glm-5.3-flash/implementation-result.json",
+      "openrouter-ceiling/z-ai--glm-5.3-flash/implementation-manual-inspection.json"
+    ]
+  },
+  "z-ai/glm-5.3-flash|regression|128k": {
+    "proceed": false,
+    "reason": "HTTP429 upstreamrate limit, no captured reasoning to justify outputescalation; preserve maximum reservation/no retry.",
+    "evidence": [
+      "openrouter-ceiling/z-ai--glm-5.3-flash/regression-error.json"
+    ]
   }
 }

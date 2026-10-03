@@ -1,0 +1,22 @@
+{
+  "reviewer": "author entire four-file source inspection before original default restricted15s grading; not independent validation",
+  "all_source_inspected": true,
+  "response_sha256": "2943de746f5c3fc559428639d006d94d63f1d712810eaeca7a304f25ba583da3",
+  "delivery": "Valid exactfourfile JSON. Original AST rejects benign __all__ export declarations and type(value).__name__ exception label before any candidate execution. No197semantic score established.",
+  "filter_compatibility": "Static exports and exception-label access are restrictive-grader compatibility issues, not malicious-code findings. No broad exception, source normalization, relaxed execution or model feedback.",
+  "visible_semantic_errors": [
+    {
+      "cause": "partial_jobs omission",
+      "fact": "pipeline initializes partial_jobs=[] but never appends selected partial jobs; returned partial_jobs remains empty even though partial downloaded_rows contribute to successful_rows. This repeats the source omission seen in Space Bunny; no executed-score comparison established."
+    },
+    {
+      "cause": "timestamp domain extension",
+      "fact": "times.instant falls back for lowercase trailing z, which Python3.14 datetime.fromisoformat rejects. Contract accepts strings accepted by that parser; this fallback admits an extra invalid timestamp representation. Manual source finding, no generated candidate execution."
+    }
+  ],
+  "evidence": [
+    "implementation-response.txt",
+    "implementation-acceptance.json",
+    "../../ceiling/CONTRACT.md"
+  ]
+}

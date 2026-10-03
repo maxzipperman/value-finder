@@ -245,3 +245,6 @@ PR147 DeepSeek64K regression stops1894s/52,659completiontokens, reported$0.04109
 
 
 PR147 DeepSeek integrated review stop1132s/35,471completiontokens/$0.027699776: validJSON, fullauthorsemantic audit9/10causes0false/duplicates/no correcttimes flag, missesquoteIDtie. AllDeepSeek3 integrated collected,24totalresults0errors. GLMimplementationpending+5paidunstarted, onlyqueue98555; matched32K6 wait. Aggregatepaidreported$0.165026588, unknownerrorsmaxreserved. No128K/feedback/reroll; finalhandoff/independentvalidation pending.
+
+
+PR147 GLMDeepInfraFP4implementation stops1272s/$0.0098436; completeauthor inspection originalASTrejects benignexports/type-name access beforeexecution, no197semantic score. Visiblemissingpartial_jobsappend/lowercasezdomainextension; no128K. NextGLMregression429 upstreamsharedpool, savedmaximumreservation/queue98555 exited; unattemptedGLMreviewprovider-deferred. ProspectiveMiMo-only originalstress3 continuation plan/digest-boundaudit/5offlineadverse checks andcombinedbudgetfit pass, guard-only freeze9de2e484 preservespriorv2/prompts/harness/settings. Counts25results1error1deferred3unstarted,aggregatepaidreported$0.174870188 unknownerrorsreserved. Qualified32K6/finalreport/allocation/independentvalidation pending.

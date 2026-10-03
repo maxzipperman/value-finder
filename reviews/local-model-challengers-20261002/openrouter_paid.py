@@ -12,7 +12,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from openrouter_free import ROOT, LIST_HASH, NoRedirect, key_from_file
-from openrouter_budget import reserve_ok, audited_terminal, deferral, baseline_terminal
+from openrouter_budget import reserve_ok, audited_terminal, deferral, baseline_terminal, ceiling_deferral
 
 MODELS = {'deepseek/deepseek-v4.1-flash', 'z-ai/glm-5.3-flash', 'xiaomi/mimo-v2.6-flash'}
 OUT = ROOT / 'openrouter-paid'
@@ -35,7 +35,7 @@ def reservation(item):
     return ((len(body['messages'][0]['content'].encode()) + 256) * prices['prompt'] + body['max_tokens'] * prices['completion']) / 1_000_000
 
 
-def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False, mimo_only=False, ceiling=False):
+def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False, mimo_only=False, ceiling=False, ceiling_mimo_only=False):
     out = ROOT / output
     raw = (ROOT / request_file).read_bytes()
     if hashlib.sha256(raw).hexdigest() != list_hash:
@@ -48,6 +48,12 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
         selected=deferral(ROOT)['selected_models']
         entries=[x for x in entries if x['model'] in selected]
         assert len(entries)==7
+    if ceiling_mimo_only:
+        if not ceiling or conditional or output!='openrouter-ceiling' or request_file!='ceiling-api-requests.json':
+            raise RuntimeError('ceiling continuation only applies to declared stress MiMo subset')
+        selected=ceiling_deferral(ROOT)['selected_models']
+        entries=[x for x in entries if x['model'] in selected]
+        assert len(entries)==3
     if conditional:
         decisions = json.loads((ROOT / 'openrouter-budget-decisions.json').read_text())
         chosen = []
@@ -76,7 +82,13 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
         assert body['provider']['max_price']['request'] == body['provider']['max_price']['image'] == 0
     out.mkdir(exist_ok=True)
     saved_ledger = json.loads((out / 'billing.json').read_text()) if (out / 'billing.json').exists() else None
-    if any(out.glob('*/*-error.json')) and not (output == 'openrouter-paid' and saved_ledger and audited_terminal(ROOT, saved_ledger)):
+    def terminal_ok(ledger):
+        if output=='openrouter-paid':
+            return audited_terminal(ROOT,ledger)
+        if ceiling_mimo_only:
+            return audited_terminal(ROOT,ledger,folder='openrouter-ceiling',audit_file='ceiling-error-audit.json')
+        return False
+    if any(out.glob('*/*-error.json')) and not (saved_ledger and terminal_ok(saved_ledger)):
         print(json.dumps({'status': 'saved_error_requires_review'}), flush=True)
         return
     key = key_from_file()
@@ -119,7 +131,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
         ledger = json.loads(ledger_path.read_text()) if ledger_path.exists() else {'cap_usd': CAP, 'owner_cap_usd': 1, 'list_sha256': list_hash, 'initial': billing(), 'attempts': []}
         if ledger['list_sha256'] != list_hash or ledger['cap_usd'] != CAP:
             raise RuntimeError('billing ledger mismatch')
-        if any(x['status'] != 'completed' for x in ledger['attempts']) and not (output == 'openrouter-paid' and audited_terminal(ROOT, ledger)):
+        if any(x['status'] != 'completed' for x in ledger['attempts']) and not (terminal_ok(ledger)):
             print(json.dumps({'status': 'uncertain_attempt_requires_review'}), flush=True)
             return
         ledger_path.write_text(json.dumps(ledger, indent=2) + '\n')

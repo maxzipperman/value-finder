@@ -50,9 +50,9 @@ def reserve_ok(root, next_amount):
     return total
 
 
-def audited_terminal(root, ledger, folder='openrouter-paid'):
+def audited_terminal(root, ledger, folder='openrouter-paid', audit_file='openrouter-error-audit.json'):
     """Allow distinct missing requests only; never retry an audited failed request."""
-    audit_path = root / 'openrouter-error-audit.json'
+    audit_path = root / audit_file
     audits = json.loads(audit_path.read_text()) if audit_path.exists() else {}
     for attempt in ledger['attempts']:
         if attempt['status'] == 'completed':
@@ -91,3 +91,21 @@ def baseline_terminal(root,ledger):
         if (item['model'],item['task']) not in attempted|deferred:
             return False
     return attempted.isdisjoint(deferred) and len(attempted)+len(deferred)==21
+
+
+CEILING_DEFERRAL_HASH = '20ec745611149b9b68d21e064005a29bd579aa86ed71c56691ebbbf9b35795c7'
+
+def ceiling_deferral(root):
+    raw=(root/'ceiling-provider-deferral.json').read_bytes()
+    if hashlib.sha256(raw).hexdigest()!=CEILING_DEFERRAL_HASH:
+        raise RuntimeError('ceiling deferral changed; review required')
+    d=json.loads(raw)
+    original=(root/'ceiling-api-requests.json').read_bytes()
+    audit=(root/'ceiling-error-audit.json').read_bytes()
+    if hashlib.sha256(original).hexdigest()!=d['original_list_sha256'] or hashlib.sha256(audit).hexdigest()!=d['error_audit_sha256'] or d['selected_models']!=['xiaomi/mimo-v2.6-flash']:
+        raise RuntimeError('ceiling subset/audit changed')
+    selected=[x for x in json.loads(original)['requests'] if x['model'] in d['selected_models']]
+    hashes=[hashlib.sha256(json.dumps(x,sort_keys=True).encode()).hexdigest() for x in selected]
+    if len(selected)!=3 or hashes!=d['selected_request_sha256']:
+        raise RuntimeError('ceiling subset does not match frozen requests')
+    return d

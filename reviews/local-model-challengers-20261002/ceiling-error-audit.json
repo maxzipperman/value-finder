@@ -1,0 +1,8 @@
+{
+  "z-ai/glm-5.3-flash|regression": {
+    "continue_distinct_missing_only": true,
+    "error_sha256": "a6a6436240840f95590acecc29261ceda857670ed8caec93289898e7f9a180a6",
+    "reason": "DeepInfra upstream shared-pool engine_overloaded HTTP429 at0.228s. Preserve stopped regression request/error and full maximum reservation; no answer/reasoning, no semantic grade or zero-charge claim. Only separately frozen unattempted MiMo stress tasks may continue after audit/source guard validation and idle check; never retry failed request or change provider.",
+    "request_sha256": "2340c53fe5d9f879e180dedfb190de23652398439a3433314e9ae20e5f43356e"
+  }
+}

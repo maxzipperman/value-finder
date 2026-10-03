@@ -8,6 +8,10 @@ ROOT = Path(__file__).resolve().parent
 
 def summarize():
     records = []
+    deferred = {}
+    deferral_path=ROOT/'ceiling-provider-deferral.json'
+    if deferral_path.exists():
+        deferred={(x['model'],x['task']):x for x in json.loads(deferral_path.read_text())['deferred']}
     for family in ('local', 'api'):
         for item in json.loads((ROOT / ('ceiling-' + family + '-requests.json')).read_text())['requests']:
             model, task = item['model'], item['task']
@@ -53,8 +57,10 @@ def summarize():
             if helper_diagnostic.exists():
                 value = json.loads(helper_diagnostic.read_text())
                 rec['supplemental_helper_coverage'] = dict(evidence=str(helper_diagnostic.relative_to(ROOT)), grading=value['grading'], passed=value['passed'], cases=value['cases'], original_acceptance_preserved=value['original_acceptance_preserved'], restrictions=value['restrictions'], limitations=value['limitations'])
+            if rec['status']=='not_started' and (model,task) in deferred:
+                rec.update(status='deferred',provider_deferral=deferred[(model,task)])
             records.append(rec)
-    counts = {s: sum(r['status'] == s for r in records) for s in ('result', 'error', 'pending', 'not_started')}
+    counts = {s: sum(r['status'] == s for r in records) for s in ('result', 'error', 'pending', 'not_started', 'deferred')}
     snapshot = dict(status='collection_in_progress', grading='author only; independent validation pending', counts=counts, records=records, limitations='Modes/artifacts/providers/tokenization differ; single draws and adaptive profiles are not causal or equal-compute rankings. Sampled allocation is not complete machine peak memory or swap evidence.')
     (ROOT / 'ceiling-summary.json').write_text(json.dumps(snapshot, indent=2) + '\n')
     print(json.dumps(counts))
