@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "5ae631df77464941874b8ed9e222ffc4f3134d004a35b61a0cb5e2e878d08cad",
+  "evidence_digest": "5172953177f3e854bb15f8a93d6547a93036bca4f1453f0dc0cedac6840adb9a",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -91,14 +91,16 @@
       "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]"
     },
     "files": {
+      ".github/workflows/cache-readiness.yml": "d663aa7037bb1d1541422f75a03af902209c9c796e4a1f02309237575322f551",
+      "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
       "reviews/post151-readiness/diagnostic.py": "738536c587d5b590ee5b317a6faa3c9d3d1a6cbac5cdc07bbf2f6f0a646b1866",
       "reviews/post151-readiness/readiness.json": "0fefa3abec62ed1f8807b8d36dd2e900a63698e6a4234c3790b9ad57256b59cd",
       "reviews/post151-readiness/test_diagnostic.py": "ef7f60b25fd13f76004d50062a1ab631524be6bbe8dc75457e8e84f5fb15e46b",
-      "reviews/post151-readiness/verification.json": "69076817c9604d80839249930b07bf7c98cbc509e8ec03b161e222629470ba33"
+      "reviews/post151-readiness/verification.json": "2076eaeb618d3bce7a561e057f9dd5fe07191e8c0edb47fd8daa299d38360b2c"
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T18:35:53.332971+00:00",
+  "recorded_at": "2026-10-03T18:37:07.050626+00:00",
   "results": [
     {
       "argv": [
@@ -121,8 +123,8 @@
       ]
     }
   ],
-  "tested_commit": "c824ad2e529d9710e7e1840159101553331c58db",
-  "tested_identity": "f0169639a5fd4dec59beb7f0420b550af612fedf615ddb527287cc855e9a8dd1",
+  "tested_commit": "c6aa8c3e77c2d44339eefcb3c50d2690ea4fa729",
+  "tested_identity": "68c1b9b7cd5120f271481aec96e7ec082a7d1854047c300aedb2aa8cbbc87991",
   "version": 1,
   "worktree_clean": true
 }
