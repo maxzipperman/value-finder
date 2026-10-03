@@ -197,3 +197,6 @@ Owner added capability-ceiling round to model evaluation (PR147): harder integra
 ### Model comparison checkpoint — October3 (PR147, isolated only)
 
 Original local82 attempts remain final/frozen. Cloud baseline paused on GLM provider520; preserved error/max reservation, digest-bound audit allows only distinct missing requests. Eight responses report$0.042776569; free16k diagnostics continue under the shared lock. Combined paid reservation guard across all stages enforces owner$1 total. Owner-requested capability-ceiling contract/reference drafted, but fixture/mutant validation, prompt/resource freeze and inference are pending. NOT READY for final hub allocation or autonomous routing; author-only extensions still need independent validation.
+
+
+PR147 follow-up: GLM4 unattempted baseline requests classified provider-unavailable after2 distinct520 failures; MiMo-only original7 collection active. Synthetic ceiling harness passes182 reference cases and kills16 mutants; full interface checks197. Draft10-cause review/control and prompts built; resource/model manifest/freeze and inference pending. No final allocation or independent extension signoff.

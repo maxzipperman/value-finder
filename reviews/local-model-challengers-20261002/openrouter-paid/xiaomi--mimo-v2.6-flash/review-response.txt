@@ -1,0 +1,24 @@
+```json
+[
+  {
+    "line": 7,
+    "explanation": "The filter never inspects last_update: rows whose last_update is after the decision, or after the row's own snapshot, are still admitted as eligible, so a stale/late update can be selected even though the contract requires last_update <= decision and last_update <= snapshot."
+  },
+  {
+    "line": 11,
+    "explanation": "probability = 100 / (odds + 100) is only valid for positive odds. In-contract negative odds (abs >= 100) yield a non-positive, out-of-range probability (e.g. odds=-200 gives -1), and odds == -100 makes the denominator zero, raising ZeroDivisionError; negative odds need the |odds|/(|odds|+100) form."
+  },
+  {
+    "line": 11,
+    "explanation": "Assigning r['probability'] writes into the caller's row dictionaries, mutating the input, which the contract forbids; the probability should be attached to a copy or returned separately."
+  },
+  {
+    "line": 13,
+    "explanation": "Sorting uses the raw snapshot strings instead of the parsed datetimes, so aware timestamps with different UTC offsets (or a 'Z' vs '+00:00' suffix) are ordered lexicographically rather than chronologically, which can pick the wrong snapshot and also break the id tie-break for equal instants."
+  },
+  {
+    "line": 14,
+    "explanation": "eligible is sorted in ascending snapshot order, so eligible[0] is the earliest snapshot at or before the decision, not the latest; the latest snapshot (with the smallest id among its ties) is never returned."
+  }
+]
+```

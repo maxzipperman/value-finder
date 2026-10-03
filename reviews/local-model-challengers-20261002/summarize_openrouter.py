@@ -10,6 +10,7 @@ def summarize():
     planned = json.loads((ROOT / 'openrouter-requests.json').read_text())['requests']
     extra = json.loads((ROOT / 'openrouter-free16k-requests.json').read_text())['requests']
     records = []
+    deferred = {(x['model'], x['task']) for x in json.loads((ROOT / 'openrouter-provider-deferral.json').read_text())['deferred']} if (ROOT / 'openrouter-provider-deferral.json').exists() else set()
     for item, diagnostic in [(x, False) for x in planned] + [(x, True) for x in extra]:
         if item['model'] == 'stealth/space-bunny-alpha':
             folder = ROOT / ('openrouter-space-bunny-alpha-16k' if diagnostic else 'openrouter-space-bunny-alpha')
@@ -17,6 +18,8 @@ def summarize():
             folder = ROOT / 'openrouter-paid' / item['model'].replace('/', '--')
         task = item['task']
         record = dict(model=item['model'], task=task, diagnostic='free16k' if diagnostic else 'baseline', folder=str(folder.relative_to(ROOT)), status='not_started', prompt_sha256=item['prompt_sha256'], settings={k: v for k, v in item['body'].items() if k != 'messages'}, deadline_seconds=item['deadline_seconds'])
+        if not diagnostic and (item['model'], task) in deferred:
+            record.update(status='deferred', reason='Repeated provider Relace520; no retry/fallback. Provider-unavailable, not semantic model score.')
         request = folder / (task + '-request.json')
         if request.exists():
             record.update(status='pending', request_sha256=hashlib.sha256(request.read_bytes()).hexdigest())
@@ -43,7 +46,7 @@ def summarize():
         records.append(record)
     snapshot = dict(status='in_progress', grading='author grading, not independent validation', records=records, note='Existing local controls are historical. Actual private helper excluded. Account-level credits/key usage are excluded; usage fields here belong only to synthetic model requests.')
     (ROOT / 'openrouter-summary.json').write_text(json.dumps(snapshot, indent=2) + '\n')
-    print(json.dumps({status: sum(r['status'] == status for r in records) for status in ('result', 'error', 'pending', 'not_started')}))
+    print(json.dumps({status: sum(r['status'] == status for r in records) for status in ('result', 'error', 'pending', 'not_started', 'deferred')}))
 
 
 if __name__ == '__main__':

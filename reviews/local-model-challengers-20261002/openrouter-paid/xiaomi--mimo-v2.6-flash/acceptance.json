@@ -1,0 +1,23 @@
+{
+  "debugging": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Empty capped final; reasoning not delivered source"
+    }
+  ],
+  "multifile": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Empty capped final; reasoning not delivered source"
+    }
+  ],
+  "regression": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Empty capped final; reasoning not delivered source"
+    }
+  ]
+}

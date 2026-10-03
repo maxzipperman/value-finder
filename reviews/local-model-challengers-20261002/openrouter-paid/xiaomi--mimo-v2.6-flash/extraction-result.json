@@ -1,0 +1,55 @@
+{
+  "id": "gen-1791022853-AZG2ehDNTBNcr6t8IXaf",
+  "object": "chat.completion",
+  "created": 1791022853,
+  "model": "xiaomi/mimo-v2.6-flash",
+  "provider": "InferenceNet",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"latest\": {\"A\": {\"attempt\": 2, \"status\": \"ok\"}, \"B\": {\"attempt\": 2, \"status\": \"ok\"}, \"C\": {\"attempt\": 2, \"status\": \"failed\"}}, \"failures\": [\"C\"], \"successful_rows\": 12}",
+        "refusal": null,
+        "reasoning": "Let me parse the records.\n\nJob A: attempt 1 failed, attempt 2 ok \u2192 latest attempt 2, status ok. Downloaded 12 rows \u2192 count 12.\n\nJob B: attempt 2 ok (message \"downloaded 0 rows\"), attempt 1 failed. Latest = attempt 2, status ok. Rows explicitly stated: 0 rows \u2192 sum 0.\n\nJob C: attempt 1 failed, attempt 2 failed \u2192 latest attempt 2 failed.\n\nfailures sorted: [\"C\"]\n\nsuccessful_rows = 12 + 0 = 12.\n\nReturn only JSON.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Let me parse the records.\n\nJob A: attempt 1 failed, attempt 2 ok \u2192 latest attempt 2, status ok. Downloaded 12 rows \u2192 count 12.\n\nJob B: attempt 2 ok (message \"downloaded 0 rows\"), attempt 1 failed. Latest = attempt 2, status ok. Rows explicitly stated: 0 rows \u2192 sum 0.\n\nJob C: attempt 1 failed, attempt 2 failed \u2192 latest attempt 2 failed.\n\nfailures sorted: [\"C\"]\n\nsuccessful_rows = 12 + 0 = 12.\n\nReturn only JSON.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 316,
+    "completion_tokens": 192,
+    "total_tokens": 508,
+    "cost": 9.168e-05,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 9.168e-05,
+      "upstream_inference_prompt_cost": 3.792e-05,
+      "upstream_inference_completions_cost": 5.376e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 127,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "wall_seconds": 1.8326082920248155
+}

@@ -1152,7 +1152,7 @@
       "task": "review",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/z-ai--glm-5.3-flash",
-      "status": "not_started",
+      "status": "deferred",
       "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
       "settings": {
         "model": "z-ai/glm-5.3-flash",
@@ -1174,14 +1174,15 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "reason": "Repeated provider Relace520; no retry/fallback. Provider-unavailable, not semantic model score."
     },
     {
       "model": "z-ai/glm-5.3-flash",
       "task": "extraction",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/z-ai--glm-5.3-flash",
-      "status": "not_started",
+      "status": "deferred",
       "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
       "settings": {
         "model": "z-ai/glm-5.3-flash",
@@ -1203,14 +1204,15 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "reason": "Repeated provider Relace520; no retry/fallback. Provider-unavailable, not semantic model score."
     },
     {
       "model": "z-ai/glm-5.3-flash",
       "task": "hard-selection",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/z-ai--glm-5.3-flash",
-      "status": "not_started",
+      "status": "deferred",
       "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
       "settings": {
         "model": "z-ai/glm-5.3-flash",
@@ -1232,14 +1234,15 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "reason": "Repeated provider Relace520; no retry/fallback. Provider-unavailable, not semantic model score."
     },
     {
       "model": "z-ai/glm-5.3-flash",
       "task": "hard-review",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/z-ai--glm-5.3-flash",
-      "status": "not_started",
+      "status": "deferred",
       "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
       "settings": {
         "model": "z-ai/glm-5.3-flash",
@@ -1261,14 +1264,15 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "reason": "Repeated provider Relace520; no retry/fallback. Provider-unavailable, not semantic model score."
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "multifile",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "not_started",
+      "status": "result",
       "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1290,14 +1294,54 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "5034b5d768039ee89445fc74521c2342474d021c0463eed01a52e1d010e18a07",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 141.79102733300533,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 291,
+        "completion_tokens": 8192,
+        "total_tokens": 8483,
+        "cost": 0.00232868,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00232868,
+          "upstream_inference_prompt_cost": 3.492e-05,
+          "upstream_inference_completions_cost": 0.00229376
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 8199,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Empty capped final; reasoning not delivered source"
+          }
+        ]
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "debugging",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "not_started",
+      "status": "result",
       "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1319,14 +1363,54 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "889c0f9c906df7cf111ed228c809300550e9974cf72cf906733445249b3d16f2",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 136.90712699998403,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 453,
+        "completion_tokens": 8192,
+        "total_tokens": 8645,
+        "cost": 0.00234812,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00234812,
+          "upstream_inference_prompt_cost": 5.436e-05,
+          "upstream_inference_completions_cost": 0.00229376
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 8192,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Empty capped final; reasoning not delivered source"
+          }
+        ]
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "regression",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "not_started",
+      "status": "result",
       "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1348,14 +1432,54 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "afe3ba094f812780e62018155594d8509e7ff356f69cd1f3ba55468b260f21ac",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 112.86368558299728,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 205,
+        "completion_tokens": 8192,
+        "total_tokens": 8397,
+        "cost": 0.00231836,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00231836,
+          "upstream_inference_prompt_cost": 2.46e-05,
+          "upstream_inference_completions_cost": 0.00229376
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 8197,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "usable final answer delivered",
+            "passed": false,
+            "error": "Empty capped final; reasoning not delivered source"
+          }
+        ]
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "review",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "not_started",
+      "status": "result",
       "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1377,14 +1501,43 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "ac4ed064ac068296256ab69b3d56291af40f1da8bf1116f62924a0d12037490b",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 45.47862095900928,
+      "finish_reason": "stop",
+      "final_answer_bytes": 1507,
+      "usage": {
+        "prompt_tokens": 295,
+        "completion_tokens": 3262,
+        "total_tokens": 3557,
+        "cost": 0.00094876,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00094876,
+          "upstream_inference_prompt_cost": 3.54e-05,
+          "upstream_inference_completions_cost": 0.00091336
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2873,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "extraction",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "not_started",
+      "status": "result",
       "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1406,14 +1559,43 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "2a724f5082c4e4925c11691635175bef5c3d8426b7b2bbfe50bf58f0f7dd0af9",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 1.8326082920248155,
+      "finish_reason": "stop",
+      "final_answer_bytes": 169,
+      "usage": {
+        "prompt_tokens": 316,
+        "completion_tokens": 192,
+        "total_tokens": 508,
+        "cost": 9.168e-05,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 9.168e-05,
+          "upstream_inference_prompt_cost": 3.792e-05,
+          "upstream_inference_completions_cost": 5.376e-05
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 127,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "hard-selection",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
-      "status": "not_started",
+      "status": "pending",
       "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
       "settings": {
         "model": "xiaomi/mimo-v2.6-flash",
@@ -1435,7 +1617,8 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "7c43b7b2cfa67c1a1c54ba8d4049d8419ebaf3ce2c4d270b89edfff103b82173"
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",

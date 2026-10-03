@@ -1,0 +1,67 @@
+{
+  "causes": [
+    {
+      "cause": "negative odds formula",
+      "file": "quotes.py",
+      "line": 13,
+      "explanation": "Negative odds magnitude a needs a/(a+100); -100 alone does not distinguish the formulas."
+    },
+    {
+      "cause": "lexical offset ordering",
+      "file": "quotes.py",
+      "line": 21,
+      "explanation": "Raw ISO string order differs from absolute time."
+    },
+    {
+      "cause": "eligibility after book dedupe",
+      "file": "quotes.py",
+      "line": 23,
+      "explanation": "A newer future, expired, wrong-event or update-invalid record suppresses older eligible alternatives."
+    },
+    {
+      "cause": "missing quote tie rules",
+      "file": "quotes.py",
+      "line": 21,
+      "explanation": "Equal absolute time must choose smallest id and first equal instant/id; prefilter keeps first without id ranking."
+    },
+    {
+      "cause": "inclusive expiry",
+      "file": "quotes.py",
+      "line": 33,
+      "explanation": "Exact expiry must be rejected."
+    },
+    {
+      "cause": "job-scoped run id dedupe",
+      "file": "runs.py",
+      "line": 19,
+      "explanation": "run_id is global; a later correction to job must replace earlier same ID across jobs."
+    },
+    {
+      "cause": "last duplicate time tie",
+      "file": "runs.py",
+      "line": 20,
+      "explanation": "Equal absolute observed times for same run ID must retain first eligible record."
+    },
+    {
+      "cause": "stale job retry overwrite",
+      "file": "runs.py",
+      "line": 27,
+      "explanation": "Last distinct run input overwrites greatest attempt/time/ID selection; stale failures can erase newer success."
+    },
+    {
+      "cause": "partial downloaded rows omitted",
+      "file": "pipeline.py",
+      "line": 10,
+      "explanation": "Selected partial download rows are known and count, once per selected job."
+    },
+    {
+      "cause": "pending classified failed",
+      "file": "pipeline.py",
+      "line": 10,
+      "explanation": "Selected pending belongs only to unknown_jobs, not failures."
+    }
+  ],
+  "correct_control": "times.py is correct for the specified inputs; no seeded timestamp-normalization defect.",
+  "valid_subset": "All records individually valid dictionary fields; only string timestamps/aware ISO asof, finite representable odds; duplicate run IDs and multi-event/offset/tie/retry rows allowed. Do not flag malformed-input behavior.",
+  "grading": "Manual semantic causes/false/duplicate/inaccurate claims. Schema/line matches alone not hits."
+}
