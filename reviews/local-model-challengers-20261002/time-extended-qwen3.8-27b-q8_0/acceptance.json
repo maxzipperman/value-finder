@@ -1,0 +1,48 @@
+{
+  "regression": [
+    {
+      "case": "correct implementation accepted",
+      "passed": true
+    },
+    {
+      "case": "negative_rejected",
+      "passed": true,
+      "error": "AssertionError: candidate(-100) raised ValueError(), expected 0.5"
+    },
+    {
+      "case": "positive_formula_for_both",
+      "passed": true,
+      "error": "AssertionError: candidate(-100) raised ZeroDivisionError(division by zero), expected 0.5"
+    },
+    {
+      "case": "rounded_probability",
+      "passed": true,
+      "error": "AssertionError: candidate(200) returned 0.33, expected 0.3333333333333333"
+    },
+    {
+      "case": "numeric_strings_rejected",
+      "passed": true,
+      "error": "AssertionError: candidate('100') raised ValueError(), expected 0.5"
+    },
+    {
+      "case": "sub100_accepted",
+      "passed": true,
+      "error": "AssertionError: candidate(True) did not raise ValueError"
+    },
+    {
+      "case": "nonfinite_accepted",
+      "passed": true,
+      "error": "AssertionError: candidate(inf) did not raise ValueError"
+    },
+    {
+      "case": "bad_input_returns_none",
+      "passed": true,
+      "error": "AssertionError: candidate(None) did not raise ValueError"
+    },
+    {
+      "case": "valid_boundary_rejected",
+      "passed": true,
+      "error": "AssertionError: candidate(100) raised ValueError(), expected 0.5"
+    }
+  ]
+}

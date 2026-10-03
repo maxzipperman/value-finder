@@ -1,0 +1,8 @@
+{
+  "status": "author_grading_complete",
+  "requests": 44,
+  "results": 38,
+  "errors": 6,
+  "independent_extension_review": "pending",
+  "budget_decisions": "budget-decisions.json"
+}

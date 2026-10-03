@@ -1,0 +1,68 @@
+```python
+from datetime import datetime, timezone, timedelta
+
+def run_tests(candidate):
+    # --- Invalid / None / Blank inputs must return None ---
+    assert candidate(None) is None
+    assert candidate("") is None
+    assert candidate("   ") is None
+    assert candidate("\t\n\r") is None
+    assert candidate("not-a-date") is None
+    assert candidate("2026-13-45T99:99:99Z") is None
+
+    # --- Whitespace stripping ---
+    dt_ws = candidate("  2026-09-29T14:30:07Z  ")
+    assert dt_ws == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)
+
+    # --- ISO Z suffix (with seconds) ---
+    dt_z = candidate("2026-09-29T14:30:07Z")
+    assert dt_z == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)
+
+    # --- ISO Z suffix (without seconds) ---
+    dt_z_ns = candidate("2026-09-29T14:30Z")
+    assert dt_z_ns == datetime(2026, 9, 29, 14, 30, 0, tzinfo=timezone.utc)
+
+    # --- Compact UTC HHMMZ (T separator) ---
+    dt_comp_t = candidate("2026-09-29T1430Z")
+    assert dt_comp_t == datetime(2026, 9, 29, 14, 30, 0, tzinfo=timezone.utc)
+
+    # --- Compact UTC HHMMZ (space separator) ---
+    dt_comp_s = candidate("2026-09-29 1430Z")
+    assert dt_comp_s == datetime(2026, 9, 29, 14, 30, 0, tzinfo=timezone.utc)
+
+    # --- Explicit +00:00 offset ---
+    dt_off_p = candidate("2026-10-02T00:00:00+00:00")
+    assert dt_off_p == datetime(2026, 10, 2, 0, 0, 0, tzinfo=timezone.utc)
+
+    # --- Positive offset conversion to UTC ---
+    dt_pos = candidate("2026-10-02T05:30:00+05:30")
+    assert dt_pos == datetime(2026, 10, 2, 0, 0, 0, tzinfo=timezone.utc)
+
+    # --- Negative offset conversion to UTC ---
+    dt_neg = candidate("2026-10-02T00:00:00-05:00")
+    assert dt_neg == datetime(2026, 10, 2, 5, 0, 0, tzinfo=timezone.utc)
+
+    # --- Naive ISO interpreted as UTC ---
+    dt_naive = candidate("2026-10-02T12:00:00")
+    assert dt_naive == datetime(2026, 10, 2, 12, 0, 0, tzinfo=timezone.utc)
+
+    # --- Fractional seconds preservation (microseconds) ---
+    dt_frac = candidate("2026-09-29T14:30:07.123456Z")
+    assert dt_frac == datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc)
+
+    # --- Fractional seconds with explicit offset ---
+    dt_frac_off = candidate("2026-09-29T14:30:07.654321+00:00")
+    assert dt_frac_off == datetime(2026, 9, 29, 14, 30, 7, 654321, tzinfo=timezone.utc)
+
+    # --- Verify all valid results are aware UTC datetimes ---
+    for dt in [dt_ws, dt_z, dt_z_ns, dt_comp_t, dt_comp_s, dt_off_p, dt_pos, dt_neg, dt_naive, dt_frac, dt_frac_off]:
+        assert dt.tzinfo is not None, "Result must be timezone-aware"
+        assert dt.utcoffset() == timedelta(0), "Result must be normalized to UTC"
+
+    # --- Edge: -00:00 offset (treated as UTC) ---
+    dt_neg_zero = candidate("2026-10-02T12:00:00-00:00")
+    assert dt_neg_zero == datetime(2026, 10, 2, 12, 0, 0, tzinfo=timezone.utc)
+
+    # --- Edge: Non-string input (coerced to string then stripped) ---
+    assert candidate(0) is None
+```

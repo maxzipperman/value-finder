@@ -1,8 +1,10 @@
-# Harder project-specific local-model comparison — in progress
+# Project-specific local-model extensions — author grading complete
 
-LOCAL-BECAUSE: hardware. Synthetic Value Finder quote-selection and code-review tasks; no production data or execution. Original 38-request report and reviewer validation remain separate; new extension is author grading, not separate reviewer approval.
+Qwen3.8 Q4 remains the economical coding-draft option in this trial. Thinking reviews are substantially stronger than fast reviews. Q8 can draft useful tests if allowed enough wall time, but these results do not show a consistent improvement that justifies its larger allocation. Qwen3.6 remains useful for test drafts; Gemma fast is useful for quick bounded drafts. No Ornith coding role is recommended from these configurations.
 
-## Current controlled results
+LOCAL-BECAUSE: hardware. All44 extension requests have terminal artifacts and author grades/progress decisions:38 results,6 errors,0 pending. Together with the separate original38 requests,82 benchmark attempts are preserved, plus one separately recorded one-token Q4 configuration probe. Original38 reviewer replay at [PR147 comment](https://github.com/maxzipperman/value-finder/pull/147#issuecomment-5966896455) does not validate these extensions. Independent methodology/claim validation remains required before automatic routing. No live changes or merges.
+
+## Hard selection and review
 
 Selection: 78 hidden behavioral checks; review: five seeded causes checked manually, not the automatic JSON/schema score. A generation failure gets no semantic score.
 
@@ -26,26 +28,50 @@ The greedy Qwen3.8 selection drafts fail the out-of-float-range integer case: so
 
 The reference passes all78 cases and all eight deliberately faulty implementations are detected; [hard-pair-harness-validation.json](hard-pair-harness-validation.json). Inspect candidate source before executing AST-restricted grading in the ordinary sandbox. No candidate has been given test failures or patched by the grader.
 
-## Limits and role guidance
+## Original newcomer six-task rounds
 
-Preliminary: keep Qwen3.8 Q4 as the economical general draft option, use thinking for nuanced reviews, and consider Gemma fast for bounded quick drafts/review assistance. GPT-OSS can provide a second review, but every claim needs checking. Ornith's thinking mode has not delivered a usable final answer under this budget; check a separately declared fast diagnostic before any role recommendation. Qwen3.6's earlier test-drafting strengths do not establish reliable harder selection code.
+Historical controls are the original [README](README.md)/[summary](summary.json) at098a7afd, not fresh randomized repetitions. Exact newer request/result/grade paths are indexed in [extension-summary.json](extension-summary.json).
 
-Exact model digests/artifact sizes: [inventory.json](inventory.json). Q4/Q8 metadata matches architecture/version/template, but does not prove identical prequantized weights. Initial Q4 has default drafting4; matched hard tests disable drafting for both. No causal precision-only claim. Memory samples are approximate Ollama allocation telemetry, not proof of total fit or absence of swapping. This is one draw per task/configuration, not a stable benchmark or independent extension validation.
+| Model, thinking | Implementation | Debugging | Odds test draft | Seeded review | UTC helper tests | Extraction |
+|---|---|---|---|---|---|---|
+| Qwen3.8 Q8 |52/53,271s|52/53,206s|Timeout300s|Timeout300s|Timeout300s|Exact,56s|
+| Ornith |Empty at8192,83s|Empty at8192,79s|Empty at8192,77s|Empty at8192,82s|Empty at8192,83s|Exact,15s|
 
-## Owner-requested budget diagnostics pending
+Both Q8 completed code answers leave huge-integer conversion OverflowError unnormalized. Ornith length-limited answers contain reasoning but no final deliverable; reasoning is not salvaged as finished code. Extraction correctly ignores embedded instructions in synthetic logs; this is a narrow demonstrated role, already covered by faster models in the original round.
 
-After the owner questioned unfinished tests, prospective separate diagnostics were declared: Ornith hard tasks thinking with output16384/context32768/deadline600 (double output, larger context), and Q8 original regression with only time300→600 and original output8192/context16384. Native/sampling/fast modes remain separate. Current sequential collectors complete the original six-task extensions before queued Ornith fast/extended and Q8 runtime-only diagnostic. No old results are overwritten; no solutions or grading feedback supplied. Completion and grading remain pending, and no new Dot handoff has been sent yet.
+## Selective resource increases
 
-Original six-task extension progress: Q8 multifile52/53 in271s; regression and review each timed out at300s, so no review capability grade is assigned. Ornith multifile/regression each reached8192 output tokens with empty final answers (~83/77s); no semantic/test-suite score is assigned. Remaining tasks and larger-budget diagnostics are pending.
+Prospective settings/stopping rules: [BUDGET_LADDER.md](BUDGET_LADDER.md), declared at57c5579. Every prior failure remains. No grading feedback, hidden checks or solutions were supplied; each diagnostic is a single new attempt with distinct artifacts. Completed wrong answers are not rerolled.
 
-Original extraction: both Q8 and Ornith exactly match the expected schema/facts and ignore adversarial instructions in synthetic logs. Q8 takes56.45s, Ornith15.11s. Ornith original review also reaches8192 tokens with empty final answer in81.62s. This is a narrowly demonstrated extraction role, not broader review/code quality.
+| Diagnostic | Final delivery / correctness | Wall / load / generation seconds |
+|---|---|---|
+| Q8 odds tests, deadline300→600 only |Completed; oracle accepted,8/8 frozen mutants caught|406.50 /4.58 /401.09|
+| Qwen3.6 helper, output16384/context32768 |Completed at8355 tokens; oracle accepted,5/6 frozen mutants caught|82.41 /5.07 /76.63|
+| Qwen3.8 Q4 helper, output16384/context32768 |Stop at9078 tokens, empty final; repetitive reasoning, no suite|159.75 /5.82 /152.79|
+| GPT-OSS medium helper, output16384/context32768 |Completed at9650 tokens; rejects oracle, no mutant score|95.47 /3.06 /92.05|
+| Gemma thinking helper, output16384/context32768 |Length16384, empty final; repeated same final checks|119.59 /5.11 /113.45|
+| Ornith thinking hard selection, output16384/context32768 |Length16384, empty final; no delivery progress|148.12 / see indexed telemetry|
+| Ornith thinking hard review, output16384/context32768 |Length16384, empty final; no delivery progress|149.19 / see indexed telemetry|
 
-Owner requested selective further budget escalation (BUDGET_LADDER.md, prospective57c5579). Queued16k actual UTC-parser test drafts for the four earlier models whose thinking suites were truncated; inspect/grade before any32k extension. Completion, correctness and compute are distinct outcomes. Completed wrong answers are not automatically rerolled; repeated reasoning/no progress/memory constraints stop escalation.
+Q8 odds suite in [time-extended folder](time-extended-qwen3.8-27b-q8_0/acceptance.json) catches all8 mutations after accepting oracle; the original300s timeout remains. Its7,408 output tokens completed within8192, so output escalation was unnecessary. Qwen3.6 [helper suite](budget16k-qwen3.6-35b/real-helper-acceptance.json) misses the frozen -04:00 relabelled-offset mutant despite checking other offsets. This is5/6 frozen coverage, not proof of general inability to test offsets. Several caught mutant errors are propagated TypeError/ValueError rather than explicit AssertionError; report exception distinction honestly.
 
-Original six-task newcomer rounds are now fully collected. Q8 implementation and debugging each52/53 (271s/206s), exact extraction56s; regression/review/actual-helper each hit300s timeout. Both completed code drafts leave huge-integer odds conversion OverflowError unnormalized. Ornith thinking returns empty final answers at8192 for implementation/regression/review/helper/debugging (83/77/82/83/79s), while extraction passes in15s. No hidden fixture/feedback was supplied.
+GPT-OSS [helper suite](budget16k-gpt-oss-20b/real-helper-response.txt) wrongly expects timezone.utc.dst()==timedelta(0), where Python3.14 returns None. It also invents rejection expectations for otherwise accepted ISO variants. Oracle rejection means no mutant credit. Q4 ended normally with no answer, before its output ceiling; extra output does not fix this observed delivery failure. Gemma and Ornith spend the extra allowance repeating completed plans/check lists. [budget-decisions.json](budget-decisions.json) records32k denials and the optional Q8-helper stop; no32k inference was warranted or performed. This stops these configurations, not every possible configuration of each model.
 
-Ornith fast hard-selection32/78: comparison selects oldest instead of latest and huge integer conversion crashes. Fast review4/5 real causes plus2 false findings: reversed American-odds formula diagnosis, and false claim that probabilities are computed outside eligibility. Minor false phrases also overstate first-input tie behavior and observed==asof invalidity. These completed semantic failures do not justify budget escalation of fast mode. Extended thinking remains a separate pending diagnostic.
+## Evidence, settings and useful bounded roles
 
-Ornith extended thinking selection used16384 tokens/context32768 in148s with empty final answer. Manual inspection against8k shows repeated finished code drafts and repeated finalization/reconsideration of the same cases, without delivering final content.32k escalation denied in budget-decisions.json under the no-progress stopping rule. This stops the greedy configuration, not all possible Ornith inference configurations. Extended review is still pending.
+[PLAN.md](PLAN.md)/[protocol.json](protocol.json) give every prospective mode/cap. [inventory.json](inventory.json) freezes exact digests and artifact sizes; [q8-ornith-metadata.json](q8-ornith-metadata.json) records checkpoint/runtime metadata. [extension-summary.json](extension-summary.json) indexes all44 request/prompt hashes, mode/options, terminal status, output lengths, latency and grades. Cold-load time is included in wall time and listed separately from generation; the difference also contains prefill/overhead. Failed requests have no reliable load/generation split.
 
-Extended Ornith review also ends at16384 tokens with empty final answer in149s. It repeatedly rechecks the same five causes without finalizing;32k denied for both hard tasks. Greedy Ornith thinking escalation is complete and stopped for no meaningful delivery progress, not scored as wrong completed code.
+Initial six-task caps: thinking true (GPT medium), temp0/seed42/context16384/output8192/deadline300. Hard controlled caps use deadline600 and draft0; native Q4 restores drafting4. Published-profile sampling uses the exact profiles in PLAN, one stochastic draw. Helper16k diagnostics use deadline1200 and native defaults. Q4/Q8 metadata matches architecture/version/template but cannot prove identical prequantized weights. Historical/native/sampled/extended modes are not pooled or presented as causal precision gains or equal-compute rankings.
+
+Sampled allocations are approximate Ollama model telemetry: Q4 about18.4GB, Q8 about30.4GB, Qwen3.6 about22.5GB, GPT about12.9GB, Ornith about22.1GB on recent runs. Gemma helper reports1.39GB against an18.73GB artifact and prior hard allocation17.98GB: inconsistent telemetry, not proof of tiny memory use. These are samples, not measured peaks, whole-Mac memory or evidence of zero swap.
+
+Provisional role advice, requiring reviewed/tested outputs and independent extension validation before autonomous routing:
+
+- Qwen3.8 Q4: code drafts with manufacturer thinking sampling; nuanced reviews with thinking/native drafting. Sampled selection78/78 versus Q8 77/78 in this one draw. No general superiority claim.
+- Qwen3.6: regression-test drafts, especially fast mode from the original round; helper thinking can finish with a16k allowance but adds time without improved frozen coverage. Its hard selection40/78 and false probability diagnosis preclude broad unattended code/review authority.
+- Gemma fast: quick bounded parser-test/code drafts and review assistance; hard selection77/78 and review4/5 indicate edge cases/missed causes. Thinking helper escalation gives no usable suite here.
+- GPT-OSS medium: second-review assistance/extraction, with factual checking; hard review5/5 plus false Z warning, hard selection repeat-limit, helper oracle rejection.
+- Q8: optional slower odds-test draft or thinking review, when a second opinion is worth its larger allocation. Useful odds suite406s versus original Qwen3.6 fast suite31s does not establish cost-effective default replacement. No consistent upgrade over Q4 demonstrated.
+- Ornith: no added coding/review role; extraction exact but redundant, fast hard code32/78 and review4/5 plus2 false findings, thinking did not finalize at8k/16k. No further budget increase justified by the inspected progress.
+
+The OpenRouter experiment is a separate prospective synthetic-only extension in [OPENROUTER_PLAN.md](OPENROUTER_PLAN.md). It does not change these local grades or represent a fresh local control round. No router/default has been installed and no model is an approval authority.

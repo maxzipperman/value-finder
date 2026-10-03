@@ -1,0 +1,160 @@
+```python
+def run_tests(candidate):
+    import math
+
+    def check_valid(val, expected):
+        try:
+            result = candidate(val)
+        except Exception as e:
+            raise AssertionError(
+                f"candidate({val!r}) raised {type(e).__name__}({e}), expected {expected!r}"
+            )
+        if not isinstance(result, float):
+            raise AssertionError(
+                f"candidate({val!r}) returned {type(result).__name__}, expected float"
+            )
+        if result != expected:
+            raise AssertionError(
+                f"candidate({val!r}) returned {result!r}, expected {expected!r}"
+            )
+
+    def check_invalid(val):
+        try:
+            candidate(val)
+        except ValueError:
+            pass
+        except Exception as e:
+            raise AssertionError(
+                f"candidate({val!r}) raised {type(e).__name__}({e}), expected ValueError"
+            )
+        else:
+            raise AssertionError(
+                f"candidate({val!r}) did not raise ValueError"
+            )
+
+    # --- Positive integer odds ---
+    check_valid(100, 100 / (100 + 100))
+    check_valid(200, 100 / (200 + 100))
+    check_valid(500, 100 / (500 + 100))
+    check_valid(1000, 100 / (1000 + 100))
+    check_valid(10000, 100 / (10000 + 100))
+    check_valid(101, 100 / (101 + 100))
+
+    # --- Negative integer odds ---
+    check_valid(-100, -(-100) / (-(-100) + 100))
+    check_valid(-200, -(-200) / (-(-200) + 100))
+    check_valid(-500, -(-500) / (-(-500) + 100))
+    check_valid(-1000, -(-1000) / (-(-1000) + 100))
+    check_valid(-10000, -(-10000) / (-(-10000) + 100))
+    check_valid(-101, -(-101) / (-(-101) + 100))
+
+    # --- Float odds ---
+    check_valid(100.0, 100 / (100.0 + 100))
+    check_valid(-100.0, -(-100.0) / (-(-100.0) + 100))
+    check_valid(150.5, 100 / (150.5 + 100))
+    check_valid(-150.5, -(-150.5) / (-(-150.5) + 100))
+    check_valid(100.1, 100 / (100.1 + 100))
+    check_valid(-999.9, -(-999.9) / (-(-999.9) + 100))
+
+    # --- Numeric strings (with surrounding whitespace) ---
+    check_valid("100", 100 / (100 + 100))
+    check_valid("-200", -(-200) / (-(-200) + 100))
+    check_valid(" 150 ", 100 / (150 + 100))
+    check_valid("  -250  ", -(-250) / (-(-250) + 100))
+    check_valid("100.0", 100 / (100.0 + 100))
+    check_valid("-100.0", -(-100.0) / (-(-100.0) + 100))
+    check_valid("\t200\n", 100 / (200 + 100))
+    check_valid("  500  ", 100 / (500 + 100))
+    check_valid("+100", 100 / (100 + 100))
+
+    # --- Boundary: abs == 100 is valid ---
+    check_valid(100, 0.5)
+    check_valid(-100, 0.5)
+
+    # --- No rounding: verify full float precision ---
+    r = candidate(200)
+    assert r == 100 / 300, f"Rounding detected: got {r!r}, expected {100/300!r}"
+    assert r != 0.33, "Output appears rounded to 2 decimal places"
+    assert r != 0.333, "Output appears rounded to 3 decimal places"
+    assert r != 0.3333, "Output appears rounded to 4 decimal places"
+
+    r2 = candidate(-300)
+    assert r2 == 300 / 400, f"Rounding detected: got {r2!r}, expected {300/400!r}"
+
+    # --- Large values ---
+    check_valid(10**9, 100 / (10**9 + 100))
+    check_valid(-(10**9), -(-(10**9)) / (-(-(10**9)) + 100))
+
+    # --- Invalid: booleans ---
+    check_invalid(True)
+    check_invalid(False)
+
+    # --- Invalid: None ---
+    check_invalid(None)
+
+    # --- Invalid: non-numeric strings ---
+    check_invalid("abc")
+    check_invalid("12.34.56")
+    check_invalid("")
+    check_invalid("   ")
+    check_invalid("100abc")
+    check_invalid("abc100")
+    check_invalid("100 200")
+    check_invalid("--100")
+    check_invalid("100-")
+
+    # --- Invalid: abs < 100 (int) ---
+    check_invalid(99)
+    check_invalid(-99)
+    check_invalid(0)
+    check_invalid(-1)
+    check_invalid(50)
+    check_invalid(-50)
+
+    # --- Invalid: abs < 100 (float) ---
+    check_invalid(99.9)
+    check_invalid(-99.9)
+    check_invalid(0.0)
+    check_invalid(-0.5)
+
+    # --- Invalid: abs < 100 (string) ---
+    check_invalid("99")
+    check_invalid(" 99 ")
+    check_invalid("-99")
+    check_invalid("0")
+    check_invalid(" 0 ")
+    check_invalid("99.9")
+
+    # --- Invalid: non-finite (float) ---
+    check_invalid(float("inf"))
+    check_invalid(float("-inf"))
+    check_invalid(float("nan"))
+
+    # --- Invalid: non-finite (string) ---
+    check_invalid("inf")
+    check_invalid("-inf")
+    check_invalid("nan")
+    check_invalid(" Inf ")
+    check_invalid(" -inf ")
+    check_invalid(" NaN ")
+    check_invalid("infinity")
+    check_invalid("-infinity")
+
+    # --- Invalid: wrong types ---
+    check_invalid([100])
+    check_invalid({100})
+    check_invalid((100,))
+    check_invalid(b"100")
+    check_invalid(complex(100, 0))
+    check_invalid(complex(100, 1))
+    check_invalid({1: 100})
+    check_invalid({"a": 100})
+
+    # --- Verify specific known values for correctness ---
+    assert candidate(100) == 0.5
+    assert candidate(-100) == 0.5
+    assert candidate(1000) == 100 / 1100
+    assert candidate(-1000) == 1000 / 1100
+    assert candidate(300) == 100 / 400
+    assert candidate(-300) == 300 / 400
+```

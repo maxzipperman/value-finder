@@ -1,0 +1,156 @@
+```python
+from datetime import datetime, timezone, timedelta
+
+def run_tests(candidate):
+    """
+    Run a suite of regression tests against the supplied `candidate` function.
+    The function is expected to parse UTC timestamps and return an aware datetime
+    in UTC, or None for invalid input.  All assertions must pass; otherwise
+    an AssertionError is raised.
+    """
+
+    # Helper assertions -------------------------------------------------------
+    def assert_none(value):
+        assert value is None, f"Expected None, got {value!r}"
+
+    def assert_not_none(value):
+        assert value is not None, "Expected a datetime, got None"
+
+    def assert_aware_utc(dt):
+        assert dt.tzinfo == timezone.utc, f"Expected UTC tzinfo, got {dt.tzinfo!r}"
+        assert dt.utcoffset() == timedelta(0), f"Expected zero offset, got {dt.utcoffset()!r}"
+        assert dt.tzname() == "UTC", f"Expected tzname 'UTC', got {dt.tzname()!r}"
+        assert dt.dst() == timedelta(0), f"Expected zero DST, got {dt.dst()!r}"
+
+    # Individual test cases ---------------------------------------------------
+    def test_none_input():
+        assert_none(candidate(None))
+
+    def test_blank_input():
+        assert_none(candidate(""))
+
+    def test_whitespace_input():
+        assert_none(candidate("   "))
+
+    def test_invalid_format():
+        assert_none(candidate("not a date"))
+
+    def test_iso_z():
+        dt = candidate("2026-09-29T14:30:07Z")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)
+
+    def test_iso_z_no_colon():
+        dt = candidate("2026-09-29T0002Z")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 0, 2, tzinfo=timezone.utc)
+
+    def test_iso_offset_plus():
+        dt = candidate("2026-09-29T23:59:59+02:00")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 21, 59, 59, tzinfo=timezone.utc)
+
+    def test_iso_offset_minus():
+        dt = candidate("2026-09-29T23:59:59-02:00")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 30, 1, 59, 59, tzinfo=timezone.utc)
+
+    def test_naive_iso():
+        dt = candidate("2026-09-29T14:30:07")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)
+
+    def test_naive_space():
+        dt = candidate("2026-09-29 14:30:07")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)
+
+    def test_fractional_seconds():
+        dt = candidate("2026-09-29T14:30:07.123456Z")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt.microsecond == 123456
+        assert dt == datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc)
+
+    def test_fractional_seconds_too_many():
+        assert_none(candidate("2026-09-29T14:30:07.1234567Z"))
+
+    def test_invalid_offset():
+        assert_none(candidate("2026-09-29T23:59:59+25:00"))
+
+    def test_invalid_offset_minute():
+        assert_none(candidate("2026-09-29T23:59:59+02:60"))
+
+    def test_invalid_offset_format():
+        assert_none(candidate("2026-09-29T23:59:59+02:00:00"))
+
+    def test_strip_whitespace():
+        dt1 = candidate("2026-09-29T14:30:07Z")
+        dt2 = candidate(" 2026-09-29T14:30:07Z ")
+        assert dt1 == dt2
+
+    def test_iso_with_z_no_seconds():
+        dt = candidate("2026-09-29T14:30Z")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 14, 30, 0, tzinfo=timezone.utc)
+
+    def test_iso_with_z_no_minutes():
+        assert_none(candidate("2026-09-29T14Z"))
+
+    def test_iso_with_z_no_time():
+        assert_none(candidate("2026-09-29"))
+
+    def test_iso_with_z_and_offset():
+        dt = candidate("2026-09-29T14:30:07+02:00")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 12, 30, 7, tzinfo=timezone.utc)
+
+    def test_iso_with_z_and_offset_negative():
+        dt = candidate("2026-09-29T14:30:07-02:00")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 16, 30, 7, tzinfo=timezone.utc)
+
+    def test_iso_with_z_and_offset_zero():
+        dt = candidate("2026-09-29T14:30:07+00:00")
+        assert_not_none(dt)
+        assert_aware_utc(dt)
+        assert dt == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)
+
+    # Run all tests ----------------------------------------------------------
+    tests = [
+        test_none_input,
+        test_blank_input,
+        test_whitespace_input,
+        test_invalid_format,
+        test_iso_z,
+        test_iso_z_no_colon,
+        test_iso_offset_plus,
+        test_iso_offset_minus,
+        test_naive_iso,
+        test_naive_space,
+        test_fractional_seconds,
+        test_fractional_seconds_too_many,
+        test_invalid_offset,
+        test_invalid_offset_minute,
+        test_invalid_offset_format,
+        test_strip_whitespace,
+        test_iso_with_z_no_seconds,
+        test_iso_with_z_no_minutes,
+        test_iso_with_z_no_time,
+        test_iso_with_z_and_offset,
+        test_iso_with_z_and_offset_negative,
+        test_iso_with_z_and_offset_zero,
+    ]
+
+    for t in tests:
+        t()
+```

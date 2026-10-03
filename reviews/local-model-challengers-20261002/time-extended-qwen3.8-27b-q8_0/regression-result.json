@@ -1,0 +1,2017 @@
+{
+  "model": "qwen3.8:27b-q8_0",
+  "created_at": "2026-10-03T09:07:32.261019Z",
+  "message": {
+    "role": "assistant",
+    "content": "```python\ndef run_tests(candidate):\n    import math\n\n    def check_valid(val, expected):\n        try:\n            result = candidate(val)\n        except Exception as e:\n            raise AssertionError(\n                f\"candidate({val!r}) raised {type(e).__name__}({e}), expected {expected!r}\"\n            )\n        if not isinstance(result, float):\n            raise AssertionError(\n                f\"candidate({val!r}) returned {type(result).__name__}, expected float\"\n            )\n        if result != expected:\n            raise AssertionError(\n                f\"candidate({val!r}) returned {result!r}, expected {expected!r}\"\n            )\n\n    def check_invalid(val):\n        try:\n            candidate(val)\n        except ValueError:\n            pass\n        except Exception as e:\n            raise AssertionError(\n                f\"candidate({val!r}) raised {type(e).__name__}({e}), expected ValueError\"\n            )\n        else:\n            raise AssertionError(\n                f\"candidate({val!r}) did not raise ValueError\"\n            )\n\n    # --- Positive integer odds ---\n    check_valid(100, 100 / (100 + 100))\n    check_valid(200, 100 / (200 + 100))\n    check_valid(500, 100 / (500 + 100))\n    check_valid(1000, 100 / (1000 + 100))\n    check_valid(10000, 100 / (10000 + 100))\n    check_valid(101, 100 / (101 + 100))\n\n    # --- Negative integer odds ---\n    check_valid(-100, -(-100) / (-(-100) + 100))\n    check_valid(-200, -(-200) / (-(-200) + 100))\n    check_valid(-500, -(-500) / (-(-500) + 100))\n    check_valid(-1000, -(-1000) / (-(-1000) + 100))\n    check_valid(-10000, -(-10000) / (-(-10000) + 100))\n    check_valid(-101, -(-101) / (-(-101) + 100))\n\n    # --- Float odds ---\n    check_valid(100.0, 100 / (100.0 + 100))\n    check_valid(-100.0, -(-100.0) / (-(-100.0) + 100))\n    check_valid(150.5, 100 / (150.5 + 100))\n    check_valid(-150.5, -(-150.5) / (-(-150.5) + 100))\n    check_valid(100.1, 100 / (100.1 + 100))\n    check_valid(-999.9, -(-999.9) / (-(-999.9) + 100))\n\n    # --- Numeric strings (with surrounding whitespace) ---\n    check_valid(\"100\", 100 / (100 + 100))\n    check_valid(\"-200\", -(-200) / (-(-200) + 100))\n    check_valid(\" 150 \", 100 / (150 + 100))\n    check_valid(\"  -250  \", -(-250) / (-(-250) + 100))\n    check_valid(\"100.0\", 100 / (100.0 + 100))\n    check_valid(\"-100.0\", -(-100.0) / (-(-100.0) + 100))\n    check_valid(\"\\t200\\n\", 100 / (200 + 100))\n    check_valid(\"  500  \", 100 / (500 + 100))\n    check_valid(\"+100\", 100 / (100 + 100))\n\n    # --- Boundary: abs == 100 is valid ---\n    check_valid(100, 0.5)\n    check_valid(-100, 0.5)\n\n    # --- No rounding: verify full float precision ---\n    r = candidate(200)\n    assert r == 100 / 300, f\"Rounding detected: got {r!r}, expected {100/300!r}\"\n    assert r != 0.33, \"Output appears rounded to 2 decimal places\"\n    assert r != 0.333, \"Output appears rounded to 3 decimal places\"\n    assert r != 0.3333, \"Output appears rounded to 4 decimal places\"\n\n    r2 = candidate(-300)\n    assert r2 == 300 / 400, f\"Rounding detected: got {r2!r}, expected {300/400!r}\"\n\n    # --- Large values ---\n    check_valid(10**9, 100 / (10**9 + 100))\n    check_valid(-(10**9), -(-(10**9)) / (-(-(10**9)) + 100))\n\n    # --- Invalid: booleans ---\n    check_invalid(True)\n    check_invalid(False)\n\n    # --- Invalid: None ---\n    check_invalid(None)\n\n    # --- Invalid: non-numeric strings ---\n    check_invalid(\"abc\")\n    check_invalid(\"12.34.56\")\n    check_invalid(\"\")\n    check_invalid(\"   \")\n    check_invalid(\"100abc\")\n    check_invalid(\"abc100\")\n    check_invalid(\"100 200\")\n    check_invalid(\"--100\")\n    check_invalid(\"100-\")\n\n    # --- Invalid: abs < 100 (int) ---\n    check_invalid(99)\n    check_invalid(-99)\n    check_invalid(0)\n    check_invalid(-1)\n    check_invalid(50)\n    check_invalid(-50)\n\n    # --- Invalid: abs < 100 (float) ---\n    check_invalid(99.9)\n    check_invalid(-99.9)\n    check_invalid(0.0)\n    check_invalid(-0.5)\n\n    # --- Invalid: abs < 100 (string) ---\n    check_invalid(\"99\")\n    check_invalid(\" 99 \")\n    check_invalid(\"-99\")\n    check_invalid(\"0\")\n    check_invalid(\" 0 \")\n    check_invalid(\"99.9\")\n\n    # --- Invalid: non-finite (float) ---\n    check_invalid(float(\"inf\"))\n    check_invalid(float(\"-inf\"))\n    check_invalid(float(\"nan\"))\n\n    # --- Invalid: non-finite (string) ---\n    check_invalid(\"inf\")\n    check_invalid(\"-inf\")\n    check_invalid(\"nan\")\n    check_invalid(\" Inf \")\n    check_invalid(\" -inf \")\n    check_invalid(\" NaN \")\n    check_invalid(\"infinity\")\n    check_invalid(\"-infinity\")\n\n    # --- Invalid: wrong types ---\n    check_invalid([100])\n    check_invalid({100})\n    check_invalid((100,))\n    check_invalid(b\"100\")\n    check_invalid(complex(100, 0))\n    check_invalid(complex(100, 1))\n    check_invalid({1: 100})\n    check_invalid({\"a\": 100})\n\n    # --- Verify specific known values for correctness ---\n    assert candidate(100) == 0.5\n    assert candidate(-100) == 0.5\n    assert candidate(1000) == 100 / 1100\n    assert candidate(-1000) == 1000 / 1100\n    assert candidate(300) == 100 / 400\n    assert candidate(-300) == 300 / 400\n```",
+    "thinking": "Let me analyze the requirements carefully:\n\n1. `american_probability(value)` returns implied probability:\n   - Positive odds: `100/(value+100)`\n   - Negative odds: `-value/(-value+100)`\n\n2. Input validation:\n   - Accept: int, float, numeric strings (with surrounding whitespace)\n   - Only finite values with absolute value >= 100\n   - Reject: bool, None, nonnumeric strings, all other types \u2192 raise ValueError\n   - Do not round output\n\n3. `run_tests(candidate)` function:\n   - `candidate` is the `american_probability` callable\n   - Assert meaningful behavioral checks including invalid inputs\n   - Successful completion = tests passed\n   - Raise AssertionError on bad candidate\n   - Tests must accept correct implementation and catch defective ones\n   - Do NOT inspect candidate source, name, attributes, or identity\n   - No output, imports other than math allowed\n   - Paper-only synthetic data, standard library only\n\nLet me think about edge cases:\n\n**Valid inputs:**\n- `100` \u2192 `100/(100+100)` = `0.5`\n- `-100` \u2192 `-(-100)/(-(-100)+100)` = `100/(100+100)` = `0.5`\n- `200` \u2192 `100/(200+100)` = `100/300` = `1/3`\n- `-200` \u2192 `-(-200)/(-(-200)+100)` = `200/(200+100)` = `200/300` = `2/3`\n- `1000` \u2192 `100/(1000+100)` = `100/1100` = `1/11`\n- `-1000` \u2192 `1000/(1000+100)` = `1000/1100` = `10/11`\n- `\"150\"` \u2192 `100/(150+100)` = `100/250` = `0.4`\n- `\" -250 \"` \u2192 `250/(250+100)` = `250/350` = `5/7`\n- `100.0` \u2192 `100/(100.0+100)` = `0.5`\n- `-100.0` \u2192 `100/(100.0+100)` = `0.5`\n\n**Invalid inputs (should raise ValueError):**\n- `True` (bool)\n- `False` (bool)\n- `None`\n- `\"abc\"` (nonnumeric string)\n- `\"12.34.56\"` (nonnumeric string)\n- `\"\"` (empty string)\n- `\"  \"` (whitespace only)\n- `99` (abs < 100)\n- `-99` (abs < 100)\n- `99.9` (abs < 100)\n- `-99.9` (abs < 100)\n- `\"99\"` (abs < 100)\n- `\" 99 \"` (abs < 100)\n- `float('inf')` (not finite)\n- `float('-inf')` (not finite)\n- `float('nan')` (not finite)\n- `\"inf\"` (not finite)\n- `\"-inf\"` (not finite)\n- `\"nan\"` (not finite)\n- `[100]` (list)\n- `{100}` (set)\n- `(100,)` (tuple)\n- `complex(100, 0)` (complex)\n- `b\"100\"` (bytes)\n\nWait, let me re-read: \"Accept int, float and numeric strings (surrounding whitespace allowed), only finite values with absolute value >= 100.\"\n\nSo the valid types are: int, float, str (numeric). Everything else is rejected.\n\nFor strings: they must be numeric (parseable as a number) and the resulting value must be finite with abs >= 100.\n\nFor int/float: must be finite with abs >= 100.\n\nLet me think about what \"numeric strings\" means. It should be strings that can be parsed as a number. So `\"100\"`, `\"100.5\"`, `\"-200\"`, `\" 150 \"`, `\"  -250  \"` are valid. But `\"abc\"`, `\"12.34.56\"`, `\"\"`, `\"  \"` are not.\n\nWhat about `\"1e3\"`? That's 1000, which is numeric. I think it should be accepted. Let me include it.\n\nWhat about `\"100.\"` or `\".5\"`? These are valid Python float representations. I'll include them as valid.\n\nActually, let me be careful. The spec says \"numeric strings\". I'll use `float(s)` to test if a string is numeric. If `float(s)` succeeds, it's numeric.\n\nWait, but `float(\"inf\")` succeeds, `float(\"nan\")` succeeds. So I need to check finiteness separately.\n\nLet me also think about: does `float(\"  100  \")` work? Yes, Python's float() strips whitespace.\n\nNow for the test function:\n\n```python\ndef run_tests(candidate):\n    import math\n    \n    # Test valid positive odds\n    assert candidate(100) == 100/(100+100)  # 0.5\n    assert candidate(200) == 100/(200+100)  # 1/3\n    assert candidate(1000) == 100/(1000+100)  # 1/11\n    assert candidate(500) == 100/(500+100)  # 1/6\n    \n    # Test valid negative odds\n    assert candidate(-100) == -(-100)/(-(-100)+100)  # 100/200 = 0.5\n    assert candidate(-200) == -(-200)/(-(-200)+100)  # 200/300 = 2/3\n    assert candidate(-1000) == -(-1000)/(-(-1000)+100)  # 1000/1100 = 10/11\n    assert candidate(-500) == -(-500)/(-(-500)+100)  # 500/600 = 5/6\n    \n    # Test float inputs\n    assert candidate(100.0) == 100/(100.0+100)\n    assert candidate(-100.0) == -(-100.0)/(-(-100.0)+100)\n    assert candidate(150.5) == 100/(150.5+100)\n    assert candidate(-150.5) == -(-150.5)/(-(-150.5)+100)\n    \n    # Test string inputs\n    assert candidate(\"100\") == 100/(100+100)\n    assert candidate(\"-200\") == -(-200)/(-(-200)+100)\n    assert candidate(\" 150 \") == 100/(150+100)\n    assert candidate(\"  -250  \") == -(-250)/(-(-250)+100)\n    assert candidate(\"100.0\") == 100/(100.0+100)\n    \n    # Test boundary: abs == 100 is valid\n    assert candidate(100) == 0.5\n    assert candidate(-100) == 0.5\n    \n    # Test invalid inputs - should raise ValueError\n    invalid_inputs = [\n        True, False, None,\n        \"abc\", \"12.34.56\", \"\", \"  \",\n        99, -99, 99.9, -99.9,\n        \"99\", \" 99 \", \"-99\",\n        float('inf'), float('-inf'), float('nan'),\n        \"inf\", \"-inf\", \"nan\", \" Inf \",\n        [100], {100}, (100,),\n        b\"100\",\n        complex(100, 0),\n    ]\n    \n    for val in invalid_inputs:\n        try:\n            candidate(val)\n            assert False, f\"Expected ValueError for {val!r}\"\n        except ValueError:\n            pass\n        except Exception as e:\n            assert False, f\"Expected ValueError for {val!r}, got {type(e).__name__}\"\n    \n    # Test that output is not rounded\n    # 100/300 = 0.3333333333333333...\n    result = candidate(200)\n    assert result == 100/300  # exact float comparison\n    \n    # Test with large values\n    assert candidate(100000) == 100/(100000+100)\n    assert candidate(-100000) == -(-100000)/(-(-100000)+100)\n```\n\nWait, I need to be careful. The spec says \"Do not round output.\" This means the function should return the exact float result of the division, not a rounded version. So `candidate(200)` should return exactly `100/300` which is `0.3333333333333333` (the float representation).\n\nLet me also think about whether I should test that the return type is float. The spec doesn't explicitly say, but since we're doing division, it should be a float. Actually, `100/(100+100)` in Python 3 gives `0.5` which is a float. And `-(-100)/(-(-100)+100)` gives `100/200` = `0.5`. So the return should always be a float.\n\nActually wait - what if someone implements it with integer division? In Python 3, `/` always returns float, so that's fine. But if they use `//`, that would be wrong. Let me add a check.\n\nLet me also think about: should I check that the result is a float? The spec says \"returns implied probability\" and the formulas involve division. In Python 3, `/` always produces a float. I'll add a type check.\n\nActually, let me re-read: \"Do not round output.\" This is a constraint on the implementation - it should return the raw division result. I'll test with values where rounding would give a different result.\n\nLet me also consider: what about very large numbers? Like `10**18`? The formula should still work.\n\nWhat about `100` as a string with various whitespace? `\"  100  \"`, `\"\\t100\\n\"`, etc.\n\nLet me refine my test suite:\n\n```python\ndef run_tests(candidate):\n    import math\n    \n    # === Valid inputs: positive odds ===\n    assert candidate(100) == 100 / (100 + 100)\n    assert candidate(200) == 100 / (200 + 100)\n    assert candidate(500) == 100 / (500 + 100)\n    assert candidate(1000) == 100 / (1000 + 100)\n    assert candidate(10000) == 100 / (10000 + 100)\n    \n    # === Valid inputs: negative odds ===\n    assert candidate(-100) == -(-100) / (-(-100) + 100)\n    assert candidate(-200) == -(-200) / (-(-200) + 100)\n    assert candidate(-500) == -(-500) / (-(-500) + 100)\n    assert candidate(-1000) == -(-1000) / (-(-1000) + 100)\n    assert candidate(-10000) == -(-10000) / (-(-10000) + 100)\n    \n    # === Valid inputs: float ===\n    assert candidate(100.0) == 100 / (100.0 + 100)\n    assert candidate(-100.0) == -(-100.0) / (-(-100.0) + 100)\n    assert candidate(150.5) == 100 / (150.5 + 100)\n    assert candidate(-150.5) == -(-150.5) / (-(-150.5) + 100)\n    assert candidate(100.1) == 100 / (100.1 + 100)\n    \n    # === Valid inputs: numeric strings ===\n    assert candidate(\"100\") == 100 / (100 + 100)\n    assert candidate(\"-200\") == -(-200) / (-(-200) + 100)\n    assert candidate(\" 150 \") == 100 / (150 + 100)\n    assert candidate(\"  -250  \") == -(-250) / (-(-250) + 100)\n    assert candidate(\"100.0\") == 100 / (100.0 + 100)\n    assert candidate(\"-100.0\") == -(-100.0) / (-(-100.0) + 100)\n    assert candidate(\"\\t200\\n\") == 100 / (200 + 100)\n    \n    # === Boundary: abs == 100 is valid ===\n    assert candidate(100) == 0.5\n    assert candidate(-100) == 0.5\n    \n    # === No rounding check ===\n    # 100/300 is not a \"clean\" number\n    r = candidate(200)\n    assert r == 100 / 300\n    assert r != 0.33  # would be wrong if rounded to 2 decimal places\n    assert r != 0.333  # would be wrong if rounded to 3 decimal places\n    \n    # === Return type should be float ===\n    assert isinstance(candidate(100), float)\n    assert isinstance(candidate(-100), float)\n    assert isinstance(candidate(\"200\"), float)\n    \n    # === Invalid inputs: should raise ValueError ===\n    invalid_inputs = [\n        # bool\n        True,\n        False,\n        # None\n        None,\n        # nonnumeric strings\n        \"abc\",\n        \"12.34.56\",\n        \"\",\n        \"   \",\n        \"100abc\",\n        \"abc100\",\n        # abs < 100\n        99,\n        -99,\n        99.9,\n        -99.9,\n        0,\n        -1,\n        \"99\",\n        \" 99 \",\n        \"-99\",\n        \"0\",\n        # non-finite\n        float('inf'),\n        float('-inf'),\n        float('nan'),\n        \"inf\",\n        \"-inf\",\n        \"nan\",\n        \" Inf \",\n        \" -inf \",\n        \" NaN \",\n        # wrong types\n        [100],\n        {100},\n        (100,),\n        b\"100\",\n        complex(100, 0),\n    ]\n    \n    for val in invalid_inputs:\n        try:\n            candidate(val)\n            raise AssertionError(f\"Expected ValueError for input {val!r}\")\n        except ValueError:\n            pass\n        except AssertionError:\n            raise\n        except Exception as e:\n            raise AssertionError(f\"Expected ValueError for input {val!r}, got {type(e).__name__}: {e}\")\n    \n    # === Additional edge cases ===\n    # Very large values\n    assert candidate(10**9) == 100 / (10**9 + 100)\n    assert candidate(-(10**9)) == -(-(10**9)) / (-(-(10**9)) + 100)\n    \n    # Just above 100\n    assert candidate(101) == 100 / (101 + 100)\n    assert candidate(-101) == -(-101) / (-(-101) + 100)\n```\n\nHmm wait, I need to be careful with the `raise AssertionError` inside the try block. If `candidate(val)` succeeds (doesn't raise), I want to raise an AssertionError. But if I put `raise AssertionError(...)` inside the try, it will be caught by `except Exception`. Let me restructure:\n\n```python\nfor val in invalid_inputs:\n    try:\n        candidate(val)\n    except ValueError:\n        pass\n    except Exception as e:\n        raise AssertionError(f\"Expected ValueError for input {val!r}, got {type(e).__name__}\")\n    else:\n        raise AssertionError(f\"Expected ValueError for input {val!r}, but no exception was raised\")\n```\n\nThis is cleaner. The `else` clause runs if no exception was raised.\n\nWait, but what if the candidate raises a `ValueError` for the wrong reason? Like, what if it raises ValueError for a valid input? I'm testing valid inputs separately with `assert`, so if it raises ValueError for a valid input, the assert will fail with a ValueError propagating up... actually no, the assert would just fail because the exception propagates.\n\nHmm, actually if `candidate(100)` raises ValueError, then `assert candidate(100) == 0.5` will raise ValueError, not AssertionError. The spec says \"raise AssertionError on a bad candidate.\" So I should catch exceptions from valid inputs and convert them to AssertionError.\n\nLet me restructure:\n\n```python\ndef run_tests(candidate):\n    import math\n    \n    def check_valid(val, expected):\n        try:\n            result = candidate(val)\n        except Exception as e:\n            raise AssertionError(f\"candidate({val!r}) raised {type(e).__name__}, expected result {expected}\")\n        if result != expected:\n            raise AssertionError(f\"candidate({val!r}) returned {result!r}, expected {expected!r}\")\n        if not isinstance(result, float):\n            raise AssertionError(f\"candidate({val!r}) returned type {type(result).__name__}, expected float\")\n    \n    def check_invalid(val):\n        try:\n            candidate(val)\n        except ValueError:\n            pass\n        except Exception as e:\n            raise AssertionError(f\"candidate({val!r}) raised {type(e).__name__}, expected ValueError\")\n        else:\n            raise AssertionError(f\"candidate({val!r}) did not raise ValueError\")\n    \n    # ... tests using check_valid and check_invalid\n```\n\nThis is much better. Let me write the full solution now.\n\nActually, wait. Let me reconsider the \"numeric strings\" part. What about strings like `\"1e2\"` (which is 100)? Or `\"1e3\"` (which is 1000)? These are valid numeric strings in Python. `float(\"1e2\")` = 100.0. I think these should be accepted.\n\nWhat about `\"0x100\"`? `float(\"0x100\")` raises ValueError, so it's not a valid numeric string. Good.\n\nWhat about `\"+100\"`? `float(\"+100\")` = 100.0. This is a valid numeric string. I'll include it.\n\nWhat about `\"1_00\"`? In Python 3.6+, `float(\"1_00\")` = 100.0. Hmm, this is a valid numeric string in Python. I'll include it as valid.\n\nActually, let me not overthink this. The key tests are:\n- Valid: integers, floats, simple numeric strings with whitespace\n- Invalid: bools, None, non-numeric strings, out-of-range, non-finite, wrong types\n\nLet me also think about whether `\"100\"` should give the same result as `100`. Yes, because `float(\"100\")` = 100.0, and `100/(100.0+100)` = `100/200.0` = `0.5`. And `100/(100+100)` = `100/200` = `0.5`. Same result.\n\nOne more thing: the spec says \"Do not round output.\" I should test with a value where the result has many decimal places to ensure no rounding is happening. For example, `candidate(200)` should give exactly `100/300` = `0.3333333333333333` (16 significant digits in float64). If someone rounds to, say, 4 decimal places, they'd get `0.3333`.\n\nLet me finalize my solution. I'll make it comprehensive but not excessively long.\n\nActually, I realize I should double-check: does the spec say the function should raise ValueError specifically, or any exception? It says \"Reject bool, None, nonnumeric strings and all other types with ValueError\". So it must be ValueError specifically.\n\nAlso: \"Accept int, float and numeric strings (surrounding whitespace allowed), only finite values with absolute value >= 100.\"\n\nSo the acceptance criteria are:\n1. Type is int, float, or str\n2. If str: must be parseable as a number (numeric string)\n3. The numeric value must be finite\n4. The absolute value must be >= 100\n\nIf any of these fail \u2192 ValueError.\n\nLet me also consider: what about a string like `\"100\\n\"`? `float(\"100\\n\")` = 100.0. This should be valid (surrounding whitespace allowed).\n\nWhat about `\"100 200\"`? `float(\"100 200\")` raises ValueError. Invalid. Good.\n\nI think my test suite is comprehensive enough. Let me write the final version.\n\nOne more consideration: the spec says \"No output, imports other than math allowed.\" So I can only import math. I don't actually need math for my tests since I'm using `float('inf')`, `float('-inf')`, `float('nan')` directly. But I'll import it to be safe in case I need `math.isfinite` or something. Actually, I don't need it. Let me just not import anything, or import math just in case.\n\nWait, the spec says \"imports other than math allowed\" - meaning math IS allowed, and nothing else. So I can import math if needed. I don't think I need it for my tests, but I'll include it to be safe.\n\nLet me write the final clean version."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 406076922084,
+  "load_duration": 4581594209,
+  "prompt_eval_count": 208,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 402634000,
+  "eval_count": 7408,
+  "eval_duration": 401089796000,
+  "memory_samples": [
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    },
+    {
+      "size": 30439962049,
+      "size_vram": 30439962049,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 406.4987801250245,
+  "request_deadline_seconds": 600
+}

@@ -16,5 +16,53 @@
       "hard-extended-ornith-1.5-35b/hard-review-result.json"
     ],
     "reviewer": "author progress inspection"
+  },
+  "qwen3.6:35b|real-helper|32k": {
+    "proceed": false,
+    "reason": "Tier16k delivered a final suite (stop,8355 tokens). Oracle accepted;5/6 frozen mutants caught. Completed semantic coverage outcome, not an unfinished answer; no escalation.",
+    "evidence": [
+      "budget16k-qwen3.6-35b/real-helper-result.json"
+    ],
+    "reviewer": "author progress/source inspection, not independent signoff"
+  },
+  "qwen3.8:27b|real-helper|32k": {
+    "proceed": false,
+    "reason": "Tier16k stopped at9078 tokens with empty final answer and repetitive duplicate equivalence assertions in thinking; not capped at16384, so more output does not address the observed delivery failure. No salvage or retry.",
+    "evidence": [
+      "budget16k-qwen3.8-27b/real-helper-result.json"
+    ],
+    "reviewer": "author progress/source inspection, not independent signoff"
+  },
+  "gpt-oss:20b|real-helper|32k": {
+    "proceed": false,
+    "reason": "Tier16k delivered a finished test suite. It rejects the correct helper because timezone.utc.dst() returns None, not timedelta(0); additional invented invalid-input expectations exist. Completed semantic failure, not a budget failure.",
+    "evidence": [
+      "budget16k-gpt-oss-20b/real-helper-result.json"
+    ],
+    "reviewer": "author progress/source inspection, not independent signoff"
+  },
+  "gemma4:26b|real-helper|32k": {
+    "proceed": false,
+    "reason": "Tier16k remains capped/empty, but comparison against8k shows extra allowance repeatedly restates the same final-check list (whitespace, fraction, UTC, naive, offsets, compact, Z, constructor, signature). No meaningful completion progress; stop under no-progress rule.",
+    "evidence": [
+      "budget16k-gemma4-26b/real-helper-result.json"
+    ],
+    "reviewer": "author progress/source inspection, not independent signoff"
+  },
+  "qwen3.8:27b-q8_0|regression|16k": {
+    "proceed": false,
+    "reason": "Time-only600s diagnostic completed at406.50s. Oracle accepted and8/8 frozen mutants caught. No unfinished answer; extra output unnecessary.",
+    "evidence": [
+      "time-extended-qwen3.8-27b-q8_0/regression-result.json"
+    ],
+    "reviewer": "author progress/source inspection, not independent signoff"
+  },
+  "qwen3.8:27b-q8_0|real-helper|16k": {
+    "proceed": false,
+    "reason": "Optional task not extended: original300s timeout has no captured answer/reasoning, so meaningful unfinished progress cannot be inspected. Longer Q8 regression now establishes a usable test-drafting role; stop additional resource use without a progress basis.",
+    "evidence": [
+      "qwen3.8-27b-q8_0/real-helper-error.json"
+    ],
+    "reviewer": "author progress/source inspection, not independent signoff"
   }
 }
