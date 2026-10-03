@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "scopes": ["strategy-research/nfl-props-archive-v1/plan.py", "strategy-research/nfl-props-archive-v1/test_plan.py", "strategy-research/nfl-props-archive-v1/catalog.json", "strategy-research/nfl-props-archive-v1/cfb-catalog.json", "strategy-research/nfl-props-archive-v1/verification.json", "ops/process/process_guard.py"],
+  "commands": [["{python}", "-B", "-m", "unittest", "discover", "-s", "strategy-research/nfl-props-archive-v1", "-p", "test_plan.py", "-v"]],
+  "environment": {"PYTHONHASHSEED": "0", "PYTHONDONTWRITEBYTECODE": "1"}
+}
