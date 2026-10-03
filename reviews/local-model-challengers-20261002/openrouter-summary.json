@@ -586,6 +586,17 @@
           "image_tokens": 0,
           "audio_tokens": 0
         }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
       }
     },
     {
@@ -593,7 +604,7 @@
       "task": "debugging",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
-      "status": "pending",
+      "status": "result",
       "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
       "settings": {
         "model": "deepseek/deepseek-v4.1-flash",
@@ -616,14 +627,53 @@
         "seed": 42
       },
       "deadline_seconds": 600,
-      "request_sha256": "5f7406499a4ff713a3bae0c598d1b361d4bea2bafcde1a226ed599b495578c34"
+      "request_sha256": "5f7406499a4ff713a3bae0c598d1b361d4bea2bafcde1a226ed599b495578c34",
+      "returned_model": "deepseek/deepseek-v4.1-flash",
+      "provider": "OpenInference",
+      "wall_seconds": 241.28414445801172,
+      "finish_reason": "length",
+      "final_answer_bytes": 1,
+      "usage": {
+        "prompt_tokens": 473,
+        "completion_tokens": 8192,
+        "total_tokens": 8665,
+        "cost": 0.00639652,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 426,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00639652,
+          "upstream_inference_prompt_cost": 6.76e-06,
+          "upstream_inference_completions_cost": 0.00638976
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 8192,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
     },
     {
       "model": "deepseek/deepseek-v4.1-flash",
       "task": "regression",
       "diagnostic": "baseline",
       "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
-      "status": "not_started",
+      "status": "pending",
       "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
       "settings": {
         "model": "deepseek/deepseek-v4.1-flash",
@@ -645,7 +695,8 @@
         },
         "seed": 42
       },
-      "deadline_seconds": 600
+      "deadline_seconds": 600,
+      "request_sha256": "ca5e60931cc8225d2a9fc285c97ff41adf9ac5d86f9ca3691831e886bbcc56fd"
     },
     {
       "model": "deepseek/deepseek-v4.1-flash",

@@ -186,3 +186,6 @@ Owner selected free Space Bunny Alpha plus DeepSeek V4.1 Flash, GLM5.3 Flash and
 
 
 Local model extension author grading complete (PR147):44 additional requests,38 results/6 errors/0 pending, all budget stopping decisions recorded. Q8 time-only odds tests accepted oracle and caught8/8 mutants at406s. Qwen3.6 helper16k accepted oracle5/6 mutants; GPT16k rejects oracle, Q4 stop-empty and Gemma/Ornith repeated reasoning stop32k escalation. Independent extension review still required; no live routing/merge. OpenRouter comparison remains separate and in progress under owner explicit up-to$1 waiver, first-round cap$0.50.
+
+
+OpenRouter checkpoint (PR147): free baseline7 complete; paid DeepSeek implementation/debugging length8192 with no deliverable, reported combined cost$0.01279044; remaining declared paid requests and queued free16k diagnostics continue serially. Max authorized completed-results handoff to hub chat with job-reallocation guidance favoring capable local/free/cheap models. No partial cloud routing claims; full grading and final handoff pending.
