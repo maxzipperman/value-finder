@@ -11,7 +11,7 @@ preserved [verbatim in the historical archive](docs/status-archive/README.md).
 | NFL / CFB weather | Registered forward tests; signal counts require current preview evidence | [NFL strategy](nfl-weather/STRATEGY.md), [CFB strategy](cfb-weather/STRATEGY.md) |
 | Football archive | F1 recent, F2 and F3a complete; accepted coverage pilot supports a finite successor acquisition | [Completion audit PR104](https://github.com/maxzipperman/value-finder/pull/104), [PR151 recovery report](reviews/pass150-timeout-recovery/REPORT.md) |
 | NFL / CFB props | Coverage-first acquisition; held groups remain held | [Coverage report workflow](strategy-research/coverage-pilot-completion-v1/WORKFLOW.md) |
-| NBA / sharp markets | N0 preparation waits for the actual completed predecessor receipt | [N0 follow-on](https://github.com/maxzipperman/value-finder/pull/128), [research reports](sharp-markets/reports/) |
+| NBA / sharp markets | Exact successor151 N0 ancestry adapter prepared; proposed 400,000 ceiling awaits review/adoption; packet/execution held | [N0 follow-on](https://github.com/maxzipperman/value-finder/pull/128), [research reports](sharp-markets/reports/) |
 | Forecast/style discovery | Six-model discovery setup; 2026 football remains sealed | [Research protocol](strategy-research/forecast_style_protocol.json) |
 | Logging collectors | PR125 installation and paid collector entry points disabled pending a reviewed enforced shared-account bridge and exact live authority; schedules/rules unchanged | [Collector adoption prerequisites](ops/collector-safety/README.md) |
 | Dashboard / menu bar | Read-only operational view; no rule or job change here | [Dashboard](dashboard/), [Mac move](ops/MOVE_TO_NEW_MAC.md) |
@@ -57,7 +57,7 @@ reservations remain immutable. [Public completion receipts](https://github.com/m
 | Order | State / next action | Maximum new credits / authority |
 |---|---|---|
 | 1 | Hub-owned PR151 successor: finish or reconcile its actual terminal receipt before any follow-on; never resend attempted/pending IDs | Frozen 1,290 untouched requests / 66,480-credit total cap, not a fresh remaining balance. [Exact recovery scope](reviews/pass150-timeout-recovery/REPORT.md); PR99 exact authority governs |
-| 2 | N0: prepare against actual completed predecessor root and final ledger, then obtain exact list/executor/account approval | Candidate 754 requests / 7,540 credits, not approved by this page; [PR128](https://github.com/maxzipperman/value-finder/pull/128) |
+| 2 | N0: exact successor151 adapter prepared; independently review/adopt proposed 400,000 ceiling and executor integration before packet/list/account approval | Candidate 754 requests / 7,540 credits, not approved by this page; [PR128](https://github.com/maxzipperman/value-finder/pull/128) |
 | 3 | Qualifying MLB/soccer heat closes: free joins and finite reviewed gap list first | No new approved cap; coverage/eligibility gate remains |
 | Held | CFB2021–22 totals and CFB2023–25 props; NBA full season and hourly football require their own gates | No bulk release or automatic spend |
 

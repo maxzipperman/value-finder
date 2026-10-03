@@ -13,6 +13,8 @@ import re
 import stat
 import types
 
+import successor151
+
 
 SOURCE = Path(__file__).resolve().parents[1]
 REPO = SOURCE.parents[1]
@@ -159,6 +161,10 @@ def reconcile(rows, own_root=None):
 
 def seed(ledger_path, rows, *, require_f2=False):
     rows = list(rows)
+    if Path(ledger_path) == RUNTIME_BASE / successor151.ROOT / "spending-ledger.json":
+        return successor151.seed(ledger_path, rows, RUNTIME_BASE)
+    if require_f2:
+        raise ValueError("Only exact successor151 is an N0 predecessor; Both exact partial F2 proofs are required")
     gate = f2_handoff()
     ledger_path = Path(ledger_path).resolve()
     root = ledger_path.parent.name
@@ -265,6 +271,8 @@ def freeze(packet):
     files["code/stage.py"] = sha(__file__)
     files["code/execute.py"] = sha(Path(__file__).with_name("execute.py"))
     files["code/f2_handoff.py"] = sha(F2_HANDOFF_PATH)
+    files["code/successor151.py"] = sha(successor151.HERE / "successor151.py")
+    files["code/successor151-pins.json"] = sha(successor151.HERE / "successor151-pins.json")
     root = hashlib.sha256(canonical(files)).hexdigest()
     write(packet / "FREEZE.json", {"root": root, "files": files})
     return root
@@ -273,6 +281,8 @@ def freeze(packet):
 def prepare(predecessor_ledger, packet):
     _, rows = source()
     predecessor = seed(predecessor_ledger, rows, require_f2=True)
+    if predecessor.get("kind") == "exact_successor151_preparation_only":
+        raise ValueError("Actual N0 packet held: prospective ceiling adoption and executor integration review required")
     cache = reconcile(rows)
     packet = Path(packet)
     packet.mkdir(parents=True, exist_ok=False)
@@ -291,14 +301,16 @@ def verify_packet(packet, root):
     packet = Path(packet)
     _, rows = source()
     cert = json.loads((packet / "FREEZE.json").read_text())
-    expected_names = set(FILES) | {"code/stage.py", "code/execute.py", "code/f2_handoff.py"}
+    expected_names = set(FILES) | {"code/stage.py", "code/execute.py", "code/f2_handoff.py", "code/successor151.py", "code/successor151-pins.json"}
     if (any(p.is_dir() or p.is_symlink() for p in packet.iterdir())
             or {p.name for p in packet.iterdir()} != set(FILES) | {"FREEZE.json"}
             or set(cert["files"]) != expected_names):
         raise ValueError("N0 packet file set changed")
     files = {name: sha(packet / name) for name in FILES}
     files.update({"code/stage.py": sha(__file__), "code/execute.py": sha(Path(__file__).with_name("execute.py")),
-                  "code/f2_handoff.py": sha(F2_HANDOFF_PATH)})
+                  "code/f2_handoff.py": sha(F2_HANDOFF_PATH),
+                  "code/successor151.py": sha(successor151.HERE / "successor151.py"),
+                  "code/successor151-pins.json": sha(successor151.HERE / "successor151-pins.json")})
     if files != cert["files"] or hashlib.sha256(canonical(files)).hexdigest() != root or cert["root"] != root:
         raise ValueError("N0 frozen root or code changed")
     manifest = json.loads((packet / "manifest.json").read_text())

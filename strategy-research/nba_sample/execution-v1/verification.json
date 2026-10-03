@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "scopes": [
+    "strategy-research/nba_sample/execution-v1/stage.py",
+    "strategy-research/nba_sample/execution-v1/execute.py",
+    "strategy-research/nba_sample/execution-v1/successor151.py",
+    "strategy-research/nba_sample/execution-v1/successor151-pins.json",
+    "strategy-research/nba_sample/execution-v1/test_stage.py",
+    "strategy-research/nba_sample/execution-v1/test_execute.py",
+    "strategy-research/nba_sample/execution-v1/test_successor151.py",
+    "strategy-research/nba_sample/execution-v1/verification.json",
+    "strategy-research/nba_sample/manifest.json",
+    "strategy-research/nba_sample/metadata.json",
+    "strategy-research/nba_sample/requests.json",
+    "strategy-research/nba_sample/request-list.csv",
+    "strategy-research/nba_sample/free-inputs-receipt.json",
+    "strategy-research/nba_sample/exact_list.py",
+    "reviews/post151-readiness/readiness.json",
+    "strategy-research/football_archive/f2_handoff.py",
+    "strategy-research/football_archive/union-v1/F3a/union-certificate.json",
+    "strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json",
+    "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json",
+    "strategy-research/football_archive/acquisition/football-archive-v4",
+    "ops/process/process_guard.py",
+    ".github/workflows/n0-preparation.yml",
+    "STATUS.md",
+    "strategy-research/nba_sample/execution-v1/README.md",
+    "strategy-research/nba_sample/execution-v1/CEILING-DRAFT.md",
+    "strategy-research/football_archive/followups/F2-pilot/cache-reconciliation.json",
+    "strategy-research/football_archive/recovery-v1/F2-continuation/cache-reconciliation.json",
+    "strategy-research/football_archive/recovery-v2/F2-second-continuation/cache-reconciliation.json"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "pytest",
+      "strategy-research/nba_sample/execution-v1/test_stage.py",
+      "strategy-research/nba_sample/execution-v1/test_execute.py",
+      "strategy-research/nba_sample/execution-v1/test_successor151.py",
+      "-o",
+      "addopts=",
+      "-p",
+      "no:cacheprovider",
+      "-q"
+    ]
+  ],
+  "environment": {
+    "PYTHONPATH": "strategy-research/nba_sample/execution-v1/",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONHASHSEED": "0"
+  }
+}

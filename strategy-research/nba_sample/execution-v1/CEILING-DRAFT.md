@@ -1,0 +1,9 @@
+# Proposed N0 cumulative-ceiling amendment — not adopted
+
+Owner explicitly permits raising the conservative250000 cap. Hub proposes **400000credits**, the existing finite day-one ceiling, as the prospective first-tranche ceiling for this unchanged754-request N0 purchase. Current conservative carried debit274586 plus maximum7540 is **282126**, leaving117874 headroom within this proposal. This does not replenish the monthly account or reduce protected reserves.
+
+Preserve1687probe,206419other carried debit and66480successor reservations, including the earlier720retired reservations and permanent pending60. Do not substitute provider-billed258135 for conservative274586. All eleven accepted ancestry ledgers remain byte-identical. Shared/live/uncertain debit must be freshly reconciled; any additional debit consumes headroom and can invalidate the prospective list/account baseline. Cache overlaps block repurchase and require a reviewed reuse packet.
+
+Adoption needs independent source review and explicit hub decision, a versioned prospective execution protocol consistently bound to the packet/authority/ledger budget checks (original frozen v4 remains unchanged), complete shared-writer/nonoverlap/account readiness, and exact `APPROVED paid run: list <sha256>, budget7540credits, commit <sha>` plus request-set/root/current account authority in the repository's required format. This prose is not an approval comment and supplies no new paid authority.
+
+No actual N0 packet is generated on this head. The successor-specific preparation record is rejected by packet preparation/execution until those prerequisites are established. Full-season NBA remains separately held behind the prospectively reviewed outcome-blind sample coverage/eligibility/cost-yield gate described in READINESS-GAP.md. No outcomes or profitable subset selection were used to propose this cap.
