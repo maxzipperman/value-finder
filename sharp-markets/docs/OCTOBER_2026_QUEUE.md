@@ -37,34 +37,38 @@ Run one paid purchase at a time. Derive the actual list and cache deductions bef
 |---|---|---:|---|
 | Done | F2: NFL alternate spreads/totals | 0 additional | Complete union: 1,773 slots; 34,140 billed credits. Never repurchase completed or explicitly missing requests. |
 | Done | F3a: NFL 2025 six-market player props | 0 additional | 570 completed requests; 34,090 billed credits. Reuse compatible book/market/time coverage. |
-| First | Fixed existing-frame coverage pilot | 37,080 | PR137/140 merged; sole committed draw selects430games. Actual packet736new requests (236older,500props), eight old reused slot references; exact packet review/current preflight/live paid authority pending. No redraw or automatic later-tranche release. |
-| After coverage gate | NFL/CFB listing discovery, then market availability | 1,544 listing; 7,032 currently proposed availability | PR #132 safety repairs first. New IDs need a separately bounded list; metadata is not price-pair proof. |
-| After coverage gate | Owner-requested NFL/CFB props archive (#130) | 2,747,340 two-time planning bound | Up to ten selected books; actual supported coverage/list/cap follow pilot and compatible cache reuse. Four earlier times for eight core markets add a separate 1,112,960 planning bound. |
-| After coverage gate / completed predecessor | N0: NBA January 5–11, 2026 sample week | 7,540 | 754 prepared requests; completed older successor ancestry and reviewed driver required. No generic football F1. |
-| 4 | HB1/HS1: qualifying 2024–25 heat-game closes | 16,000 | Free venue/forecast joins and registered trigger first; buy only qualifying slots, deduplicated by actual request identity. |
-| Prepared; held for coverage gate | Older F1: NFL/CFB 2020–22 remainder | 53,580 | PR #129 offline reconciliation installed: 480 completed plus one certified lag-missing response; 14,430 charges/reservations retained. PR #134 freezes 1,786 never-sent rows; exact authority separate. Original 12 cache-reuse responses preserved. |
+| Done | Fixed existing-frame coverage pilot | 0 additional | PR143 acquisition complete; PR144 final look completed. Final record100a532; no redraw/rebuy. Combined pilot charges24,400; conservative carry207,386. |
+| Next1 | Passing NFL2023–24 six-market props | 56,280 | PR145 preparation:938 exact residual requests, reuse NFL2025. Review and new bulk execution bridge/authority required. |
+| Next2 | Passing older totals: NFL2020–22, CFB2020 | 10,920 | PR145 preparation:364 residual requests. Shared sweeps deduplicated. Same proposed finite tranche as props; held CFB2021/22 excluded. |
+| Optional preparation | NFL-focused listing discovery / market availability | Recompute; old estimates1,544 /7,032 | Justify gaps and refresh scope/list/cap/cache deductions first; metadata does not prove price pairs. No authorization. |
+| Separate expansion | Kicker/additional markets, books and timing depth | No current exact cap | Requires separate coverage and settlement/forecast-vintage dependencies. Existing utility PASS is not family-specific approval. Broad2,747,340 and extra-time1,112,960 estimates are historical bounds, not next purchases. |
+| Gated | N0 NBA January5–11,2026 sample week | 7,540 prior prepared cap |754 prepared requests need refreshed completed ancestry, reviewed driver and exact authority; subsequent full season stays behind its gate. |
+| Gated | HB1/HS1 qualifying2024–25 heat closes | 16,000 planning ceiling | Free venue/forecast-vintage joins and registered trigger first; freeze only qualifying deduplicated slots. |
 
-At the installed older partial, terminal purchase charges plus the probe total
-**167,177 credits**; conservative cumulative budget debit is **170,306**.
-These are not current provider-balance measurements. The older remainder adds
-at most **53,580**, for **223,886** before other new stages/usage. The original
-**250,000-credit first-tranche ceiling** remains and needs a reviewed prospective
-extension before larger props execution. Monthly ceiling **4,440,000** and reserve
-**531,630** remain. Larger figures are bounds, not billing predictions or authority.
+The exact next preparation combines **1,302 requests /67,200 credits**. Retain
+**207,386** conservative cumulative carry. The owner permits a prospective
+first-tranche increase to **274,686** (=carry+cap+100 existing shared-use allowance).
+The installed historical250,000 policy remains unchanged until hub adoption of a
+reviewed future execution policy. Day-one400,000, monthly4,440,000 and reserve531,630
+remain. No document here authorizes calls; fresh account/shared-ledger checks and
+exact list/cap/commit approval are required. Preparation root22c546ed; full pins and
+saved nonexclusive held reasons are in [PR145 packet](../../strategy-research/coverage-pass-residual-v1/README.md).
+Prior full-older1,786/53,580 is superseded for this passing-only purpose; no blanket
+older-season release. Primary rush/reception-yard diagnostics inform analysis
+readiness without a new acquisition gate. No outcomes or renewed gate look.
 
 ## Schedule and gate decisions
 
 Dates are targets, not permission to skip a dependency. The [official FAQ](https://the-odds-api.com/manage/faqs.html) states that credits reset on the first of each month: standard next reset November 1, 2026. Exact hour/timezone and account renewal/cancellation are not verified; aim to finish by October 29 Pacific.
 
-- **Now through October 7:** freeze/review the first lists, reconcile all local caches, and execute ready
-  Phase 1 runs consecutively. Prepare the older runner concurrently with list review; do not wait for a backup.
+- **Now through October 7:** review PR145 and its separate bulk execution bridge, reconcile current shared state and obtain exact authority. Run passing NFL2023–24 props first, then passing older totals from the same finite list. Do not wait for an optional backup.
   After each run, publish credits, missing/excluded coverage and any stop before authorizing the next one.
-- **October 8–14 target:** resolve the outcome-blind older-coverage decision, execute the approved older slice,
+- **October 8–14 target:** complete only the six saved passing groups after exact authority,
   and complete the prospective price-engine amendments. Run free registered analyses as dependencies finish.
-  This target is about finishing the six-season dataset early enough to evaluate the hourly gate.
+  Held CFB2021/22 do not count as completed eligible coverage for the hourly gate.
 - **By about October 20:** read the existing N1 and F4 gates; freeze/review those larger request
   lists only if their registered gate passes. No automatic N1/F4 purchase on an unread, failed or inconclusive gate.
-  NFL props archive acquisition is exempt under the October 2 owner override; its registered research criteria remain unchanged.
+  The prior owner override removed profitability purchase gates; the later coverage-first direction still limits this next list to saved PASS groups. Registered research criteria remain unchanged.
   F4 requires both sports in four of six seasons; recent three-season data alone cannot satisfy it.
 - **Before the allowance reset:** execute ready approved purchases with a completion/recovery buffer.
   The existing October 25 cutoff for unread N1/F4 gates remains unless prospectively amended; it does not block the owner-requested NFL props archive.
@@ -96,7 +100,7 @@ Workers report implementation/list blockers through PRs; they do not create over
 
 ## October 2 owner extension: NFL and CFB props
 
-Both sports’ 2023–2025 props acquisition is independent of the old F3b/F6
+Historical owner expansion direction (now constrained by the later saved coverage decision): both sports’2023–2025 props acquisition was independent of the old F3b/F6
 profitability/probe purchase gates. T24/close comes first, all supported domestic
 books plus sharp benchmarks, with market-specific compatible cache union. Both
 OU sides share a market request. Four earlier-time additions and optional
