@@ -20,8 +20,14 @@ jobs:
         run: |
           python -B ops/process/process_guard.py test --config strategy-research/nba_sample/execution-v1/verification.json --output n0-preparation-evidence.json
           python -B ops/process/process_guard.py verify-test --config strategy-research/nba_sample/execution-v1/verification.json --saved n0-preparation-evidence.json
+      - name: Disabled successor historical contracts
+        run: |
+          python -B ops/process/process_guard.py test --config strategy-research/nba_sample/successor-execution-v1/verification.json --output n0-successor-evidence.json
+          python -B ops/process/process_guard.py verify-test --config strategy-research/nba_sample/successor-execution-v1/verification.json --saved n0-successor-evidence.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: n0-preparation-${{ github.sha }}
-          path: n0-preparation-evidence.json
+          path: |
+            n0-preparation-evidence.json
+            n0-successor-evidence.json

@@ -57,7 +57,7 @@ reservations remain immutable. [Public completion receipts](https://github.com/m
 | Order | State / next action | Maximum new credits / authority |
 |---|---|---|
 | 1 | Successor151 completed: 1,288 responses / 2 missing, no pending or untouched; prior stopped reservations remain retained; never repurchase | Completed 1,290-request batch: 65,880 billed / 66,480 reserved, not a fresh spend balance. [Exact recovery scope](reviews/pass150-timeout-recovery/REPORT.md); PR99 exact authority governs |
-| 2 | N0: PR128 preparation merged; successor-aware executor/protocol scope drafted, coordinate one account bridge; proposed 400,000 ceiling and packet/list/account approval remain held | Candidate 754 requests / 7,540 credits, not approved by this page; [PR128](https://github.com/maxzipperman/value-finder/pull/128) |
+| 2 | N0: PR128 preparation merged; [PR168](https://github.com/maxzipperman/value-finder/pull/168) disabled successor helpers/interface authored for independent review; historical account integration remains held; proposed 400,000 ceiling and packet/list/account approval remain held | Candidate 754 requests / 7,540 credits, not approved by this page; [PR128](https://github.com/maxzipperman/value-finder/pull/128) |
 | 3 | Qualifying MLB/soccer heat closes: free joins and finite reviewed gap list first | No new approved cap; coverage/eligibility gate remains |
 | Held | CFB2021–22 totals and CFB2023–25 props; NBA full season and hourly football require their own gates | No bulk release or automatic spend |
 
