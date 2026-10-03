@@ -117,8 +117,8 @@
   },
   "hard-pair-ornith-1.5-35b": {
     "reviewer": "author manual source/contract check, not separate reviewer signoff",
-    "true_defects": 0,
-    "independent_false_findings": 0,
+    "true_defects": null,
+    "independent_false_findings": null,
     "status": "8192-token reasoning limit with empty answer; no usable review to assess"
   },
   "hard-native-qwen3.8-27b": {
@@ -168,5 +168,31 @@
       "Tie finding overstates missing first-input retention for identical strings."
     ],
     "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-pair-ornith-1.5-35b-no-thinking": {
+    "true_defects": 4,
+    "independent_false_findings": 2,
+    "covered": [
+      "eligibility_after_latest",
+      "lexical_offset_order",
+      "missing_id_tie_break",
+      "inclusive_expiry"
+    ],
+    "missed": [
+      "negative_odds_probability"
+    ],
+    "inaccurate_claims": [
+      "Reverses American-odds formula correctness: current formula is correct for positive odds, not negative.",
+      "Claims probability is computed for ineligible rows; it is inside the eligibility if.",
+      "Tie finding wrongly implies identical timestamp/id first-input retention missing and nondeterministic; strict > retains it for identical strings.",
+      "Expiry finding mentions observed==asof as if invalid, though that boundary is eligible."
+    ],
+    "reviewer": "author manual source/contract check, not separate reviewer signoff"
+  },
+  "hard-extended-ornith-1.5-35b": {
+    "status": "both final answers empty at16384; reasoning not salvaged; no semantic review grade",
+    "true_defects": null,
+    "independent_false_findings": null,
+    "reviewer": "author completion/progress inspection, not separate reviewer signoff"
   }
 }

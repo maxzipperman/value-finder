@@ -1,0 +1,426 @@
+{
+  "hard-selection": [
+    {
+      "case": "empty",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "negative",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "future does not suppress",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expired later does not suppress",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "independent books",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "absolute offset order",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "offset instant tie id",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "same id first identity",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "exact observation",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "exact expiry",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "nonutc asof",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": false,
+      "error": "OverflowError: int too large to convert to float"
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "book malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "book malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at malformed plus eligible",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof None",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof '2025-11-02T06:30:00Z'",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 11, 2, 6, 30)",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 11, 2, 6, 30, tzinfo=<__main__.NoOffset object at 0x107c86900>)",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 0",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 1",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 2",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 3",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 4",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 5",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 6",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 7",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 8",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 9",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 10",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 11",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 12",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 13",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 14",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 15",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 16",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 17",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 18",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 19",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 20",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 21",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 22",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 23",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 24",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 25",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 26",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 27",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 28",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 29",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 30",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "mixed 31",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 32",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 33",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 34",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 35",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 36",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 37",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 38",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 39",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 40",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 41",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 42",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 43",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 44",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 45",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 46",
+      "passed": false,
+      "error": null
+    },
+    {
+      "case": "mixed 47",
+      "passed": false,
+      "error": null
+    }
+  ],
+  "hard-review": [
+    {
+      "case": "line localization only; manual explanation review required",
+      "passed": true,
+      "findings": [
+        {
+          "line": 6,
+          "explanation": "Eligibility is not enforced during selection: rows are chosen purely by the latest observed_at regardless of whether observed_at<=asof<expires_at, so a later ineligible row suppresses an earlier eligible alternative, violating the requirement that future/expired rows must not suppress eligible alternatives."
+        },
+        {
+          "line": 6,
+          "explanation": "The comparison uses row['observed_at'] as an ISO string rather than the parsed instant, so ordering is lexicographic instead of chronological and fails for arbitrary offsets or mixed 'Z'/'+HH:MM' notations."
+        },
+        {
+          "line": 6,
+          "explanation": "Tie-breaking is missing: equal instants are not broken by smallest id, and identical instant/id pairs are not broken by first input row, so the selected row is not deterministic for ties."
+        },
+        {
+          "line": 12,
+          "explanation": "The eligibility test uses <= on both sides, so a row with observed_at==asof or expires_at==asof is treated as eligible, but the contract requires the strict inequality asof<expires_at."
+        },
+        {
+          "line": 13,
+          "explanation": "The probability formula is inverted for American odds: 100/(abs(odds)+100) yields the correct implied probability only for negative odds, and is wrong for positive odds."
+        },
+        {
+          "line": 13,
+          "explanation": "The probability is computed for every book in the second loop, including rows that fail the eligibility check, so it is calculated for rows that never appear in the output."
+        }
+      ]
+    }
+  ]
+}

@@ -1,1 +1,20 @@
-{}
+{
+  "ornith-1.5:35b|hard-selection|32k": {
+    "proceed": false,
+    "reason": "Manual comparison of8k and16k thinking artifacts: final content empty in both; extra reasoning repeats completed draft code, final-answer announcements and reconsiderations of the same Z/asof/tie cases. No meaningful completion progress to justify32k. Stop this greedy thinking configuration; not a general capability ceiling.",
+    "evidence": [
+      "hard-pair-ornith-1.5-35b/hard-selection-result.json",
+      "hard-extended-ornith-1.5-35b/hard-selection-result.json"
+    ],
+    "reviewer": "author progress inspection"
+  },
+  "ornith-1.5:35b|hard-review|32k": {
+    "proceed": false,
+    "reason": "Manual16k inspection finds repeated reconfirmation of the same five causes, restated final lists and formula/eligibility checks; still empty final content. Extra allowance produced repetition rather than a delivered review. Stop this greedy configuration under no-progress rule, not a general capability ceiling.",
+    "evidence": [
+      "hard-pair-ornith-1.5-35b/hard-review-result.json",
+      "hard-extended-ornith-1.5-35b/hard-review-result.json"
+    ],
+    "reviewer": "author progress inspection"
+  }
+}

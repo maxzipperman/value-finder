@@ -1,0 +1,28 @@
+```json
+[
+  {
+    "line": 6,
+    "explanation": "Eligibility is not enforced during selection: rows are chosen purely by the latest observed_at regardless of whether observed_at<=asof<expires_at, so a later ineligible row suppresses an earlier eligible alternative, violating the requirement that future/expired rows must not suppress eligible alternatives."
+  },
+  {
+    "line": 6,
+    "explanation": "The comparison uses row['observed_at'] as an ISO string rather than the parsed instant, so ordering is lexicographic instead of chronological and fails for arbitrary offsets or mixed 'Z'/'+HH:MM' notations."
+  },
+  {
+    "line": 6,
+    "explanation": "Tie-breaking is missing: equal instants are not broken by smallest id, and identical instant/id pairs are not broken by first input row, so the selected row is not deterministic for ties."
+  },
+  {
+    "line": 12,
+    "explanation": "The eligibility test uses <= on both sides, so a row with observed_at==asof or expires_at==asof is treated as eligible, but the contract requires the strict inequality asof<expires_at."
+  },
+  {
+    "line": 13,
+    "explanation": "The probability formula is inverted for American odds: 100/(abs(odds)+100) yields the correct implied probability only for negative odds, and is wrong for positive odds."
+  },
+  {
+    "line": 13,
+    "explanation": "The probability is computed for every book in the second loop, including rows that fail the eligibility check, so it is calculated for rows that never appear in the output."
+  }
+]
+```

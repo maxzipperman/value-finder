@@ -30,6 +30,90 @@
   },
   "records": [
     {
+      "folder": "hard-extended-ornith-1.5-35b",
+      "task": "hard-review",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 32768,
+        "num_predict": 16384,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "211b49fba081ecfbcb907a39b70f3a3ac662b82868978e73c3be073e5790584a",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 149.18530612500035,
+      "deadline_seconds": 600,
+      "done_reason": "length",
+      "output_tokens": 16384,
+      "load_seconds": 2.045763459,
+      "generation_seconds": 146.197594,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22461724751
+      ],
+      "sampled_vram_bytes": [
+        22461724751
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-extended-ornith-1.5-35b",
+      "task": "hard-selection",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 32768,
+        "num_predict": 16384,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "64f7aa87e97977db7883c22917847d73f1fbe9af7e9e6d815991c6627ed74029",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 148.12414254201576,
+      "deadline_seconds": 600,
+      "done_reason": "length",
+      "output_tokens": 16384,
+      "load_seconds": 2.809856792,
+      "generation_seconds": 145.027345,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22461724751
+      ],
+      "sampled_vram_bytes": [
+        22461724751
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "KeyError: 'select_books'"
+          }
+        ]
+      }
+    },
+    {
       "folder": "hard-native-qwen3.8-27b",
       "task": "hard-review",
       "model": "qwen3.8:27b",
@@ -334,6 +418,309 @@
             "case": "candidate completion/loading",
             "passed": false,
             "error": "KeyError: 'select_books'"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-ornith-1.5-35b-no-thinking",
+      "task": "hard-review",
+      "model": "ornith-1.5:35b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "745cd44cc693eb4473be74736eab15bcca2ce58251efa2acfa3aaf24f61db4eb",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 9.072881125001004,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 395,
+      "load_seconds": 5.090318292,
+      "generation_seconds": 3.191694,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 1519,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-ornith-1.5-35b-no-thinking",
+      "task": "hard-selection",
+      "model": "ornith-1.5:35b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "50c3a8af9b6f21cf7f7ac18bbf193b0c03804fb2a1e082d02b64aa08ce0020f7",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 8.058804291998968,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 640,
+      "load_seconds": 2.059414625,
+      "generation_seconds": 5.351039,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 2429,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 32,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "independent books",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "absolute offset order",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": "OverflowError: int too large to convert to float"
+          },
+          {
+            "case": "mixed 0",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 1",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 2",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 3",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 4",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 5",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 6",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 8",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 9",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 10",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 12",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 13",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 15",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 16",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 17",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 18",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 19",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 20",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 21",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 22",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 23",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 24",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 25",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 26",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 27",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 29",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 31",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 32",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 33",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 34",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 35",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 36",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 37",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 38",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 39",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 40",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 41",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 42",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 43",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 44",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 45",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 46",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 47",
+            "passed": false,
+            "error": null
           }
         ]
       }
@@ -1102,6 +1489,47 @@
     },
     {
       "folder": "ornith-1.5-35b",
+      "task": "debugging",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "5f9e145d2b1743c98bb7ea39137acdd0689f4c7b6f82b0a8ca8660d1ea14d129",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "status": "result",
+      "wall_seconds": 78.59351224999409,
+      "deadline_seconds": 300,
+      "done_reason": "length",
+      "output_tokens": 8192,
+      "load_seconds": 6.08316225,
+      "generation_seconds": 72.133774,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "ornith-1.5-35b",
       "task": "extraction",
       "model": "ornith-1.5:35b",
       "think": true,
@@ -1172,6 +1600,47 @@
             "case": "candidate completion/loading",
             "passed": false,
             "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "ornith-1.5-35b",
+      "task": "real-helper",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "574a281bf8181f9705f0bc6ea037d0e34284c3d1776a14296f37c0be4ab8fc67",
+      "prompt_sha256": "58a191a40c37027f54595a9b53a2cc71716793cd5ff74a03c388191f7e36b40b",
+      "status": "result",
+      "wall_seconds": 82.67925695798476,
+      "deadline_seconds": 300,
+      "done_reason": "length",
+      "output_tokens": 8192,
+      "load_seconds": 8.608432375,
+      "generation_seconds": 73.181874,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "KeyError: 'run_tests'"
           }
         ]
       }
@@ -1254,6 +1723,48 @@
             "case": "candidate completion/loading",
             "passed": false,
             "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "qwen3.8-27b-q8_0",
+      "task": "debugging",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "57ecb5660ae6580a6ab13a0b6f5e399a98f02f1f63d906577017c51bdf3c4170",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "status": "result",
+      "wall_seconds": 205.6602437920228,
+      "deadline_seconds": 300,
+      "done_reason": "stop",
+      "output_tokens": 3603,
+      "load_seconds": 10.375406667,
+      "generation_seconds": 193.646265,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 2689,
+      "sampled_allocation_bytes": [
+        30439962049
+      ],
+      "sampled_vram_bytes": [
+        30439962049
+      ],
+      "acceptance": {
+        "passed": 52,
+        "cases": 53,
+        "failures": [
+          {
+            "case": "invalid odds 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            "group": "invalid odds",
+            "passed": false,
+            "error": "OverflowError: int too large to convert to float"
           }
         ]
       }
@@ -1348,7 +1859,26 @@
       },
       "request_sha256": "828f27acb5857e375a9fb7a1576dc7c90d068505d5561590eac6fb15fbef28e5",
       "prompt_sha256": "58a191a40c37027f54595a9b53a2cc71716793cd5ff74a03c388191f7e36b40b",
-      "status": "pending"
+      "status": "error",
+      "wall_seconds": 300.33155087500927,
+      "deadline_seconds": null,
+      "done_reason": null,
+      "output_tokens": null,
+      "load_seconds": 0.0,
+      "generation_seconds": 0.0,
+      "error_type": "TimeoutError",
+      "server_error": null,
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/qwen3.8-27b-q8_0/real-helper-response.txt'"
+          }
+        ]
+      }
     },
     {
       "folder": "qwen3.8-27b-q8_0",
@@ -1371,7 +1901,18 @@
       "load_seconds": 0.0,
       "generation_seconds": 0.0,
       "error_type": "TimeoutError",
-      "server_error": null
+      "server_error": null,
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/qwen3.8-27b-q8_0/regression-response.txt'"
+          }
+        ]
+      }
     },
     {
       "folder": "qwen3.8-27b-q8_0",
@@ -1394,7 +1935,33 @@
       "load_seconds": 0.0,
       "generation_seconds": 0.0,
       "error_type": "TimeoutError",
-      "server_error": null
+      "server_error": null,
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/qwen3.8-27b-q8_0/review-response.txt'"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "time-extended-qwen3.8-27b-q8_0",
+      "task": "regression",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "ee87eab664e7cd8c3850b68eaf0303ef6ff670e757f568c4cd7a5d699f80a685",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "status": "pending"
     }
   ],
   "hard_manual_reviews": {
@@ -1516,8 +2083,8 @@
     },
     "hard-pair-ornith-1.5-35b": {
       "reviewer": "author manual source/contract check, not separate reviewer signoff",
-      "true_defects": 0,
-      "independent_false_findings": 0,
+      "true_defects": null,
+      "independent_false_findings": null,
       "status": "8192-token reasoning limit with empty answer; no usable review to assess"
     },
     "hard-native-qwen3.8-27b": {
@@ -1567,6 +2134,32 @@
         "Tie finding overstates missing first-input retention for identical strings."
       ],
       "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-pair-ornith-1.5-35b-no-thinking": {
+      "true_defects": 4,
+      "independent_false_findings": 2,
+      "covered": [
+        "eligibility_after_latest",
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "inclusive_expiry"
+      ],
+      "missed": [
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Reverses American-odds formula correctness: current formula is correct for positive odds, not negative.",
+        "Claims probability is computed for ineligible rows; it is inside the eligibility if.",
+        "Tie finding wrongly implies identical timestamp/id first-input retention missing and nondeterministic; strict > retains it for identical strings.",
+        "Expiry finding mentions observed==asof as if invalid, though that boundary is eligible."
+      ],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-extended-ornith-1.5-35b": {
+      "status": "both final answers empty at16384; reasoning not salvaged; no semantic review grade",
+      "true_defects": null,
+      "independent_false_findings": null,
+      "reviewer": "author completion/progress inspection, not separate reviewer signoff"
     }
   }
 }

@@ -174,3 +174,7 @@ Owner-requested extension in progress (October3, PR147): fresh harder Q4/Q8 and 
 PR147 extension checkpoint: sampled Q4 hard selection78/78, Q8 77/78; original Q8 and Ornith synthetic extraction both exact. Other new original/budget tasks remain pending; see HARD_RESULTS.md and extension-summary.json. No new independent extension approval or live routing change.
 
 PR147 owner steering: selective budget ladder declared in BUDGET_LADDER.md; four unfinished but promising actual-helper test drafts queued at16k output. Any32k escalation requires manual progress decision, with stops for finished semantic failures/repetition/no progress/memory. Final comparison and Dot extension handoff remain pending.
+
+PR147 checkpoint: original newcomer six-task collection complete; Q8 code/debug52/53 each, extraction exact and three original300s timeouts. Ornith thinking only extraction completes at8192; fast hard selection32/78/review4 real+2 false, so no automatic fast-mode budget escalation. Separate thinking/time/helper budget diagnostics remain active; final report/handoff pending.
+
+PR147 budget checkpoint: Ornith16k thinking hard tasks still return empty answers; manual comparison shows repetitive reconsideration, so32k declined for both. Q8 runtime-only diagnostic and four targeted16k helper drafts remain pending. No final extension review/handoff or live routing changes.

@@ -1,0 +1,36 @@
+{
+  "model": "ornith-1.5:35b",
+  "created_at": "2026-10-03T08:55:24.785798Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n[\n  {\n    \"line\": 6,\n    \"explanation\": \"Eligibility is not enforced during selection: rows are chosen purely by the latest observed_at regardless of whether observed_at<=asof<expires_at, so a later ineligible row suppresses an earlier eligible alternative, violating the requirement that future/expired rows must not suppress eligible alternatives.\"\n  },\n  {\n    \"line\": 6,\n    \"explanation\": \"The comparison uses row['observed_at'] as an ISO string rather than the parsed instant, so ordering is lexicographic instead of chronological and fails for arbitrary offsets or mixed 'Z'/'+HH:MM' notations.\"\n  },\n  {\n    \"line\": 6,\n    \"explanation\": \"Tie-breaking is missing: equal instants are not broken by smallest id, and identical instant/id pairs are not broken by first input row, so the selected row is not deterministic for ties.\"\n  },\n  {\n    \"line\": 12,\n    \"explanation\": \"The eligibility test uses <= on both sides, so a row with observed_at==asof or expires_at==asof is treated as eligible, but the contract requires the strict inequality asof<expires_at.\"\n  },\n  {\n    \"line\": 13,\n    \"explanation\": \"The probability formula is inverted for American odds: 100/(abs(odds)+100) yields the correct implied probability only for negative odds, and is wrong for positive odds.\"\n  },\n  {\n    \"line\": 13,\n    \"explanation\": \"The probability is computed for every book in the second loop, including rows that fail the eligibility check, so it is calculated for rows that never appear in the output.\"\n  }\n]\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 8473907959,
+  "load_duration": 5090318292,
+  "prompt_eval_count": 410,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 186728000,
+  "eval_count": 395,
+  "eval_duration": 3191694000,
+  "memory_samples": [
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    },
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    },
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 9.072881125001004,
+  "request_deadline_seconds": 600
+}

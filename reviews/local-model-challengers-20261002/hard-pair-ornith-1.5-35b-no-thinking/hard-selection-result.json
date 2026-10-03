@@ -1,0 +1,46 @@
+{
+  "model": "ornith-1.5:35b",
+  "created_at": "2026-10-03T08:55:15.790436Z",
+  "message": {
+    "role": "assistant",
+    "content": "```python\nimport math\nfrom datetime import datetime, timezone\n\n\ndef _parse_iso_utc(value):\n    if not isinstance(value, str) or not value:\n        return None\n    text = value.strip()\n    if not text:\n        return None\n    if text.endswith('Z') or text.endswith('z'):\n        text = text[:-1] + '+00:00'\n    try:\n        dt = datetime.fromisoformat(text)\n    except ValueError:\n        return None\n    if dt.tzinfo is None:\n        return None\n    return dt.astimezone(timezone.utc)\n\n\ndef _parse_odds(value):\n    if isinstance(value, bool):\n        return None\n    if isinstance(value, int):\n        return float(value) if abs(value) >= 100 else None\n    if isinstance(value, float):\n        if not math.isfinite(value) or abs(value) < 100:\n            return None\n        return value\n    if isinstance(value, str):\n        text = value.strip()\n        if not text:\n            return None\n        try:\n            num = float(text)\n        except ValueError:\n            return None\n        if not math.isfinite(num) or abs(num) < 100:\n            return None\n        return num\n    return None\n\n\ndef select_books(rows, asof):\n    if not isinstance(asof, datetime) or asof.tzinfo is None or asof.utcoffset() is None:\n        raise ValueError(\"asof must be a timezone-aware datetime\")\n    asof_utc = asof.astimezone(timezone.utc)\n\n    results = {}\n    for row in rows:\n        if not isinstance(row, dict):\n            continue\n        book = row.get('book')\n        if not isinstance(book, str) or not book:\n            continue\n        rid = row.get('id')\n        if not isinstance(rid, str) or not rid:\n            continue\n        odds = _parse_odds(row.get('odds'))\n        if odds is None:\n            continue\n        observed_at = _parse_iso_utc(row.get('observed_at'))\n        if observed_at is None:\n            continue\n        expires_at = _parse_iso_utc(row.get('expires_at'))\n        if expires_at is None:\n            continue\n        if not (observed_at < expires_at):\n            continue\n        if not (observed_at <= asof_utc < expires_at):\n            continue\n        current = results.get(book)\n        if current is None:\n            results[book] = (observed_at, rid, row)\n            continue\n        cur_obs, cur_id, _ = current\n        if (observed_at, rid) < (cur_obs, cur_id):\n            results[book] = (observed_at, rid, row)\n\n    return {book: entry[2] for book, entry in results.items()}\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 7613548750,
+  "load_duration": 2059414625,
+  "prompt_eval_count": 263,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 200456000,
+  "eval_count": 640,
+  "eval_duration": 5351039000,
+  "memory_samples": [
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    },
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    },
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    },
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    },
+    {
+      "size": 22092625999,
+      "size_vram": 22092625999,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 8.058804291998968,
+  "request_deadline_seconds": 600
+}

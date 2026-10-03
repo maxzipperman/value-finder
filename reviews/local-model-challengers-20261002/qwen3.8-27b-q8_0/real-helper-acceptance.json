@@ -1,0 +1,7 @@
+[
+  {
+    "case": "candidate completion/loading",
+    "passed": false,
+    "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/qwen3.8-27b-q8_0/real-helper-response.txt'"
+  }
+]
