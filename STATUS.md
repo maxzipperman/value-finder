@@ -178,3 +178,8 @@ PR147 owner steering: selective budget ladder declared in BUDGET_LADDER.md; four
 PR147 checkpoint: original newcomer six-task collection complete; Q8 code/debug52/53 each, extraction exact and three original300s timeouts. Ornith thinking only extraction completes at8192; fast hard selection32/78/review4 real+2 false, so no automatic fast-mode budget escalation. Separate thinking/time/helper budget diagnostics remain active; final report/handoff pending.
 
 PR147 budget checkpoint: Ornith16k thinking hard tasks still return empty answers; manual comparison shows repetitive reconsideration, so32k declined for both. Q8 runtime-only diagnostic and four targeted16k helper drafts remain pending. No final extension review/handoff or live routing changes.
+
+
+## OpenRouter comparison proposal (October 3; PR147, not approved for paid execution)
+
+Owner selected free Space Bunny Alpha plus DeepSeek V4.1 Flash, GLM5.3 Flash and MiMo V2.6 Flash using existing credits. Exact synthetic-only28-request list (7free/21paid), hash01a4e1c63a82ee48dee3c610f25ed56d7b39028a050305ae02cd4ca118137f3c and proposed total paid cap$0.50 are in reviews/local-model-challengers-20261002/OPENROUTER_PLAN.md. Free collection may proceed; paid calls await hub approval for exact list/budget/commit. No current OpenRouter purchase overlaps the live paid list; no private source/data transmitted. Local benchmark budget diagnostics continue separately.
