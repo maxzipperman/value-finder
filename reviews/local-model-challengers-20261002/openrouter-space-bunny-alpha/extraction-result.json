@@ -1,0 +1,55 @@
+{
+  "id": "gen-1791019382-MiAeeSaIcJ9OMfmcL3He",
+  "object": "chat.completion",
+  "created": 1791019382,
+  "model": "stealth/space-bunny-alpha",
+  "provider": "Stealth",
+  "system_fingerprint": null,
+  "service_tier": null,
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"latest\":{\"A\":{\"attempt\":2,\"status\":\"ok\"},\"B\":{\"attempt\":2,\"status\":\"ok\"},\"C\":{\"attempt\":2,\"status\":\"failed\"}},\"failures\":[\"C\"],\"successful_rows\":12}",
+        "refusal": null,
+        "reasoning": "We need answer only JSON exact keys. Need parse. Latest highest attempt per job. A attempt2 ok. B attempt2 ok (even older failed later log order ignored). C attempt2 failed. latest mapping likely {\"A\":{\"attempt\":2,\"status\":\"ok\"},...}. failures sorted names C. successful_rows sum explicit downloaded counts only from latest successful records. A 12, B 0 => 12. Need valid JSON no markdown.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "We need answer only JSON exact keys. Need parse. Latest highest attempt per job. A attempt2 ok. B attempt2 ok (even older failed later log order ignored). C attempt2 failed. latest mapping likely {\"A\":{\"attempt\":2,\"status\":\"ok\"},...}. failures sorted names C. successful_rows sum explicit downloaded counts only from latest successful records. A 12, B 0 => 12. Need valid JSON no markdown.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 468,
+    "completion_tokens": 136,
+    "total_tokens": 604,
+    "cost": 0,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 149,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0,
+      "upstream_inference_prompt_cost": 0,
+      "upstream_inference_completions_cost": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "wall_seconds": 2.088320874987403
+}

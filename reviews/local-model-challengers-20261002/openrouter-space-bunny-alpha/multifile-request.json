@@ -1,0 +1,31 @@
+{
+  "model": "stealth/space-bunny-alpha",
+  "task": "multifile",
+  "deadline_seconds": 600,
+  "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+  "body": {
+    "model": "stealth/space-bunny-alpha",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Isolated Value Finder coding evaluation. Paper-only synthetic data. Use standard library only. Do not access files, network, processes, real data or credentials. american_probability(value) returns implied probability: positive odds => 100/(value+100); negative => -value/(-value+100). Accept int, float and numeric strings (surrounding whitespace allowed), only finite values with absolute value >=100. Reject bool, None, nonnumeric strings and all other types with ValueError; do not round output. select_latest(rows, asof) returns the ORIGINAL eligible dict with latest observed_at, tie lexicographically smallest id; None if empty/no eligible rows. Each row has string id, odds, observed_at, expires_at. Only dict rows with nonempty string id, valid odds and timezone-aware ISO timestamps qualify. Both asof (an aware datetime) and clocks are compared as absolute instants. Require observed_at <= asof < expires_at and observed_at < expires_at. Malformed rows are skipped, valid negative odds are eligible. Invalid/naive asof raises ValueError. Do not mutate any input. Offset ISO strings and Z accepted.\nReturn only a JSON object mapping exactly odds.py and selection.py to complete Python source strings. odds.py exports american_probability; selection.py imports it from odds and exports select_latest. Include imports. No other files or metadata."
+      }
+    ],
+    "stream": false,
+    "temperature": 0,
+    "max_tokens": 8192,
+    "reasoning": {
+      "enabled": true
+    },
+    "provider": {
+      "require_parameters": true,
+      "allow_fallbacks": false,
+      "max_price": {
+        "prompt": 0,
+        "completion": 0,
+        "request": 0,
+        "image": 0
+      }
+    }
+  }
+}

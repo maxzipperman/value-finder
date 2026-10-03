@@ -4,3 +4,5 @@ __pycache__/
 
 # Account-level billing snapshots stay on this Mac; publish only aggregate trial cost.
 openrouter-paid/billing.json
+
+.collection.lock

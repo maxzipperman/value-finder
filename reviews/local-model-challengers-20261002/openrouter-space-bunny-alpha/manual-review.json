@@ -1,0 +1,19 @@
+{
+  "review": {
+    "seeded_causes": 4,
+    "additional_valid_causes": [
+      "lexical snapshot offset order versus absolute instants"
+    ],
+    "false_findings": 0,
+    "inaccurate_claims": [],
+    "reviewer": "author manual source/contract check, not independent signoff"
+  },
+  "hard-review": {
+    "true_defects": 5,
+    "false_findings": 0,
+    "inaccurate_claims": [
+      "Probability is not wrong at -100; both hard-review formulas give0.5. Core negative-odds defect remains valid."
+    ],
+    "reviewer": "author manual source/contract check, not independent signoff"
+  }
+}

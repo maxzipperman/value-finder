@@ -1,0 +1,22 @@
+[
+  {
+    "line": 6,
+    "explanation": "ISO-8601 timestamp strings are compared lexicographically rather than as absolute instants. Different offset representations of the same instant, or timestamps whose lexical order differs from their chronological order, can therefore select the wrong row."
+  },
+  {
+    "line": 6,
+    "explanation": "The first pass selects the latest row before checking eligibility. A later future row or an expired row with a later observed_at can suppress an earlier observed_at row that is eligible at asof, causing the book to be omitted or the wrong row to be returned."
+  },
+  {
+    "line": 6,
+    "explanation": "Ties in absolute observed_at are not resolved as required: different ids with the same instant must choose the smallest id, while identical instant/id pairs must retain the first input row."
+  },
+  {
+    "line": 12,
+    "explanation": "The expiration boundary is inclusive, so a row is accepted when asof equals expires_at. The required condition is observed_at <= asof < expires_at."
+  },
+  {
+    "line": 13,
+    "explanation": "The probability formula is correct only for positive American odds. For negative odds of magnitude a, the implied probability is a / (a + 100), not 100 / (a + 100)."
+  }
+]

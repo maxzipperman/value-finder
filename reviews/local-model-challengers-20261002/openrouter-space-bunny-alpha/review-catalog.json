@@ -1,0 +1,61 @@
+{
+  "id": "stealth/space-bunny-alpha",
+  "canonical_slug": "stealth/space-bunny-alpha",
+  "hugging_face_id": null,
+  "name": "Space Bunny Alpha",
+  "created": 1790174884,
+  "description": "Space Bunny Alpha is an anonymous large model with blazing-fast inference, strong coding capabilities and native multimodal input support. It delivers adjustable reasoning effort, and a 1M-token context window. Space...",
+  "context_length": 1000000,
+  "architecture": {
+    "modality": "text+image+video->text",
+    "input_modalities": [
+      "text",
+      "image",
+      "video"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "tokenizer": "Other",
+    "instruct_type": null
+  },
+  "pricing": {
+    "prompt": "0",
+    "completion": "0"
+  },
+  "top_provider": {
+    "context_length": 1000000,
+    "max_completion_tokens": 524288,
+    "is_moderated": false
+  },
+  "per_request_limits": null,
+  "supported_parameters": [
+    "include_reasoning",
+    "max_tokens",
+    "reasoning",
+    "reasoning_effort",
+    "response_format",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_p"
+  ],
+  "default_parameters": {},
+  "supported_voices": null,
+  "knowledge_cutoff": null,
+  "expiration_date": "2026-10-05",
+  "links": {
+    "details": "/api/v1/models/stealth/space-bunny-alpha/endpoints"
+  },
+  "reasoning": {
+    "mandatory": true,
+    "supported_efforts": [
+      "max",
+      "xhigh",
+      "high",
+      "medium",
+      "low"
+    ],
+    "default_effort": "max"
+  }
+}

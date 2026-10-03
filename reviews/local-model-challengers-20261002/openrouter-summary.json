@@ -1,0 +1,1286 @@
+{
+  "status": "in_progress",
+  "grading": "author grading, not independent validation",
+  "records": [
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "multifile",
+      "diagnostic": "baseline",
+      "folder": "openrouter-space-bunny-alpha",
+      "status": "result",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "e95ed6aa6db8771ad0dfda45cccbe31423b0d5e1c62de8a4e42dbae84b690c20",
+      "returned_model": "stealth/space-bunny-alpha",
+      "provider": "Stealth",
+      "wall_seconds": 105.812791208009,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 437,
+        "completion_tokens": 8192,
+        "total_tokens": 8629,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "debugging",
+      "diagnostic": "baseline",
+      "folder": "openrouter-space-bunny-alpha",
+      "status": "result",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "02b2a622983823d877815d8e56a03a964d0f734a4ce52e84c4c0b56cb406a096",
+      "returned_model": "stealth/space-bunny-alpha",
+      "provider": "Stealth",
+      "wall_seconds": 84.01926375000039,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 591,
+        "completion_tokens": 8192,
+        "total_tokens": 8783,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "regression",
+      "diagnostic": "baseline",
+      "folder": "openrouter-space-bunny-alpha",
+      "status": "result",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "366a914e727b01ae647419b22e90411486d741242d5641e08474bf06d36222a3",
+      "returned_model": "stealth/space-bunny-alpha",
+      "provider": "Stealth",
+      "wall_seconds": 117.65247345902026,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 353,
+        "completion_tokens": 8192,
+        "total_tokens": 8545,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "KeyError: 'run_tests'"
+          }
+        ]
+      }
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-space-bunny-alpha",
+      "status": "result",
+      "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "12d6ce2007b961b1952fea6815e350d9fe6224a7fbc225a535891c2edd01f91d",
+      "returned_model": "stealth/space-bunny-alpha",
+      "provider": "Stealth",
+      "wall_seconds": 27.122604125004727,
+      "finish_reason": "stop",
+      "final_answer_bytes": 907,
+      "usage": {
+        "prompt_tokens": 429,
+        "completion_tokens": 2250,
+        "total_tokens": 2679,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 3,
+        "cases": 5,
+        "checks": [
+          {
+            "case": "future/update-after-snapshot not gated",
+            "passed": false
+          },
+          {
+            "case": "negative odds wrong probability",
+            "passed": true
+          },
+          {
+            "case": "input mutated",
+            "passed": true
+          },
+          {
+            "case": "oldest snapshot chosen",
+            "passed": true
+          },
+          {
+            "case": "all findings point to seeded causes",
+            "passed": false
+          }
+        ]
+      },
+      "manual_review": {
+        "seeded_causes": 4,
+        "additional_valid_causes": [
+          "lexical snapshot offset order versus absolute instants"
+        ],
+        "false_findings": 0,
+        "inaccurate_claims": [],
+        "reviewer": "author manual source/contract check, not independent signoff"
+      }
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "extraction",
+      "diagnostic": "baseline",
+      "folder": "openrouter-space-bunny-alpha",
+      "status": "result",
+      "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "3e07a287ad138be761b39e373a23ea31a133dc70be5e9e2dc0df78da992e9e6f",
+      "returned_model": "stealth/space-bunny-alpha",
+      "provider": "Stealth",
+      "wall_seconds": 2.088320874987403,
+      "finish_reason": "stop",
+      "final_answer_bytes": 150,
+      "usage": {
+        "prompt_tokens": 468,
+        "completion_tokens": 136,
+        "total_tokens": 604,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "exact fact extraction and schema",
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "hard-selection",
+      "diagnostic": "baseline",
+      "folder": "openrouter-space-bunny-alpha",
+      "status": "result",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "08c0ce3a224501eec6c545a4044f54a03900a4f0643b3b406598f9afa5ab6d09",
+      "returned_model": "stealth/space-bunny-alpha",
+      "provider": "Stealth",
+      "wall_seconds": 97.15145545799169,
+      "finish_reason": "length",
+      "final_answer_bytes": 0,
+      "usage": {
+        "prompt_tokens": 405,
+        "completion_tokens": 8192,
+        "total_tokens": 8597,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "KeyError: 'select_books'"
+          }
+        ]
+      }
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "hard-review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-space-bunny-alpha",
+      "status": "result",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "1dfae79a1c05a25e4fcf7c3091b0bae8423b9cb2b88f8c93eb640e8c2e2199e0",
+      "returned_model": "stealth/space-bunny-alpha",
+      "provider": "Stealth",
+      "wall_seconds": 21.857782083010534,
+      "finish_reason": "stop",
+      "final_answer_bytes": 1247,
+      "usage": {
+        "prompt_tokens": 523,
+        "completion_tokens": 1887,
+        "total_tokens": 2410,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 149,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "line localization only; manual explanation review required",
+            "passed": true,
+            "findings": [
+              {
+                "line": 6,
+                "explanation": "ISO-8601 timestamp strings are compared lexicographically rather than as absolute instants. Different offset representations of the same instant, or timestamps whose lexical order differs from their chronological order, can therefore select the wrong row."
+              },
+              {
+                "line": 6,
+                "explanation": "The first pass selects the latest row before checking eligibility. A later future row or an expired row with a later observed_at can suppress an earlier observed_at row that is eligible at asof, causing the book to be omitted or the wrong row to be returned."
+              },
+              {
+                "line": 6,
+                "explanation": "Ties in absolute observed_at are not resolved as required: different ids with the same instant must choose the smallest id, while identical instant/id pairs must retain the first input row."
+              },
+              {
+                "line": 12,
+                "explanation": "The expiration boundary is inclusive, so a row is accepted when asof equals expires_at. The required condition is observed_at <= asof < expires_at."
+              },
+              {
+                "line": 13,
+                "explanation": "The probability formula is correct only for positive American odds. For negative odds of magnitude a, the implied probability is a / (a + 100), not 100 / (a + 100)."
+              }
+            ]
+          }
+        ]
+      },
+      "manual_review": {
+        "true_defects": 5,
+        "false_findings": 0,
+        "inaccurate_claims": [
+          "Probability is not wrong at -100; both hard-review formulas give0.5. Core negative-odds defect remains valid."
+        ],
+        "reviewer": "author manual source/contract check, not independent signoff"
+      }
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "multifile",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
+      "status": "result",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "da43ad7aa120b511ee24107cd0a24122edfea7f5ef90d490d01118c8e9600372",
+      "returned_model": "deepseek/deepseek-v4.1-flash",
+      "provider": "OpenInference",
+      "wall_seconds": 304.4067907499848,
+      "finish_reason": "length",
+      "final_answer_bytes": 1,
+      "usage": {
+        "prompt_tokens": 317,
+        "completion_tokens": 8192,
+        "total_tokens": 8509,
+        "cost": 0.00639392,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 314,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00639392,
+          "upstream_inference_prompt_cost": 4.16e-06,
+          "upstream_inference_completions_cost": 0.00638976
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 8192,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "debugging",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
+      "status": "pending",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600,
+      "request_sha256": "5f7406499a4ff713a3bae0c598d1b361d4bea2bafcde1a226ed599b495578c34"
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "regression",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
+      "status": "not_started",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
+      "status": "not_started",
+      "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "extraction",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
+      "status": "not_started",
+      "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "hard-selection",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
+      "status": "not_started",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "task": "hard-review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/deepseek--deepseek-v4.1-flash",
+      "status": "not_started",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "settings": {
+        "model": "deepseek/deepseek-v4.1-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.3,
+            "completion": 1.2,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "multifile",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/z-ai--glm-5.3-flash",
+      "status": "not_started",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "settings": {
+        "model": "z-ai/glm-5.3-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.15,
+            "completion": 0.5,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "debugging",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/z-ai--glm-5.3-flash",
+      "status": "not_started",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "settings": {
+        "model": "z-ai/glm-5.3-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.15,
+            "completion": 0.5,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "regression",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/z-ai--glm-5.3-flash",
+      "status": "not_started",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "settings": {
+        "model": "z-ai/glm-5.3-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.15,
+            "completion": 0.5,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/z-ai--glm-5.3-flash",
+      "status": "not_started",
+      "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
+      "settings": {
+        "model": "z-ai/glm-5.3-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.15,
+            "completion": 0.5,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "extraction",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/z-ai--glm-5.3-flash",
+      "status": "not_started",
+      "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
+      "settings": {
+        "model": "z-ai/glm-5.3-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.15,
+            "completion": 0.5,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "hard-selection",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/z-ai--glm-5.3-flash",
+      "status": "not_started",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "settings": {
+        "model": "z-ai/glm-5.3-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.15,
+            "completion": 0.5,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "task": "hard-review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/z-ai--glm-5.3-flash",
+      "status": "not_started",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "settings": {
+        "model": "z-ai/glm-5.3-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.15,
+            "completion": 0.5,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "multifile",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
+      "status": "not_started",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "debugging",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
+      "status": "not_started",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "regression",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
+      "status": "not_started",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
+      "status": "not_started",
+      "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "extraction",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
+      "status": "not_started",
+      "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "hard-selection",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
+      "status": "not_started",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "xiaomi/mimo-v2.6-flash",
+      "task": "hard-review",
+      "diagnostic": "baseline",
+      "folder": "openrouter-paid/xiaomi--mimo-v2.6-flash",
+      "status": "not_started",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "settings": {
+        "model": "xiaomi/mimo-v2.6-flash",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 8192,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.14,
+            "completion": 0.28,
+            "request": 0,
+            "image": 0
+          }
+        },
+        "seed": 42
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "multifile",
+      "diagnostic": "free16k",
+      "folder": "openrouter-space-bunny-alpha-16k",
+      "status": "not_started",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 16384,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "debugging",
+      "diagnostic": "free16k",
+      "folder": "openrouter-space-bunny-alpha-16k",
+      "status": "not_started",
+      "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 16384,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "regression",
+      "diagnostic": "free16k",
+      "folder": "openrouter-space-bunny-alpha-16k",
+      "status": "not_started",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 16384,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600
+    },
+    {
+      "model": "stealth/space-bunny-alpha",
+      "task": "hard-selection",
+      "diagnostic": "free16k",
+      "folder": "openrouter-space-bunny-alpha-16k",
+      "status": "not_started",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "settings": {
+        "model": "stealth/space-bunny-alpha",
+        "stream": false,
+        "temperature": 0,
+        "max_tokens": 16384,
+        "reasoning": {
+          "enabled": true
+        },
+        "provider": {
+          "require_parameters": true,
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0,
+            "completion": 0,
+            "request": 0,
+            "image": 0
+          }
+        }
+      },
+      "deadline_seconds": 600
+    }
+  ],
+  "note": "Existing local controls are historical. Actual private helper excluded. Account-level credits/key usage are excluded; usage fields here belong only to synthetic model requests."
+}
