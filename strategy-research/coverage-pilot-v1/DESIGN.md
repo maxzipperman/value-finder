@@ -49,11 +49,19 @@ it deliberately accepts exactly 1,544 listing requests.
 
 ## NFL 2025 census and revised planning arithmetic
 
-The existing 570 F3a requests cover a 285-game NFL 2025 census for the original six
+The existing 570 F3a requests cover the 285 currently known NFL 2025 identities as a census for the original six
 markets. Use its exact quote-coverage classification without drawing another 50
 or attaching sampling uncertainty. Hub's reported 215/285 proposed core successes
 must be reproduced under the final registered acquisition classifier before being
 bound into a gate; this design does not independently certify that external result.
+The independent reviewer reports strict-clock coverage of 215/285 for any eligible
+retail book with at least two families at early and close, versus 66/285 (23.2%)
+for fixed DraftKings early-and-close and 192/285 for fixed DraftKings close-only.
+These are three separate metrics and gates; archive-union coverage cannot release
+a fixed-book early strategy. These supplied counts still require reproducible
+classifier evidence before freezing. Quote availability does not establish executable
+edge or settlement support.
+
 The new eight-core-market proposal adds passing/rushing attempts, which are NOT
 covered by that census. Those two markets do not define the four-family core gate.
 Do not purchase them merely to pretend the census needs another sample.
@@ -71,6 +79,23 @@ reported170,306 conservative carry yields223,150, leaving26,850 beneath the250,0
 first-tranche ceiling before other usage. Exact game counts, early-slot mappings,
 shared sweep reuse, metadata needs and counter reconciliation can change these
 figures. More than two original requests/game invalidates the10,800 assumption.
+
+If frame discovery finds genuinely new NFL2025 identities, reconcile the frame
+before drawing. Up to50 genuinely unknown games at eight markets/two slots plus
+100 availability calls adds8,100: the conditional bound becomes60,944. This is
+not authority to sample50 already-cached games. Exact cap follows the reconciled
+frame; the285 census claim is limited to the currently known identities.
+
+**Practical minimal proposal:** use the six supported NFL markets for the primary
+NFL purchase, deferring passing/rushing attempts until a reviewed settlement plan
+exists. Removing those two markets from the100 unknown NFL2023/24 games saves
+4,000 gross credits, giving48,844 under the otherwise unchanged eight-market CFB
+assumptions. CFB settlement remains unsupported: its quotes can measure archive
+coverage, but cannot be labeled gradable. Resolve whether to defer that basket or
+fund it explicitly as coverage-only before freezing. A six-market basket across
+all250 unknown games would instead imply42,844, but requires a separately agreed
+CFB market/support contract; this is arithmetic, not a recommended approved cap.
+Do not buy extra markets to certify the existing four-family primary metric.
 
 Optional completion of the two additional NFL2025 markets across all285 games
 would be11,400 gross credits (285×2×2×10), separately justified/listed; it is not
