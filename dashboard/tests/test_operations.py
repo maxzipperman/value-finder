@@ -398,3 +398,26 @@ def test_deployment_record_binds_status_without_paths_or_false_freshness(root,ho
     assert not result['status_matches'] and result['source_url'] is None
     d['commit']='javascript:DO_NOT_EXPOSE';write(p,json.dumps(d))
     assert not op.deployment_provenance(store.cfg,status,NOW)['available']
+
+
+@pytest.mark.parametrize('state,expected_level', [
+    ('failed', 'fail'), ('blocked', 'warn'), ('waiting', 'warn'), ('collected', 'warn'),
+])
+def test_reported_misses_preserve_failure_severity_and_recovery_action(home,state,expected_level):
+    label = 'com.valuefinder.propslog'
+    receipt(home,state=state,missed_windows=0,
+            window_start_utc='2026-10-02T18:00:00Z',window_end_utc='2026-10-03T18:00:00Z')
+    baseline_receipt = op.collector_receipts(home,NOW)[label]
+    assert baseline_receipt['available'] and not baseline_receipt['stale']
+    baseline = op.collector_display(label,True,False,0,baseline_receipt)
+    receipt(home,state=state,missed_windows=2,
+            window_start_utc='2026-10-02T18:00:00Z',window_end_utc='2026-10-03T18:00:00Z')
+    parsed = op.collector_receipts(home,NOW)[label]
+    assert parsed['available'] and parsed['missed_windows'] == 2
+    display = op.collector_display(label,True,False,0,parsed)
+    assert display['state'] == state and display['level'] == expected_level
+    assert display['attention']
+    assert baseline['next_action'] in display['next_action']
+    assert 'Reconcile the reported missed windows' in display['next_action']
+    if state == 'failed':
+        assert 'Resolve the collection failure' in display['next_action']

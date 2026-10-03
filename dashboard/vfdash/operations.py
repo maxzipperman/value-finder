@@ -390,9 +390,13 @@ def collector_display(label, loaded, running, exit_status, receipt, future_start
         attention = level != 'ok'
         if state in {'waiting', 'collected'}:
             action = 'Monitor the next expected window; inspect recorded misses if present.'
+        elif state == 'failed':
+            action = 'Resolve the collection failure and verify the next eligible collection.'
         if receipt.get('missed_windows'):
-            level, attention = 'warn', True
-            action = 'Reconcile the reported missed windows; do not impute missing snapshots.'
+            if level == 'ok':
+                level = 'warn'
+            attention = True
+            action += ' Reconcile the reported missed windows; do not impute missing snapshots.'
     else:
         text = ('Running. ' if running else 'Loaded; idle. ') + 'Collection success is unverified.'
         if receipt.get('stale'):
