@@ -1,0 +1,18 @@
+{
+  "qwen3.6:35b": {
+    "digest": "a7eb95c53bcf96b4bdd008d0fab4a5dac88047d9c1a7a9ab88ed453423fbd87c",
+    "artifact_bytes": 22621314381
+  },
+  "qwen3.8:27b": {
+    "digest": "aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813",
+    "artifact_bytes": 17741872154
+  },
+  "gpt-oss:20b": {
+    "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
+    "artifact_bytes": 13793441244
+  },
+  "gemma4:26b": {
+    "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c",
+    "artifact_bytes": 18731025629
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "review": [
+    {
+      "case": "future/update-after-snapshot not gated",
+      "passed": true
+    },
+    {
+      "case": "negative odds wrong probability",
+      "passed": true
+    },
+    {
+      "case": "input mutated",
+      "passed": true
+    },
+    {
+      "case": "oldest snapshot chosen",
+      "passed": true
+    },
+    {
+      "case": "all findings point to seeded causes",
+      "passed": true
+    }
+  ],
+  "extraction": [
+    {
+      "case": "exact fact extraction and schema",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "model": "qwen3.6:35b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Isolated Value Finder coding evaluation. Paper-only synthetic data. Use standard library only. Do not access files, network, processes, real data or credentials. american_probability(value) returns implied probability: positive odds => 100/(value+100); negative => -value/(-value+100). Accept int, float and numeric strings (surrounding whitespace allowed), only finite values with absolute value >=100. Reject bool, None, nonnumeric strings and all other types with ValueError; do not round output. \nWrite executable Python source defining run_tests(candidate). candidate is american_probability, a callable supplied by the evaluator. Assert meaningful behavioral checks, including invalid inputs. Successful completion means tests passed; raise AssertionError on a bad candidate. Tests must accept a correct implementation and catch defective implementations. Do not inspect candidate source, name, attributes or identity. No output, imports other than math allowed. We will run your suite on correct and deliberately wrong functions."
+    }
+  ],
+  "stream": false,
+  "keep_alive": 0,
+  "think": true,
+  "options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 16384,
+    "num_predict": 8192
+  }
+}

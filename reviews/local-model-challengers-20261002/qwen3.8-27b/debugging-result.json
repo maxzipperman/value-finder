@@ -1,0 +1,526 @@
+{
+  "model": "qwen3.8:27b",
+  "created_at": "2026-10-03T07:16:28.648859Z",
+  "message": {
+    "role": "assistant",
+    "content": "{\"odds.py\": \"from math import isfinite\\n\\n\\ndef american_probability(value):\\n    if isinstance(value, bool):\\n        raise ValueError('invalid')\\n    if value is None:\\n        raise ValueError('invalid')\\n    if isinstance(value, int):\\n        v = float(value)\\n    elif isinstance(value, float):\\n        v = value\\n    elif isinstance(value, str):\\n        s = value.strip()\\n        if not s:\\n            raise ValueError('invalid')\\n        try:\\n            v = float(s)\\n        except (ValueError, OverflowError):\\n            raise ValueError('invalid')\\n    else:\\n        raise ValueError('invalid')\\n\\n    if not isfinite(v):\\n        raise ValueError('invalid')\\n    if abs(v) < 100:\\n        raise ValueError('invalid')\\n\\n    if v > 0:\\n        return 100.0 / (v + 100.0)\\n    else:\\n        return -v / (-v + 100.0)\\n\", \"selection.py\": \"from datetime import datetime\\nfrom odds import american_probability\\n\\n\\ndef _parse_iso(s):\\n    s = s.strip()\\n    if s.endswith('Z') or s.endswith('z'):\\n        s = s[:-1] + '+00:00'\\n    return datetime.fromisoformat(s)\\n\\n\\ndef _is_aware(dt):\\n    return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None\\n\\n\\ndef select_latest(rows, asof):\\n    if not isinstance(asof, datetime):\\n        raise ValueError('asof must be a datetime')\\n    if not _is_aware(asof):\\n        raise ValueError('asof must be timezone-aware')\\n\\n    if rows is None:\\n        return None\\n\\n    best = None\\n    best_obs = None\\n    best_id = None\\n\\n    for row in rows:\\n        if not isinstance(row, dict):\\n            continue\\n\\n        if 'id' not in row or 'odds' not in row or 'observed_at' not in row or 'expires_at' not in row:\\n            continue\\n\\n        row_id = row['id']\\n        if not isinstance(row_id, str) or not row_id:\\n            continue\\n\\n        try:\\n            american_probability(row['odds'])\\n        except (ValueError, TypeError):\\n            continue\\n\\n        obs_raw = row['observed_at']\\n        if not isinstance(obs_raw, str):\\n            continue\\n        try:\\n            obs = _parse_iso(obs_raw)\\n        except (ValueError, TypeError, OverflowError):\\n            continue\\n        if not _is_aware(obs):\\n            continue\\n\\n        exp_raw = row['expires_at']\\n        if not isinstance(exp_raw, str):\\n            continue\\n        try:\\n            exp = _parse_iso(exp_raw)\\n        except (ValueError, TypeError, OverflowError):\\n            continue\\n        if not _is_aware(exp):\\n            continue\\n\\n        if not (obs <= asof < exp):\\n            continue\\n        if not (obs < exp):\\n            continue\\n\\n        if best is None or obs > best_obs or (obs == best_obs and row_id < best_id):\\n            best = row\\n            best_obs = obs\\n            best_id = row_id\\n\\n    return best\\n\"}",
+    "thinking": "Let me analyze the contract requirements carefully and fix both modules.\n\n**odds.py requirements:**\n1. `american_probability(value)` returns implied probability\n2. Positive odds => 100/(value+100)\n3. Negative odds => -value/(-value+100)\n4. Accept int, float and numeric strings (surrounding whitespace allowed)\n5. Only finite values with absolute value >= 100\n6. Reject bool, None, nonnumeric strings and all other types with ValueError\n7. Do not round output\n\nBugs in current odds.py:\n- Doesn't handle negative odds (uses `100/(v+100)` for all)\n- Doesn't reject bool (bool is subclass of int, so `float(True)` = 1.0, but we need to reject it)\n- Doesn't reject None explicitly (float(None) raises TypeError, not ValueError)\n- Doesn't handle numeric strings (float(\"150\") works, but we need to be explicit)\n- Doesn't reject nonnumeric strings with ValueError (float(\"abc\") raises ValueError, that's fine)\n- Doesn't reject other types with ValueError (e.g., list would raise TypeError)\n- The check `abs(v) < 100` should be `abs(v) < 100` - wait, the contract says \"absolute value >= 100\" so we need `abs(v) >= 100` to be valid, meaning `abs(v) < 100` should raise. That's correct.\n\nWait, let me re-read: \"only finite values with absolute value >= 100\". So valid values have |v| >= 100. Invalid if |v| < 100. The current code has `abs(v) < 100` which raises - that's correct.\n\nBut wait - what about exactly 100? |100| >= 100, so it's valid. The current code: `abs(v) < 100` would be False for v=100, so it wouldn't raise. Good.\n\nWhat about -100? |-100| >= 100, so valid. Current code: `abs(-100) < 100` is False, so it wouldn't raise. Good.\n\nNow for the negative odds formula: negative => -value/(-value+100). So if value = -150, probability = 150/(150+100) = 150/250 = 0.6.\n\nLet me fix odds.py:\n- Check if value is bool first (reject)\n- Check if value is None (reject)\n- Check if value is int, float, or str\n- For strings, strip whitespace, then try to convert\n- For int/float, convert to float\n- Check finite\n- Check abs >= 100\n- Apply correct formula based on sign\n\nWait, what about the string case? \"numeric strings (surrounding whitespace allowed)\". So \"  150  \" should work. What about \"  -150  \"? Should work. What about \"abc\"? Should raise ValueError.\n\nWhat about strings like \"1e5\"? That's a numeric string. float(\"1e5\") = 100000.0. I think that should be accepted since it's numeric.\n\nWhat about \"inf\", \"nan\"? float(\"inf\") = inf, float(\"nan\") = nan. These would fail the isfinite check, so they'd be rejected. Good.\n\nWhat about bool? In Python, `isinstance(True, int)` is True. So we need to check for bool BEFORE checking for int.\n\nWhat about other types like list, dict, etc.? We need to raise ValueError for those.\n\nLet me think about the type checking:\n- bool: reject (check first since bool is subclass of int)\n- None: reject\n- int: accept (convert to float)\n- float: accept\n- str: accept (strip, then try float conversion)\n- everything else: reject\n\nFor strings, after stripping, try float(). If it fails, raise ValueError.\n\n**selection.py requirements:**\n1. `select_latest(rows, asof)` returns the ORIGINAL eligible dict with latest observed_at\n2. Tie: lexicographically smallest id\n3. None if empty/no eligible rows\n4. Each row has string id, odds, observed_at, expires_at\n5. Only dict rows with nonempty string id, valid odds and timezone-aware ISO timestamps qualify\n6. Both asof (an aware datetime) and clocks are compared as absolute instants\n7. Require observed_at <= asof < expires_at and observed_at < expires_at\n8. Malformed rows are skipped\n9. Valid negative odds are eligible\n10. Invalid/naive asof raises ValueError\n11. Do not mutate any input\n12. Offset ISO strings and Z accepted\n\nBugs in current selection.py:\n- Doesn't validate asof (should raise ValueError if not aware datetime)\n- Doesn't check if rows are dicts\n- Doesn't check if id is nonempty string\n- Doesn't validate odds properly (should use american_probability which validates)\n- Doesn't check expires_at\n- Doesn't check observed_at < expires_at\n- Mutates input by adding 'probability' key\n- Doesn't handle Z suffix properly (actually it does with replace)\n- Doesn't handle timezone-aware comparison properly\n- The sorting is wrong - should sort by latest observed_at (descending) then lexicographically smallest id (ascending)\n- Doesn't skip malformed rows gracefully (will crash on missing keys)\n- Doesn't check if row is a dict\n- The comparison `t >= asof` should be `t > asof` (we need observed_at <= asof)\n\nWait, let me re-read: \"Require observed_at <= asof < expires_at and observed_at < expires_at\"\n\nSo the conditions are:\n- observed_at <= asof\n- asof < expires_at\n- observed_at < expires_at\n\nThe current code has `if t >= asof: continue` which means it skips if observed_at >= asof, i.e., keeps if observed_at < asof. But we need observed_at <= asof. So it should be `if t > asof: continue`.\n\nAlso, it doesn't check expires_at at all.\n\nFor timezone-aware comparison: we need to compare as absolute instants. If both are timezone-aware, Python can compare them directly. But we need to make sure both are aware.\n\nFor parsing ISO timestamps with Z: Python 3.11+ handles Z natively in fromisoformat, but earlier versions don't. The contract says \"Offset ISO strings and Z accepted.\" So we should handle Z.\n\nLet me think about the \"Do not mutate any input\" requirement. The current code does `row['probability'] = american_probability(row['odds'])` which mutates the row. We should NOT do this. We just need to validate that odds is valid (call american_probability to check it doesn't raise), but not store the result.\n\nWait, actually we just need to validate that the odds field is valid. We can call american_probability(row['odds']) and if it raises ValueError, skip the row. We don't need to store the result.\n\nLet me also think about \"timezone-aware ISO timestamps\". The observed_at and expires_at must be timezone-aware. If they're naive (no timezone info), the row is malformed and should be skipped.\n\nFor the asof parameter: \"Invalid/naive asof raises ValueError\". So asof must be a timezone-aware datetime. If it's not a datetime, or if it's naive, raise ValueError.\n\nLet me also consider: what if rows is not a list? The contract says \"None if empty/no eligible rows\". I'll assume rows is iterable. If it's None or not iterable, maybe we should handle that... but the contract doesn't explicitly say. Let me just iterate over it.\n\nActually, re-reading: \"Malformed rows are skipped\" - so if a row is not a dict, or missing keys, or has wrong types, we skip it.\n\nLet me now write the fixed code:\n\n**odds.py:**\n```python\nfrom math import isfinite\n\ndef american_probability(value):\n    # Reject bool first (bool is subclass of int)\n    if isinstance(value, bool):\n        raise ValueError('invalid')\n    # Reject None\n    if value is None:\n        raise ValueError('invalid')\n    # Accept int, float, str\n    if isinstance(value, int):\n        v = float(value)\n    elif isinstance(value, float):\n        v = value\n    elif isinstance(value, str):\n        s = value.strip()\n        if not s:\n            raise ValueError('invalid')\n        try:\n            v = float(s)\n        except (ValueError, OverflowError):\n            raise ValueError('invalid')\n    else:\n        raise ValueError('invalid')\n    \n    if not isfinite(v):\n        raise ValueError('invalid')\n    if abs(v) < 100:\n        raise ValueError('invalid')\n    \n    if v > 0:\n        return 100.0 / (v + 100.0)\n    else:\n        return -v / (-v + 100.0)\n```\n\nWait, what about the case where v is exactly 0? abs(0) < 100, so it would be rejected. Good.\n\nWhat about v = 100? abs(100) >= 100, valid. 100/(100+100) = 0.5. Good.\nWhat about v = -100? abs(-100) >= 100, valid. -(-100)/(-(-100)+100) = 100/(100+100) = 0.5. Good.\n\nWhat about very large numbers? float can handle them. isfinite would catch inf.\n\nWhat about a string like \"  150  \"? strip() gives \"150\", float(\"150\") = 150.0. Good.\nWhat about \"  -150  \"? strip() gives \"-150\", float(\"-150\") = -150.0. Good.\nWhat about \"abc\"? float(\"abc\") raises ValueError. Good.\nWhat about \"\"? After strip, it's empty. We check `if not s` and raise. Good.\nWhat about \"  \"? After strip, it's empty. Same. Good.\n\nWhat about a string like \"1_000\"? In Python, float(\"1_000\") actually works in Python 3.6+. Hmm, is that a \"numeric string\"? I think it's fine to accept it since float() accepts it.\n\nWhat about \"0x10\"? float(\"0x10\") raises ValueError. Good, rejected.\n\nWhat about \"1e5\"? float(\"1e5\") = 100000.0. That's a valid numeric string. I'll accept it.\n\nNow, one edge case: what if value is a float that's NaN? isfinite(nan) is False, so it raises. Good.\nWhat if value is float('inf')? isfinite(inf) is False, so it raises. Good.\n\n**selection.py:**\n```python\nfrom datetime import datetime, timezone\nfrom odds import american_probability\n\ndef select_latest(rows, asof):\n    # Validate asof\n    if not isinstance(asof, datetime):\n        raise ValueError('asof must be a datetime')\n    if asof.tzinfo is None or asof.tzinfo.utcoffset(asof) is None:\n        raise ValueError('asof must be timezone-aware')\n    \n    best = None\n    best_key = None\n    \n    for row in rows:\n        # Must be a dict\n        if not isinstance(row, dict):\n            continue\n        \n        # Must have required keys\n        if 'id' not in row or 'odds' not in row or 'observed_at' not in row or 'expires_at' not in row:\n            continue\n        \n        # id must be nonempty string\n        row_id = row['id']\n        if not isinstance(row_id, str) or not row_id:\n            continue\n        \n        # odds must be valid\n        try:\n            american_probability(row['odds'])\n        except (ValueError, TypeError):\n            continue\n        \n        # Parse observed_at\n        obs_raw = row['observed_at']\n        if not isinstance(obs_raw, str):\n            continue\n        try:\n            obs = _parse_iso(obs_raw)\n        except (ValueError, TypeError):\n            continue\n        if obs is None:\n            continue\n        \n        # Parse expires_at\n        exp_raw = row['expires_at']\n        if not isinstance(exp_raw, str):\n            continue\n        try:\n            exp = _parse_iso(exp_raw)\n        except (ValueError, TypeError):\n            continue\n        if exp is None:\n            continue\n        \n        # Both must be timezone-aware\n        if obs.tzinfo is None or obs.tzinfo.utcoffset(obs) is None:\n            continue\n        if exp.tzinfo is None or exp.tzinfo.utcoffset(exp) is None:\n            continue\n        \n        # Check conditions: observed_at <= asof < expires_at and observed_at < expires_at\n        if not (obs <= asof < exp):\n            continue\n        if not (obs < exp):\n            continue\n        \n        # This row is eligible\n        # We want latest observed_at, tie-break by lexicographically smallest id\n        key = (obs, row_id)\n        if best is None:\n            best = row\n            best_key = key\n        else:\n            # We want the LATEST observed_at, so higher obs is better\n            # Tie: lexicographically smallest id\n            if obs > best_key[0]:\n                best = row\n                best_key = key\n            elif obs == best_key[0] and row_id < best_key[1]:\n                best = row\n                best_key = key\n    \n    return best\n\ndef _parse_iso(s):\n    s = s.strip()\n    if s.endswith('Z') or s.endswith('z'):\n        s = s[:-1] + '+00:00'\n    dt = datetime.fromisoformat(s)\n    return dt\n```\n\nWait, I need to be careful about the comparison. \"Both asof (an aware datetime) and clocks are compared as absolute instants.\" This means we compare the actual UTC instants, not the string representations. Since both are timezone-aware datetimes, Python's comparison operators handle this correctly (they compare the absolute time).\n\nLet me double-check the tie-breaking: \"latest observed_at, tie lexicographically smallest id\". So:\n- Primary: latest (maximum) observed_at\n- Secondary: lexicographically smallest id\n\nMy comparison logic:\n- If new obs > best obs: new is better (later)\n- If new obs == best obs and new id < best id: new is better (smaller id)\n\nThat looks correct.\n\nWait, I need to think about whether `obs <= asof < exp` already implies `obs < exp`. If obs <= asof and asof < exp, then obs < exp (since obs <= asof < exp means obs < exp). So the second check `obs < exp` is redundant. But the contract explicitly lists it, so I'll keep it for clarity. Actually, it's mathematically implied, so it's fine either way.\n\nLet me also think about: what if `rows` is None? The contract says \"None if empty/no eligible rows\". If rows is None, iterating over it would raise TypeError. Should I handle that? The contract says \"Malformed rows are skipped\" which implies rows is a collection. I'll add a check: if rows is None, return None. Actually, let me just let it be - if rows is None, `for row in rows` would raise TypeError. But the contract doesn't say what to do with None rows. I'll add a guard.\n\nActually, re-reading the contract: \"None if empty/no eligible rows\". This suggests rows could be an empty list. I'll handle None gracefully by returning None.\n\nHmm, but the contract says \"Do not mutate any input.\" I'm not mutating anything in my solution. Good.\n\nLet me also reconsider: the contract says \"Only dict rows with nonempty string id, valid odds and timezone-aware ISO timestamps qualify.\" So the row must be a dict. If it's not a dict, skip it.\n\nOne more thing: \"valid negative odds are eligible\" - this is just confirming that negative odds (like -150) are valid inputs to american_probability. My code handles this.\n\nLet me also think about edge cases for the ISO parsing:\n- \"2023-01-01T00:00:00Z\" -> should work (Z replaced with +00:00)\n- \"2023-01-01T00:00:00+05:00\" -> should work\n- \"2023-01-01T00:00:00\" -> naive, should be rejected (not timezone-aware)\n- \"2023-01-01\" -> date only, fromisoformat would give a naive datetime. Should be rejected.\n\nWait, in Python 3.11+, `datetime.fromisoformat` is more flexible. But in earlier versions, it's stricter. Let me make sure my code works across versions.\n\nActually, for \"2023-01-01\", `datetime.fromisoformat(\"2023-01-01\")` returns `datetime(2023, 1, 1, 0, 0)` which is naive. So my check for tzinfo would reject it. Good.\n\nFor \"2023-01-01T00:00:00Z\", after replacing Z with +00:00, we get \"2023-01-01T00:00:00+00:00\" which parses to an aware datetime. Good.\n\nWhat about \"2023-01-01T00:00:00z\" (lowercase z)? The contract says \"Z accepted\" - I'll handle both upper and lowercase.\n\nActually, let me re-read: \"Offset ISO strings and Z accepted.\" I think this means both offset format (like +05:00) and Z suffix are accepted. I'll handle both.\n\nLet me finalize my code. One more thought: should I handle the case where `rows` is not iterable? I'll add a try/except or just let it raise. The contract doesn't specify, so I'll just let it be.\n\nActually wait - I should double-check: the contract says \"Do not mutate any input.\" In my selection.py, I'm not adding any keys to the rows. I'm just reading from them. Good.\n\nLet me also make sure I'm not importing anything that's not standard library. `math.isfinite` is standard. `datetime` is standard. Good.\n\nOne more edge case for odds.py: what about a very large integer like 10**100? `float(10**100)` would be inf (overflow). Then isfinite would catch it. Good.\n\nWhat about a string \"1e400\"? `float(\"1e400\")` would be inf. isfinite catches it. Good.\n\nWhat about a string \"1e-400\"? `float(\"1e-400\")` would be 0.0. Then abs(0.0) < 100, so it's rejected. Good.\n\nI think my solution is complete. Let me write the final version.\n\nWait, one more thing about the `asof` validation. The contract says \"Invalid/naive asof raises ValueError.\" What counts as \"invalid\"? I think:\n- Not a datetime object -> ValueError\n- Naive datetime (no tzinfo) -> ValueError\n\nWhat if asof is a string? That's not a datetime, so ValueError. Good.\n\nWhat if asof is a datetime with tzinfo set but utcoffset returns None? That's a weird edge case. I'll check `asof.tzinfo is None or asof.tzinfo.utcoffset(asof) is None`.\n\nActually, in Python, a datetime is considered \"aware\" if `dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None`. Let me use that check.\n\nLet me finalize."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 105860013583,
+  "load_duration": 4069419625,
+  "prompt_eval_count": 467,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 773780000,
+  "eval_count": 5324,
+  "eval_duration": 101007577000,
+  "memory_samples": [
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 106.48330783299753
+}

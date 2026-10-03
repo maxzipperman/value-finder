@@ -1,0 +1,90 @@
+{
+  "model": "qwen3.6:35b",
+  "created_at": "2026-10-03T07:31:08.837852Z",
+  "message": {
+    "role": "assistant",
+    "content": "```python\nfrom datetime import datetime, timezone\n\ndef run_tests(candidate):\n    \"\"\"\n    Run regression tests on the candidate parse_utc function.\n    Raises AssertionError if any test fails.\n    \"\"\"\n    UTC = timezone.utc\n    \n    # Test 1: None input returns None\n    assert candidate(None) is None, \"None input should return None\"\n    \n    # Test 2: Blank string returns None\n    assert candidate(\"\") is None, \"Blank string should return None\"\n    \n    # Test 3: Whitespace-only string returns None\n    assert candidate(\"   \") is None, \"Whitespace-only string should return None\"\n    \n    # Test 4: Strip outer whitespace from valid input\n    result = candidate(\"  2026-09-29T14:30:07Z  \")\n    assert result is not None, \"Valid input with whitespace should parse\"\n    assert result == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC), f\"Expected {datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)}, got {result}\"\n    \n    # Test 5: Standard ISO Z format\n    result = candidate(\"2026-09-29T14:30:07Z\")\n    assert result is not None, \"Standard ISO Z should parse\"\n    assert result == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC), f\"Expected {datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)}, got {result}\"\n    \n    # Test 6: ISO Z without seconds\n    result = candidate(\"2026-09-29T14:30Z\")\n    assert result is not None, \"ISO Z without seconds should parse\"\n    assert result == datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC), f\"Expected {datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)}, got {result}\"\n    \n    # Test 7: Compact UTC HHMMZ format\n    result = candidate(\"2026-09-29T0002Z\")\n    assert result is not None, \"Compact HHMMZ should parse\"\n    assert result == datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC), f\"Expected {datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC)}, got {result}\"\n    \n    # Test 8: Space-separated date and time with Z\n    result = candidate(\"2026-10-02 00:00:00Z\")\n    assert result is not None, \"Space-separated with Z should parse\"\n    assert result == datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC), f\"Expected {datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)}, got {result}\"\n    \n    # Test 9: Space-separated date and time without Z but with explicit offset\n    result = candidate(\"2026-10-02 00:00:00+00:00\")\n    assert result is not None, \"Explicit +00:00 should parse\"\n    assert result == datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC), f\"Expected {datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)}, got {result}\"\n    \n    # Test 10: Naive ISO interpreted as UTC\n    result = candidate(\"2026-09-29T14:30:07\")\n    assert result is not None, \"Naive ISO should parse as UTC\"\n    assert result == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC), f\"Expected {datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)}, got {result}\"\n    \n    # Test 11: Preserve fractional seconds\n    result = candidate(\"2026-09-29T14:30:07.123Z\")\n    assert result is not None, \"Fractional seconds should be preserved\"\n    expected = datetime(2026, 9, 29, 14, 30, 7, 123000, tzinfo=UTC)\n    assert result == expected, f\"Expected {expected}, got {result}\"\n    \n    # Test 12: Invalid input returns None\n    assert candidate(\"not a date\") is None, \"Invalid string should return None\"\n    \n    # Test 13: Integer input (converted to string) - should fail or handle gracefully\n    # The reference implementation converts to str first, so \"123\" would be invalid\n    assert candidate(123) is None, \"Integer input should return None\"\n    \n    # Test 14: Explicit offset other than +00:00 should still work if it's valid ISO\n    result = candidate(\"2026-09-29T14:30:07+05:00\")\n    assert result is not None, \"Non-zero offset should parse\"\n    # Should be converted to UTC\n    expected_utc = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)\n    assert result == expected_utc, f\"Expected {expected_utc}, got {result}\"\n    \n    # Test 15: Negative offset\n    result = candidate(\"2026-09-29T14:30:07-05:00\")\n    assert result is not None, \"Negative offset should parse\"\n    expected_utc = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)\n    assert result == expected_utc, f\"Expected {expected_utc}, got {result}\"\n    \n    # Test 16: Edge case - midnight UTC\n    result = candidate(\"2026-01-01T00:00:00Z\")\n    assert result is not None, \"Midnight should parse\"\n    assert result == datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC), f\"Expected {datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)}, got {result}\"\n    \n    # Test 17: Edge case - end of year\n    result = candidate(\"2026-12-31T23:59:59Z\")\n    assert result is not None, \"End of year should parse\"\n    assert result == datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC), f\"Expected {datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC)}, got {result}\"\n    \n    # Test 18: Leap year date\n    result = candidate(\"2024-02-29T12:00:00Z\")\n    assert result is not None, \"Leap year date should parse\"\n    assert result == datetime(2024, 2, 29, 12, 0, 0, tzinfo=UTC), f\"Expected {datetime(2024, 2, 29, 12, 0, 0, tzinfo=UTC)}, got {result}\"\n    \n    # Test 19: Non-leap year Feb 29 should fail\n    assert candidate(\"2023-02-29T12:00:00Z\") is None, \"Non-leap year Feb 29 should return None\"\n    \n    # Test 20: String with only spaces inside (after strip becomes empty)\n    assert candidate(\" \\t\\n \") is None, \"Whitespace-only string should return None\"\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 19586267375,
+  "load_duration": 5073456458,
+  "prompt_eval_count": 516,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 230007000,
+  "eval_count": 1980,
+  "eval_duration": 14274258000,
+  "memory_samples": [
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 20.088342542003375
+}

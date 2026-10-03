@@ -1,0 +1,7 @@
+```python
+from datetime import datetime, timezone, timedelta
+
+def run_tests(candidate):
+    """
+    Run a suite of regression tests against the supplied `candidate` function.
+    The function is expected to parse UTC timestamps

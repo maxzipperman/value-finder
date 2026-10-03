@@ -1,0 +1,36 @@
+{
+  "multifile": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+    }
+  ],
+  "regression": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "KeyError: 'run_tests'"
+    }
+  ],
+  "review": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+    }
+  ],
+  "extraction": [
+    {
+      "case": "exact fact extraction and schema",
+      "passed": true
+    }
+  ],
+  "debugging": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+    }
+  ]
+}

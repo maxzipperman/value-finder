@@ -1,0 +1,138 @@
+```python
+import math
+
+def run_tests(candidate):
+    """
+    Run a comprehensive suite of tests on the supplied `candidate` function.
+    The function is expected to compute the implied probability from American odds.
+    It must accept int, float, and numeric strings (with optional surrounding whitespace),
+    reject bool, None, non‑numeric strings, and any other types.
+    It must also reject values whose absolute value is < 100 or are not finite.
+    """
+
+    # ------------------------------------------------------------------
+    # Helper assertions
+    # ------------------------------------------------------------------
+    def assert_value(value, expected):
+        """Assert that candidate(value) returns a finite float equal to expected."""
+        try:
+            result = candidate(value)
+        except Exception as exc:
+            raise AssertionError(f"Unexpected exception for input {value!r}: {exc}") from exc
+
+        if not isinstance(result, float):
+            raise AssertionError(f"Result type is not float for input {value!r}: {type(result).__name__}")
+        if not math.isfinite(result):
+            raise AssertionError(f"Result is not finite for input {value!r}: {result}")
+
+        if not math.isclose(result, expected, rel_tol=1e-12, abs_tol=0.0):
+            raise AssertionError(
+                f"Incorrect result for input {value!r}: expected {expected}, got {result}"
+            )
+
+    def assert_raises_value_error(value):
+        """Assert that candidate(value) raises ValueError."""
+        try:
+            candidate(value)
+        except ValueError:
+            return
+        except Exception as exc:
+            raise AssertionError(
+                f"Expected ValueError for input {value!r}, but got {type(exc).__name__}"
+            ) from exc
+        else:
+            raise AssertionError(f"Expected ValueError for input {value!r}, but no exception was raised")
+
+    def assert_same_result(a, b):
+        """Assert that candidate(a) and candidate(b) return the same float."""
+        res_a = candidate(a)
+        res_b = candidate(b)
+        if not isinstance(res_a, float) or not isinstance(res_b, float):
+            raise AssertionError(f"Results are not floats for inputs {a!r} and {b!r}")
+        if not math.isclose(res_a, res_b, rel_tol=1e-12, abs_tol=0.0):
+            raise AssertionError(
+                f"Results differ for inputs {a!r} and {b!r}: {res_a} vs {res_b}"
+            )
+
+    # ------------------------------------------------------------------
+    # Valid positive odds
+    # ------------------------------------------------------------------
+    assert_value(100, 0.5)
+    assert_value(200, 100 / (200 + 100))          # 0.3333333333333333
+    assert_value(150, 100 / (150 + 100))          # 0.4
+    assert_value(101, 100 / (101 + 100))          # 0.49751243781
+    assert_value(201, 100 / (201 + 100))          # 0.332225249
+
+    # ------------------------------------------------------------------
+    # Valid negative odds
+    # ------------------------------------------------------------------
+    assert_value(-100, 0.5)
+    assert_value(-200, 200 / (200 + 100))         # 0.6666666666666666
+    assert_value(-150, 150 / (150 + 100))         # 0.6
+    assert_value(-101, 101 / (101 + 100))         # 0.50248756219
+    assert_value(-201, 201 / (201 + 100))         # 0.668225249
+
+    # ------------------------------------------------------------------
+    # Edge cases: exactly ±100
+    # ------------------------------------------------------------------
+    assert_value(100.0, 0.5)
+    assert_value(-100.0, 0.5)
+
+    # ------------------------------------------------------------------
+    # Numeric strings (including whitespace)
+    # ------------------------------------------------------------------
+    assert_value("100", 0.5)
+    assert_value("200", 100 / (200 + 100))
+    assert_value("150", 100 / (150 + 100))
+    assert_value("  200  ", 100 / (200 + 100))
+    assert_value(" -200 ", 200 / (200 + 100))
+    assert_value(" -200.0 ", 200 / (200 + 100))
+    assert_value("200.5", 100 / (200.5 + 100))
+    assert_value("-200.5", 200.5 / (200.5 + 100))
+    assert_value("  -200.5  ", 200.5 / (200.5 + 100))
+
+    # ------------------------------------------------------------------
+    # Scientific notation
+    # ------------------------------------------------------------------
+    assert_value("1e2", 0.5)                      # 100
+    assert_value("1e3", 1000 / (1000 + 100))     # 0.09090909090909091
+    assert_value("1.0e2", 0.5)                    # 100
+
+    # ------------------------------------------------------------------
+    # Reject values with |value| < 100
+    # ------------------------------------------------------------------
+    for bad in ("99", "-99", "0", "50", "-50", "99.9", "-99.9"):
+        assert_raises_value_error(bad)
+
+    # ------------------------------------------------------------------
+    # Reject non‑numeric strings
+    # ------------------------------------------------------------------
+    for bad in ("abc", "1a", "inf", "nan", " ", "  ", "1 2 3", "1.2.3", "1,000", "1 000"):
+        assert_raises_value_error(bad)
+
+    # ------------------------------------------------------------------
+    # Reject non‑finite numeric strings
+    # ------------------------------------------------------------------
+    for bad in ("inf", "-inf", "nan"):
+        assert_raises_value_error(bad)
+
+    # ------------------------------------------------------------------
+    # Reject non‑numeric types
+    # ------------------------------------------------------------------
+    for bad in (True, False, None, [200], {"value": 200}, (200,), {200}):
+        assert_raises_value_error(bad)
+
+    # ------------------------------------------------------------------
+    # Type consistency: int vs float vs string
+    # ------------------------------------------------------------------
+    assert_same_result(200, 200.0)
+    assert_same_result(200, "200")
+    assert_same_result(200.0, "200.0")
+    assert_same_result("  200  ", 200)
+
+    # ------------------------------------------------------------------
+    # All tests passed
+    # ------------------------------------------------------------------
+    # If we reach this point, no assertion was raised.
+    return None
+```

@@ -1,0 +1,51 @@
+{
+  "multifile": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+    }
+  ],
+  "regression": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "KeyError: 'run_tests'"
+    }
+  ],
+  "review": [
+    {
+      "case": "future/update-after-snapshot not gated",
+      "passed": true
+    },
+    {
+      "case": "negative odds wrong probability",
+      "passed": true
+    },
+    {
+      "case": "input mutated",
+      "passed": true
+    },
+    {
+      "case": "oldest snapshot chosen",
+      "passed": true
+    },
+    {
+      "case": "all findings point to seeded causes",
+      "passed": true
+    }
+  ],
+  "extraction": [
+    {
+      "case": "exact fact extraction and schema",
+      "passed": true
+    }
+  ],
+  "debugging": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+    }
+  ]
+}

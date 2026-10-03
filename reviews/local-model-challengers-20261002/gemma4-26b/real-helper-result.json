@@ -1,0 +1,321 @@
+{
+  "model": "gemma4:26b",
+  "created_at": "2026-10-03T07:25:15.559278Z",
+  "message": {
+    "role": "assistant",
+    "content": "",
+    "thinking": "*   Goal: Write a Python function `run_tests(candidate)` that performs regression testing on a `parse_utc` function.\n    *   Constraints:\n        *   Use only `datetime` and `math` from the standard library.\n        *   No file access, network, processes, real data, or credentials.\n        *   Input `candidate` is the function to be tested.\n        *   Contract for `candidate`:\n            *   `None`/blank/invalid input $\\rightarrow$ `None`.\n            *   Strip outer whitespace.\n            *   Accept: ISO Z, explicit offsets, compact UTC `HHMMZ`, naive ISO (interpreted as UTC).\n            *   Return: Aware UTC normalized absolute instants.\n            *   Preserve: ISO fractional seconds.\n        *   Test requirements: Behavioral edge cases, no inspection of candidate source/name/attributes.\n        *   Output: Complete Python source defining `run_tests(candidate)`.\n        *   Success: All assertions pass; otherwise, raise `AssertionError`.\n        *   No printing.\n\n    *   `None` $\\rightarrow$ `None`.\n    *   `\"\"` (empty string) $\\rightarrow$ `None`.\n    *   `\"   \"` (whitespace) $\\rightarrow$ `None`.\n    *   `\"invalid\"` $\\rightarrow$ `None`.\n    *   `\" 2026-09-29T14:30:07Z \"` (whitespace stripping) $\\rightarrow$ `2026-09-29 14:30:07+00:00`.\n    *   `\"2026-09-29T14:30:07Z\"` (standard ISO Z) $\\rightarrow$ `2026-09-29 14:30:07+00:00`.\n    *   `\"2026-09-29T0002Z\"` (compact UTC HHMMZ) $\\rightarrow$ `2026-09-29 00:02:00+00:00`.\n    *   `\"2026-10-02 00:00:00+00:00\"` (explicit offset) $\\rightarrow$ `2026-10-02 00:00:00+00:00`.\n    *   `\"2026-10-02 00:00:00+05:00\"` (explicit offset, normalization) $\\rightarrow$ `2026-10-01 19:00:00+00:00`.\n    *   `\"2026-09-29T14:30:07\"` (naive ISO) $\\rightarrow$ `2026-09-29 14:30:07+00:00`.\n    *   `\"2026-09-29T14:30:07.123456Z\"` (fractional seconds) $\\rightarrow$ `2026-09-29 14:30:07.123456+00:00`.\n\n    *   *Null/Empty/Invalid:*\n        *   `None`\n        *   `\"\"`\n        *   `\"   \"`\n        *   `\"not a date\"`\n        *   `\"2026-13-01\"` (invalid month)\n\n    *   *Whitespace:*\n        *   `\"  2026-09-29T14:30:07Z  \"`\n\n    *   *Formats:*\n        *   `\"2026-09-29T14:30:07Z\"` (Standard)\n        *   `\"2026-09-29 14:30:07Z\"` (Space instead of T)\n        *   `\"2026-09-29T0002Z\"` (Compact HHMMZ)\n        *   `\"2026-09-29 0002Z\"` (Compact HHMMZ with space)\n        *   `\"2026-09-29T14:30:07+05:00\"` (Offset)\n        *   `\"2026-09-29T14:30:07-08:00\"` (Negative offset)\n        *   `\"2026-09-29T14:30:07\"` (Naive)\n\n    *   *Normalization:*\n        *   Input with offset must return UTC.\n        *   Input naive must return UTC.\n\n    *   *Precision:*\n        *   `\"2026-09-29T14:30:07.123456Z\"`\n\n    *   Imports: `from datetime import datetime, timezone, timedelta`. (Wait, prompt says \"imports from datetime/math only\". I'll stick to `datetime` and `timezone` if needed, or just `datetime`).\n    *   Helper for comparison: Since we are comparing `datetime` objects, we need to ensure they are aware and in UTC.\n\n    *   *Test Case 1: Null/Empty*\n        `assert candidate(None) is None`\n        `assert candidate(\"\") is None`\n        `assert candidate(\"   \") is None`\n        `assert candidate(\"garbage\") is None`\n\n    *   *Test Case 2: Whitespace*\n        `res = candidate(\"  2026-09-29T14:30:07Z  \")`\n        `assert res == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)`\n\n    *   *Test Case 3: Compact HHMMZ*\n        `res = candidate(\"2026-09-29T0002Z\")`\n        `assert res == datetime(2026, 9, 29, 0, 2, 0, tzinfo=timezone.utc)`\n\n    *   *Test Case 4: Offset Normalization*\n        `res = candidate(\"2026-10-02T10:00:00+02:00\")`\n        `assert res == datetime(2026, 10, 2, 8, 0, 0, tzinfo=timezone.utc)`\n\n    *   *Test Case 5: Naive to UTC*\n        `res = candidate(\"2026-09-29T14:30:07\")`\n        `assert res == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)`\n\n    *   *Test Case 6: Fractional Seconds*\n        `res = candidate(\"2026-09-29T14:30:07.123456Z\")`\n        `assert res == datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc)`\n\n    *   *Test Case 7: Mixed formats from the reference list*\n        `\"2026-09-29 00:00:00\"` (Naive)\n        `\"2026-09-29T14:30:07\"` (Naive)\n\n    *   `datetime.fromisoformat` in Python 3.11+ handles `Z`. In older versions, it doesn't. The reference implementation uses `.replace(\"Z\", \"+00:00\")` to handle this.\n    *   The contract says \"accept ... compact UTC HHMMZ\". The reference implementation handles this via `_UTC_FORMATS`.\n    *   The contract says \"return aware UTC normalized absolute instants\".\n\n    *   `from datetime import datetime, timezone`\n    *   `def run_tests(candidate):`\n    *   `    # Test None/Empty`\n    *   `    # Test Whitespace`\n    *   `    # Test ISO Z`\n    *   `    # Test Compact HHMMZ`\n    *   `    # Test Offset`\n    *   `    # Test Naive`\n    *   `    # Test Fractional`\n    *   `    # Test Invalid`\n\n    *   `candidate(\"2026-09-29T0002Z\")` -> `2026-09-29 00:02:00+00:00`.\n    *   `candidate(\"2026-09-29 0002Z\")` -> `2026-09-29 00:02:00+00:00`.\n    *   `candidate(\"2026-09-29T14:30:07.123Z\")` -> `2026-09-29 14:30:07.123000+00:00`.\n\n    *   `datetime` and `math` only? Yes.\n    *   No files/network/etc? Yes.\n    *   `run_tests(candidate)`? Yes.\n    *   `AssertionError` on failure? Yes.\n    *   No printing? Yes.\n    *   Behavioral edge cases? Yes.\n    *   No inspection of candidate? Yes.\n\n    *Self-Correction during drafting:*\n    The reference implementation uses `_UTC_FORMATS` which includes `%Y-%m-%dT%H:%MZ`.\n    `%H:%MZ` is not a standard strptime format for \"HHMMZ\".\n    Wait, looking at `_UTC_FORMATS`: `\"%Y-%m-%dT%H:%MZ\"` is actually `YYYY-MM-DDTHH:MZ`. That's not right.\n    Let's look closer: `\"%Y-%m-%dT%H:%MZ\"`... if the input is `2026-09-29T0002Z`, `strptime` with `%H:%MZ` would expect a colon.\n    Actually, the reference implementation provided in the prompt is:\n    `\"%Y-%m-%dT%H:%MZ\", \"%Y-%m-%dT%H%MZ\"`\n    If input is `2026-09-29T0002Z`:\n    `%H%MZ` would match `0002Z`.\n    `%H:%MZ` would match `00:02Z`.\n    The prompt says \"compact UTC HHMMZ\".\n    I will test both `0002Z` and `00:02Z` to be safe, though the contract specifically mentions `HHMMZ`.\n\n    *Wait, the contract says:* \"accept ... compact UTC HHMMZ\".\n    If the input is `2026-09-29T0002Z`, the `strptime` format `%Y-%m-%dT%H%MZ` would work.\n\n    *One more check on fractional seconds:*\n    `datetime.fromisoformat` handles them. `strptime` does not handle arbitrary fractional lengths easily without specific format strings. The reference implementation uses `fromisoformat` as a fallback.\n\n    *Final Test List:*\n    1. `None` -> `None`\n    2. `\"\"` -> `None`\n    3. `\"   \"` -> `None`\n    4. `\"invalid\"` -> `None`\n    5. `\" 2026-09-29T14:30:07Z \"` -> `2026-09-29 14:30:07+00:00`\n    6. `\"2026-09-29T14:30:07Z\"` -> `2026-09-29 14:30:07+00:00`\n    7. `\"2026-09-29T0002Z\"` -> `2026-09-29 00:02:00+00:00`\n    8. `\"2026-09-29 00:02Z\"` -> `2026-09-29 00:02:00+00:00`\n    9. `\"2026-10-02 00:00:00+05:00\"` -> `2026-10-01 19:00:00+00:00`\n    10. `\"2026-10-02T00:00:00-08:00\"` -> `2026-10-02 08:00:00+00:00`\n    11. `\"2026-09-29T14:30:07\"` -> `2026-09-29 14:30:07+00:00`\n    12. `\"2026-09-29 14:30:07\"` -> `2026-09-29 14:30:07+00:00`\n    13. `\"2026-09-29T14:30:07.123456Z\"` -> `2026-09-29 14:30:07.123456+00:00`\n\n    *Wait, check the normalization of 10:*\n    `2026-10-02T00:00:00-08:00`\n    `00:00` minus `-8` hours is `00:00 + 8` hours = `08:00`. Correct.\n\n    *Check the normalization of 9:*\n    `2026-10-02 00:00:00+05:00`\n    `00:00` minus `+5` hours is `19:00` on the previous day. Correct.\n\n    *Implementation Detail:*\n    I'll use `datetime(..., tzinfo=timezone.utc)` for expected values.\n\n    *Edge Case: Invalid dates*\n    `\"2026-02-30T14:30:07Z\"` (Feb 30) -> `None`.\n\n    *Edge Case: Non-string input*\n    The contract says `text` is the input. If `text` is `123`, `str(text).strip()` will be `\"123\"`, which is invalid. `candidate(123)` should return `None`.\n\n    *Edge Case: Fractional seconds with offset*\n    `\"2026-09-29T14:30:07.123456+05:00\"` -> `2026-09-29 09:30:07.123456+00:00`.\n\n    *Final check on imports:*\n    `from datetime import datetime, timezone` is allowed.\n\n    *One detail:* The prompt says \"Return complete Python source defining run_tests(candidate), with imports from datetime/math only.\"\n    This means I should include the imports inside the code block.\n\n    *Refining the test for \"compact UTC HHMMZ\":*\n    The reference implementation has `\"%Y-%m-%dT%H%MZ\"`.\n    If input is `2026-09-29T0002Z`:\n    `%Y-%m-%dT` matches `2026-09-29T`.\n    `%H%MZ` matches `0002Z`.\n    This works.\n\n    *Refining the test for \"naive ISO interpreted as UTC\":*\n    `\"2026-09-29T14:30:07\"` -> `datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)`.\n\n    *Refining the test for \"strip outer whitespace\":*\n    `\"  2026-09-29T14:30:07Z  \"` -> `datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)`.\n\n    *Refining the test for \"preserve ISO fractional seconds\":*\n    `\"2026-09-29T14:30:07.123456Z\"` -> `datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc)`.\n\n    *Refining the test for \"invalid input returns None\":*\n    `\"not-a-date\"` -> `None`.\n    `\"2026-13-01T00:00:00Z\"` -> `None`.\n\n    *Final check on the return type:*\n    \"return aware UTC normalized absolute instants\".\n    This means `res.tzinfo` must be `timezone.utc`.\n\n    *Code Structure:*\n    ```python\n    from datetime import datetime, timezone\n\n    def run_tests(candidate):\n        # Helper to verify result\n        def check(input_val, expected_val):\n            actual = candidate(input_val)\n            if expected_val is None:\n                assert actual is None\n            else:\n                assert actual == expected_val\n                assert actual.tzinfo == timezone.utc\n\n        # 1. Null/Empty/Blank\n        check(None, None)\n        check(\"\", None)\n        check(\"   \", None)\n\n        # 2. Whitespace stripping\n        check(\"  2026-09-29T14:30:07Z  \", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc))\n\n        # 3. Standard ISO Z\n        check(\"2026-09-29T14:30:07Z\", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc))\n\n        # 4. Compact HHMMZ\n        check(\"2026-09-29T0002Z\", datetime(2026, 9, 29, 0, 2, 0, tzinfo=timezone.utc))\n\n        # 5. Explicit Offsets & Normalization\n        check(\"2026-10-02 00:00:00+05:00\", datetime(2026, 10, 1, 19, 0, 0, tzinfo=timezone.utc))\n        check(\"2026-10-02T00:00:00-08:00\", datetime(2026, 10, 2, 8, 0, 0, tzinfo=timezone.utc))\n\n        # 6. Naive ISO (interpreted as UTC)\n        check(\"2026-09-29T14:30:07\", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc))\n        check(\"2026-09-29 14:30:07\", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc))\n\n        # 7. Fractional Seconds\n        check(\"2026-09-29T14:30:07.123456Z\", datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc))\n        check(\"2026-09-29T14:30:07.123+00:00\", datetime(2026, 9, 29, 14, 30, 7, 123000, tzinfo=timezone.utc))\n\n        # 8. Invalid inputs\n        check(\"garbage\", None)\n        check(\"2026-13-01T00:00:00Z\", None)\n        check(\"2026-09-29T25:00:00Z\", None)\n    ```\n\n    *Wait, one more check:*\n    The reference implementation uses `_UTC_FORMATS` which includes `\"%Y-%m-%dT%H:%MZ\"`.\n    If the input is `2026-09-29T00:02Z`, `strptime` with `%H:%MZ` will work.\n    If the input is `2026-09-29T0002Z`, `strptime` with `%H%MZ` will work.\n    The contract says \"compact UTC HHMMZ\". This usually implies no colon.\n    I'll include both to be thorough.\n\n    *Wait, the reference implementation's `_UTC_FORMATS` has:*\n    `\"%Y-%m-%dT%H:%MZ\"` (This is actually `YYYY-MM-DDTHH:MZ`? No, `%H` is 2 digits, `%M` is 2 digits. So `%H:%MZ` expects `HH:MMZ`).\n    `\"%Y-%m-%dT%H%MZ\"` (This expects `HHMMZ`).\n    So `0002Z` matches `%H%MZ`.\n    `00:02Z` matches `%H:%MZ`.\n\n    *Final check on `datetime.fromisoformat`:*\n    In Python < 3.11, `fromisoformat` does not support `Z`.\n    The reference implementation handles this with `.replace(\"Z\", \"+00:00\")`.\n    My tests should ensure the candidate handles `Z` correctly regardless of the Python version's `fromisoformat` behavior.\n\n    *One more edge case:*\n    What if the input is a number? `candidate(12345)`.\n    `str(12345).strip()` is `\"12345\"`.\n    `strptime` or `fromisoformat` will fail on `\"12345\"`.\n    The function should return `None`.\n\n    *Final check on the contract:*\n    \"return aware UTC normalized absolute instants\".\n    This means `res.tzinfo` must be `timezone.utc`.\n    My `check` function does `assert actual.tzinfo == timezone.utc`.\n\n    *Wait, one detail:*\n    `datetime.fromisoformat(\"2026-09-29T14:30:07.123456+00:00\")` returns an aware datetime.\n    `datetime.fromisoformat(\"2026-09-29T14:30:07.123456\")` returns a naive datetime.\n    The reference implementation handles the naive case with `t.replace(tzinfo=UTC)`.\n    The reference implementation handles the aware case with `t.astimezone(UTC)`.\n    This is correct.\n\n    *Final check on the `check` function:*\n    If `expected_val` is `None`, `actual` must be `None`.\n    If `expected_val` is a `datetime`, `actual` must be equal to it AND be UTC.\n    Equality `==` between two aware datetimes in Python compares their absolute moments in time.\n    So `datetime(2026, 10, 2, 8, 0, tzinfo=utc) == datetime(2026, 10, 2, 10, 0, tzinfo=+2)` is `True`.\n    However, the contract says \"return aware UTC normalized absolute instants\".\n    This implies the `tzinfo` *must* be `timezone.utc`.\n    So `actual == expected_val` is not enough; I must also check `actual.tzinfo == timezone.utc`.\n\n    *Wait, the reference implementation:*\n    `return t.replace(tzinfo=UTC) if t.tzinfo is None else t.astimezone(UTC)`\n    This ensures the returned object is always in `UTC`.\n\n    *Final Test Suite Construction:*\n    I will group them logically.\n\n    *One small detail:* `math` is allowed but not needed. `datetime` is needed.\n\n    *Self-Correction on `check` function:*\n    If `actual` is `None`, `actual.tzinfo` will raise an `AttributeError`.\n    I should check `actual is not None` before checking `tzinfo`.\n\n    ```python\n    def check(input_val, expected_val):\n        actual = candidate(input_val)\n        if expected_val is None:\n            assert actual is None\n        else:\n            assert actual is not None\n            assert actual == expected_val\n            assert actual.tzinfo == timezone.utc\n    ```\n\n    *Wait, the prompt says:* \"Successful completion means all assertions passed; otherwise raise AssertionError.\"\n    My `check` function uses `assert`, which raises `AssertionError`. This is perfect.\n\n    *Final check on \"compact UTC HHMMZ\":*\n    Input: `\"2026-09-29T0002Z\"`\n    Expected: `datetime(2026, 9, 29, 0, 2, 0, tzinfo=timezone.utc)`\n\n    *Final check on \"naive ISO interpreted as UTC\":*\n    Input: `\"2026-09-29T14:30:07\"`\n    Expected: `datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)`\n\n    *Final check on \"preserve ISO fractional seconds\":*\n    Input: `\"2026-09-29T14:30:07.123456Z\"`\n    Expected: `datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc)`\n\n    *Final check on \"strip outer whitespace\":*\n    Input: `\" 2026-09-29T14:30:07Z \"`\n    Expected: `datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)`\n\n    *Final check on \"explicit offsets\":*\n    Input: `\"2026-10-02 00:00:00+05:00\"`\n    Expected: `datetime(2026, 10, 1, 19, 0, 0, tzinfo=timezone.utc)`\n\n    *Final check on \"invalid input\":*\n    Input: `\"not a time\"`\n    Expected: `None`\n\n    *Final check on \"None/blank/invalid input returns None\":*\n    Input: `None` -> `None`\n    Input: `\"\"` -> `None`\n    Input: `\" \"` -> `None`\n\n    *One more edge case:*\n    `\"2026-09-29T14:30:07.123Z\"` (3 decimal places)\n    `datetime.fromisoformat` handles this.\n    `datetime(2026, 9, 29, 14, 30, 7, 123000, tzinfo=timezone.utc)`\n\n    *Wait, the reference implementation's `_UTC_FORMATS` includes:*\n    `\"%Y-%m-%d %H:%M:%S\"`\n    `\"%Y-%m-%dT%H:%M\"`\n    `\"%Y-%m-%d %H:%M\"`\n    These are all naive. The code handles them by `replace(tzinfo=UTC)`.\n\n    *Final check on the `candidate` parameter:*\n    The prompt says `candidate` is `parse_utc` supplied by evaluator.\n    The function I write is `run_tests(candidate)`.\n\n    *Final check on imports:*\n    `from datetime import datetime, timezone`\n    `import math` (even if unused, it's allowed).\n\n    *Wait, the prompt says:* \"Return complete Python source defining run_tests(candidate), with imports from datetime/math only.\"\n    This means I should only import from those.\n\n    *Final check on the `check` function logic:*\n    If `expected_val` is `None`, `actual` must be `None`.\n    If `expected_val` is a `datetime`, `actual` must be `datetime`, equal to `expected_val`, and `tzinfo` must be `timezone.utc`.\n\n    *One more test case:*\n    `\"2026-09-29T00:02Z\"` (with colon)\n    The reference implementation has `\"%Y-%m-%dT%H:%MZ\"`.\n    This matches `2026-09-29T00:02Z`.\n    So I'll add that.\n\n    *One more test case:*\n    `\"2026-09-29 00:02Z\"` (with space and colon)\n    The reference implementation has `\"%Y-%m-%d %H:%MZ\"`.\n    This matches `2026-09-29 00:02Z`.\n    So I'll add that.\n\n    *Final check on the `datetime` equality:*\n    `datetime(2026, 1, 1, tzinfo=timezone.utc) == datetime(2026, 1, 1, tzinfo=timezone.utc)` is `True`.\n    `datetime(2026, 1, 1, tzinfo=timezone.utc) == datetime(2026, 1, 1, tzinfo=timezone(timedelta(hours=1)))` is `True` (because they represent the same instant).\n    However, the contract says \"return aware UTC normalized absolute instants\".\n    This means the `tzinfo` *must* be `timezone.utc`.\n    So `actual.tzinfo == timezone.utc` is a mandatory check.\n\n    *Final check on the `candidate` input type:*\n    The contract says `text` is the input. It doesn't explicitly say `text` is always a string.\n    The reference implementation does `s = str(text).strip()`.\n    So if `candidate(None)` is called, `str(None)` is `\"None\"`.\n    Wait, the reference implementation says:\n    `if text is None: return None`\n    `s = str(text).strip()`\n    So `candidate(None)` returns `None`.\n    `candidate(123)` -> `str(123)` is `\"123\"`, `strip()` is `\"123\"`, `strptime` fails, `fromisoformat` fails, returns `None`.\n    This is consistent.\n\n    *Final check on the `check` function:*\n    I'll use `assert` statements directly in `run_tests` to keep it simple and avoid any issues with a helper function's scope or complexity.\n\n    ```python\n    from datetime import datetime, timezone\n\n    def run_tests(candidate):\n        # 1. Null/Empty/Blank\n        assert candidate(None) is None\n        assert candidate(\"\") is None\n        assert candidate(\"   \") is None\n\n        # 2. Whitespace stripping\n        res = candidate(\"  2026-09-29T14:30:07Z  \")\n        assert res == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n\n        # 3. Standard ISO Z\n        res = candidate(\"2026-09-29T14:30:07Z\")\n        assert res == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n\n        # 4. Compact HHMMZ and HH:MMZ\n        res = candidate(\"2026-09-29T0002Z\")\n        assert res == datetime(2026, 9, 29, 0, 2, 0, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n        res = candidate(\"2026-09-29T00:02Z\")\n        assert res == datetime(2026, 9, 29, 0, 2, 0, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n\n        # 5. Explicit Offsets & Normalization\n        res = candidate(\"2026-10-02 00:00:00+05:00\")\n        assert res == datetime(2026, 10, 1, 19, 0, 0, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n        res = candidate(\"2026-10-02T00:00:00-08:00\")\n        assert res == datetime(2026, 10, 2, 8, 0, 0, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n\n        # 6. Naive ISO (interpreted as UTC)\n        res = candidate(\"2026-09-29T14:30:07\")\n        assert res == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n        res = candidate(\"2026-09-29 14:30:07\")\n        assert res == datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)\n        assert res.tzinfo == timezone.utc\n\n        # 7. Fractional Seconds\n        res = candidate(\"2026-09-29T14:30:07.123456Z\")\n        assert res == datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc)\n        assert res."
+  },
+  "done": true,
+  "done_reason": "length",
+  "total_duration": 63406593292,
+  "load_duration": 3120241875,
+  "prompt_eval_count": 542,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 200097000,
+  "eval_count": 8192,
+  "eval_duration": 60083124000,
+  "memory_samples": [
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 64.28580337500898
+}

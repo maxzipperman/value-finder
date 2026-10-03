@@ -1,0 +1,559 @@
+{
+  "local_because": "hardware",
+  "scope": "six bounded tasks; public helper source and synthetic fixtures; no production execution",
+  "requests": 38,
+  "settings": {
+    "models": [
+      "qwen3.6:35b",
+      "qwen3.8:27b",
+      "gpt-oss:20b",
+      "gemma4:26b"
+    ],
+    "source": "public repository code and synthetic 2025 fixtures only",
+    "tasks": [
+      "multifile",
+      "regression",
+      "review",
+      "extraction",
+      "real-helper",
+      "debugging"
+    ],
+    "rounds": 1,
+    "options": {
+      "temperature": 0,
+      "seed": 42,
+      "num_ctx": 16384,
+      "num_predict": 8192
+    },
+    "reasoning": "enabled; gpt-oss medium, others true; record actual settings and thinking tokens",
+    "deadline_seconds": 300,
+    "repair_policy": "no feedback in first pass; optional one equal-budget feedback round reported separately",
+    "promotion": "supervised draft roles only, validated by independent acceptance and claim review",
+    "notification_thread": "01a0ffc0-b663-7265-ab9e-fd5cb90e3001",
+    "prior_report": "reviews/local-model-eval-20261002/extended/README.md"
+  },
+  "inventory": {
+    "qwen3.6:35b": {
+      "digest": "a7eb95c53bcf96b4bdd008d0fab4a5dac88047d9c1a7a9ab88ed453423fbd87c",
+      "artifact_bytes": 22621314381
+    },
+    "qwen3.8:27b": {
+      "digest": "aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813",
+      "artifact_bytes": 17741872154
+    },
+    "gpt-oss:20b": {
+      "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
+      "artifact_bytes": 13793441244
+    },
+    "gemma4:26b": {
+      "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c",
+      "artifact_bytes": 18731025629
+    }
+  },
+  "rounds": {
+    "gemma4-26b": {
+      "debugging": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 63.277023583999835,
+        "load_seconds": 2.598491125,
+        "prompt_seconds": 0.308151,
+        "generation_seconds": 59.417436,
+        "generated_tokens": 8192,
+        "thinking_characters": 23495,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "extraction": {
+        "passed": 1,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 15.065484833001392,
+        "load_seconds": 2.620867916,
+        "prompt_seconds": 0.162442,
+        "generation_seconds": 11.300313,
+        "generated_tokens": 1718,
+        "thinking_characters": 5183,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "multifile": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 63.33198249997804,
+        "load_seconds": 4.8846315,
+        "prompt_seconds": 0.422173,
+        "generation_seconds": 57.638662,
+        "generated_tokens": 8192,
+        "thinking_characters": 28239,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "real-helper": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 64.28580337500898,
+        "load_seconds": 3.120241875,
+        "prompt_seconds": 0.200097,
+        "generation_seconds": 60.083124,
+        "generated_tokens": 8192,
+        "thinking_characters": 20268,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "regression": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 59.24679470801493,
+        "load_seconds": 2.363625291,
+        "prompt_seconds": 0.108752,
+        "generation_seconds": 56.405845,
+        "generated_tokens": 8192,
+        "thinking_characters": 19969,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "review": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 70.3330186670064,
+        "load_seconds": 6.398989334,
+        "prompt_seconds": 0.231421,
+        "generation_seconds": 63.180178,
+        "generated_tokens": 8192,
+        "thinking_characters": 24604,
+        "max_sampled_model_bytes": 1286351092
+      }
+    },
+    "gemma4-26b-no-thinking": {
+      "debugging": {
+        "passed": 50,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 13.049506625015056,
+        "load_seconds": 6.373517917,
+        "prompt_seconds": 0.225695,
+        "generation_seconds": 5.688043,
+        "generated_tokens": 870,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "extraction": {
+        "passed": 1,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 4.009544250002364,
+        "load_seconds": 2.340980333,
+        "prompt_seconds": 0.146204,
+        "generation_seconds": 0.615883,
+        "generated_tokens": 117,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "multifile": {
+        "passed": 52,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 13.057894582976587,
+        "load_seconds": 4.6274665,
+        "prompt_seconds": 0.132501,
+        "generation_seconds": 7.325376,
+        "generated_tokens": 1015,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "real-helper": {
+        "passed": 6,
+        "checks": 7,
+        "done_reason": "stop",
+        "wall_seconds": 13.042033917008666,
+        "load_seconds": 4.863459792,
+        "prompt_seconds": 0.26182,
+        "generation_seconds": 6.96385,
+        "generated_tokens": 1124,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "regression": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 13.061191832995974,
+        "load_seconds": 4.62794475,
+        "prompt_seconds": 0.111646,
+        "generation_seconds": 7.718901,
+        "generated_tokens": 1150,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 1286351092
+      },
+      "review": {
+        "passed": 5,
+        "checks": 5,
+        "done_reason": "stop",
+        "wall_seconds": 4.0148186669975985,
+        "load_seconds": 2.359158417,
+        "prompt_seconds": 0.149118,
+        "generation_seconds": 1.293906,
+        "generated_tokens": 208,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 1286351092
+      }
+    },
+    "gpt-oss-20b": {
+      "debugging": {
+        "passed": 50,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 76.34265137501643,
+        "load_seconds": 1.321061125,
+        "prompt_seconds": 0.180987,
+        "generation_seconds": 74.089145,
+        "generated_tokens": 8125,
+        "thinking_characters": 31250,
+        "max_sampled_model_bytes": 12866111405
+      },
+      "extraction": {
+        "passed": 1,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 7.033742125000572,
+        "load_seconds": 1.572460875,
+        "prompt_seconds": 0.157673,
+        "generation_seconds": 4.338428,
+        "generated_tokens": 490,
+        "thinking_characters": 1646,
+        "max_sampled_model_bytes": 12866111405
+      },
+      "multifile": {
+        "passed": 52,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 27.121898374985904,
+        "load_seconds": 3.073777,
+        "prompt_seconds": 0.329261,
+        "generation_seconds": 23.665336,
+        "generated_tokens": 2673,
+        "thinking_characters": 6563,
+        "max_sampled_model_bytes": 12866111405
+      },
+      "real-helper": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 77.35386512501282,
+        "load_seconds": 2.578829458,
+        "prompt_seconds": 0.274031,
+        "generation_seconds": 74.390723,
+        "generated_tokens": 8192,
+        "thinking_characters": 25859,
+        "max_sampled_model_bytes": 12866111405
+      },
+      "regression": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 71.33487087499816,
+        "load_seconds": 1.313358,
+        "prompt_seconds": 0.131491,
+        "generation_seconds": 69.567194,
+        "generated_tokens": 7723,
+        "thinking_characters": 24965,
+        "max_sampled_model_bytes": 12866111405
+      },
+      "review": {
+        "passed": 5,
+        "checks": 5,
+        "done_reason": "stop",
+        "wall_seconds": 30.147078165988205,
+        "load_seconds": 1.319357375,
+        "prompt_seconds": 0.131881,
+        "generation_seconds": 28.477046,
+        "generated_tokens": 3221,
+        "thinking_characters": 13363,
+        "max_sampled_model_bytes": 12866111405
+      }
+    },
+    "qwen3.6-35b": {
+      "debugging": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 77.34419999999227,
+        "load_seconds": 5.076401083,
+        "prompt_seconds": 0.211738,
+        "generation_seconds": 71.896361,
+        "generated_tokens": 8192,
+        "thinking_characters": 32235,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "extraction": {
+        "passed": 1,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 19.077500209008576,
+        "load_seconds": 2.061723917,
+        "prompt_seconds": 0.153102,
+        "generation_seconds": 16.706157,
+        "generated_tokens": 2412,
+        "thinking_characters": 8170,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "multifile": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 72.27571595800691,
+        "load_seconds": 5.314672417,
+        "prompt_seconds": 0.171148,
+        "generation_seconds": 66.366352,
+        "generated_tokens": 8192,
+        "thinking_characters": 32723,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "real-helper": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 72.25788412499242,
+        "load_seconds": 5.31316675,
+        "prompt_seconds": 0.195196,
+        "generation_seconds": 66.19046,
+        "generated_tokens": 8192,
+        "thinking_characters": 21913,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "regression": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 75.33966916598729,
+        "load_seconds": 2.309359209,
+        "prompt_seconds": 0.136991,
+        "generation_seconds": 72.063875,
+        "generated_tokens": 8192,
+        "thinking_characters": 29119,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "review": {
+        "passed": 5,
+        "checks": 5,
+        "done_reason": "stop",
+        "wall_seconds": 41.15201154098031,
+        "load_seconds": 2.308075625,
+        "prompt_seconds": 0.177397,
+        "generation_seconds": 38.016738,
+        "generated_tokens": 4508,
+        "thinking_characters": 17127,
+        "max_sampled_model_bytes": 22445692025
+      }
+    },
+    "qwen3.6-35b-no-thinking": {
+      "debugging": {
+        "passed": 48,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 14.047752708022017,
+        "load_seconds": 5.060314959,
+        "prompt_seconds": 0.192103,
+        "generation_seconds": 8.459947,
+        "generated_tokens": 1088,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "multifile": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 16.06542716702097,
+        "load_seconds": 5.074001084,
+        "prompt_seconds": 0.179107,
+        "generation_seconds": 10.395189,
+        "generated_tokens": 1367,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "real-helper": {
+        "passed": 6,
+        "checks": 7,
+        "done_reason": "stop",
+        "wall_seconds": 20.088342542003375,
+        "load_seconds": 5.073456458,
+        "prompt_seconds": 0.230007,
+        "generation_seconds": 14.274258,
+        "generated_tokens": 1980,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 22445692025
+      },
+      "regression": {
+        "passed": 9,
+        "checks": 9,
+        "done_reason": "stop",
+        "wall_seconds": 31.133010416990146,
+        "load_seconds": 5.078043209,
+        "prompt_seconds": 0.155539,
+        "generation_seconds": 25.552237,
+        "generated_tokens": 3219,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 22445692025
+      }
+    },
+    "qwen3.8-27b": {
+      "debugging": {
+        "passed": 52,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 106.48330783299753,
+        "load_seconds": 4.069419625,
+        "prompt_seconds": 0.77378,
+        "generation_seconds": 101.007577,
+        "generated_tokens": 5324,
+        "thinking_characters": 16277,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "extraction": {
+        "passed": 1,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 16.06122345800395,
+        "load_seconds": 2.058772417,
+        "prompt_seconds": 0.614565,
+        "generation_seconds": 12.539342,
+        "generated_tokens": 752,
+        "thinking_characters": 2423,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "multifile": {
+        "passed": 52,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 82.31282774999272,
+        "load_seconds": 4.292489083,
+        "prompt_seconds": 0.666403,
+        "generation_seconds": 76.711818,
+        "generated_tokens": 3878,
+        "thinking_characters": 11820,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "real-helper": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 145.61175970901968,
+        "load_seconds": 5.315064292,
+        "prompt_seconds": 0.774494,
+        "generation_seconds": 139.17879,
+        "generated_tokens": 8192,
+        "thinking_characters": 17407,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "regression": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 159.6298603329924,
+        "load_seconds": 2.05822125,
+        "prompt_seconds": 0.430189,
+        "generation_seconds": 156.972736,
+        "generated_tokens": 8192,
+        "thinking_characters": 20348,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "review": {
+        "passed": 5,
+        "checks": 5,
+        "done_reason": "stop",
+        "wall_seconds": 82.29962408400024,
+        "load_seconds": 2.296270542,
+        "prompt_seconds": 0.61081,
+        "generation_seconds": 78.969617,
+        "generated_tokens": 3761,
+        "thinking_characters": 12426,
+        "max_sampled_model_bytes": 18231003707
+      }
+    },
+    "qwen3.8-27b-no-thinking": {
+      "debugging": {
+        "passed": 51,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 16.05914795800345,
+        "load_seconds": 4.305762416,
+        "prompt_seconds": 0.779866,
+        "generation_seconds": 10.29605,
+        "generated_tokens": 618,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "multifile": {
+        "passed": 44,
+        "checks": 53,
+        "done_reason": "stop",
+        "wall_seconds": 16.06389124999987,
+        "load_seconds": 4.325523125,
+        "prompt_seconds": 0.610791,
+        "generation_seconds": 10.68549,
+        "generated_tokens": 656,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "real-helper": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "length",
+        "wall_seconds": 145.5812905000057,
+        "load_seconds": 4.304133083,
+        "prompt_seconds": 0.877691,
+        "generation_seconds": 140.298268,
+        "generated_tokens": 8192,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 18231003707
+      },
+      "regression": {
+        "passed": 0,
+        "checks": 1,
+        "done_reason": "stop",
+        "wall_seconds": 53.2583426249912,
+        "load_seconds": 4.072728125,
+        "prompt_seconds": 0.481023,
+        "generation_seconds": 48.581289,
+        "generated_tokens": 2899,
+        "thinking_characters": 0,
+        "max_sampled_model_bytes": 18231003707
+      }
+    }
+  },
+  "manual_review": {
+    "qwen3.6-35b": {
+      "defect_categories_found": 4,
+      "fully_explained": 4,
+      "independent_false_findings": 0
+    },
+    "qwen3.8-27b": {
+      "defect_categories_found": 4,
+      "fully_explained": 4,
+      "independent_false_findings": 0,
+      "caveat": "negative-odds explanation incorrectly mentions zero probability; actual finite negative odds yield negative probability or division by zero"
+    },
+    "gpt-oss-20b": {
+      "defect_categories_found": 4,
+      "fully_explained": 4,
+      "independent_false_findings": 0,
+      "caveat": "negative-odds explanation incorrectly mentions probability >1; actual valid negative odds yield negative probability or division by zero"
+    },
+    "gemma4-26b-no-thinking": {
+      "defect_categories_found": 4,
+      "fully_explained": 3,
+      "partially_explained": 1,
+      "independent_false_findings": 0,
+      "caveat": "update finding covers decision gate but omits update <= snapshot"
+    }
+  },
+  "limitations": [
+    "One first attempt per task/mode; no confidence intervals or real autonomous repository task.",
+    "No-thinking round selected after observing truncation; separate scores, no feedback.",
+    "AST checks and manual inspection precede generated-code execution in ordinary restricted sandbox; AST alone is not a security boundary.",
+    "Ollama model allocation samples are not total system RAM or exact peak; Gemma allocation telemetry (~1.2 GiB) inconsistent with artifact size and not accepted as memory estimate.",
+    "Specific -04:00 offset mutant missed by both valid UTC suites; separate post-result generic-offset diagnostic caught by both.",
+    "Catalog tags may change; only frozen installed digests evaluated. No Q8, Ornith or Llama tested."
+  ]
+}

@@ -1,0 +1,123 @@
+```python
+import math
+
+def run_tests(american_probability):
+    """
+    Evaluates the candidate function american_probability.
+    Tests for correct mathematical conversion, type handling, 
+    and strict error enforcement.
+    """
+
+    # --- 1. Mathematical Correctness Tests ---
+    
+    # Positive Odds: 100 / (value + 100)
+    # +100 -> 100/200 = 0.5
+    assert american_probability(100) == 0.5
+    # +300 -> 100/400 = 0.25
+    assert american_probability(300.0) == 0.25
+    # +1 -> 100/101
+    assert american_probability(1) == 100 / 101
+    
+    # Negative Odds: -value / (-value + 100)
+    # -100 -> -(-100) / (-(-100) + 100) = 100 / 200 = 0.5
+    assert american_probability(-100) == 0.5
+    # -400 -> -(-400) / (-(-400) + 100) = 400 / 500 = 0.8
+    assert american_probability(-400) == 0.8
+    # -1 -> -(-1) / (-(-1) + 100) = 1 / 101
+    assert american_probability(-1) == 1 / 101
+
+    # --- 2. Numeric String and Whitespace Tests ---
+    assert american_probability("100") == 0.5
+    assert american_probability("  -400  ") == 0.8
+    assert american_probability("0.25") == 100 / 100.25 # value is 0.25, but requirement says |val| >= 100
+    # Re-reading requirement: "only finite values with absolute value >=100"
+    # This implies values like 0.25 should be rejected if they are treated as the 'value'.
+    # However, the prompt says "Accept int, float and numeric strings... only finite values with absolute value >=100".
+    # This means we must test the boundary of 100.
+    
+    assert american_probability("100.0") == 0.5
+    assert american_probability("-100") == 0.5
+
+    # --- 3. Boundary and Edge Case Tests ---
+    # Absolute value must be >= 100. 
+    # If |value| < 100, it should raise ValueError.
+    try:
+        american_probability(50)
+        raise AssertionError("Failed to reject |value| < 100 (positive)")
+    except ValueError:
+        pass
+
+    try:
+        american_probability(-50)
+        raise AssertionError("Failed to reject |value| < 100 (negative)")
+    except ValueError:
+        pass
+
+    try:
+        american_probability("99.9")
+        raise AssertionError("Failed to reject |value| < 100 (string)")
+    except ValueError:
+        pass
+
+    # Infinity/NaN check
+    try:
+        american_probability(float('inf'))
+        raise AssertionError("Failed to reject infinity")
+    except ValueError:
+        pass
+
+    try:
+        american_probability(float('nan'))
+        raise AssertionError("Failed to reject NaN")
+    except ValueError:
+        pass
+
+    # --- 4. Type Rejection Tests ---
+    # Reject bool (even though bool is a subclass of int in Python)
+    try:
+        american_probability(True)
+        raise AssertionError("Failed to reject bool")
+    except ValueError:
+        pass
+
+    try:
+        american_probability(False)
+        raise AssertionError("Failed to reject bool")
+    except ValueError:
+        pass
+
+    # Reject None
+    try:
+        american_probability(None)
+        raise AssertionError("Failed to reject None")
+    except ValueError:
+        pass
+
+    # Reject non-numeric strings
+    try:
+        american_probability("abc")
+        raise AssertionError("Failed to reject non-numeric string")
+    except ValueError:
+        pass
+
+    # Reject complex/other types
+    try:
+        american_probability([100])
+        raise AssertionError("Failed to reject list")
+    except ValueError:
+        pass
+
+    try:
+        american_probability({"val": 100})
+        raise AssertionError("Failed to reject dict")
+    except ValueError:
+        pass
+
+    # --- 5. Precision Check ---
+    # "Do not round output"
+    # We check if the result is exactly the float result of the formula
+    val = 123.456
+    expected = 100 / (val + 100)
+    assert american_probability(val) == expected
+
+```

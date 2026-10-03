@@ -1,0 +1,60 @@
+{
+  "model": "qwen3.6:35b",
+  "created_at": "2026-10-03T07:34:08.069359Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n{\n  \"odds.py\": \"def american_probability(value):\\n    if isinstance(value, bool):\\n        raise ValueError('invalid')\\n    if value is None:\\n        raise ValueError('invalid')\\n    if not isinstance(value, (int, float)):\\n        if isinstance(value, str):\\n            stripped = value.strip()\\n            if stripped == '':\\n                raise ValueError('invalid')\\n            try:\\n                v = float(stripped)\\n            except ValueError:\\n                raise ValueError('invalid')\\n        else:\\n            raise ValueError('invalid')\\n    else:\\n        v = value\\n    from math import isfinite\\n    if not isfinite(v):\\n        raise ValueError('invalid')\\n    if abs(v) < 100:\\n        raise ValueError('invalid')\\n    if v >= 0:\\n        return 100 / (v + 100)\\n    else:\\n        return -v / (-v + 100)\",\n  \"selection.py\": \"from datetime import datetime, timezone\\nfrom odds import american_probability\\n\\ndef select_latest(rows, asof):\\n    if not isinstance(asof, datetime) or asof.tzinfo is None:\\n        raise ValueError('asof must be a timezone-aware datetime')\\n    \\n    valid_candidates = []\\n    \\n    for row in rows:\\n        # Must be a dict\\n        if not isinstance(row, dict):\\n            continue\\n        \\n        # Check required keys exist and are strings\\n        if 'id' not in row or 'odds' not in row or 'observed_at' not in row or 'expires_at' not in row:\\n            continue\\n        \\n        rid = row['id']\\n        odds_val = row['odds']\\n        observed_str = row['observed_at']\\n        expires_str = row['expires_at']\\n        \\n        # id must be a non-empty string\\n        if not isinstance(rid, str) or rid == '':\\n            continue\\n        \\n        # Parse observed_at\\n        try:\\n            obs_str = observed_str.replace('Z', '+00:00')\\n            t_observed = datetime.fromisoformat(obs_str)\\n        except (ValueError, TypeError):\\n            continue\\n        \\n        if t_observed.tzinfo is None:\\n            continue\\n        \\n        # Parse expires_at\\n        try:\\n            exp_str = expires_str.replace('Z', '+00:00')\\n            t_expires = datetime.fromisoformat(exp_str)\\n        except (ValueError, TypeError):\\n            continue\\n        \\n        if t_expires.tzinfo is None:\\n            continue\\n        \\n        # Check observed_at < expires_at\\n        if not (t_observed < t_expires):\\n            continue\\n        \\n        # Check observed_at <= asof < expires_at\\n        if not (t_observed <= asof < t_expires):\\n            continue\\n        \\n        # Validate odds\\n        try:\\n            prob = american_probability(odds_val)\\n        except ValueError:\\n            continue\\n        \\n        # Store original row and computed probability for sorting/reference\\n        # We need to return the ORIGINAL eligible dict.\\n        # To avoid mutation, we keep a reference. But the contract says \\\"Do not mutate any input\\\".\\n        # The buggy code mutated the input by adding 'probability'. We must NOT do that.\\n        # We just need to identify the correct row.\\n        valid_candidates.append((t_observed, rid, row))\\n    \\n    if not valid_candidates:\\n        return None\\n    \\n    # Sort by latest observed_at (descending), then lexicographically smallest id (ascending)\\n    # key for sorting: (-observed_at, id) but since we want max observed_at first,\\n    # we can sort by observed_at descending and id ascending.\\n    # Python's sort is stable. Let's use a key that puts the desired order first.\\n    # We want max observed_at. So we can negate or reverse.\\n    # Let's sort with key=lambda x: (-x[0].timestamp(), x[1])\\n    # But timestamps might lose precision or have issues with different timezones?\\n    # Better to compare datetimes directly. Since we need the \\\"latest\\\", we want max observed_at.\\n    # Tie-breaker: min id.\\n    \\n    # Find the max observed_at\\n    max_observed = max(c[0] for c in valid_candidates)\\n    \\n    # Filter candidates with that max observed_at\\n    latest_candidates = [c for c in valid_candidates if c[0] == max_observed]\\n    \\n    # Pick the one with lexicographically smallest id\\n    latest_candidates.sort(key=lambda x: x[1])\\n    \\n    return latest_candidates[0][2]\"\n}\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 13717855167,
+  "load_duration": 5060314959,
+  "prompt_eval_count": 469,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 192103000,
+  "eval_count": 1088,
+  "eval_duration": 8459947000,
+  "memory_samples": [
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    },
+    {
+      "size": 22445692025,
+      "size_vram": 22445692025,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 14.047752708022017
+}

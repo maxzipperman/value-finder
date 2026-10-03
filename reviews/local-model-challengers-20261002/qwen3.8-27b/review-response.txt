@@ -1,0 +1,20 @@
+```json
+[
+  {
+    "line": 6,
+    "explanation": "The parsed 'update' timestamp is never used to enforce the required constraint that last_update must be at or before decision AND at or before snapshot; rows violating this are not filtered out."
+  },
+  {
+    "line": 11,
+    "explanation": "The formula 100 / (odds + 100) is only valid for positive odds; for negative odds it yields a negative or zero probability (e.g. odds=-200 gives -1) or a ZeroDivisionError (odds=-100), violating the requirement for a valid probability."
+  },
+  {
+    "line": 11,
+    "explanation": "Assigning r['probability'] mutates the caller's input dictionary, violating the no-input-mutation requirement; a new key is written into the original row object."
+  },
+  {
+    "line": 13,
+    "explanation": "Sorting ascending by (snapshot, id) and then selecting eligible[0] returns the earliest snapshot with the smallest id, but the requirement calls for the latest snapshot at or before decision with smallest id on ties; the sort order is inverted."
+  }
+]
+```

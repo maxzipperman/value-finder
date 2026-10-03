@@ -1,0 +1,136 @@
+{
+  "model": "gpt-oss:20b",
+  "created_at": "2026-10-03T07:17:19.311158Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n{\n  \"odds.py\": \"import math\\nfrom typing import Union\\n\\n\\ndef american_probability(value: Union[int, float, str]) -> float:\\n    \\\"\\\"\\\"Return the implied probability for American odds.\\n\\n    Accepts ``int``, ``float`` or a numeric string (leading/trailing\\n    whitespace allowed).  Raises ``ValueError`` for any other type, for\\n    ``None`` or ``bool``, for non\u2011numeric strings, for non\u2011finite values\\n    or for values whose absolute value is less than 100.\\n\\n    The calculation follows the standard formula:\\n    * positive odds: ``100 / (value + 100)``\\n    * negative odds: ``-value / (-value + 100)``\\n    \\\"\\\"\\\"\\n    # Reject bools explicitly \u2013 they are instances of int.\\n    if isinstance(value, bool):\\n        raise ValueError(\\\"bool is not a valid odds value\\\")\\n    if value is None:\\n        raise ValueError(\\\"None is not a valid odds value\\\")\\n\\n    if isinstance(value, (int, float)):\\n        num = value\\n    elif isinstance(value, str):\\n        stripped = value.strip()\\n        if stripped == \\\"\\\":\\n            raise ValueError(\\\"empty string is not a valid odds value\\\")\\n        try:\\n            num = float(stripped)\\n        except ValueError as exc:\\n            raise ValueError(f\\\"string '{value}' is not a numeric odds value\\\") from exc\\n    else:\\n        raise ValueError(f\\\"Unsupported type {type(value).__name__} for odds value\\\")\\n\\n    if not math.isfinite(num):\\n        raise ValueError(\\\"odds value must be finite\\\")\\n    if abs(num) < 100:\\n        raise ValueError(\\\"odds value must have absolute value >= 100\\\")\\n\\n    if num > 0:\\n        return 100.0 / (num + 100.0)\\n    else:\\n        return -num / (-num + 100.0)\\n\",\n  \"selection.py\": \"import datetime\\nfrom typing import Iterable, Dict, Any, Optional\\nfrom odds import american_probability\\n\\n\\ndef _parse_iso(dt_str: str) -> datetime.datetime:\\n    \\\"\\\"\\\"Parse an ISO\u20118601 datetime string that includes timezone info.\\n\\n    Accepts strings ending with ``Z`` as UTC.  Raises ``ValueError`` if\\n    the string cannot be parsed or if the resulting ``datetime`` is\\n    naive.\\n    \\\"\\\"\\\"\\n    if not isinstance(dt_str, str):\\n        raise ValueError(\\\"datetime must be a string\\\")\\n    s = dt_str.strip()\\n    if s.endswith(\\\"Z\\\"):\\n        s = s[:-1] + \\\"+00:00\\\"\\n    try:\\n        dt = datetime.datetime.fromisoformat(s)\\n    except Exception as exc:\\n        raise ValueError(f\\\"invalid ISO datetime: {dt_str}\\\") from exc\\n    if dt.tzinfo is None:\\n        raise ValueError(f\\\"datetime is naive: {dt_str}\\\")\\n    return dt\\n\\n\\ndef select_latest(rows: Iterable[Dict[str, Any]], asof: datetime.datetime) -> Optional[Dict[str, Any]]:\\n    \\\"\\\"\\\"Return the original eligible row with the latest ``observed_at``.\\n\\n    * ``asof`` must be a timezone\u2011aware ``datetime``; otherwise a\\n      ``ValueError`` is raised.\\n    * A row is eligible if:\\n      - ``id`` is a non\u2011empty string.\\n      - ``odds`` is a valid American odds value.\\n      - ``observed_at`` and ``expires_at`` are timezone\u2011aware ISO\\n        timestamps with ``observed_at < expires_at``.\\n      - ``observed_at <= asof < expires_at``.\\n    * If multiple rows share the same latest ``observed_at``, the one\\n      with the lexicographically smallest ``id`` is chosen.\\n    * ``None`` is returned if no rows are eligible.\\n    \\\"\\\"\\\"\\n    if not isinstance(asof, datetime.datetime) or asof.tzinfo is None:\\n        raise ValueError(\\\"asof must be a timezone-aware datetime\\\")\\n\\n    best_row: Optional[Dict[str, Any]] = None\\n    best_time: Optional[datetime.datetime] = None\\n    best_id: Optional[str] = None\\n\\n    for row in rows:\\n        try:\\n            # Validate id\\n            row_id = row.get(\\\"id\\\")\\n            if not isinstance(row_id, str) or row_id == \\\"\\\":\\n                raise ValueError\\n            # Validate odds \u2013 will raise if invalid\\n            american_probability(row.get(\\\"odds\\\"))\\n            # Parse timestamps\\n            observed_at = _parse_iso(row.get(\\\"observed_at\\\", \\\"\\\"))\\n            expires_at = _parse_iso(row.get(\\\"expires_at\\\", \\\"\\\"))\\n            if observed_at >= expires_at:\\n                raise ValueError\\n            if not (observed_at <= asof < expires_at):\\n                continue\\n        except Exception:\\n            # Skip malformed or ineligible rows\\n            continue\\n\\n        if (\\n            best_row is None\\n            or observed_at > best_time\\n            or (observed_at == best_time and row_id < best_id)\\n        ):\\n            best_row = row\\n            best_time = observed_at\\n            best_id = row_id\\n\\n    return best_row\\n\"\n}\n```",
+    "thinking": "We need to produce JSON object mapping filenames to source strings. Provide code for odds.py and selection.py. Must use standard library only. Implement american_probability with validation. Accept int, float, numeric strings with whitespace. Reject bool, None, nonnumeric strings, other types. Only finite values with absolute value >=100. For positive odds: 100/(value+100). For negative odds: -value/(-value+100). Return float. No rounding.\n\nImplement select_latest(rows, asof). asof must be timezone-aware datetime; else ValueError. rows is iterable of dicts. Each row must have string id, odds, observed_at, expires_at. Validate: id nonempty string; odds valid per american_probability? Actually \"valid odds\" meaning numeric string or number? Should use american_probability to validate? But we need to parse odds? The requirement: \"valid odds\" likely means numeric string or number that passes american_probability. But we don't need to use odds value for selection. So we can just check that odds can be parsed by american_probability. Also observed_at and expires_at must be timezone-aware ISO timestamps. Use datetime.fromisoformat? It supports offset. But need to parse timezone-aware. Use datetime.fromisoformat and check tzinfo not None. Also ensure observed_at < expires_at. Then check observed_at <= asof < expires_at. Keep eligible rows. Then select latest observed_at. If tie, lexicographically smallest id. Return original dict (not mutated). None if no eligible rows.\n\nNeed to not mutate input. So we can copy row? But returning original dict is fine as long as we don't modify it. We just compare.\n\nEdge cases: asof naive -> ValueError. asof timezone-aware but not datetime? Should raise ValueError. Accept datetime with tzinfo.\n\nParsing ISO: datetime.fromisoformat handles 'Z'? Actually Python 3.11: fromisoformat does not support 'Z', but we can replace 'Z' with '+00:00'. So implement helper parse_iso(dt_str). Accept string, strip whitespace. If endswith 'Z', replace. Then datetime.fromisoformat. Ensure tzinfo not None.\n\nAlso need to handle numeric strings for odds: use american_probability to validate. But american_probability expects numeric types or numeric strings. So we can call it; if it raises ValueError, row invalid.\n\nAlso need to ensure observed_at <= asof < expires_at. Use comparison of datetime objects.\n\nReturn None if no eligible rows.\n\nAlso tie: latest observed_at. If multiple rows with same observed_at, choose lexicographically smallest id. So we can iterate, keep best row.\n\nImplementation details: In selection.py, import american_probability from odds. Use typing.\n\nReturn JSON object mapping filenames to source strings. Provide code as string. Ensure no extra whitespace? It's okay.\n\nLet's craft code.\n\nOdds.py:\n\n```\nimport math\nfrom typing import Union\n\ndef american_probability(value: Union[int, float, str]) -> float:\n    \"\"\"\n    Convert American odds to implied probability.\n    Accepts int, float, or numeric string (with optional surrounding whitespace).\n    Raises ValueError for invalid inputs.\n    \"\"\"\n    if isinstance(value, bool):\n        raise ValueError(\"bool is not a valid odds value\")\n    if value is None:\n        raise ValueError(\"None is not a valid odds value\")\n    if isinstance(value, (int, float)):\n        num = value\n    elif isinstance(value, str):\n        stripped = value.strip()\n        if stripped == '':\n            raise ValueError(\"empty string is not a valid odds value\")\n        try:\n            num = float(stripped)\n        except ValueError:\n            raise ValueError(f\"string '{value}' is not a numeric odds value\")\n    else:\n        raise ValueError(f\"Unsupported type {type(value).__name__} for odds value\")\n\n    if not math.isfinite(num):\n        raise ValueError(\"odds value must be finite\")\n    if abs(num) < 100:\n        raise ValueError(\"odds value must have absolute value >= 100\")\n\n    if num > 0:\n        return 100.0 / (num + 100.0)\n    else:\n        return -num / (-num + 100.0)\n```\n\nNeed to ensure not rounding. Good.\n\nSelection.py:\n\n```\nimport datetime\nfrom typing import Iterable, Dict, Any, Optional\nfrom odds import american_probability\n\ndef _parse_iso(dt_str: str) -> datetime.datetime:\n    \"\"\"\n    Parse an ISO 8601 datetime string with timezone information.\n    Accepts strings ending with 'Z' as UTC.\n    Raises ValueError if parsing fails or datetime is naive.\n    \"\"\"\n    if not isinstance(dt_str, str):\n        raise ValueError(\"datetime must be a string\")\n    s = dt_str.strip()\n    if s.endswith('Z'):\n        s = s[:-1] + '+00:00'\n    try:\n        dt = datetime.datetime.fromisoformat(s)\n    except Exception as e:\n        raise ValueError(f\"invalid ISO datetime: {dt_str}\") from e\n    if dt.tzinfo is None:\n        raise ValueError(f\"datetime is naive: {dt_str}\")\n    return dt\n\ndef select_latest(rows: Iterable[Dict[str, Any]], asof: datetime.datetime) -> Optional[Dict[str, Any]]:\n    \"\"\"\n    Return the original eligible row with the latest observed_at.\n    Tie-breaking: lexicographically smallest id.\n    Return None if no eligible rows.\n    \"\"\"\n    if not isinstance(asof, datetime.datetime) or asof.tzinfo is None:\n        raise ValueError(\"asof must be a timezone-aware datetime\")\n\n    best_row: Optional[Dict[str, Any]] = None\n    best_time: Optional[datetime.datetime] = None\n    best_id: Optional[str] = None\n\n    for row in rows:\n        try:\n            # Validate id\n            row_id = row.get('id')\n            if not isinstance(row_id, str) or row_id == '':\n                raise ValueError\n            # Validate odds\n            odds_val = row.get('odds')\n            american_probability(odds_val)  # will raise if invalid\n            # Parse timestamps\n            observed_at = _parse_iso(row.get('observed_at', ''))\n            expires_at = _parse_iso(row.get('expires_at', ''))\n            if observed_at >= expires_at:\n                raise ValueError\n            if not (observed_at <= asof < expires_at):\n                continue\n        except Exception:\n            continue  # skip malformed rows\n\n        if best_row is None or observed_at > best_time or (observed_at == best_time and row_id < best_id):\n            best_row = row\n            best_time = observed_at\n            best_id = row_id\n\n    return best_row\n```\n\nNeed to ensure we don't mutate input. We don't modify row.\n\nEdge: row.get('observed_at', '') may be None; _parse_iso expects str; will raise ValueError.\n\nReturn None if no eligible rows.\n\nAlso ensure we don't import datetime incorrectly.\n\nReturn JSON mapping.\n\nLet's produce final JSON."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 27082108959,
+  "load_duration": 3073777000,
+  "prompt_eval_count": 345,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 329261000,
+  "eval_count": 2673,
+  "eval_duration": 23665336000,
+  "memory_samples": [
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    },
+    {
+      "size": 12866111405,
+      "size_vram": 12866111405,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 27.121898374985904
+}

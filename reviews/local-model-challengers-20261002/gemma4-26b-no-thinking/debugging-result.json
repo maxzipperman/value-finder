@@ -1,0 +1,50 @@
+{
+  "model": "gemma4:26b",
+  "created_at": "2026-10-03T07:34:40.99752Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n{\n  \"odds.py\": \"from math import isfinite\\n\\ndef american_probability(value):\\n    if isinstance(value, bool) or value is None:\\n        raise ValueError('invalid type')\\n    try:\\n        v = float(value)\\n    except (TypeError, ValueError):\\n        raise ValueError('invalid numeric value')\\n    if not isfinite(v) or abs(v) < 100:\\n        raise ValueError('value out of range')\\n    if v > 0:\\n        return 100 / (v + 100)\\n    else:\\n        return -v / (-v + 100)\",\n  \"selection.py\": \"from datetime import datetime\\nfrom odds import american_probability\\n\\ndef select_latest(rows, asof):\\n    if asof.tzinfo is None:\\n        raise ValueError('asof must be timezone-aware')\\n    \\n    eligible = []\\n    for row in rows:\\n        try:\\n            # Validate row structure and types\\n            if not isinstance(row, dict):\\n                continue\\n            \\n            row_id = row.get('id')\\n            if not isinstance(row_id, str) or not row_id:\\n                continue\\n                \\n            odds_raw = row.get('odds')\\n            # Check if odds is a bool (which is an int subclass)\\n            if isinstance(odds_raw, bool):\\n                continue\\n            # This will trigger ValueError in american_probability if invalid\\n            prob = american_probability(odds_raw)\\n            \\n            obs_str = row.get('observed_at')\\n            exp_str = row.get('expires_at')\\n            if not isinstance(obs_str, str) or not isinstance(exp_str, str):\\n                continue\\n                \\n            obs_dt = datetime.fromisoformat(obs_str.replace('Z', '+00:00'))\\n            exp_dt = datetime.fromisoformat(exp_str.replace('Z', '+00:00'))\\n            \\n            if obs_dt.tzinfo is None or exp_dt.tzinfo is None:\\n                continue\\n            \\n            # Logic: observed_at <= asof < expires_at AND observed_at < expires_at\\n            if obs_dt <= asof < exp_dt and obs_dt < exp_dt:\\n                eligible.append(row)\\n        except (ValueError, TypeError, KeyError):\\n            continue\\n            \\n    if not eligible:\\n        return None\\n\\n    # Sort by observed_at descending (latest), then id ascending (lexicographical)\\n    # We use a custom key to handle the 'latest' requirement\\n    # Since we want the latest observed_at, we sort by -timestamp or reverse\\n    # But we need the tie-breaker to be smallest id.\\n    \\n    def sort_key(r):\\n        obs_dt = datetime.fromisoformat(r['observed_at'].replace('Z', '+00:00'))\\n        return (obs_dt, r['id'])\\n\\n    # To get latest observed_at and smallest id:\\n    # We can sort by observed_at descending, then id ascending.\\n    # Python's sort is stable. \\n    # 1. Sort by id ascending\\n    # 2. Sort by observed_at descending\\n    \\n    sorted_rows = sorted(eligible, key=lambda r: r['id'])\\n    sorted_rows.sort(key=lambda r: datetime.fromisoformat(r['observed_at'].replace('Z', '+00:00')), reverse=True)\\n    \\n    return sorted_rows[0]\"\n}\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 12293849417,
+  "load_duration": 6373517917,
+  "prompt_eval_count": 497,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 225695000,
+  "eval_count": 870,
+  "eval_duration": 5688043000,
+  "memory_samples": [
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    },
+    {
+      "size": 1286351092,
+      "size_vram": 1286351092,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 13.049506625015056
+}

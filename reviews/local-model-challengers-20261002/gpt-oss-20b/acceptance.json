@@ -1,0 +1,677 @@
+{
+  "multifile": [
+    {
+      "case": "valid odds 100",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -100",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds 110",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -110",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds 250",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -250",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds 100.5",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -100.5",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds ' -110 '",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds '+250'",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds '1e3'",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds True",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds False",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds None",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 0",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 99",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds -99",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 'oops'",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds ''",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds nan",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds inf",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds '-inf'",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds []",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds {}",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds (100+0j)",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "group": "invalid odds",
+      "passed": false,
+      "error": "OverflowError: int too large to convert to float"
+    },
+    {
+      "case": "empty",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid negative",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid positive",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "at observed",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "at expiry",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "future",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "latest",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "tie",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "offset equivalent tie",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "bad plus valid",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at None",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at 'bad'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at '2025-01-01T11:00:00'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at 3",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at None",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at 'bad'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at '2025-01-01T11:00:00'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at 3",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id ''",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id None",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id 3",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds nan",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds -99",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at '2025-01-01T10:00:00Z'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof None",
+      "group": "invalid asof",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 1, 1, 12, 0)",
+      "group": "invalid asof",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof '2025-01-01T12:00:00Z'",
+      "group": "invalid asof",
+      "passed": true,
+      "error": null
+    }
+  ],
+  "regression": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "AssertionError: Incorrect result for input '1e3': expected 0.9090909090909091, got 0.09090909090909091"
+    }
+  ],
+  "review": [
+    {
+      "case": "future/update-after-snapshot not gated",
+      "passed": true
+    },
+    {
+      "case": "negative odds wrong probability",
+      "passed": true
+    },
+    {
+      "case": "input mutated",
+      "passed": true
+    },
+    {
+      "case": "oldest snapshot chosen",
+      "passed": true
+    },
+    {
+      "case": "all findings point to seeded causes",
+      "passed": true
+    }
+  ],
+  "extraction": [
+    {
+      "case": "exact fact extraction and schema",
+      "passed": true
+    }
+  ],
+  "debugging": [
+    {
+      "case": "valid odds 100",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -100",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds 110",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -110",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds 250",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -250",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds 100.5",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds -100.5",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds ' -110 '",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds '+250'",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid odds '1e3'",
+      "group": "valid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds True",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds False",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds None",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 0",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 99",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds -99",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 'oops'",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds ''",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds nan",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds inf",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds '-inf'",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds []",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds {}",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds (100+0j)",
+      "group": "invalid odds",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid odds 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "group": "invalid odds",
+      "passed": false,
+      "error": "OverflowError: int too large to convert to float"
+    },
+    {
+      "case": "empty",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid negative",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "valid positive",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "at observed",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "at expiry",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "future",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "latest",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "tie",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "offset equivalent tie",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "bad plus valid",
+      "group": "eligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at None",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at 'bad'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at '2025-01-01T11:00:00'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "observed_at 3",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at None",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at 'bad'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at '2025-01-01T11:00:00'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at 3",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id ''",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id None",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "id 3",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds nan",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "odds -99",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "expires_at '2025-01-01T10:00:00Z'",
+      "group": "ineligible selection",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof None",
+      "group": "invalid asof",
+      "passed": false,
+      "error": "AttributeError: 'NoneType' object has no attribute 'tzinfo'"
+    },
+    {
+      "case": "invalid asof datetime.datetime(2025, 1, 1, 12, 0)",
+      "group": "invalid asof",
+      "passed": true,
+      "error": null
+    },
+    {
+      "case": "invalid asof '2025-01-01T12:00:00Z'",
+      "group": "invalid asof",
+      "passed": false,
+      "error": "AttributeError: 'str' object has no attribute 'tzinfo'"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "allowed": "type(value).__name__ for pure exception labels after manual inspection",
+  "blocked": [
+    "import os",
+    "open(\"x\")",
+    "getattr(object,\"x\")",
+    "object.__subclasses__()",
+    "type(1).__dict__"
+  ]
+}

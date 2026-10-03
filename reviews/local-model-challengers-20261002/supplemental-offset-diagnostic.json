@@ -1,0 +1,12 @@
+{
+  "qwen3.6-35b-no-thinking": {
+    "correct_accepted": true,
+    "generic_offset_relabel_bug_caught": true,
+    "error": "AssertionError: Expected 2026-09-29 09:30:07+00:00, got 2026-09-29 14:30:07+00:00"
+  },
+  "gemma4-26b-no-thinking": {
+    "correct_accepted": true,
+    "generic_offset_relabel_bug_caught": true,
+    "error": "AssertionError: "
+  }
+}

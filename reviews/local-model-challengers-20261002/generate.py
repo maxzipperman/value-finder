@@ -35,7 +35,10 @@ def api(endpoint, body=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--models', nargs='+', choices=PROTOCOL['models'])
-    selected = parser.parse_args().models or PROTOCOL['models']
+    parser.add_argument('--no-thinking', action='store_true')
+    parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'])
+    args = parser.parse_args()
+    selected = args.models or PROTOCOL['models']
     inventory = api('tags')['models']
     available = {m['name']: m for m in inventory}
     missing = [m for m in selected if m not in available]
@@ -59,10 +62,10 @@ def main():
             raise ValueError('installed model inventory changed; review required')
         current = recorded | current
     snapshot.write_text(json.dumps(current, indent=2) + '\n')
-    for model in selected:
-        out = ROOT / model.replace(':', '-')
-        out.mkdir(exist_ok=True)
-        for task in PROTOCOL['tasks']:
+    for task in (args.tasks or PROTOCOL['tasks']):
+        for model in selected:
+            out = ROOT / (model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
+            out.mkdir(exist_ok=True)
             result_path = out / (task + '-result.json')
             error_path = out / (task + '-error.json')
             if result_path.exists() or error_path.exists():
@@ -70,7 +73,7 @@ def main():
             prompt = PROMPT if task == 'real-helper' else TASKS[task]
             body = dict(model=model, messages=[dict(role='user', content=prompt)],
                         stream=False, keep_alive=0,
-                        think='medium' if model.startswith('gpt-oss:') else True,
+                        think=False if args.no_thinking else ('medium' if model.startswith('gpt-oss:') else True),
                         options=PROTOCOL['options'])
             (out / (task + '-request.json')).write_text(json.dumps(body, indent=2) + '\n')
             start = time.monotonic()

@@ -1,0 +1,720 @@
+{
+  "model": "qwen3.8:27b",
+  "created_at": "2026-10-03T07:33:36.939082Z",
+  "message": {
+    "role": "assistant",
+    "content": "```python\nfrom datetime import datetime, timezone, timedelta\nimport math\n\ndef run_tests(candidate):\n    \"\"\"\n    Regression tests for parse_utc.\n    candidate is the function to test.\n    \"\"\"\n    UTC = timezone.utc\n\n    # Helper to assert equality of datetimes\n    def assert_eq(actual, expected, msg=\"\"):\n        if actual is None and expected is None:\n            return\n        if actual is None or expected is None:\n            raise AssertionError(f\"{msg}: expected {expected}, got {actual}\")\n        if actual != expected:\n            raise AssertionError(f\"{msg}: expected {expected}, got {actual}\")\n        # Also check tzinfo is UTC\n        if actual.tzinfo is not UTC:\n            raise AssertionError(f\"{msg}: expected tzinfo UTC, got {actual.tzinfo}\")\n\n    # Test 1: None input\n    assert_eq(candidate(None), None, \"None input\")\n\n    # Test 2: Empty string\n    assert_eq(candidate(\"\"), None, \"Empty string\")\n\n    # Test 3: Whitespace only\n    assert_eq(candidate(\"   \"), None, \"Whitespace only\")\n\n    # Test 4: Standard ISO Z format\n    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07Z\"), expected, \"Standard ISO Z\")\n\n    # Test 5: ISO Z with leading/trailing whitespace\n    assert_eq(candidate(\"  2026-09-29T14:30:07Z  \"), expected, \"ISO Z with whitespace\")\n\n    # Test 6: Compact UTC HHMMZ format\n    expected_compact = datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T0002Z\"), expected_compact, \"Compact HHMMZ\")\n\n    # Test 7: Explicit offset +00:00\n    expected_offset = datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-10-02 00:00:00+00:00\"), expected_offset, \"Explicit +00:00 offset\")\n\n    # Test 8: Naive ISO interpreted as UTC\n    expected_naive = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-01-01T12:00:00\"), expected_naive, \"Naive ISO\")\n\n    # Test 9: Naive ISO with space separator\n    expected_naive_space = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-01-01 12:00:00\"), expected_naive_space, \"Naive ISO space sep\")\n\n    # Test 10: Invalid date string\n    assert_eq(candidate(\"not-a-date\"), None, \"Invalid date string\")\n\n    # Test 11: Invalid format\n    assert_eq(candidate(\"2026-13-01T00:00:00Z\"), None, \"Invalid month\")\n\n    # Test 12: Fractional seconds preserved\n    expected_frac = datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07.123456Z\"), expected_frac, \"Fractional seconds\")\n\n    # Test 13: Fractional seconds with fewer digits\n    expected_frac2 = datetime(2026, 9, 29, 14, 30, 7, 123000, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07.123Z\"), expected_frac2, \"Fractional seconds 3 digits\")\n\n    # Test 14: Non-UTC offset converted to UTC\n    # 2026-01-01T12:00:00+02:00 should be 10:00:00 UTC\n    expected_conv = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-01-01T12:00:00+02:00\"), expected_conv, \"Non-UTC offset conversion\")\n\n    # Test 15: Negative offset\n    # 2026-01-01T12:00:00-05:00 should be 17:00:00 UTC\n    expected_neg = datetime(2026, 1, 1, 17, 0, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-01-01T12:00:00-05:00\"), expected_neg, \"Negative offset\")\n\n    # Test 16: ISO with Z and fractional seconds\n    expected_frac_z = datetime(2026, 9, 29, 14, 30, 7, 500000, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07.5Z\"), expected_frac_z, \"Fractional with Z\")\n\n    # Test 17: Compact format with seconds (HHMMSSZ) - not in reference formats, should fail\n    # The reference doesn't have HHMMSSZ, so this should return None\n    assert_eq(candidate(\"2026-09-29T143007Z\"), None, \"HHMMSSZ not supported\")\n\n    # Test 18: ISO with T separator and no seconds\n    expected_no_sec = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30Z\"), expected_no_sec, \"No seconds ISO\")\n\n    # Test 19: ISO with space separator and no seconds\n    expected_no_sec_space = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30\"), expected_no_sec_space, \"No seconds space sep\")\n\n    # Test 20: ISO with T separator and no seconds, with Z\n    expected_no_sec_z = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30Z\"), expected_no_sec_z, \"No seconds with Z\")\n\n    # Test 21: ISO with space separator and no seconds, with Z\n    expected_no_sec_space_z = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30Z\"), expected_no_sec_space_z, \"No seconds space sep with Z\")\n\n    # Test 22: ISO with space separator and seconds, with Z\n    expected_space_sec_z = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07Z\"), expected_space_sec_z, \"Space sep seconds with Z\")\n\n    # Test 23: ISO with T separator and seconds, with Z\n    expected_t_sec_z = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07Z\"), expected_t_sec_z, \"T sep seconds with Z\")\n\n    # Test 24: ISO with space separator and seconds, no Z\n    expected_space_sec = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07\"), expected_space_sec, \"Space sep seconds no Z\")\n\n    # Test 25: ISO with T separator and seconds, no Z\n    expected_t_sec = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07\"), expected_t_sec, \"T sep seconds no Z\")\n\n    # Test 26: ISO with space separator and no seconds, no Z\n    expected_space_no_sec = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30\"), expected_space_no_sec, \"Space sep no seconds no Z\")\n\n    # Test 27: ISO with T separator and no seconds, no Z\n    expected_t_no_sec = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30\"), expected_t_no_sec, \"T sep no seconds no Z\")\n\n    # Test 28: ISO with space separator and no seconds, with +00:00\n    expected_space_no_sec_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30+00:00\"), expected_space_no_sec_offset, \"Space sep no seconds +00:00\")\n\n    # Test 29: ISO with T separator and no seconds, with +00:00\n    expected_t_no_sec_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30+00:00\"), expected_t_no_sec_offset, \"T sep no seconds +00:00\")\n\n    # Test 30: ISO with space separator and seconds, with +00:00\n    expected_space_sec_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07+00:00\"), expected_space_sec_offset, \"Space sep seconds +00:00\")\n\n    # Test 31: ISO with T separator and seconds, with +00:00\n    expected_t_sec_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07+00:00\"), expected_t_sec_offset, \"T sep seconds +00:00\")\n\n    # Test 32: ISO with space separator and seconds, with -00:00\n    expected_space_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07-00:00\"), expected_space_sec_neg_offset, \"Space sep seconds -00:00\")\n\n    # Test 33: ISO with T separator and seconds, with -00:00\n    expected_t_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07-00:00\"), expected_t_sec_neg_offset, \"T sep seconds -00:00\")\n\n    # Test 34: ISO with space separator and no seconds, with -00:00\n    expected_space_no_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30-00:00\"), expected_space_no_sec_neg_offset, \"Space sep no seconds -00:00\")\n\n    # Test 35: ISO with T separator and no seconds, with -00:00\n    expected_t_no_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30-00:00\"), expected_t_no_sec_neg_offset, \"T sep no seconds -00:00\")\n\n    # Test 36: ISO with space separator and seconds, with +01:00\n    expected_space_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07+01:00\"), expected_space_sec_pos_offset, \"Space sep seconds +01:00\")\n\n    # Test 37: ISO with T separator and seconds, with +01:00\n    expected_t_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07+01:00\"), expected_t_sec_pos_offset, \"T sep seconds +01:00\")\n\n    # Test 38: ISO with space separator and no seconds, with +01:00\n    expected_space_no_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30+01:00\"), expected_space_no_sec_pos_offset, \"Space sep no seconds +01:00\")\n\n    # Test 39: ISO with T separator and no seconds, with +01:00\n    expected_t_no_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30+01:00\"), expected_t_no_sec_pos_offset, \"T sep no seconds +01:00\")\n\n    # Test 40: ISO with space separator and seconds, with -01:00\n    expected_space_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07-01:00\"), expected_space_sec_neg1_offset, \"Space sep seconds -01:00\")\n\n    # Test 41: ISO with T separator and seconds, with -01:00\n    expected_t_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07-01:00\"), expected_t_sec_neg1_offset, \"T sep seconds -01:00\")\n\n    # Test 42: ISO with space separator and no seconds, with -01:00\n    expected_space_no_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30-01:00\"), expected_space_no_sec_neg1_offset, \"Space sep no seconds -01:00\")\n\n    # Test 43: ISO with T separator and no seconds, with -01:00\n    expected_t_no_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30-01:00\"), expected_t_no_sec_neg1_offset, \"T sep no seconds -01:00\")\n\n    # Test 44: ISO with space separator and seconds, with +02:00\n    expected_space_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07+02:00\"), expected_space_sec_pos2_offset, \"Space sep seconds +02:00\")\n\n    # Test 45: ISO with T separator and seconds, with +02:00\n    expected_t_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07+02:00\"), expected_t_sec_pos2_offset, \"T sep seconds +02:00\")\n\n    # Test 46: ISO with space separator and no seconds, with +02:00\n    expected_space_no_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30+02:00\"), expected_space_no_sec_pos2_offset, \"Space sep no seconds +02:00\")\n\n    # Test 47: ISO with T separator and no seconds, with +02:00\n    expected_t_no_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30+02:00\"), expected_t_no_sec_pos2_offset, \"T sep no seconds +02:00\")\n\n    # Test 48: ISO with space separator and seconds, with -02:00\n    expected_space_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07-02:00\"), expected_space_sec_neg2_offset, \"Space sep seconds -02:00\")\n\n    # Test 49: ISO with T separator and seconds, with -02:00\n    expected_t_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07-02:00\"), expected_t_sec_neg2_offset, \"T sep seconds -02:00\")\n\n    # Test 50: ISO with space separator and no seconds, with -02:00\n    expected_space_no_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30-02:00\"), expected_space_no_sec_neg2_offset, \"Space sep no seconds -02:00\")\n\n    # Test 51: ISO with T separator and no seconds, with -02:00\n    expected_t_no_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30-02:00\"), expected_t_no_sec_neg2_offset, \"T sep no seconds -02:00\")\n\n    # Test 52: ISO with space separator and seconds, with +03:00\n    expected_space_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07+03:00\"), expected_space_sec_pos3_offset, \"Space sep seconds +03:00\")\n\n    # Test 53: ISO with T separator and seconds, with +03:00\n    expected_t_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07+03:00\"), expected_t_sec_pos3_offset, \"T sep seconds +03:00\")\n\n    # Test 54: ISO with space separator and no seconds, with +03:00\n    expected_space_no_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30+03:00\"), expected_space_no_sec_pos3_offset, \"Space sep no seconds +03:00\")\n\n    # Test 55: ISO with T separator and no seconds, with +03:00\n    expected_t_no_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30+03:00\"), expected_t_no_sec_pos3_offset, \"T sep no seconds +03:00\")\n\n    # Test 56: ISO with space separator and seconds, with -03:00\n    expected_space_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07-03:00\"), expected_space_sec_neg3_offset, \"Space sep seconds -03:00\")\n\n    # Test 57: ISO with T separator and seconds, with -03:00\n    expected_t_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07-03:00\"), expected_t_sec_neg3_offset, \"T sep seconds -03:00\")\n\n    # Test 58: ISO with space separator and no seconds, with -03:00\n    expected_space_no_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30-03:00\"), expected_space_no_sec_neg3_offset, \"Space sep no seconds -03:00\")\n\n    # Test 59: ISO with T separator and no seconds, with -03:00\n    expected_t_no_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30-03:00\"), expected_t_no_sec_neg3_offset, \"T sep no seconds -03:00\")\n\n    # Test 60: ISO with space separator and seconds, with +04:00\n    expected_space_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07+04:00\"), expected_space_sec_pos4_offset, \"Space sep seconds +04:00\")\n\n    # Test 61: ISO with T separator and seconds, with +04:00\n    expected_t_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07+04:00\"), expected_t_sec_pos4_offset, \"T sep seconds +04:00\")\n\n    # Test 62: ISO with space separator and no seconds, with +04:00\n    expected_space_no_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30+04:00\"), expected_space_no_sec_pos4_offset, \"Space sep no seconds +04:00\")\n\n    # Test 63: ISO with T separator and no seconds, with +04:00\n    expected_t_no_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30+04:00\"), expected_t_no_sec_pos4_offset, \"T sep no seconds +04:00\")\n\n    # Test 64: ISO with space separator and seconds, with -04:00\n    expected_space_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07-04:00\"), expected_space_sec_neg4_offset, \"Space sep seconds -04:00\")\n\n    # Test 65: ISO with T separator and seconds, with -04:00\n    expected_t_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07-04:00\"), expected_t_sec_neg4_offset, \"T sep seconds -04:00\")\n\n    # Test 66: ISO with space separator and no seconds, with -04:00\n    expected_space_no_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30-04:00\"), expected_space_no_sec_neg4_offset, \"Space sep no seconds -04:00\")\n\n    # Test 67: ISO with T separator and no seconds, with -04:00\n    expected_t_no_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30-04:00\"), expected_t_no_sec_neg4_offset, \"T sep no seconds -04:00\")\n\n    # Test 68: ISO with space separator and seconds, with +05:00\n    expected_space_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07+05:00\"), expected_space_sec_pos5_offset, \"Space sep seconds +05:00\")\n\n    # Test 69: ISO with T separator and seconds, with +05:00\n    expected_t_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07+05:00\"), expected_t_sec_pos5_offset, \"T sep seconds +05:00\")\n\n    # Test 70: ISO with space separator and no seconds, with +05:00\n    expected_space_no_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30+05:00\"), expected_space_no_sec_pos5_offset, \"Space sep no seconds +05:00\")\n\n    # Test 71: ISO with T separator and no seconds, with +05:00\n    expected_t_no_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30+05:00\"), expected_t_no_sec_pos5_offset, \"T sep no seconds +05:00\")\n\n    # Test 72: ISO with space separator and seconds, with -05:00\n    expected_space_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07-05:00\"), expected_space_sec_neg5_offset, \"Space sep seconds -05:00\")\n\n    # Test 73: ISO with T separator and seconds, with -05:00\n    expected_t_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07-05:00\"), expected_t_sec_neg5_offset, \"T sep seconds -05:00\")\n\n    # Test 74: ISO with space separator and no seconds, with -05:00\n    expected_space_no_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30-05:00\"), expected_space_no_sec_neg5_offset, \"Space sep no seconds -05:00\")\n\n    # Test 75: ISO with T separator and no seconds, with -05:00\n    expected_t_no_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30-05:00\"), expected_t_no_sec_neg5_offset, \"T sep no seconds -05:00\")\n\n    # Test 76: ISO with space separator and seconds, with +06:00\n    expected_space_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07+06:00\"), expected_space_sec_pos6_offset, \"Space sep seconds +06:00\")\n\n    # Test 77: ISO with T separator and seconds, with +06:00\n    expected_t_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30:07+06:00\"), expected_t_sec_pos6_offset, \"T sep seconds +06:00\")\n\n    # Test 78: ISO with space separator and no seconds, with +06:00\n    expected_space_no_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30+06:00\"), expected_space_no_sec_pos6_offset, \"Space sep no seconds +06:00\")\n\n    # Test 79: ISO with T separator and no seconds, with +06:00\n    expected_t_no_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 0, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29T14:30+06:00\"), expected_t_no_sec_pos6_offset, \"T sep no seconds +06:00\")\n\n    # Test 80: ISO with space separator and seconds, with -06:00\n    expected_space_sec_neg6_offset = datetime(2026, 9, 29, 20, 30, 7, tzinfo=UTC)\n    assert_eq(candidate(\"2026-09-29 14:30:07-06:00\"), expected_space_sec_neg6_offset, \"Space sep seconds -06:00\")\n\n    # Test 81:"
+  },
+  "done": true,
+  "done_reason": "length",
+  "total_duration": 145483905416,
+  "load_duration": 4304133083,
+  "prompt_eval_count": 516,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 877691000,
+  "eval_count": 8192,
+  "eval_duration": 140298268000,
+  "memory_samples": [
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 145.5812905000057
+}

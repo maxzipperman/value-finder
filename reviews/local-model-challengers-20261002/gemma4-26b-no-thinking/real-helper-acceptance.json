@@ -1,0 +1,36 @@
+[
+  {
+    "case": "actual helper accepted",
+    "passed": true
+  },
+  {
+    "case": "none_raises",
+    "passed": true,
+    "error": "TypeError: "
+  },
+  {
+    "case": "no_whitespace_strip",
+    "passed": true,
+    "error": "AssertionError: "
+  },
+  {
+    "case": "compact_unsupported",
+    "passed": true,
+    "error": "AssertionError: "
+  },
+  {
+    "case": "offset_relabelled",
+    "passed": false,
+    "error": null
+  },
+  {
+    "case": "invalid_raises",
+    "passed": true,
+    "error": "ValueError: bad timestamp"
+  },
+  {
+    "case": "fractional_seconds_lost",
+    "passed": true,
+    "error": "AssertionError: "
+  }
+]

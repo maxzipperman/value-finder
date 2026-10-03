@@ -20,3 +20,8 @@ Create a compact comparison table by task, including exact caveats, timing and m
 
 
 Owner steering: start both installed Qwen models immediately while the remaining downloads finish. Use generate.py --models qwen3.6:35b qwen3.8:27b. Inventory freezes incrementally per installed model; adding a challenger does not invalidate an existing digest.
+
+
+During the first thinking-enabled Qwen round, multiple tasks exhausted 8192 output tokens. A separate no-thinking round is justified for those failures, using the same prompts and resource caps without feedback. Keep its results in suffixed directories and do not mix the two modes in one score. Source filter inspection permits only the harmless type(value).__name__ form for exception labels; generic dunder/reflection remains blocked (source-filter-validation.json).
+
+Completed October 3: 24 thinking-enabled requests, 12 no-thinking code-writing requests, and two Gemma no-thinking review/extraction requests. All results are separate in README.md and summary.json. A post-result general-offset diagnostic supplements, without changing, the predeclared parser mutation score.

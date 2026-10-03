@@ -1,0 +1,20 @@
+```json
+[
+  {
+    "line": 7,
+    "explanation": "The condition 'snap > decision' fails to ensure 'last_update' is also at or before the decision, which is required by the specification."
+  },
+  {
+    "line": 11,
+    "explanation": "The code mutates the input dictionary by adding/modifying the 'probability' key, violating the 'no input mutation' requirement."
+  },
+  {
+    "line": 13,
+    "explanation": "The sort order for 'snapshot' is ascending, which returns the earliest snapshot instead of the latest snapshot at or before the decision."
+  },
+  {
+    "line": 11,
+    "explanation": "The probability calculation does not account for negative odds, which can result in a zero denominator or invalid probabilities (e.g., if odds is -100)."
+  }
+]
+```

@@ -1,0 +1,101 @@
+```python
+from datetime import datetime, timezone
+
+def run_tests(candidate):
+    """
+    Run regression tests on the candidate parse_utc function.
+    Raises AssertionError if any test fails.
+    """
+    UTC = timezone.utc
+    
+    # Test 1: None input returns None
+    assert candidate(None) is None, "None input should return None"
+    
+    # Test 2: Blank string returns None
+    assert candidate("") is None, "Blank string should return None"
+    
+    # Test 3: Whitespace-only string returns None
+    assert candidate("   ") is None, "Whitespace-only string should return None"
+    
+    # Test 4: Strip outer whitespace from valid input
+    result = candidate("  2026-09-29T14:30:07Z  ")
+    assert result is not None, "Valid input with whitespace should parse"
+    assert result == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC), f"Expected {datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)}, got {result}"
+    
+    # Test 5: Standard ISO Z format
+    result = candidate("2026-09-29T14:30:07Z")
+    assert result is not None, "Standard ISO Z should parse"
+    assert result == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC), f"Expected {datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)}, got {result}"
+    
+    # Test 6: ISO Z without seconds
+    result = candidate("2026-09-29T14:30Z")
+    assert result is not None, "ISO Z without seconds should parse"
+    assert result == datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC), f"Expected {datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)}, got {result}"
+    
+    # Test 7: Compact UTC HHMMZ format
+    result = candidate("2026-09-29T0002Z")
+    assert result is not None, "Compact HHMMZ should parse"
+    assert result == datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC), f"Expected {datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC)}, got {result}"
+    
+    # Test 8: Space-separated date and time with Z
+    result = candidate("2026-10-02 00:00:00Z")
+    assert result is not None, "Space-separated with Z should parse"
+    assert result == datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC), f"Expected {datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)}, got {result}"
+    
+    # Test 9: Space-separated date and time without Z but with explicit offset
+    result = candidate("2026-10-02 00:00:00+00:00")
+    assert result is not None, "Explicit +00:00 should parse"
+    assert result == datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC), f"Expected {datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)}, got {result}"
+    
+    # Test 10: Naive ISO interpreted as UTC
+    result = candidate("2026-09-29T14:30:07")
+    assert result is not None, "Naive ISO should parse as UTC"
+    assert result == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC), f"Expected {datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)}, got {result}"
+    
+    # Test 11: Preserve fractional seconds
+    result = candidate("2026-09-29T14:30:07.123Z")
+    assert result is not None, "Fractional seconds should be preserved"
+    expected = datetime(2026, 9, 29, 14, 30, 7, 123000, tzinfo=UTC)
+    assert result == expected, f"Expected {expected}, got {result}"
+    
+    # Test 12: Invalid input returns None
+    assert candidate("not a date") is None, "Invalid string should return None"
+    
+    # Test 13: Integer input (converted to string) - should fail or handle gracefully
+    # The reference implementation converts to str first, so "123" would be invalid
+    assert candidate(123) is None, "Integer input should return None"
+    
+    # Test 14: Explicit offset other than +00:00 should still work if it's valid ISO
+    result = candidate("2026-09-29T14:30:07+05:00")
+    assert result is not None, "Non-zero offset should parse"
+    # Should be converted to UTC
+    expected_utc = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)
+    assert result == expected_utc, f"Expected {expected_utc}, got {result}"
+    
+    # Test 15: Negative offset
+    result = candidate("2026-09-29T14:30:07-05:00")
+    assert result is not None, "Negative offset should parse"
+    expected_utc = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)
+    assert result == expected_utc, f"Expected {expected_utc}, got {result}"
+    
+    # Test 16: Edge case - midnight UTC
+    result = candidate("2026-01-01T00:00:00Z")
+    assert result is not None, "Midnight should parse"
+    assert result == datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC), f"Expected {datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)}, got {result}"
+    
+    # Test 17: Edge case - end of year
+    result = candidate("2026-12-31T23:59:59Z")
+    assert result is not None, "End of year should parse"
+    assert result == datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC), f"Expected {datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC)}, got {result}"
+    
+    # Test 18: Leap year date
+    result = candidate("2024-02-29T12:00:00Z")
+    assert result is not None, "Leap year date should parse"
+    assert result == datetime(2024, 2, 29, 12, 0, 0, tzinfo=UTC), f"Expected {datetime(2024, 2, 29, 12, 0, 0, tzinfo=UTC)}, got {result}"
+    
+    # Test 19: Non-leap year Feb 29 should fail
+    assert candidate("2023-02-29T12:00:00Z") is None, "Non-leap year Feb 29 should return None"
+    
+    # Test 20: String with only spaces inside (after strip becomes empty)
+    assert candidate(" \t\n ") is None, "Whitespace-only string should return None"
+```

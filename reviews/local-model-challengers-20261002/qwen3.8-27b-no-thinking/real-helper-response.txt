@@ -1,0 +1,340 @@
+```python
+from datetime import datetime, timezone, timedelta
+import math
+
+def run_tests(candidate):
+    """
+    Regression tests for parse_utc.
+    candidate is the function to test.
+    """
+    UTC = timezone.utc
+
+    # Helper to assert equality of datetimes
+    def assert_eq(actual, expected, msg=""):
+        if actual is None and expected is None:
+            return
+        if actual is None or expected is None:
+            raise AssertionError(f"{msg}: expected {expected}, got {actual}")
+        if actual != expected:
+            raise AssertionError(f"{msg}: expected {expected}, got {actual}")
+        # Also check tzinfo is UTC
+        if actual.tzinfo is not UTC:
+            raise AssertionError(f"{msg}: expected tzinfo UTC, got {actual.tzinfo}")
+
+    # Test 1: None input
+    assert_eq(candidate(None), None, "None input")
+
+    # Test 2: Empty string
+    assert_eq(candidate(""), None, "Empty string")
+
+    # Test 3: Whitespace only
+    assert_eq(candidate("   "), None, "Whitespace only")
+
+    # Test 4: Standard ISO Z format
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07Z"), expected, "Standard ISO Z")
+
+    # Test 5: ISO Z with leading/trailing whitespace
+    assert_eq(candidate("  2026-09-29T14:30:07Z  "), expected, "ISO Z with whitespace")
+
+    # Test 6: Compact UTC HHMMZ format
+    expected_compact = datetime(2026, 9, 29, 0, 2, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T0002Z"), expected_compact, "Compact HHMMZ")
+
+    # Test 7: Explicit offset +00:00
+    expected_offset = datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-10-02 00:00:00+00:00"), expected_offset, "Explicit +00:00 offset")
+
+    # Test 8: Naive ISO interpreted as UTC
+    expected_naive = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-01-01T12:00:00"), expected_naive, "Naive ISO")
+
+    # Test 9: Naive ISO with space separator
+    expected_naive_space = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-01-01 12:00:00"), expected_naive_space, "Naive ISO space sep")
+
+    # Test 10: Invalid date string
+    assert_eq(candidate("not-a-date"), None, "Invalid date string")
+
+    # Test 11: Invalid format
+    assert_eq(candidate("2026-13-01T00:00:00Z"), None, "Invalid month")
+
+    # Test 12: Fractional seconds preserved
+    expected_frac = datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07.123456Z"), expected_frac, "Fractional seconds")
+
+    # Test 13: Fractional seconds with fewer digits
+    expected_frac2 = datetime(2026, 9, 29, 14, 30, 7, 123000, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07.123Z"), expected_frac2, "Fractional seconds 3 digits")
+
+    # Test 14: Non-UTC offset converted to UTC
+    # 2026-01-01T12:00:00+02:00 should be 10:00:00 UTC
+    expected_conv = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-01-01T12:00:00+02:00"), expected_conv, "Non-UTC offset conversion")
+
+    # Test 15: Negative offset
+    # 2026-01-01T12:00:00-05:00 should be 17:00:00 UTC
+    expected_neg = datetime(2026, 1, 1, 17, 0, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-01-01T12:00:00-05:00"), expected_neg, "Negative offset")
+
+    # Test 16: ISO with Z and fractional seconds
+    expected_frac_z = datetime(2026, 9, 29, 14, 30, 7, 500000, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07.5Z"), expected_frac_z, "Fractional with Z")
+
+    # Test 17: Compact format with seconds (HHMMSSZ) - not in reference formats, should fail
+    # The reference doesn't have HHMMSSZ, so this should return None
+    assert_eq(candidate("2026-09-29T143007Z"), None, "HHMMSSZ not supported")
+
+    # Test 18: ISO with T separator and no seconds
+    expected_no_sec = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30Z"), expected_no_sec, "No seconds ISO")
+
+    # Test 19: ISO with space separator and no seconds
+    expected_no_sec_space = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30"), expected_no_sec_space, "No seconds space sep")
+
+    # Test 20: ISO with T separator and no seconds, with Z
+    expected_no_sec_z = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30Z"), expected_no_sec_z, "No seconds with Z")
+
+    # Test 21: ISO with space separator and no seconds, with Z
+    expected_no_sec_space_z = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30Z"), expected_no_sec_space_z, "No seconds space sep with Z")
+
+    # Test 22: ISO with space separator and seconds, with Z
+    expected_space_sec_z = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07Z"), expected_space_sec_z, "Space sep seconds with Z")
+
+    # Test 23: ISO with T separator and seconds, with Z
+    expected_t_sec_z = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07Z"), expected_t_sec_z, "T sep seconds with Z")
+
+    # Test 24: ISO with space separator and seconds, no Z
+    expected_space_sec = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07"), expected_space_sec, "Space sep seconds no Z")
+
+    # Test 25: ISO with T separator and seconds, no Z
+    expected_t_sec = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07"), expected_t_sec, "T sep seconds no Z")
+
+    # Test 26: ISO with space separator and no seconds, no Z
+    expected_space_no_sec = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30"), expected_space_no_sec, "Space sep no seconds no Z")
+
+    # Test 27: ISO with T separator and no seconds, no Z
+    expected_t_no_sec = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30"), expected_t_no_sec, "T sep no seconds no Z")
+
+    # Test 28: ISO with space separator and no seconds, with +00:00
+    expected_space_no_sec_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30+00:00"), expected_space_no_sec_offset, "Space sep no seconds +00:00")
+
+    # Test 29: ISO with T separator and no seconds, with +00:00
+    expected_t_no_sec_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30+00:00"), expected_t_no_sec_offset, "T sep no seconds +00:00")
+
+    # Test 30: ISO with space separator and seconds, with +00:00
+    expected_space_sec_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07+00:00"), expected_space_sec_offset, "Space sep seconds +00:00")
+
+    # Test 31: ISO with T separator and seconds, with +00:00
+    expected_t_sec_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07+00:00"), expected_t_sec_offset, "T sep seconds +00:00")
+
+    # Test 32: ISO with space separator and seconds, with -00:00
+    expected_space_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07-00:00"), expected_space_sec_neg_offset, "Space sep seconds -00:00")
+
+    # Test 33: ISO with T separator and seconds, with -00:00
+    expected_t_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07-00:00"), expected_t_sec_neg_offset, "T sep seconds -00:00")
+
+    # Test 34: ISO with space separator and no seconds, with -00:00
+    expected_space_no_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30-00:00"), expected_space_no_sec_neg_offset, "Space sep no seconds -00:00")
+
+    # Test 35: ISO with T separator and no seconds, with -00:00
+    expected_t_no_sec_neg_offset = datetime(2026, 9, 29, 14, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30-00:00"), expected_t_no_sec_neg_offset, "T sep no seconds -00:00")
+
+    # Test 36: ISO with space separator and seconds, with +01:00
+    expected_space_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07+01:00"), expected_space_sec_pos_offset, "Space sep seconds +01:00")
+
+    # Test 37: ISO with T separator and seconds, with +01:00
+    expected_t_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07+01:00"), expected_t_sec_pos_offset, "T sep seconds +01:00")
+
+    # Test 38: ISO with space separator and no seconds, with +01:00
+    expected_space_no_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30+01:00"), expected_space_no_sec_pos_offset, "Space sep no seconds +01:00")
+
+    # Test 39: ISO with T separator and no seconds, with +01:00
+    expected_t_no_sec_pos_offset = datetime(2026, 9, 29, 13, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30+01:00"), expected_t_no_sec_pos_offset, "T sep no seconds +01:00")
+
+    # Test 40: ISO with space separator and seconds, with -01:00
+    expected_space_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07-01:00"), expected_space_sec_neg1_offset, "Space sep seconds -01:00")
+
+    # Test 41: ISO with T separator and seconds, with -01:00
+    expected_t_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07-01:00"), expected_t_sec_neg1_offset, "T sep seconds -01:00")
+
+    # Test 42: ISO with space separator and no seconds, with -01:00
+    expected_space_no_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30-01:00"), expected_space_no_sec_neg1_offset, "Space sep no seconds -01:00")
+
+    # Test 43: ISO with T separator and no seconds, with -01:00
+    expected_t_no_sec_neg1_offset = datetime(2026, 9, 29, 15, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30-01:00"), expected_t_no_sec_neg1_offset, "T sep no seconds -01:00")
+
+    # Test 44: ISO with space separator and seconds, with +02:00
+    expected_space_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07+02:00"), expected_space_sec_pos2_offset, "Space sep seconds +02:00")
+
+    # Test 45: ISO with T separator and seconds, with +02:00
+    expected_t_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07+02:00"), expected_t_sec_pos2_offset, "T sep seconds +02:00")
+
+    # Test 46: ISO with space separator and no seconds, with +02:00
+    expected_space_no_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30+02:00"), expected_space_no_sec_pos2_offset, "Space sep no seconds +02:00")
+
+    # Test 47: ISO with T separator and no seconds, with +02:00
+    expected_t_no_sec_pos2_offset = datetime(2026, 9, 29, 12, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30+02:00"), expected_t_no_sec_pos2_offset, "T sep no seconds +02:00")
+
+    # Test 48: ISO with space separator and seconds, with -02:00
+    expected_space_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07-02:00"), expected_space_sec_neg2_offset, "Space sep seconds -02:00")
+
+    # Test 49: ISO with T separator and seconds, with -02:00
+    expected_t_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07-02:00"), expected_t_sec_neg2_offset, "T sep seconds -02:00")
+
+    # Test 50: ISO with space separator and no seconds, with -02:00
+    expected_space_no_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30-02:00"), expected_space_no_sec_neg2_offset, "Space sep no seconds -02:00")
+
+    # Test 51: ISO with T separator and no seconds, with -02:00
+    expected_t_no_sec_neg2_offset = datetime(2026, 9, 29, 16, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30-02:00"), expected_t_no_sec_neg2_offset, "T sep no seconds -02:00")
+
+    # Test 52: ISO with space separator and seconds, with +03:00
+    expected_space_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07+03:00"), expected_space_sec_pos3_offset, "Space sep seconds +03:00")
+
+    # Test 53: ISO with T separator and seconds, with +03:00
+    expected_t_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07+03:00"), expected_t_sec_pos3_offset, "T sep seconds +03:00")
+
+    # Test 54: ISO with space separator and no seconds, with +03:00
+    expected_space_no_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30+03:00"), expected_space_no_sec_pos3_offset, "Space sep no seconds +03:00")
+
+    # Test 55: ISO with T separator and no seconds, with +03:00
+    expected_t_no_sec_pos3_offset = datetime(2026, 9, 29, 11, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30+03:00"), expected_t_no_sec_pos3_offset, "T sep no seconds +03:00")
+
+    # Test 56: ISO with space separator and seconds, with -03:00
+    expected_space_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07-03:00"), expected_space_sec_neg3_offset, "Space sep seconds -03:00")
+
+    # Test 57: ISO with T separator and seconds, with -03:00
+    expected_t_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07-03:00"), expected_t_sec_neg3_offset, "T sep seconds -03:00")
+
+    # Test 58: ISO with space separator and no seconds, with -03:00
+    expected_space_no_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30-03:00"), expected_space_no_sec_neg3_offset, "Space sep no seconds -03:00")
+
+    # Test 59: ISO with T separator and no seconds, with -03:00
+    expected_t_no_sec_neg3_offset = datetime(2026, 9, 29, 17, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30-03:00"), expected_t_no_sec_neg3_offset, "T sep no seconds -03:00")
+
+    # Test 60: ISO with space separator and seconds, with +04:00
+    expected_space_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07+04:00"), expected_space_sec_pos4_offset, "Space sep seconds +04:00")
+
+    # Test 61: ISO with T separator and seconds, with +04:00
+    expected_t_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07+04:00"), expected_t_sec_pos4_offset, "T sep seconds +04:00")
+
+    # Test 62: ISO with space separator and no seconds, with +04:00
+    expected_space_no_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30+04:00"), expected_space_no_sec_pos4_offset, "Space sep no seconds +04:00")
+
+    # Test 63: ISO with T separator and no seconds, with +04:00
+    expected_t_no_sec_pos4_offset = datetime(2026, 9, 29, 10, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30+04:00"), expected_t_no_sec_pos4_offset, "T sep no seconds +04:00")
+
+    # Test 64: ISO with space separator and seconds, with -04:00
+    expected_space_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07-04:00"), expected_space_sec_neg4_offset, "Space sep seconds -04:00")
+
+    # Test 65: ISO with T separator and seconds, with -04:00
+    expected_t_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07-04:00"), expected_t_sec_neg4_offset, "T sep seconds -04:00")
+
+    # Test 66: ISO with space separator and no seconds, with -04:00
+    expected_space_no_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30-04:00"), expected_space_no_sec_neg4_offset, "Space sep no seconds -04:00")
+
+    # Test 67: ISO with T separator and no seconds, with -04:00
+    expected_t_no_sec_neg4_offset = datetime(2026, 9, 29, 18, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30-04:00"), expected_t_no_sec_neg4_offset, "T sep no seconds -04:00")
+
+    # Test 68: ISO with space separator and seconds, with +05:00
+    expected_space_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07+05:00"), expected_space_sec_pos5_offset, "Space sep seconds +05:00")
+
+    # Test 69: ISO with T separator and seconds, with +05:00
+    expected_t_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07+05:00"), expected_t_sec_pos5_offset, "T sep seconds +05:00")
+
+    # Test 70: ISO with space separator and no seconds, with +05:00
+    expected_space_no_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30+05:00"), expected_space_no_sec_pos5_offset, "Space sep no seconds +05:00")
+
+    # Test 71: ISO with T separator and no seconds, with +05:00
+    expected_t_no_sec_pos5_offset = datetime(2026, 9, 29, 9, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30+05:00"), expected_t_no_sec_pos5_offset, "T sep no seconds +05:00")
+
+    # Test 72: ISO with space separator and seconds, with -05:00
+    expected_space_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07-05:00"), expected_space_sec_neg5_offset, "Space sep seconds -05:00")
+
+    # Test 73: ISO with T separator and seconds, with -05:00
+    expected_t_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07-05:00"), expected_t_sec_neg5_offset, "T sep seconds -05:00")
+
+    # Test 74: ISO with space separator and no seconds, with -05:00
+    expected_space_no_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30-05:00"), expected_space_no_sec_neg5_offset, "Space sep no seconds -05:00")
+
+    # Test 75: ISO with T separator and no seconds, with -05:00
+    expected_t_no_sec_neg5_offset = datetime(2026, 9, 29, 19, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30-05:00"), expected_t_no_sec_neg5_offset, "T sep no seconds -05:00")
+
+    # Test 76: ISO with space separator and seconds, with +06:00
+    expected_space_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07+06:00"), expected_space_sec_pos6_offset, "Space sep seconds +06:00")
+
+    # Test 77: ISO with T separator and seconds, with +06:00
+    expected_t_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30:07+06:00"), expected_t_sec_pos6_offset, "T sep seconds +06:00")
+
+    # Test 78: ISO with space separator and no seconds, with +06:00
+    expected_space_no_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30+06:00"), expected_space_no_sec_pos6_offset, "Space sep no seconds +06:00")
+
+    # Test 79: ISO with T separator and no seconds, with +06:00
+    expected_t_no_sec_pos6_offset = datetime(2026, 9, 29, 8, 30, 0, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29T14:30+06:00"), expected_t_no_sec_pos6_offset, "T sep no seconds +06:00")
+
+    # Test 80: ISO with space separator and seconds, with -06:00
+    expected_space_sec_neg6_offset = datetime(2026, 9, 29, 20, 30, 7, tzinfo=UTC)
+    assert_eq(candidate("2026-09-29 14:30:07-06:00"), expected_space_sec_neg6_offset, "Space sep seconds -06:00")
+
+    # Test 81:

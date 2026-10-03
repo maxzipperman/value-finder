@@ -167,4 +167,4 @@ Any change that moves a project, a forward test or a backlog item updates this f
 
 ## Local model challenger evaluation (October 2, 2026)
 
-Owner-authorized hardware comparison of Qwen3.8:27b, gpt-oss:20b and Gemma4:26b against Qwen3.6:35b is queued pending downloads (#146). Six task types, synthetic fixtures and repository helper code only. No live changes, paid calls, model promotion or research variants. Protocol: reviews/local-model-challengers-20261002/PLAN.md.
+Owner-authorized hardware comparison completed (#146, PR #147): 38 local requests across six task types, with separate thinking/no-thinking results. Keep Qwen3.6; recommend supervised Qwen3.8 code drafts, GPT-OSS quick review/extraction and Gemma fast helper-test drafts/extraction. No model is an approval authority or demonstrated overall replacement. Synthetic fixtures and helper code only; no live changes, paid calls or research variants. Evidence and caveats: reviews/local-model-challengers-20261002/README.md.

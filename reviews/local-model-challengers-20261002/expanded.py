@@ -105,7 +105,9 @@ def validated(source,allowed):
    names=[a.name.split('.')[0] for a in n.names] if isinstance(n,ast.Import) else [(n.module or '').split('.')[0]]
    if any(x not in allowed for x in names) or isinstance(n,ast.ImportFrom) and n.level: raise ValueError('disallowed import')
   if isinstance(n,ast.Name) and n.id in ('open','eval','exec','compile','__import__','breakpoint','getattr','setattr','globals','locals','vars','input'): raise ValueError('disallowed operation')
-  if isinstance(n,ast.Attribute) and (n.attr.startswith('__') or n.attr in ('mro','subclasses')):raise ValueError('disallowed attribute')
+  if isinstance(n,ast.Attribute) and (n.attr.startswith('__') or n.attr in ('mro','subclasses')):
+   safe_error_label = n.attr == '__name__' and isinstance(n.value, ast.Call) and isinstance(n.value.func, ast.Name) and n.value.func.id == 'type' and len(n.value.args) == 1 and not n.value.keywords
+   if not safe_error_label: raise ValueError('disallowed attribute')
  return compile(tree,'candidate','exec')
 
 def odds_checks(f):

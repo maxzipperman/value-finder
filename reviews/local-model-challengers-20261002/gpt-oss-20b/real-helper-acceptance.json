@@ -1,0 +1,7 @@
+[
+  {
+    "case": "candidate completion/loading",
+    "passed": false,
+    "error": "SyntaxError: unterminated triple-quoted string literal (detected at line 7) (<unknown>, line 5)"
+  }
+]

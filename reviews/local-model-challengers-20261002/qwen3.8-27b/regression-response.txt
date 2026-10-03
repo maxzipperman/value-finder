@@ -1,0 +1,130 @@
+```python
+import math
+
+
+def run_tests(candidate):
+    def check_valid(value, expected):
+        try:
+            result = candidate(value)
+        except Exception as e:
+            raise AssertionError(
+                f"candidate({value!r}) raised {type(e).__name__}: {e}"
+            )
+        if result != expected:
+            raise AssertionError(
+                f"candidate({value!r}) = {result!r}, expected {expected!r}"
+            )
+        if not isinstance(result, float):
+            raise AssertionError(
+                f"candidate({value!r}) returned {type(result).__name__}, expected float"
+            )
+
+    def check_invalid(value):
+        try:
+            candidate(value)
+        except ValueError:
+            return
+        except AssertionError:
+            raise
+        except Exception as e:
+            raise AssertionError(
+                f"candidate({value!r}) raised {type(e).__name__}, expected ValueError"
+            )
+        else:
+            raise AssertionError(
+                f"candidate({value!r}) did not raise ValueError"
+            )
+
+    # ── Valid: positive integers ──
+    check_valid(100, 100.0 / 200.0)
+    check_valid(200, 100.0 / 300.0)
+    check_valid(500, 100.0 / 600.0)
+    check_valid(1000, 100.0 / 1100.0)
+    check_valid(10000, 100.0 / 10100.0)
+
+    # ── Valid: positive floats ──
+    check_valid(150.5, 100.0 / 250.5)
+    check_valid(100.0, 100.0 / 200.0)
+    check_valid(123.456, 100.0 / 223.456)
+    check_valid(999.99, 100.0 / 1099.99)
+
+    # ── Valid: negative integers ──
+    check_valid(-100, 100.0 / 200.0)
+    check_valid(-200, 200.0 / 300.0)
+    check_valid(-500, 500.0 / 600.0)
+    check_valid(-1000, 1000.0 / 1100.0)
+    check_valid(-10000, 10000.0 / 10100.0)
+
+    # ── Valid: negative floats ──
+    check_valid(-150.5, 150.5 / 250.5)
+    check_valid(-100.0, 100.0 / 200.0)
+    check_valid(-123.456, 123.456 / 223.456)
+    check_valid(-999.99, 999.99 / 1099.99)
+
+    # ── Valid: numeric strings (with optional surrounding whitespace) ──
+    check_valid("100", 100.0 / 200.0)
+    check_valid("  200  ", 100.0 / 300.0)
+    check_valid("-150", 150.0 / 250.0)
+    check_valid("  -100  ", 100.0 / 200.0)
+    check_valid("500.5", 100.0 / 600.5)
+    check_valid("  1000  ", 100.0 / 1100.0)
+    check_valid("-500.25", 500.25 / 600.25)
+    check_valid("  -200  ", 200.0 / 300.0)
+
+    # ── Invalid: booleans (must be rejected despite being int subclass) ──
+    check_invalid(True)
+    check_invalid(False)
+
+    # ── Invalid: None ──
+    check_invalid(None)
+
+    # ── Invalid: non-numeric / malformed strings ──
+    check_invalid("abc")
+    check_invalid("")
+    check_invalid("  ")
+    check_invalid("12.3.4")
+    check_invalid("100abc")
+    check_invalid("abc100")
+    check_invalid("inf")
+    check_invalid("-inf")
+    check_invalid("+inf")
+    check_invalid("nan")
+    check_invalid("-nan")
+    check_invalid("0x100")
+    check_invalid("1,000")
+
+    # ── Invalid: finite values with |value| < 100 (int) ──
+    check_invalid(0)
+    check_invalid(1)
+    check_invalid(-1)
+    check_invalid(50)
+    check_invalid(-50)
+    check_invalid(99)
+    check_invalid(-99)
+
+    # ── Invalid: finite values with |value| < 100 (float) ──
+    check_invalid(0.0)
+    check_invalid(50.5)
+    check_invalid(-50.5)
+    check_invalid(99.9)
+    check_invalid(-99.9)
+    check_invalid(0.1)
+    check_invalid(-0.1)
+
+    # ── Invalid: non-finite floats ──
+    check_invalid(float("inf"))
+    check_invalid(float("-inf"))
+    check_invalid(float("nan"))
+
+    # ── Invalid: other unsupported types ──
+    check_invalid([100])
+    check_invalid({})
+    check_invalid(set())
+    check_invalid((100,))
+    check_invalid(complex(100, 0))
+    check_invalid(b"100")
+
+    # ── Explicit no-rounding verification ──
+    # 100/300 is a repeating decimal; any rounding would change the value
+    r = candidate(200)
+    if r != 100.0 /

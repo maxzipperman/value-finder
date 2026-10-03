@@ -1,0 +1,716 @@
+{
+  "model": "qwen3.8:27b",
+  "created_at": "2026-10-03T07:13:20.872268Z",
+  "message": {
+    "role": "assistant",
+    "content": "",
+    "thinking": "Let me analyze the reference implementation carefully to understand its behavior, then write comprehensive regression tests.\n\nKey behaviors of `parse_utc`:\n1. `None` input \u2192 returns `None`\n2. Blank/whitespace-only input \u2192 returns `None`\n3. Strips outer whitespace\n4. Tries a list of specific formats first:\n   - `%Y-%m-%dT%H:%M:%SZ` \u2192 \"2026-09-29T14:30:07Z\"\n   - `%Y-%m-%dT%H:%MZ` \u2192 \"2026-09-29T14:30Z\"\n   - `%Y-%m-%dT%H%MZ` \u2192 \"2026-09-29T0002Z\" (compact UTC HHMMZ)\n   - `%Y-%m-%d %H:%MZ` \u2192 \"2026-09-29 14:30Z\"\n   - `%Y-%m-%d %H:%M:%SZ` \u2192 \"2026-09-29 14:30:07Z\"\n   - `%Y-%m-%dT%H:%M:%S` \u2192 \"2026-09-29T14:30:07\" (naive)\n   - `%Y-%m-%d %H:%M:%S` \u2192 \"2026-09-29 14:30:07\" (naive)\n   - `%Y-%m-%dT%H:%M` \u2192 \"2026-09-29T14:30\" (naive)\n   - `%Y-%m-%d %H:%M` \u2192 \"2026-09-29 14:30\" (naive)\n5. Falls back to `datetime.fromisoformat(s.replace(\"Z\", \"+00:00\"))`\n6. If fromisoformat succeeds and tzinfo is None \u2192 replace with UTC\n7. If fromisoformat succeeds and tzinfo is not None \u2192 astimezone(UTC)\n8. If fromisoformat fails \u2192 return None\n\nImportant edge cases to test:\n- None \u2192 None\n- \"\" \u2192 None\n- \"   \" \u2192 None\n- \"  2026-09-29T14:30:07Z  \" \u2192 aware UTC datetime\n- \"2026-09-29T14:30:07Z\" \u2192 aware UTC\n- \"2026-09-29T14:30Z\" \u2192 aware UTC\n- \"2026-09-29T0002Z\" \u2192 aware UTC (compact HHMMZ)\n- \"2026-09-29 14:30Z\" \u2192 aware UTC\n- \"2026-09-29 14:30:07Z\" \u2192 aware UTC\n- \"2026-09-29T14:30:07\" \u2192 naive, interpreted as UTC\n- \"2026-09-29 14:30:07\" \u2192 naive, interpreted as UTC\n- \"2026-09-29T14:30\" \u2192 naive, interpreted as UTC\n- \"2026-09-29 14:30\" \u2192 naive, interpreted as UTC\n- \"2026-10-02 00:00:00+00:00\" \u2192 explicit offset, normalized to UTC\n- \"2026-10-02T05:30:00+05:30\" \u2192 explicit offset, normalized to UTC (should become 00:00:00 UTC)\n- \"2026-10-02T23:00:00-01:00\" \u2192 explicit offset, normalized to UTC (should become 2026-10-03T00:00:00 UTC)\n- Fractional seconds: \"2026-09-29T14:30:07.123Z\" \u2192 should work via fromisoformat\n- \"2026-09-29T14:30:07.123456Z\" \u2192 should work via fromisoformat\n- Invalid: \"not a date\" \u2192 None\n- Invalid: \"2026-13-99T99:99:99Z\" \u2192 None\n- \"2026-09-29T14:30:07+00:00\" \u2192 explicit offset\n- \"2026-09-29T14:30:07.500+05:00\" \u2192 fractional + offset\n\nWait, let me re-check the compact format. `%Y-%m-%dT%H%MZ` - this is \"2026-09-29T0002Z\" where HH=00, MM=02. So it's hours and minutes without a colon.\n\nLet me also think about what `fromisoformat` handles in Python 3.11+:\n- \"2026-09-29T14:30:07.123456+00:00\"\n- \"2026-09-29T14:30:07.123456\"\n- \"2026-09-29T14:30:07+05:30\"\n\nBut in Python 3.7-3.10, fromisoformat is more limited. However, the contract says \"preserve ISO fractional seconds\" so I should test those.\n\nActually, let me be careful. The `fromisoformat` in Python 3.7-3.10 only supports:\n- YYYY-MM-DD[*HH[:MM[:SS[.fff[fff]]]][+HH:MM[:SS[.ffffff]]]]\n\nIn Python 3.11+, it's more flexible.\n\nSince the reference uses `s.replace(\"Z\", \"+00:00\")` before calling fromisoformat, \"2026-09-29T14:30:07.123Z\" becomes \"2026-09-29T14:30:07.123+00:00\" which should work in all versions.\n\nLet me also consider: what about \"2026-09-29T14:30:07.123456Z\"? After replace: \"2026-09-29T14:30:07.123456+00:00\". In Python 3.7-3.10, fromisoformat supports up to 6 fractional digits, so this should work.\n\nWhat about \"2026-09-29T14:30:07.1234567Z\"? 7 digits - this might fail in older Python. I'll avoid testing this edge case to be safe, or I'll test it and expect None.\n\nActually, let me focus on what the contract explicitly states:\n- None/blank/invalid \u2192 None\n- Strip outer whitespace\n- Accept ordinary ISO Z\n- Accept explicit offsets\n- Accept compact UTC HHMMZ\n- Naive ISO interpreted as UTC\n- Return aware UTC normalized absolute instants\n- Preserve ISO fractional seconds\n\nLet me write the tests now. I need to be careful about:\n1. Not inspecting candidate source/name/attributes\n2. Only using datetime/math imports\n3. Raising AssertionError on failure\n4. No printing\n\nLet me structure the tests:\n\n```python\nfrom datetime import datetime, timezone, timedelta\n\ndef run_tests(candidate):\n    UTC = timezone.utc\n    \n    # Test None input\n    assert candidate(None) is None\n    \n    # Test blank inputs\n    assert candidate(\"\") is None\n    assert candidate(\"   \") is None\n    assert candidate(\"\\t\\n\") is None\n    \n    # Test whitespace stripping\n    r = candidate(\"  2026-09-29T14:30:07Z  \")\n    assert r is not None\n    assert r == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    assert r.tzinfo is not None\n    \n    # Test ordinary ISO Z\n    r = candidate(\"2026-09-29T14:30:07Z\")\n    assert r == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    \n    # Test ISO Z without seconds\n    r = candidate(\"2026-09-29T14:30Z\")\n    assert r == datetime(2026, 9, 29, 14, 30, tzinfo=UTC)\n    \n    # Test compact UTC HHMMZ\n    r = candidate(\"2026-09-29T0002Z\")\n    assert r == datetime(2026, 9, 29, 0, 2, tzinfo=UTC)\n    \n    # Test space-separated with Z\n    r = candidate(\"2026-09-29 14:30Z\")\n    assert r == datetime(2026, 9, 29, 14, 30, tzinfo=UTC)\n    \n    r = candidate(\"2026-09-29 14:30:07Z\")\n    assert r == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    \n    # Test naive ISO (interpreted as UTC)\n    r = candidate(\"2026-09-29T14:30:07\")\n    assert r == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    \n    r = candidate(\"2026-09-29 14:30:07\")\n    assert r == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    \n    r = candidate(\"2026-09-29T14:30\")\n    assert r == datetime(2026, 9, 29, 14, 30, tzinfo=UTC)\n    \n    r = candidate(\"2026-09-29 14:30\")\n    assert r == datetime(2026, 9, 29, 14, 30, tzinfo=UTC)\n    \n    # Test explicit offsets\n    r = candidate(\"2026-10-02 00:00:00+00:00\")\n    assert r == datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)\n    \n    r = candidate(\"2026-10-02T05:30:00+05:30\")\n    assert r == datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)\n    \n    r = candidate(\"2026-10-02T23:00:00-01:00\")\n    assert r == datetime(2026, 10, 3, 0, 0, 0, tzinfo=UTC)\n    \n    # Test fractional seconds\n    r = candidate(\"2026-09-29T14:30:07.123Z\")\n    assert r is not None\n    assert r.microsecond == 123000\n    assert r.tzinfo is not None\n    assert r.year == 2026 and r.month == 9 and r.day == 29\n    assert r.hour == 14 and r.minute == 30 and r.second == 7\n    \n    r = candidate(\"2026-09-29T14:30:07.123456Z\")\n    assert r is not None\n    assert r.microsecond == 123456\n    \n    # Test fractional with offset\n    r = candidate(\"2026-09-29T14:30:07.500+05:00\")\n    assert r is not None\n    assert r.microsecond == 500000\n    # 14:30:07.500 +05:00 = 09:30:07.500 UTC\n    assert r.hour == 9 and r.minute == 30 and r.second == 7\n    \n    # Test invalid inputs\n    assert candidate(\"not a date\") is None\n    assert candidate(\"2026-13-99T99:99:99Z\") is None\n    assert candidate(\"99999-99-99\") is None\n    assert candidate(\"hello world\") is None\n    \n    # Test that results are aware\n    r = candidate(\"2026-09-29T14:30:07Z\")\n    assert r.tzinfo is not None\n    assert r.utcoffset() == timedelta(0)\n    \n    # Test that results are normalized to UTC\n    r = candidate(\"2026-09-29T14:30:07+05:00\")\n    assert r is not None\n    assert r.utcoffset() == timedelta(0)\n    assert r.hour == 9  # 14:30 - 5 hours = 09:30\n    \n    # Test non-string input (should be converted via str())\n    # Actually, the reference does str(text).strip(), so numbers would become strings\n    # Let's test with a number - \"2026\" would be str(2026) = \"2026\" which is not a valid date\n    assert candidate(2026) is None  # str(2026) = \"2026\", not a valid datetime\n    \n    # Test that the result is a datetime instance\n    r = candidate(\"2026-09-29T14:30:07Z\")\n    assert isinstance(r, datetime)\n    \n    # Test edge: year boundaries\n    r = candidate(\"2026-01-01T00:00:00Z\")\n    assert r == datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)\n    \n    r = candidate(\"2026-12-31T23:59:59Z\")\n    assert r == datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC)\n    \n    # Test: offset that crosses date boundary\n    r = candidate(\"2026-01-01T00:30:00+01:00\")\n    assert r is not None\n    assert r == datetime(2025, 12, 31, 23, 30, 0, tzinfo=UTC)\n    \n    # Test: negative offset crossing date boundary\n    r = candidate(\"2025-12-31T23:30:00-01:00\")\n    assert r is not None\n    assert r == datetime(2026, 1, 1, 0, 30, 0, tzinfo=UTC)\n    \n    # Test: \"Z\" with fractional and offset (shouldn't happen but let's be safe)\n    # Actually \"Z\" is replaced with \"+00:00\" so \"2026-09-29T14:30:07.123Z\" \u2192 \"2026-09-29T14:30:07.123+00:00\"\n    \n    # Test: multiple spaces\n    r = candidate(\"   2026-09-29T14:30:07Z   \")\n    assert r == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    \n    # Test: tab and newline as whitespace\n    r = candidate(\"\\t2026-09-29T14:30:07Z\\n\")\n    assert r == datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)\n    \n    # Test: compact format with different times\n    r = candidate(\"2026-09-29T1230Z\")\n    assert r == datetime(2026, 9, 29, 12, 30, tzinfo=UTC)\n    \n    r = candidate(\"2026-09-29T2359Z\")\n    assert r == datetime(2026, 9, 29, 23, 59, tzinfo=UTC)\n    \n    # Test: invalid compact (too many digits)\n    # \"2026-09-29T12345Z\" - this would try %Y-%m-%dT%H%MZ which expects 4 digits after T\n    # 12345 is 5 digits, so it would fail. Then fromisoformat would also fail.\n    assert candidate(\"2026-09-29T12345Z\") is None\n    \n    # Test: empty after strip\n    assert candidate(\"  \\t\\n  \") is None\n    \n    # Test: single character\n    assert candidate(\"a\") is None\n    assert candidate(\"Z\") is None\n    \n    # Test: date only (no time) - should this work?\n    # \"2026-09-29\" - none of the strptime formats match, fromisoformat would give midnight\n    # Actually in Python 3.7+, fromisoformat(\"2026-09-29\") gives datetime(2026, 9, 29, 0, 0)\n    # So it would be interpreted as UTC midnight\n    r = candidate(\"2026-09-29\")\n    # This depends on Python version. In 3.7+, fromisoformat handles date-only strings.\n    # Let me check: the reference would try all strptime formats (none match), then fromisoformat\n    # fromisoformat(\"2026-09-29\") \u2192 datetime(2026, 9, 29, 0, 0) (naive)\n    # Then t.tzinfo is None \u2192 replace with UTC\n    # So it should return datetime(2026, 9, 29, 0, 0, tzinfo=UTC)\n    # But wait - is this in the contract? The contract says \"naive ISO interpreted as UTC\"\n    # A date-only string is technically valid ISO. Let me include this test.\n    assert r is not None\n    assert r == datetime(2026, 9, 29, 0, 0, tzinfo=UTC)\n    \n    # Test: \"2026-09-29T14:30:07.000Z\" - zero fractional\n    r = candidate(\"2026-09-29T14:30:07.000Z\")\n    assert r is not None\n    assert r.microsecond == 0\n    assert r.second == 7\n    \n    # Test: verify it's an absolute instant (not just a wall clock)\n    # 2026-09-29T14:30:07+02:00 should equal 2026-09-29T12:30:07Z\n    r1 = candidate(\"2026-09-29T14:30:07+02:00\")\n    r2 = candidate(\"2026-09-29T12:30:07Z\")\n    assert r1 == r2\n    \n    # Test: 2026-09-29T14:30:07-03:00 should equal 2026-09-29T17:30:07Z\n    r1 = candidate(\"2026-09-29T14:30:07-03:00\")\n    r2 = candidate(\"2026-09-29T17:30:07Z\")\n    assert r1 == r2\n    \n    # Test: leap year\n    r = candidate(\"2028-02-29T12:00:00Z\")\n    assert r == datetime(2028, 2, 29, 12, 0, 0, tzinfo=UTC)\n    \n    # Test: non-leap year Feb 29 should fail\n    assert candidate(\"2026-02-29T12:00:00Z\") is None\n    \n    # Test: \"2026-09-29T14:30:07.123+00:00\" (explicit +00:00)\n    r = candidate(\"2026-09-29T14:30:07.123+00:00\")\n    assert r is not None\n    assert r.microsecond == 123000\n    assert r.hour == 14\n    \n    # Test: very small fractional\n    r = candidate(\"2026-09-29T14:30:07.000001Z\")\n    assert r is not None\n    assert r.microsecond == 1\n    \n    # Test: ensure no side effects - calling multiple times gives same result\n    r1 = candidate(\"2026-09-29T14:30:07Z\")\n    r2 = candidate(\"2026-09-29T14:30:07Z\")\n    assert r1 == r2\n    \n    # Test: \"2026-09-29T00:00:00Z\" - midnight\n    r = candidate(\"2026-09-29T00:00:00Z\")\n    assert r == datetime(2026, 9, 29, 0, 0, 0, tzinfo=UTC)\n    \n    # Test: \"2026-09-29T0000Z\" - compact midnight\n    r = candidate(\"2026-09-29T0000Z\")\n    assert r == datetime(2026, 9, 29, 0, 0, tzinfo=UTC)\n    \n    # Test: ensure the function doesn't raise on valid inputs\n    # (already covered by the assertions above)\n    \n    # Test: \"2026-09-29T14:30:07.123456+05:30\"\n    r = candidate(\"2026-09-29T14:30:07.123456+05:30\")\n    assert r is not None\n    assert r.microsecond == 123456\n    # 14:30:07.123456 - 5:30 = 09:00:07.123456\n    assert r.hour == 9 and r.minute == 0 and r.second == 7\n    \n    # Test: \"2026-09-29T14:30:07.123456-05:30\"\n    r = candidate(\"2026-09-29T14:30:07.123456-05:30\")\n    assert r is not None\n    assert r.microsecond == 123456\n    # 14:30:07.123456 + 5:30 = 20:00:07.123456\n    assert r.hour == 20 and r.minute == 0 and r.second == 7\n    \n    # Test: \"2026-09-29T14:30:07.123456-14:00\" crosses date\n    r = candidate(\"2026-09-29T14:30:07.123456-14:00\")\n    assert r is not None\n    # 14:30:07.123456 + 14:00 = 28:30:07.123456 = next day 04:30:07.123456\n    assert r.day == 30\n    assert r.hour == 4 and r.minute == 30 and r.second == 7\n    assert r.microsecond == 123456\n    \n    # Test: \"2026-09-29T01:00:00+14:00\" crosses date backwards\n    r = candidate(\"2026-09-29T01:00:00+14:00\")\n    assert r is not None\n    # 01:00:00 - 14:00 = previous day 11:00:00\n    assert r.day == 28\n    assert r.hour == 11\n    \n    # Test: ensure all successful results have tzinfo\n    for s in [\"2026-09-29T14:30:07Z\", \"2026-09-29T14:30Z\", \"2026-09-29T0002Z\",\n              \"2026-09-29 14:30Z\", \"2026-09-29T14:30:07\", \"2026-09-29 14:30\",\n              \"2026-09-29T14:30:07+05:00\", \"2026-09-29T14:30:07.123Z\"]:\n        r = candidate(s)\n        assert r is not None, f\"Expected non-None for {s!r}\"\n        assert r.tzinfo is not None, f\"Expected tzinfo for {s!r}\"\n        assert r.utcoffset() == timedelta(0), f\"Expected UTC offset for {s!r}\"\n    \n    # Test: \"2026-09-29T14:30:07.123456789Z\" - 9 fractional digits\n    # In Python 3.7-3.10, fromisoformat only supports up to 6 fractional digits\n    # In Python 3.11+, it supports more\n    # This is version-dependent, so I'll skip this or handle it carefully\n    # Actually, let me not test this since it's version-dependent\n    \n    # Test: \"2026-09-29T14:30:07.1Z\" - 1 fractional digit\n    r = candidate(\"2026-09-29T14:30:07.1Z\")\n    assert r is not None\n    assert r.microsecond == 100000\n    \n    # Test: \"2026-09-29T14:30:07.12Z\" - 2 fractional digits\n    r = candidate(\"2026-09-29T14:30:07.12Z\")\n    assert r is not None\n    assert r.microsecond == 120000\n    \n    # Test: \"2026-09-29T14:30:07.123Z\" - 3 fractional digits\n    r = candidate(\"2026-09-29T14:30:07.123Z\")\n    assert r is not None\n    assert r.microsecond == 123000\n    \n    # Test: \"2026-09-29T14:30:07.1234Z\" - 4 fractional digits\n    r = candidate(\"2026-09-29T14:30:07.1234Z\")\n    assert r is not None\n    assert r.microsecond == 123400\n    \n    # Test: \"2026-09-29T14:30:07.12345Z\" - 5 fractional digits\n    r = candidate(\"2026-09-29T14:30:07.12345Z\")\n    assert r is not None\n    assert r.microsecond == 123450\n    \n    # Test: \"2026-09-29T14:30:07.123456Z\" - 6 fractional digits\n    r = candidate(\"2026-09-29T14:30:07.123456Z\")\n    assert r is not None\n    assert r.microsecond == 123456\n    \n    # Test: \"2026-09-29T14:30:07.1234567Z\" - 7 fractional digits\n    # This might fail in Python < 3.11. Let me check...\n    # In Python 3.7-3.10, fromisoformat supports exactly 3 or 6 fractional digits\n    # Actually no, it supports 1-6 digits. Let me verify.\n    # Python docs say: \"The separator between the date and time can be any single character.\"\n    # For fractional seconds: \"The fractional seconds component can be 1 to 6 digits.\"\n    # So 7 digits would fail. Let me test that it returns None.\n    # Actually wait - in Python 3.11+, fromisoformat was extended. Let me be safe and not test 7+ digits.\n    \n    # Test: \"2026-09-29T14:30:07.1234567Z\" - skip, version dependent\n    \n    # Test: \"2026-09-29T14:30:07.123456789Z\" - skip, version dependent\n    \n    # Test: ensure the function handles the \"2026-09-29T14:30:07.123+05:30\" case\n    r = candidate(\"2026-09-29T14:30:07.123+05:30\")\n    assert r is not None\n    assert r.microsecond == 123000\n    # 14:30:07.123 - 5:30 = 09:00:07.123\n    assert r.hour == 9 and r.minute == 0 and r.second == 7\n    \n    # Test: \"2026-09-29T14:30:07.123-05:30\"\n    r = candidate(\"2026-09-29T14:30:07.123-05:30\")\n    assert r is not None\n    assert r.microsecond == 123000\n    # 14:30:07.123 + 5:30 = 20:00:07.123\n    assert r.hour == 20 and r.minute == 0 and r.second == 7\n    \n    # Test: \"2026-09-29T14:30:07.123+00:00\"\n    r = candidate(\"2026-09-29T14:30:07.123+00:00\")\n    assert r is not None\n    assert r.microsecond == 123000\n    assert r.hour == 14 and r.minute == 30 and r.second == 7\n    \n    # Test: \"2026-09-29T14:30:07.123-00:00\"\n    r = candidate(\"2026-09-29T14:30:07.123-00:00\")\n    assert r is not None\n    assert r.microsecond == 123000\n    assert r.hour == 14 and r.minute == 30 and r.second == 7\n    \n    # Test: \"2026-09-29T14:30:07.123+00:00\" vs \"2026-09-29T14:30:07.123Z\"\n    r1 = candidate(\"2026-09-29T14:30:07.123+00:00\")\n    r2 = candidate(\"2026-09-29T14:30:07.123Z\")\n    assert r1 == r2\n    \n    # Test: \"2026-09-29T14:30:07.123+00:00\" vs \"2026-09-29T14:30:07.123\"\n    r1 = candidate(\"2026-09-29T14:30:07.123+00:00\")\n    r2 = candidate(\"2026-09-29T14:30:07.123\")\n    assert r1 == r2\n    \n    # Test: \"2026-09-29T14:30:07.123+00:00\" vs \"2026-09-29T14:30:07.123Z\"\n    r1 = candidate(\"2026-09-29T14:30:07.123+00:00\")\n    r2 = candidate"
+  },
+  "done": true,
+  "done_reason": "length",
+  "total_duration": 145275548709,
+  "load_duration": 5315064292,
+  "prompt_eval_count": 514,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 774494000,
+  "eval_count": 8192,
+  "eval_duration": 139178790000,
+  "memory_samples": [
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    },
+    {
+      "size": 18231003707,
+      "size_vram": 18231003707,
+      "context_length": 16384
+    }
+  ],
+  "wall_seconds": 145.61175970901968
+}
