@@ -68,7 +68,7 @@ def global_union(root_base, baseline_snapshot, pilot_bindings, verify_baseline, 
                 or json.loads(initialization) != {'bundle_root_sha256':root,'probe_credits':1687}):
             raise InvalidPlan('prospective initialization proof differs')
         s = json.loads(raw); marker = json.loads(marker_raw)
-        if (s.get('status') != 'pilot_complete' or s.get('pending') or s.get('stopped')
+        if (s.get('status') not in ('pilot_complete','pilot_partial_reconciled') or s.get('pending') or s.get('stopped')
                 or s.get('probe_credits') != 1687 or s.get('bundle_root_sha256') != root
                 or s.get('authorization_sha256') != b['authorization_sha256']
                 or marker.get('authorization_sha256') != b['authorization_sha256']
@@ -78,9 +78,16 @@ def global_union(root_base, baseline_snapshot, pilot_bindings, verify_baseline, 
                 or s.get('predecessor_snapshot') != b['predecessor_snapshot']
                 or type(s.get('other_usage_reserved')) is not int or s['other_usage_reserved'] < carry):
             raise InvalidPlan('prospective epoch proof differs')
-        proof = captured_receipts(ledgers[root].parent,b['rows'],s,b['policy'])
-        if proof['untouched_ids'] or proof['reserved'] != s.get('slice_cap'):
-            raise InvalidPlan('incomplete terminal pilot')
+        if s.get('status')=='pilot_partial_reconciled':
+            import quarantine
+            certificate=quarantine.verify_approval(b['reconciliation'])
+            proof=quarantine.verify_partial(ledgers[root].parent,b['rows'],s,b['policy'],certificate)
+            if proof['untouched_ids']!=certificate['untouched_ids'] or proof['reserved']!=270:raise InvalidPlan('certified untouched scope differs')
+        else:
+            if b.get('reconciliation'):raise InvalidPlan('unexpected reconciliation on complete pilot')
+            proof = captured_receipts(ledgers[root].parent,b['rows'],s,b['policy'])
+            if proof['untouched_ids'] or proof['reserved'] != s.get('slice_cap'):
+                raise InvalidPlan('incomplete terminal pilot')
         carry = s['other_usage_reserved'] + proof['reserved']
         snapshot = {'ledgers':dict(snapshot['ledgers'],**{root:b['ledger_sha256']}),
                     'registrations':dict(snapshot['registrations'],**{root:b['marker_sha256']})}
@@ -100,7 +107,7 @@ def final_record(*, frame_sha256, protocol_sha256, draw_sha256, evidence_sha256,
     mapped={m['game_id']:m for m in mappings}
     if len(mapped)!=len(mappings) or set(mapped)!=set(selected_ids):raise InvalidPlan('final mapping denominator differs')
     for gid,item in mapped.items():
-        if item.get('metadata_disposition',{}).get('classification')=='failure' and classifications[gid] is not False:
+        if any(item.get(k,{}).get('classification')=='failure' for k in ('metadata_disposition','coverage_disposition')) and classifications[gid] is not False:
             raise InvalidPlan('selected metadata zero must remain a failure in final bounds')
     if any(type(v) is not bool for v in classifications.values()):
         raise InvalidPlan('pending/unknown classification blocks final look')

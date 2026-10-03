@@ -31,7 +31,15 @@ def verify(data,source,rows,selected,mappings,frame):
     protocol=json.loads(data['protocol.json'])
     if protocol.get('candidate_books')!=contract['book_panel'] or protocol.get('primary_markets')!=list(mapping.MARKETS):
         raise ValueError('fixed books/six markets differ')
+    quarantined=set()
+    for binding in json.loads(data.get('baseline.json',b'{"pilot_bindings":{}}')).get('pilot_bindings',{}).values():
+        if binding.get('reconciliation'):
+            quarantined.add(binding['reconciliation']['certificate']['quarantined_request_id'])
     for item in mappings:
+        relevant=(set(item['request_ids'])|set(item.get('reused_request_ids',[]))) & quarantined
+        relevant.update(c['request_id'] for slot in item.get('reused_slots',[]) for c in slot.get('evidence',[]) if c['request_id'] in quarantined)
+        expected_failure={'classification':'failure','reason':'certified_quarantined_response','request_ids':sorted(relevant)} if relevant else None
+        if item.get('coverage_disposition')!=expected_failure:raise ValueError('certified quarantined response must remain selected failure')
         game=games[item['game_id']];sport=game['stratum'].split('/')[1]
         if game['stratum'].startswith('older/'):
             declared=oldmap[item['game_id']]
