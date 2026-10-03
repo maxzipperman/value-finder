@@ -4,6 +4,11 @@
   "smoke_mutants": {
     "last_input_wins": true,
     "drops_all": true,
-    "copies_rows": true
+    "copies_rows": true,
+    "lexical_offsets": true,
+    "filter_after_latest": true,
+    "ignore_id_tie": true,
+    "inclusive_expiry": true,
+    "input_mutation": true
   }
 }

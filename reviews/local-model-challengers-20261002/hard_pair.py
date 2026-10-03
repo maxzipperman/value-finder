@@ -84,6 +84,24 @@ def checks(f):
   out.append(dict(case=name,passed=good,error=error))
  return out
 
+def wrong_order(rows, asof, lexical=False, prefilter=False, ignore_tie=False):
+ # Deliberate harness mutants, never shown to candidates.
+ reference([],asof)
+ selected={};keys={}
+ for r in rows:
+  try:
+   if not isinstance(r,dict):continue
+   if not prefilter and not reference([r],asof):continue
+   book=r['book'];stamp=r['observed_at'] if lexical else datetime.fromisoformat(r['observed_at']).astimezone(UTC)
+   if book not in selected or stamp>keys[book][0] or (not ignore_tie and stamp==keys[book][0] and r['id']<keys[book][1]):selected[book]=r;keys[book]=(stamp,r['id'])
+  except (ValueError,TypeError,KeyError,AttributeError):continue
+ return reference(list(selected.values()),asof) if prefilter else selected
+
+def changes_input(rows, asof):
+ out=reference(rows,asof)
+ for r in out.values():r['_model_added']=True
+ return out
+
 def grade(task,text):
  if task=='hard-selection':
   blocks=re.findall(r'```(?:python)?\s*\n(.*?)```',text,re.S);ns={};exec(validated('\n'.join(blocks) if blocks else text,{'math','datetime'}),ns);return checks(ns['select_books'])
@@ -95,7 +113,10 @@ if __name__=='__main__':
  signal.signal(signal.SIGALRM,lambda *a:(_ for _ in ()).throw(TimeoutError('15 second deadline')))
  if sys.argv[1]=='selfcheck':
   cs=checks(reference);assert all(c['passed'] for c in cs)
-  mutants={'last_input_wins':lambda rs,t:{r['book']:r for r in rs if isinstance(r,dict) and 'book' in r},'drops_all':lambda rs,t:{},'copies_rows':lambda rs,t:{k:dict(v) for k,v in reference(rs,t).items()}}
+  import inspect
+  source=inspect.getsource(reference).replace('a<=now<b','a<=now<=b')
+  namespace=dict(globals());exec(source,namespace);inclusive=namespace['reference']
+  mutants={'last_input_wins':lambda rs,t:{r['book']:r for r in rs if isinstance(r,dict) and 'book' in r},'drops_all':lambda rs,t:{},'copies_rows':lambda rs,t:{k:dict(v) for k,v in reference(rs,t).items()},'lexical_offsets':lambda rs,t:wrong_order(rs,t,lexical=True),'filter_after_latest':lambda rs,t:wrong_order(rs,t,prefilter=True),'ignore_id_tie':lambda rs,t:wrong_order(rs,t,ignore_tie=True),'inclusive_expiry':inclusive,'input_mutation':changes_input}
   killed={k:any(not c['passed'] for c in checks(f)) for k,f in mutants.items()};assert all(killed.values());x=dict(cases=len(cs),oracle_passed=True,smoke_mutants=killed);(ROOT/'hard-pair-harness-validation.json').write_text(json.dumps(x,indent=2));print(x)
  else:
   folder=ROOT/sys.argv[2];out={}

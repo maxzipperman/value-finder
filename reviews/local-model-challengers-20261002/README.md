@@ -28,6 +28,8 @@ All models had the same six prompts, temperature 0, seed 42, 16,384 context toke
 
 “Truncated” means the cap was exhausted and no complete usable answer was returned. Empty content, unfinished code and malformed JSON count as failures; nothing was silently repaired. GPT-OSS's scientific-notation test expected `1e3` to produce 1000/1100 instead of 100/1100 and therefore rejected the correct odds implementation.
 
+The 52/53 implementation scores use the amended AST allowance for the harmless `type(value).__name__` error-label form, documented in PLAN.md and source-filter-validation.json. The original filter rejected those outputs; candidate text and functional fixtures were unchanged.
+
 All completed implementations missed the huge integer conversion case: `10**1000` must yield ValueError rather than OverflowError. GPT-OSS debugging also missed invalid `asof` types. Review findings were read independently: both Qwens and GPT-OSS identified all four genuine categories without an independent false finding. Qwen3.8 incorrectly mentioned zero probability in its negative-odds explanation; GPT-OSS mentioned values above one. The actual formula gives negative probabilities for valid negative odds below -100 and divides by zero at -100. Their main defect diagnoses are valid, but these phrases are not reliable facts.
 
 ## Separate no-thinking diagnostic round
@@ -58,3 +60,5 @@ The oracle passes all 53 functional cases, eight odds mutations and six parser m
 This is a small bounded evaluation, not proof of autonomous repo editing, tool use, long-context reasoning, production readiness or general research accuracy. No Q8, Ornith or Llama was tested. New Ollama catalog versions can differ from installed frozen digests. Compare Q8 against an explicitly matched lower-precision artifact before attributing differences to precision.
 
 To grade existing artifacts after source inspection, use `expanded.py grade MODEL` and `real_helper.py grade MODEL` in the ordinary sandbox. For Qwen suffixed no-thinking folders, the general CLI also marks uncollected review/extraction as missing; the saved acceptance files deliberately include only collected tasks. Inference collection is through guarded `generate.py`, one request per invocation, with a lock, exact installed digest checks and busy/memory deferral. Do not use legacy generation branches in the grading modules. No model pulls or cloud fallback are part of this experiment.
+
+The hub relayed a separate reviewer’s offline reconciliation/replay of the original 38-request report at commit098a7afd034d8c09e8fd217186e6ea0b887b185b on October3 ([review comment](https://github.com/maxzipperman/value-finder/pull/147#issuecomment-5966896455)). It found no blocking issues for evidence-only reporting or bounded supervised draft roles and requested the source-filter disclosure above. That review does not cover the later Q8 or hard-pair extension.
