@@ -6,7 +6,8 @@
     "reviews/post151-readiness/readiness.json",
     "reviews/post151-readiness/verification.json",
     "ops/process/process_guard.py",
-    ".github/workflows/cache-readiness.yml"
+    ".github/workflows/cache-readiness.yml",
+    "strategy-research/coverage-pilot-v1/classifier.py"
   ],
   "commands": [
     [

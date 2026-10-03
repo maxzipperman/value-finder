@@ -24,6 +24,24 @@ class ReadinessTests(unittest.TestCase):
         self.assertFalse(measured['provenance']['native_outcomes_read'])
         self.assertEqual(d.sha(Path(__file__).with_name('diagnostic.py').read_bytes()), measured['provenance']['diagnostic_sha256'])
 
+    def test_temporal_points_do_not_require_common_cross_book_point(self):
+        import ast
+        source = Path(__file__).resolve().parents[2] / 'strategy-research/coverage-pilot-v1/classifier.py'
+        node = next(n for n in ast.parse(source.read_text()).body
+                    if isinstance(n, ast.FunctionDef) and n.name == 'older_totals_feasibility')
+        namespace = {}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), 'exec'), namespace)
+        slot = {'pairs': {('totals', 'draftkings', '__total__', 40),
+                          ('totals', 'pinnacle', '__total__', 42)}}
+        result = namespace['older_totals_feasibility'](slot, slot, ['draftkings'])
+        self.assertTrue(result['same_point_success'])
+        self.assertEqual({p[3] for p in slot['pairs']}, {40, 42})
+        measured = json.loads(Path(__file__).with_name('readiness.json').read_text())
+        self.assertEqual(sum(r['each_book_preserves_own_point_across_slots']
+                             for r in measured['older_paired_readiness'].values()), 334)
+        self.assertTrue(all('four_quote_sets_same_point' not in r
+                            for r in measured['older_paired_readiness'].values()))
+
     def test_missing_older_slots_still_have_both_denominators(self):
         game = {'stratum': 'older/americanfootball_nfl/2020', 'game_id': 'g'}
         ops = d.operations(game, {})

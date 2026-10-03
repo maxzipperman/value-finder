@@ -25384,22 +25384,22 @@
   "ledger_sha256": "58b3ee64c6320fb29989b7ae41f2866ae2f9102e9bbfed703b684625187f017c",
   "older_paired_readiness": {
     "older/americanfootball_ncaaf/2020": {
-      "four_quote_sets_same_point": 76,
+      "each_book_preserves_own_point_across_slots": 76,
       "game_denominator": 653,
       "same_domestic_plus_reference_both_slots": 457
     },
     "older/americanfootball_nfl/2020": {
-      "four_quote_sets_same_point": 52,
+      "each_book_preserves_own_point_across_slots": 52,
       "game_denominator": 285,
       "same_domestic_plus_reference_both_slots": 252
     },
     "older/americanfootball_nfl/2021": {
-      "four_quote_sets_same_point": 99,
+      "each_book_preserves_own_point_across_slots": 99,
       "game_denominator": 291,
       "same_domestic_plus_reference_both_slots": 282
     },
     "older/americanfootball_nfl/2022": {
-      "four_quote_sets_same_point": 107,
+      "each_book_preserves_own_point_across_slots": 107,
       "game_denominator": 285,
       "same_domestic_plus_reference_both_slots": 276
     }
@@ -25481,7 +25481,13 @@
     "canonical_metadata_sha256": "c2e3ce27b12a4c47da09f3fe26c148f6c4f2f4b1802cd91f96dc209bb9fe8395",
     "classifier_sha256": "3022001dd610bd57bdc9aa301e761f987f5977cabc200b81b2806218511e7ac2",
     "completion_sha256": "17046b87ce044d89db8087f174c75ea07f3aa8401cc83ddec40a4a7f5871d8db",
-    "diagnostic_sha256": "738536c587d5b590ee5b317a6faa3c9d3d1a6cbac5cdc07bbf2f6f0a646b1866",
+    "diagnostic_sha256": "28fbe961ee6b11fec64ed6c2a1df034c7a0375f9b66d1c7a1bcce24908d22c60",
+    "label_correction": {
+      "corrected_key": "each_book_preserves_own_point_across_slots",
+      "operation": "Rename temporal within-book point metric only; no cached-data remeasurement",
+      "original_artifact_sha256": "0fefa3abec62ed1f8807b8d36dd2e900a63698e6a4234c3790b9ad57256b59cd",
+      "original_key": "four_quote_sets_same_point"
+    },
     "ledger_pins": {
       "03391fd2c0bf224f053aae102fe1e3c520db58f9fa97837d34244e4fc54988c0": "4d2fb599aa16318ed09f4057bca63a0a9efc92810461f5e42879a742842ce586",
       "059fc135b00bbbc36db208a8bb622d7444a43d42bb2607675d30671ad455f4e4": "cc2f17d3289ac1dbebac6bcf5d828f4384f2ea4c9d88829c2d8510a014a57313",
@@ -25495,6 +25501,7 @@
       "f499935c05191d9583f891d9f859575ad7419472829fd802e39e2f62549eb22f": "3a3813fee41b4054cf4c67ed3c92c21a4247187b1f70c2ca536d2dff2c71d5bf",
       "f955f28b2fba9f36b3cdcaa7cf29013de9b18b128a629204b0e098f6594259cd": "8c8592a437646416d6dfb3b0cb989738a5c6cbf100851e874e35d6ac36ad7ba9"
     },
+    "measurement_diagnostic_sha256": "738536c587d5b590ee5b317a6faa3c9d3d1a6cbac5cdc07bbf2f6f0a646b1866",
     "merged_saved_record_source_sha256": "2370ab54c14fc491d9e9b35f9ac929b687c159059aff7ed8aff8f82512f20691",
     "native_outcomes_read": false,
     "original_final_sha256": "100a53275119fba283b3e8938cfee994f0d1a535201f2bab2e8769bfba9fdbdb",

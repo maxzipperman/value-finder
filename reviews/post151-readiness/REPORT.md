@@ -54,9 +54,10 @@ book count describes projected records only, not every original planned request.
 ## Acquired older totals
 
 A paired game requires the same domestic book at EARLY and CLOSE and Pinnacle at
-both. The stricter column requires all four quote sets at the same point.
+both. The last column requires each book to retain its own point across EARLY and
+CLOSE. The domestic and reference books may have different points.
 
-| Group | Fixed games | Paired domestic + reference | Same-point four-set games |
+| Group | Fixed games | Paired domestic + reference | Each book retains own point |
 |---|---:|---:|---:|
 | ncaaf 2020 | 653 | 457 | 76 |
 | nfl 2020 | 285 | 252 | 52 |
@@ -64,7 +65,9 @@ both. The stricter column requires all four quote sets at the same point.
 | nfl 2022 | 285 | 276 | 107 |
 
 Thus **1,267** games support quote-feasibility pairing, but only **334** meet the
-same-point diagnostic. Simulation must explicitly handle changing total lines;
+within-book temporal-point diagnostic: domestic 40 at both times and Pinnacle
+42 at both times qualifies. This does not certify a common cross-book point.
+Simulation must explicitly handle changing lines and cross-book line differences;
 comparing prices at different points as if they were the same bet is invalid.
 This is not renewed utility-gate acceptance or permission to grade.
 CFB2021/22 totals and CFB2023–25 props remain held; no quote measurement here
@@ -130,3 +133,8 @@ fixed sources are the retained approved Mac captures/runtime; it never fetches o
 writes there. `verification.json` covers the focused synthetic and measured-artifact
 invariants. [Saved test evidence](test-evidence.json) is separate from native cache
 measurement provenance; no unchanged broad acquisition suites were repeated.
+
+Independent-review correction: the temporal-point label was renamed without
+remeasuring caches or changing any counts, classifier, gate or final look. The
+JSON preserves the original artifact and measurement-producer hashes alongside
+the corrected label provenance. A 40-versus-42 regression tests the actual classifier.

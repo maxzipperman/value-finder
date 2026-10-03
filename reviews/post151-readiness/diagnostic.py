@@ -246,7 +246,7 @@ def run():
             paired = classifier.older_totals_feasibility({'pairs': game_pairs.get('EARLY_18_54', set())},
                        {'pairs': game_pairs.get('CLOSE_T10', set())}, [b for b in BOOKS if b not in ('pinnacle', 'lowvig', 'betonlineag')])
             older_pairing[game['stratum']].update({'game_denominator': 1, 'same_domestic_plus_reference_both_slots': int(paired['success']),
-                                                 'four_quote_sets_same_point': int(paired['same_point_success'])})
+                                                 'each_book_preserves_own_point_across_slots': int(paired['same_point_success'])})
     # Stat source schema only; no row groups, values, outcome counts or 2026 filtering.
     import pyarrow.parquet as pq
     schema_path = REPO / 'nfl-weather/data/processed/player_week.parquet'
