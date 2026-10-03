@@ -1,0 +1,116 @@
+{
+  "evidence_digest": "e0939658ab01e3f01992712b8be15c1b1220d970ef9aff61dd0e98057b2db5c9",
+  "inputs": {
+    "command_binaries": {
+      "{python}": {
+        "path": "/private/tmp/valuefinder-dashboard-20261003/dashboard/.venv/bin/python",
+        "sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60"
+      }
+    },
+    "commands": [
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/process",
+        "-p",
+        "test_*.py",
+        "-v"
+      ]
+    ],
+    "configured_environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "effective_environment": {
+      "LANG": "C.UTF-8",
+      "PATH": "/bin:/usr/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "environment": {
+      "executable_sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60",
+      "packages": [
+        [
+          "Pygments",
+          "2.21.0"
+        ],
+        [
+          "iniconfig",
+          "2.3.0"
+        ],
+        [
+          "packaging",
+          "26.3"
+        ],
+        [
+          "pluggy",
+          "1.6.0"
+        ],
+        [
+          "pytest",
+          "9.1.1"
+        ],
+        [
+          "vfdash",
+          "0.1.0"
+        ]
+      ],
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]"
+    },
+    "files": {
+      ".github/workflows/process.yml": "4da28b672694421a9d74dc29e68f910e877d1d44be6458b1f70f8803cc1e83af",
+      "GOVERNANCE.md": "f521aa7206795a590eef021bdfd9db2d60f36f47889e77d6dde6ebf584b85254",
+      "STATUS.md": "7a18822be494462220ccc1fd9916b1eb0056ea6b59a6fc801ef46bbe70830845",
+      "dashboard/vfdash/__init__.py": "d17f21fe42a5a71589071b9870c39e685ce501622eb8e43fe4a96f25d98996e4",
+      "dashboard/vfdash/status_md.py": "eba21336d1c5cf6ac43c0204c802429dbb385562d6a0783896fc78fcfaa60732",
+      "dashboard/vfdash/words.py": "ae5f56809163d2394fc621916955a8fb4f1214e64394716282d945a592f7707f",
+      "docs/status-archive/2026-10-03-before-simplification.md": "0928b45e0f739736db6470569dd5a03fb9df949a152b7780039c2c697e042545",
+      "docs/status-archive/manifest.json": "6c1fd22283dcc676e5f902d64e591d887e2c33332b99fa696b6cf016abc8ecc5",
+      "nfl-weather/PREREGISTRATION_PROPS.md": "c65f725ad73682daaaabc1f5faf406b5ee272e048f844d389fea0ae96eeff033",
+      "ops/process/governance_guard.py": "4f48189c10d7f6c77f3e4662a9ee5475301c939a1fb2eb5285bef16caa220e47",
+      "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
+      "ops/process/review-policy.json": "e47b772fd89618bd09da3de16c2722bc11b5cf061987236e20a3275e7b341185",
+      "ops/process/test_governance_guard.py": "aa6f03df20068df04ec2f75d7af5ab4a7f86a5f930fa412683add3e89a3ca7c6",
+      "ops/process/test_process_guard.py": "323cea008c78329aecbe855858a3cb5aa84d01f87faf242339e31751cc2ff408",
+      "ops/process/test_startup_guard.py": "ed03d5f46d242882496b3b79fcaca94d60585d0c598ed02f0cc35f0895b53c6e",
+      "ops/process/test_status_contract.py": "69a9f61304af61fcd644d26fff01346a1d313379d3d8847057cab98062764e1d",
+      "ops/process/verification.json": "ce09e95332b391e2663442712bf8721a587f23e193c1fcdaab83fcc86278a5be",
+      "sharp-markets/src/markets/research/props_grade/registration.py": "f4d90991d3b6d01d373848f4d4d6a7261e05dcf1260f268b026a5f22c0fb6bf7",
+      "strategy-research/coverage-pass-execution-v1/bootstrap.py": "48ba33f06b02c1024d49f2758ddd3a5106fcc34ab6c0f09420e71c6407d41213",
+      "strategy-research/coverage-pass-execution-v1/orchestration.py": "63011b68ee34ce6841ef642bcac99cf4b283a1b56fe448001d4623c9eedcb03e"
+    }
+  },
+  "passed": true,
+  "recorded_at": "2026-10-03T19:03:29.076809+00:00",
+  "results": [
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/process",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "c708e3ac1cb361cf4bd45d8cf9ec73948895b706f5887807c8d46bc050fad277",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unittest_count": [
+        36
+      ]
+    }
+  ],
+  "tested_commit": "879d42b6cdab59bc7189b2872d6bd6415216ec9d",
+  "tested_identity": "29f8a7a27ecc6456baf419eeafb6de199680e49e791fe2c2f8a8dbc668af38a9",
+  "version": 1,
+  "worktree_clean": false
+}
