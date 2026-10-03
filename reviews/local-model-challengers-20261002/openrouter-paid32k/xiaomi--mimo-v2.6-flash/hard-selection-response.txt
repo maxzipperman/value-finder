@@ -1,0 +1,231 @@
+```python
+"""Isolated Value Finder.
+
+select_books(rows, asof) -> dict mapping every book to the ORIGINAL row
+(identity preserving) that has to be reported for that book.
+
+Implemented rules
+-----------------
+* book / id                : non-empty strings.
+* odds                     : finite int, float or numeric string with
+                             |odds| >= 100.  bool and every other type are
+                             invalid; conversions that leave the float range
+                             make the row malformed (never a crash).
+* observed_at / expires_at : timezone aware ISO-8601 instants; "Z" and
+                             numeric UTC offsets are accepted.
+* eligibility              : observed_at <= asof < expires_at and
+                             observed_at < expires_at, every clock compared
+                             as an absolute UTC instant.
+* selection per book       : latest observed_at, tie -> lexicographically
+                             smallest id, tie -> first input row.
+* asof                     : must be a datetime with a non-None utcoffset,
+                             otherwise ValueError (checked before rows).
+* malformed / future / expired rows never suppress an older eligible row,
+  and neither `rows` nor any row content is ever mutated.
+
+Standard library only; no I/O of any kind.
+"""
+
+import math
+import re
+from collections.abc import Mapping
+from datetime import datetime, timedelta, timezone
+
+__all__ = ["select_books"]
+
+_ODDS_FLOOR = 100.0
+
+# Lenient ISO-8601 fallback used only when datetime.fromisoformat() refuses a
+# string (older interpreters do not understand "Z" or basic-format offsets).
+_ISO_FALLBACK_RE = re.compile(
+    r"^(?P<year>\d{4})-?(?P<month>\d{2})-?(?P<day>\d{2})"
+    r"[Tt ]"
+    r"(?P<hour>\d{2}):?(?P<minute>\d{2})"
+    r"(?::?(?P<second>\d{2})(?:[.,](?P<frac>\d+))?)?"
+    r"(?P<tz>Z|z|[+-]\d{2}(?::?\d{2})?)$"
+)
+
+
+def _text(value):
+    """Return the original string when it holds non-whitespace content."""
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
+def _odds(value):
+    """Return odds as a finite float, or None when the field is malformed."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            number = float(text)
+        except (ValueError, OverflowError):
+            return None
+    elif isinstance(value, (int, float)):
+        try:
+            number = float(value)
+        except (ValueError, OverflowError):
+            return None
+    else:
+        return None
+    if not math.isfinite(number):
+        return None
+    return number
+
+
+def _fallback_iso(text):
+    """Parse an ISO-8601 instant by hand; return a datetime or None."""
+    match = _ISO_FALLBACK_RE.match(text)
+    if match is None:
+        return None
+    parts = match.groupdict()
+
+    tz_text = parts["tz"]
+    if tz_text in ("Z", "z"):
+        tz_delta = timedelta(0)
+    else:
+        sign = -1 if tz_text[0] == "-" else 1
+        digits = tz_text[1:].replace(":", "")
+        hours = int(digits[:2])
+        minutes = int(digits[2:4]) if len(digits) >= 4 else 0
+        if hours > 23 or minutes > 59:
+            return None
+        tz_delta = sign * timedelta(hours=hours, minutes=minutes)
+
+    frac = parts["frac"] or ""
+    microsecond = int((frac + "000000")[:6]) if frac else 0
+
+    try:
+        return datetime(
+            int(parts["year"]),
+            int(parts["month"]),
+            int(parts["day"]),
+            int(parts["hour"]),
+            int(parts["minute"]),
+            int(parts["second"] or 0),
+            microsecond,
+            tzinfo=timezone(tz_delta),
+        )
+    except (ValueError, OverflowError):
+        return None
+
+
+def _instant(value):
+    """Parse a timezone-aware ISO string into a UTC datetime, else None."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+
+    candidate = text[:-1] + "+00:00" if text[-1] in ("Z", "z") else text
+
+    try:
+        parsed = datetime.fromisoformat(candidate)
+    except ValueError:
+        parsed = _fallback_iso(candidate)
+    except TypeError:
+        return None
+
+    if parsed is None:
+        return None
+
+    try:
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            return None
+        return parsed.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _eligible(row, asof_utc):
+    """Return (book, observed_utc, id) for an eligible row, else None."""
+    if not isinstance(row, Mapping):
+        return None
+
+    try:
+        book = row.get("book")
+        rid = row.get("id")
+        odds = row.get("odds")
+        observed_raw = row.get("observed_at")
+        expires_raw = row.get("expires_at")
+    except Exception:
+        return None
+
+    if _text(book) is None or _text(rid) is None:
+        return None
+
+    odds_number = _odds(odds)
+    if odds_number is None or abs(odds_number) < _ODDS_FLOOR:
+        return None
+
+    observed = _instant(observed_raw)
+    if observed is None:
+        return None
+    expires = _instant(expires_raw)
+    if expires is None:
+        return None
+
+    # observed_at <= asof < expires_at  and  observed_at < expires_at
+    if observed > asof_utc:
+        return None
+    if asof_utc >= expires:
+        return None
+    if observed >= expires:
+        return None
+
+    return book, observed, rid
+
+
+def select_books(rows, asof):
+    """Return {book: original_row} with the latest eligible row per book."""
+    if not isinstance(asof, datetime):
+        raise ValueError("asof must be a timezone-aware datetime")
+    try:
+        asof_offset = asof.utcoffset()
+    except Exception:
+        asof_offset = None
+    if asof_offset is None:
+        raise ValueError("asof must be a timezone-aware datetime")
+    try:
+        asof_utc = asof.astimezone(timezone.utc)
+    except Exception as exc:
+        raise ValueError("asof must be a timezone-aware datetime") from exc
+
+    if rows is None:
+        return {}
+    try:
+        items = list(enumerate(rows))
+    except TypeError:
+        return {}
+
+    best = {}
+    for index, row in items:
+        info = _eligible(row, asof_utc)
+        if info is None:
+            continue
+        book, observed, rid = info
+
+        current = best.get(book)
+        if current is None:
+            best[book] = (observed, rid, index, row)
+            continue
+
+        prev_observed, prev_id, prev_index, _prev_row = current
+        replace = False
+        if observed > prev_observed:
+            replace = True
+        elif observed == prev_observed:
+            if rid < prev_id:
+                replace = True
+            elif rid == prev_id and index < prev_index:
+                replace = True
+        if replace:
+            best[book] = (observed, rid, index, row)
+
+    return {book: entry[3] for book, entry in best.items()}
+```

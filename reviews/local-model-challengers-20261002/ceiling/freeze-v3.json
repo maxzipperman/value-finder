@@ -21,12 +21,12 @@
     "openrouter-inventory.json": "b7dd5e5308fa52d46ecb5d2640ef418551ef84010e8b6c2ed9d4b9345aa30279",
     "openrouter_budget.py": "9910009346a67e820d31490fd60e876c9bafaf2c3667ef738767d8a44245b8f6",
     "openrouter_free.py": "6412962e97196f1b8d6882b4f5ed523470c00489f561534e9b35625c3a67201e",
-    "openrouter_paid.py": "33bb880528fbf0a7b442179ca5fa892fe3a08ee252eef2213f302effc50fbb67",
+    "openrouter_paid.py": "a2a49d23b86deb4a05a47cccad1b01e02fd0864327a363263c0f7e3925dad5f2",
     "ceiling_queue.py": "723953ef48e7c7957f4f647202f4c9ac4b516e398dbddd23582be505134d7771",
     "ceiling_mimo.py": "e008c4c6b785d4a82e7601dd46b926df5980a862d03704a55540e130635d4826",
     "ceiling-error-audit.json": "3adb1711cef791cfb5342eb43e05e6753258efa66b521a7b059496b31f6ab39c",
     "ceiling-provider-deferral.json": "20ec745611149b9b68d21e064005a29bd579aa86ed71c56691ebbbf9b35795c7",
     "CEILING_CONTINUATION_PLAN.md": "3a6683d40dcc1fb78dcda9f00f0c0ec2c2cebe0fc23599ffa056d8c9e72f9ff1"
   },
-  "note": "Terminal guard repair after4995collection_complete: stop for embedded choice errors/finish_reasonerror, save full response and retain stopped maximum reservation. No requests/settings/harness/outputs changed and no further inference performed. Previous freeze preserved asfreeze-v3.json."
+  "note": "Guard-only transition after terminal queue98555: declared MiMo subset and folder-specific audit after GLM429. Prompts/model modes/caps/reference/harness unchanged; preserve freeze-v2 and prior responses, no rerolls."
 }

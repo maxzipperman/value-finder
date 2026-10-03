@@ -1,0 +1,18 @@
+{
+  "offline_checks": {
+    "top_level_error": true,
+    "choice_error": true,
+    "finish_error": true,
+    "later_choice_error": true,
+    "explicit_empty_choice_error": true,
+    "valid_stop": true,
+    "valid_length": true,
+    "actual_saved_embedded502": true
+  },
+  "network_calls": 0,
+  "credentials_read": false,
+  "candidate_code_executed": false,
+  "collection_terminal_before_change": true,
+  "prior_result_preserved": true,
+  "integration_note": "Existing collector saves result envelope before this predicate; failure then enters unchanged stopped/error persistence and return path, leaving maximum reservation. No inference or old-request retry performed."
+}

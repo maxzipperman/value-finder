@@ -1,0 +1,106 @@
+```python
+import math
+
+
+def run_tests(candidate):
+    def call(value, label):
+        try:
+            return candidate(value)
+        except BaseException:
+            raise AssertionError("%s: unexpected exception raised" % (label,))
+
+    def expect_error(value, label):
+        try:
+            candidate(value)
+        except ValueError:
+            return
+        except BaseException:
+            raise AssertionError("%s: expected ValueError, another exception was raised" % (label,))
+        raise AssertionError("%s: expected ValueError, but the call returned normally" % (label,))
+
+    def expected(value):
+        f = float(value)
+        if f > 0.0:
+            return 100.0 / (f + 100.0)
+        return (-f) / ((-f) + 100.0)
+
+    def check(actual, exp, label):
+        if not isinstance(actual, float):
+            raise AssertionError("%s: expected a float result, got %s"
+                                 % (label, type(actual).__name__))
+        if not (0.0 <= actual <= 1.0):
+            raise AssertionError("%s: result %r is not within [0, 1]" % (label, actual))
+        if not math.isclose(actual, exp, rel_tol=1e-13, abs_tol=0.0):
+            raise AssertionError("%s: expected %r, got %r" % (label, exp, actual))
+
+    # ------------------------------------------------------------------
+    # valid int / float inputs (both signs, boundaries, extremes)
+    # ------------------------------------------------------------------
+    valid_numbers = (
+        100, -100, 101, -101, 150, -150, 200, -200, 300, -300, 400, -400,
+        1000, -1000, 123.45, -123.45, 999.99, -999.99, 100.0, -100.0,
+        100.00000000000001, -100.00000000000001, 150.5, -150.5,
+        12345.6789, -12345.6789, 250.75, -250.75,
+        1e6, -1e6, 1e3, -1e3, 1e2, -1e2, 1.5e2, -1.5e2,
+        10 ** 15, -(10 ** 15), 10 ** 18, -(10 ** 18),
+        10 ** 300, -(10 ** 300), 1e308, -1e308,
+    )
+    for v in valid_numbers:
+        check(call(v, repr(v)), expected(v), "valid number %r" % (v,))
+
+    # ------------------------------------------------------------------
+    # valid numeric strings (whitespace, decimals, exponents)
+    # ------------------------------------------------------------------
+    valid_strings = (
+        "100", "-100", "150", "-150", "  150  ", " -150 ", "  -100  ",
+        "100.0", "-100.0", "101", "-101", "1000", "-1000",
+        "123.45", "-123.45", "999.99", "-999.99", "200", "-200",
+        "300", "-300", "250.75", "-250.75", "1000000", "-1000000",
+        "1e3", "-1.5e3", "0.5e3", "1.25e2", "-1.25e2", "1e6", "-1e6",
+    )
+    for s in valid_strings:
+        got = call(s, repr(s))
+        check(got, expected(s), "valid string %r" % (s,))
+        check(got, call(float(s), repr(float(s))), "string/number consistency %r" % (s,))
+
+    # ------------------------------------------------------------------
+    # invalid inputs: wrong types, non-numeric strings, bad magnitudes,
+    # non-finite values
+    # ------------------------------------------------------------------
+    invalid_values = (
+        # unsupported types
+        None, True, False, [], (), {}, set(), b"150", bytearray(b"150"),
+        150 + 0j, object(), Ellipsis,
+        # non-finite numbers
+        math.inf, -math.inf, math.nan, 1e400, -1e400,
+        # magnitudes below the 100 threshold
+        0, 0.0, -0.0, 1, -1, 10.0, -10.0, 50, -50, 99, -99,
+        99.5, -99.5, 99.99999999999999, -99.99999999999999,
+        # non-numeric strings
+        "", "   ", "\t", "abc", "15x", "x150", "1,000", "1/2", "None",
+        "True", "150j", "0x96", "1 50", "150 150", "--150", "150.0.0",
+        "-", "+", "150-", "(150)", "150e", "150.0.0 ",
+        # numeric strings below threshold
+        "0", "0.0", "-0.0", "10", "-10", "50", "-50", "99", "-99",
+        "99.999", "-99.999", "1e1", "-1e1", ".5", "-.5", "  99  ",
+        # non-finite strings
+        "inf", "-inf", "Inf", "nan", "NaN", "NAN", "1e400", "-1e400",
+        "infinity", "-Infinity",
+    )
+    for v in invalid_values:
+        expect_error(v, repr(v))
+
+    # ------------------------------------------------------------------
+    # boundaries, repeatability and behaviour after rejected calls
+    # ------------------------------------------------------------------
+    baseline = call(150, "150")
+    check(baseline, expected(150), "baseline 150")
+    for _ in range(3):
+        check(call(150, "150"), baseline, "repeated call with 150")
+    check(call(100, "100"), 0.5, "boundary 100")
+    check(call(-100, "-100"), 0.5, "boundary -100")
+    check(call(-150, "-150"), expected(-150), "-150 after rejected inputs")
+    check(call("  -100  ", "boundary string"), 0.5, "boundary string after rejected inputs")
+    check(call(1000, "1000"), 100.0 / 1100.0, "unrounded 1000")
+    check(call(-1000, "-1000"), 1000.0 / 1100.0, "unrounded -1000")
+```

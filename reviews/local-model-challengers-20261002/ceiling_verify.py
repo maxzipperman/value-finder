@@ -2,7 +2,7 @@
 import hashlib,json
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
-FREEZE_HASH="9de2e4849bd28021db104be6045e3ae04444185b419e9685e777ab351f2bc54a"
+FREEZE_HASH="265b3cf10c20b32e22f988da3ccb4a2cc53fbfe586f97d218bc5f348b7540c21"
 def verify():
     raw=(ROOT/'ceiling/freeze.json').read_bytes()
     if hashlib.sha256(raw).hexdigest()!=FREEZE_HASH:raise RuntimeError('ceiling manifest changed')

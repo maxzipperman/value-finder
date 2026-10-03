@@ -35,6 +35,14 @@ def reservation(item):
     return ((len(body['messages'][0]['content'].encode()) + 256) * prices['prompt'] + body['max_tokens'] * prices['completion']) / 1_000_000
 
 
+def provider_error(result):
+    """HTTP200 can carry a provider failure inside a choice."""
+    return 'error' in result or any(
+        isinstance(choice, dict) and ('error' in choice or choice.get('finish_reason') == 'error')
+        for choice in result.get('choices', [])
+    )
+
+
 def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='openrouter-paid', token_cap=8192, conditional=False, mimo_only=False, ceiling=False, ceiling_mimo_only=False):
     out = ROOT / output
     raw = (ROOT / request_file).read_bytes()
@@ -171,7 +179,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
                 result = call('/api/v1/chat/completions', item['body'], auth=True, timeout=item['deadline_seconds'])
                 result['wall_seconds'] = time.monotonic() - start
                 Path(str(prefix) + '-result.json').write_text(json.dumps(result, indent=2) + '\n')
-                if 'error' in result or result.get('model') not in (item['model'], frozen['canonical_slug']):
+                if provider_error(result) or result.get('model') not in (item['model'], frozen['canonical_slug']):
                     raise RuntimeError('upstream error or unexpected response model')
                 if ceiling and item['model']=='z-ai/glm-5.3-flash' and result.get('provider')!='DeepInfra':
                     raise RuntimeError('unexpected pinned GLM provider')

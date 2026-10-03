@@ -1022,7 +1022,7 @@
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "regression",
-      "status": "pending",
+      "status": "result",
       "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
       "settings": {
@@ -1056,12 +1056,109 @@
         "baseline_sha256": "b11b1107e2848211008dc3fe77e56020c5f56771dc1564b936abfc3e16828184",
         "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
       },
-      "request_sha256": "b2202b9c50608b7b6e397705c6df780de8fa0b3289583db78df825bf64599e58"
+      "request_sha256": "b2202b9c50608b7b6e397705c6df780de8fa0b3289583db78df825bf64599e58",
+      "finish_reason": "stop",
+      "error": null,
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 462.81733162500313,
+      "usage": {
+        "prompt_tokens": 205,
+        "completion_tokens": 27573,
+        "total_tokens": 27778,
+        "cost": 0.00774299,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00774299,
+          "upstream_inference_prompt_cost": 2.255e-05,
+          "upstream_inference_completions_cost": 0.00772044
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 25822,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "final_answer_bytes": 4816,
+      "acceptance": {
+        "passed": 9,
+        "cases": 9,
+        "checks": [
+          {
+            "case": "correct implementation accepted",
+            "passed": true
+          },
+          {
+            "case": "negative_rejected",
+            "passed": true,
+            "error": "AssertionError: -100: unexpected exception raised"
+          },
+          {
+            "case": "positive_formula_for_both",
+            "passed": true,
+            "error": "AssertionError: -100: unexpected exception raised"
+          },
+          {
+            "case": "rounded_probability",
+            "passed": true,
+            "error": "AssertionError: valid number 101: expected 0.4975124378109453, got 0.5"
+          },
+          {
+            "case": "numeric_strings_rejected",
+            "passed": true,
+            "error": "AssertionError: '100': unexpected exception raised"
+          },
+          {
+            "case": "sub100_accepted",
+            "passed": true,
+            "error": "AssertionError: None: expected ValueError, another exception was raised"
+          },
+          {
+            "case": "nonfinite_accepted",
+            "passed": true,
+            "error": "AssertionError: inf: expected ValueError, but the call returned normally"
+          },
+          {
+            "case": "bad_input_returns_none",
+            "passed": true,
+            "error": "AssertionError: None: expected ValueError, but the call returned normally"
+          },
+          {
+            "case": "valid_boundary_rejected",
+            "passed": true,
+            "error": "AssertionError: 100: unexpected exception raised"
+          }
+        ]
+      },
+      "manual_inspection": {
+        "reviewer": "author complete candidate source inspection before original defaultrestricted15s expanded grader, not independent validation",
+        "all_source_inspected": true,
+        "response_sha256": "f0a07e2ea355114fb15672cae04145b70efe7e61b3002f11286ba6fe8df0ea8f",
+        "only_import": "math",
+        "operations": "Pure deterministic fabricated numeric/type/error assertions; no candidate source/name/attribute introspection, files/network/env/processes",
+        "original_fence_parser": true,
+        "no_source_repair_or_feedback": true,
+        "correct_oracle_accepted": true,
+        "mutants_caught": 8,
+        "mutants": 8,
+        "assertion_catches": 8,
+        "propagated_exception_catches": 0,
+        "limitations": [
+          "Only eight planted odds mutants; not exhaustive acceptance or integrated pipeline suite. Lighter finite-int oracle boundary remains for implementations; this suite does not test10**1000. Candidate errors are converted to AssertionError; classify these as intentional assertion catches not leaked exceptions."
+        ],
+        "resource_decision": "Completedstop27573tokens/462.82s below32768; no escalation/reroll."
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "hard-selection",
-      "status": "not_started",
+      "status": "result",
       "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
       "settings": {
@@ -1094,6 +1191,75 @@
         "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
         "baseline_sha256": "341a92327c54d015558578bc55d04d4de9441d2ede016877101045e44d622db1",
         "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      },
+      "request_sha256": "bed4474cb805dc2746a367a251694554dfdf6552a22f5566ff05f4f1ece56317",
+      "finish_reason": "stop",
+      "error": null,
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 314.061342541012,
+      "usage": {
+        "prompt_tokens": 258,
+        "completion_tokens": 21099,
+        "total_tokens": 21357,
+        "cost": 0.0059361,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0059361,
+          "upstream_inference_prompt_cost": 2.838e-05,
+          "upstream_inference_completions_cost": 0.00590772
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 19421,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "final_answer_bytes": 6956,
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: disallowed import"
+          }
+        ]
+      },
+      "manual_inspection": {
+        "reviewer": "author complete source inspection before original defaultrestricted15s grading, not independent validation",
+        "all_source_inspected": true,
+        "response_sha256": "768a1c59048537ccaa10d07b578d5981af1a6c08cb94312c9e66961bce703a94",
+        "imports": [
+          "math",
+          "re",
+          "collections.abc",
+          "datetime"
+        ],
+        "original_grader": true,
+        "acceptance": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: disallowed import"
+          }
+        ],
+        "no_candidate_execution": true,
+        "compatibility_note": "Prompt explicitly permits standard library math/datetime only. re/collections exceed both declared prompt imports and original AST allowlist; this is instruction-following/loading failure, not malicious-code evidence or78semanticzero.",
+        "manual_notes": [
+          "Nonempty string book/id is filtered with strip(), rejecting whitespace-only identifiers accepted by frozenreference interpretation.",
+          "Mapping accepted instead of dict-only; extra input acceptance may exceed required types.",
+          "Timestamp whitespace/lowercasez/fallback extensions differ from exact fromisoformat accepted strings; harderprompt timestamp contract needs independent interpretation before generalizing."
+        ],
+        "no_supplemental_permission_or_source_repair": true,
+        "resource_decision": "Completedstop21099tokens/314s below32768; no reroll/escalation for visible semantics."
       }
     }
   ],

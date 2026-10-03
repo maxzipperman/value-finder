@@ -1,0 +1,18 @@
+{
+  "reviewer": "author complete candidate source inspection before original defaultrestricted15s expanded grader, not independent validation",
+  "all_source_inspected": true,
+  "response_sha256": "f0a07e2ea355114fb15672cae04145b70efe7e61b3002f11286ba6fe8df0ea8f",
+  "only_import": "math",
+  "operations": "Pure deterministic fabricated numeric/type/error assertions; no candidate source/name/attribute introspection, files/network/env/processes",
+  "original_fence_parser": true,
+  "no_source_repair_or_feedback": true,
+  "correct_oracle_accepted": true,
+  "mutants_caught": 8,
+  "mutants": 8,
+  "assertion_catches": 8,
+  "propagated_exception_catches": 0,
+  "limitations": [
+    "Only eight planted odds mutants; not exhaustive acceptance or integrated pipeline suite. Lighter finite-int oracle boundary remains for implementations; this suite does not test10**1000. Candidate errors are converted to AssertionError; classify these as intentional assertion catches not leaked exceptions."
+  ],
+  "resource_decision": "Completedstop27573tokens/462.82s below32768; no escalation/reroll."
+}

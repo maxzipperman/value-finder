@@ -1,0 +1,46 @@
+[
+  {
+    "case": "correct implementation accepted",
+    "passed": true
+  },
+  {
+    "case": "negative_rejected",
+    "passed": true,
+    "error": "AssertionError: -100: unexpected exception raised"
+  },
+  {
+    "case": "positive_formula_for_both",
+    "passed": true,
+    "error": "AssertionError: -100: unexpected exception raised"
+  },
+  {
+    "case": "rounded_probability",
+    "passed": true,
+    "error": "AssertionError: valid number 101: expected 0.4975124378109453, got 0.5"
+  },
+  {
+    "case": "numeric_strings_rejected",
+    "passed": true,
+    "error": "AssertionError: '100': unexpected exception raised"
+  },
+  {
+    "case": "sub100_accepted",
+    "passed": true,
+    "error": "AssertionError: None: expected ValueError, another exception was raised"
+  },
+  {
+    "case": "nonfinite_accepted",
+    "passed": true,
+    "error": "AssertionError: inf: expected ValueError, but the call returned normally"
+  },
+  {
+    "case": "bad_input_returns_none",
+    "passed": true,
+    "error": "AssertionError: None: expected ValueError, but the call returned normally"
+  },
+  {
+    "case": "valid_boundary_rejected",
+    "passed": true,
+    "error": "AssertionError: 100: unexpected exception raised"
+  }
+]

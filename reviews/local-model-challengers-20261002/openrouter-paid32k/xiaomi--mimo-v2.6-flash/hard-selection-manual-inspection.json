@@ -1,0 +1,28 @@
+{
+  "reviewer": "author complete source inspection before original defaultrestricted15s grading, not independent validation",
+  "all_source_inspected": true,
+  "response_sha256": "768a1c59048537ccaa10d07b578d5981af1a6c08cb94312c9e66961bce703a94",
+  "imports": [
+    "math",
+    "re",
+    "collections.abc",
+    "datetime"
+  ],
+  "original_grader": true,
+  "acceptance": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "ValueError: disallowed import"
+    }
+  ],
+  "no_candidate_execution": true,
+  "compatibility_note": "Prompt explicitly permits standard library math/datetime only. re/collections exceed both declared prompt imports and original AST allowlist; this is instruction-following/loading failure, not malicious-code evidence or78semanticzero.",
+  "manual_notes": [
+    "Nonempty string book/id is filtered with strip(), rejecting whitespace-only identifiers accepted by frozenreference interpretation.",
+    "Mapping accepted instead of dict-only; extra input acceptance may exceed required types.",
+    "Timestamp whitespace/lowercasez/fallback extensions differ from exact fromisoformat accepted strings; harderprompt timestamp contract needs independent interpretation before generalizing."
+  ],
+  "no_supplemental_permission_or_source_repair": true,
+  "resource_decision": "Completedstop21099tokens/314s below32768; no reroll/escalation for visible semantics."
+}
