@@ -25,3 +25,11 @@ Owner steering: start both installed Qwen models immediately while the remaining
 During the first thinking-enabled Qwen round, multiple tasks exhausted 8192 output tokens. A separate no-thinking round is justified for those failures, using the same prompts and resource caps without feedback. Keep its results in suffixed directories and do not mix the two modes in one score. Source filter inspection permits only the harmless type(value).__name__ form for exception labels; generic dunder/reflection remains blocked (source-filter-validation.json).
 
 Completed October 3: 24 thinking-enabled requests, 12 no-thinking code-writing requests, and two Gemma no-thinking review/extraction requests. All results are separate in README.md and summary.json. A post-result general-offset diagnostic supplements, without changing, the predeclared parser mutation score.
+
+## Prospective Q8 and Ornith addendum, October 3 (before inference)
+
+Owner confirmed qwen3.8:27b-q8_0 and ornith-1.5:35b and asked to test Qwen as soon as its download finishes. Run the same six TASKS/PROMPT strings, temperature0 seed42 num_ctx16384 num_predict8192 deadline300, one-attempt thinking-enabled Q8 first. Use Ornith's supported reasoning mode when installed; verify capabilities before execution. Same collection lock, busy/memory deferral, keep_alive=0, synthetic-only scope and unchanged acceptance checks. Separate directories/digests; never overwrite prior results. Truncation may justify a separately labeled no-thinking diagnostic without feedback.
+
+Historical controls are the prior frozen Qwen3.6 and Qwen3.8 rounds, not fresh randomized contemporaneous runs. Local show metadata reports identical Qwen3.8 general.version 0814, architecture, parameter count and template SHA for Q4 and Q8, but Q4 also has draft_num_predict4 while Q8 does not. Metadata cannot prove the underlying unquantized weights are identical. Report whole-artifact comparisons, not causal precision-only improvements. q8-ornith-metadata.json preserves the selected metadata before inference.
+
+All grading is author grading against independent behavioral fixtures, not separate reviewer signoff. Dot's methodology/result validation remains required before automatic routing. Continue only through isolated draft PR147. No new paid/spend/research authorization.

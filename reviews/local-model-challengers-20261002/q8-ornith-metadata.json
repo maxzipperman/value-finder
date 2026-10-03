@@ -1,0 +1,86 @@
+{
+  "qwen3.8:27b": {
+    "details": {
+      "parent_model": "qwen3.8:27b-q4_K_M",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "27.3B",
+      "quantization_level": "Q4_K_M"
+    },
+    "capabilities": [
+      "completion",
+      "vision",
+      "tools",
+      "thinking"
+    ],
+    "parameters": "presence_penalty               0\nrepeat_penalty                 1\ntemperature                    1\ntop_k                          20\ntop_p                          0.95\ndraft_num_predict              4\nmin_p                          0",
+    "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315",
+    "model_info": {
+      "general.architecture": "qwen35",
+      "general.basename": "Qwen3.8",
+      "general.file_type": 15,
+      "general.license": "apache-2.0",
+      "general.parameter_count": 27320697856,
+      "general.quantization_version": 2,
+      "general.sampling.temp": 1,
+      "general.sampling.top_k": 20,
+      "general.sampling.top_p": 0.95,
+      "general.size_label": "27B",
+      "general.tags": [
+        "image-text-to-text"
+      ],
+      "general.type": "model",
+      "general.version": "0814",
+      "qwen35.attention.head_count": 24,
+      "qwen35.attention.head_count_kv": 4,
+      "qwen35.block_count": 65,
+      "qwen35.context_length": 262144,
+      "qwen35.embedding_length": 5120
+    }
+  },
+  "qwen3.8:27b-q8_0": {
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "27.3B",
+      "quantization_level": "Q8_0"
+    },
+    "capabilities": [
+      "completion",
+      "vision",
+      "tools",
+      "thinking"
+    ],
+    "parameters": "top_p                          0.95\nmin_p                          0\npresence_penalty               0\nrepeat_penalty                 1\ntemperature                    1\ntop_k                          20",
+    "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315",
+    "model_info": {
+      "general.architecture": "qwen35",
+      "general.basename": "Qwen3.8",
+      "general.file_type": 7,
+      "general.license": "apache-2.0",
+      "general.parameter_count": 27320697856,
+      "general.quantization_version": 2,
+      "general.sampling.temp": 1,
+      "general.sampling.top_k": 20,
+      "general.sampling.top_p": 0.95,
+      "general.size_label": "27B",
+      "general.tags": [
+        "image-text-to-text"
+      ],
+      "general.type": "model",
+      "general.version": "0814",
+      "qwen35.attention.head_count": 24,
+      "qwen35.attention.head_count_kv": 4,
+      "qwen35.block_count": 65,
+      "qwen35.context_length": 262144,
+      "qwen35.embedding_length": 5120
+    }
+  }
+}

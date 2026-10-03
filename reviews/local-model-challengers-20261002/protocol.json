@@ -3,7 +3,9 @@
     "qwen3.6:35b",
     "qwen3.8:27b",
     "gpt-oss:20b",
-    "gemma4:26b"
+    "gemma4:26b",
+    "qwen3.8:27b-q8_0",
+    "ornith-1.5:35b"
   ],
   "source": "public repository code and synthetic 2025 fixtures only",
   "tasks": [
