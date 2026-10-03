@@ -1,3 +1,5 @@
+> Historical first-head evidence only. See [REPORT_REPAIR.md](REPORT_REPAIR.md) for the superseding independent-review repair and current non-executable production boundary.
+
 # PR165 synthetic verification
 
 Implementation commit tested clean: `38fba6ef8ad626110a6127abce0c7301e04511af`.
