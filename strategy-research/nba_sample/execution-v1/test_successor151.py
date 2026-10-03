@@ -67,3 +67,11 @@ def test_actual_packet_held_before_directory_or_cache_scanning(tmp_path):
 def test_paid_executor_held_before_source_import_key_or_runtime(tmp_path):
     with patch.object(stage,'verify_packet',return_value=({},[],{'kind':'exact_successor151_preparation_only'})),patch.object(execute,'source_executor',side_effect=AssertionError('held before import')):
         with pytest.raises(ValueError,match='preparation only'):execute.run(tmp_path,'0'*64,tmp_path,{},key=lambda:pytest.fail('must never load key'))
+
+@pytest.mark.parametrize('kind',['raw','receipt'])
+def test_retired_pending_cannot_gain_a_response_without_reconciliation(tmp_path,kind):
+    pins=json.loads((S.HERE/'successor151-pins.json').read_bytes())
+    if kind=='raw':p=tmp_path/pins['retired_root']/'data/raw/test/05175510dc14de25e2ca.parquet'
+    else:p=tmp_path/pins['retired_root']/'receipts'/(pins['pending_id']+'.json')
+    p.parent.mkdir(parents=True);p.write_bytes(b'opaque synthetic bytes never read')
+    with pytest.raises(ValueError,match='new response'):S.retired_absence(tmp_path,pins)

@@ -94,6 +94,13 @@ def validate(states, pins, rows):
         raise ValueError('Prospective ceiling insufficient or changed')
 
 
+def retired_absence(runtime, pins):
+    folder = Path(runtime)/pins['retired_root']
+    receipt = folder/'receipts'/(pins['pending_id']+'.json')
+    if receipt.exists() or receipt.is_symlink() or any((folder/'data/raw').rglob('05175510dc14de25e2ca.parquet')):
+        raise ValueError('Retired pending60 acquired new response/receipt; reconciliation required')
+
+
 def seed(path, rows, runtime):
     """Caller holds shared read-only global lock; recheck every pin before returning."""
     runtime, path = Path(runtime), Path(path)
@@ -111,6 +118,7 @@ def seed(path, rows, runtime):
     captured = {rel:checked(runtime/rel,pin) for rel,pin in pins['runtime_pins'].items()}
     states = {root:json.loads(captured[root+'/spending-ledger.json']) for root in pins['ledger_pins']}
     validate(states,pins,list(rows))
+    retired_absence(runtime,pins)
     if states[ROOT]['predecessor_snapshot'] != hashlib.sha256(canonical(expected)).hexdigest():
         raise ValueError('Native predecessor snapshot changed')
     for root in states:
@@ -128,6 +136,7 @@ def seed(path, rows, runtime):
                  response_evidence_sha256=f2['response_evidence_sha256'])
     if hashlib.sha256(canonical(proof)).hexdigest() != pins['f2_union_proof_sha256']:
         raise ValueError('Accepted F2 proof changed')
+    retired_absence(runtime,pins)
     for rel,pin in pins['runtime_pins'].items(): checked(runtime/rel,pin)
     for rel,pin in pins['source_pins'].items(): checked(REPO/rel,pin)
     return dict(kind='exact_successor151_preparation_only',root=ROOT,ledger_path=str(path),

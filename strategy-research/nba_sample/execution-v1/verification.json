@@ -22,7 +22,13 @@
     "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json",
     "strategy-research/football_archive/acquisition/football-archive-v4",
     "ops/process/process_guard.py",
-    ".github/workflows/n0-preparation.yml"
+    ".github/workflows/n0-preparation.yml",
+    "STATUS.md",
+    "strategy-research/nba_sample/execution-v1/README.md",
+    "strategy-research/nba_sample/execution-v1/CEILING-DRAFT.md",
+    "strategy-research/football_archive/followups/F2-pilot/cache-reconciliation.json",
+    "strategy-research/football_archive/recovery-v1/F2-continuation/cache-reconciliation.json",
+    "strategy-research/football_archive/recovery-v2/F2-second-continuation/cache-reconciliation.json"
   ],
   "commands": [
     [

@@ -1,10 +1,10 @@
 name: N0 preparation
 on:
   pull_request:
-    paths: ['strategy-research/nba_sample/**', 'strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json', 'strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json', 'strategy-research/football_archive/f2_handoff.py', 'strategy-research/football_archive/union-v1/F3a/union-certificate.json', 'strategy-research/football_archive/acquisition/football-archive-v4/**', 'reviews/post151-readiness/readiness.json', 'ops/process/process_guard.py', '.github/workflows/n0-preparation.yml']
+    paths: ['strategy-research/nba_sample/**', 'strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json', 'strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json', 'strategy-research/football_archive/f2_handoff.py', 'strategy-research/football_archive/union-v1/F3a/union-certificate.json', 'strategy-research/football_archive/**', 'STATUS.md', 'reviews/post151-readiness/readiness.json', 'ops/process/process_guard.py', '.github/workflows/n0-preparation.yml']
   push:
     branches: [main]
-    paths: ['strategy-research/nba_sample/**', 'strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json', 'strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json', 'strategy-research/football_archive/f2_handoff.py', 'strategy-research/football_archive/union-v1/F3a/union-certificate.json', 'strategy-research/football_archive/acquisition/football-archive-v4/**', 'reviews/post151-readiness/readiness.json', 'ops/process/process_guard.py', '.github/workflows/n0-preparation.yml']
+    paths: ['strategy-research/nba_sample/**', 'strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json', 'strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json', 'strategy-research/football_archive/f2_handoff.py', 'strategy-research/football_archive/union-v1/F3a/union-certificate.json', 'strategy-research/football_archive/**', 'STATUS.md', 'reviews/post151-readiness/readiness.json', 'ops/process/process_guard.py', '.github/workflows/n0-preparation.yml']
 permissions:
   contents: read
 jobs:
