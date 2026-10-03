@@ -1,0 +1,85 @@
+```python
+import math
+
+def run_tests(candidate):
+    """
+    Executes a suite of tests on the candidate function 'american_probability'.
+    Raises AssertionError if the candidate fails any test.
+    """
+    
+    # Helper to run a single test
+    def test(description, input_val, expected):
+        try:
+            result = candidate(input_val)
+            if math.isclose(result, expected, rel_tol=1e-9, abs_tol=1e-9):
+                print(f"PASS: {description}")
+            else:
+                raise AssertionError(f"FAIL: {description} - Expected {expected}, got {result}")
+        except Exception as e:
+            raise AssertionError(f"FAIL: {description} - {str(e)}")
+
+    # --- Valid Inputs Tests ---
+
+    # Positive Odds
+    test("Positive Odds: 100", 100, 0.5)
+    test("Positive Odds: 200", 200, 1/3)
+    test("Positive Odds: 500", 500, 0.16666666666666666)
+    test("Positive Odds: 1000", 1000, 0.09090909090909091)
+    test("Positive Odds: Float 150.0", 150.0, 0.4)
+    test("Positive Odds: String '200'", "200", 1/3)
+    test("Positive Odds: String '  300  '", "  300  ", 0.25)
+    test("Positive Odds: String '  -200  '", "  -200  ", 0.6666666666666666) # Note: string parsing handles whitespace
+
+    # Negative Odds
+    test("Negative Odds: -100", -100, 0.5)
+    test("Negative Odds: -200", -200, 0.3333333333333333)
+    test("Negative Odds: -500", -500, 0.16666666666666666)
+    test("Negative Odds: -1000", -1000, 0.09090909090909091)
+    test("Negative Odds: Float -150.0", -150.0, 0.4)
+    test("Negative Odds: String '-200'", "-200", 0.3333333333333333)
+    test("Negative Odds: String '  -300  '", "  -300  ", 0.25)
+
+    # --- Invalid Inputs Tests ---
+
+    # Type Errors
+    test("Invalid Type: None", None, ValueError)
+    test("Invalid Type: Bool True", True, ValueError)
+    test("Invalid Type: Bool False", False, ValueError)
+    test("Invalid Type: List", [], ValueError)
+    test("Invalid Type: Dict", {}, ValueError)
+    test("Invalid Type: Tuple", (), ValueError)
+    test("Invalid Type: Set", set(), ValueError)
+    test("Invalid Type: Object", object(), ValueError)
+
+    # Non-Numeric Strings
+    test("Invalid String: 'abc'", "abc", ValueError)
+    test("Invalid String: '100abc'", "100abc", ValueError)
+    test("Invalid String: 'abc100'", "abc100", ValueError)
+    test("Invalid String: '1e3'", "1e3", ValueError) # Scientific notation not explicitly allowed by prompt constraints usually implying strict parsing, but prompt says "nonnumeric strings". '1e3' is numeric but not standard integer/float string format in this context. We treat it as invalid to be safe or standard float conversion. Let's assume strict non-numeric.
+    test("Invalid String: 'NaN'", "NaN", ValueError)
+    test("Invalid String: 'Infinity'", "Infinity", ValueError)
+
+    # Value Errors (Absolute value < 100)
+    test("Invalid Value: 99", 99, ValueError)
+    test("Invalid Value: -99", -99, ValueError)
+    test("Invalid Value: 0", 0, ValueError)
+    test("Invalid Value: -0", -0, ValueError)
+    test("Invalid Value: 100.5", 100.5, ValueError)
+    test("Invalid Value: -100.5", -100.5, ValueError)
+    test("Invalid Value: 99.99", 99.99, ValueError)
+    test("Invalid Value: -99.99", -99.99, ValueError)
+    test("Invalid Value: 1e100", 1e100, ValueError) # Finite check
+    test("Invalid Value: -1e100", -1e100, ValueError) # Finite check
+
+    # --- Edge Cases ---
+    
+    # Boundary Value
+    test("Boundary Value: 100", 100, 0.5)
+    test("Boundary Value: -100", -100, 0.5)
+
+    # Floating Point Precision
+    test("Precision: 333.3333333333333", 333.3333333333333, 0.23) # 100/(333.33+100) = 0.23
+    test("Precision: -333.3333333333333", -333.3333333333333, 0.23) # -333.33/(-333.33+100) = 0.23
+
+    print("All tests passed.")
+```

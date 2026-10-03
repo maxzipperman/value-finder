@@ -1,0 +1,90 @@
+Here's the complete Python source for the regression tests as requested:
+
+```python
+from datetime import datetime, timezone, timedelta
+import math
+
+def run_tests(candidate):
+    # Test cases covering various edge cases and formats
+    test_cases = [
+        # None/blank/invalid inputs
+        (None, None),
+        ("", None),
+        ("   ", None),
+        ("invalid", None),
+        ("2026-09-29", None),  # Missing time component
+        ("2026-09-29T14:30:07", None),  # Missing timezone
+        ("2026-09-29T14:30:07+01:00", None),  # Non-UTC timezone (should be converted)
+
+        # Standard ISO Z format
+        ("2026-09-29T14:30:07Z", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+        ("2026-09-29T00:00:00Z", datetime(2026, 9, 29, 0, 0, 0, tzinfo=timezone.utc)),
+
+        # Compact UTC HHMMZ format
+        ("2026-09-29T0002Z", datetime(2026, 9, 29, 0, 2, 0, tzinfo=timezone.utc)),
+        ("2026-09-29T2359Z", datetime(2026, 9, 29, 23, 59, 0, tzinfo=timezone.utc)),
+
+        # Explicit UTC offset
+        ("2026-09-29T14:30:07+00:00", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+        ("2026-09-29T14:30:07+0000", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+        ("2026-09-29T14:30:07Z0000", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+
+        # Space-separated formats
+        ("2026-09-29 14:30:07Z", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+        ("2026-09-29 14:30Z", datetime(2026, 9, 29, 14, 30, 0, tzinfo=timezone.utc)),
+        ("2026-09-29 14:30:07+00:00", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+
+        # Fractional seconds
+        ("2026-09-29T14:30:07.123Z", datetime(2026, 9, 29, 14, 30, 7, 123000, tzinfo=timezone.utc)),
+        ("2026-09-29T14:30:07.123456Z", datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=timezone.utc)),
+        ("2026-09-29T14:30:07.1Z", datetime(2026, 9, 29, 14, 30, 7, 100000, tzinfo=timezone.utc)),
+
+        # Edge cases with different date components
+        ("2026-12-31T23:59:59Z", datetime(2026, 12, 31, 23, 59, 59, tzinfo=timezone.utc)),
+        ("2026-01-01T00:00:00Z", datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)),
+        ("2026-02-29T12:00:00Z", datetime(2026, 2, 29, 12, 0, 0, tzinfo=timezone.utc)),  # Leap year
+
+        # Whitespace handling
+        ("  2026-09-29T14:30:07Z  ", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+        ("\t2026-09-29T14:30:07Z\n", datetime(2026, 9, 29, 14, 30, 7, tzinfo=timezone.utc)),
+    ]
+
+    for input_text, expected in test_cases:
+        result = candidate(input_text)
+        assert result == expected, f"Failed for input '{input_text}': expected {expected}, got {result}"
+
+    # Test that the result is always timezone-aware UTC
+    for input_text, expected in test_cases:
+        if expected is not None:
+            result = candidate(input_text)
+            assert result is not None
+            assert result.tzinfo == timezone.utc
+            assert result.utcoffset() == timedelta(0)
+
+    # Test that fractional seconds are preserved
+    fractional_cases = [
+        ("2026-09-29T14:30:07.123Z", 123000),
+        ("2026-09-29T14:30:07.123456Z", 123456),
+        ("2026-09-29T14:30:07.1Z", 100000),
+    ]
+    for input_text, expected_microseconds in fractional_cases:
+        result = candidate(input_text)
+        assert result is not None
+        assert result.microsecond == expected_microseconds
+
+    print("All tests passed successfully!")
+```
+
+This test suite covers:
+1. None/blank/invalid inputs (returns None)
+2. Standard ISO Z format
+3. Compact UTC HHMMZ format
+4. Explicit UTC offsets
+5. Space-separated formats
+6. Fractional seconds preservation
+7. Edge cases with different date components
+8. Whitespace handling
+9. Verification that results are always timezone-aware UTC
+10. Verification that fractional seconds are preserved
+
+The tests follow the contract specified and don't inspect the candidate implementation's source, name, or attributes. They only test the behavioral interface through the function's input/output.

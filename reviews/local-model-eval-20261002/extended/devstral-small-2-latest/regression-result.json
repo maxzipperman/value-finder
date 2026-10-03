@@ -1,0 +1,18 @@
+{
+  "model": "devstral-small-2:latest",
+  "created_at": "2026-10-02T17:53:27.849545Z",
+  "message": {
+    "role": "assistant",
+    "content": "Here's a Python source file that defines `run_tests(candidate)` to evaluate the `american_probability` function according to the given specifications:\n\n```python\nimport math\n\ndef run_tests(candidate):\n    # Test valid positive odds\n    assert math.isclose(candidate(\"100\"), 0.5, rel_tol=1e-9)\n    assert math.isclose(candidate(100), 0.5, rel_tol=1e-9)\n    assert math.isclose(candidate(\" 150 \"), 2/3, rel_tol=1e-9)\n    assert math.isclose(candidate(200), 0.3333333333333333, rel_tol=1e-9)\n\n    # Test valid negative odds\n    assert math.isclose(candidate(\"-100\"), -0.5, rel_tol=1e-9)\n    assert math.isclose(candidate(-100), -0.5, rel_tol=1e-9)\n    assert math.isclose(candidate(\"-200\"), -0.6666666666666666, rel_tol=1e-9)\n    assert math.isclose(candidate(\"-150\"), -2/3, rel_tol=1e-9)\n\n    # Test edge cases with absolute value exactly 100\n    assert math.isclose(candidate(\"100\"), 0.5, rel_tol=1e-9)\n    assert math.isclose(candidate(\"-100\"), -0.5, rel_tol=1e-9)\n\n    # Test invalid inputs that should raise ValueError\n    try:\n        candidate(\"abc\")\n        assert False, \"Should have raised ValueError for non-numeric string\"\n    except ValueError:\n        pass\n\n    try:\n        candidate(True)\n        assert False, \"Should have raised ValueError for bool\"\n    except ValueError:\n        pass\n\n    try:\n        candidate(None)\n        assert False, \"Should have raised ValueError for None\"\n    except ValueError:\n        pass\n\n    try:\n        candidate(50)\n        assert False, \"Should have raised ValueError for value < 100\"\n    except ValueError:\n        pass\n\n    try:\n        candidate(-50)\n        assert False, \"Should have raised ValueError for value > -100\"\n    except ValueError:\n        pass\n\n    try:\n        candidate(float('inf'))\n        assert False, \"Should have raised ValueError for infinite value\"\n    except ValueError:\n        pass\n\n    try:\n        candidate(float('nan'))\n        assert False, \"Should have raised ValueError for NaN\"\n    except ValueError:\n        pass\n\n    # Test that output is not rounded\n    result = candidate(\"101\")\n    assert result == 100/201, f\"Expected {100/201}, got {result}\"\n    result = candidate(\"-101\")\n    assert result == -101/201, f\"Expected {-101/201}, got {result}\"\n```\n\nThis test suite:\n1. Tests valid positive and negative odds with both string and numeric inputs\n2. Tests edge cases with absolute value exactly 100\n3. Verifies that invalid inputs raise ValueError\n4. Checks that the output isn't rounded (using exact fraction comparisons)\n5. Uses `math.isclose` for floating-point comparisons with a tight tolerance\n6. Doesn't inspect the candidate function's implementation or attributes\n7. Only uses the standard library (math module)\n8. Has no output (only assertions)\n\nThe tests will pass with a correct implementation and fail with incorrect ones, including those that:\n- Don't handle string inputs properly\n- Don't validate input types\n- Don't validate the absolute value >= 100 requirement\n- Round the output\n- Don't handle infinite or NaN values properly"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 26756664292,
+  "load_duration": 1864167,
+  "prompt_eval_count": 764,
+  "prompt_eval_cached_count": 668,
+  "prompt_eval_duration": 216493000,
+  "eval_count": 851,
+  "eval_duration": 26516094000,
+  "wall_seconds": 26.757304958009627
+}

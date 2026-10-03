@@ -1,0 +1,83 @@
+{
+  "multifile": [
+    {
+      "case": "candidate completion/loading",
+      "passed": false,
+      "error": "JSONDecodeError: Extra data: line 3 column 2 (char 1096)"
+    }
+  ],
+  "regression": [
+    {
+      "case": "correct implementation accepted",
+      "passed": true
+    },
+    {
+      "case": "negative_rejected",
+      "passed": true,
+      "error": "ValueError: "
+    },
+    {
+      "case": "positive_formula_for_both",
+      "passed": true,
+      "error": "AssertionError: Expected 0.6666666666666666, got -1.0"
+    },
+    {
+      "case": "rounded_probability",
+      "passed": true,
+      "error": "AssertionError: Expected 0.3333333333333333, got 0.33"
+    },
+    {
+      "case": "numeric_strings_rejected",
+      "passed": true,
+      "error": "ValueError: "
+    },
+    {
+      "case": "sub100_accepted",
+      "passed": true,
+      "error": "AssertionError: Should have raised ValueError for bool True"
+    },
+    {
+      "case": "nonfinite_accepted",
+      "passed": true,
+      "error": "AssertionError: Should have raised ValueError for infinity"
+    },
+    {
+      "case": "bad_input_returns_none",
+      "passed": true,
+      "error": "AssertionError: Should have raised ValueError for None"
+    },
+    {
+      "case": "valid_boundary_rejected",
+      "passed": true,
+      "error": "ValueError: "
+    }
+  ],
+  "review": [
+    {
+      "case": "future/update-after-snapshot not gated",
+      "passed": true
+    },
+    {
+      "case": "negative odds wrong probability",
+      "passed": true
+    },
+    {
+      "case": "input mutated",
+      "passed": true
+    },
+    {
+      "case": "oldest snapshot chosen",
+      "passed": true
+    },
+    {
+      "case": "all findings point to seeded causes",
+      "passed": true
+    }
+  ],
+  "extraction": [
+    {
+      "case": "exact fact extraction and schema",
+      "passed": true
+    }
+  ]
+}

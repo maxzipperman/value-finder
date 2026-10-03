@@ -1,0 +1,18 @@
+{
+  "model": "qwen3-coder:30b",
+  "created_at": "2026-10-02T17:52:01.842443Z",
+  "message": {
+    "role": "assistant",
+    "content": "{\n  \"latest\": {\n    \"A\": {\n      \"attempt\": 2,\n      \"status\": \"ok\"\n    },\n    \"B\": {\n      \"attempt\": 2,\n      \"status\": \"ok\"\n    },\n    \"C\": {\n      \"attempt\": 2,\n      \"status\": \"failed\"\n    }\n  },\n  \"failures\": [\n    \"C\"\n  ],\n  \"successful_rows\": 12\n}"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 773242292,
+  "load_duration": 969708,
+  "prompt_eval_count": 317,
+  "prompt_eval_cached_count": 34,
+  "prompt_eval_duration": 108948000,
+  "eval_count": 94,
+  "eval_duration": 655644000,
+  "wall_seconds": 0.7741139999998268
+}

@@ -1,0 +1,14 @@
+{
+  "model": "glm-4.7-flash:latest",
+  "created_at": "2026-10-02T17:29:39.106221Z",
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 79188411750,
+  "load_duration": 1121709,
+  "prompt_eval_count": 210,
+  "prompt_eval_cached_count": 4,
+  "prompt_eval_duration": 121366000,
+  "eval_count": 4619,
+  "eval_duration": 79040555000,
+  "wall_seconds": 79.18944349998492
+}

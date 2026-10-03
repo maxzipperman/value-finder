@@ -1,0 +1,16 @@
+{
+  "model": "qwen3.6:35b",
+  "digest": "a7eb95c53bcf96b4bdd008d0fab4a5dac88047d9c1a7a9ab88ed453423fbd87c",
+  "download_bytes": 22621314381,
+  "parameter_size": "35.5B",
+  "quantization": "Q4_K_M",
+  "ollama_version": "0.35.0",
+  "loaded_model_gb_ollama": 22,
+  "processor": "100% GPU",
+  "context": 8192,
+  "thinking": false,
+  "swap_used_mib_during": 8.06,
+  "memory_pressure_free_percent_sample": 49,
+  "peak_measured": false,
+  "model_unloaded_at_end": true
+}

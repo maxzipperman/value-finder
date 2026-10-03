@@ -1,0 +1,240 @@
+```python
+from datetime import datetime, timezone
+import math
+
+def run_tests(candidate):
+    # Test cases based on reference implementation behavior
+    UTC = timezone.utc
+    
+    # Test None input
+    assert candidate(None) is None
+    
+    # Test blank/empty string
+    assert candidate("") is None
+    assert candidate("   ") is None
+    assert candidate("\t\n") is None
+    
+    # Test valid ISO Z format
+    result = candidate("2026-09-29T14:30:07Z")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test compact UTC HHMMZ format
+    result = candidate("2026-09-29T1430Z")
+    expected = datetime(2026, 9, 29, 14, 30, tzinfo=UTC)
+    assert result == expected
+    
+    # Test explicit offset (should be normalized to UTC)
+    result = candidate("2026-10-02 00:00:00+00:00")
+    expected = datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)
+    assert result == expected
+    
+    # Test naive ISO (should be interpreted as UTC)
+    result = candidate("2026-10-02 00:00:00")
+    expected = datetime(2026, 10, 2, 0, 0, 0, tzinfo=UTC)
+    assert result == expected
+    
+    # Test fractional seconds
+    result = candidate("2026-09-29T14:30:07.123456Z")
+    expected = datetime(2026, 9, 29, 14, 30, 7, 123456, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with whitespace around
+    result = candidate("  2026-09-29T14:30:07Z  ")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test invalid format
+    assert candidate("invalid") is None
+    assert candidate("2026-13-45T14:30:07Z") is None
+    assert candidate("2026-09-29T25:30:07Z") is None
+    
+    # Test different valid formats
+    result = candidate("2026-09-29T14:30Z")
+    expected = datetime(2026, 9, 29, 14, 30, tzinfo=UTC)
+    assert result == expected
+    
+    result = candidate("2026-09-29 14:30:07Z")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test that naive datetime is interpreted as UTC
+    result = candidate("2026-09-29T14:30:07")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test that timezone-aware datetime is normalized to UTC
+    result = candidate("2026-09-29T14:30:07+05:00")
+    expected = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test edge case with zero time
+    result = candidate("2026-01-01T00:00:00Z")
+    expected = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+    assert result == expected
+    
+    # Test edge case with maximum time
+    result = candidate("2026-12-31T23:59:59Z")
+    expected = datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with different fractional second precision
+    result = candidate("2026-09-29T14:30:07.1Z")
+    expected = datetime(2026, 9, 29, 14, 30, 7, 100000, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with no fractional seconds
+    result = candidate("2026-09-29T14:30:07Z")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test that non-string inputs are converted to string
+    result = candidate(1234567890)
+    assert result is None  # because it's not a valid datetime format
+    
+    # Test with timezone offset that's not UTC
+    result = candidate("2026-09-29T14:30:07+02:00")
+    expected = datetime(2026, 9, 29, 12, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with negative offset
+    result = candidate("2026-09-29T14:30:07-05:00")
+    expected = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test that invalid timezone offset returns None
+    assert candidate("2026-09-29T14:30:07+25:00") is None
+    
+    # Test that invalid date returns None
+    assert candidate("2026-13-01T14:30:07Z") is None
+    
+    # Test that invalid time returns None
+    assert candidate("2026-09-29T25:30:07Z") is None
+    
+    # Test that invalid month returns None
+    assert candidate("2026-13-29T14:30:07Z") is None
+    
+    # Test that invalid day returns None
+    assert candidate("2026-09-32T14:30:07Z") is None
+    
+    # Test that invalid hour returns None
+    assert candidate("2026-09-29T25:30:07Z") is None
+    
+    # Test that invalid minute returns None
+    assert candidate("2026-09-29T14:60:07Z") is None
+    
+    # Test that invalid second returns None
+    assert candidate("2026-09-29T14:30:60Z") is None
+    
+    # Test with string containing only whitespace
+    assert candidate("   ") is None
+    
+    # Test with string containing only tabs and newlines
+    assert candidate("\t\n\r") is None
+    
+    # Test with string that has leading/trailing spaces
+    result = candidate(" 2026-09-29T14:30:07Z ")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has multiple spaces
+    result = candidate("  2026-09-29T14:30:07Z   ")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has mixed whitespace
+    result = candidate(" \t\n 2026-09-29T14:30:07Z \t\n ")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has no timezone
+    result = candidate("2026-09-29T14:30:07")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z
+    result = candidate("2026-09-29T14:30:07+00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and not UTC
+    result = candidate("2026-09-29T14:30:07+05:00")
+    expected = datetime(2026, 9, 29, 9, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and negative offset
+    result = candidate("2026-09-29T14:30:07-05:00")
+    expected = datetime(2026, 9, 29, 19, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07+00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07-00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07+0000")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07-0000")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07+00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07-00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07+00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07-00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07+00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07-00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07+00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07-00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07+00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not Z and zero offset
+    result = candidate("2026-09-29T14:30:07-00:00")
+    expected = datetime(2026, 9, 29, 14, 30, 7, tzinfo=UTC)
+    assert result == expected
+    
+    # Test with string that has timezone but not

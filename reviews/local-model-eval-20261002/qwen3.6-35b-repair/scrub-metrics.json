@@ -1,0 +1,14 @@
+{
+  "model": "qwen3.6:35b",
+  "created_at": "2026-10-02T17:35:11.597909Z",
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 4550674958,
+  "load_duration": 2616208,
+  "prompt_eval_count": 1354,
+  "prompt_eval_cached_count": 700,
+  "prompt_eval_duration": 314518000,
+  "eval_count": 615,
+  "eval_duration": 4195598000,
+  "wall_seconds": 4.560237458004849
+}

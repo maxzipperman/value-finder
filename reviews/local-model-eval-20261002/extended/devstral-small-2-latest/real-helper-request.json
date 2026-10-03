@@ -1,0 +1,18 @@
+{
+  "model": "devstral-small-2:latest",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Isolated Value Finder coding evaluation. Paper-only synthetic data. Use standard library only. Do not access files, network, processes, real data or credentials. Write regression tests for this ACTUAL dashboard helper. Return complete Python source defining run_tests(candidate), with imports from datetime/math only. candidate is parse_utc supplied by evaluator, not the implementation below. Contract: None/blank/invalid input returns None; strip outer whitespace; accept ordinary ISO Z, explicit offsets, compact UTC HHMMZ, naive ISO interpreted as UTC; return aware UTC normalized absolute instants, preserve ISO fractional seconds. Successful completion means all assertions passed; otherwise raise AssertionError. Test behavioral edge cases; never inspect candidate source/name/attributes. Avoid printing.\nReference implementation:\nfrom datetime import datetime, timezone\nUTC=timezone.utc\n_UTC_FORMATS = (\"%Y-%m-%dT%H:%M:%SZ\", \"%Y-%m-%dT%H:%MZ\", \"%Y-%m-%dT%H%MZ\", \"%Y-%m-%d %H:%MZ\", \"%Y-%m-%d %H:%M:%SZ\",\n                \"%Y-%m-%dT%H:%M:%S\", \"%Y-%m-%d %H:%M:%S\", \"%Y-%m-%dT%H:%M\", \"%Y-%m-%d %H:%M\")\n\ndef parse_utc(text) -> datetime | None:\n    \"\"\"A UTC time as the jobs write them (\"2026-09-29T14:30:07Z\", \"2026-09-29T0002Z\",\n    \"2026-10-02 00:00:00+00:00\", ...), as an aware datetime; None when blank or not a time.\"\"\"\n    if text is None:\n        return None\n    s = str(text).strip()\n    if not s:\n        return None\n    for fmt in _UTC_FORMATS:\n        try:\n            return datetime.strptime(s, fmt).replace(tzinfo=UTC)\n        except ValueError:\n            pass\n    try:\n        t = datetime.fromisoformat(s.replace(\"Z\", \"+00:00\"))\n    except ValueError:\n        return None\n    return t.replace(tzinfo=UTC) if t.tzinfo is None else t.astimezone(UTC)"
+    }
+  ],
+  "stream": false,
+  "keep_alive": "5m",
+  "think": false,
+  "options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 16384,
+    "num_predict": 3500
+  }
+}

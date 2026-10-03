@@ -1,0 +1,12 @@
+Value Finder is paper-only research. This is an isolated synthetic coding test. Use Python standard library only; do not read files, use network, execute commands, or access real data. Return only complete executable Python source, without markdown. Include needed imports. Repair the following dashboard helper. Contract: return the first daily scheduled run STRICTLY AFTER aware now, in the provided timezone; accept unsorted times, empty list returns None. Preserve signature.
+def next_run(times: list[tuple[int, int]], now: datetime, tz: tzinfo) -> datetime | None:
+    """The first scheduled run strictly after `now`, from a list of daily (hour, minute) times."""
+    if not times:
+        return None
+    today = now.astimezone(tz).date()
+    for d in (today, today + timedelta(days=1)):
+        for h, m in sorted(times):
+            t = datetime.combine(d, time(h, m), tzinfo=tz)
+            if t >= now:
+                return t
+    return None

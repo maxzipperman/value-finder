@@ -1,0 +1,106 @@
+```python
+import math
+
+def run_tests(candidate):
+    # Test valid positive odds
+    assert abs(candidate(100) - 0.5) < 1e-10
+    assert abs(candidate(200) - 0.6666666666666666) < 1e-10
+    assert abs(candidate(50) - 0.3333333333333333) < 1e-10
+    
+    # Test valid negative odds
+    assert abs(candidate(-100) - 0.5) < 1e-10
+    assert abs(candidate(-200) - 0.6666666666666666) < 1e-10
+    assert abs(candidate(-50) - 0.3333333333333333) < 1e-10
+    
+    # Test string inputs
+    assert abs(candidate("100") - 0.5) < 1e-10
+    assert abs(candidate("200") - 0.6666666666666666) < 1e-10
+    assert abs(candidate("-100") - 0.5) < 1e-10
+    
+    # Test whitespace around strings
+    assert abs(candidate(" 100 ") - 0.5) < 1e-10
+    assert abs(candidate(" -100 ") - 0.5) < 1e-10
+    
+    # Test float inputs
+    assert abs(candidate(100.0) - 0.5) < 1e-10
+    assert abs(candidate(-100.0) - 0.5) < 1e-10
+    
+    # Test edge case: exactly 100
+    assert abs(candidate(100) - 0.5) < 1e-10
+    assert abs(candidate(-100) - 0.5) < 1e-10
+    
+    # Test that values with absolute value < 100 are rejected
+    try:
+        candidate(99)
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    
+    try:
+        candidate(-99)
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+        
+    try:
+        candidate("99")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    
+    # Test invalid inputs that should raise ValueError
+    try:
+        candidate(None)
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    
+    try:
+        candidate(True)
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+        
+    try:
+        candidate(False)
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    
+    try:
+        candidate("abc")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+        
+    try:
+        candidate("")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+        
+    try:
+        candidate("  ")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    
+    # Test that non-finite values are rejected
+    try:
+        candidate(float('inf'))
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+        
+    try:
+        candidate(float('-inf'))
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+        
+    try:
+        candidate(float('nan'))
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+```

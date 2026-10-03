@@ -1,0 +1,7 @@
+[
+  {
+    "case": "candidate completion/loading",
+    "passed": false,
+    "error": "SyntaxError: invalid syntax (<unknown>, line 1)"
+  }
+]

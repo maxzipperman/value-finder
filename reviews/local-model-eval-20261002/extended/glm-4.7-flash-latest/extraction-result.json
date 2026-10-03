@@ -1,0 +1,18 @@
+{
+  "model": "glm-4.7-flash:latest",
+  "created_at": "2026-10-02T17:54:33.973727Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n{\n  \"latest\": {\n    \"A\": {\n      \"attempt\": 2,\n      \"status\": \"ok\"\n    },\n    \"B\": {\n      \"attempt\": 2,\n      \"status\": \"ok\"\n    },\n    \"C\": {\n      \"attempt\": 2,\n      \"status\": \"failed\"\n    }\n  },\n  \"failures\": [\n    \"C\"\n  ],\n  \"successful_rows\": 12\n}\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 1231744500,
+  "load_duration": 768333,
+  "prompt_eval_count": 313,
+  "prompt_eval_cached_count": 34,
+  "prompt_eval_duration": 146813000,
+  "eval_count": 97,
+  "eval_duration": 1081037000,
+  "wall_seconds": 1.232284208002966
+}

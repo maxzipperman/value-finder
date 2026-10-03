@@ -1,0 +1,46 @@
+{
+  "glm-4.7-flash-latest": {
+    "passed": 22,
+    "total": 34,
+    "wall_seconds": 20.63,
+    "budget_exhaustions": 0,
+    "tasks": {
+      "schedule": 3,
+      "scrub": 6,
+      "quotes": 13
+    }
+  },
+  "glm-4.7-flash-latest-repair": {
+    "passed": 24,
+    "total": 34,
+    "wall_seconds": 19.54,
+    "budget_exhaustions": 0,
+    "tasks": {
+      "schedule": 5,
+      "scrub": 6,
+      "quotes": 13
+    }
+  },
+  "glm-4.7-flash-latest-thinking": {
+    "passed": 22,
+    "total": 34,
+    "wall_seconds": 241.15,
+    "budget_exhaustions": 1,
+    "tasks": {
+      "schedule": 5,
+      "scrub": 0,
+      "quotes": 17
+    }
+  },
+  "glm-4.7-flash-latest-default-thinking": {
+    "passed": 5,
+    "total": 34,
+    "wall_seconds": 190.07,
+    "budget_exhaustions": 2,
+    "tasks": {
+      "schedule": 5,
+      "scrub": 0,
+      "quotes": 0
+    }
+  }
+}

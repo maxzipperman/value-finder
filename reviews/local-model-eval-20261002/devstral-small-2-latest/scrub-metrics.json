@@ -1,0 +1,13 @@
+{
+  "model": "devstral-small-2:latest",
+  "created_at": "2026-10-02T16:56:05.996911Z",
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 19683745208,
+  "load_duration": 57592375,
+  "prompt_eval_count": 1271,
+  "prompt_eval_duration": 2297502166,
+  "eval_count": 614,
+  "eval_duration": 17194179375,
+  "wall_seconds": 19.68448591599008
+}

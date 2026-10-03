@@ -1,0 +1,5 @@
+{
+  "correct_accepted": false,
+  "generic_offset_bug_detected": null,
+  "error": "SyntaxError: invalid syntax (<unknown>, line 1)"
+}

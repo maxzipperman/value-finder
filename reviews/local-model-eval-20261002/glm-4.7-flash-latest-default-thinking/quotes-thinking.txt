@@ -1,0 +1,337 @@
+1.  **Understand the Goal:** The user wants a Python function `select_quote(rows, decision, kickoff)` that selects a dictionary from a list of dictionaries `rows` based on specific eligibility criteria and a tie-breaking rule.
+
+2.  **Analyze Input/Output:**
+    *   `rows`: List of dicts. Keys: `id`, `snapshot_utc`, `last_update_utc`, `price`.
+    *   `decision`, `kickoff`: `datetime` objects (aware).
+    *   `price`: "American odds" (integers or numeric strings representing odds like -150, +200).
+    *   Output: The original dict from `rows` that meets the criteria, or `None`.
+
+3.  **Analyze Criteria (Eligibility):**
+    *   **Clocks:**
+        *   Both `snapshot_utc` and `last_update_utc` must be timezone-aware (`datetime.datetime(..., tzinfo=...)`).
+        *   Naive clocks (no timezone) are rejected.
+        *   Missing clocks (keys don't exist) are rejected.
+    *   **Time Constraints:**
+        *   `snapshot_utc` must be `<=` `decision`.
+        *   `last_update_utc` must be `<=` `decision`.
+        *   `snapshot_utc` must be `<` `kickoff`.
+        *   `last_update_utc` must be `<` `kickoff`.
+        *   *Wait, let's re-read*: "both are at or before decision, both are strictly before kickoff".
+        *   Let's double check "both". Does it mean snapshot <= decision *and* last_update <= decision? Yes, usually implies both timestamp fields satisfy the time bound. Similarly for kickoff.
+    *   **Temporal Order:**
+        *   `last_update_utc` must be `<=` `snapshot_utc`.
+        *   (The row is a quote with a snapshot time and a last update time. The last update happens on or before the snapshot).
+    *   **Price Checks:**
+        *   Must be present.
+        *   Must be numeric (int, float, or numeric string like "10").
+        *   Must be finite (not NaN, not Infinity).
+        *   Must *not* be a boolean.
+        *   American Odds rule: Absolute value must be *below* 100?
+            *   Standard American odds: -100 to -9999 (favorites) or +100 to +9999 (underdogs).
+            *   Sometimes decimal odds are used, but the prompt specifically says "American odds whose absolute value is below 100".
+            *   So, if price is -99, -200, 50, 300. Valid: |-100| is 100 (boundary), but prompt says "below 100".
+            *   So valid range: -99 <= price <= 99.
+    *   **Tie-breaking:**
+        *   "For equal snapshots choose the lexicographically smallest id".
+        *   Wait, if two rows have the *exact same* snapshot_utc string, which one do we pick?
+        *   Usually, if times are equal, the order in the list implies something, but the rule says "lexicographically smallest id".
+    *   **"Never mutate input":** Standard Python behavior unless specified otherwise. I will ensure I don't modify the dicts in place.
+
+4.  **Algorithm Design:**
+    *   Initialize `best_row` = `None`, `best_snapshot` = `None`.
+    *   Iterate through each `row` in `rows`.
+    *   **Validation Steps (Early Exit):**
+        *   Check if row has 'snapshot_utc' and 'last_update_utc'.
+        *   Check if both are timezone-aware.
+        *   Check time comparisons: `snapshot <= decision` and `last_update <= decision` and `snapshot < kickoff` and `last_update < kickoff`.
+        *   Check `last_update <= snapshot`.
+        *   Extract price.
+        *   Check if price is numeric (int/float) or string parseable.
+        *   Check if price is finite.
+        *   Check if price is not bool.
+        *   Check `abs(price) < 100`.
+    *   **Selection Logic:**
+        *   If validation fails, skip this row.
+        *   If validation passes:
+            *   Current Snapshot = row['snapshot_utc'].
+            *   **Tie-breaking Strategy:**
+                *   The prompt says: "For equal snapshots choose the lexicographically smallest id".
+                *   This implies if `best_snapshot` exists and equals `current_snapshot`, we check `best_row['id'] > current_row['id']`.
+                *   But wait, usually "latest snapshot" implies higher timestamp. If multiple have the *latest* snapshot, pick the lexicographically smallest ID.
+    *   **Refining the Selection:**
+        *   I need to compare strings or datetimes. The prompt says "latest snapshot".
+        *   Compare `row['snapshot_utc']` (String) vs `best_snapshot` (String).
+        *   If `row['snapshot_utc'] > best_snapshot`:
+            *   Update `best_row` and `best_snapshot`.
+        *   If `row['snapshot_utc'] == best_snapshot`:
+            *   Compare `row['id']` and `best_row['id']`.
+            *   If `current_id < best_id`, update `best_row` and `best_snapshot`.
+
+5.  **Handling Edge Cases & Types:**
+    *   *Price string vs Number*: `int(price)` or `float(price)`. If `ValueError`, it's invalid.
+    *   *American Odds*: Absolute value < 100.
+    *   *Finite*: `math.isfinite(float(price))`.
+    *   *Naive Datetime*: Check `.tzinfo is not None and not isinstance(obj, datetime) and obj.tzinfo is None` (or similar). Actually, checking `obj.tzinfo is not None` is the standard way to ensure awareness, though sometimes `tzinfo` exists but is set to a static placeholder. The prompt says "timezone-aware". Strictly speaking, `tzinfo` exists and isn't None.
+    *   *Malformed clocks*: Does this imply they aren't ISO strings? The prompt says "reject missing/malformed clocks". It doesn't explicitly say "parsing error", but usually, "malformed" in this context means it doesn't look like a timestamp or parsing fails. However, the prompt *also* says `snapshot_utc` and `last_update_utc` are ISO timestamp strings. If they are passed as dicts, they are likely already parsed or valid strings. But if a string is "invalid", `datetime.fromisoformat` might fail (Python 3.7+). I should try to parse them to ensure validity, or assume they are valid strings if strict validation isn't explicitly requested for parsing (but "malformed" usually implies invalid format). I will treat "malformed" as `datetime.fromisoformat` raising an exception, though the function receives them. Wait, if the function receives `rows`, the dicts contain the values. If they are strings, they must be valid ISO strings. If they are objects, they must be datetime objects. The prompt says "ISO timestamp strings" in the description of `rows`.
+    *   *Logic check*: "Value Finder is paper-only...". This is a synthetic test.
+    *   *American Odds*: "Absolute value is below 100". So -99.9, -99, 99, 99.9 are valid. -100 is invalid (>= 100).
+
+6.  **Code Structure:**
+
+```python
+import datetime
+import math
+import re
+
+def select_quote(rows, decision, kickoff):
+    best_row = None
+    best_snapshot = None
+    
+    for row in rows:
+        # 1. Check keys
+        if 'snapshot_utc' not in row or 'last_update_utc' not in row:
+            continue
+            
+        snap = row['snapshot_utc']
+        last = row['last_update_utc']
+        
+        # 2. Check Timezone Awareness
+        if snap.tzinfo is None or last.tzinfo is None:
+            continue
+            
+        # 3. Time Constraints
+        # Note: Decision and Kickoff are aware datetimes.
+        # Comparisons must be timezone-aware comparisons.
+        # If snap is a string, it needs to be compared to decision. 
+        # Python 3.2+ allows comparing timezone-aware datetimes with aware datetimes directly.
+        # ISO strings are usually timezone-aware.
+        
+        if snap > decision:
+            continue
+        if last > decision:
+            continue
+        if snap >= kickoff:
+            continue
+        if last >= kickoff:
+            continue
+            
+        # 4. Temporal Order
+        # We need to convert to comparable objects. 
+        # Usually comparing strings is fine for ISO, but datetimes are safer for logic.
+        # Assuming strings are valid ISO.
+        # "last_update_utc is at or before snapshot_utc"
+        # This comparison needs to be safe. ISO strings compare lexicographically based on date/time.
+        # If snap = "2023-01-01T10:00:00Z", last = "2023-01-01T09:00:00Z".
+        # We should ensure they are comparable. If the string formats match, lexicographic is okay.
+        # To be safe, I'll parse them? The prompt says use ISO strings.
+        # Let's rely on string comparison if formats are guaranteed ISO with same precision,
+        # OR convert to datetime objects. 
+        # "ISO timestamp strings" suggests valid format.
+        # Comparing strings is strictly invalid if formats differ (e.g. ms vs s), 
+        # but typical ISO 8601 string comparison works for equal precision.
+        # Let's parse to ensure accuracy.
+        
+        try:
+            snap_dt = datetime.datetime.fromisoformat(snap)
+            last_dt = datetime.datetime.fromisoformat(last)
+        except ValueError:
+            continue # Malformed clock
+            
+        if last_dt > snap_dt:
+            continue
+            
+        # 5. Price Processing
+        price_val = None
+        price_is_str = isinstance(row['price'], str)
+        
+        try:
+            if price_is_str:
+                price_val = float(row['price'])
+            else:
+                price_val = float(row['price'])
+            
+            # Check finiteness, bool exclusion, negative/positive check
+            if not math.isfinite(price_val):
+                continue
+            
+            # Explicit check for boolean masking float conversion (e.g. True -> 1.0)
+            # But usually booleans aren't passed as "price" unless explicitly weird.
+            # "Reject ... booleans as prices". 
+            # In Python: bool is subclass of int, but we should catch it.
+            # Actually, checking value type is cleaner.
+            if isinstance(row['price'], bool):
+                continue
+                
+            if abs(price_val) >= 100:
+                continue
+                
+        except (ValueError, TypeError):
+            # Missing/non-numeric
+            continue
+            
+        # 6. Selection
+        if best_row is None:
+            best_row = row
+            best_snapshot = snap_dt # Store datetime for comparison? Or string for ID?
+            # Prompt: "For equal snapshots choose lexicographically smallest id".
+            # If I store string 'snap_utc', I can compare string IDs.
+            # But comparison of snapshot_utc needs to be robust.
+            # Storing datetime is safer.
+            # But ID comparison is always string.
+            # Let's stick to string for snapshot since that's the input type 'snapshot_utc'.
+            # Wait, if I compare strings "2023..." and "2024...", lexicographic works.
+            # But what if milliseconds are different? "2023-01-01T00:00:00.000Z" vs "2023-01-01T00:00:00Z".
+            # Lexicographically "2023-01-01T00:00:00.000Z" > "2023-01-01T00:00:00Z" (because of '.').
+            # This is technically incorrect time comparison.
+            # However, standard ISO 8601 comparisons are usually done via datetime objects.
+            # I will parse them to datetime for the 'latest' check.
+            # For ID comparison, just use the strings from the row.
+            
+            best_snapshot_dt = snap_dt
+            best_row_id = row['id']
+            best_row_original = row
+            
+        else:
+            # Compare current snapshot with best_snapshot_dt
+            if snap_dt > best_snapshot_dt:
+                best_row_original = row
+                best_snapshot_dt = snap_dt
+                best_row_id = row['id']
+            elif snap_dt == best_snapshot_dt:
+                if row['id'] < best_row_id:
+                    best_row_original = row
+                    best_row_id = row['id']
+                    # best_snapshot_dt remains same
+            
+    return best_row_original
+```
+
+7.  **Refining Logic Steps:**
+
+    *   *Clocks*: Are `snapshot_utc` and `last_update_utc` strings or objects? The prompt says "ISO timestamp strings". I will handle the conversion safely.
+    *   *American Odds*: `abs(price) < 100`.
+    *   *Booleans*: `isinstance(row['price'], bool)`. Even though bools are ints, checking isinstance catches `True`, `False`.
+    *   *Finite*: `math.isfinite`.
+    *   *Timezones*: `.tzinfo is not None`.
+
+8.  **Double check requirements:**
+    *   `rows`: list of dicts.
+    *   `decision`, `kickoff`: aware datetime objects.
+    *   Return original dict or None.
+    *   `id`, `snapshot_utc`, `last_update_utc`, `price` keys.
+    *   `snapshot_utc` <= decision, `last_update_utc` <= decision. (Both before/after decision).
+    *   `snapshot_utc` < kickoff, `last_update_utc` < kickoff. (Both strictly before kickoff).
+    *   `last_update_utc` <= `snapshot_utc`.
+    *   Reject missing/malformed clocks. (ValueError on fromisoformat).
+    *   Reject naive clocks. (tzinfo is None).
+    *   Reject missing/non-numeric/non-finite prices.
+    *   Reject booleans as prices.
+    *   `abs(price) < 100`.
+    *   Equal snapshots -> lexicographically smallest id.
+    *   No mutation.
+    *   Standard lib only.
+
+9.  **Corner Case: String comparison vs Datetime comparison.**
+    *   If `snap` is "2023-01-01T12:00:00Z" and `best_snap` is "2023-01-01T12:00:00+00:00".
+    *   `fromisoformat` in Python 3.11+ handles parsing. Older versions might not handle "Z". I'll assume Python 3.11+ behavior or handle the 'Z' replacement to be safe? The prompt says "ISO timestamp strings", "standard library". It's best to handle the Z suffix for broad compatibility in this "synthetic test" environment, although usually `fromisoformat` works on valid ISO 8601. If `snap` is "2023-01-01T12:00:00Z", `datetime.fromisoformat` fails in older Python. `datetime.strptime(snap, "%Y-%m-%dT%H:%M:%S%z")` is more robust for the "Z".
+    *   Actually, checking `snap.replace('Z', '+00:00')` before `fromisoformat` is a common trick for ISO 8601 strings with 'Z'. Given the constraints, I'll stick to standard library. `datetime.fromisoformat` in Python 3.7+ handles some, but strict ISO requires care. I'll try `datetime.fromisoformat` first, fallback to `strptime` if needed, or just standard string comparison if precision isn't specified?
+    *   Wait, "ISO timestamp strings" usually implies standard format. I will use `datetime.fromisoformat`. To handle 'Z', I'll replace 'Z' with '+00:00' inside the try block. This ensures robustness.
+
+10. **Price Logic Detail:**
+    *   "Numeric strings are accepted."
+    *   So `float(row['price'])` for strings.
+    *   "Non-numeric ... rejected". `ValueError`.
+    *   "Booleans as prices". `isinstance(row['price'], bool)`.
+    *   "Non-finite". `math.isfinite`.
+    *   "American odds ... below 100". `abs(price) < 100`.
+
+11. **Final Code Construction:**
+
+```python
+import datetime
+import math
+
+def select_quote(rows, decision, kickoff):
+    best_row = None
+    # We need to store the snapshot datetime object for comparison to ensure accurate ordering.
+    # And the ID string for tie-breaking.
+    best_snapshot_dt = None
+    best_row_id = None
+
+    for row in rows:
+        # Check for missing keys
+        if not all(k in row for k in ('snapshot_utc', 'last_update_utc', 'price', 'id')):
+            continue
+            
+        snap_str = row['snapshot_utc']
+        last_str = row['last_update_utc']
+        
+        # --- Clock Checks ---
+        # Naive clocks
+        try:
+            snap_dt = datetime.datetime.fromisoformat(snap_str.replace('Z', '+00:00'))
+            last_dt = datetime.datetime.fromisoformat(last_str.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            continue # Malformed or missing
+            
+        if snap_dt.tzinfo is None or last_dt.tzinfo is None:
+            continue # Naive
+            
+        # --- Time Constraints ---
+        # snapshot_utc <= decision
+        if snap_dt > decision:
+            continue
+        # last_update_utc <= decision
+        if last_dt > decision:
+            continue
+        # snapshot_utc < kickoff (strictly)
+        if snap_dt >= kickoff:
+            continue
+        # last_update_utc < kickoff (strictly)
+        if last_dt >= kickoff:
+            continue
+            
+        # --- Temporal Order ---
+        # last_update_utc <= snapshot_utc
+        if last_dt > snap_dt:
+            continue
+            
+        # --- Price Checks ---
+        price_raw = row['price']
+        
+        # Reject booleans explicitly
+        if isinstance(price_raw, bool):
+            continue
+            
+        try:
+            # Handle numeric strings
+            if isinstance(price_raw, str):
+                price = float(price_raw)
+            else:
+                price = float(price_raw)
+            
+            # Check finite
+            if not math.isfinite(price):
+                continue
+                
+            # American Odds: abs(price) < 100
+            if abs(price) >= 100:
+                continue
+                
+        except (ValueError, TypeError):
+            continue # Missing/non-numeric
+            
+        # --- Selection Logic ---
+        if best_row is None:
+            best_row = row
+            best_snapshot_dt = snap_dt
+            best_row_id = row['id']
+        else:
+            # Compare current snapshot with best snapshot
+            if snap_dt > best_snapshot_dt:
+                best_row = row
+                best_snapshot_dt = snap_dt
+                best_row_id = row['id']
+            elif snap_dt == best_snapshot_dt:
+                # Lexicographically smallest id
+                if row['id'] < best_row_id

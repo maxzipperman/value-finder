@@ -1,0 +1,206 @@
+[
+  {
+    "task": "schedule",
+    "case": "exact scheduled time moves to next",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "last slot moves to tomorrow",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "empty schedule",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "UTC input local output",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "DST following day offset",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "standalone bearer",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "API key URL",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "environment topic",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "preserve multiline",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "leave ordinary words",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "idempotent",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "authorization",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "empty quote list",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "latest eligible snapshot",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot at decision permitted",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "future snapshot excluded",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "future update excluded",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "update after snapshot excluded",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "at kickoff excluded",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "tie broken by id",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "offset normalized",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot_utc missing",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot_utc bad",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot_utc naive",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "last_update_utc missing",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "last_update_utc bad",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "last_update_utc naive",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "price low",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "price nan",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "price inf",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "price bool",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "price bad",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "price missing",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "quotes",
+    "case": "numeric string price",
+    "passed": true,
+    "error": null
+  }
+]

@@ -1,0 +1,100 @@
+{
+  "models": [
+    {
+      "name": "qwen3.6:35b",
+      "model": "qwen3.6:35b",
+      "modified_at": "2026-10-02T10:32:22.061366515-07:00",
+      "size": 22621314381,
+      "digest": "a7eb95c53bcf96b4bdd008d0fab4a5dac88047d9c1a7a9ab88ed453423fbd87c",
+      "details": {
+        "parent_model": "qwen3.6-source:35b-a3b-mtp-q4_K_M-20260824",
+        "format": "gguf",
+        "family": "qwen35moe",
+        "families": [
+          "qwen35moe"
+        ],
+        "parameter_size": "35.5B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 262144,
+        "embedding_length": 2048
+      },
+      "capabilities": [
+        "completion",
+        "vision",
+        "tools",
+        "thinking"
+      ]
+    },
+    {
+      "name": "glm-4.7-flash:latest",
+      "model": "glm-4.7-flash:latest",
+      "modified_at": "2026-10-02T10:17:59.631230017-07:00",
+      "size": 19019270897,
+      "digest": "4475827791a269b02c8ec49b1c3bc1abb5846bacf3fae015b75d33986322d8f6",
+      "details": {
+        "parent_model": "glm-4.7-flash:latest",
+        "format": "gguf",
+        "family": "glm4moelite",
+        "families": [
+          "glm4moelite"
+        ],
+        "parameter_size": "29.9B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 202752,
+        "embedding_length": 2048
+      },
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ]
+    },
+    {
+      "name": "devstral-small-2:latest",
+      "model": "devstral-small-2:latest",
+      "modified_at": "2026-10-02T09:54:35.91603575-07:00",
+      "size": 15177374099,
+      "digest": "24277f07f62db8f9cb68e9dfc679ea1818a7fbac47a50eff0a701d3f645b63c8",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "mistral3",
+        "families": [
+          "mistral3"
+        ],
+        "parameter_size": "24.0B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 393216,
+        "embedding_length": 5120
+      },
+      "capabilities": [
+        "completion",
+        "vision",
+        "tools"
+      ]
+    },
+    {
+      "name": "qwen3-coder:30b",
+      "model": "qwen3-coder:30b",
+      "modified_at": "2026-10-01T13:41:01.186126844-07:00",
+      "size": 18556700761,
+      "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3moe",
+        "families": [
+          "qwen3moe"
+        ],
+        "parameter_size": "30.5B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 262144,
+        "embedding_length": 2048
+      },
+      "capabilities": [
+        "completion",
+        "tools"
+      ]
+    }
+  ]
+}

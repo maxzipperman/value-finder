@@ -1,0 +1,18 @@
+{
+  "model": "devstral-small-2:latest",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Isolated Value Finder coding evaluation. Paper-only synthetic data. Use standard library only. Do not access files, network, processes, real data or credentials. Review only the code below. Inputs are valid aware ISO timestamps, nonempty ids and finite odds with abs >=100, and an aware decision. Desired: latest snapshot AT OR BEFORE decision, last_update at or before decision AND at or before snapshot, ties smallest id, valid positive/negative odds probability, no input mutation. Return JSON list of findings {line: integer, explanation: string}; line points to the cause, one finding per independent defect. Do not flag out-of-contract inputs. No patches.\n 1 from datetime import datetime\n 2 def choose(rows, decision):\n 3     eligible = []\n 4     for r in rows:\n 5         snap = datetime.fromisoformat(r['snapshot'])\n 6         update = datetime.fromisoformat(r['last_update'])\n 7         if snap > decision:\n 8             continue\n 9         if abs(r['odds']) < 100:\n10             continue\n11         r['probability'] = 100 / (r['odds'] + 100)\n12         eligible.append(r)\n13     eligible.sort(key=lambda r: (r['snapshot'], r['id']))\n14     return eligible[0] if eligible else None"
+    }
+  ],
+  "stream": false,
+  "keep_alive": "5m",
+  "think": false,
+  "options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 16384,
+    "num_predict": 3500
+  }
+}

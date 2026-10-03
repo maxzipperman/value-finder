@@ -1,0 +1,8 @@
+```json
+[
+  {
+    "line": 11,
+    "explanation": "The function mutates the input dictionary 'r' by assigning a new key 'probability' to it. This violates the requirement to not mutate input data."
+  }
+]
+```

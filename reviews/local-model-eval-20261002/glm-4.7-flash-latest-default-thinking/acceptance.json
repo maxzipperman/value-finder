@@ -1,0 +1,206 @@
+[
+  {
+    "task": "schedule",
+    "case": "exact scheduled time moves to next",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "last slot moves to tomorrow",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "empty schedule",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "UTC input local output",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "schedule",
+    "case": "DST following day offset",
+    "passed": true,
+    "error": null
+  },
+  {
+    "task": "scrub",
+    "case": "standalone bearer",
+    "passed": false,
+    "error": "'scrub'"
+  },
+  {
+    "task": "scrub",
+    "case": "API key URL",
+    "passed": false,
+    "error": "'scrub'"
+  },
+  {
+    "task": "scrub",
+    "case": "environment topic",
+    "passed": false,
+    "error": "'scrub'"
+  },
+  {
+    "task": "scrub",
+    "case": "preserve multiline",
+    "passed": false,
+    "error": "'scrub'"
+  },
+  {
+    "task": "scrub",
+    "case": "leave ordinary words",
+    "passed": false,
+    "error": "'scrub'"
+  },
+  {
+    "task": "scrub",
+    "case": "idempotent",
+    "passed": false,
+    "error": "'scrub'"
+  },
+  {
+    "task": "scrub",
+    "case": "authorization",
+    "passed": false,
+    "error": "'scrub'"
+  },
+  {
+    "task": "quotes",
+    "case": "empty quote list",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "latest eligible snapshot",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot at decision permitted",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "future snapshot excluded",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "future update excluded",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "update after snapshot excluded",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "at kickoff excluded",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "tie broken by id",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "offset normalized",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot_utc missing",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot_utc bad",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "snapshot_utc naive",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "last_update_utc missing",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "last_update_utc bad",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "last_update_utc naive",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "price low",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "price nan",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "price inf",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "price bool",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "price bad",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "price missing",
+    "passed": false,
+    "error": "'select_quote'"
+  },
+  {
+    "task": "quotes",
+    "case": "numeric string price",
+    "passed": false,
+    "error": "'select_quote'"
+  }
+]
