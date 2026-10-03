@@ -1,0 +1,9 @@
+{
+  "worker_sha256": "8d25b22678cbd4d11a8afe4518f5874ed8805a9bfe4bb7082b6f23c9c00eb074",
+  "synthetic_local_model_smoke": true,
+  "explanation": {
+    "synthetic-smoke": "The project nfl-weather failed during the building the board step with a classified error of timeout and a streak of 1."
+  },
+  "models_unloaded": true,
+  "unit_tests_passed": 23
+}

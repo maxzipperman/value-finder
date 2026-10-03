@@ -66,6 +66,8 @@ is historical/supporting context, not a second current queue. All purchases stay
 hub-only, one at a time, with exact reviewed lists, shared cache/ledger/lock checks,
 retained reservations, cumulative ceilings and live revocation checks.
 
+**Read-only local log triage (Oct 2, PR #123):** Owner-authorized isolated hourly pilot for the NFL/CFB run records. Deterministic detection and deduplication; Qwen3.6 receives classified metadata only for new problems. Local private reports, no fixes, paid calls, live-checkout writes or launchd changes. 23 tests passed; scheduler activation receipt is recorded in `ops/LOCAL_LOG_TRIAGE.md`. This does not authorize any acquisition or strategy work.
+
 ## Waiting on you
 
 0. **Monthly reset date.** Confirm the prepaid credit reset date for the completion buffer; this does not block already approved work. Backup remains optional under the October 2 owner waiver.

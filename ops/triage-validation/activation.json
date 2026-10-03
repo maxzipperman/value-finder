@@ -1,0 +1,10 @@
+{
+  "automation_id": "local-value-finder-log-triage",
+  "status": "ACTIVE",
+  "cadence": "hourly",
+  "deployment": "owner-authorized isolated read-only pilot",
+  "worker_sha256": "8d25b22678cbd4d11a8afe4518f5874ed8805a9bfe4bb7082b6f23c9c00eb074",
+  "source_writes": false,
+  "launchd_changes": false,
+  "merged": false
+}
