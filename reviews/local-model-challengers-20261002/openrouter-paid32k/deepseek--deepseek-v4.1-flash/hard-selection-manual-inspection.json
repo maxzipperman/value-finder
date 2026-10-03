@@ -1,0 +1,10 @@
+{
+  "reviewer": "author complete final-source inspection before defaultrestricted15s grading, not independent validation",
+  "response_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "all_candidate_source_inspected": true,
+  "original_grader": true,
+  "no_source_repair_or_feedback": true,
+  "candidate_source": "Empty final; length32768 reasoning-only, no usable source",
+  "no_candidate_execution": true,
+  "resource_decision": "Declared one-attempt matched32K ceiling reached; no automatic64K."
+}

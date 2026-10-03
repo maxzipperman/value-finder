@@ -108,7 +108,7 @@
     {
       "model": "deepseek/deepseek-v4.1-flash",
       "task": "hard-selection",
-      "status": "pending",
+      "status": "result",
       "folder": "openrouter-paid32k/deepseek--deepseek-v4.1-flash",
       "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
       "settings": {
@@ -142,12 +142,62 @@
         "baseline_sha256": "d67bf3ef502dfdf4120eae1be494561b91bc0dc48e5fa5d55febdcf4ffa7bb6c",
         "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
       },
-      "request_sha256": "6a875124599cc3e866824da5520aa6aef810933293447d395b57ccd853e9e2bb"
+      "request_sha256": "6a875124599cc3e866824da5520aa6aef810933293447d395b57ccd853e9e2bb",
+      "finish_reason": "length",
+      "error": null,
+      "returned_model": "deepseek/deepseek-v4.1-flash",
+      "provider": "OpenInference",
+      "wall_seconds": 1205.972079167026,
+      "usage": {
+        "prompt_tokens": 291,
+        "completion_tokens": 32768,
+        "total_tokens": 33059,
+        "cost": 0.025563382,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 248,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.025563382,
+          "upstream_inference_prompt_cost": 4.342e-06,
+          "upstream_inference_completions_cost": 0.02555904
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 32768,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "final_answer_bytes": 0,
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "KeyError: 'select_books'"
+          }
+        ]
+      },
+      "manual_inspection": {
+        "reviewer": "author complete final-source inspection before defaultrestricted15s grading, not independent validation",
+        "response_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "all_candidate_source_inspected": true,
+        "original_grader": true,
+        "no_source_repair_or_feedback": true,
+        "candidate_source": "Empty final; length32768 reasoning-only, no usable source",
+        "no_candidate_execution": true,
+        "resource_decision": "Declared one-attempt matched32K ceiling reached; no automatic64K."
+      }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "multifile",
-      "status": "not_started",
+      "status": "result",
       "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
       "settings": {
@@ -180,12 +230,384 @@
         "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
         "baseline_sha256": "55e11c95b4e3d0e819dac028417fe5843b329ff153b5a46765325b18a42fcb8f",
         "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      },
+      "request_sha256": "fb44b8a1b805aceb178d11d2dfb5458a9ca1801f47fb0ff7cad72de222cb39b8",
+      "finish_reason": "stop",
+      "error": null,
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 329.0385962910077,
+      "usage": {
+        "prompt_tokens": 291,
+        "completion_tokens": 26725,
+        "total_tokens": 27016,
+        "cost": 0.00751501,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00751501,
+          "upstream_inference_prompt_cost": 3.201e-05,
+          "upstream_inference_completions_cost": 0.007483
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 25634,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "final_answer_bytes": 4294,
+      "acceptance": {
+        "passed": 52,
+        "cases": 53,
+        "checks": [
+          {
+            "case": "valid odds 100",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -100",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds 110",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -110",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds 250",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -250",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds 100.5",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -100.5",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds ' -110 '",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds '+250'",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds '1e3'",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds True",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds False",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds None",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 0",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 99",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds -99",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 'oops'",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds ''",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds nan",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds inf",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds '-inf'",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds []",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds {}",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds (100+0j)",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            "group": "invalid odds",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "empty",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid negative",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid positive",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "at observed",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "at expiry",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "future",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "latest",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "tie",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "offset equivalent tie",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "bad plus valid",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at None",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at 'bad'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at '2025-01-01T11:00:00'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at 3",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at None",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at 'bad'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at '2025-01-01T11:00:00'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at 3",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "id ''",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "id None",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "id 3",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "odds nan",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "odds -99",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at '2025-01-01T10:00:00Z'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof None",
+            "group": "invalid asof",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof datetime.datetime(2025, 1, 1, 12, 0)",
+            "group": "invalid asof",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof '2025-01-01T12:00:00Z'",
+            "group": "invalid asof",
+            "passed": true,
+            "error": null
+          }
+        ]
+      },
+      "manual_inspection": {
+        "reviewer": "author complete final-source inspection before defaultrestricted15s grading, not independent validation",
+        "response_sha256": "bf7060c1214e436479c37a8cd328514d039267f791f04cb1650517743264feca",
+        "all_candidate_source_inspected": true,
+        "original_grader": true,
+        "no_source_repair_or_feedback": true,
+        "imports": [
+          "math",
+          "datetime",
+          "odds"
+        ],
+        "operations": "Pure probability/UTC selection helpers, original row identity; no files/network/processes/environment/tools",
+        "semantic_note": "Huge int remains unconverted and OverflowError produces0.0/1.0 instead of required normalized ValueError under frozen finite-float oracle.",
+        "cases": 53,
+        "passed": 52,
+        "resource_decision": "Completedstop below32768; semanticerror not cap exhaustion, no reroll.",
+        "contract_limit": "The lighter prompt says finite int/float/numeric strings without explicitly saying representable as finite float. Huge integers are mathematically finite; frozen oracle rejects10**1000 via float conversion. Preserve52/53 score but independent review should resolve this contract/oracle boundary before treating the sole failure as an unambiguous prompt violation. Integrated contract separately specifies finite-float representability."
       }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "debugging",
-      "status": "not_started",
+      "status": "result",
       "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "0661d89a3757736f4715e856713b267f8ee7e6fb51b6765606954473cc64a7e0",
       "settings": {
@@ -218,12 +640,389 @@
         "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
         "baseline_sha256": "d2f9e260bc51b27605440ff5b4a6a8a95cb5e0137a7c3846374f378750cca3c3",
         "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
+      },
+      "request_sha256": "b331a66b1b0ca2895d0cd8a43e3b186a8fc7a7e43f596e42bf17509add6da407",
+      "finish_reason": "stop",
+      "error": null,
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "provider": "InferenceNet",
+      "wall_seconds": 340.81810795800993,
+      "usage": {
+        "prompt_tokens": 453,
+        "completion_tokens": 24973,
+        "total_tokens": 25426,
+        "cost": 0.00704227,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00704227,
+          "upstream_inference_prompt_cost": 4.983e-05,
+          "upstream_inference_completions_cost": 0.00699244
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 23924,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "final_answer_bytes": 3956,
+      "acceptance": {
+        "passed": 52,
+        "cases": 53,
+        "checks": [
+          {
+            "case": "valid odds 100",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -100",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds 110",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -110",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds 250",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -250",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds 100.5",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds -100.5",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds ' -110 '",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds '+250'",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid odds '1e3'",
+            "group": "valid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds True",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds False",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds None",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 0",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 99",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds -99",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 'oops'",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds ''",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds nan",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds inf",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds '-inf'",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds []",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds {}",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds (100+0j)",
+            "group": "invalid odds",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid odds 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            "group": "invalid odds",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "empty",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid negative",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "valid positive",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "at observed",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "at expiry",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "future",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "latest",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "tie",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "offset equivalent tie",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "bad plus valid",
+            "group": "eligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at None",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at 'bad'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at '2025-01-01T11:00:00'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "observed_at 3",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at None",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at 'bad'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at '2025-01-01T11:00:00'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at 3",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "id ''",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "id None",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "id 3",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "odds nan",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "odds -99",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "expires_at '2025-01-01T10:00:00Z'",
+            "group": "ineligible selection",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof None",
+            "group": "invalid asof",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof datetime.datetime(2025, 1, 1, 12, 0)",
+            "group": "invalid asof",
+            "passed": true,
+            "error": null
+          },
+          {
+            "case": "invalid asof '2025-01-01T12:00:00Z'",
+            "group": "invalid asof",
+            "passed": true,
+            "error": null
+          }
+        ]
+      },
+      "manual_inspection": {
+        "reviewer": "author complete source inspection before ordinaryrestricted15s grading; not independent validation",
+        "all_source_inspected": true,
+        "response_sha256": "9430010ae80e059f653e701ab6137bdaebb87e874fba3d71bb169fd61a7a5296",
+        "original_grader": true,
+        "passed": 52,
+        "cases": 53,
+        "imports": [
+          "math",
+          "datetime",
+          "re",
+          "odds"
+        ],
+        "source_operations": "Pure coercion, regex normalization, absolute timestamps and original-row selection; no network/I/O/environment/processes",
+        "semantic_note": "Hugeint accepted rather than frozen oracle ValueError, same lighterprompt finitefloat representability caveat as multifile. Explicit integrated contract is stricter.",
+        "additional_manual_note": "Parser strips whitespace and accepts lowercasez not accepted by datetime.fromisoformat in suppliedPython3.14. Lighterprompt does not explicitly bind parser to that function; track extension/boundary rather than invent an extra hidden-score failure.",
+        "trusted_parser_controls": {
+          "2025-01-01T11:00:00z": "ValueError",
+          " 2025-01-01T11:00:00Z ": "ValueError"
+        },
+        "no_repairs_or_feedback": true,
+        "resource_decision": "Completedstop24973tokens/341s below32768; no escalation/reroll."
       }
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "regression",
-      "status": "not_started",
+      "status": "pending",
       "folder": "openrouter-paid32k/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
       "settings": {
@@ -256,7 +1055,8 @@
         "reviewer": "author saved-thinking progress inspection; not semantic acceptance or independent signoff",
         "baseline_sha256": "b11b1107e2848211008dc3fe77e56020c5f56771dc1564b936abfc3e16828184",
         "execution_order": "after active ceiling queue98555 terminates and locks/models are idle; never competing inference"
-      }
+      },
+      "request_sha256": "b2202b9c50608b7b6e397705c6df780de8fa0b3289583db78df825bf64599e58"
     },
     {
       "model": "xiaomi/mimo-v2.6-flash",

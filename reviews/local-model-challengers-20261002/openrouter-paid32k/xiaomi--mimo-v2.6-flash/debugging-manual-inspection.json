@@ -1,0 +1,23 @@
+{
+  "reviewer": "author complete source inspection before ordinaryrestricted15s grading; not independent validation",
+  "all_source_inspected": true,
+  "response_sha256": "9430010ae80e059f653e701ab6137bdaebb87e874fba3d71bb169fd61a7a5296",
+  "original_grader": true,
+  "passed": 52,
+  "cases": 53,
+  "imports": [
+    "math",
+    "datetime",
+    "re",
+    "odds"
+  ],
+  "source_operations": "Pure coercion, regex normalization, absolute timestamps and original-row selection; no network/I/O/environment/processes",
+  "semantic_note": "Hugeint accepted rather than frozen oracle ValueError, same lighterprompt finitefloat representability caveat as multifile. Explicit integrated contract is stricter.",
+  "additional_manual_note": "Parser strips whitespace and accepts lowercasez not accepted by datetime.fromisoformat in suppliedPython3.14. Lighterprompt does not explicitly bind parser to that function; track extension/boundary rather than invent an extra hidden-score failure.",
+  "trusted_parser_controls": {
+    "2025-01-01T11:00:00z": "ValueError",
+    " 2025-01-01T11:00:00Z ": "ValueError"
+  },
+  "no_repairs_or_feedback": true,
+  "resource_decision": "Completedstop24973tokens/341s below32768; no escalation/reroll."
+}

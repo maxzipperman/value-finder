@@ -1,0 +1,18 @@
+{
+  "reviewer": "author complete final-source inspection before defaultrestricted15s grading, not independent validation",
+  "response_sha256": "bf7060c1214e436479c37a8cd328514d039267f791f04cb1650517743264feca",
+  "all_candidate_source_inspected": true,
+  "original_grader": true,
+  "no_source_repair_or_feedback": true,
+  "imports": [
+    "math",
+    "datetime",
+    "odds"
+  ],
+  "operations": "Pure probability/UTC selection helpers, original row identity; no files/network/processes/environment/tools",
+  "semantic_note": "Huge int remains unconverted and OverflowError produces0.0/1.0 instead of required normalized ValueError under frozen finite-float oracle.",
+  "cases": 53,
+  "passed": 52,
+  "resource_decision": "Completedstop below32768; semanticerror not cap exhaustion, no reroll.",
+  "contract_limit": "The lighter prompt says finite int/float/numeric strings without explicitly saying representable as finite float. Huge integers are mathematically finite; frozen oracle rejects10**1000 via float conversion. Preserve52/53 score but independent review should resolve this contract/oracle boundary before treating the sole failure as an unambiguous prompt violation. Integrated contract separately specifies finite-float representability."
+}
