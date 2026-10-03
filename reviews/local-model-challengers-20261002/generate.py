@@ -43,6 +43,7 @@ def main():
     parser.add_argument('--qwen-sampling', action='store_true')
     parser.add_argument('--extended-budget', action='store_true')
     parser.add_argument('--time-extension', action='store_true')
+    parser.add_argument('--budget-tier', choices=['16k', '32k'])
     parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'] + list(HARD_TASKS))
     args = parser.parse_args()
     if args.hard_pair:
@@ -57,6 +58,25 @@ def main():
             parser.error('Extended budget is the declared Ornith thinking hard diagnostic only')
         PROTOCOL['deadline_seconds'] = 600
         PROTOCOL['options'] = PROTOCOL['options'] | {'num_ctx': 32768, 'num_predict': 16384}
+    if args.budget_tier:
+        helper_models = {'qwen3.6:35b', 'qwen3.8:27b', 'gpt-oss:20b', 'gemma4:26b'}
+        tasks = args.tasks or []
+        if args.no_thinking or args.recovery_run or args.native_defaults or args.qwen_sampling or args.extended_budget or args.time_extension:
+            parser.error('Budget tiers use only their declared thinking configuration')
+        ordinary = not args.hard_pair and tasks == ['real-helper'] and set(selected) <= helper_models
+        q8 = not args.hard_pair and selected == ['qwen3.8:27b-q8_0'] and len(tasks) == 1 and tasks[0] in ('regression', 'real-helper')
+        ornith = args.hard_pair and selected == ['ornith-1.5:35b'] and args.budget_tier == '32k' and tasks and set(tasks) <= set(HARD_TASKS)
+        if not (ordinary or q8 or ornith):
+            parser.error('Undeclared budget-ladder target')
+        if args.budget_tier == '32k' or q8:
+            decisions = json.loads((ROOT / 'budget-decisions.json').read_text())
+            for model in selected:
+                for task in tasks:
+                    decision = decisions.get(model + '|' + task + '|' + args.budget_tier, {})
+                    if decision.get('proceed') is not True or not decision.get('reason'):
+                        parser.error('Manual progress inspection decision required before escalation')
+        PROTOCOL['deadline_seconds'] = 2400 if q8 and args.budget_tier == '32k' else 1200
+        PROTOCOL['options'] = PROTOCOL['options'] | {'num_ctx': 65536 if args.budget_tier == '32k' else 32768, 'num_predict': 32768 if args.budget_tier == '32k' else 16384}
     if args.qwen_sampling and (not args.hard_pair or any(not m.startswith('qwen3.8:') for m in selected)):
         parser.error('Qwen sampling diagnostic requires hard-pair and explicit Qwen3.8 models')
     inventory = api('tags')['models']
@@ -71,7 +91,7 @@ def main():
     check = subprocess.run(['/usr/bin/memory_pressure', '-Q'], capture_output=True, text=True, timeout=10)
     import re
     match = re.search(r'System-wide memory free percentage:\s*(\d+)%', check.stdout)
-    if check.returncode or not match or int(match[1]) < 40:
+    if check.returncode or not match or int(match[1]) < (50 if args.budget_tier else 40):
         print(json.dumps({'status': 'deferred', 'reason': 'low or unknown memory headroom'}))
         return
     snapshot = ROOT / 'inventory.json'
@@ -93,6 +113,8 @@ def main():
                 prefix = 'hard-extended-'
             if args.time_extension:
                 prefix = 'time-extended-'
+            if args.budget_tier:
+                prefix = ('hard-budget' if args.hard_pair else 'budget') + args.budget_tier + '-'
             out = ROOT / (prefix + model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
             out.mkdir(exist_ok=True)
             result_path = out / (task + '-result.json')

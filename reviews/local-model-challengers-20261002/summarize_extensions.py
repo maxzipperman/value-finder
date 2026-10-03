@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-PREFIXES = ("hard-", "time-extended-")
+PREFIXES = ("hard-", "time-extended-", "budget16k-", "budget32k-")
 ORIGINAL_NEW = {"qwen3.8-27b-q8_0", "ornith-1.5-35b"}
 
 def summarize():
