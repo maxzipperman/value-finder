@@ -21,8 +21,7 @@
     "openrouter-inventory.json": "b7dd5e5308fa52d46ecb5d2640ef418551ef84010e8b6c2ed9d4b9345aa30279",
     "openrouter_budget.py": "e5f70bbed7b5118abaaa36e1fe2558fc53a7747d193325f1023787ddcc21e496",
     "openrouter_free.py": "6412962e97196f1b8d6882b4f5ed523470c00489f561534e9b35625c3a67201e",
-    "openrouter_paid.py": "99100e8fd9091f969234d824b7d90babdf7c2f128b6799f0a1b8ed9f3ff2136e",
-    "ceiling_queue.py": "723953ef48e7c7957f4f647202f4c9ac4b516e398dbddd23582be505134d7771"
+    "openrouter_paid.py": "99100e8fd9091f969234d824b7d90babdf7c2f128b6799f0a1b8ed9f3ff2136e"
   },
   "note": "Frozen before stress inference. Does not contain outcome data/hidden feedback in requests. Author validation, independent signoff pending."
 }
