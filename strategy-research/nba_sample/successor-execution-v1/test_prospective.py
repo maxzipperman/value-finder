@@ -76,7 +76,8 @@ def test_bad_account_receipt_remains_uncertain(plan,rows,change):
 def active(plan,rows):
     row=rows[0];req=P.historical_request(plan,row);account=receipt(req)
     record=dict(cache_key=row['cache_key'],http_status=200,url=req.url,sport='nba',source='oddsapi_hist',
-                params_json=json.dumps(row['params']),body=account['body'],headers_json=json.dumps(account['headers']))
+                params_json=json.dumps(row['params']),body=account['body'],headers_json=json.dumps(account['headers']),
+                fetched_at=account['observed_utc'])
     saved=dict(request_id=row['request_id'],cache_key=row['cache_key'],record_sha256='d'*64,
                body_sha256=P.sha(record['body'].encode()),headers=account['headers'],record=record)
     raw=P.canonical(saved)
@@ -161,3 +162,45 @@ def test_real_v4_plan_lock_between_outer_and_synthetic_account_lock(tmp_path):
     for path in (tmp_path/'followup-purchase.lock',tmp_path/root/'acquisition.lock',tmp_path/'journal.json.lock'):
         with path.open('a') as released:
             fcntl.flock(released,fcntl.LOCK_EX|fcntl.LOCK_NB)
+
+
+@pytest.mark.parametrize('value',[None,123,'bad','2026-10-03T20:00:00','2020-10-03T20:00:00Z'])
+def test_original_plan_clock_missing_malformed_or_divergent_rejected(active,rows,value):
+    plan,state,marker,init,receipts,accounts=copy.deepcopy(active)
+    rid=next(iter(receipts));saved=json.loads(receipts[rid])
+    if value is None:saved['record'].pop('fetched_at')
+    else:saved['record']['fetched_at']=value
+    receipts[rid]=P.canonical(saved);state['attempts'][rid]['receipt_sha256']=P.sha(receipts[rid])
+    with pytest.raises(ValueError):P.active_attribution(plan,state,marker,init,rows,receipts,accounts)
+
+
+def test_account_future_clock_cannot_replace_original_plan_clock(active,rows):
+    plan,state,marker,init,receipts,accounts=copy.deepcopy(active)
+    rid=next(iter(accounts));accounts[rid]['observed_utc']='2099-10-03T20:00:00Z'
+    with pytest.raises(ValueError):P.active_attribution(plan,state,marker,init,rows,receipts,accounts)
+
+
+@pytest.mark.parametrize('clock',['2026-10-03T20:00:00+00:00','2026-10-03T13:00:00-07:00'])
+def test_replayed_equivalent_original_instants_preserved(active,rows,clock):
+    plan,state,marker,init,receipts,accounts=copy.deepcopy(active)
+    rid=next(iter(receipts));saved=json.loads(receipts[rid]);saved['record']['fetched_at']=clock
+    receipts[rid]=P.canonical(saved);state['attempts'][rid]['receipt_sha256']=P.sha(receipts[rid])
+    accounts[rid]['replayed']=True
+    before=copy.deepcopy(accounts)
+    assert P.active_attribution(plan,state,marker,init,rows,receipts,accounts)
+    assert accounts==before and accounts[rid]['observed_utc']=='2026-10-03T20:00:00Z'
+
+
+@pytest.mark.parametrize('key',['wrong','0'*20,None,123])
+def test_consistently_wrong_cache_key_across_all_layers_rejected(active,rows,key):
+    plan,state,marker,init,receipts,accounts=copy.deepcopy(active)
+    rid=next(iter(receipts));saved=json.loads(receipts[rid])
+    saved['cache_key']=saved['record']['cache_key']=state['attempts'][rid]['cache_key']=key
+    receipts[rid]=P.canonical(saved);state['attempts'][rid]['receipt_sha256']=P.sha(receipts[rid])
+    with pytest.raises(ValueError):P.active_attribution(plan,state,marker,init,rows,receipts,accounts)
+
+
+def test_request_cache_key_binds_exact_frozen_identity(plan,rows):
+    req=P.historical_request(plan,rows[0]);assert req.cache_key==rows[0]['cache_key']
+    row=copy.deepcopy(rows[0]);row['cache_key']='wrong'
+    with pytest.raises(ValueError):P.historical_request(plan,row)

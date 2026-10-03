@@ -87,6 +87,7 @@ class HistoricalRequest:
     plan_identity_sha256: str
     plan_root: str
     request_id: str
+    cache_key: str
     url: str
     public_params_json: str
     maximum_credits: int
@@ -107,10 +108,13 @@ def historical_request(plan, row):
             or row['retry_allowance'] != 0 or row['sealed'] is not False):
         raise ValueError('Request differs from exact historical contract')
     url='https://api.the-odds-api.com/v4'+row['path']
-    rid=sha(canonical({'source':'oddsapi_hist','url':url,'params':public}))
-    if row['request_id'] != rid:raise ValueError('Stable request identity changed')
+    source_identity={'source':'oddsapi_hist','url':url,'params':public}
+    rid=sha(canonical(source_identity))
+    cache_key=hashlib.sha1(json.dumps(source_identity,sort_keys=True,default=str).encode()).hexdigest()[:20]
+    if row['request_id'] != rid or row['cache_key'] != cache_key:
+        raise ValueError('Stable request/cache identity changed')
     # Whole-set membership must be established by factory before admission.
-    return HistoricalRequest(identity,plan.root,rid,url,canonical(public).decode(),10)
+    return HistoricalRequest(identity,plan.root,rid,cache_key,url,canonical(public).decode(),10)
 
 
 def exact_requests(plan, rows):
@@ -142,6 +146,19 @@ def require_packet_admission(*args, **kwargs):
     raise Held('N0 packet held: ceiling/account/executor adoption and exact authority absent')
 
 
+def observed_instant(value):
+    """Require a captured timezone-aware timestamp; never substitute current time."""
+    if not isinstance(value,str):
+        raise ValueError('Captured observation timestamp required')
+    try:
+        at=datetime.fromisoformat(value.replace('Z','+00:00'))
+    except ValueError as exc:
+        raise ValueError('Malformed captured observation timestamp') from exc
+    if at.tzinfo is None or at.utcoffset() is None:
+        raise ValueError('Timezone-aware captured observation timestamp required')
+    return at
+
+
 def validate_account_receipt(receipt, request):
     """Shape/attribution/original clock check only; not provider authentication."""
     required={'request_id','plan_identity_sha256','status','headers','body','observed_utc','replayed'}
@@ -150,8 +167,8 @@ def validate_account_receipt(receipt, request):
             or type(receipt['replayed']) is not bool or type(receipt['status']) is not int
             or not isinstance(receipt['headers'],dict) or not isinstance(receipt['body'],str)):
         raise ValueError('Receipt attribution/schema changed')
-    at=datetime.fromisoformat(receipt['observed_utc'].replace('Z','+00:00'))
-    if at.tzinfo is None or at.utcoffset().total_seconds() != 0:
+    at=observed_instant(receipt['observed_utc'])
+    if at.utcoffset().total_seconds() != 0:
         raise ValueError('Original observed UTC required')
     if set(receipt['headers']) != {'x-requests-last','x-requests-used','x-requests-remaining'}:
         raise ValueError('Billing fields required')
@@ -195,16 +212,18 @@ def active_attribution(plan, ledger, marker, initialized, rows, receipt_bytes, a
         # not a second ledger/baseline or a replacement of the frozen format.
         saved=json.loads(receipt_bytes[rid]);record=saved['record']
         request=requests[rid]
-        if (saved['request_id']!=rid or saved['cache_key']!=a['cache_key']
+        if (saved['request_id']!=rid or saved['cache_key']!=request.cache_key
+                or a['cache_key']!=request.cache_key
                 or saved['record_sha256']!=a['response_sha256']
                 or saved['body_sha256']!=sha(record['body'].encode())
-                or record['cache_key']!=a['cache_key'] or record['http_status']!=200
+                or record['cache_key']!=request.cache_key or record['http_status']!=200
                 or record['url']!=request.url or record['sport']!='nba' or record['source']!='oddsapi_hist'
                 or json.loads(record['params_json'])!=json.loads(request.public_params_json)
                 or saved['headers']!=json.loads(record['headers_json'])):
             raise ValueError('Original v4 receipt/record identity changed')
         account=validate_account_receipt(account_receipts[rid],request)
-        if account['body']!=record['body'] or account['headers']!=saved['headers']:
+        if (account['body']!=record['body'] or account['headers']!=saved['headers']
+                or observed_instant(record.get('fetched_at'))!=observed_instant(account['observed_utc'])):
             raise ValueError('Account/plan receipt divergence')
     return sha(canonical({'plan':plan.validate(),'ledger':ledger,'marker':marker,'initialized':initialized}))
 
