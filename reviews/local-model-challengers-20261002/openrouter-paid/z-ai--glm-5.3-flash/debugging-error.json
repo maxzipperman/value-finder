@@ -1,0 +1,7 @@
+{
+  "type": "HTTPError",
+  "wall_seconds": 0.32769904198357835,
+  "http_status": 520,
+  "body": "{\"error\": {\"message\": \"Provider returned error\", \"code\": 520, \"metadata\": {\"raw\": \"error code: 520\\n\", \"provider_name\": \"Relace\", \"is_byok\": false}}}",
+  "privacy_note": "Gateway account identifier removed; HTTP status/provider error preserved."
+}

@@ -1,23 +1,50 @@
 {
   "multifile": [
     {
-      "case": "candidate completion/loading",
+      "case": "usable final answer delivered",
       "passed": false,
-      "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+      "error": "Length-limited empty/whitespace final; reasoning not executable delivery"
     }
   ],
   "debugging": [
     {
-      "case": "candidate completion/loading",
+      "case": "usable final answer delivered",
       "passed": false,
-      "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+      "error": "Length-limited empty/whitespace final; reasoning not executable delivery"
     }
   ],
   "regression": [
     {
-      "case": "candidate completion/loading",
+      "case": "usable final answer delivered",
       "passed": false,
-      "error": "KeyError: 'run_tests'"
+      "error": "Length-limited empty/whitespace final; reasoning not executable delivery"
+    }
+  ],
+  "hard-review": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length-limited empty/whitespace final; reasoning not executable delivery"
+    }
+  ],
+  "extraction": [
+    {
+      "case": "exact fact extraction and schema",
+      "passed": true
+    }
+  ],
+  "hard-selection": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length-limited empty/whitespace final; reasoning not executable delivery"
+    }
+  ],
+  "review": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length-limited empty/whitespace final; reasoning not executable delivery"
     }
   ]
 }

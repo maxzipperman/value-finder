@@ -192,3 +192,8 @@ OpenRouter checkpoint (PR147): free baseline7 complete; paid DeepSeek implementa
 
 
 Owner added capability-ceiling round to model evaluation (PR147): harder integrated synthetic pipeline implementation/audit/test drafting, larger local/API resource profiles, all before final allocation handoff. Prospective design in reviews/local-model-challengers-20261002/CAPABILITY_CEILING_PLAN.md; reference/hidden harness/request list must be validated/frozen before inference. Owner total API$1 remains cumulative; combined reservation guard required before additional stress spending. Conditional API32k progress-gated collector prepared; no qualified32k request yet, two runaway-digit cases denied. Existing baseline/free16k queues continue unchanged, no competing inference.
+
+
+### Model comparison checkpoint — October3 (PR147, isolated only)
+
+Original local82 attempts remain final/frozen. Cloud baseline paused on GLM provider520; preserved error/max reservation, digest-bound audit allows only distinct missing requests. Eight responses report$0.042776569; free16k diagnostics continue under the shared lock. Combined paid reservation guard across all stages enforces owner$1 total. Owner-requested capability-ceiling contract/reference drafted, but fixture/mutant validation, prompt/resource freeze and inference are pending. NOT READY for final hub allocation or autonomous routing; author-only extensions still need independent validation.

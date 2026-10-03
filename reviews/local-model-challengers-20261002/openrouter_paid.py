@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from openrouter_free import ROOT, LIST_HASH, NoRedirect, key_from_file
+from openrouter_budget import reserve_ok, audited_terminal
 
 MODELS = {'deepseek/deepseek-v4.1-flash', 'z-ai/glm-5.3-flash', 'xiaomi/mimo-v2.6-flash'}
 OUT = ROOT / 'openrouter-paid'
@@ -67,7 +68,8 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
         assert body['provider']['allow_fallbacks'] is False and body['provider']['require_parameters'] is True
         assert body['provider']['max_price']['request'] == body['provider']['max_price']['image'] == 0
     out.mkdir(exist_ok=True)
-    if any(out.glob('*/*-error.json')):
+    saved_ledger = json.loads((out / 'billing.json').read_text()) if (out / 'billing.json').exists() else None
+    if any(out.glob('*/*-error.json')) and not (output == 'openrouter-paid' and saved_ledger and audited_terminal(ROOT, saved_ledger)):
         print(json.dumps({'status': 'saved_error_requires_review'}), flush=True)
         return
     key = key_from_file()
@@ -96,7 +98,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
         free = ROOT / 'openrouter-space-bunny-alpha'
         if conditional:
             baseline = json.loads((ROOT / 'openrouter-paid/billing.json').read_text())
-            if len(baseline['attempts']) != 21 or any(a['status'] != 'completed' for a in baseline['attempts']):
+            if len(baseline['attempts']) != 21 or not audited_terminal(ROOT, baseline):
                 print(json.dumps({'status': 'baseline_not_complete'}), flush=True)
                 return
             diagnostic = ROOT / 'openrouter-space-bunny-alpha-16k'
@@ -110,7 +112,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
         ledger = json.loads(ledger_path.read_text()) if ledger_path.exists() else {'cap_usd': CAP, 'owner_cap_usd': 1, 'list_sha256': list_hash, 'initial': billing(), 'attempts': []}
         if ledger['list_sha256'] != list_hash or ledger['cap_usd'] != CAP:
             raise RuntimeError('billing ledger mismatch')
-        if any(x['status'] != 'completed' for x in ledger['attempts']):
+        if any(x['status'] != 'completed' for x in ledger['attempts']) and not (output == 'openrouter-paid' and audited_terminal(ROOT, ledger)):
             print(json.dumps({'status': 'uncertain_attempt_requires_review'}), flush=True)
             return
         ledger_path.write_text(json.dumps(ledger, indent=2) + '\n')
@@ -134,6 +136,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
             before = billing()
             reserved = sum(number(a['accounted_usd']) for a in ledger['attempts'])
             amount = reservation(item)
+            reserve_ok(ROOT, amount)
             # Balance/delta are separate alarms, not additions to billed usage.
             if reserved + amount > CAP or before['account_credits'] - before['account_usage'] < amount:
                 raise RuntimeError('budget or balance stop')
@@ -163,6 +166,7 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
                 attempt['after'] = billing()
                 if attempt['after']['account_usage'] - ledger['initial']['account_usage'] > sum(a['accounted_usd'] for a in ledger['attempts']) + 0.01:
                     raise RuntimeError('account usage exceeds counted attempts')
+                reserve_ok(ROOT, 0)
                 attempt['status'] = 'completed'
                 ledger_path.write_text(json.dumps(ledger, indent=2) + '\n')
                 print(json.dumps({'model': item['model'], 'task': item['task'], 'cost': cost, 'seconds': result['wall_seconds'], 'finish': result['choices'][0].get('finish_reason')}), flush=True)
@@ -170,7 +174,14 @@ def main(request_file='openrouter-requests.json', list_hash=LIST_HASH, output='o
                 error = {'type': type(exc).__name__, 'wall_seconds': time.monotonic() - start}
                 if isinstance(exc, urllib.error.HTTPError):
                     error['http_status'] = exc.code
-                    error['body'] = exc.read(8192).decode(errors='replace').replace(key, '[REDACTED]')
+                    body_text = exc.read(8192).decode(errors='replace').replace(key, '[REDACTED]')
+                    try:
+                        body_data = json.loads(body_text)
+                        if isinstance(body_data, dict):
+                            body_data.pop('user_id', None)
+                        error['body'] = json.dumps(body_data)
+                    except json.JSONDecodeError:
+                        error['body'] = '[non-JSON error body omitted]'
                 else:
                     error['message'] = str(exc).replace(key, '[REDACTED]')
                 attempt['status'] = 'stopped'

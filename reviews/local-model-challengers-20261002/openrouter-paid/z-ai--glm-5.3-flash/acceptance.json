@@ -1,0 +1,9 @@
+{
+  "multifile": [
+    {
+      "case": "usable final answer delivered",
+      "passed": false,
+      "error": "Length-limited empty/whitespace final; reasoning not executable delivery"
+    }
+  ]
+}
