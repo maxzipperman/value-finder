@@ -207,3 +207,47 @@ A request must arrive in full within 15 seconds: a connection that sends part of
 byte at a time, is closed. At start-up the dashboard raises its own limit on open files from launchd's 256 to
 4,096, so a pile of connections can't stop it answering. A link inside `vfdash/static` is never followed or
 served, and a data file that is a link to a `.env` file is not opened (the screen says so).
+
+## Operations refresh (#156)
+
+Home now starts with job exceptions and explicitly classified owner decisions,
+then acquisition progress, live signals, forward/research summaries and source
+freshness. Downloads (`#downloads`; old `#pull` links still work) reads bounded
+`~/Library/Application Support/ValueFinder/football-acquisition-state/*/spending-ledger.json`
+metadata. It never reads response paths, imports executors, fetches GitHub or calls
+paid APIs. Figures are journal-reported, not independently receipt-authenticated.
+Completed responses are not usable paired coverage or permission to grade.
+
+Attempt IDs must be disjoint before an aggregate is displayed. Missing/corrupt,
+linked, oversized, overlapping or future-dated journals withhold totals. Unknown
+billing is explicit; charges exclude probe/live/other usage and do not add carried
+budget, reused responses or reservations. The legacy CSV remains a separate view.
+Known batch labels are presentation-only; unknown roots display their identifier.
+A recorded running state does not establish process liveness. Reconciled/stopped
+history remains visible even when a successor has completed.
+
+The existing Purchase sequence table in `sharp-markets/docs/OCTOBER_2026_QUEUE.md`
+is displayed verbatim as a document snapshot, never promoted to live execution
+state. No second queue is maintained. `--operations-root PATH` optionally selects
+a reviewed checkout for STATUS/queue while `--root` still selects local live data;
+this option grants no execution authority. It helps avoid reading old status from
+the frozen live checkout. The dashboard does not pull or refresh that checkout.
+
+Owner actions in STATUS's existing Waiting on you section use `[open]`, `[review]`,
+`[resolved]` or `[reference]` inside the bold title. Only open/review items appear;
+unclassified legacy items are reported as requiring classification, not silently
+asserted to be pending decisions. Review items do not turn old dates into failures.
+Freshness uses recorded event times or declared document update dates; a fresh
+checkout or browser refresh does not establish current facts. Display age windows
+(24h records, 48h documents, 7d evidence) are informational, not research rules.
+
+All seven jobs are shown. Additional collectors distinguish process state, exit
+status, log update and output-file update (metadata only). Exit zero is not proof
+of collection. NBA's future start is read from its existing collector config.
+Until successful-collection receipts are available, collection success is explicitly
+unverified; quiet trigger/slot-dependent output is not declared a failure.
+
+Deployment still requires hub review/coordination. For an isolated UI review use
+`--scorer-root` pointing at a missing directory to disable scorer launches; warnings
+then describe the preview, not production health. The start-at-login installer is
+unchanged by this PR.

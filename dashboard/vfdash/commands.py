@@ -22,7 +22,8 @@ from pathlib import Path
 LAUNCHCTL = "/bin/launchctl"
 PROJECTS = ("nfl-weather", "cfb-weather")
 JOB_LABELS = ("com.nflweather.alerts", "com.cfbweather.alerts", "com.valuefinder.closecapture",
-              "com.valuefinder.ledgersync")
+              "com.valuefinder.ledgersync", "com.valuefinder.triggerpoll",
+              "com.valuefinder.propslog", "com.valuefinder.nbacollector")
 SCORER = "scripts/score_forward.py"
 SCORER_TIMEOUT = 60
 LAUNCHCTL_TIMEOUT = 10

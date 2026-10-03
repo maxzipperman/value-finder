@@ -50,16 +50,12 @@ def test_home(store):
     assert d["tests"][0]["progress"] == "Starts Week 5, Thu Oct 8, 2026"
     assert all(t["money_gate"] == "Money gate: not chosen" for t in d["tests"])
     assert [j["name"] for j in d["jobs"]] == ["NFL alerts", "College football alerts", "Close capture",
-                                               "Nightly ledger copy"]
-    assert all(j["level"] == "ok" for j in d["jobs"])
-    w = d["waiting"]
-    assert [x["title"] for x in w] == ["Odds API plan", "The Oct 20 gate decisions", "Something overdue (#9)",
-                                       "Scorer readings: amendment 6"]
-    assert w[0]["first_sentence"] == "A free key is set in all three .env files (Sep 28)."
-    assert w[0]["due"] is None
-    assert w[1]["due"] == "Due Tue Oct 20" and w[1]["due_level"] == "ok"
-    assert w[2]["due"] == "Due Wed Sep 30" and w[2]["due_level"] == "fail"
-    assert w[3]["first_sentence"] == "The hub registered both."
+                                               "Nightly ledger copy", "Wind-trigger price collector",
+                                               "NFL props collector", "NBA collector"]
+    assert all(j["level"] == "ok" for j in d["jobs"][:4])
+    assert all(j["level"] == "warn" for j in d["jobs"][4:])
+    assert d["waiting"] == []  # legacy unclassified prose is no longer asserted as an owner task
+    assert d["operations"]["unclassified_actions"] == 4
     assert d["variants"] == 271 and d["bar"] == "0.000185"
     assert d["evidence"] and all(e["n_words"] for e in d["evidence"])
 
@@ -200,7 +196,8 @@ def test_run_records(store):
 def test_pull_not_started(store):
     d = api.pull(store)
     assert d["started"] is False
-    assert d["text"] == "The pull has not started. It is planned for Thursday, October 1."
+    assert "does not mean downloads have not started" in d["text"]
+    assert d["operations"]["total"] is None
 
 
 def test_pull_from_manifest(root, home):

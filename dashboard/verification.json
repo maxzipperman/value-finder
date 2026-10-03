@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "scopes": ["dashboard/vfdash", "dashboard/tests", "dashboard/content", "dashboard/pyproject.toml", "dashboard/uv.lock", "dashboard/verification.json", "ops/process/process_guard.py"],
+  "commands": [["{python}", "-B", "-m", "pytest", "dashboard/tests/test_operations.py", "-o", "addopts=", "-q"], ["/opt/homebrew/bin/node", "--check", "dashboard/vfdash/static/app.js"]],
+  "environment": {"PATH": "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin", "PYTHONDONTWRITEBYTECODE": "1", "PYTHONHASHSEED": "0"}
+}
