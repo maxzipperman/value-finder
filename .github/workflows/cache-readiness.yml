@@ -1,0 +1,21 @@
+name: Cached readiness diagnostics
+on:
+  pull_request:
+    paths: ['reviews/post151-readiness/**', '.github/workflows/cache-readiness.yml', 'ops/process/process_guard.py']
+permissions:
+  contents: read
+jobs:
+  synthetic-and-artifact-invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Synthetic and measured-aggregate invariants only; no native cache/outcome read
+        run: python -B ops/process/process_guard.py test --config reviews/post151-readiness/verification.json --output cache-readiness-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cached-readiness-${{ github.sha }}
+          path: cache-readiness-evidence.json
