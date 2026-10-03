@@ -619,7 +619,7 @@ def home(store: Store) -> dict:
     op = scr.snap.operations
     waiting = op.get("actions", [])
     if op.get("unclassified_actions"):
-        scr.notes.append("Some legacy status items are unclassified. They are not asserted to be owner decisions; review STATUS.md.")
+        scr.notes.append("Unclassified owner items remain visible with “Status needs review”; the hub should confirm their current disposition.")
     ev, n, bar = scr.part("evidence list", lambda: evidence(scr), ([], None, None))
     ev_sorted = sorted((e for e in ev if e["kind"] != "pending"), key=lambda e: e["date"], reverse=True)
     q = scr.snap.quota or {}

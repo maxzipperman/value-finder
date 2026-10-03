@@ -1,0 +1,41 @@
+name: Dashboard checks
+on:
+  pull_request:
+    paths: ['dashboard/**', 'STATUS.md', 'ops/process/process_guard.py', '.github/workflows/dashboard.yml']
+  push:
+    branches: [main]
+    paths: ['dashboard/**', 'STATUS.md', 'ops/process/process_guard.py', '.github/workflows/dashboard.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --project dashboard --locked
+      - name: Bind CI runtime and run affected dashboard checks
+        run: |
+          python - <<'PYCONFIG'
+          import json, os
+          from pathlib import Path
+          config = json.loads(Path('dashboard/verification.json').read_text())
+          config['environment']['PATH'] = os.environ['PATH']
+          config['scopes'].append('dashboard/verification-ci.json')
+          Path('dashboard/verification-ci.json').write_text(json.dumps(config, indent=2) + '\n')
+          PYCONFIG
+          dashboard/.venv/bin/python -B ops/process/process_guard.py test --config dashboard/verification-ci.json --output dashboard-evidence.json
+          dashboard/.venv/bin/python -B ops/process/process_guard.py verify-test --config dashboard/verification-ci.json --saved dashboard-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-verification-${{ github.sha }}
+          path: |
+            dashboard-evidence.json
+            dashboard/verification-ci.json

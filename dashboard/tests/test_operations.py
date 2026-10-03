@@ -1,6 +1,9 @@
 """Operational truth, overlap, missingness, provenance and read-only boundaries."""
 import json
 import os
+import subprocess
+import sys
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 from conftest import write, make_store, Clock
@@ -79,14 +82,17 @@ def test_old_documents_do_not_become_fresh_after_checkout(tmp_path):
 def test_owner_actions_classified_only():
     text='## Waiting on you\n1. **[resolved] Backup.** Waived.\n2. **[reference] Installed.** Done.\n3. **[open] Choose plan.** Due Oct 20, 2026.\n4. **[review] Old deadline.** Due Oct 1, 2026.\n5. **Unclassified.** Unknown.\n'
     rows,unknown=op.owner_actions(text,NOW,timezone.utc)
-    assert [r['title'] for r in rows]==['Choose plan','Old deadline'] and unknown==1
+    assert [r['title'] for r in rows]==['Choose plan','Old deadline','Unclassified'] and unknown==1
+    assert rows[-1]['action_state']=='review'
     assert rows[1]['due_level']=='warn' and rows[1]['due_iso'] is None
 
 
-def test_queue_not_sum_of_historical_bounds():
-    text='## Purchase sequence\n| Order | Dataset / purpose | Maximum new credits | Dependency and current state |\n|---|---|---:|---|\n| Done | Props | 0 additional | 570 requests; 34090 billed |\n| Gated | NBA | 7540 prior cap | Review needed |\n## Other\n| Next | Wrong | 1 | Ignore |'
+def test_queue_only_adopted_status_table():
+    text='## Paid data — sole current queue\n| Order | State / next action | Maximum new credits / authority |\n|---|---|---|\n| 1 | Finish actual successor | 66480 total cap, not remaining |\n| Held | CFB groups held | No bulk release |\n## Other\n| 2 | Wrong | Ignore |'
     rows=op.queue_rows(text)
-    assert len(rows)==2 and rows[1]['state']=='blocked' and rows[0]['state']=='completed'
+    assert len(rows)==2 and rows[1]['state']=='blocked' and rows[0]['state']=='queued'
+    assert 'not remaining' in rows[0]['cap']
+    assert op.queue_rows('## Purchase sequence\n| Next | Old plan | 100 | Stale |')==[]
 
 
 def test_later_variant_setup_not_silently_lost():
@@ -147,9 +153,91 @@ def test_bad_identity_and_many_batches_withhold_total(home,monkeypatch):
 
 def test_newer_journal_flags_plan_and_updates_header(root,home):
     journal(home)
-    write(root/op.QUEUE,'Updated October 2, 2026\n\n## Purchase sequence\n| Next | Props | 60 | Held |\n')
+    write(root/op.QUEUE,'Updated October 2, 2026\n\n## Paid data — sole current queue\n| Order | State / next action | Maximum new credits / authority |\n|---|---|---|\n| 1 | Props | 60; Held |\n')
     store=make_store(root,home,clock=Clock(NOW))
     data=api.pull(store)
     assert data['operations']['plan_freshness']['state']=='stale'
     assert data['header']['last_written'].startswith('Last acquisition record')
     assert 'nothing recorded' not in data['header']['last_written']
+
+
+ADOPTED = Path(__file__).parent / 'fixtures/status-adopted-11474c6.md'
+
+
+def test_real_adopted_status_keeps_every_current_choice(root,home):
+    text = ADOPTED.read_text()
+    write(root/'STATUS.md',text)
+    # A historical plan must never override the adopted queue.
+    write(root/'sharp-markets/docs/OCTOBER_2026_QUEUE.md','## Purchase sequence\n| Next | WRONG HISTORICAL | 999 | Wrong |')
+    store=make_store(root,home,clock=Clock(NOW));data=api.home(store)
+    assert [x['n'] for x in data['waiting']]==[0,2,4,8,11]
+    assert all(x['action_state']=='review' for x in data['waiting'])
+    assert data['variants']==294
+    queue=data['operations']['queue']
+    assert len(queue)==4 and queue[-1]['state']=='blocked'
+    assert 'finish or reconcile' in queue[0]['name']
+    assert 'not a fresh remaining balance' in queue[0]['cap']
+    assert 'CFB2021–22' in queue[-1]['name'] and 'own gates' in queue[-1]['name']
+    assert data['operations']['queue_source']=='STATUS.md'
+    assert data['operations']['queue_url'].endswith('STATUS.md#paid-data--sole-current-queue')
+    assert 'WRONG HISTORICAL' not in json.dumps(data)
+
+
+def test_mixed_resolved_history_retains_explicit_child_decisions():
+    text = """## Waiting on you
+0. **[resolved] Backup and current plan.** Waived and purchased.
+   - **[open] Credit reset date.** Confirm the date, not a new purchase.
+   - **[open] Post-month plan.** Choose by October 25; no automatic renewal.
+7. **[reference] Earlier review.** Historical results only.
+   - **[review] Future paper-to-money discussion.** Paper-only remains in force; no betting authority.
+"""
+    rows,unknown=op.owner_actions(text,NOW,timezone.utc)
+    assert [r['n'] for r in rows]==['0.1','0.2','7.1'] and unknown==0
+    assert [r['title'] for r in rows]==['Credit reset date','Post-month plan','Future paper-to-money discussion']
+    assert 'no betting authority' in rows[-1]['detail']
+
+
+def test_current_source_split_choices_and_paper_only():
+    text=(Path(__file__).resolve().parents[2]/'STATUS.md').read_text()
+    rows,_=op.owner_actions(text,NOW,timezone.utc)
+    ids={x['n']:x for x in rows}
+    assert {0,2,4,8,11,12,13} <= set(ids)
+    assert 'reset date' in ids[0]['title'].lower()
+    assert ids[12]['action_state']=='open' and 'no renewal' in ids[12]['detail'].lower()
+    assert ids[13]['action_state']=='review' and 'project remains paper-only' in ids[13]['detail']
+
+
+def test_fifo_journal_returns_without_writer(tmp_path):
+    path=tmp_path.resolve()/'spending-ledger.json'
+    os.mkfifo(path)
+    script='from pathlib import Path; from vfdash.operations import bounded; import sys; r=bounded(Path(sys.argv[1])); assert r.data is None and "Nonregular" in r.note'
+    subprocess.run([sys.executable,'-B','-c',script,str(path)],check=True,timeout=2)
+
+
+def test_replaced_fifo_at_open_is_still_nonblocking(tmp_path):
+    path=tmp_path.resolve()/'spending-ledger.json';path.write_text('{}')
+    script="""from pathlib import Path
+import os,sys
+from vfdash import operations as op
+p=Path(sys.argv[1]);original=op.os.open
+def swapped(path,flags):
+    assert flags & os.O_NONBLOCK and flags & os.O_NOFOLLOW
+    p.unlink();os.mkfifo(p)
+    return original(path,flags)
+op.os.open=swapped
+r=op.bounded(p)
+assert r.data is None and 'Nonregular' in r.note
+"""
+    subprocess.run([sys.executable,'-B','-c',script,str(path)],check=True,timeout=2)
+
+
+def test_directory_and_socket_are_not_read(tmp_path):
+    import socket
+    folder=tmp_path.resolve()
+    assert op.bounded(folder).data is None
+    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as sock:
+        # Short path avoids macOS AF_UNIX path-length limit in pytest folders.
+        import tempfile
+        with tempfile.TemporaryDirectory(dir='/tmp') as d:
+            p=Path(d).resolve()/'s';sock.bind(str(p))
+            assert op.bounded(p).data is None

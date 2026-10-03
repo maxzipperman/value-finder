@@ -247,10 +247,10 @@
         const det = h("details", { class: "item", open: state.openWaiting.has(w.n) },
           h("summary", null, h("span", { class: "n" }, w.n + "."), h("span", { class: "t" }, w.title),
             w.due ? h("span", { class: "due status" }, dot(w.due_level), w.due) : ""),
-          h("p", null, w.first_sentence));
+          h("p", null, w.detail || w.first_sentence));
         det.addEventListener("toggle", () => { if (det.open) state.openWaiting.add(w.n); else state.openWaiting.delete(w.n); });
         return h("li", null, det);
-      })) : h("p", { class: "muted" }, "No classified owner decisions in this snapshot. Unclassified legacy items require review."));
+      })) : h("p", { class: "muted" }, "No owner decisions are listed in this status snapshot."));
 
     const ev = panel("Research progress", h("a", { href: "#research" }, "All " + (d.evidence_total || 0) + " results"),
       h("p", { class: "muted" }, "Historical findings and forward tests remain separate. Downloaded data is not automatically ready for analysis."),

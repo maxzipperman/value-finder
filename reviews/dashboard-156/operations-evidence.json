@@ -1,8 +1,8 @@
 {
-  "evidence_digest": "cfb5088a0c3bab8cbe73b26bd66962b2c8ffc9a84b10f591fb0ea17e0fd4b684",
+  "evidence_digest": "8bf73eeb59513297eaff0bc296770a489d938f6c94a53233db170f9942eb0ce6",
   "inputs": {
     "command_binaries": {
-      "/opt/homebrew/bin/node": {
+      "node": {
         "path": "/opt/homebrew/bin/node",
         "sha256": "45e39a9f8b22235cf7c4d88d49b8a8e8307297c6f1913e2b963327f771acdce3"
       },
@@ -18,24 +18,29 @@
         "-m",
         "pytest",
         "dashboard/tests/test_operations.py",
+        "dashboard/tests/test_api.py",
+        "dashboard/tests/test_parsing.py",
+        "dashboard/tests/test_readonly.py",
+        "dashboard/tests/test_secrets.py",
+        "dashboard/tests/test_static.py",
         "-o",
         "addopts=",
         "-q"
       ],
       [
-        "/opt/homebrew/bin/node",
+        "node",
         "--check",
         "dashboard/vfdash/static/app.js"
       ]
     ],
     "configured_environment": {
-      "PATH": "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+      "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
       "PYTHONDONTWRITEBYTECODE": "1",
       "PYTHONHASHSEED": "0"
     },
     "effective_environment": {
       "LANG": "C.UTF-8",
-      "PATH": "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+      "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
       "PYTHONDONTWRITEBYTECODE": "1",
       "PYTHONHASHSEED": "0"
     },
@@ -71,6 +76,8 @@
       "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]"
     },
     "files": {
+      ".github/workflows/dashboard.yml": "f60bd553d534d1ccae03a7449ac5e34fb9ec49761491cb8bede3db355d9128a2",
+      "STATUS.md": "7a18822be494462220ccc1fd9916b1eb0056ea6b59a6fc801ef46bbe70830845",
       "dashboard/content/README.md": "f84c6983d1e20b05f8da87fd8318e9934187d103b5874d3bfb97c94cb7eba33f",
       "dashboard/content/charts/forecast-error-cfb.json": "acc63e39296b91995d786c737c358de8002eccad71e1e910273ff2cf273212c4",
       "dashboard/content/charts/forecast-error-nfl.json": "6b223065f2f227d7af694b107fcefd456db46e3101c0f2b004b432dc899121c6",
@@ -105,13 +112,14 @@
       "dashboard/tests/__pycache__/test_time_not_set.cpython-312-pytest-9.1.1.pyc": "0b18625ccb58f0bdf4722f63b9ed1a6e2abfdeede69431f07a496d671e40853b",
       "dashboard/tests/__pycache__/test_wording.cpython-312-pytest-9.1.1.pyc": "f5f1cc2014da16a7e118fa4199243c81da9555b26c2dfab20efc6f1c4db64fdf",
       "dashboard/tests/conftest.py": "1f937ed46bc745144122e2e77c26c23efdfb911a69c40faca73e80fe76b64dc7",
+      "dashboard/tests/fixtures/status-adopted-11474c6.md": "0617927e2ea926f1034947c4cd0471babc410fc7174549aa57cabea3d8f7d62d",
       "dashboard/tests/render_page.mjs": "6476efa0aef7e19c8dae875f961e6a48a6a7c67323ce6deddf4976c7fee9feac",
-      "dashboard/tests/test_api.py": "b4140c74eea26d2fd397282cb5fbd8d93f3cd4f67cbe2d500b8b4cdb29a1c247",
+      "dashboard/tests/test_api.py": "f0402c456540cd1ca43bf3c5922751a3add668537d872d2b46969ddacf239e14",
       "dashboard/tests/test_backtests.py": "a98ff915a626884ed944bd63af215d321df6a987cc2e2dfd0db3542a9f9bdb7c",
       "dashboard/tests/test_board_values.py": "669ee1f70ecffef8009a13d7984eb39fb3d848b5c276dac9ea34f54a34c1912a",
       "dashboard/tests/test_commands.py": "ffe3a8a7feb954bd311ed7bc5ed84caf32b61b5932ee0fd25396efe580639927",
       "dashboard/tests/test_install.py": "1a5841e185f6e585f44e36641a29ca9fb7a6ac7482d89af0611b253f3f8f3497",
-      "dashboard/tests/test_operations.py": "8bd618f6b9922d04b65eaca6122fe12362e87e156ae8c4ce7bd20f400deaad6c",
+      "dashboard/tests/test_operations.py": "e530593183a43876107cf2583b54179ef491543569d8fb7b4d2b3834aaed0e7c",
       "dashboard/tests/test_page_render.py": "5560157f9ca7a35747b413216caab731691d1cf818fc495b6a5b929135e45c98",
       "dashboard/tests/test_parsing.py": "bb1e910f8437e9fa3ec65b102b36c5809ffa88d6b4181bdf3bf9f6a6df7e01c1",
       "dashboard/tests/test_perf.py": "ca74bb7fd4a9ea4c14b77a5f5cd9b5c75195036194ea09b33e16f096d5fd5d18",
@@ -124,7 +132,7 @@
       "dashboard/tests/test_time_not_set.py": "2afca60e4b13c516d2deb45ccfac346d6e523ac5e921c84a63c35aa84b53b2b3",
       "dashboard/tests/test_wording.py": "bdefc8778f6696c329a7a4c55d6ad70d173b071ff4f929a37f42749279580083",
       "dashboard/uv.lock": "d2193591501bd0016090e4ca32b56eefdc0272dfda0e62c47aaa8d93a808fdae",
-      "dashboard/verification.json": "c99fe22fc1a49b2d844feb9e06c23e2b8ea07e124ef0dd7fcb09ab615c28a18b",
+      "dashboard/verification.json": "1cc5b0a504b0ef0906b9c09096864efaff0e9cbabfc12bbd89282190a73d2dee",
       "dashboard/vfdash/__init__.py": "d17f21fe42a5a71589071b9870c39e685ce501622eb8e43fe4a96f25d98996e4",
       "dashboard/vfdash/__main__.py": "5094603c0571764e72aef4ac6a717dbdf269c4f7f8c7397601ce86a1cc4ff39e",
       "dashboard/vfdash/__pycache__/__init__.cpython-312.pyc": "2a4c34f23398c49ce887bef5e162d2fdd8d62b256ccad97b18859a0cbf3a70d7",
@@ -157,27 +165,27 @@
       "dashboard/vfdash/__pycache__/status_md.cpython-314.pyc": "d7dd244b9bca75df2f69a4a68dc519bcdbe353bf09f2101160e61433ce3c267f",
       "dashboard/vfdash/__pycache__/words.cpython-312.pyc": "53a92c39a10655345f535e456a1c3e7fc2871c919e10db9294eace9105e80552",
       "dashboard/vfdash/__pycache__/words.cpython-314.pyc": "3c6fb7c39097a3c082136d78806cd003385366fa15ad4915e233102b4aed583e",
-      "dashboard/vfdash/api.py": "54301cc6457e6dc6c4b7e6f122cfb6841003b6821e8e6d80dd76f5e891ecadb9",
+      "dashboard/vfdash/api.py": "62013a74cd0a530f137228e712c9c9437e75b5f72ffd6e6bc91d279fb9440aa9",
       "dashboard/vfdash/backtests.py": "b70ea08117029d5f1f9261a42790ad2dedaee80974423d6423d79481ce29f16e",
       "dashboard/vfdash/commands.py": "97d592f86168514925cb4065fa23635af3661d6fa4e5b56079e25a721d8c8fed",
       "dashboard/vfdash/data.py": "b50147e510226d3d1a9ee396b015d77d63cbe8f4dd27517d8cba68420fb3cff8",
       "dashboard/vfdash/health.py": "1dab60e37ea8bcbce6be040bfea7a9fe64b9e2ab385d88a24cc5ed9a5f89669b",
       "dashboard/vfdash/ledger.py": "75aebe8a9febdb0caf9ca977acd6eeeb4322d500fc1bbfa6701c0189a927a312",
-      "dashboard/vfdash/operations.py": "709c71f5be017cf17db599e9a9cbae6c554e0784dab7cec82e6d765394cd55bb",
+      "dashboard/vfdash/operations.py": "96e00db4097105eb75258cc8d437a7b3787784708f4f114e465ac2d7817834ee",
       "dashboard/vfdash/pytest_plugin.py": "c95abad809d6e3896229b3f2d6d97124b71be0d51ea9b0a54f08cf6228c27622",
       "dashboard/vfdash/readers.py": "a8cf3cc612e7d2b6c4791076d301655c998b66ad6c03493f12a645e124d7d4a8",
       "dashboard/vfdash/server.py": "d6981f3595ae488ac636ded4b7fca1ed48d432ac4446c533c06a8854a88c6eec",
       "dashboard/vfdash/signals.py": "101356a3dc1e0c2d14fc1a99bfc7c033ff3b83567113553777aac9fc2e21994f",
       "dashboard/vfdash/static/app.css": "93ac343f0289fc9ab8ee12131834ee37f7abdd886cd8d5b860001ecb9bac356e",
-      "dashboard/vfdash/static/app.js": "6fbe2b762e77172ab4ac402a66fde1a355184bc523ac1ad4f9c90a6d94bfe75e",
+      "dashboard/vfdash/static/app.js": "e7dadd12308f220b600322ee88a84b66e6d86fb39b90312fc73ef804d8338cd2",
       "dashboard/vfdash/static/index.html": "0126754bacaaf85a6c8b8b1a1fd34b26ab1b627ae77387b42215a41d2aed407a",
-      "dashboard/vfdash/status_md.py": "6cbcde44eba86a497e655ac7d5f4011e0ff78ebcd0fb8eacd29f992d82939ba7",
+      "dashboard/vfdash/status_md.py": "eba21336d1c5cf6ac43c0204c802429dbb385562d6a0783896fc78fcfaa60732",
       "dashboard/vfdash/words.py": "ae5f56809163d2394fc621916955a8fb4f1214e64394716282d945a592f7707f",
       "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c"
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T18:50:38.329362+00:00",
+  "recorded_at": "2026-10-03T19:02:14.693761+00:00",
   "results": [
     {
       "argv": [
@@ -186,18 +194,23 @@
         "-m",
         "pytest",
         "dashboard/tests/test_operations.py",
+        "dashboard/tests/test_api.py",
+        "dashboard/tests/test_parsing.py",
+        "dashboard/tests/test_readonly.py",
+        "dashboard/tests/test_secrets.py",
+        "dashboard/tests/test_static.py",
         "-o",
         "addopts=",
         "-q"
       ],
       "exit_code": 0,
       "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "stdout_sha256": "db4ca9a3fc71415150a2c2450489a41e5f46839a0e6368cf68dd301df445db40",
+      "stdout_sha256": "7f80718909698262faa06a81cf4dff46b79db1064ec6fe06e9db5c02846c2547",
       "unittest_count": []
     },
     {
       "argv": [
-        "/opt/homebrew/bin/node",
+        "node",
         "--check",
         "dashboard/vfdash/static/app.js"
       ],
@@ -207,8 +220,8 @@
       "unittest_count": []
     }
   ],
-  "tested_commit": "7228a72405f7583ea2c72727b8584fc97dce228d",
-  "tested_identity": "2688d71085ef1eb8e487b1d0d37bbda9e52454ff187e57e41d5431a0c2fdbd93",
+  "tested_commit": "16735918e31c815e9b58a5f82f29f9722656baaf",
+  "tested_identity": "10c76d9619b78ac27d67c8f82987b7e10bbfa6ef82593a67c2bd6c9790ffeb36",
   "version": 1,
   "worktree_clean": false
 }

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,7 +16,7 @@ from . import words, status_md
 from .readers import Read, Refused, refuse
 
 UTC = timezone.utc
-QUEUE = 'sharp-markets/docs/OCTOBER_2026_QUEUE.md'
+QUEUE = 'STATUS.md'
 MAX_BYTES = 20_000_000
 MAX_BATCHES = 128
 ROOT_ID = re.compile(r'^[a-f0-9]{64}$')
@@ -43,8 +44,16 @@ def bounded(path: Path) -> Read:
         p = refuse(path)
         if any(x.is_symlink() for x in (p, *p.parents)):
             return Read(note='Linked source refused.')
-        with p.open('rb') as f:
-            stamp = os.fstat(f.fileno()).st_mtime
+        # Reject known devices/pipes before open; then validate the actual descriptor
+        # as well, since the path can be replaced between the check and open.
+        if not stat.S_ISREG(p.lstat().st_mode):
+            return Read(note='Nonregular source refused.')
+        fd = os.open(p, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+        with os.fdopen(fd, 'rb') as f:
+            actual = os.fstat(f.fileno())
+            if not stat.S_ISREG(actual.st_mode):
+                return Read(note='Nonregular source refused.')
+            stamp = actual.st_mtime
             raw = f.read(MAX_BYTES + 1)
         if len(raw) > MAX_BYTES:
             return Read(note='Source exceeds the display size limit.')
@@ -80,34 +89,65 @@ def document(path, name, now, tz):
 
 
 def queue_rows(text):
-    """Read the existing authoritative table; do not create another manual queue."""
-    section = status_md.section(text, 'Purchase sequence')
+    """Only the adopted three-column Paid data table in STATUS is a queue."""
+    body = status_md.section(text, 'Paid data — sole current queue')
+    if not body:
+        body = status_md.section(text, 'Paid data')
     out = []
-    for line in section.splitlines():
+    expected = ['Order', 'State / next action', 'Maximum new credits / authority']
+    recognized = False
+    for line in body.splitlines():
         if not line.startswith('|'):
+            recognized = False
             continue
         cols = [words.scrub(words.strip_markdown(x.strip())) for x in line.strip().strip('|').split('|')]
-        if len(cols) != 4 or cols[0] == 'Order' or re.fullmatch(r'[-: ]+', cols[0]):
+        if cols == expected:
+            recognized = True
             continue
-        state = 'completed' if cols[0].lower() == 'done' else 'blocked' if cols[0].lower() == 'gated' else 'queued'
-        out.append(dict(order=cols[0], name=cols[1], cap=cols[2], detail=cols[3], state=state))
+        if not recognized or len(cols) != 3 or re.fullmatch(r'[-: ]+', cols[0]):
+            continue
+        state = 'blocked' if cols[0].lower() == 'held' else 'queued'
+        # Preserve the whole action/authority text, including held-cohort restrictions.
+        out.append(dict(order=cols[0], name=cols[1], cap=cols[2], detail='', state=state))
     return out
 
 
 def owner_actions(text, now, tz):
-    """Only explicitly classified open/review decisions; prose history is not a task list."""
-    items = status_md.waiting_items(text, now, tz)
+    """Unknown classifications stay visible for review; explicit child choices survive
+    resolved/reference parents. Decisions belong in the current Waiting on you section.
+    """
+    body = status_md.section(text, 'Waiting on you')
+    # Flatten explicit nested choices into separate items before classifying parents.
+    # Use stable compound IDs so children never share expansion state with the parent.
+    lines, ids, parent, child = [], {}, None, 0
+    occupied = [int(m[1]) for m in re.finditer(r'^(\d+)\.\s+\*\*', body, re.M)]
+    next_id = max(occupied, default=0) + 1
+    for line in body.splitlines():
+        top = status_md.ITEM.match(line)
+        nested = re.match(r'^\s+[-*]\s+(\*\*\[(?:open|review|resolved|reference)\].*)$', line, re.I)
+        if top:
+            parent, child = int(top[1]), 0
+        if nested and parent is not None:
+            child += 1
+            ids[next_id] = f'{parent}.{child}'
+            lines.append(f'{next_id}. {nested[1]}')
+            next_id += 1
+        else:
+            lines.append(line)
+    items = status_md.waiting_items('## Waiting on you\n' + '\n'.join(lines), now, tz)
     visible, unclassified = [], 0
     for item in items:
         m = re.match(r'\[(open|review|resolved|reference)\]\s*', item['title'], re.I)
         if not m:
             unclassified += 1
+            item['action_state'] = 'review'
+        else:
+            item['action_state'] = m[1].lower()
+            item['title'] = item['title'][m.end():]
+        if item['action_state'] in {'resolved', 'reference'}:
             continue
-        if m[1].lower() in {'resolved', 'reference'}:
-            continue
-        item['title'] = item['title'][m.end():]
-        item['action_state'] = m[1].lower()
-        # Review-needed is not a claim that the owner missed a deadline.
+        item['n'] = ids.get(item['n'], item['n'])
+        # Preserve full decision context; first sentences can omit unresolved subchoices.
         if item['action_state'] == 'review':
             item['due'], item['due_iso'], item['due_level'] = 'Status needs review', None, 'warn'
         visible.append(item)
@@ -185,7 +225,7 @@ def acquisition(home, now, tz):
 def build(cfg, now):
     source = cfg.operations_root or cfg.root
     queue, qfresh = document(source / QUEUE, 'Download plan', now, cfg.tz)
-    status, sfresh = document(source / 'STATUS.md', 'Owner decisions', now, cfg.tz)
+    status, sfresh = queue, dict(qfresh, name='Owner decisions')
     actions, unclassified = owner_actions(status.data or '', now, cfg.tz)
     acquired = acquisition(cfg.home, now, cfg.tz)
     recorded = words.parse_utc(acquired['freshness'].get('utc', ''))
@@ -197,7 +237,7 @@ def build(cfg, now):
         acquired['notes'].append('Canonical download queue missing or unrecognized; planned work is unknown.')
     return {**acquired, 'collector_outputs': collector_outputs(cfg.root), 'nba_start': str(nba_start(cfg.root) or ''), 'queue': queue_rows(queue.data or ''), 'actions': actions,
             'unclassified_actions': unclassified, 'plan_freshness': qfresh, 'action_freshness': sfresh,
-            'queue_source': QUEUE, 'queue_url': 'https://github.com/maxzipperman/value-finder/blob/main/' + QUEUE,
+            'queue_source': QUEUE, 'queue_url': 'https://github.com/maxzipperman/value-finder/blob/main/' + QUEUE + '#paid-data--sole-current-queue',
             'notes': acquired['notes'] + ([queue.note] if queue.note else []) + ([status.note] if status.note else [])}
 
 

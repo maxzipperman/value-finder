@@ -76,6 +76,7 @@ def waiting_items(text: str, now: datetime, tz: tzinfo) -> list[dict]:
             first = words.first_sentence(after) or first
         out.append({"n": it["n"], "title": words.strip_markdown(it["title"]).rstrip().rstrip(".").rstrip(),
                     "first_sentence": first or "The item has no text after its title.",
+                    "detail": words.scrub(words.strip_markdown(rest)),
                     "due": None if due is None else f"Due {due:%a} {due:%b} {due.day}",
                     "due_iso": None if due is None else due.isoformat(), "due_level": level})
     return out

@@ -219,24 +219,25 @@ paid APIs. Figures are journal-reported, not independently receipt-authenticated
 Completed responses are not usable paired coverage or permission to grade.
 
 Attempt IDs must be disjoint before an aggregate is displayed. Missing/corrupt,
-linked, oversized, overlapping or future-dated journals withhold totals. Unknown
+linked, nonregular, oversized, overlapping or future-dated journals withhold totals. Unknown
 billing is explicit; charges exclude probe/live/other usage and do not add carried
 budget, reused responses or reservations. The legacy CSV remains a separate view.
-Known batch labels are presentation-only; unknown roots display their identifier.
+Reads use nonblocking, no-follow opens and validate the actual descriptor as a
+regular file before a bounded read. Known batch labels are presentation-only; unknown roots display their identifier.
 A recorded running state does not establish process liveness. Reconciled/stopped
 history remains visible even when a successor has completed.
 
-The existing Purchase sequence table in `sharp-markets/docs/OCTOBER_2026_QUEUE.md`
-is displayed verbatim as a document snapshot, never promoted to live execution
-state. No second queue is maintained. `--operations-root PATH` optionally selects
+The three-column Paid data table in `STATUS.md` is the sole displayed queue.
+The historical October plan is not a fallback queue. The current table remains a
+document snapshot, never promoted to live execution state. No second queue is maintained. `--operations-root PATH` optionally selects
 a reviewed checkout for STATUS/queue while `--root` still selects local live data;
 this option grants no execution authority. It helps avoid reading old status from
 the frozen live checkout. The dashboard does not pull or refresh that checkout.
 
 Owner actions in STATUS's existing Waiting on you section use `[open]`, `[review]`,
-`[resolved]` or `[reference]` inside the bold title. Only open/review items appear;
-unclassified legacy items are reported as requiring classification, not silently
-asserted to be pending decisions. Review items do not turn old dates into failures.
+`[resolved]` or `[reference]` inside the bold title. Open/review items appear, and unclassified items remain visible as “Status needs
+review.” Explicit indented child decisions retain their own classification even
+under resolved/reference parents. Expanded items show the full decision context. Review items do not turn old dates into failures.
 Freshness uses recorded event times or declared document update dates; a fresh
 checkout or browser refresh does not establish current facts. Display age windows
 (24h records, 48h documents, 7d evidence) are informational, not research rules.

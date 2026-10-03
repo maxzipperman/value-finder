@@ -54,7 +54,8 @@ def test_home(store):
                                                "NFL props collector", "NBA collector"]
     assert all(j["level"] == "ok" for j in d["jobs"][:4])
     assert all(j["level"] == "warn" for j in d["jobs"][4:])
-    assert d["waiting"] == []  # legacy unclassified prose is no longer asserted as an owner task
+    assert len(d["waiting"]) == 4  # unknown classifications remain visible for review
+    assert all(x["action_state"] == "review" for x in d["waiting"])
     assert d["operations"]["unclassified_actions"] == 4
     assert d["variants"] == 271 and d["bar"] == "0.000185"
     assert d["evidence"] and all(e["n_words"] for e in d["evidence"])
@@ -216,7 +217,7 @@ def test_pull_from_manifest(root, home):
                            "unreadable": 1, "name": "F1"}
     assert pulls["F2"]["billed"] == 20 and pulls["F2"]["upper"] == 30
     assert d["total"] == {"requests": 4, "billed": 40, "upper": 50, "unreadable": 1, "lowest": 19999960}
-    assert d["header"]["last_written"] == "Last request Thu Oct 1, 8:00 AM"
+    assert d["header"]["last_written"] == "Last acquisition record Thu Oct 1, 8:00 AM"
 
 
 def test_research(store):
