@@ -108,5 +108,42 @@
       "ceiling-local/gemma4-26b/review-acceptance.json"
     ],
     "reviewer": "author complete source/manual inspection"
+  },
+  "qwen3.8:27b-q8_0|implementation|64k": {
+    "proceed": false,
+    "reason": "Stop after13164 tokens below32768. Delivered four-file JSON, original ASTreject due benign type(value).__name__. Prospective separate exact-source diagnostic197/197 passes but direct select/reconcile asof normalization/validation4/4 probes fail. Completed semantic/helper omission, not cap exhaustion; no inference reroll.",
+    "evidence": [
+      "ceiling-local/qwen3.8-27b-q8_0/implementation-result.json",
+      "ceiling-local/qwen3.8-27b-q8_0/implementation-acceptance.json",
+      "ceiling-local/qwen3.8-27b-q8_0/implementation-type-name-diagnostic.json"
+    ],
+    "reviewer": "author complete source inspection and supplemental default-sandbox diagnostic, not independent validation"
+  },
+  "qwen3.8:27b-q8_0|regression|64k": {
+    "proceed": false,
+    "reason": "Server stop after13197 tokens below32768, empty final with35567chars thinking; not a reported length/timeout. No hidden draft salvage or oracle/mutation score.",
+    "evidence": [
+      "ceiling-local/qwen3.8-27b-q8_0/regression-result.json",
+      "ceiling-local/qwen3.8-27b-q8_0/regression-acceptance.json"
+    ],
+    "reviewer": "author final delivery/tail inspection"
+  },
+  "qwen3.8:27b-q8_0|review|64k": {
+    "proceed": false,
+    "reason": "Completed stop review9/10 causes across8findings, no whollyfalsefindings but combined causes/ancillary inaccuracies. MissingIDtie is semantic, not truncation.",
+    "evidence": [
+      "ceiling-local/qwen3.8-27b-q8_0/review-result.json",
+      "ceiling-local/qwen3.8-27b-q8_0/manual-review.json"
+    ],
+    "reviewer": "author semantic inspection"
+  },
+  "ornith-1.5:35b|implementation|64k": {
+    "proceed": false,
+    "reason": "Stop delivered fenced JSON; forbidden relative imports, missing math import and maximum-ID ties contrary to smallest-ID contract visible in source. Completed output not cap exhaustion. Original rejection retained, no source salvage/execution.",
+    "evidence": [
+      "ceiling-local/ornith-1.5-35b/implementation-result.json",
+      "ceiling-local/ornith-1.5-35b/implementation-acceptance.json"
+    ],
+    "reviewer": "author full source inspection"
   }
 }

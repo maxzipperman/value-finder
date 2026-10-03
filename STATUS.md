@@ -218,3 +218,9 @@ PR147 GPT-OSS medium integrated review completed200s:8/10 real causes across7act
 
 
 PR147 Gemmafast integrated tasks author inspected:27s implementation wrongfivefilebundle,19s regression fencedJSON/wrongpartialtotal,8s review fencedJSON; visible manualreview5/10 real+2false tieclaims. No source execution/oraclecredit or64K escalation. Integrated12results saved, Q8 next; all required API/dynamicdiagnostics still pending.
+
+
+PR147 Q8 integrated checkpoint:724s implementation validfourfileJSON but originalAST rejects benign type(value).__name__. Prospective exact-source supplemental diagnostic declared24a62f1, reference197+4 passes/safety negatives retained; candidate197/197 pipeline checks but0/4 new helper asof probes. Preserve originalgrade and separatecoverage gap; not independent/precisioncausal claim. Regression724s stopempty, no64K escalations. Queue98555 Q8review active; no final handoff.
+
+
+PR147 Q8review author9/10 causes,0whollyfalse/duplicate,497s, ancillary inaccuracies and combinedcause noted. Ornithfast implementation fencedJSON/relativeimports/missingmath/maxIDties; no codeexecuted. Remaining Ornithsource authorgrades pending; queue98555 may proceed free/API sequentially, no competingcollector.

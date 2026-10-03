@@ -1,0 +1,4289 @@
+{
+  "model": "qwen3.8:27b-q8_0",
+  "created_at": "2026-10-03T11:28:18.27939Z",
+  "message": {
+    "role": "assistant",
+    "content": "{\n  \"times.py\": \"from datetime import datetime, timezone\\n\\n\\ndef instant(value):\\n    if isinstance(value, str):\\n        try:\\n            dt = datetime.fromisoformat(value)\\n        except (ValueError, TypeError):\\n            raise ValueError(f\\\"Invalid ISO8601 string: {value!r}\\\")\\n    elif isinstance(value, datetime):\\n        dt = value\\n    else:\\n        raise ValueError(f\\\"Unsupported type for instant: {type(value).__name__}\\\")\\n\\n    if dt.utcoffset() is None:\\n        raise ValueError(\\\"Datetime must be timezone-aware (utcoffset must not be None)\\\")\\n\\n    return dt.astimezone(timezone.utc)\\n\",\n  \"quotes.py\": \"import math\\nfrom times import instant\\n\\n\\ndef probability(value):\\n    if isinstance(value, bool):\\n        raise ValueError(\\\"bool type not supported\\\")\\n\\n    if isinstance(value, int):\\n        try:\\n            v = float(value)\\n        except OverflowError:\\n            raise ValueError(\\\"Value not representable as finite float\\\")\\n    elif isinstance(value, float):\\n        v = value\\n    elif isinstance(value, str):\\n        try:\\n            v = float(value)\\n        except (ValueError, OverflowError):\\n            raise ValueError(f\\\"Cannot convert string to float: {value!r}\\\")\\n    else:\\n        raise ValueError(f\\\"Unsupported type: {type(value).__name__}\\\")\\n\\n    if not math.isfinite(v):\\n        raise ValueError(\\\"Value must be finite\\\")\\n\\n    if abs(v) < 100:\\n        raise ValueError(\\\"Absolute value must be >= 100\\\")\\n\\n    if v > 0:\\n        return 100.0 / (v + 100.0)\\n    else:\\n        return (-v) / ((-v) + 100.0)\\n\\n\\ndef select(rows, event, asof):\\n    eligible = []\\n    for i, row in enumerate(rows):\\n        if not isinstance(row, dict):\\n            continue\\n        try:\\n            qid = row['id']\\n            if not isinstance(qid, str) or len(qid) == 0:\\n                continue\\n            book = row['book']\\n            if not isinstance(book, str) or len(book) == 0:\\n                continue\\n            ev = row['event']\\n            if not isinstance(ev, str) or len(ev) == 0:\\n                continue\\n            if ev != event:\\n                continue\\n            obs = instant(row['observed_at'])\\n            exp = instant(row['expires_at'])\\n            lu = instant(row['last_update'])\\n            prob = probability(row['odds'])\\n        except (ValueError, TypeError, KeyError):\\n            continue\\n\\n        if obs <= asof < exp and lu <= obs:\\n            eligible.append((obs, qid, i, book, row, prob))\\n\\n    by_book = {}\\n    for obs, qid, idx, book, row, prob in eligible:\\n        if book not in by_book:\\n            by_book[book] = (obs, qid, idx, row, prob)\\n        else:\\n            prev = by_book[book]\\n            prev_obs, prev_qid, prev_idx = prev[0], prev[1], prev[2]\\n            if obs > prev_obs:\\n                by_book[book] = (obs, qid, idx, row, prob)\\n            elif obs == prev_obs:\\n                if qid < prev_qid:\\n                    by_book[book] = (obs, qid, idx, row, prob)\\n                elif qid == prev_qid and idx < prev_idx:\\n                    by_book[book] = (obs, qid, idx, row, prob)\\n\\n    return {book: {'row': data[3], 'probability': data[4]} for book, data in by_book.items()}\\n\",\n  \"runs.py\": \"from times import instant\\n\\n\\ndef reconcile(rows, asof):\\n    valid_records = []\\n    for i, row in enumerate(rows):\\n        if not isinstance(row, dict):\\n            continue\\n        try:\\n            run_id = row['run_id']\\n            if not isinstance(run_id, str) or len(run_id) == 0:\\n                continue\\n            job = row['job']\\n            if not isinstance(job, str) or len(job) == 0:\\n                continue\\n            attempt = row['attempt']\\n            if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt <= 0:\\n                continue\\n            obs = instant(row['observed_at'])\\n            status = row['status']\\n            if status not in ('ok', 'partial', 'failed', 'pending'):\\n                continue\\n            dl = row['downloaded_rows']\\n            if not isinstance(dl, int) or isinstance(dl, bool) or dl < 0:\\n                continue\\n            if status in ('failed', 'pending') and dl != 0:\\n                continue\\n        except (ValueError, TypeError, KeyError):\\n            continue\\n\\n        if obs > asof:\\n            continue\\n\\n        valid_records.append((run_id, job, attempt, obs, status, dl, i, row))\\n\\n    # Deduplicate by run_id: greatest observed_at wins, ties keep first input\\n    by_run_id = {}\\n    for run_id, job, attempt, obs, status, dl, idx, row in valid_records:\\n        if run_id not in by_run_id:\\n            by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\\n        else:\\n            prev = by_run_id[run_id]\\n            prev_obs, prev_idx = prev[0], prev[1]\\n            if obs > prev_obs:\\n                by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\\n            elif obs == prev_obs and idx < prev_idx:\\n                by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\\n\\n    # Select per job: greatest attempt, then greatest observed_at, then smallest run_id, then first input\\n    by_job = {}\\n    for run_id, (obs, idx, job, attempt, status, dl, row) in by_run_id.items():\\n        if job not in by_job:\\n            by_job[job] = (attempt, obs, run_id, idx, row)\\n        else:\\n            prev = by_job[job]\\n            prev_attempt, prev_obs, prev_run_id, prev_idx = prev[0], prev[1], prev[2], prev[3]\\n            if attempt > prev_attempt:\\n                by_job[job] = (attempt, obs, run_id, idx, row)\\n            elif attempt == prev_attempt:\\n                if obs > prev_obs:\\n                    by_job[job] = (attempt, obs, run_id, idx, row)\\n                elif obs == prev_obs:\\n                    if run_id < prev_run_id:\\n                        by_job[job] = (attempt, obs, run_id, idx, row)\\n                    elif run_id == prev_run_id and idx < prev_idx:\\n                        by_job[job] = (attempt, obs, run_id, idx, row)\\n\\n    return {job: data[4] for job, data in by_job.items()}\\n\",\n  \"pipeline.py\": \"import quotes\\nimport runs\\nfrom times import instant\\n\\n\\ndef snapshot(quote_rows, run_rows, event, asof):\\n    if not isinstance(event, str) or len(event) == 0:\\n        raise ValueError(\\\"event must be a nonempty string\\\")\\n\\n    asof_dt = instant(asof)\\n\\n    q = quotes.select(quote_rows, event, asof_dt)\\n    r = runs.reconcile(run_rows, asof_dt)\\n\\n    successful_rows = 0\\n    failures = []\\n    partial_jobs = []\\n    unknown_jobs = []\\n\\n    for job, row in r.items():\\n        status = row['status']\\n        if status == 'ok':\\n            successful_rows += row['downloaded_rows']\\n        elif status == 'partial':\\n            successful_rows += row['downloaded_rows']\\n            partial_jobs.append(job)\\n        elif status == 'failed':\\n            failures.append(job)\\n        elif status == 'pending':\\n            unknown_jobs.append(job)\\n\\n    return {\\n        'quotes': q,\\n        'runs': r,\\n        'successful_rows': successful_rows,\\n        'failures': sorted(failures),\\n        'partial_jobs': sorted(partial_jobs),\\n        'unknown_jobs': sorted(unknown_jobs),\\n    }\\n\"\n}",
+    "thinking": "Let me carefully analyze the contract and implement the four files.\n\n**times.py:**\n- `times.instant(value)`: \n  - Accepts ISO8601 strings (accepted by `datetime.fromisoformat`, including Z) or datetime objects\n  - Must be timezone-aware with non-None utcoffset\n  - Normalize to UTC\n  - Otherwise raise ValueError\n  - asof must satisfy this rule; invalid asof raises ValueError before inspecting either list\n  - event must be a nonempty str (whitespace allowed); invalid event raises ValueError\n\n**quotes.py:**\n- `quotes.probability(value)`:\n  - Accepts finite int, float or float-convertible str, excluding bool\n  - abs >= 100\n  - Unsupported types, conversion/overflow, NaN/inf and small magnitude raise ValueError\n  - Positive American odds: 100/(v+100)\n  - Negative odds: (-v)/((-v)+100)\n  - Values unrepresentable as finite float are invalid\n  - No Decimal/custom numeric support\n\n- `quotes.select(rows, event, asof)`:\n  - Returns dict keyed by book, each value `{'row': original_input_dict, 'probability': float}`\n  - Required quote fields: nonempty strings id, book, event; observed_at, expires_at, last_update accepted by instant; valid odds\n  - Extra fields ignored/preserved in original row\n  - Eligible iff: matching event AND observed_at <= asof < expires_at AND last_update <= observed_at\n  - All comparisons use absolute instants\n  - Invalid/future/expired rows are filtered BEFORE selecting each book\n  - Select greatest eligible observed_at per book\n  - Absolute-time ties choose lexicographically smallest id\n  - Equal instant/id ties keep first eligible input row\n  - Do not copy chosen row\n  - Only eligible records participate\n  - Future update invalidates its own row, never the entire book\n  - Books without eligible quotes are omitted\n\nWait, \"odds\" - what field is the odds? The contract says \"valid odds\" as a required field. Let me re-read...\n\n\"Required quote fields: nonempty strings id, book, event; observed_at, expires_at, last_update accepted by instant; valid odds.\"\n\nSo the odds field - what's it called? The contract doesn't explicitly name it. Let me re-read... It says \"valid odds\" as a required field. I think the field is called \"odds\". Let me assume the field name is \"odds\".\n\nActually, looking more carefully, the contract says \"Required quote fields: nonempty strings id, book, event; observed_at, expires_at, last_update accepted by instant; valid odds.\" This lists the fields. The odds field is likely named \"odds\".\n\n**runs.py:**\n- `runs.reconcile(rows, asof)`:\n  - Returns dict keyed by job, values are original input run dicts\n  - Required fields: nonempty strings run_id, job; positive int attempt (bool excluded); observed_at accepted by instant; status exactly one of ok, partial, failed, pending; downloaded_rows nonnegative int (bool excluded)\n  - Failed/pending must have downloaded_rows==0; ok/partial may have 0 or more\n  - Skip malformed/future rows\n  - First deduplicate by run_id: greatest eligible absolute observed_at wins, exact time ties retain first eligible input row\n  - Then select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first\n  - No status-preference rule\n  - Duplicate replay of identical rows must not inflate counts\n  - Invalid/future duplicates cannot suppress a valid previous record\n  - run_id is global across jobs, and a later valid record may correct the job field\n  - Equal-time conflicting duplicate run IDs use first-input rule\n\n**pipeline.py:**\n- `pipeline.snapshot(quote_rows, run_rows, event, asof)`:\n  - Returns exactly: `{'quotes': quotes.select(...), 'runs': runs.reconcile(...), 'successful_rows': int, 'failures': sorted list, 'partial_jobs': sorted list, 'unknown_jobs': sorted list}`\n  - Sum downloaded_rows ONCE from each selected job with status ok or partial\n  - failures: selected failed jobs\n  - partial_jobs: selected partial\n  - unknown_jobs: selected pending\n  - Validate asof and event even if inputs are empty\n  - Must invoke supporting modules\n\nNow let me think about the \"odds\" field name. The contract says \"valid odds\" - I'll use \"odds\" as the field name since it's the most natural name and the contract refers to it as a required field.\n\nLet me think about edge cases:\n\nFor `times.instant`:\n- String: must be accepted by `datetime.fromisoformat`. In Python 3.11+, `fromisoformat` accepts 'Z' suffix. In Python 3.14, it should definitely accept it.\n- Datetime object: must be timezone-aware (utcoffset() is not None)\n- Normalize to UTC: convert to UTC using `astimezone(timezone.utc)`\n- If not timezone-aware, raise ValueError\n\nFor `quotes.probability`:\n- Input types: int, float, str (float-convertible)\n- Exclude bool (bool is subclass of int in Python)\n- Must be finite\n- abs >= 100\n- For str: try float(value), must succeed, must be finite\n- For int: abs(value) >= 100\n- For float: math.isfinite(value) and abs(value) >= 100\n- Formula: positive: 100/(v+100), negative: (-v)/((-v)+100)\n\nWait, what about 0? abs(0) < 100, so it raises ValueError. Good.\n\nFor `quotes.select`:\n- rows is a list of arbitrary objects\n- Each row must be a dict to have fields\n- \"Malformed individual records are skipped\"\n- Required fields: id (nonempty str), book (nonempty str), event (nonempty str), observed_at (instant), expires_at (instant), last_update (instant), odds (valid probability input)\n- \"no mutation of either list or any input dictionary\"\n- Eligible: event matches AND observed_at <= asof < expires_at AND last_update <= observed_at\n- Selection: greatest observed_at per book, ties by lexicographically smallest id, then first input\n\nFor `runs.reconcile`:\n- Similar structure\n- Deduplicate by run_id first (greatest observed_at wins, ties first input)\n- Then per job: greatest attempt, then greatest observed_at, then smallest run_id, ties first input\n\nLet me now think about the \"no mutation\" requirement. We must not modify the input lists or dicts. We just read from them.\n\nLet me think about what \"nonempty strings\" means - the string must be a str type and len > 0. Whitespace-only strings are nonempty.\n\nFor the `event` parameter in `pipeline.snapshot`: \"nonempty str (whitespace allowed)\". So `event` must be a str and `len(event) > 0`. A string of just spaces is valid.\n\nFor `asof`: must satisfy `times.instant` rules.\n\nLet me code this up:\n\n```python\n# times.py\nfrom datetime import datetime, timezone\n\ndef instant(value):\n    if isinstance(value, str):\n        try:\n            dt = datetime.fromisoformat(value)\n        except (ValueError, TypeError):\n            raise ValueError(f\"Invalid ISO8601 string: {value!r}\")\n    elif isinstance(value, datetime):\n        dt = value\n    else:\n        raise ValueError(f\"Unsupported type: {type(value)!r}\")\n    \n    if dt.utcoffset() is None:\n        raise ValueError(\"Must be timezone-aware\")\n    \n    return dt.astimezone(timezone.utc)\n```\n\nWait, I need to be careful. The contract says \"accepts only ISO8601 strings accepted by datetime.fromisoformat (including Z), or datetime objects.\" So the string must be parseable by fromisoformat, and the resulting datetime must be timezone-aware.\n\nFor a string like \"2024-01-01T00:00:00\" (no timezone), fromisoformat will parse it but the resulting datetime will be naive. So we need to check utcoffset is not None.\n\nLet me also handle the case where `value` is None or some other type - should raise ValueError.\n\n```python\n# times.py\nfrom datetime import datetime, timezone\n\ndef instant(value):\n    if isinstance(value, str):\n        try:\n            dt = datetime.fromisoformat(value)\n        except (ValueError, TypeError):\n            raise ValueError(f\"Invalid ISO8601 string: {value!r}\")\n    elif isinstance(value, datetime):\n        dt = value\n    else:\n        raise ValueError(f\"Unsupported type: {type(value).__name__}\")\n    \n    if dt.utcoffset() is None:\n        raise ValueError(\"Datetime must be timezone-aware\")\n    \n    return dt.astimezone(timezone.utc)\n```\n\nNow for quotes.py:\n\n```python\n# quotes.py\nimport math\nfrom times import instant\n\ndef probability(value):\n    # Exclude bool\n    if isinstance(value, bool):\n        raise ValueError(\"bool not supported\")\n    \n    if isinstance(value, int):\n        v = float(value)\n    elif isinstance(value, float):\n        v = value\n    elif isinstance(value, str):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError):\n            raise ValueError(f\"Cannot convert to float: {value!r}\")\n    else:\n        raise ValueError(f\"Unsupported type: {type(value).__name__}\")\n    \n    if not math.isfinite(v):\n        raise ValueError(\"Must be finite\")\n    \n    if abs(v) < 100:\n        raise ValueError(\"Absolute value must be >= 100\")\n    \n    if v > 0:\n        return 100.0 / (v + 100.0)\n    else:\n        return (-v) / ((-v) + 100.0)\n```\n\nWait, what about negative values with abs < 100? Like -50? abs(-50) = 50 < 100, so ValueError. Good.\n\nWhat about exactly 100 or -100? abs(100) >= 100, so valid. 100/(100+100) = 0.5. -100: (-(-100))/((-(-100))+100) = 100/200 = 0.5. Good.\n\nFor `quotes.select`:\n\n```python\ndef select(rows, event, asof):\n    # asof is already a UTC datetime from pipeline validation\n    # event is already validated\n    \n    eligible = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        try:\n            qid = row.get('id')\n            if not isinstance(qid, str) or len(qid) == 0:\n                continue\n            book = row.get('book')\n            if not isinstance(book, str) or len(book) == 0:\n                continue\n            ev = row.get('event')\n            if not isinstance(ev, str) or len(ev) == 0:\n                continue\n            if ev != event:\n                continue\n            obs = instant(row.get('observed_at'))\n            exp = instant(row.get('expires_at'))\n            lu = instant(row.get('last_update'))\n            prob = probability(row.get('odds'))\n        except (ValueError, TypeError, KeyError):\n            continue\n        \n        # Check eligibility\n        if obs <= asof < exp and lu <= obs:\n            eligible.append((obs, qid, i, book, row, prob))\n    \n    # Select per book: greatest observed_at, ties by smallest id, then first input\n    by_book = {}\n    for obs, qid, idx, book, row, prob in eligible:\n        if book not in by_book:\n            by_book[book] = (obs, qid, idx, row, prob)\n        else:\n            prev_obs, prev_qid, prev_idx, prev_row, prev_prob = by_book[book]\n            # Greatest observed_at\n            if obs > prev_obs:\n                by_book[book] = (obs, qid, idx, row, prob)\n            elif obs == prev_obs:\n                # Lexicographically smallest id\n                if qid < prev_qid:\n                    by_book[book] = (obs, qid, idx, row, prob)\n                elif qid == prev_qid:\n                    # First input\n                    if idx < prev_idx:\n                        by_book[book] = (obs, qid, idx, row, prob)\n    \n    return {book: {'row': data[3], 'probability': data[4]} for book, data in by_book.items()}\n```\n\nWait, I need to be more careful. The contract says \"Equal instant/id ties keep first eligible input row, regardless of other fields.\" This means if observed_at and id are both equal, we keep the one that appeared first in the input list. So I should track the original index.\n\nActually, let me reconsider. The selection logic:\n1. Filter to eligible records\n2. Per book, select the one with greatest observed_at\n3. Tie-break: lexicographically smallest id\n4. Tie-break: first input (lowest index)\n\nSo my logic above is correct. Let me refine it.\n\nActually wait - I need to think about whether the `odds` field validation should happen. The contract says \"valid odds\" is a required field. So if the odds field is missing or invalid, the row is malformed and skipped.\n\nLet me also think about: what if `row.get('observed_at')` is None? Then `instant(None)` will raise ValueError, and we skip. Good.\n\nNow for runs.py:\n\n```python\n# runs.py\nfrom times import instant\n\ndef reconcile(rows, asof):\n    # Step 1: Filter to valid, non-future records\n    valid_records = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        try:\n            run_id = row.get('run_id')\n            if not isinstance(run_id, str) or len(run_id) == 0:\n                continue\n            job = row.get('job')\n            if not isinstance(job, str) or len(job) == 0:\n                continue\n            attempt = row.get('attempt')\n            if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt <= 0:\n                continue\n            obs = instant(row.get('observed_at'))\n            status = row.get('status')\n            if status not in ('ok', 'partial', 'failed', 'pending'):\n                continue\n            dl = row.get('downloaded_rows')\n            if not isinstance(dl, int) or isinstance(dl, bool) or dl < 0:\n                continue\n            # Status-specific constraints\n            if status in ('failed', 'pending') and dl != 0:\n                continue\n        except (ValueError, TypeError, KeyError):\n            continue\n        \n        # Skip future records (observed_at > asof)\n        if obs > asof:\n            continue\n        \n        valid_records.append((run_id, job, attempt, obs, status, dl, i, row))\n    \n    # Step 2: Deduplicate by run_id\n    # Greatest observed_at wins, exact time ties retain first eligible input row\n    by_run_id = {}\n    for run_id, job, attempt, obs, status, dl, idx, row in valid_records:\n        if run_id not in by_run_id:\n            by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\n        else:\n            prev_obs, prev_idx, prev_job, prev_attempt, prev_status, prev_dl, prev_row = by_run_id[run_id]\n            if obs > prev_obs:\n                by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\n            elif obs == prev_obs:\n                if idx < prev_idx:\n                    by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\n    \n    # Step 3: Select per job\n    # Greatest attempt, then greatest observed_at, then smallest run_id, then first input\n    by_job = {}\n    for run_id, (obs, idx, job, attempt, status, dl, row) in by_run_id.items():\n        if job not in by_job:\n            by_job[job] = (attempt, obs, run_id, idx, status, dl, row)\n        else:\n            prev_attempt, prev_obs, prev_run_id, prev_idx, prev_status, prev_dl, prev_row = by_job[job]\n            if attempt > prev_attempt:\n                by_job[job] = (attempt, obs, run_id, idx, status, dl, row)\n            elif attempt == prev_obs:  # BUG: should be prev_attempt\n                if obs > prev_obs:\n                    by_job[job] = (attempt, obs, run_id, idx, status, dl, row)\n                elif obs == prev_obs:\n                    if run_id < prev_run_id:\n                        by_job[job] = (attempt, obs, run_id, idx, status, dl, row)\n                    elif run_id == prev_run_id:\n                        if idx < prev_idx:\n                            by_job[job] = (attempt, obs, run_id, idx, status, dl, row)\n    \n    return {job: data[6] for job, data in by_job.items()}\n```\n\nWait, I made a typo. Let me fix: `elif attempt == prev_attempt:`.\n\nAlso, I need to think about the \"Duplicate replay of identical rows must not inflate counts\" requirement. Since we're deduplicating by run_id first, if the same row appears twice (same run_id), only one will survive. And in the final selection, we only count each job's selected row once. So this should be fine.\n\n\"Invalid/future duplicates cannot suppress a valid previous record.\" - Since we filter out invalid/future records before deduplication, they won't be in the valid_records list, so they can't suppress anything. Good.\n\n\"run_id is global across jobs, and a later valid record may correct the job field.\" - Since we deduplicate by run_id globally (not per job), a later record with the same run_id but different job will replace the earlier one. Then in the per-job selection, it'll be assigned to the new job. Good.\n\nNow for pipeline.py:\n\n```python\n# pipeline.py\nimport quotes\nimport runs\nfrom times import instant\n\ndef snapshot(quote_rows, run_rows, event, asof):\n    # Validate event\n    if not isinstance(event, str) or len(event) == 0:\n        raise ValueError(\"event must be a nonempty string\")\n    \n    # Validate asof\n    asof_dt = instant(asof)\n    \n    # Invoke supporting modules\n    q = quotes.select(quote_rows, event, asof_dt)\n    r = runs.reconcile(run_rows, asof_dt)\n    \n    # Compute summary\n    successful_rows = 0\n    failures = []\n    partial_jobs = []\n    unknown_jobs = []\n    \n    for job, row in r.items():\n        status = row['status']\n        if status == 'ok':\n            successful_rows += row['downloaded_rows']\n        elif status == 'partial':\n            successful_rows += row['downloaded_rows']\n            partial_jobs.append(job)\n        elif status == 'failed':\n            failures.append(job)\n        elif status == 'pending':\n            unknown_jobs.append(job)\n    \n    return {\n        'quotes': q,\n        'runs': r,\n        'successful_rows': successful_rows,\n        'failures': sorted(failures),\n        'partial_jobs': sorted(partial_jobs),\n        'unknown_jobs': sorted(unknown_jobs),\n    }\n```\n\nWait, I need to double-check: \"Sum downloaded_rows ONCE from each selected job with status ok or partial.\" So for each job in the runs dict, if its status is ok or partial, add its downloaded_rows to successful_rows. Since each job appears at most once in the runs dict (it's keyed by job), this is naturally \"once\".\n\nNow let me think about potential issues:\n\n1. In `quotes.select`, I'm calling `instant()` which can raise ValueError. I catch that in the try/except. But I also need to handle the case where the row doesn't have the 'odds' key - `row.get('odds')` returns None, and `probability(None)` will raise ValueError because None is not int, float, or str. Good.\n\n2. In `runs.reconcile`, same pattern.\n\n3. The contract says \"No mutation of either list or any input dictionary.\" I'm only reading from the lists and dicts, never writing. Good.\n\n4. \"Do not copy chosen row.\" - I'm storing the reference to the original row dict. Good.\n\n5. \"Empty valid lists produce empty selections and zero counts.\" - If quote_rows is empty, quotes.select returns {}. If run_rows is empty, runs.reconcile returns {}. successful_rows = 0, all lists empty. Good.\n\n6. \"Validate asof and event even if inputs are empty.\" - In pipeline.snapshot, I validate event and asof before calling the select/reconcile functions. Good.\n\nLet me reconsider the `probability` function. The contract says \"Values unrepresentable as finite float are invalid.\" For int, any int is representable as float in Python (Python ints are arbitrary precision, but converting to float might overflow for very large ints). Actually, `float(10**400)` raises OverflowError. Let me handle that.\n\n```python\ndef probability(value):\n    if isinstance(value, bool):\n        raise ValueError(\"bool not supported\")\n    \n    if isinstance(value, int):\n        try:\n            v = float(value)\n        except OverflowError:\n            raise ValueError(\"Value not representable as finite float\")\n    elif isinstance(value, float):\n        v = value\n    elif isinstance(value, str):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError):\n            raise ValueError(f\"Cannot convert to float: {value!r}\")\n    else:\n        raise ValueError(f\"Unsupported type: {type(value).__name__}\")\n    \n    if not math.isfinite(v):\n        raise ValueError(\"Must be finite\")\n    \n    if abs(v) < 100:\n        raise ValueError(\"Absolute value must be >= 100\")\n    \n    if v > 0:\n        return 100.0 / (v + 100.0)\n    else:\n        return (-v) / ((-v) + 100.0)\n```\n\nActually, for very large ints like 10**400, `float(10**400)` raises OverflowError in Python. Let me verify... Actually in Python, `float(10**400)` does raise OverflowError. So I need to catch that.\n\nFor the string case, `float(\"inf\")` returns inf, which will be caught by the `math.isfinite` check. `float(\"nan\")` returns nan, also caught. Good.\n\nWhat about `float(\"1e400\")`? That returns inf in Python. Caught by isfinite. Good.\n\nWhat about a string like \"  150  \"? `float(\"  150  \")` returns 150.0. That's fine.\n\nWhat about an empty string? `float(\"\")` raises ValueError. Caught. Good.\n\nNow let me think about the `times.instant` function more carefully. The contract says \"ISO8601 strings accepted by datetime.fromisoformat (including Z)\". In Python 3.11+, `fromisoformat` accepts 'Z' as a timezone indicator. In Python 3.14, this should definitely work.\n\nWhat about a string like \"2024-01-01\"? `fromisoformat(\"2024-01-01\")` returns `datetime(2024, 1, 1, 0, 0)` which is naive. So `utcoffset()` is None, and we raise ValueError. Good.\n\nWhat about \"2024-01-01T00:00:00+00:00\"? `fromisoformat` parses it, utcoffset is 0 (not None), so it's valid. Normalized to UTC (already UTC). Good.\n\nWhat about a datetime object? `datetime(2024, 1, 1, tzinfo=timezone.utc)` - utcoffset is timedelta(0), which is not None. Valid. `datetime(2024, 1, 1)` - utcoffset is None. Invalid. Good.\n\nNow, let me think about the tie-breaking in quotes.select more carefully.\n\n\"Select greatest eligible observed_at per book; absolute-time ties choose lexicographically smallest id; equal instant/id ties keep first eligible input row, regardless of other fields.\"\n\nSo the ordering is:\n1. Greatest observed_at (descending)\n2. Smallest id (ascending lexicographic)\n3. First in input (smallest index)\n\nThis is a total ordering (since id is a nonempty string and index is unique), so there's always a unique winner.\n\nIn my implementation, I iterate through eligible records and compare. Let me make sure the comparison logic is correct:\n\nFor a new candidate (obs, qid, idx) vs current best (prev_obs, prev_qid, prev_idx):\n- If obs > prev_obs: new wins\n- If obs < prev_obs: current wins\n- If obs == prev_obs:\n  - If qid < prev_qid: new wins\n  - If qid > prev_qid: current wins\n  - If qid == prev_qid:\n    - If idx < prev_idx: new wins\n    - If idx > prev_idx: current wins\n\nSince I iterate in order (idx increasing), if obs == prev_obs and qid == prev_qid, the current best always has a smaller idx (since it was found earlier). So the \"idx < prev_idx\" case would never trigger in a forward iteration. But to be safe, I'll keep the check.\n\nActually wait - I'm iterating in input order, so the first one I see has the smallest idx. If a later one has the same obs and same qid, its idx is larger, so it won't replace. Good.\n\nLet me also reconsider: \"This first-input tie exception means arbitrary permutations need not preserve identity or probability.\" This confirms that when two records have the same observed_at and same id, the result depends on input order. So my implementation is correct.\n\nFor runs.reconcile, the dedup step:\n- \"First deduplicate by run_id: greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row.\"\n\nSo for the same run_id:\n1. Greatest observed_at\n2. First in input (smallest index)\n\nThen the per-job selection:\n- \"Then select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first.\"\n\nSo for the same job:\n1. Greatest attempt\n2. Greatest observed_at\n3. Smallest run_id (lexicographic)\n4. First in input (smallest index)\n\nLet me make sure my implementation handles this correctly.\n\nOne more thing: \"Duplicate replay of identical rows must not inflate counts.\" Since we deduplicate by run_id, if the exact same row (same run_id, same everything) appears twice, only one survives. And since each job can only have one selected row in the output, the count is naturally not inflated.\n\n\"Invalid/future duplicates cannot suppress a valid previous record.\" Since invalid/future records are filtered out before deduplication, they can't appear in the valid_records list and thus can't suppress anything.\n\nLet me also think about: what if a row has extra fields? The contract says \"Extra fields ignored/preserved in original row\" for quotes. For runs, it doesn't explicitly say, but since we return the original row dict, extra fields are naturally preserved.\n\nNow let me also think about: the `asof` parameter. In `pipeline.snapshot`, `asof` can be either a string or a datetime. We validate it once with `times.instant(asof)` and pass the resulting UTC datetime to both `quotes.select` and `runs.reconcile`.\n\nWait, but `quotes.select` and `runs.reconcile` also need to validate the asof? No - the contract says the pipeline validates it. The select/reconcile functions receive an already-validated asof (a UTC datetime). Let me re-read...\n\n\"asof must satisfy this rule; invalid asof raises ValueError before inspecting either list.\"\n\nSo asof is validated in the pipeline before the lists are inspected. The select/reconcile functions receive a valid UTC datetime.\n\nBut wait - the contract says \"Implement pipeline.snapshot(quote_rows, run_rows, event, asof) and the supporting functions below.\" The supporting functions are times.instant, quotes.probability, quotes.select, runs.reconcile. So quotes.select and runs.reconcile receive an already-validated asof.\n\nActually, let me re-read: \"asof must satisfy this rule; invalid asof raises ValueError before inspecting either list.\" This is about the pipeline level. The individual functions (select, reconcile) receive the validated asof as a datetime.\n\nOK so in my implementation, `quotes.select(rows, event, asof)` receives `asof` as a UTC datetime (already validated). And `runs.reconcile(rows, asof)` also receives a UTC datetime.\n\nLet me finalize my implementation. Let me also make sure I handle the case where `rows` is not a list (e.g., None or a string). The contract says \"Inputs quote_rows/run_rows are lists of arbitrary objects.\" So they should be lists. But what if they're not? The contract says \"Malformed individual records are skipped\" but doesn't say what happens if the input isn't a list. I'll assume they're always lists (the contract guarantees this). But to be safe, I could check.\n\nActually, the contract says \"Inputs quote_rows/run_rows are lists of arbitrary objects.\" This is a guarantee about the input. So I can assume they're lists. If they're not, it's undefined behavior. I'll just iterate over them.\n\nWait, but \"Empty valid lists produce empty selections and zero counts.\" This confirms they can be empty lists.\n\nLet me also think about: what if a row in the list is not a dict? \"Malformed individual records are skipped\" - so if it's not a dict, it's malformed and skipped. My `isinstance(row, dict)` check handles this.\n\nOne more consideration: the contract says \"no mutation of either list or any input dictionary.\" I need to make sure I don't modify any dict. Since I'm only reading from them, this should be fine.\n\nLet me also think about the `probability` function edge case: what if value is a string like \"abc\"? `float(\"abc\")` raises ValueError, caught. What about \"1e999\"? `float(\"1e999\")` returns inf, caught by isfinite. What about \"  \"? `float(\"  \")` raises ValueError. Good.\n\nWhat about a string that looks like a complex number, e.g., \"1+2j\"? `float(\"1+2j\")` raises ValueError. Good.\n\nI think my implementation is solid. Let me write the final versions.\n\nActually, wait. Let me re-read the probability contract: \"accepts finite int, float or float-convertible str, excluding bool, with abs>=100.\"\n\nSo the value must:\n1. Be of type int, float, or str (not bool)\n2. Be convertible to a finite float\n3. Have abs >= 100\n\nFor int: must be finite (all Python ints are finite as integers, but might overflow when converted to float). abs >= 100.\nFor float: must be finite (not nan, not inf). abs >= 100.\nFor str: must be float-convertible, result must be finite, abs >= 100.\n\n\"Values unrepresentable as finite float are invalid.\" - This covers the overflow case for very large ints.\n\nOK, I think I have a good understanding. Let me write the final code.\n\nOne more thing: in the runs.reconcile, the contract says \"Skip malformed/future rows.\" Future means observed_at > asof. So the check is `obs <= asof`.\n\nAnd for quotes: \"observed_at<=asof<expires_at\" - so observed_at must be <= asof AND asof must be < expires_at. This means the quote must not be expired (expires_at is strictly in the future relative to asof) and must not be in the future relative to asof.\n\nLet me write the final code now.\n\nActually, I realize I should double-check: in the probability function, for negative odds, the formula is (-v)/((-v)+100). If v = -150, then (-(-150))/((-(-150))+100) = 150/250 = 0.6. Let me verify: in American odds, -150 means you need to bet 150 to win 100. So probability = 150/(150+100) = 150/250 = 0.6. Yes, that's correct.\n\nFor positive: v = 150, 100/(150+100) = 100/250 = 0.4. In American odds, +150 means you win 150 on a 100 bet. Probability = 100/(100+150) = 100/250 = 0.4. Correct.\n\nNow let me finalize everything and output the JSON.\n\nWait, one more thought on the `runs.reconcile` function. The contract says:\n\n\"First deduplicate by run_id: greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row.\"\n\nThis means: for each unique run_id, keep only one record. The one with the greatest observed_at. If tied, the one that appeared first in the input.\n\n\"Then select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first.\"\n\nThis means: from the deduplicated set, group by job. For each job, select one record based on:\n1. Greatest attempt\n2. Greatest observed_at\n3. Smallest run_id\n4. First in input (smallest index)\n\nThis is clear. Let me make sure my code does this.\n\nActually, I want to reconsider the \"first eligible input row\" in the dedup step. If two records have the same run_id and same observed_at, we keep the one that appeared first in the input list. Since I'm iterating in order, the first one I see will have the smaller index. So when I compare, if obs == prev_obs, I keep the one with the smaller index (which is the one I saw first). My code does this correctly.\n\nLet me also think about: can a row have a valid run_id but invalid other fields? Yes, and it would be skipped entirely (not added to valid_records). So it can't participate in deduplication.\n\nI'm satisfied with the logic. Let me write the final code.\n\nHmm, actually one more edge case: in `quotes.select`, what if two different books have the same id? That's fine because we're selecting per book. The id tie-breaking only applies within the same book.\n\nAnd in `runs.reconcile`, the run_id is global across jobs. So if job A has run_id \"r1\" and job B also has run_id \"r1\", they're the same run_id and will be deduplicated together. The later one (by observed_at) wins, and it might have a different job field. This is the \"a later valid record may correct the job field\" behavior.\n\nOK, I'm confident now. Let me write the final output.\n\nLet me also make sure about the import structure. The contract says \"Package uses absolute imports among those four files, no other local module imports.\" So:\n- times.py: no local imports (just stdlib)\n- quotes.py: `from times import instant` (absolute import)\n- runs.py: `from times import instant` (absolute import)\n- pipeline.py: `import quotes`, `import runs`, `from times import instant` (absolute imports)\n\nWait, actually \"absolute imports\" in the context of a package... If these are all in the same package, then `from times import instant` is a relative import within the package. But the contract says \"absolute imports among those four files.\" I think this means they should use `from times import instant` style (as if the files are at the top level of the package) rather than `from .times import instant`. Let me use `from times import instant` style.\n\nActually, in Python, if all four files are in the same directory and you're running them as a flat set of modules (not a package), then `from times import instant` is an absolute import. If they're in a package, you'd need `from .times import instant`. But the contract says \"absolute imports among those four files,\" so I'll use `from times import instant`.\n\nLet me finalize:\n\n```python\n# times.py\nfrom datetime import datetime, timezone\n\ndef instant(value):\n    if isinstance(value, str):\n        try:\n            dt = datetime.fromisoformat(value)\n        except (ValueError, TypeError):\n            raise ValueError(f\"Invalid ISO8601 string: {value!r}\")\n    elif isinstance(value, datetime):\n        dt = value\n    else:\n        raise ValueError(f\"Unsupported type for instant: {type(value).__name__}\")\n    \n    if dt.utcoffset() is None:\n        raise ValueError(\"Datetime must be timezone-aware (utcoffset must not be None)\")\n    \n    return dt.astimezone(timezone.utc)\n```\n\n```python\n# quotes.py\nimport math\nfrom times import instant\n\ndef probability(value):\n    if isinstance(value, bool):\n        raise ValueError(\"bool type not supported\")\n    \n    if isinstance(value, int):\n        try:\n            v = float(value)\n        except OverflowError:\n            raise ValueError(\"Value not representable as finite float\")\n    elif isinstance(value, float):\n        v = value\n    elif isinstance(value, str):\n        try:\n            v = float(value)\n        except (ValueError, OverflowError):\n            raise ValueError(f\"Cannot convert string to float: {value!r}\")\n    else:\n        raise ValueError(f\"Unsupported type: {type(value).__name__}\")\n    \n    if not math.isfinite(v):\n        raise ValueError(\"Value must be finite\")\n    \n    if abs(v) < 100:\n        raise ValueError(\"Absolute value must be >= 100\")\n    \n    if v > 0:\n        return 100.0 / (v + 100.0)\n    else:\n        return (-v) / ((-v) + 100.0)\n\ndef select(rows, event, asof):\n    eligible = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        try:\n            qid = row['id']\n            if not isinstance(qid, str) or len(qid) == 0:\n                continue\n            book = row['book']\n            if not isinstance(book, str) or len(book) == 0:\n                continue\n            ev = row['event']\n            if not isinstance(ev, str) or len(ev) == 0:\n                continue\n            if ev != event:\n                continue\n            obs = instant(row['observed_at'])\n            exp = instant(row['expires_at'])\n            lu = instant(row['last_update'])\n            prob = probability(row['odds'])\n        except (ValueError, TypeError, KeyError):\n            continue\n        \n        if obs <= asof < exp and lu <= obs:\n            eligible.append((obs, qid, i, book, row, prob))\n    \n    by_book = {}\n    for obs, qid, idx, book, row, prob in eligible:\n        if book not in by_book:\n            by_book[book] = (obs, qid, idx, row, prob)\n        else:\n            prev = by_book[book]\n            prev_obs, prev_qid, prev_idx = prev[0], prev[1], prev[2]\n            if obs > prev_obs:\n                by_book[book] = (obs, qid, idx, row, prob)\n            elif obs == prev_obs:\n                if qid < prev_qid:\n                    by_book[book] = (obs, qid, idx, row, prob)\n                elif qid == prev_qid and idx < prev_idx:\n                    by_book[book] = (obs, qid, idx, row, prob)\n    \n    return {book: {'row': data[3], 'probability': data[4]} for book, data in by_book.items()}\n```\n\n```python\n# runs.py\nfrom times import instant\n\ndef reconcile(rows, asof):\n    valid_records = []\n    for i, row in enumerate(rows):\n        if not isinstance(row, dict):\n            continue\n        try:\n            run_id = row['run_id']\n            if not isinstance(run_id, str) or len(run_id) == 0:\n                continue\n            job = row['job']\n            if not isinstance(job, str) or len(job) == 0:\n                continue\n            attempt = row['attempt']\n            if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt <= 0:\n                continue\n            obs = instant(row['observed_at'])\n            status = row['status']\n            if status not in ('ok', 'partial', 'failed', 'pending'):\n                continue\n            dl = row['downloaded_rows']\n            if not isinstance(dl, int) or isinstance(dl, bool) or dl < 0:\n                continue\n            if status in ('failed', 'pending') and dl != 0:\n                continue\n        except (ValueError, TypeError, KeyError):\n            continue\n        \n        if obs > asof:\n            continue\n        \n        valid_records.append((run_id, job, attempt, obs, status, dl, i, row))\n    \n    # Deduplicate by run_id\n    by_run_id = {}\n    for run_id, job, attempt, obs, status, dl, idx, row in valid_records:\n        if run_id not in by_run_id:\n            by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\n        else:\n            prev = by_run_id[run_id]\n            prev_obs, prev_idx = prev[0], prev[1]\n            if obs > prev_obs:\n                by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\n            elif obs == prev_obs and idx < prev_idx:\n                by_run_id[run_id] = (obs, idx, job, attempt, status, dl, row)\n    \n    # Select per job\n    by_job = {}\n    for run_id, (obs, idx, job, attempt, status, dl, row) in by_run_id.items():\n        if job not in by_job:\n            by_job[job] = (attempt, obs, run_id, idx, row)\n        else:\n            prev = by_job[job]\n            prev_attempt, prev_obs, prev_run_id, prev_idx = prev[0], prev[1], prev[2], prev[3]\n            if attempt > prev_attempt:\n                by_job[job] = (attempt, obs, run_id, idx, row)\n            elif attempt == prev_attempt:\n                if obs > prev_obs:\n                    by_job[job] = (attempt, obs, run_id, idx, row)\n                elif obs == prev_obs:\n                    if run_id < prev_run_id:\n                        by_job[job] = (attempt, obs, run_id, idx, row)\n                    elif run_id == prev_run_id and idx < prev_idx:\n                        by_job[job] = (attempt, obs, run_id, idx, row)\n    \n    return {job: data[4] for job, data in by_job.items()}\n```\n\n```python\n# pipeline.py\nimport quotes\nimport runs\nfrom times import instant\n\ndef snapshot(quote_rows, run_rows, event, asof):\n    if not isinstance(event, str) or len(event) == 0:\n        raise ValueError(\"event must be a nonempty string\")\n    \n    asof_dt = instant(asof)\n    \n    q = quotes.select(quote_rows, event, asof_dt)\n    r = runs.reconcile(run_rows, asof_dt)\n    \n    successful_rows = 0\n    failures = []\n    partial_jobs = []\n    unknown_jobs = []\n    \n    for job, row in r.items():\n        status = row['status']\n        if status == 'ok':\n            successful_rows += row['downloaded_rows']\n        elif status == 'partial':\n            successful_rows += row['downloaded_rows']\n            partial_jobs.append(job)\n        elif status == 'failed':\n            failures.append(job)\n        elif status == 'pending':\n            unknown_jobs.append(job)\n    \n    return {\n        'quotes': q,\n        'runs': r,\n        'successful_rows': successful_rows,\n        'failures': sorted(failures),\n        'partial_jobs': sorted(partial_jobs),\n        'unknown_jobs': sorted(unknown_jobs),\n    }\n```\n\nNow let me review once more:\n\n1. `times.instant` - looks good. Handles str, datetime, rejects everything else. Checks timezone-aware. Normalizes to UTC.\n\n2. `quotes.probability` - handles int, float, str. Rejects bool. Checks finite. Checks abs >= 100. Computes correct formula.\n\n3. `quotes.select` - filters eligible rows, selects best per book with correct tie-breaking.\n\n4. `runs.reconcile` - filters valid non-future rows, dedupes by run_id, selects best per job.\n\n5. `pipeline.snapshot` - validates event and asof, calls supporting modules, computes summary.\n\nI think this is correct. Let me format as JSON.\n\nWait, I need to double-check one thing: in `quotes.select`, when I access `row['id']`, if 'id' is not in the row, it raises KeyError, which I catch. Good. But what if `row` has 'id' but it's not a string (e.g., it's an int)? Then `isinstance(qid, str)` is False, and I `continue`. Good.\n\nWhat about the `odds` field? If it's not present, `row['odds']` raises KeyError, caught. If it's present but None, `probability(None)` raises ValueError (None is not int, float, or str), caught. Good.\n\nOne more thought: the contract says \"Extra fields ignored/preserved in original row.\" Since I'm returning the original row dict (not a copy), extra fields are naturally preserved. Good.\n\nLet me also verify: \"Do not copy chosen row.\" I'm storing `row` (the original dict reference) in the result. Good.\n\nI'm satisfied. Let me produce the JSON output.\n\nActually, wait. Let me re-examine the `probability` function for the edge case where v is exactly 0. abs(0) = 0 < 100, so ValueError. Good. What about v = -100? abs(-100) = 100 >= 100, valid. (-(-100))/((-(-100))+100) = 100/200 = 0.5. Good.\n\nWhat about v = 100? abs(100) = 100 >= 100, valid. 100/(100+100) = 0.5. Good.\n\nWhat about very large values, like v = 1e308? 100/(1e308+100) \u2248 1e-306. That's a valid float. Good.\n\nWhat about v = -1e308? (-(-1e308))/((-(-1e308))+100) = 1e308/(1e308+100) \u2248 1.0. That's fine.\n\nOK, I'm done. Let me write the JSON.\n\nHmm, actually one more thought. In Python, `isinstance(True, int)` is True because bool is a subclass of int. So I need to check for bool BEFORE int. In my `probability` function, I check `isinstance(value, bool)` first, which handles this. In `runs.reconcile`, I check `isinstance(attempt, int) and not isinstance(attempt, bool)` - wait, no, I check `isinstance(attempt, bool)` as part of the condition. Let me re-read my code:\n\n```python\nif not isinstance(attempt, int) or isinstance(attempt, bool) or attempt <= 0:\n    continue\n```\n\nThis means: skip if attempt is not int, OR is bool, OR is <= 0. Since bool is a subclass of int, `isinstance(True, int)` is True. So for `True`: `not isinstance(True, int)` is False, `isinstance(True, bool)` is True \u2192 condition is True \u2192 skip. Good.\n\nFor `downloaded_rows`:\n```python\nif not isinstance(dl, int) or isinstance(dl, bool) or dl < 0:\n    continue\n```\nSame logic. Good.\n\nI'm confident the implementation is correct. Let me produce the final JSON."
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 724140553667,
+  "load_duration": 7098382792,
+  "prompt_eval_count": 1128,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 1567692000,
+  "eval_count": 13164,
+  "eval_duration": 715465433000,
+  "wall_seconds": 724.6751843340171,
+  "memory_samples": [
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    },
+    {
+      "name": "qwen3.8:27b-q8_0",
+      "size": 32412228648,
+      "size_vram": 32412228648,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 80,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

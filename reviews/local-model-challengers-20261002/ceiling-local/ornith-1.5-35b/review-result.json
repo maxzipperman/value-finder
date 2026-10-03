@@ -1,0 +1,64 @@
+{
+  "model": "ornith-1.5:35b",
+  "created_at": "2026-10-03T11:50:26.993357Z",
+  "message": {
+    "role": "assistant",
+    "content": "```json\n[\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 21,\n    \"explanation\": \"The dedup loop uses strict '>' for observed_at comparison, so exact-time ties do not replace the stored row; the contract requires that equal-instant ties keep the first eligible input row, and this ordering also ignores the lexicographically-smallest-id tiebreak, so the wrong row can be selected for a book.\"\n  },\n  {\n    \"file\": \"quotes.py\",\n    \"line\": 33,\n    \"explanation\": \"The eligibility test uses observed<=at<=expiry, but the contract requires observed_at<=asof<expires_at; an exactly-expired quote (asof==expires_at) is wrongly accepted instead of being filtered before book selection.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 20,\n    \"explanation\": \"The dedup loop uses '>=' for observed comparison, so exact-time duplicate run_ids overwrite the stored row with the later input row, violating the first-input rule for equal-time ties and making the result permutation-dependent.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 27,\n    \"explanation\": \"The 'if True:' block selects the last row per job unconditionally, ignoring the rank (greatest attempt, then greatest observed_at, then smallest run_id) required to pick each job's latest attempt, so a higher failed/partial/pending attempt does not correctly supersede an older ok attempt.\"\n  },\n  {\n    \"file\": \"runs.py\",\n    \"line\": 26,\n    \"explanation\": \"The rank tuple includes identity (job+run_id) as a tiebreak, but the contract's latest-attempt tiebreak is greatest attempt, then greatest observed_at, then lexicographically smallest run_id; including the full job+run_id identity as the final tiebreak is not the specified rule.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 9,\n    \"explanation\": \"select is called with the already-normalized UTC datetime 'at' rather than the original asof; instant() is idempotent for aware values so this is harmless, but it is an unnecessary normalization that deviates from passing asof directly.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 10,\n    \"explanation\": \"successful_rows sums downloaded_rows only for status=='ok', but the contract requires summing downloaded_rows ONCE from each selected job with status ok OR partial, so partial jobs' downloaded_rows are omitted.\"\n  },\n  {\n    \"file\": \"pipeline.py\",\n    \"line\": 10,\n    \"explanation\": \"failures includes jobs with status in ('failed','pending'), but the contract requires failures to contain only selected failed jobs; pending jobs must go in unknown_jobs, so pending jobs are wrongly counted as failures.\"\n  }\n]\n```"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 8291679708,
+  "load_duration": 1806374792,
+  "prompt_eval_count": 2522,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 745660000,
+  "eval_count": 661,
+  "eval_duration": 5729144000,
+  "wall_seconds": 9.06944633400417,
+  "memory_samples": [
+    {
+      "name": "ornith-1.5:35b",
+      "size": 23547074312,
+      "size_vram": 23547074312,
+      "context_length": 65536
+    },
+    {
+      "name": "ornith-1.5:35b",
+      "size": 23547074312,
+      "size_vram": 23547074312,
+      "context_length": 65536
+    },
+    {
+      "name": "ornith-1.5:35b",
+      "size": 23547074312,
+      "size_vram": 23547074312,
+      "context_length": 65536
+    },
+    {
+      "name": "ornith-1.5:35b",
+      "size": 23547074312,
+      "size_vram": 23547074312,
+      "context_length": 65536
+    },
+    {
+      "name": "ornith-1.5:35b",
+      "size": 23547074312,
+      "size_vram": 23547074312,
+      "context_length": 65536
+    },
+    {
+      "name": "ornith-1.5:35b",
+      "size": 23547074312,
+      "size_vram": 23547074312,
+      "context_length": 65536
+    },
+    {
+      "name": "ornith-1.5:35b",
+      "size": 23547074312,
+      "size_vram": 23547074312,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 78,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

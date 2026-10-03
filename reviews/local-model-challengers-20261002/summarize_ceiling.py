@@ -43,6 +43,12 @@ def summarize():
             manual = folder / 'manual-review.json'
             if task == 'review' and manual.exists():
                 rec['manual_review'] = json.loads(manual.read_text())
+            diagnostic = folder / (task + '-type-name-diagnostic.json')
+            if diagnostic.exists():
+                value = json.loads(diagnostic.read_text())
+                checks = value['original_197_checks']
+                helpers = value['extra_helper_checks']
+                rec['supplemental_diagnostic'] = dict(evidence=str(diagnostic.relative_to(ROOT)), grading=value['grading'], original_acceptance_preserved=value['original_acceptance_preserved'], original197_passed=checks['passed'], original197_cases=checks['cases'], extra_helper_passed=sum(x['passed'] for x in helpers), extra_helper_cases=len(helpers), limitations=value['limitations'])
             records.append(rec)
     counts = {s: sum(r['status'] == s for r in records) for s in ('result', 'error', 'pending', 'not_started')}
     snapshot = dict(status='collection_in_progress', grading='author only; independent validation pending', counts=counts, records=records, limitations='Modes/artifacts/providers/tokenization differ; single draws and adaptive profiles are not causal or equal-compute rankings. Sampled allocation is not complete machine peak memory or swap evidence.')

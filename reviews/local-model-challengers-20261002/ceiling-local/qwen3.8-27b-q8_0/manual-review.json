@@ -1,0 +1,69 @@
+{
+  "reviewer": "author complete manual semantic inspection; not independent validation",
+  "task": "review",
+  "all_findings_inspected": true,
+  "distinct_real_causes": 9,
+  "seeded_causes": 10,
+  "true_findings": 8,
+  "false_findings": 0,
+  "duplicate_findings": 0,
+  "non_defect_annotations": 0,
+  "correct_times_component_flagged": false,
+  "finding_audit": [
+    {
+      "index": 1,
+      "classification": "real",
+      "cause": "negative odds formula",
+      "caveat": "Every negative-odds input is an overstatement: -100 gives same0.5 in both formulas."
+    },
+    {
+      "index": 2,
+      "classification": "real_combined",
+      "causes": [
+        "lexical offset ordering",
+        "eligibility after book dedupe"
+      ],
+      "caveat": "Combines independent causes, contrary to one-cause-per-finding. Additional list-reordering/first-input/permutation claim is imprecise: selected first-input exact ties are excepted from arbitrary permutation invariance, and per-book list ordering itself is not the defect."
+    },
+    {
+      "index": 3,
+      "classification": "real",
+      "cause": "inclusive expiry"
+    },
+    {
+      "index": 4,
+      "classification": "real",
+      "cause": "job-scoped run id dedupe"
+    },
+    {
+      "index": 5,
+      "classification": "real",
+      "cause": "last duplicate time tie"
+    },
+    {
+      "index": 6,
+      "classification": "real",
+      "cause": "stale job retry overwrite"
+    },
+    {
+      "index": 7,
+      "classification": "real",
+      "cause": "partial downloaded rows omitted"
+    },
+    {
+      "index": 8,
+      "classification": "real",
+      "cause": "pending classified failed"
+    }
+  ],
+  "missed_causes": [
+    "missing quote tie rules"
+  ],
+  "evidence": [
+    "review-response.txt",
+    "../../ceiling/review-source.json",
+    "../../ceiling/review-inventory.json",
+    "../../ceiling/review-validation.json"
+  ],
+  "schema_check_is_not_semantic_credit": true
+}

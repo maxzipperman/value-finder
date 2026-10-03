@@ -1,0 +1,44 @@
+```json
+[
+  {
+    "file": "quotes.py",
+    "line": 21,
+    "explanation": "The dedup loop uses strict '>' for observed_at comparison, so exact-time ties do not replace the stored row; the contract requires that equal-instant ties keep the first eligible input row, and this ordering also ignores the lexicographically-smallest-id tiebreak, so the wrong row can be selected for a book."
+  },
+  {
+    "file": "quotes.py",
+    "line": 33,
+    "explanation": "The eligibility test uses observed<=at<=expiry, but the contract requires observed_at<=asof<expires_at; an exactly-expired quote (asof==expires_at) is wrongly accepted instead of being filtered before book selection."
+  },
+  {
+    "file": "runs.py",
+    "line": 20,
+    "explanation": "The dedup loop uses '>=' for observed comparison, so exact-time duplicate run_ids overwrite the stored row with the later input row, violating the first-input rule for equal-time ties and making the result permutation-dependent."
+  },
+  {
+    "file": "runs.py",
+    "line": 27,
+    "explanation": "The 'if True:' block selects the last row per job unconditionally, ignoring the rank (greatest attempt, then greatest observed_at, then smallest run_id) required to pick each job's latest attempt, so a higher failed/partial/pending attempt does not correctly supersede an older ok attempt."
+  },
+  {
+    "file": "runs.py",
+    "line": 26,
+    "explanation": "The rank tuple includes identity (job+run_id) as a tiebreak, but the contract's latest-attempt tiebreak is greatest attempt, then greatest observed_at, then lexicographically smallest run_id; including the full job+run_id identity as the final tiebreak is not the specified rule."
+  },
+  {
+    "file": "pipeline.py",
+    "line": 9,
+    "explanation": "select is called with the already-normalized UTC datetime 'at' rather than the original asof; instant() is idempotent for aware values so this is harmless, but it is an unnecessary normalization that deviates from passing asof directly."
+  },
+  {
+    "file": "pipeline.py",
+    "line": 10,
+    "explanation": "successful_rows sums downloaded_rows only for status=='ok', but the contract requires summing downloaded_rows ONCE from each selected job with status ok OR partial, so partial jobs' downloaded_rows are omitted."
+  },
+  {
+    "file": "pipeline.py",
+    "line": 10,
+    "explanation": "failures includes jobs with status in ('failed','pending'), but the contract requires failures to contain only selected failed jobs; pending jobs must go in unknown_jobs, so pending jobs are wrongly counted as failures."
+  }
+]
+```
