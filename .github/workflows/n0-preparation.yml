@@ -1,0 +1,27 @@
+name: N0 preparation
+on:
+  pull_request:
+    paths: ['strategy-research/nba_sample/**', 'strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json', 'strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json', 'strategy-research/football_archive/f2_handoff.py', 'strategy-research/football_archive/union-v1/F3a/union-certificate.json', 'strategy-research/football_archive/acquisition/football-archive-v4/**', 'reviews/post151-readiness/readiness.json', 'ops/process/process_guard.py', '.github/workflows/n0-preparation.yml']
+  push:
+    branches: [main]
+    paths: ['strategy-research/nba_sample/**', 'strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json', 'strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json', 'strategy-research/football_archive/f2_handoff.py', 'strategy-research/football_archive/union-v1/F3a/union-certificate.json', 'strategy-research/football_archive/acquisition/football-archive-v4/**', 'reviews/post151-readiness/readiness.json', 'ops/process/process_guard.py', '.github/workflows/n0-preparation.yml']
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest requests pandas pyarrow pyyaml python-dotenv duckdb
+      - name: Source-bound synthetic preparation and execution-hold checks only
+        run: |
+          python -B ops/process/process_guard.py test --config strategy-research/nba_sample/execution-v1/verification.json --output n0-preparation-evidence.json
+          python -B ops/process/process_guard.py verify-test --config strategy-research/nba_sample/execution-v1/verification.json --saved n0-preparation-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: n0-preparation-${{ github.sha }}
+          path: n0-preparation-evidence.json

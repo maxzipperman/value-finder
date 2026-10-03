@@ -21,7 +21,8 @@
     "strategy-research/pass150-timeout-recovery-v1/exact-stop-certificate/certificate.json",
     "strategy-research/pass150-timeout-recovery-v1/untouched-successor-final/baseline.json",
     "strategy-research/football_archive/acquisition/football-archive-v4",
-    "ops/process/process_guard.py"
+    "ops/process/process_guard.py",
+    ".github/workflows/n0-preparation.yml"
   ],
   "commands": [
     [
