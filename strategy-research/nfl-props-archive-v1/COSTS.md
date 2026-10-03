@@ -79,3 +79,20 @@ are reviewable; executor/authority/content-capture review, stable global overlap
 acceptance, all-phase listing reconciliation and slot availability are outstanding.
 Do not run the legacy grader against these proposed lists. The separate analysis
 repair owns manifest timing, player/stat mappings and settlement coverage.
+
+## Coverage-first depth alternative
+
+Keep the broad two-time 2023–2025 baseline. Add T72/T48/T6/T1 for eight core
+markets: passing/rushing/receiving yards, receptions, kicking points, field goals,
+pass attempts and rush attempts. At the current 13,912 bound extra event/time
+slots, ≤10 books and eight markets, the illustrative incremental reservation is
+**1,112,960 credits**. Add the broader two-time cap of 2,747,340: **3,860,300**,
+plus 8,576 prepared metadata credits, before other account debits/new listing
+gaps. Availability/cached coverage may reduce this; it is not a paid cap.
+
+Prefer narrowing alternate/defensive/esoteric depth to dropping independent
+games. If a depth subset is necessary, choose NFL and CFB year/conference/
+availability strata without outcomes, retain the full broad baseline and disclose
+selection/coverage. Metadata does not establish player counts, two-sided prices,
+fresh quotes or stat settlement; any small stratified price pilot must be frozen,
+counted in the total cap and fully reused in later acquisition.

@@ -31,3 +31,8 @@ No credentials, provider calls, runtime writes, grading or sealed quote reads.
 Primary documentation: [API](https://the-odds-api.com/liveapi/guides/v4/),
 [market catalog](https://the-odds-api.com/sports-odds-data/betting-markets.html),
 [book regions](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html).
+
+The proposed first metadata executor is [football-metadata-v1](../football-metadata-v1/README.md),
+with a 1,544-credit listing-only freeze. The 7,032-credit availability stage remains
+separate and cannot start automatically. The coverage-only utility reports cached
+F3a presence/pairs/freshness without joining outcomes; its detailed output stays local.

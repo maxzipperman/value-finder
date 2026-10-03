@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "scopes": [
+    "strategy-research/football-metadata-v1/entry.py",
+    "strategy-research/football-metadata-v1/engine.py",
+    "strategy-research/football-metadata-v1/capture.py",
+    "strategy-research/football-metadata-v1/prepare.py",
+    "strategy-research/football-metadata-v1/test_metadata.py",
+    "strategy-research/football-metadata-v1/verification.json",
+    "strategy-research/football-metadata-v1/listing-gaps",
+    "strategy-research/nfl-props-archive-v1/plan.py",
+    "strategy-research/football_archive/acquisition/football-archive-v4",
+    "ops/process/process_guard.py"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "strategy-research/football-metadata-v1",
+      "-p",
+      "test_metadata.py",
+      "-v"
+    ]
+  ],
+  "environment": {
+    "PYTHONHASHSEED": "0",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}
