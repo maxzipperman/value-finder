@@ -259,11 +259,16 @@
     const attention = (d.jobs || []).filter((j) => j.level !== "ok");
     const needs = panel("Needs attention", h("a", { href: "#jobs" }, "Job details"),
       attention.length ? h("ul", { class: "rows" }, attention.map((j) => h("li", null,
-        h("strong", null, j.name), h("div", { class: "faint" }, j.result)))) :
+        h("strong", null, j.name), h("div", { class: "faint" }, j.result), collectorDetails(j.collector)))) :
         h("p", { class: "muted" }, "No job exceptions reported in this snapshot."));
-    return h("div", null, h("div", { class: "grid2" }, needs, waiting),
+    const scheduled = (d.jobs || []).filter((j) => j.collector && j.collector.state === "scheduled");
+    return h("div", null,
+      d.scoring_disabled ? h("p", { class: "bar-note" }, "Scoring disabled for this dashboard. Collection monitoring is active; logged signals are not graded results. Paper only.") : "",
+      h("div", { class: "grid2" }, needs, waiting),
+      scheduled.length ? panel("Upcoming collection", null, scheduled.map((j) => h("div", null,
+        h("strong", null, j.name), h("p", { class: "muted" }, j.result), collectorDetails(j.collector)))) : "",
       downloadPanel(d.operations || {}, true), livePanel(d), tiles,
-      h("div", { class: "grid2" }, tests, ev), sourcePanel(d.sources || []),
+      h("div", { class: "grid2" }, tests, ev), deploymentPanel((d.operations || {}).deployment), sourcePanel(d.sources || []),
       h("details", null, h("summary", null, "All scheduled jobs"), jobs));
   }
 
@@ -762,7 +767,7 @@
   // ------------------------------------------------------------------ jobs and records
   function drawJobs(d) {
     const out = h("div", null, h("h1", null, "Jobs and records"),
-      h("p", { class: "lede" }, "The four scheduled jobs, the alert runs’ own records, the credit balance and the closing lines captured. ",
+      h("p", { class: "lede" }, "The seven scheduled jobs, collection status, the alert runs’ own records, the credit balance and the closing lines captured. ",
         h("a", { href: "#jobs/records" }, "How to read these records (ops/RUN_RECORDS.md)"), "."));
     const jobs = d.jobs || [];
     out.append(panel("Scheduled jobs", null, d.launchctl_note ? h("p", { class: "muted" }, d.launchctl_note) : "",
@@ -775,7 +780,7 @@
           h("td", null, j.schedule),
           h("td", { class: "stack" }, h("div", null, j.last_run), j.last_run_note ? h("div", { class: "faint" }, j.last_run_note) : ""),
           h("td", null, j.exit_words),
-          h("td", { class: "stack" }, h("div", null, j.result), j.log_line ? h("div", { class: "faint" }, "Its log’s last line: " + j.log_line) : "")))))));
+          h("td", { class: "stack" }, h("div", null, j.result), collectorDetails(j.collector), j.log_line ? h("div", { class: "faint" }, "Its log’s last line: " + j.log_line) : "")))))));
 
     const c = d.credits;
     out.append(panel("Odds API credits", null, c ? h("div", null, h("p", { class: "big-sentence" }, c.text + "."),
@@ -814,6 +819,35 @@
   }
 
   // ------------------------------------------------------------------ Thursday's pull
+  function collectorDetails(c) {
+    if (!c) return "";
+    const r = c.receipt || {};
+    const receiptText = r.available ? [
+      "Recorded: " + r.recorded_utc + (r.stale ? " (over one hour old)" : ""),
+      "Last attempt: " + (r.last_attempt_utc || "Not recorded"),
+      "Last successful collection: " + (r.last_success_utc || "Not recorded"),
+      "Next expected: " + (r.next_expected_utc || "Not reported"),
+      r.missed_windows == null ? "Missed windows: Unknown" :
+        "Reported missed windows: " + fmtInt(r.missed_windows) + " (" + r.window_start_utc + " to " + r.window_end_utc + ")"
+    ] : ["Last successful collection: Not verified", "Next expected window: Not reported", "Missed windows: Unknown"];
+    return h("div", { class: "faint" },
+      h("p", null, "Owner: " + c.owner + " · ", h("a", { href: c.tracking_url }, "Deployment task · PR #125")),
+      h("p", null, "Next action: " + c.next_action),
+      h("details", null, h("summary", null, "Collection evidence"),
+        receiptText.map((text) => h("p", null, text)),
+        h("p", null, "Output file updated: " + c.output_updated + ". File updates and process exits do not prove successful collection."),
+        h("p", null, r.note || "A metadata receipt is needed to verify collection; quote and outcome files are not read.")));
+  }
+
+  function deploymentPanel(d) {
+    d = d || {};
+    return panel("Dashboard version and status source", null,
+      d.available ? h("p", null, "Deployed " + d.deployed + " · Version " + d.commit.slice(0, 12)) : "",
+      h("p", { class: "muted" }, d.note || "Deployment record unavailable. STATUS is a local document snapshot."),
+      d.source_url ? h("a", { href: d.source_url }, "Reviewed STATUS snapshot") : "",
+      h("p", { class: "faint" }, "Refreshing this page reads current local records. It does not update the deployed code or the pinned status document."));
+  }
+
   function sourcePanel(sources) {
     return panel("Source freshness", null, h("p", { class: "muted" },
       "Page refresh is not a data update. Old completed journals can be valid historical records; dates show when evidence last changed."),

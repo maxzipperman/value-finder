@@ -7,8 +7,9 @@ logger: it runs only on a paid plan and stops at the background floor (quota.py)
 while the Mac slept stays missing; nothing is imputed.
 
 Prices are requested in decimal odds, as the historical F2/F3 pulls are (sharp-markets/config/odds5m.yaml).
-props_state.json is rewritten (temp file, then rename) after every captured slot, so an error part
-way through never re-fetches a slot it already paid for.
+The shared collector guard reserves each event/offset before sending. A failed or uncertain
+attempt retains its reservation and is never automatically resent. props_state.json is only
+the downstream captured-row index, not billing authority.
 
     python scripts/log_props.py [--now 2026-10-11T15:00:00Z]
 
@@ -59,9 +60,10 @@ for ev, h in due:
     try:
         r = oddsapi._get(f"/sports/{oddsapi.SPORT}/events/{ev['id']}/odds",
                          dict(bookmakers=",".join(live.PROP_BOOKS), markets=",".join(live.PROP_MARKETS),
-                              oddsFormat=live.PROP_ODDS_FORMAT, dateFormat="iso"))
+                              oddsFormat=live.PROP_ODDS_FORMAT, dateFormat="iso"),
+                         collector_label="nfl-props", request_slot=f"{ev['id']}:{h}")
     except SystemExit as e:
-        print(f"  {ev['away_team']} @ {ev['home_team']} T-{h}h: no prices ({e}); retried while the slot is open")
+        print(f"  {ev['away_team']} @ {ev['home_team']} T-{h}h: no prices ({e}); not automatically resent; inspect the durable attempt ledger")
         continue
     last = int(float(r.headers.get("x-requests-last") or 0))
     spent += last

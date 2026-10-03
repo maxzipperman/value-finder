@@ -1,0 +1,40 @@
+name: Collector safety
+on:
+  pull_request:
+    paths: ['ops/collector_guard.py', 'ops/install_live_uses.sh', 'ops/collector-safety/**', 'ops/process/process_guard.py', 'nfl-weather/nflweather/**', 'nfl-weather/scripts/poll_triggers.py', 'nfl-weather/scripts/log_props.py', 'nfl-weather/tests/test_live.py', 'nfl-weather/tests/test_oddsapi.py', 'nfl-weather/tests/test_quota.py', 'nfl-weather/tests/test_collector_callers.py', 'nfl-weather/requirements.txt', 'cfb-weather/cfbweather/**', 'cfb-weather/scripts/poll_triggers.py', 'cfb-weather/tests/test_live.py', 'cfb-weather/tests/test_oddsapi.py', 'cfb-weather/tests/test_quota.py', 'cfb-weather/tests/test_collector_callers.py', 'cfb-weather/requirements.txt', 'sharp-markets/src/markets/**', 'sharp-markets/config/sports/nba.yaml', 'sharp-markets/tests/test_collector.py', 'sharp-markets/tests/test_http.py', '.github/workflows/collector-safety.yml', 'GOVERNANCE.md']
+  push:
+    branches: [main]
+    paths: ['ops/collector_guard.py', 'ops/install_live_uses.sh', 'ops/collector-safety/**', 'ops/process/process_guard.py', 'nfl-weather/nflweather/**', 'nfl-weather/scripts/poll_triggers.py', 'nfl-weather/scripts/log_props.py', 'nfl-weather/tests/test_live.py', 'nfl-weather/tests/test_oddsapi.py', 'nfl-weather/tests/test_quota.py', 'nfl-weather/tests/test_collector_callers.py', 'nfl-weather/requirements.txt', 'cfb-weather/cfbweather/**', 'cfb-weather/scripts/poll_triggers.py', 'cfb-weather/tests/test_live.py', 'cfb-weather/tests/test_oddsapi.py', 'cfb-weather/tests/test_quota.py', 'cfb-weather/tests/test_collector_callers.py', 'cfb-weather/requirements.txt', 'sharp-markets/src/markets/**', 'sharp-markets/config/sports/nba.yaml', 'sharp-markets/tests/test_collector.py', 'sharp-markets/tests/test_http.py', '.github/workflows/collector-safety.yml', 'GOVERNANCE.md']
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m venv sharp-markets/.venv
+          sharp-markets/.venv/bin/pip install pytest requests pandas pyarrow pyyaml python-dotenv duckdb
+          python -m venv nfl-weather/.venv
+          nfl-weather/.venv/bin/pip install -r nfl-weather/requirements.txt
+          python -m venv cfb-weather/.venv
+          cfb-weather/.venv/bin/pip install -r cfb-weather/requirements.txt
+      - name: Bind source and run guard, collector, localhost HTTP and real weather callers
+        run: |
+          sharp-markets/.venv/bin/python -B ops/process/process_guard.py test --config ops/collector-safety/verification.json --output collector-safety-evidence.json
+          sharp-markets/.venv/bin/python -B ops/process/process_guard.py verify-test --config ops/collector-safety/verification.json --saved collector-safety-evidence.json
+          nfl-weather/.venv/bin/python -B ops/process/process_guard.py test --config ops/collector-safety/nflweather-verification.json --output nfl-collector-evidence.json
+          nfl-weather/.venv/bin/python -B ops/process/process_guard.py verify-test --config ops/collector-safety/nflweather-verification.json --saved nfl-collector-evidence.json
+          cfb-weather/.venv/bin/python -B ops/process/process_guard.py test --config ops/collector-safety/cfbweather-verification.json --output cfb-collector-evidence.json
+          cfb-weather/.venv/bin/python -B ops/process/process_guard.py verify-test --config ops/collector-safety/cfbweather-verification.json --saved cfb-collector-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: collector-safety-${{ github.sha }}
+          path: |
+            collector-safety-evidence.json
+            nfl-collector-evidence.json
+            cfb-collector-evidence.json

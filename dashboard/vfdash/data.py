@@ -45,6 +45,7 @@ class Config:
     tz: tzinfo
     port: int = 8787
     operations_root: Path | None = None
+    disable_scorers: bool = False
 
     @property
     def quota_file(self) -> Path:
@@ -440,6 +441,8 @@ class Store:
     def scorer(self, project: str, wait: bool = True) -> Scored:
         """The scorer's preview, at most 10 minutes old. With wait=False it never blocks: it returns what it
         has (possibly nothing yet) and refreshes in the background."""
+        if self.cfg.disable_scorers:
+            return Scored(project, "disabled")
         have = self._scores.get(project)
         now = self.clock()
         fresh = have is not None and have.ran_at is not None and (now - have.ran_at) < timedelta(seconds=SCORER_SECONDS)
@@ -452,6 +455,8 @@ class Store:
         return self._score(project)
 
     def _score(self, project: str) -> Scored:
+        if self.cfg.disable_scorers:
+            return Scored(project, "disabled")
         with self._score_locks[project]:
             have = self._scores.get(project)
             now = self.clock()

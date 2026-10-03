@@ -36,6 +36,8 @@ import hashlib
 import json
 import os
 import time
+import sys
+import fcntl
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -45,6 +47,9 @@ from .cache import Fetched, RawCache, body_json
 from .http import RateLimiter, http_get, new_session, scrub
 from .kalshi.client import KalshiClient, KalshiHTTPError
 from .settings import CONFIG_DIR, DATA_DIR, env, parse_ts, utcnow
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from ops.collector_guard import paid_get, slot
 
 ODDS_BASE = "https://api.the-odds-api.com/v4"
 QUOTA_FILE = Path(os.environ.get("ODDS_QUOTA_FILE", Path.home() / ".cache" / "value-finder" / "odds_quota.json"))
@@ -140,8 +145,12 @@ class Collector:
     def key(self) -> str:
         return self.api_key or env("ODDS_API_KEY")
 
-    def _odds_get(self, path: str, params: dict):
-        r = http_get(self.odds, ODDS_BASE + path, {**params, "apiKey": self.key}, self.limiter, max_retries=2)
+    def _odds_get(self, path: str, params: dict, *, request_slot=None):
+        keyed = {**params, "apiKey": self.key}
+        if path.endswith("/odds"):
+            r = paid_get(self.odds, ODDS_BASE + path, keyed, label="nba", request_slot=request_slot)
+        else:
+            r = http_get(self.odds, ODDS_BASE + path, keyed, self.limiter, max_retries=0, allow_redirects=False)
         return r.status_code, {k.lower(): v for k, v in r.headers.items()}, r.text
 
     def schedule(self, now: datetime) -> list[dict]:
@@ -169,7 +178,7 @@ class Collector:
         inside = [t for t in tips if t - before <= now <= t + after]
         return len(inside), any(t - final <= now <= t + after for t in inside)
 
-    def fetch_odds(self, tick: str, now: datetime) -> dict:
+    def fetch_odds(self, tick: str, now: datetime, *, step=None) -> dict:
         if self.dry_run:
             return {"odds_status": "skipped", "note": "dry run (--now): no Odds API call"}
         if (why := quota_block(now, self.key)):
@@ -179,7 +188,8 @@ class Collector:
         sent = {}
 
         def fetch() -> Fetched:
-            status, headers, text = self._odds_get(f"/sports/{self.c['sport_key']}/odds", params)
+            status, headers, text = self._odds_get(f"/sports/{self.c['sport_key']}/odds", params,
+                                                   request_slot=slot(now, 60 * (step or self.c["every_min"])))
             sent.update(status=status, headers=headers)
             return Fetched(status, headers, text)
 
@@ -230,9 +240,12 @@ class Collector:
             return None
         self.dir.mkdir(parents=True, exist_ok=True)
         lock = self.dir / "tick.lock"
-        if lock.exists() and time.time() - lock.stat().st_mtime < LOCK_STALE.total_seconds():
+        lock_handle = lock.open("a+")
+        try:
+            fcntl.flock(lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            lock_handle.close()
             return None
-        lock.write_text(str(os.getpid()))
         try:
             state = self._state()
             try:
@@ -247,11 +260,11 @@ class Collector:
                 return self._heartbeat({"action": "idle", "games_in_window": 0}, state, now)
             tick = now.strftime("%Y-%m-%dT%H:%M:%SZ")
             row = {"action": "collected", "games_in_window": n, "final_window": final}
-            for name, part in (("kalshi", lambda: self.fetch_kalshi(tick)), ("odds", lambda: self.fetch_odds(tick, now))):
+            for name, part in (("kalshi", lambda: self.fetch_kalshi(tick)), ("odds", lambda: self.fetch_odds(tick, now, step=step))):
                 try:
                     row.update(part())
                 except Exception as e:      # noqa: BLE001 - one source failing must not lose the other
                     row.update({f"{name}_status": "error", "note": scrub(f"{name}: {type(e).__name__}: {e}")[:300]})
             return self._heartbeat(row, state, now)
         finally:
-            lock.unlink(missing_ok=True)
+            lock_handle.close()  # Keep inode: unlinking a held lock permits overlapping owners.

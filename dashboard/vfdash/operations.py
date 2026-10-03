@@ -39,8 +39,9 @@ COMPLETE = {'event_epoch_complete', 'pilot_complete', 'recent_complete_stopped_b
 RECONCILED = {'event_epoch_partial_reconciled', 'older_epoch_partial_reconciled', 'pilot_partial_reconciled'}
 
 
-def bounded(path: Path) -> Read:
+def bounded(path: Path, limit=None) -> Read:
     """Fixed local inputs only; reject links including ancestor links and oversized files."""
+    limit = MAX_BYTES if limit is None else min(limit, MAX_BYTES)
     try:
         p = refuse(path)
         if any(x.is_symlink() for x in (p, *p.parents)):
@@ -55,8 +56,8 @@ def bounded(path: Path) -> Read:
             if not stat.S_ISREG(actual.st_mode):
                 return Read(note='Nonregular source refused.')
             stamp = actual.st_mtime
-            raw = f.read(MAX_BYTES + 1)
-        if len(raw) > MAX_BYTES:
+            raw = f.read(limit + 1)
+        if len(raw) > limit:
             return Read(note='Source exceeds the display size limit.')
         return Read(data=raw.decode('utf-8'), mtime=stamp)
     except (OSError, ValueError, Refused):
@@ -236,7 +237,8 @@ def build(cfg, now):
         acquired['notes'].append('Acquisition records are newer than the plan date. Queued items may already have progressed; hub reconciliation is needed.')
     if not queue_rows(queue.data or ''):
         acquired['notes'].append('Canonical download queue missing or unrecognized; planned work is unknown.')
-    return {**acquired, 'collector_outputs': collector_outputs(cfg.root), 'nba_start': str(nba_start(cfg.root) or ''), 'queue': queue_rows(queue.data or ''), 'actions': actions,
+    return {**acquired, 'collector_receipts': collector_receipts(cfg.home, now),
+            'deployment': deployment_provenance(cfg, queue.data or '', now), 'collector_outputs': collector_outputs(cfg.root), 'nba_start': str(nba_start(cfg.root) or ''), 'queue': queue_rows(queue.data or ''), 'actions': actions,
             'unclassified_actions': unclassified, 'plan_freshness': qfresh, 'action_freshness': sfresh,
             'queue_source': QUEUE, 'queue_url': 'https://github.com/maxzipperman/value-finder/blob/main/' + QUEUE + '#paid-data--sole-current-queue',
             'notes': acquired['notes'] + ([queue.note] if queue.note else []) + ([status.note] if status.note else [])}
@@ -274,3 +276,157 @@ def nba_start(root):
         return datetime.strptime(start[1], '%Y-%m-%d').date()
     except ValueError:
         return None
+
+
+COLLECTORS = ('triggerpoll', 'propslog', 'nbacollector')
+DEPLOYMENT_URL = 'https://github.com/maxzipperman/value-finder/pull/125'
+
+
+def _json_pairs(pairs):
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError('Duplicate field')
+        out[key] = value
+    return out
+
+
+def _metadata(path):
+    r = bounded(path, limit=16_384)
+    if r.note:
+        return None
+    try:
+        value = json.loads(r.data, object_pairs_hook=_json_pairs)
+        return value if isinstance(value, dict) else None
+    except (ValueError, TypeError, RecursionError):
+        return None
+
+
+def _timestamp(value):
+    if not isinstance(value, str) or len(value) > 40:
+        raise ValueError('Invalid timestamp')
+    at = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    if at.tzinfo is None or at.utcoffset() is None:
+        raise ValueError('Timestamp needs timezone')
+    return at.astimezone(UTC)
+
+
+def collector_receipts(home, now):
+    """Optional metadata-only receipts; never open quote, player or outcome files."""
+    out = {}
+    fields = {'version', 'label', 'recorded_utc', 'state', 'last_attempt_utc',
+              'last_success_utc', 'next_expected_utc', 'missed_windows',
+              'window_start_utc', 'window_end_utc'}
+    for name in COLLECTORS:
+        label = 'com.valuefinder.' + name
+        unknown = {'available': False, 'state': 'unknown', 'note': 'Collection receipt unavailable or invalid.'}
+        out[label] = unknown
+        d = _metadata(home / 'Library/Application Support/ValueFinder/collector-status' / (name + '.json'))
+        if d is None:
+            continue
+        try:
+            if set(d) != fields or type(d['version']) is not int or d['version'] != 1 or d['label'] != label:
+                raise ValueError('Wrong schema or label')
+            if d['state'] not in {'waiting', 'collected', 'failed', 'blocked'}:
+                raise ValueError('Unknown state')
+            times = {k: _timestamp(d[k]) if d[k] is not None else None for k in fields if k.endswith('_utc')}
+            recorded = times['recorded_utc']
+            if recorded is None or (recorded - now).total_seconds() > 300:
+                raise ValueError('Invalid recorded time')
+            for key in ('last_attempt_utc', 'last_success_utc', 'window_start_utc', 'window_end_utc'):
+                if times[key] and times[key] > recorded:
+                    raise ValueError('Event after record')
+            attempt, success = times['last_attempt_utc'], times['last_success_utc']
+            if success and (not attempt or success > attempt):
+                raise ValueError('Success after attempt')
+            if d['state'] in {'collected', 'failed'} and attempt is None:
+                raise ValueError('Attempt missing')
+            if d['state'] == 'collected' and success != attempt:
+                raise ValueError('Collection not evidenced for latest attempt')
+            missed = d['missed_windows']
+            start, end = times['window_start_utc'], times['window_end_utc']
+            if missed is not None and (not integer(missed) or start is None or end is None or start > end):
+                raise ValueError('Invalid coverage window')
+            if (start is None) != (end is None) or (start and start > end):
+                raise ValueError('Invalid coverage window')
+            stale = (now - recorded).total_seconds() > 3600
+            out[label] = {'available': True, 'state': d['state'], 'stale': stale,
+                          'missed_windows': missed, **{k: words.iso_z(v) for k,v in times.items()},
+                          'note': 'Collector-reported metadata; not an independent receipt audit.'}
+        except (ValueError, TypeError, OverflowError):
+            continue
+    return out
+
+
+def collector_display(label, loaded, running, exit_status, receipt, future_start=None):
+    """Process state and recorded collection evidence remain independent."""
+    owner = 'Hub'
+    action = 'Verify a successful eligible collection and publish its metadata receipt.'
+    level, state, attention = 'warn', 'collection_unverified', True
+    if loaded is None:
+        state, text = 'process_unknown', 'Service status unavailable.'
+        action = 'Restore access to service status, then verify collection metadata.'
+    elif not loaded:
+        state, text = 'deployment_pending', 'Deployment pending; service is not loaded.'
+        action = 'Complete the collector safety preflight tracked in PR #125, deploy, and verify the first eligible collection.'
+        if future_start:
+            level, state, attention = 'ok', 'scheduled', False
+            text = 'Collection starts ' + future_start + '; no collections expected yet. Service is not loaded.'
+            action = 'Complete deployment before ' + future_start + ' and verify the first eligible collection.'
+    elif exit_status not in (None, 0):
+        level, state, text = 'fail', 'process_failed', 'Last process run failed; collection needs verification.'
+        action = 'Resolve the process failure and verify the next eligible collection.'
+    elif future_start:
+        level, state, attention = 'ok', 'scheduled', False
+        text = 'Collection starts ' + future_start + '; no collections expected yet.'
+        action = 'Verify the first eligible collection after ' + future_start + '.'
+    elif receipt.get('available') and not receipt.get('stale'):
+        state = receipt['state']
+        text = {'waiting': 'Collector reports waiting for an eligible collection.',
+                'collected': 'Collector reports a successful collection.',
+                'failed': 'Collector reports a failed collection.',
+                'blocked': 'Collector reports that collection is blocked.'}[state]
+        level = 'fail' if state == 'failed' else 'warn' if state == 'blocked' else 'ok'
+        attention = level != 'ok'
+        if state in {'waiting', 'collected'}:
+            action = 'Monitor the next expected window; inspect recorded misses if present.'
+        elif state == 'failed':
+            action = 'Resolve the collection failure and verify the next eligible collection.'
+        if receipt.get('missed_windows'):
+            if level == 'ok':
+                level = 'warn'
+            attention = True
+            action += ' Reconcile the reported missed windows; do not impute missing snapshots.'
+    else:
+        text = ('Running. ' if running else 'Loaded; idle. ') + 'Collection success is unverified.'
+        if receipt.get('stale'):
+            text += ' The collection receipt is over one hour old.'
+    return {'state': state, 'text': text, 'level': level, 'attention': attention,
+            'owner': owner, 'next_action': action, 'tracking_url': DEPLOYMENT_URL,
+            'receipt': receipt}
+
+
+def deployment_provenance(cfg, status_text, now):
+    """Display-only deployment record, bound to the status bytes; never execution authority."""
+    import hashlib
+    code_root = cfg.content.parent.parent
+    d = _metadata(code_root / 'DEPLOYMENT.json')
+    unknown = {'available': False, 'note': 'Deployment record unavailable. STATUS is a local document snapshot.'}
+    if not d:
+        return unknown
+    try:
+        if set(d) != {'version', 'commit', 'deployed_utc', 'status_sha256'} or type(d['version']) is not int or d['version'] != 1:
+            return unknown
+        if not isinstance(d['commit'], str) or not re.fullmatch('[0-9a-f]{40}', d['commit']):
+            return unknown
+        at = _timestamp(d['deployed_utc'])
+        if (at-now).total_seconds() > 300:
+            return unknown
+        matched = d['status_sha256'] == hashlib.sha256(status_text.encode()).hexdigest()
+        return {'available': True, 'commit': d['commit'], 'deployed_utc': words.iso_z(at),
+                'deployed': words.when_full(at, cfg.tz), 'status_matches': matched,
+                'note': 'Local deployment record; status bytes match the recorded snapshot.' if matched else
+                        'STATUS differs from the deployment snapshot; verify its provenance.',
+                'source_url': 'https://github.com/maxzipperman/value-finder/blob/' + d['commit'] + '/STATUS.md' if matched else None}
+    except (ValueError, TypeError, OverflowError):
+        return unknown

@@ -36,6 +36,7 @@
   "environment": {
     "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
     "PYTHONDONTWRITEBYTECODE": "1",
-    "PYTHONHASHSEED": "0"
+    "PYTHONHASHSEED": "0",
+    "PYTHONPATH": "dashboard"
   }
 }
