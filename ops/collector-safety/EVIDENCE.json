@@ -1,0 +1,251 @@
+{
+  "evidence_digest": "a3be7db344c10ee245b5223587dbb093660f1cb5ce3b5a71bc090514da9a6229",
+  "inputs": {
+    "command_binaries": {
+      "{python}": {
+        "path": "/private/tmp/vf-collector-safety/sharp-markets/.venv/bin/python",
+        "sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60"
+      }
+    },
+    "commands": [
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/collector-safety",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "pytest",
+        "sharp-markets/tests/test_collector.py",
+        "sharp-markets/tests/test_http.py",
+        "-q",
+        "-k",
+        "not a_failed_request_never_shows_the_key"
+      ]
+    ],
+    "configured_environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "sharp-markets/src"
+    },
+    "effective_environment": {
+      "LANG": "C.UTF-8",
+      "PATH": "/bin:/usr/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "sharp-markets/src"
+    },
+    "environment": {
+      "executable_sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60",
+      "packages": [
+        [
+          "PyYAML",
+          "6.0.3"
+        ],
+        [
+          "Pygments",
+          "2.21.0"
+        ],
+        [
+          "certifi",
+          "2026.7.22"
+        ],
+        [
+          "charset-normalizer",
+          "3.5.2"
+        ],
+        [
+          "duckdb",
+          "1.5.6"
+        ],
+        [
+          "idna",
+          "3.20"
+        ],
+        [
+          "iniconfig",
+          "2.3.0"
+        ],
+        [
+          "numpy",
+          "2.5.3"
+        ],
+        [
+          "packaging",
+          "26.3"
+        ],
+        [
+          "pandas",
+          "3.0.6"
+        ],
+        [
+          "pluggy",
+          "1.6.0"
+        ],
+        [
+          "pyarrow",
+          "25.0.1"
+        ],
+        [
+          "pytest",
+          "9.1.1"
+        ],
+        [
+          "python-dateutil",
+          "2.9.0.post0"
+        ],
+        [
+          "python-dotenv",
+          "1.2.4"
+        ],
+        [
+          "requests",
+          "2.34.2"
+        ],
+        [
+          "six",
+          "1.17.0"
+        ],
+        [
+          "urllib3",
+          "2.8.0"
+        ]
+      ],
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]"
+    },
+    "files": {
+      ".github/workflows/collector-safety.yml": "c7f1635a66f95eb0db397303d6055c80ef05931471f0e9ec501ff56459c40574",
+      "GOVERNANCE.md": "f521aa7206795a590eef021bdfd9db2d60f36f47889e77d6dde6ebf584b85254",
+      "cfb-weather/cfbweather/live.py": "7ad7f85f7af2ce3fa4fbdbaf698856b751a2f067ef08d7991ffdeb39d278b63a",
+      "nfl-weather/nflweather/oddsapi.py": "c3a29321a6771abd68069308e72f62914ad124534e1b7b44358edf4473f1be88",
+      "nfl-weather/scripts/log_props.py": "317e1a45866ec77daac3a68c69b4423f8527a5dd1bfc61ca3b3de98e36a597f7",
+      "ops/collector-safety/test_guard.py": "1539031e888ee499cbda01ab6f6205089d5d4f9f1f6e60e09ab914aa33e0c11b",
+      "ops/collector-safety/verification.json": "d7d05b4005c5e91be0a6d85049ecbf4ce3eed807d46b0e8e1c190b59c3157cce",
+      "ops/collector_guard.py": "107edf38bcfa613ba916ca61447de1d792ae238ce370ff63fdfe5be8053fe382",
+      "ops/install_live_uses.sh": "3f4ccacb47209eaeafbeb09f779d9c0200e2f100a2b6d87735a44ef5fefe6efc",
+      "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c",
+      "sharp-markets/config/sports/nba.yaml": "f4229128792aa353cf5a9828cd30d67716693ceca539e385d589b9bfb5e6dac8",
+      "sharp-markets/src/markets/__init__.py": "29743241e3300dda93d6600f0a7df4b665fce03d367cffd27357bf709ead838c",
+      "sharp-markets/src/markets/analysis/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sharp-markets/src/markets/analysis/backtest.py": "b13c205c0a7b5767153471e7d02d475af189033695cf3d0261fff4725869d1d8",
+      "sharp-markets/src/markets/analysis/data.py": "fb07adfc2b88dce3e296a99a994bde272d2a017e455b358fed82c357f4a18b3d",
+      "sharp-markets/src/markets/analysis/leadlag.py": "d3280ca989a7a8b2c04298bc46a87b64e7eb8dcbce64b7ff9907011b4d8335e2",
+      "sharp-markets/src/markets/analysis/run.py": "a2bfe7c8c9c97d725df881630a3da0459632eb879acf458232d85ebe8e6de6df",
+      "sharp-markets/src/markets/build/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sharp-markets/src/markets/build/match.py": "194b3be2f8b33beecbe91ea3530de42d154b52644f08d8f95e920fe715159e92",
+      "sharp-markets/src/markets/build/run.py": "27eec57b19a41c29d1bbf0d699d0df7930aecb76a25b43ddcc15b3b2cbdbcd6e",
+      "sharp-markets/src/markets/build/sql.py": "cd4056f46689791f933b970dca08fe949c49a0b6629399b4968b883593b0a71f",
+      "sharp-markets/src/markets/cache.py": "b593dcfe81f0b6c48064184f9490fb5c3bd8ecd138a6cd5a9a8499791b814c53",
+      "sharp-markets/src/markets/cli.py": "cc38f2d8eb4b20ce1c34d8dcbd8e9b964fecf95c71200eabd49d4b674e1e211d",
+      "sharp-markets/src/markets/collector.py": "74f96c74519ce876af9e8cc6095c61cfabb3d3c83a892e8af95008e72781e6e7",
+      "sharp-markets/src/markets/context.py": "ada9dd458ebc2729d34760f19f7cc248dd8fbf87ab5f581021c76fed48774f9d",
+      "sharp-markets/src/markets/devig.py": "4aad8d8f014274249545e695c23117395be88a2543f51a656a3370ef09eebf99",
+      "sharp-markets/src/markets/espn.py": "6c04b455f38d6e36270ab82f3e9cebe4821ff22de464fb1a3491ffebb5608775",
+      "sharp-markets/src/markets/fees.py": "913cc0aaec9947330d2368d777e4a5355bafd54eb14cdbf323cb0b90e69305f3",
+      "sharp-markets/src/markets/games.py": "57eebb2e02deafe7d45bbf383a3b101f27e79d12ca54112dbd5f0268f0221c50",
+      "sharp-markets/src/markets/http.py": "d03f4b17997125f4fcab7c01851287e92da2edcc30ce28681e2a6797bce2354d",
+      "sharp-markets/src/markets/kalshi/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sharp-markets/src/markets/kalshi/client.py": "524f8ce30cf82c92306c020ccfce3defd72c2dd1d979866b9eacd562f9ea88a8",
+      "sharp-markets/src/markets/kalshi/ingest.py": "80d95e431f3d4931d08fe4c043ce7bd342bd14a4e67f6c29117df88922bf5739",
+      "sharp-markets/src/markets/oddsapi/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sharp-markets/src/markets/oddsapi/bulk.py": "4d2496d5b2705ce87e7be07ad02de78093ba070354b0dfafe369130fa0802f91",
+      "sharp-markets/src/markets/oddsapi/client.py": "1cdb2b2629f9f594fabe23ec2e136bffbd002d0ebe826eb61185439d618997ff",
+      "sharp-markets/src/markets/oddsapi/headers.py": "6cbb7c8f80c0f5b86b7faf49733f14bb999d4a23ec7c8264168597f54365a41d",
+      "sharp-markets/src/markets/oddsapi/ingest.py": "0579ba1b1a9133e28a374d5345798d419ba9c615103b6b46dfe1958c0a2e7297",
+      "sharp-markets/src/markets/oddsapi/normalize.py": "82cf3e781b064774e990c4cce9c901fc3a68b1da2e345a782895fc44fd2f682e",
+      "sharp-markets/src/markets/oddsapi/schedule.py": "1a1e7f39087cfd8a674b3bfc995e1565c85bd50db8030b97255a2d0986cd1a26",
+      "sharp-markets/src/markets/research/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sharp-markets/src/markets/research/kaggle_h3.py": "3464b6c5c02d20c030ca5c7eae44830b0bce4a96c2555fe9e754f8dd2d757a1c",
+      "sharp-markets/src/markets/research/kaggle_h3_nfl.py": "f5a9c671ab5d3781820ec1bdd54ae792f59321adc558fe8e6bf05a4393cbaa2b",
+      "sharp-markets/src/markets/research/nfl_weather.py": "7ff58241e5cf3b6c8fa695595c11c074ec1d9988fbbaae4a7708616a29d634fb",
+      "sharp-markets/src/markets/research/price_engine/__init__.py": "4118f548576e365c98b449df11f985b2447c58faf29da88e5023a3f51c41206c",
+      "sharp-markets/src/markets/research/price_engine/archive_adapter.py": "998f0f5619432944e34a7379377c6fdb56c5be3a4b16d8a16bb4b76c2fae9643",
+      "sharp-markets/src/markets/research/price_engine/engine.py": "c9127bead767df7de81d9dbfbb7982ab00232c26c8cf678413e6d358a78a47d2",
+      "sharp-markets/src/markets/research/price_engine/fixture.py": "861d7090004dcaaf7f3c5ad5d435124f6b12626ab51de511c3b0fff7c2be9d82",
+      "sharp-markets/src/markets/research/price_engine/handoff.py": "e47f546340a504f6e7c903aa7610c6f38bf51977039f61d6b62da5f349d96385",
+      "sharp-markets/src/markets/research/price_engine/model.py": "f34f4cf577d2a335df9f003c0b43fa5e4c38198e532ed41c79f83fc1be5f3013",
+      "sharp-markets/src/markets/research/price_engine/names_preflight.py": "80f309fff49d90c50020246571feb7787d3f1ca34b3c8027ea87a2b769a5fcd0",
+      "sharp-markets/src/markets/research/price_engine/outcomes.py": "fae46675ace95f5169a3613babdfc3cb6e349128441cec989fbc4133044b4b62",
+      "sharp-markets/src/markets/research/price_engine/quotes.py": "8a07ba4429489772716df96f0c8a128e0e851930c744e9c4557905d38b3aab9b",
+      "sharp-markets/src/markets/research/price_engine/run.py": "32fe424d8a816ef134ecfef43cf0db3d3fe979aee6595d004b4284d10f2d340e",
+      "sharp-markets/src/markets/research/props_grade/__init__.py": "ee7dc44c91576958d681561e84567c4559489f9d021cb93f9bef730cac0528c4",
+      "sharp-markets/src/markets/research/props_grade/archive.py": "8e05a8fad98f4980319e8930b71b2b9db816074a39293a1ddcf0ec31cefe2992",
+      "sharp-markets/src/markets/research/props_grade/fixture.py": "400234b3215aec83d2a4f29dd5066b0576b390d291c0cada5843c9cbf6f343b7",
+      "sharp-markets/src/markets/research/props_grade/grade.py": "982a194a360138c625ffe7022a574980b0acbb5217ed178e57ec574869cf5ff2",
+      "sharp-markets/src/markets/research/props_grade/lines.py": "8a5d941a3fa7feb44853ab0a8938507b07d5420b6f6686b3fa183e569ce6252b",
+      "sharp-markets/src/markets/research/props_grade/outcomes.py": "1b833b00133ffec5fbd6ca14833e5013b108f5337bc20e535283cc01ee45d2a3",
+      "sharp-markets/src/markets/research/props_grade/registration.py": "f4d90991d3b6d01d373848f4d4d6a7261e05dcf1260f268b026a5f22c0fb6bf7",
+      "sharp-markets/src/markets/research/props_grade/roster.py": "6ca6b899aea1c150491f2267961ba97c608bc6e1f3819e68566a8ff196b7b1ab",
+      "sharp-markets/src/markets/research/props_grade/run.py": "5aa9614f894c7884831bca2db56c8ab5d1b1df7d99a602dc1c26dc0428c7ef69",
+      "sharp-markets/src/markets/research/props_grade/settlement.py": "6815bc0ac18e9c927315f6b666db4200f8d3da8ddf1c5e5e1b6c984c4edf5a20",
+      "sharp-markets/src/markets/research/props_grade/stats.py": "9ef9050568fe0400d72ad127fbc75845e577ddc24e9d5feeb06eab95b315698e",
+      "sharp-markets/src/markets/research/props_grade/union.py": "e378123debe72957ff62ad4770dde4b403a9f5df157ea9c617f454295c3a80f5",
+      "sharp-markets/src/markets/settings.py": "c6384107e1a19a9bf54c9736eb7061091a9cbd6379c7af5f1d2bbf9ecb39f825",
+      "sharp-markets/src/markets/sport.py": "55b159d90c80c39b697ff9dfb97a336406ad08e0ceefe1d95a93793268439594",
+      "sharp-markets/src/markets/stats.py": "c795991f3b69510fe227c0562ac487c1624bf601359f31b7640277ce4e15e7da",
+      "sharp-markets/src/markets/weather/__init__.py": "55b850477e3e695f383a8f67de6a3a024f8b2d15cc4ae53953e28eb151072048",
+      "sharp-markets/src/markets/weather/gamevenues.py": "345d1549bacbe9d780954cdc5f792881151854378ad41f7a19dc2d1e1ecb6ce6",
+      "sharp-markets/src/markets/weather/heat.py": "a9dfc5939bbdba0e52620caa60a846e21a130f0062bfed543030a66df3c8f013",
+      "sharp-markets/src/markets/weather/join.py": "82aa805e49312eacff6cc5b7e3d50db5483240b2b9d6a314e8f66ee8dc5c6a71",
+      "sharp-markets/src/markets/weather/openmeteo.py": "a83389303aad8dc7858e3c72c8b7601fea88dc3ccfa17a16e849d0d445d2e63d",
+      "sharp-markets/src/markets/weather/venues.py": "5f8339b26e6d6e0b4b97d8ff3bcf04615aa75b0e3ec7c298aeb4b06a6d856dcf",
+      "sharp-markets/tests/test_collector.py": "d973b60499cfa79218adb8fc90c91162a0478ab5ffbfaf59345c789700fdb66e",
+      "sharp-markets/tests/test_http.py": "368e9ae783b5e6781579911e3eff485a3f6068a6d150417cbf189a3aa0accaf4"
+    }
+  },
+  "passed": true,
+  "recorded_at": "2026-10-03T20:16:23.311826+00:00",
+  "results": [
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/collector-safety",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "694f2566ade589ef087a693514cbf2912daa9297a1390c4a270b324ba4db0c34",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unittest_count": [
+        21
+      ]
+    },
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "pytest",
+        "sharp-markets/tests/test_collector.py",
+        "sharp-markets/tests/test_http.py",
+        "-q",
+        "-k",
+        "not a_failed_request_never_shows_the_key"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "0caf379acbcb845c31b98bf4efeffb865a66d527d27d5bb4f34018bea0099078",
+      "unittest_count": []
+    }
+  ],
+  "tested_commit": "38fba6ef8ad626110a6127abce0c7301e04511af",
+  "tested_identity": "42f8fdea446c3d64bb962c9b9956c305039b11beed97a2f825811081a855964d",
+  "version": 1,
+  "worktree_clean": true
+}

@@ -181,7 +181,7 @@ def test_props_log_saves_each_slot_before_the_next_and_asks_for_decimal_odds(tmp
         def json(self):
             return json.loads(self.text)
 
-    def get(path, params, fail_on=None):
+    def get(path, params, fail_on=None, **admission):
         calls.append((path, params))
         if path.endswith("/events"):
             return R(events)
@@ -191,7 +191,7 @@ def test_props_log_saves_each_slot_before_the_next_and_asks_for_decimal_odds(tmp
                       "outcomes": [{"name": "Over", "description": "Green Bay Packers", "point": 24.5, "price": 1.91}]}]}]))
 
     with pytest.raises(RuntimeError):
-        run_log_props(tmp_path, monkeypatch, lambda p, q: get(p, q, fail_on="/e2/"))
+        run_log_props(tmp_path, monkeypatch, lambda p, q, **kw: get(p, q, fail_on="/e2/", **kw))
     state = json.loads((tmp_path / "data" / "forward" / "props_state.json").read_text())
     assert state["captured"] == ["e1:24"]
     (raw,) = (tmp_path / "raw" / "oddsapi" / "props").glob("*_e1_T24.json")

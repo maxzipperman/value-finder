@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "scopes": [
+    "nfl-weather/nflweather/__init__.py",
+    "nfl-weather/nflweather/board.py",
+    "nfl-weather/nflweather/boxscore.py",
+    "nfl-weather/nflweather/build.py",
+    "nfl-weather/nflweather/config.py",
+    "nfl-weather/nflweather/features.py",
+    "nfl-weather/nflweather/fetch.py",
+    "nfl-weather/nflweather/live.py",
+    "nfl-weather/nflweather/market.py",
+    "nfl-weather/nflweather/models.py",
+    "nfl-weather/nflweather/mos.py",
+    "nfl-weather/nflweather/notify.py",
+    "nfl-weather/nflweather/odds.py",
+    "nfl-weather/nflweather/oddsapi.py",
+    "nfl-weather/nflweather/players.py",
+    "nfl-weather/nflweather/quota.py",
+    "nfl-weather/nflweather/runlog.py",
+    "nfl-weather/nflweather/stadiums.py",
+    "nfl-weather/nflweather/thesis.py",
+    "nfl-weather/nflweather/weather.py",
+    "nfl-weather/scripts/poll_triggers.py",
+    "nfl-weather/scripts/log_props.py",
+    "nfl-weather/tests/test_live.py",
+    "nfl-weather/tests/test_oddsapi.py",
+    "nfl-weather/tests/test_quota.py",
+    "nfl-weather/tests/test_collector_callers.py",
+    "nfl-weather/requirements.txt",
+    "ops/collector-safety/nflweather-verification.json",
+    "ops/collector_guard.py",
+    "ops/install_live_uses.sh",
+    "ops/process/process_guard.py",
+    ".github/workflows/collector-safety.yml",
+    "GOVERNANCE.md"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "pytest",
+      "nfl-weather/tests/test_live.py",
+      "nfl-weather/tests/test_oddsapi.py",
+      "nfl-weather/tests/test_quota.py",
+      "nfl-weather/tests/test_collector_callers.py",
+      "-q"
+    ]
+  ],
+  "environment": {
+    "PYTHONPATH": "nfl-weather:.",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONHASHSEED": "0"
+  }
+}

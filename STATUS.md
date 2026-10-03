@@ -13,6 +13,7 @@ preserved [verbatim in the historical archive](docs/status-archive/README.md).
 | NFL / CFB props | Coverage-first acquisition; held groups remain held | [Coverage report workflow](strategy-research/coverage-pilot-completion-v1/WORKFLOW.md) |
 | NBA / sharp markets | N0 preparation waits for the actual completed predecessor receipt | [N0 follow-on](https://github.com/maxzipperman/value-finder/pull/128), [research reports](sharp-markets/reports/) |
 | Forecast/style discovery | Six-model discovery setup; 2026 football remains sealed | [Research protocol](strategy-research/forecast_style_protocol.json) |
+| Logging collectors | PR125 installation and paid collector entry points disabled pending a reviewed enforced shared-account bridge and exact live authority; schedules/rules unchanged | [Collector adoption prerequisites](ops/collector-safety/README.md) |
 | Dashboard / menu bar | Read-only operational view; no rule or job change here | [Dashboard](dashboard/), [Mac move](ops/MOVE_TO_NEW_MAC.md) |
 
 ## Forward tests

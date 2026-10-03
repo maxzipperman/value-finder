@@ -1,0 +1,390 @@
+{
+  "evidence_digest": "a5826fdac4c62a26e9a819d108df3778406847395108698d2de69c6a54737605",
+  "inputs": {
+    "command_binaries": {
+      "{python}": {
+        "path": "/private/tmp/vf-collector-safety/cfb-weather/.venv/bin/python",
+        "sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60"
+      }
+    },
+    "commands": [
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "pytest",
+        "cfb-weather/tests/test_live.py",
+        "cfb-weather/tests/test_oddsapi.py",
+        "cfb-weather/tests/test_quota.py",
+        "cfb-weather/tests/test_collector_callers.py",
+        "-q"
+      ]
+    ],
+    "configured_environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "cfb-weather:."
+    },
+    "effective_environment": {
+      "LANG": "C.UTF-8",
+      "PATH": "/bin:/usr/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "cfb-weather:."
+    },
+    "environment": {
+      "executable_sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60",
+      "packages": [
+        [
+          "Pygments",
+          "2.21.0"
+        ],
+        [
+          "asttokens",
+          "3.0.2"
+        ],
+        [
+          "babel",
+          "2.18.0"
+        ],
+        [
+          "beautifulsoup4",
+          "4.15.0"
+        ],
+        [
+          "certifi",
+          "2026.7.22"
+        ],
+        [
+          "cffi",
+          "2.1.1"
+        ],
+        [
+          "charset-normalizer",
+          "3.5.2"
+        ],
+        [
+          "click",
+          "8.5.0"
+        ],
+        [
+          "cloudpickle",
+          "3.1.2"
+        ],
+        [
+          "contourpy",
+          "1.4.0"
+        ],
+        [
+          "cycler",
+          "0.12.1"
+        ],
+        [
+          "executing",
+          "2.2.1"
+        ],
+        [
+          "faicons",
+          "0.2.2"
+        ],
+        [
+          "fonttools",
+          "4.66.1"
+        ],
+        [
+          "formulaic",
+          "1.2.2"
+        ],
+        [
+          "great-tables",
+          "1.0.0"
+        ],
+        [
+          "html5lib",
+          "1.1"
+        ],
+        [
+          "htmltools",
+          "0.7.0"
+        ],
+        [
+          "idna",
+          "3.20"
+        ],
+        [
+          "importlib_metadata",
+          "9.0.1"
+        ],
+        [
+          "importlib_resources",
+          "7.1.0"
+        ],
+        [
+          "iniconfig",
+          "2.3.0"
+        ],
+        [
+          "interface_meta",
+          "2.0.1"
+        ],
+        [
+          "ipython",
+          "9.17.1"
+        ],
+        [
+          "ipython_pygments_lexers",
+          "1.1.1"
+        ],
+        [
+          "jedi",
+          "0.20.0"
+        ],
+        [
+          "joblib",
+          "1.6.0"
+        ],
+        [
+          "kiwisolver",
+          "1.5.1"
+        ],
+        [
+          "lxml",
+          "6.1.3"
+        ],
+        [
+          "maketables",
+          "0.1.9"
+        ],
+        [
+          "matplotlib",
+          "3.11.2"
+        ],
+        [
+          "matplotlib-inline",
+          "0.2.2"
+        ],
+        [
+          "multimark",
+          "0.3.2"
+        ],
+        [
+          "narwhals",
+          "2.26.0"
+        ],
+        [
+          "nokap",
+          "0.1.0"
+        ],
+        [
+          "numpy",
+          "2.5.3"
+        ],
+        [
+          "packaging",
+          "26.3"
+        ],
+        [
+          "pandas",
+          "3.0.6"
+        ],
+        [
+          "parso",
+          "0.8.7"
+        ],
+        [
+          "patsy",
+          "1.0.3"
+        ],
+        [
+          "pexpect",
+          "4.9.0"
+        ],
+        [
+          "pillow",
+          "12.3.0"
+        ],
+        [
+          "pluggy",
+          "1.6.0"
+        ],
+        [
+          "prompt_toolkit",
+          "3.0.53"
+        ],
+        [
+          "psutil",
+          "7.2.2"
+        ],
+        [
+          "ptyprocess",
+          "0.7.0"
+        ],
+        [
+          "pure_eval",
+          "0.2.4"
+        ],
+        [
+          "pyarrow",
+          "25.0.1"
+        ],
+        [
+          "pycparser",
+          "3.0"
+        ],
+        [
+          "pyfixest",
+          "0.60.0"
+        ],
+        [
+          "pyparsing",
+          "3.3.3"
+        ],
+        [
+          "pytest",
+          "9.1.1"
+        ],
+        [
+          "python-dateutil",
+          "2.9.0.post0"
+        ],
+        [
+          "python-docx",
+          "1.2.0"
+        ],
+        [
+          "requests",
+          "2.34.2"
+        ],
+        [
+          "scikit-learn",
+          "1.9.1"
+        ],
+        [
+          "scipy",
+          "1.18.1"
+        ],
+        [
+          "seaborn",
+          "0.13.2"
+        ],
+        [
+          "six",
+          "1.17.0"
+        ],
+        [
+          "soupsieve",
+          "2.10"
+        ],
+        [
+          "stack-data",
+          "0.6.3"
+        ],
+        [
+          "statsmodels",
+          "0.15.0"
+        ],
+        [
+          "tabulate",
+          "0.10.0"
+        ],
+        [
+          "threadpoolctl",
+          "3.7.0"
+        ],
+        [
+          "tqdm",
+          "4.70.1"
+        ],
+        [
+          "traitlets",
+          "5.16.1"
+        ],
+        [
+          "typing_extensions",
+          "4.16.0"
+        ],
+        [
+          "urllib3",
+          "2.8.0"
+        ],
+        [
+          "wcwidth",
+          "0.9.1"
+        ],
+        [
+          "webencodings",
+          "0.6.1"
+        ],
+        [
+          "websockets",
+          "17.2"
+        ],
+        [
+          "wrapt",
+          "2.5.0"
+        ],
+        [
+          "zipp",
+          "4.1.1"
+        ]
+      ],
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]"
+    },
+    "files": {
+      ".github/workflows/collector-safety.yml": "de8f362d77e0aa3823c83f53318f5c218173b496ce99bbde9eb15e2b8342003d",
+      "GOVERNANCE.md": "f521aa7206795a590eef021bdfd9db2d60f36f47889e77d6dde6ebf584b85254",
+      "cfb-weather/cfbweather/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "cfb-weather/cfbweather/board.py": "d3198fbb0e5dce1b69b954d920dbe6d7c79e5f27a67c7d261c7ea4accb953352",
+      "cfb-weather/cfbweather/build.py": "87f620a38e602fefd7ba15f6ff028d0dddab560c470c49214cbd880df15c6736",
+      "cfb-weather/cfbweather/cfbd.py": "31567a7dc6cc9eccccfd2dc34467dd3750eddbc446d13aa305bd6ef20fca3491",
+      "cfb-weather/cfbweather/config.py": "0cf8c93888263f3aa8f13131cc8ae1b2f7d83e2957d99836d8daf3b52bb168b1",
+      "cfb-weather/cfbweather/features.py": "05909f00b72c09793156f013d6f06ad88be43e5710c8e49dbd3cf5754e0c9f5f",
+      "cfb-weather/cfbweather/fetch.py": "eca6b8a65265f0c42415cd81b380e58edd6d504f31435143dea49ef03300108c",
+      "cfb-weather/cfbweather/live.py": "7ad7f85f7af2ce3fa4fbdbaf698856b751a2f067ef08d7991ffdeb39d278b63a",
+      "cfb-weather/cfbweather/market.py": "2ab0aa0460193c9997dd76c444732ea78efe9684b3202276228da9d5f4a93ad6",
+      "cfb-weather/cfbweather/models.py": "b5f0a01a8b53df1276997aa414f5ae5cd3883122cbd86dbc41bf802cd2922633",
+      "cfb-weather/cfbweather/mos.py": "07d7afeb63b5e617474b4a4af63995b0ffac5b3b0f246a5969e200251ef1a769",
+      "cfb-weather/cfbweather/notify.py": "efe1ce5420b5ac41f4800127b2015225de62e1f31001faf5adfa2b057bd087c4",
+      "cfb-weather/cfbweather/players.py": "a70d84db3da306d93969126fa571a2b6c9eb6521b4bfc9f89f4f2652fa8a3cd1",
+      "cfb-weather/cfbweather/quota.py": "6d9418068d9c2eceaedd106077ff1b9567cd62e0376fce406782491fc476c539",
+      "cfb-weather/cfbweather/runlog.py": "b7ea15aef0c27e6810d259d2e702bf07e903d9aae1be710fdc3535bcc7b667ec",
+      "cfb-weather/cfbweather/weather.py": "573b2efa55d9f5d0e1112fef25b91b0ce9940161295557c3bf6af04a521edcc9",
+      "cfb-weather/requirements.txt": "ae2238d9e7f901cc844febbfdfb6517f1eb7be5ca679819c553b8d8336cefedd",
+      "cfb-weather/scripts/poll_triggers.py": "94780a5b718e24066852fce8a42c39abd58851999cc046cae58b66f0eba69cad",
+      "cfb-weather/tests/test_collector_callers.py": "04d7fd41162fcda3b2cd08893425bd24800ae51f34513c2027d5aca6889b4044",
+      "cfb-weather/tests/test_live.py": "1ec30548b8a8b39bbbbaeeacb6345b2aeaf8f47f1122ac6e803d214fa4d75fea",
+      "cfb-weather/tests/test_oddsapi.py": "d889c02c5e6b1b735625fa5ff74d5136634b4c03f5a851ea3f53f06141d04fa9",
+      "cfb-weather/tests/test_quota.py": "05dbf9cf3baf5aa321901fb97f79c60a5d70c6d8940c815ebff6639a7dab495f",
+      "ops/collector-safety/cfbweather-verification.json": "221dfee0e0bf46a562e4f38c5a8a21ba22d353e70a6e86f1d39d6628e7755fc7",
+      "ops/collector_guard.py": "df372bba0849982cb832455aa94aa507188b762407088e83e75c5f768bfef678",
+      "ops/install_live_uses.sh": "df89afa3b9dcd624cad9b638f7c9fada48b2362381b4c4d51dae8eeb39903881",
+      "ops/process/process_guard.py": "e4e4161630da0641a1fc9593203c972adff5493daf5db7782d8c4437c261b89c"
+    }
+  },
+  "passed": true,
+  "recorded_at": "2026-10-03T20:30:42.322961+00:00",
+  "results": [
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "pytest",
+        "cfb-weather/tests/test_live.py",
+        "cfb-weather/tests/test_oddsapi.py",
+        "cfb-weather/tests/test_quota.py",
+        "cfb-weather/tests/test_collector_callers.py",
+        "-q"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "0a7b785000809ed5c480bedfcf792425918c0ac1eae5c729458108e62fa5daa5",
+      "unittest_count": []
+    }
+  ],
+  "tested_commit": "98c7dabda05893984452b83ce654a63bb56f10bd",
+  "tested_identity": "8a3689a3ccee006f80be94b61a559f2ced610767b9a698d31067c390cdb034a4",
+  "version": 1,
+  "worktree_clean": true
+}

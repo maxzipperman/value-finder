@@ -17,6 +17,8 @@ analyses those rows until a hypothesis about them is pre-registered.
 from __future__ import annotations
 
 import json
+import sys
+from datetime import datetime, timezone
 
 import pandas as pd
 import requests
@@ -67,7 +69,9 @@ def book_rows(events: list[dict], team_names: dict, stamp: str) -> pd.DataFrame:
 def live_totals(team_names: dict) -> pd.DataFrame | str:
     """Every book's live totals (1 credit), or the reason there are none."""
     from . import quota
-    from .config import RAW
+    from .config import RAW, ROOT
+    sys.path.insert(0, str(ROOT.parent))
+    from ops.collector_guard import Blocked, paid_get, slot
     from .fetch import LIVE_BOOKS, ODDS_API, session
     from .notify import _env
     key = _env("ODDS_API_KEY")
@@ -77,8 +81,11 @@ def live_totals(team_names: dict) -> pd.DataFrame | str:
     if why:
         return why
     try:
-        r = session.get(ODDS_API, params=dict(apiKey=key, bookmakers=",".join(LIVE_BOOKS), markets="totals",
-                                              oddsFormat="american", dateFormat="iso"), timeout=60)
+        r = paid_get(session, ODDS_API, dict(apiKey=key, bookmakers=",".join(LIVE_BOOKS), markets="totals",
+                                              oddsFormat="american", dateFormat="iso"),
+                     label="cfb-trigger", request_slot=slot(datetime.now(timezone.utc), 600))
+    except Blocked as e:
+        return str(e)
     except requests.RequestException as e:
         return f"Odds API unreachable ({type(e).__name__})"
     quota.record(r, "cfb-weather")
