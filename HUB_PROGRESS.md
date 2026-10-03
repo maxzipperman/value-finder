@@ -1,8 +1,8 @@
 # Value Finder — running progress and credit plan
 
-Updated October 2, 2026, 7:30 PM Pacific. Maintained by hub chat.
+Updated October 2, 2026, 7:31 PM Pacific. Maintained by hub chat.
 
-**Current position:** recent football odds, NFL alternate lines and the first NFL props slice are downloaded. Broader props discovery and the older-season continuation are being prepared/reviewed. New archive backtests have not yet cleared their analysis gates.
+**Current position:** recent football odds, NFL alternate lines and the first NFL props slice are downloaded. The exact older offline reconciliation is complete. **Owner-directed hold: remaining bulk downloads wait for an outcome-blind coverage pilot and predeclared confidence-bound gate.** Executor and analysis repairs continue in parallel.
 
 This is a readable status mirror, not purchase authority or a second queue. The repo’s [current queue](https://github.com/maxzipperman/value-finder/blob/main/sharp-markets/docs/OCTOBER_2026_QUEUE.md), exact approvals and local spending ledgers control purchases. Update this document after each completed run, stop or verified analysis.
 
@@ -40,10 +40,12 @@ Recorded charges reconcile to: probe 1,687 + recent football 82,830 + NFL altern
 Amounts below are **maximum new credits or planning bounds**, not amounts already spent. Only an exact reviewed list and active hub approval permits a run.
 
 | Next work | Maximum new credits | Readiness / dependency |
+| Cache-only coverage audit and sampling protocol | **0** | Underway. Define usable paired coverage, representative samples, confidence bounds, cost/yield and pass/skip criteria before bulk purchases. |
+| Small gap-filling coverage pilot | **To be frozen** | Reuse existing evidence first. Exact finite sample and cap require review; pilot inputs should be reused by the final archive. |
 |---|---:|---|
-| Finish older 2020–2022 football | **53,580** | 1,786 never-sent requests. PR #129 merged; exact offline reconciliation installed. Actual successor freeze/review and fresh paid approval remain. |
-| NFL/CFB listing discovery | **1,544** | Exact first metadata stage in PR #132. Auditor reproduced cache/ancestry validation blockers; worker repairing them. Also waits on older recovery. |
-| NFL/CFB market availability at two times | **7,032 currently proposed** | Separate metadata stage after listing reconciliation. Newly discovered events can expand this list and cap. Returns availability, not prices/player counts. |
+| Finish older 2020–2022 football | **53,580** | 1,786 never-sent requests. PR #129 merged; exact offline reconciliation installed. Actual successor frozen in PR #134; independent review, new coverage gate and fresh paid approval remain. |
+| NFL/CFB listing discovery | **1,544** | Exact first metadata stage in PR #132. Auditor reproduced cache/ancestry validation blockers; worker repairing them. Also waits on representative coverage measurement and the approved global predecessor. |
+| NFL/CFB market availability at two times | **7,032 currently proposed** | Full stage held for coverage-first planning; separate metadata stage after pilot/listing reconciliation. Newly discovered events can expand this list and cap. Returns availability, not prices/player counts. |
 | All supported NFL/CFB props, 2023–2025, day-before + scheduled close | **2,747,340 planning bound** | NFL 1,011,870 + CFB 1,735,470, after compatible prior-cache reuse, up to ten selected books. Actual billing depends on returned markets. Exact universe, books and price list follow discovery. |
 | Optional earlier timing: eight core markets at 72/48/6/1 hours | **1,112,960 planning bound** | Keeps broad baseline and adds timing depth. Requires coverage and settlement support; extra early-time metadata and new events are not included. Weather-dependent T72 tests need archived forecasts. |
 | NBA January 5–11, 2026 sample odds | **7,540** | 754 requests. Needs completed older successor ancestry, reviewed driver and exact approval. This NBA sample is separately unsealed. |
@@ -54,6 +56,12 @@ Amounts below are **maximum new credits or planning bounds**, not amounts alread
 The existing **250,000-credit first-tranche ceiling** must be prospectively extended through a reviewed budget before a larger props run. Small stages do not authorize that extension. Twenty-book broad coverage has a 5,528,880-credit bound; all markets at all six times has an 8,260,260-credit bound. Neither fits this month at those maxima.
 
 Conditional NBA full-season and hourly featured-football purchases remain behind their existing gates and are **not included** above. If earned, rebalance against actual remaining credits and overlaps before purchase. Reset date is not yet confirmed; do not assume calendar month-end.
+
+## Coverage gate before bulk acquisition
+
+Owner requested this on October 2. Test coverage without viewing outcomes or choosing profitable games. Existing cached inputs come first; a finite random/stratified pilot fills unmeasured sport/year/time cells. Count independent games or request/day clusters, not books, players and snapshots as separate independent successes. Use a predeclared lower confidence bound against a useful coverage threshold and report credits per usable paired game. Metadata presence is insufficient to establish complete paired prices, freshness or settlement support. Unknown, cancelled, unmatched and unsupported cases remain visible.
+
+The existing 480 older responses are a chronological sample; the 570 props responses cover only NFL 2025. Neither by itself establishes representative coverage of the remaining archive. A small pilot is the measurement step; its exact list and maximum cost still require approval. Full stages above remain held pending this gate. Confidence on coverage does not prove a betting edge.
 
 ## Analyzed versus prepared
 
@@ -68,11 +76,11 @@ Conditional NBA full-season and hourly featured-football purchases remain behind
 
 ## Remaining work and owner
 
-1. **Hub:** PR #129 review and exact offline transition are complete. Prepare/review the actual successor and execute only untouched requests. Retain the charged missing request and its reservation.
-2. **Worker → auditor → hub:** repair/review PR #132’s missing-cache and uncertified-partial acceptance; then execute listing discovery, reconcile events, freeze the next finite availability list and quantify useful price coverage.
+1. **Hub:** PR #129 review and exact offline transition are complete; actual successor is frozen in PR #134. Validate representative coverage before bulk execution, then execute only untouched requests. Retain the charged missing request and its reservation.
+2. **Worker → auditor → hub:** repair/review PR #132’s missing-cache and uncertified-partial acceptance. First freeze a small stratified coverage pilot; full discovery follows only when useful coverage/cost is supported. Reconcile events and freeze each subsequent finite list.
 3. **Worker → auditor → hub:** correct college forecast missingness. Reproduced bug: partial wind is accepted and entirely missing precipitation becomes zero. Preserve complete-input behavior; no retroactive rule changes or live deployment yet.
 4. **Auditor as implementation worker → independent reviewer → hub:** repair props analysis inputs and settlement. Missing statistics must stay missing, not become zero; over-only/yes-no markets must not acquire invented under sides.
-5. **Hub:** choose the exact incremental broad/depth price list using measured availability, settlement support, cache reuse and budget. Extra snapshots are correlated observations, not extra independent games.
+5. **Hub:** preregister the acquisition coverage gate, then choose the exact incremental broad/depth price list using measured paired availability, confidence bounds, settlement support, cache reuse and budget. Extra snapshots are correlated observations, not extra independent games.
 6. **Hub:** confirm allowance reset date and update this artifact after each run or verified analysis. Keep 2026 football outcomes sealed, requests cache-first and purchases sequential.
 
 ## Evidence and links
