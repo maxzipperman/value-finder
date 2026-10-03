@@ -48,6 +48,10 @@ from nflweather import oddsapi
 from nflweather.config import RAW, ROOT
 from nflweather.market import valid_odds
 
+sys.path.insert(0, str(ROOT.parent))
+from ops.collector_guard import close_slot
+from ops import close_observation
+
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
 MAX_TRIES = 2
 NEAR = pd.Timedelta(hours=6)       # a feed event belongs to a game only if it starts within this of the kickoff
@@ -113,8 +117,12 @@ now = pd.Timestamp(args.now) if args.now else pd.Timestamp.now(tz="UTC")
 g = pd.read_csv(RAW / "games.csv")
 g = g[g.result.isna() & g.gametime.notna()].copy()
 g["kick_utc"] = pd.to_datetime(g.gameday + " " + g.gametime).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
+close_observation.recover(CLOSES, STATE)
 state = json.loads(STATE.read_text()) if STATE.exists() else {"captured": []}
 state.setdefault("tries", {})
+observation = close_slot((), {}, now.to_pydatetime())
+if close_observation.seen(state, observation):
+    sys.exit(print("close capture: scheduled observation already applied"))
 due = g[(g.kick_utc - now).between(*WINDOW)]
 slots = sorted({t.strftime("%Y-%m-%dT%H:%MZ") for t in due.kick_utc} - set(state["captured"]))
 if not slots:
@@ -132,10 +140,11 @@ def counted(payload):
 
 oddsapi.parse = counted     # the parser drops an event no logged book prices, so the count is taken before it
 try:
-    pin = oddsapi.live(markets=("totals",))
+    pin = oddsapi.live(markets=("totals",), role="nfl-close",
+                        request_slot=observation)
 except SystemExit as e:
     sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)} ({e}); "
-                   "will retry inside the window"))
+                   "later scheduled observation only; uncertain admission remains held"))
 finally:
     oddsapi.parse = parse
 no_events = pin.empty       # amendment 7: no usable feed event, a slot with no feed events
@@ -151,16 +160,12 @@ rows = due[["game_id", "kick_utc", "home_team", "away_team"]].merge(
          "book_update"]],
     on=["game_id", "home_team", "away_team"], how="left")
 rows["kick_utc"] = rows.kick_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-FWD.mkdir(parents=True, exist_ok=True)
-rows.to_csv(CLOSES, mode="a", header=not CLOSES.exists(), index=False)
 slot_of = dict(zip(due.game_id, due.kick_utc.dt.strftime("%Y-%m-%dT%H:%MZ")))
 have = set(rows.loc[rows.book.eq("pinnacle") & rows.close_total.notna(), "game_id"])
-for slot in slots:
-    state["tries"][slot] = state["tries"].get(slot, 0) + 1
-    complete = all(g in have for g, sl in slot_of.items() if sl == slot)
-    if complete or state["tries"][slot] >= MAX_TRIES:
-        state["captured"] = sorted(set(state["captured"]) | {slot})
-STATE.write_text(json.dumps(state))
+complete_slots = {slot for slot in slots if all(g in have for g, sl in slot_of.items() if sl == slot)}
+state = close_observation.apply(CLOSES, STATE, observation, before_state=state,
+                                rows=rows, slots=slots,
+                                complete=complete_slots, max_tries=MAX_TRIES)
 pin_games = len(have)
 print(f"{now:%Y-%m-%d %H:%M}Z close capture: Pinnacle close for {pin_games}/{due.game_id.nunique()} games, "
       f"{rows.book.nunique()} books logged, for {', '.join(slots)}")

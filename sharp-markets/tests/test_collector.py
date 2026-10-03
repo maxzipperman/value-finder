@@ -240,3 +240,30 @@ def test_real_config_loads():
     c = col.load_collector_config("nba")
     assert c["start"] == date(2026, 10, 20) and c["series_ticker"] == "KXNBAGAME" and c["every_min"] == 5
     assert c["bookmakers"] == ["pinnacle", "lowvig", "betonlineag"] and not c["final_every_min"]
+
+
+def test_actual_nba_boundary_reserves_replays_and_preserves_cache_clock(env,monkeypatch):
+    from ops import collector_guard
+    from ops.shared_account_testkit import synthetic_account
+    from markets.cache import read_record
+    c,_,_,tmp=env
+    params=dict(bookmakers=','.join(CFG['bookmakers']),markets='h2h',oddsFormat='decimal',dateFormat='iso')
+    monkeypatch.setattr(col,'paid_get',collector_guard.paid_get)
+    monkeypatch.setattr(col,'quota_block',lambda *a:None)
+    now=datetime.now(UTC)
+    with synthetic_account(tmp/'account','SECRET',params) as (session,state):
+        c.odds=session
+        c.fetch_odds(now.isoformat(),now)
+        first=next((tmp/'raw'/'nba'/'collector_oddsapi').rglob('*.parquet'))
+        observed=read_record(first)['fetched_at']
+        # Different outer cache label after a restart, identical stable request slot.
+        c.fetch_odds(now.isoformat()+'-restart',now)
+        assert len(session.calls)==1
+        records=[read_record(p) for p in (tmp/'raw'/'nba'/'collector_oddsapi').rglob('*.parquet')]
+        assert len(records)==2 and all(r['fetched_at']==observed for r in records)
+        assert next(iter(state()['attempts'].values()))['label']=='nba'
+        with pytest.raises(collector_guard.Blocked):
+            c._odds_get('/historical/sports/basketball_nba/odds',params,request_slot='unknown-history')
+        with pytest.raises(collector_guard.Blocked):
+            c._odds_get('/sports/basketball_nba/unknown-paid',params,request_slot='unknown')
+        assert len(session.calls)==1

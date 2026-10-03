@@ -203,13 +203,18 @@ def norm_team(name: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9 ]", "", ascii_.lower()).split())
 
 
-def odds_api_totals(team_names: dict):
+def odds_api_totals(team_names: dict, *, role=None, request_slot=None):
     """Live CFB totals from The Odds API (1 credit per call) at LIVE_BOOKS. Rule B's price is
     Pinnacle when it lists the game, else DraftKings; `best_under` is the best under price any
     logged book offers at that same total. `team_names` maps "School Mascot" -> cfbfastR school.
     Every response is written to data/raw/oddsapi/live/ before it is parsed. Returns an empty
     frame when no key is set, quota.check() says credits are too low, or the call fails."""
     from . import quota
+    from .config import ROOT
+    import sys
+    from datetime import datetime, timezone
+    sys.path.insert(0, str(ROOT.parent))
+    from ops.collector_guard import Blocked, paid_get, alert_occurrence
     from .notify import _env
     key = _env("ODDS_API_KEY")
     cols = ["home_team", "away_team", "commence_utc", "mkt_total", "mkt_under", "mkt_over", "line_src", "quote_utc",
@@ -222,22 +227,31 @@ def odds_api_totals(team_names: dict):
         print(f"  {why}", flush=True)
         return empty
     try:
-        r = session.get(ODDS_API, params=dict(apiKey=key, bookmakers=",".join(LIVE_BOOKS), markets="totals",
-                                              oddsFormat="american", dateFormat="iso"), timeout=60)
+        if role == "cfb-alert":
+            request_slot = alert_occurrence(request_slot)
+        r = paid_get(session, ODDS_API, dict(apiKey=key, bookmakers=",".join(LIVE_BOOKS), markets="totals",
+                                              oddsFormat="american", dateFormat="iso"),
+                     label=role, request_slot=request_slot)
+    except Blocked as e:
+        print(f"  Odds API admission held ({e})", flush=True)
+        return empty
     except requests.RequestException as e:
         print(f"  Odds API unreachable ({type(e).__name__})", flush=True)
         return empty
-    quota.record(r, "cfb-weather")
+    if not getattr(r, "replayed", False):
+        quota.record(r, "cfb-weather")
     if r.status_code != 200:
         print(f"  Odds API unavailable ({r.status_code})", flush=True)
         return empty
-    stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+    stamp = pd.Timestamp(getattr(r, "observed_utc", None) or pd.Timestamp.now(tz="UTC")).strftime("%Y-%m-%dT%H:%M:%SZ")
     # cache first: keep every response, as the NFL client does
     dest = RAW / "oddsapi" / "live" / f"{stamp.replace(':', '')}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps({"snapshot_utc": stamp, "credits_last": r.headers.get("x-requests-last"),
                                 "credits_remaining": r.headers.get("x-requests-remaining"), "data": r.json()}))
-    return parse_odds_api(r.json(), team_names, stamp)[cols]
+    result = parse_odds_api(r.json(), team_names, stamp)[cols]
+    result.attrs["admission_conclusive"] = True
+    return result
 
 
 def parse_odds_api(events, team_names, stamp, min_odds=-115):

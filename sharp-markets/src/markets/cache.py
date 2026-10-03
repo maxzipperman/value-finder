@@ -15,6 +15,7 @@ import json
 import os
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
@@ -49,6 +50,7 @@ class Fetched:
     status: int
     headers: dict
     body: str
+    observed_at: datetime | None = None
 
 
 def public_params(params: dict) -> dict:
@@ -111,7 +113,7 @@ class RawCache:
             "data_date": data_date,
             "url": url,
             "params_json": json.dumps(public_params(params), sort_keys=True, default=str),
-            "fetched_at": utcnow(),
+            "fetched_at": res.observed_at if res.observed_at is not None else utcnow(),
             "http_status": res.status,
             "headers_json": json.dumps({h: res.headers.get(h) for h in KEPT_HEADERS if res.headers.get(h) is not None}),
             "body": res.body,

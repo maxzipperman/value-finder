@@ -46,6 +46,10 @@ from cfbweather.board import odds_team_names
 from cfbweather.build import schedules
 from cfbweather.config import ROOT
 
+sys.path.insert(0, str(ROOT.parent))
+from ops.collector_guard import close_slot
+from ops import close_observation
+
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
 MAX_TRIES = 2
 NEAR = pd.Timedelta(hours=6)       # a feed event belongs to a game only if it starts within this of the kickoff
@@ -108,17 +112,24 @@ s = schedules()
 s = s[(s.season == s.season.max()) & ~s.tbd & s.home_points.isna()]
 if "home_division" in s:
     s = s[s.home_division.astype(str).str.lower().eq("fbs") | s.away_division.astype(str).str.lower().eq("fbs")]
+close_observation.recover(CLOSES, STATE)
 state = json.loads(STATE.read_text()) if STATE.exists() else {"captured": []}
 state.setdefault("tries", {})
+observation = close_slot((), {}, now.to_pydatetime())
+if close_observation.seen(state, observation):
+    sys.exit(print("close capture: scheduled observation already applied"))
 due = s[(s.start_utc - now).between(*WINDOW)]
 slots = sorted({t.strftime("%Y-%m-%dT%H:%MZ") for t in due.start_utc} - set(state["captured"]))
 if not slots:
     sys.exit()
 
 due = due[due.start_utc.dt.strftime("%Y-%m-%dT%H:%MZ").isin(slots)]
-oa = fetch.odds_api_totals(odds_team_names()).dropna(subset=["home_team", "away_team"])
+oa = fetch.odds_api_totals(odds_team_names(), role="cfb-close",
+                        request_slot=observation).dropna(subset=["home_team", "away_team"])
 if oa.empty:
-    sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)}; will retry inside the window"))
+    if oa.attrs.get("admission_conclusive", False):
+        close_observation.apply(CLOSES, STATE, observation, before_state=state)
+    sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)}; later scheduled observation only; uncertain admission remains held"))
 oa = oa.reset_index(drop=True).rename_axis("event").reset_index()     # each feed event, numbered in feed order
 pick, notes = one_event(due, oa)
 oa = oa.merge(pick, on="event")               # only the feed event each due game takes, labelled with its game
@@ -129,16 +140,12 @@ rows = got.rename(columns={"mkt_total": "close_total", "mkt_under": "close_under
 rows["start_utc"] = rows.start_utc.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 cols = ["capture_utc", "game_id", "start_utc", "home_team", "away_team", "line_src", "close_total", "close_under",
         "close_over"]
-FWD.mkdir(parents=True, exist_ok=True)
-rows[cols].to_csv(CLOSES, mode="a", header=not CLOSES.exists(), index=False)
 slot_of = dict(zip(due.game_id, due.start_utc.dt.strftime("%Y-%m-%dT%H:%MZ")))
 have = set(rows.loc[rows.close_total.notna(), "game_id"])
-for slot in slots:
-    state["tries"][slot] = state["tries"].get(slot, 0) + 1
-    complete = all(g in have for g, sl in slot_of.items() if sl == slot)
-    if complete or state["tries"][slot] >= MAX_TRIES:
-        state["captured"] = sorted(set(state["captured"]) | {slot})
-STATE.write_text(json.dumps(state))
+complete_slots = {slot for slot in slots if all(g in have for g, sl in slot_of.items() if sl == slot)}
+state = close_observation.apply(CLOSES, STATE, observation, before_state=state,
+                                rows=rows[cols], slots=slots,
+                                complete=complete_slots, max_tries=MAX_TRIES)
 print(f"{now:%Y-%m-%d %H:%M}Z close capture: {int(rows.close_total.notna().sum())}/{len(rows)} games priced "
       f"for {', '.join(slots)}")
 for note in notes:

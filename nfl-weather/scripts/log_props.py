@@ -66,8 +66,9 @@ for ev, h in due:
         print(f"  {ev['away_team']} @ {ev['home_team']} T-{h}h: no prices ({e}); not automatically resent; inspect the durable attempt ledger")
         continue
     last = int(float(r.headers.get("x-requests-last") or 0))
-    spent += last
-    stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+    if not getattr(r, "replayed", False):
+        spent += last
+    stamp = pd.Timestamp(getattr(r, "observed_utc", None) or pd.Timestamp.now(tz="UTC")).strftime("%Y-%m-%dT%H:%M:%SZ")
     # The raw text goes to disk, and the slot is marked captured, before anything is parsed: a crash
     # after this point never re-fetches (and re-bills) the slot. Rows can be rebuilt from the raw file.
     dest = oddsapi.CACHE / "props" / f"{stamp.replace(':', '')}_{ev['id']}_T{h}.json"

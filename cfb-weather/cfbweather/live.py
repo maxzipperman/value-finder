@@ -88,10 +88,11 @@ def live_totals(team_names: dict) -> pd.DataFrame | str:
         return str(e)
     except requests.RequestException as e:
         return f"Odds API unreachable ({type(e).__name__})"
-    quota.record(r, "cfb-weather")
+    if not getattr(r, "replayed", False):
+        quota.record(r, "cfb-weather")
     if r.status_code != 200:
         return f"Odds API unavailable ({r.status_code})"
-    stamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+    stamp = pd.Timestamp(getattr(r, "observed_utc", None) or pd.Timestamp.now(tz="UTC")).strftime("%Y-%m-%dT%H:%M:%SZ")
     dest = RAW / "oddsapi" / "live" / f"{stamp.replace(':', '')}_poll.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps({"snapshot_utc": stamp, "credits_last": r.headers.get("x-requests-last"),

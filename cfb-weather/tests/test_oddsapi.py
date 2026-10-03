@@ -43,6 +43,9 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(quota, "STATE", tmp_path / "odds_quota.json")
     monkeypatch.delenv("XPC_SERVICE_NAME", raising=False)
     calls = []
+    from ops import collector_guard
+    monkeypatch.setattr(collector_guard, "paid_get", lambda session, url, params, **kw:
+                        session.get(url, params=params, timeout=60))
 
     def use(resp):
         def get(url, params=None, timeout=None):

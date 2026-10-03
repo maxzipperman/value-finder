@@ -147,11 +147,16 @@ class Collector:
 
     def _odds_get(self, path: str, params: dict, *, request_slot=None):
         keyed = {**params, "apiKey": self.key}
-        if path.endswith("/odds"):
+        if not (path == "/sports/basketball_nba/events" and params == {"dateFormat": "iso"}):
             r = paid_get(self.odds, ODDS_BASE + path, keyed, label="nba", request_slot=request_slot)
         else:
             r = http_get(self.odds, ODDS_BASE + path, keyed, self.limiter, max_retries=0, allow_redirects=False)
-        return r.status_code, {k.lower(): v for k, v in r.headers.items()}, r.text
+        headers = {k.lower(): v for k, v in r.headers.items()}
+        # Internal provenance is separate from the provider's billing headers.
+        if getattr(r, "observed_utc", None) is not None:
+            headers["x-valuefinder-observed-utc"] = r.observed_utc
+            headers["x-valuefinder-replayed"] = str(getattr(r, "replayed", False))
+        return r.status_code, headers, r.text
 
     def schedule(self, now: datetime) -> list[dict]:
         """Upcoming games from the free /events endpoint, cached for SCHEDULE_TTL."""
@@ -191,12 +196,12 @@ class Collector:
             status, headers, text = self._odds_get(f"/sports/{self.c['sport_key']}/odds", params,
                                                    request_slot=slot(now, 60 * (step or self.c["every_min"])))
             sent.update(status=status, headers=headers)
-            return Fetched(status, headers, text)
+            return Fetched(status, headers, text, observed_at=parse_ts(headers.get("x-valuefinder-observed-utc")))
 
         rec = self.cache.get_or_fetch(sport=self.sport, source="collector_oddsapi", data_date=tick[:10],
                                       url=f"{ODDS_BASE}/sports/{self.c['sport_key']}/odds", params=params,
                                       fetch=fetch, key_extra={"tick": tick}, cache_statuses=(200,))
-        if sent:
+        if sent and sent["headers"].get("x-valuefinder-replayed") != "True":
             quota_record(sent["status"], sent["headers"], now, self.key)
         h = json.loads(rec["headers_json"] or "{}")
         body = body_json(rec) if rec["http_status"] == 200 else None
