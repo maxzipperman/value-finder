@@ -1,0 +1,128 @@
+{
+  "evidence_digest": "5ae631df77464941874b8ed9e222ffc4f3134d004a35b61a0cb5e2e878d08cad",
+  "inputs": {
+    "command_binaries": {
+      "{python}": {
+        "path": "/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/football-v4-review-repo/.venv-football-archive/bin/python",
+        "sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60"
+      }
+    },
+    "commands": [
+      [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "reviews/post151-readiness",
+        "-p",
+        "test_diagnostic.py",
+        "-v"
+      ]
+    ],
+    "configured_environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "effective_environment": {
+      "LANG": "C.UTF-8",
+      "PATH": "/bin:/usr/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0"
+    },
+    "environment": {
+      "executable_sha256": "1699bf8aa705a8bb71613bef5cdd7d7c8c9d9a188a841f41679aa9b5830b8f60",
+      "packages": [
+        [
+          "PyYAML",
+          "6.0.3"
+        ],
+        [
+          "Pygments",
+          "2.21.0"
+        ],
+        [
+          "certifi",
+          "2026.7.22"
+        ],
+        [
+          "charset-normalizer",
+          "3.5.1"
+        ],
+        [
+          "idna",
+          "3.20"
+        ],
+        [
+          "iniconfig",
+          "2.3.0"
+        ],
+        [
+          "packaging",
+          "26.3"
+        ],
+        [
+          "pluggy",
+          "1.6.0"
+        ],
+        [
+          "pyarrow",
+          "25.0.1"
+        ],
+        [
+          "pytest",
+          "9.1.1"
+        ],
+        [
+          "python-dotenv",
+          "1.2.3"
+        ],
+        [
+          "requests",
+          "2.34.2"
+        ],
+        [
+          "urllib3",
+          "2.8.0"
+        ]
+      ],
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]"
+    },
+    "files": {
+      "reviews/post151-readiness/diagnostic.py": "738536c587d5b590ee5b317a6faa3c9d3d1a6cbac5cdc07bbf2f6f0a646b1866",
+      "reviews/post151-readiness/readiness.json": "0fefa3abec62ed1f8807b8d36dd2e900a63698e6a4234c3790b9ad57256b59cd",
+      "reviews/post151-readiness/test_diagnostic.py": "ef7f60b25fd13f76004d50062a1ab631524be6bbe8dc75457e8e84f5fb15e46b",
+      "reviews/post151-readiness/verification.json": "69076817c9604d80839249930b07bf7c98cbc509e8ec03b161e222629470ba33"
+    }
+  },
+  "passed": true,
+  "recorded_at": "2026-10-03T18:35:53.332971+00:00",
+  "results": [
+    {
+      "argv": [
+        "{python}",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "reviews/post151-readiness",
+        "-p",
+        "test_diagnostic.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stderr_sha256": "b60cff9007fce3b98fdf9cac005bf17fee6d499bc94de9a46be6cce671d02339",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unittest_count": [
+        6
+      ]
+    }
+  ],
+  "tested_commit": "c824ad2e529d9710e7e1840159101553331c58db",
+  "tested_identity": "f0169639a5fd4dec59beb7f0420b550af612fedf615ddb527287cc855e9a8dd1",
+  "version": 1,
+  "worktree_clean": true
+}
