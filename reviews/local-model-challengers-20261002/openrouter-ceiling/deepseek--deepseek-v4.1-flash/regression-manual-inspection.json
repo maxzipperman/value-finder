@@ -1,0 +1,27 @@
+{
+  "reviewer": "author complete source inspection before original default restricted15s grader; not independent validation",
+  "all_source_inspected": true,
+  "source_sha256": "1a1465e23a817d21efdbb1a97a0e8272cc10944ba4c554e235a55976ebdcdd00",
+  "delivery": "Valid single-key tests.py JSON. Original AST rejects type(e).__name__ exception label before any generated-test execution. Oracle acceptance/mutation credit not established.",
+  "filter_compatibility": "Type-name access labels exception mismatches; compatibility limitation, not malicious-code finding. Custom timezone and input-iteration controls inspected. No AST exception, code normalization or relaxed execution performed.",
+  "disallowed_attributes": [
+    {
+      "line": 12,
+      "attribute": "__name__"
+    }
+  ],
+  "manual_semantic_errors": [
+    {
+      "claim": "Rank fixture expects j1 attempt2 and j3 simultaneously with global run IDs a/b at the same observed instant; forward expects successful_rows22 and j3, reverse again expects j1 attempt2.",
+      "fact": "Global ID dedupe retains first equal-time row before per-job ranking. Forward a/b remain with j1, so j3 is absent and total12. Reversed a/b remain with j3; j1 falls back to unique c attempt1, total17. Therefore the explicit assertions contradict correct behavior.",
+      "evidence": "regression-trusted-counterexample.json"
+    }
+  ],
+  "completed_wrong_answer_not_rerolled": true,
+  "evidence": [
+    "regression-response.txt",
+    "regression-acceptance.json",
+    "regression-trusted-counterexample.json",
+    "../../ceiling/CONTRACT.md"
+  ]
+}

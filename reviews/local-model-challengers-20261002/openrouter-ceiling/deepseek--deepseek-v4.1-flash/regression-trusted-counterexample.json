@@ -1,0 +1,17 @@
+{
+  "grading": "author explicit trusted-reference fixture, not execution of model tests or independent validation",
+  "forward_selected_indices": {
+    "j1": 1,
+    "j2": 4
+  },
+  "forward_successful_rows": 12,
+  "reversed_selected_original_indices": {
+    "j3": 6,
+    "j2": 4,
+    "j1": 2
+  },
+  "reversed_successful_rows": 17,
+  "checks_passed": 2,
+  "source_contract": "ceiling/CONTRACT.md",
+  "limitations": "Only reproduces the explicit run-ID tie counterexample; no mutation credit or generated-suite execution."
+}

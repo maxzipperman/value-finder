@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 22,
+    "result": 23,
     "error": 0,
     "pending": 1,
-    "not_started": 7
+    "not_started": 6
   },
   "records": [
     {
@@ -28461,7 +28461,7 @@
       "family": "api",
       "model": "deepseek/deepseek-v4.1-flash",
       "task": "regression",
-      "status": "pending",
+      "status": "result",
       "folder": "openrouter-ceiling/deepseek--deepseek-v4.1-flash",
       "prompt_sha256": "123cf6e07cdf909838ea44a69bf18498231fb9551e4d3f1d9be3d6b053be96f3",
       "digest": null,
@@ -28487,13 +28487,52 @@
         "seed": 42,
         "top_p": 0.95
       },
-      "request_sha256": "60656f789fc9419386702f78fd3e16de9c4fcac48236069e6dea71983fbc5deb"
+      "request_sha256": "60656f789fc9419386702f78fd3e16de9c4fcac48236069e6dea71983fbc5deb",
+      "returned_model": "deepseek/deepseek-v4.1-flash",
+      "wall_seconds": 1893.635705084016,
+      "provider": "OpenInference",
+      "finish_reason": "stop",
+      "final_answer_bytes": 20706,
+      "usage": {
+        "prompt_tokens": 1198,
+        "completion_tokens": 52659,
+        "total_tokens": 53857,
+        "cost": 0.041090517,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 1127,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.041090517,
+          "upstream_inference_prompt_cost": 1.6497e-05,
+          "upstream_inference_completions_cost": 0.04107402
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 45352,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: disallowed operation"
+          }
+        ]
+      }
     },
     {
       "family": "api",
       "model": "deepseek/deepseek-v4.1-flash",
       "task": "review",
-      "status": "not_started",
+      "status": "pending",
       "folder": "openrouter-ceiling/deepseek--deepseek-v4.1-flash",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": null,
@@ -28518,7 +28557,8 @@
         },
         "seed": 42,
         "top_p": 0.95
-      }
+      },
+      "request_sha256": "9899c1caf616c5b00b3a931572f9902808f5de2beede7cb2b662fa2f55a89053"
     },
     {
       "family": "api",

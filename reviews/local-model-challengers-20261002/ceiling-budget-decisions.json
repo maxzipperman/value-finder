@@ -201,5 +201,16 @@
       "openrouter-ceiling/deepseek--deepseek-v4.1-flash/implementation-acceptance.json",
       "openrouter-ceiling/deepseek--deepseek-v4.1-flash/implementation-helper-coverage.json"
     ]
+  },
+  "deepseek/deepseek-v4.1-flash|regression|128k": {
+    "proceed": false,
+    "reason": "Stop after52659 completion tokens/1893.64s below65536. Delivered complete tests.py JSON, original AST rejects benign type(e).__name__ exception label. Manual source and trusted-reference counterexample expose wrong global-run-ID equal-time expectations. No generated suite executed/oracle acceptance/mutation credit. Completed semantic error, not cap exhaustion; no128K reroll.",
+    "reviewer": "author complete source inspection and trusted-reference counterexample, not independent validation",
+    "evidence": [
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/regression-result.json",
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/regression-acceptance.json",
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/regression-manual-inspection.json",
+      "openrouter-ceiling/deepseek--deepseek-v4.1-flash/regression-trusted-counterexample.json"
+    ]
   }
 }

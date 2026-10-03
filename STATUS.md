@@ -239,3 +239,6 @@ PR147 supplemental direct-helper coverage plan committed7b4955a before execution
 
 
 PR147 DeepSeek64K sampledimplementation deliveredOpenInference at1883s/52,544completiontokens, reported$0.040999686. Originalrestricted197/197passes, separateexactsourcehelperplan committedd916cad beforeexecution: reference4/4+2faultycontrols validated, candidate0/4directasofprobes (samepublichelpergap asQ8). Fullcontract notaccepted;stopbelowcap no128K. Reportedpaidresponses aggregate$0.096236295, unknownerrors stillmaxreserved. Queue98555regressionpending+7paidunstarted;qualified32K wait; finalallocation/independentvalidation pending.
+
+
+PR147 DeepSeek64K regression stops1894s/52,659completiontokens, reported$0.041090517. Fullsource inspected before originalrestricted15sgrader: benign type-name exception label ASTrejected, no generated tests executed/oracle/mutation credit. Separately trusted-reference counterexample confirms wrong globalIDtie assertions (forward12rows/noj3; reverse17rows/j1uniqueattempt1). Completedsemantic error no128K. Integrated23results/0errors, DeepSeekreviewpending+6paidunstarted; onlyqueue98555 active. Reportedpaidresponses aggregate$0.137326812, unknownerrorsmaxreserved. Qualified32K6/finalallocation/independentvalidation stillpending.
