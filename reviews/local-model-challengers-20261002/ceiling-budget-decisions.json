@@ -182,5 +182,14 @@
       "ceiling-space-bunny/regression-manual-inspection.json",
       "ceiling-space-bunny/regression-acceptance.json"
     ]
+  },
+  "stealth/space-bunny-alpha|review|128k": {
+    "proceed": false,
+    "reason": "Completed stop review128.28s,9/10 real causes,0false/duplicates; missed negative odds formula is semantic omission, not cap exhaustion. No resource reroll.",
+    "reviewer": "author manual semantic inspection",
+    "evidence": [
+      "ceiling-space-bunny/review-result.json",
+      "ceiling-space-bunny/manual-review.json"
+    ]
   }
 }

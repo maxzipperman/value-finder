@@ -230,3 +230,6 @@ PR147 ceiling checkpoint: all18 local stress responses collected and author insp
 
 
 PR147 SpaceBunny regression checkpoint: completed405s/39,241tokens, validtests.pyJSON but originalAST rejects special-method names; no generated tests executed/oracle/mutation credit. Manual complete source also has repeated wrong-200 probability0.75 expectations (correct2/3) and object-sentinel deepcopy equality traps. Completedstop response not128K target. Reviewpending inqueue98555, all9paidstress unstarted;qualified32K wait.
+
+
+PR147 free ceiling round complete:SpaceBunny3 responses author inspected/graded; implementation154/197 withpartial_jobs omission, regression originalAST rejection plus wrongprobability/deepcopy assertions, review128s9/10real0false/duplicates missesnegativeodds. No128K target. Queue98555 proceeds9paidstress under shared locks/combined owner$1;qualified32K6 wait. Final report/allocation/independent validation pending.

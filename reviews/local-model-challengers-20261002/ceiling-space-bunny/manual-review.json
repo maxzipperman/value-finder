@@ -1,0 +1,68 @@
+{
+  "reviewer": "author all-nine-findings manual semantic inspection; not independent validation",
+  "all_findings_inspected": true,
+  "delivery": "Valid JSON-only schema; original schema check is not semantic credit.",
+  "distinct_real_causes": 9,
+  "seeded_causes": 10,
+  "false_findings": 0,
+  "duplicate_findings": 0,
+  "non_defect_annotations": 0,
+  "correct_times_component_flagged": false,
+  "finding_audit": [
+    {
+      "index": 1,
+      "classification": "real",
+      "cause": "eligibility after book dedupe"
+    },
+    {
+      "index": 2,
+      "classification": "real",
+      "cause": "lexical offset ordering"
+    },
+    {
+      "index": 3,
+      "classification": "real",
+      "cause": "missing quote tie rules"
+    },
+    {
+      "index": 4,
+      "classification": "real",
+      "cause": "inclusive expiry"
+    },
+    {
+      "index": 5,
+      "classification": "real",
+      "cause": "job-scoped run id dedupe"
+    },
+    {
+      "index": 6,
+      "classification": "real",
+      "cause": "last duplicate time tie"
+    },
+    {
+      "index": 7,
+      "classification": "real",
+      "cause": "stale job retry overwrite"
+    },
+    {
+      "index": 8,
+      "classification": "real",
+      "cause": "partial downloaded rows omitted"
+    },
+    {
+      "index": 9,
+      "classification": "real",
+      "cause": "pending classified failed"
+    }
+  ],
+  "additional_explanation_validation": "Finding3 first equal instant/id violation can occur when equal absolute instants use different offset strings, unlike identical timestamp-string retention; finding5 concatenation collisions are a valid additional consequence.",
+  "missed_causes": [
+    "negative odds formula"
+  ],
+  "evidence": [
+    "review-response.txt",
+    "../ceiling/review-source.json",
+    "../ceiling/review-inventory.json",
+    "../ceiling/review-validation.json"
+  ]
+}

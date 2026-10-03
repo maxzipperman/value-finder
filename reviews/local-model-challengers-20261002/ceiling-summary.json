@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 20,
+    "result": 21,
     "error": 0,
     "pending": 1,
-    "not_started": 9
+    "not_started": 8
   },
   "records": [
     {
@@ -27394,7 +27394,7 @@
       "family": "api",
       "model": "stealth/space-bunny-alpha",
       "task": "review",
-      "status": "pending",
+      "status": "result",
       "folder": "ceiling-space-bunny",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": null,
@@ -27419,13 +27419,166 @@
         },
         "top_p": 0.95
       },
-      "request_sha256": "7cb5256759e0aa8d4bee6497cc235413aa86eb5eff67d2b562294c41b83f6f5c"
+      "request_sha256": "7cb5256759e0aa8d4bee6497cc235413aa86eb5eff67d2b562294c41b83f6f5c",
+      "returned_model": "stealth/space-bunny-alpha",
+      "wall_seconds": 128.28360787499696,
+      "provider": "Stealth",
+      "finish_reason": "stop",
+      "final_answer_bytes": 2316,
+      "usage": {
+        "prompt_tokens": 2554,
+        "completion_tokens": 10304,
+        "total_tokens": 12858,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 1218,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "schema only; each cause/false/duplicate finding requires manual semantic review",
+            "passed": true,
+            "findings": [
+              {
+                "file": "quotes.py",
+                "line": 21,
+                "explanation": "Quotes are pre-reduced by book before eligibility is checked, so a later-observed but ineligible quote, such as an expired quote or one with last_update after observed_at, can suppress an older eligible quote."
+              },
+              {
+                "file": "quotes.py",
+                "line": 21,
+                "explanation": "The preliminary selection compares observed_at as raw strings rather than normalized absolute instants, so timestamps with different UTC offsets can cause the wrong quote to survive."
+              },
+              {
+                "file": "quotes.py",
+                "line": 21,
+                "explanation": "The preliminary reduction does not apply the required (absolute observed_at, id) ranking, so it can discard the lexicographically smallest id on an instant tie and can also violate first-input handling for equal instant/id candidates."
+              },
+              {
+                "file": "quotes.py",
+                "line": 33,
+                "explanation": "Eligibility uses at <= expiry, admitting quotes whose expires_at equals asof even though the contract requires the strict condition asof < expires_at."
+              },
+              {
+                "file": "runs.py",
+                "line": 19,
+                "explanation": "Deduplication is keyed by job concatenated with run_id instead of by globally unique run_id alone, allowing one run_id to survive under multiple jobs, preventing a later record from correcting the job, and creating concatenation collisions."
+              },
+              {
+                "file": "runs.py",
+                "line": 20,
+                "explanation": "The >= comparison replaces an earlier eligible run when duplicate run_ids have the same observed instant, contrary to the required first-input tie rule."
+              },
+              {
+                "file": "runs.py",
+                "line": 27,
+                "explanation": "Job selection unconditionally overwrites the current result and never compares the computed rank, so the selected run depends on input order rather than greatest attempt, then observed instant, then smallest run_id."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 9,
+                "explanation": "successful_rows sums downloaded_rows only for selected ok runs and incorrectly omits selected partial runs, which must also contribute their downloaded rows."
+              },
+              {
+                "file": "pipeline.py",
+                "line": 9,
+                "explanation": "failures includes selected pending runs, but failures must contain only selected failed jobs; pending belongs only in unknown_jobs."
+              }
+            ]
+          }
+        ]
+      },
+      "manual_review": {
+        "reviewer": "author all-nine-findings manual semantic inspection; not independent validation",
+        "all_findings_inspected": true,
+        "delivery": "Valid JSON-only schema; original schema check is not semantic credit.",
+        "distinct_real_causes": 9,
+        "seeded_causes": 10,
+        "false_findings": 0,
+        "duplicate_findings": 0,
+        "non_defect_annotations": 0,
+        "correct_times_component_flagged": false,
+        "finding_audit": [
+          {
+            "index": 1,
+            "classification": "real",
+            "cause": "eligibility after book dedupe"
+          },
+          {
+            "index": 2,
+            "classification": "real",
+            "cause": "lexical offset ordering"
+          },
+          {
+            "index": 3,
+            "classification": "real",
+            "cause": "missing quote tie rules"
+          },
+          {
+            "index": 4,
+            "classification": "real",
+            "cause": "inclusive expiry"
+          },
+          {
+            "index": 5,
+            "classification": "real",
+            "cause": "job-scoped run id dedupe"
+          },
+          {
+            "index": 6,
+            "classification": "real",
+            "cause": "last duplicate time tie"
+          },
+          {
+            "index": 7,
+            "classification": "real",
+            "cause": "stale job retry overwrite"
+          },
+          {
+            "index": 8,
+            "classification": "real",
+            "cause": "partial downloaded rows omitted"
+          },
+          {
+            "index": 9,
+            "classification": "real",
+            "cause": "pending classified failed"
+          }
+        ],
+        "additional_explanation_validation": "Finding3 first equal instant/id violation can occur when equal absolute instants use different offset strings, unlike identical timestamp-string retention; finding5 concatenation collisions are a valid additional consequence.",
+        "missed_causes": [
+          "negative odds formula"
+        ],
+        "evidence": [
+          "review-response.txt",
+          "../ceiling/review-source.json",
+          "../ceiling/review-inventory.json",
+          "../ceiling/review-validation.json"
+        ]
+      }
     },
     {
       "family": "api",
       "model": "deepseek/deepseek-v4.1-flash",
       "task": "implementation",
-      "status": "not_started",
+      "status": "pending",
       "folder": "openrouter-ceiling/deepseek--deepseek-v4.1-flash",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": null,
@@ -27450,7 +27603,8 @@
         },
         "seed": 42,
         "top_p": 0.95
-      }
+      },
+      "request_sha256": "9ff40b6ba2abc82cffe8e0a646ef25869dde8dcf8621d2c15a07d81483cd579d"
     },
     {
       "family": "api",

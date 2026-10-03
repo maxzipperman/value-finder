@@ -1,0 +1,47 @@
+[
+  {
+    "file": "quotes.py",
+    "line": 21,
+    "explanation": "Quotes are pre-reduced by book before eligibility is checked, so a later-observed but ineligible quote, such as an expired quote or one with last_update after observed_at, can suppress an older eligible quote."
+  },
+  {
+    "file": "quotes.py",
+    "line": 21,
+    "explanation": "The preliminary selection compares observed_at as raw strings rather than normalized absolute instants, so timestamps with different UTC offsets can cause the wrong quote to survive."
+  },
+  {
+    "file": "quotes.py",
+    "line": 21,
+    "explanation": "The preliminary reduction does not apply the required (absolute observed_at, id) ranking, so it can discard the lexicographically smallest id on an instant tie and can also violate first-input handling for equal instant/id candidates."
+  },
+  {
+    "file": "quotes.py",
+    "line": 33,
+    "explanation": "Eligibility uses at <= expiry, admitting quotes whose expires_at equals asof even though the contract requires the strict condition asof < expires_at."
+  },
+  {
+    "file": "runs.py",
+    "line": 19,
+    "explanation": "Deduplication is keyed by job concatenated with run_id instead of by globally unique run_id alone, allowing one run_id to survive under multiple jobs, preventing a later record from correcting the job, and creating concatenation collisions."
+  },
+  {
+    "file": "runs.py",
+    "line": 20,
+    "explanation": "The >= comparison replaces an earlier eligible run when duplicate run_ids have the same observed instant, contrary to the required first-input tie rule."
+  },
+  {
+    "file": "runs.py",
+    "line": 27,
+    "explanation": "Job selection unconditionally overwrites the current result and never compares the computed rank, so the selected run depends on input order rather than greatest attempt, then observed instant, then smallest run_id."
+  },
+  {
+    "file": "pipeline.py",
+    "line": 9,
+    "explanation": "successful_rows sums downloaded_rows only for selected ok runs and incorrectly omits selected partial runs, which must also contribute their downloaded rows."
+  },
+  {
+    "file": "pipeline.py",
+    "line": 9,
+    "explanation": "failures includes selected pending runs, but failures must contain only selected failed jobs; pending belongs only in unknown_jobs."
+  }
+]
