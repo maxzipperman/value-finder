@@ -22,6 +22,8 @@ from __future__ import annotations
 import json
 import os
 import time
+import sys
+from datetime import datetime, timezone
 from datetime import timedelta
 from pathlib import Path
 
@@ -31,6 +33,9 @@ import requests
 from . import quota
 from .config import PROC, RAW, ROOT
 from .fetch import session
+
+sys.path.insert(0, str(ROOT.parent))
+from ops.collector_guard import Blocked, paid_get, slot
 
 BASE = "https://api.the-odds-api.com/v4"
 SPORT = "americanfootball_nfl"
@@ -94,11 +99,17 @@ class Budget:
         return self.used + cost <= self.max
 
 
-def _get(path, params):
+def _get(path, params, *, collector_label=None, request_slot=None):
     """GET with every failure turned into OddsAPIUnavailable (a SystemExit), which callers
     (the board) treat as "no price". Every response's quota headers go to quota.record."""
     try:
-        r = session.get(f"{BASE}{path}", params={**params, "apiKey": api_key()}, timeout=60)
+        keyed = {**params, "apiKey": api_key()}
+        if collector_label:
+            r = paid_get(session, f"{BASE}{path}", keyed, label=collector_label, request_slot=request_slot)
+        else:
+            r = session.get(f"{BASE}{path}", params=keyed, timeout=60)
+    except Blocked as e:
+        raise OddsAPIUnavailable(str(e)) from None
     except requests.RequestException as e:
         raise OddsAPIUnavailable(f"The Odds API is unreachable ({type(e).__name__})") from e
     quota.record(r, "nfl-weather")
@@ -128,7 +139,9 @@ def live(markets=("totals", "spreads"), budget: Budget | None = None, tag: str |
     dest = CACHE / "live" / f"{now:%Y-%m-%dT%H%M%SZ}{'_' + tag if tag else ''}.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
     r = _get(f"/sports/{SPORT}/odds", dict(bookmakers=",".join(LIVE_BOOKS), markets=",".join(markets),
-                                            oddsFormat="american", dateFormat="iso"))
+                                            oddsFormat="american", dateFormat="iso"),
+             **({"collector_label": "nfl-trigger", "request_slot": slot(datetime.now(timezone.utc), 600)}
+                if tag == "poll" else {}))
     if budget:
         budget.charge(r)
     payload = {"snapshot_utc": ts, "credits_last": r.headers.get("x-requests-last"),

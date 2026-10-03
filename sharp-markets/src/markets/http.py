@@ -136,7 +136,7 @@ def _scrubbed(exc: requests.RequestException, params: dict, attempts: int) -> re
 
 
 def http_get(session: requests.Session, url: str, params: dict, limiter: RateLimiter,
-             *, timeout: float = 60, max_retries: int = 6,
+             *, timeout: float = 60, max_retries: int = 6, allow_redirects: bool | None = None,
              before_retry: Callable[[str, requests.Response | None], None] | None = None) -> requests.Response:
     """GET with retries on 429/5xx/network errors. Honors Retry-After. Returns the final response.
 
@@ -156,7 +156,8 @@ def http_get(session: requests.Session, url: str, params: dict, limiter: RateLim
         limiter.wait()
         error: str | None = None
         try:
-            resp = session.get(url, params=params, timeout=timeout)
+            options = {} if allow_redirects is None else {"allow_redirects": allow_redirects}
+            resp = session.get(url, params=params, timeout=timeout, **options)
         except (requests.ConnectionError, requests.Timeout) as exc:
             if attempt == max_retries:
                 failure = _scrubbed(exc, params, attempt + 1)

@@ -52,6 +52,26 @@ if [[ -n "${ODDS_BACKGROUND_FLOOR:-}" ]]; then
 fi
 
 if (( ! remove )); then
+  # Read-only metadata preflight BEFORE key comparison or launchd mutation.
+  : "${VF_COLLECTOR_ENVELOPE:?hub-approved live envelope/shared-account bridge required}"
+  : "${VF_COLLECTOR_ENVELOPE_SHA256:?pinned live envelope hash required}"
+  export VF_COLLECTOR_ENVELOPE VF_COLLECTOR_ENVELOPE_SHA256
+  envxml+="$(python3 - "$ROOT" <<'PYGUARD'
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from html import escape
+import os
+sys.path.insert(0, sys.argv[1])
+from ops.collector_guard import envelope
+c, identity = envelope(datetime.now(timezone.utc))
+p = Path(c['ledger'])
+if not p.is_file() or not p.with_suffix(p.suffix + '.lock').is_file():
+    raise SystemExit('Hub-initialized shared ledger/lock required before installation')
+for key in ('VF_COLLECTOR_ENVELOPE', 'VF_COLLECTOR_ENVELOPE_SHA256'):
+    print('<key>' + key + '</key><string>' + escape(os.environ[key]) + '</string>')
+PYGUARD
+)"
   first=""
   for proj in nfl-weather cfb-weather sharp-markets; do
     k="$(env_key "$ROOT/$proj/.env")"

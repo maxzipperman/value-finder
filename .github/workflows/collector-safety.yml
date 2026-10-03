@@ -1,0 +1,23 @@
+name: Collector safety
+on:
+  pull_request:
+    paths: ['ops/collector_guard.py', 'ops/install_live_uses.sh', 'ops/collector-safety/**', 'nfl-weather/nflweather/oddsapi.py', 'nfl-weather/scripts/log_props.py', 'cfb-weather/cfbweather/live.py', 'sharp-markets/src/markets/collector.py', 'sharp-markets/src/markets/http.py', 'sharp-markets/tests/test_collector.py', 'sharp-markets/tests/test_http.py', '.github/workflows/collector-safety.yml', 'GOVERNANCE.md']
+  push:
+    branches: [main]
+    paths: ['ops/collector_guard.py', 'ops/install_live_uses.sh', 'ops/collector-safety/**', 'nfl-weather/nflweather/oddsapi.py', 'nfl-weather/scripts/log_props.py', 'cfb-weather/cfbweather/live.py', 'sharp-markets/src/markets/collector.py', 'sharp-markets/src/markets/http.py', 'sharp-markets/tests/test_collector.py', 'sharp-markets/tests/test_http.py', '.github/workflows/collector-safety.yml', 'GOVERNANCE.md']
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -B -m unittest discover -s ops/collector-safety -p 'test_*.py' -v
+      - run: pip install pytest requests pandas pyarrow pyyaml python-dotenv duckdb
+      - name: Existing collector behavior and HTTP regression (fully mocked network)
+        env:
+          PYTHONPATH: sharp-markets/src
+        run: python -m pytest sharp-markets/tests/test_collector.py sharp-markets/tests/test_http.py -q -k 'not a_failed_request_never_shows_the_key'

@@ -1,5 +1,6 @@
 """The NBA forward collector (markets.collector), against fake Kalshi and Odds API sessions. No network."""
 import csv
+import fcntl
 import json
 from datetime import date, datetime, timedelta, timezone
 
@@ -26,7 +27,7 @@ class FakeOdds:
     def __init__(self, remaining=4_000_000):
         self.calls, self.remaining = [], remaining
 
-    def get(self, url, params=None, timeout=None):
+    def get(self, url, params=None, timeout=None, allow_redirects=True):
         self.calls.append(url)
         if url.endswith("/events"):
             return Resp(200, [{"id": "e1", "commence_time": TIP.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -51,6 +52,11 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(col, "QUOTA_FILE", tmp_path / "quota.json")
     for v in ("ODDS_API_TIER", "ODDS_BACKGROUND_FLOOR"):
         monkeypatch.delenv(v, raising=False)
+    # These legacy cadence/cache/quota tests isolate policy from paid admission.
+    # ops/collector-safety/test_guard.py exercises the REAL guard with synthetic
+    # authority/ledger, including crash, concurrency and missing authority.
+    monkeypatch.setattr(col, "paid_get", lambda session, url, params, **kw:
+                        session.get(url, params=params, timeout=60, allow_redirects=False))
     odds, kalshi = FakeOdds(), FakeKalshi()
     c = col.Collector(cfg=dict(CFG), data_dir=tmp_path, odds_session=odds, kalshi_session=kalshi, api_key="SECRET")
     c.kalshi.limiter = c.limiter
@@ -176,9 +182,10 @@ def test_lock_prevents_overlap_and_errors_are_logged(env):
     now = TIP - timedelta(hours=1)
     paid(tmp, now=now)
     (tmp / "collector" / "nba").mkdir(parents=True)
-    (tmp / "collector" / "nba" / "tick.lock").write_text("123")
-    assert c.tick(now) is None
-    (tmp / "collector" / "nba" / "tick.lock").unlink()
+    with (tmp / "collector" / "nba" / "tick.lock").open("a+") as held:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        assert c.tick(now) is None
+    # A dead owner releases the kernel lock; a stale inode alone never blocks.
 
     def boom(*a, **k):
         raise ConnectionError("down")
@@ -197,7 +204,7 @@ def test_a_network_error_note_never_holds_the_key(tmp_path, monkeypatch):
     monkeypatch.setattr(col, "QUOTA_FILE", tmp_path / "quota.json")
 
     class Down:
-        def get(self, url, params=None, timeout=None):     # what requests raises when the host can't be reached
+        def get(self, url, params=None, timeout=None, allow_redirects=True):     # what requests raises when the host can't be reached
             raise requests.ConnectionError(f"HTTPSConnectionPool(host='odds.invalid', port=443): Max retries exceeded "
                                            f"with url: /v4{url.split('/v4')[1]}?dateFormat=iso&apiKey={params['apiKey']}")
 
@@ -217,7 +224,7 @@ def test_an_echoed_error_body_never_reaches_the_heartbeat(tmp_path, monkeypatch)
     monkeypatch.setattr(col, "QUOTA_FILE", tmp_path / "quota.json")
 
     class Echo:
-        def get(self, url, params=None, timeout=None):
+        def get(self, url, params=None, timeout=None, allow_redirects=True):
             return Resp(500, {"message": f"oops GET /v4/sports/basketball_nba/events?apiKey={params['apiKey']}",
                               "path": f"/moved/{params['apiKey']}"})
 
