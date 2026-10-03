@@ -6,6 +6,17 @@ Updated October 2, 2026, 7:31 PM Pacific. Maintained by hub chat.
 
 This is a readable status mirror, not purchase authority or a second queue. The repo’s [current queue](https://github.com/maxzipperman/value-finder/blob/main/sharp-markets/docs/OCTOBER_2026_QUEUE.md), exact approvals and local spending ledgers control purchases. Update this document after each completed run, stop or verified analysis.
 
+## Latest implementation checkpoint — October 2
+
+PR136 weather code is merged, **not deployed**. The CFB next-day collector and
+prospective dated adoption remain required. PR138 factual status is merged.
+PR137 is implementing the existing-frame coverage pilot; new paid credits: **0**.
+Preferred six-market gross planning bound **41,300** =500 availability +30,000 props
++10,800 older, conditional on at most two original older request IDs per game.
+Three older IDs would make it **46,700**. Neither is an exact list or authority.
+The conservative carried debit remains **170,306**, verified read-only across the
+seven current stores. Full listing expansion and bulk downloads remain held.
+
 ## Credit position
 
 | Measure | Credits | Meaning |
@@ -42,7 +53,7 @@ Amounts below are **maximum new credits or planning bounds**, not amounts alread
 | Next work | Maximum new credits | Readiness / dependency |
 |---|---:|---|
 | Cache-only coverage audit and sampling protocol | **0** | Underway. Define usable paired coverage, representative samples, confidence bounds, cost/yield and pass/skip criteria before bulk purchases. |
-| Small gap-filling coverage pilot | **52,844 provisional bound** | Conditional known frame:1,544 listings +500 selected availability +10,800 older +40,000 eight-market props; older10,800 assumes at most two original requests per selected game. The smallest proposed next measurement uses the existing frame and defers full listing discovery, reducing this bound to51,300. Existing2025NFL core metric is a285-game census, not another paid sample. Newly discovered unmeasured2025 identities could raise this to60,944; exact frame/list/cap and adapter are not approved. |
+| Small gap-filling coverage pilot | **41,300 conditional; exact cap to be frozen** | Six-market existing-frame measurement; three older IDs/game would raise gross planning to46,700. Reuse all pilot responses in the final archive; no paid authority. |
 | Finish older 2020–2022 football | **53,580** | 1,786 never-sent requests. PR #129 merged; exact offline reconciliation installed. Successor preparation merged in PR #134; new coverage gate and fresh paid approval remain. A bounded pilot must use a new adapter; every pilot attempt must be subtracted from the later residual. |
 | NFL/CFB listing discovery | **1,544** | Exact first metadata stage in PR #132. Both cache/ancestry validation blockers independently reviewed and merged in PR #132. Also waits on representative coverage measurement and the approved global predecessor. |
 | NFL/CFB market availability at two times | **7,032 currently proposed** | Full stage held for coverage-first planning; separate metadata stage after pilot/listing reconciliation. Newly discovered events can expand this list and cap. Returns availability, not prices/player counts. |

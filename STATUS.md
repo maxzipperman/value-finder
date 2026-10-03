@@ -221,3 +221,13 @@ large purchases. The existing 1,544/7,032 metadata proposals are not selected pa
 scope. PR132 continues safety repair only; weather is a separate next PR.
 
 **Hub acquisition update (October2):** PR132 safety repair and PR134 successor/coverage-first preparation are merged. PR133 merged coverage/settlement primitives still leave real grading disabled pending timing registration. The285-game2025NFL known F3a REG/playoff frame census provides fresh two-family entry/close quote pairs in215games across retail books, but66 at fixedDraftKings (close-only192). These support different analysis uses. The bounded coverage-pilot adapter and exact reconciled sample/cap remain under preparation; no new paid calls were made. See [running progress](HUB_PROGRESS.md).
+
+**Prospective coverage pilot design (Oct 2, DRAFT):**
+[New sibling adapter architecture](strategy-research/coverage-pilot-v1/DESIGN.md)
+preserves the installed older recovery and executed freezes. Reuse the NFL2025
+285-game census; do not buy another50 games. Preferred six-market existing-frame planning bound41,300 credits (or46,700
+if older mapping requires three original IDs/game) is not an executable cap. The sibling executor and primary classifier are implemented with synthetic
+receipt/reuse, overlap, binding and crash verification; exact frozen union and
+independent current-head review remain required before seed/list/paid authority.
+Synthetic orchestration is not a live paid preflight.
+All full listing/availability/bulk purchases remain held for coverage measurement.
