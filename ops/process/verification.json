@@ -18,7 +18,9 @@
     "docs/status-archive/2026-10-03-before-simplification.md",
     "docs/status-archive/manifest.json",
     "GOVERNANCE.md",
-    "dashboard/vfdash/__init__.py"
+    "dashboard/vfdash/__init__.py",
+    "sharp-markets/src/markets/research/props_grade/registration.py",
+    "nfl-weather/PREREGISTRATION_PROPS.md"
   ],
   "commands": [
     [

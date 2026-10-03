@@ -30,6 +30,7 @@ historical zero counts. This status cleanup changes no trigger, timing, grading,
 stake or registration. Paper-only project policy remains in force.
 
 - **Variants:** running count **294**; unchanged by this governance migration.
+  Reader-compatible running-count expression: 0.05 / 294.
   Registered families, eligibility and multiplicity remain controlled by their protocols.
 
 ## Paid data — sole current queue

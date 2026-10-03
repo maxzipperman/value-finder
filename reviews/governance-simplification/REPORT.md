@@ -17,11 +17,11 @@ tracked inputs, tests, workflows, dependency files, policy and unknown Markdown
 remain bound. Review scope/test evidence reuse is never authenticated approval.
 Original reviewer provenance and current disposition remain required.
 
-The focused saved run passed **33 tests**, including tampered/changed input
+The focused saved run passed **34 tests**, including tampered/changed input
 invalidation, author-added exclusion rejection, pending/reservation/coverage guards,
 immutable packet/archive paths, real dashboard parsing and actual startup functions
 with synthetic adapters. The saved artifact records a clean tested source commit
-3758ac264d64513674f31280893abca2b746abcc. Evidence-only publication commits can reuse
+(see saved test-evidence.json; the grader-parser repair changes tested inputs). Evidence-only publication commits can reuse
 it after verify-test; CI provides separate Linux/Python3.12 provenance.
 
 The read-only path audit checked **21** pre-existing frozen scopes with **zero
@@ -48,3 +48,8 @@ paid authorization syntax remain unchanged.
 
 Next: worker independently reviews the final head; hub reviews and merges under
 the existing dual rule. Acquisition remains hub-only under its separate authority.
+
+The post-download audit exposed a second STATUS consumer: props registration.bar
+reads literal 0.05 / N. The shortened file preserves the prior294 expression, and
+a regression runs the actual reader against archived and current status, checking
+equal runtime count and unchanged registration header. No registration is edited.

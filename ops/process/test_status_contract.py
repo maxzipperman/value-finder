@@ -1,5 +1,6 @@
 import hashlib
 import importlib
+import importlib.util
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +14,20 @@ status_md = importlib.import_module('vfdash.status_md')
 
 
 class StatusContracts(unittest.TestCase):
+    def test_props_registration_reader_retains_original_runtime_count(self):
+        path = ROOT / 'sharp-markets/src/markets/research/props_grade/registration.py'
+        spec = importlib.util.spec_from_file_location('status_registration_contract', path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        prereg = ROOT / 'nfl-weather/PREREGISTRATION_PROPS.md'
+        old = module.bar(ROOT / 'docs/status-archive/2026-10-03-before-simplification.md', prereg)
+        new = module.bar(ROOT / 'STATUS.md', prereg)
+        self.assertEqual(old.status_count, 294)
+        self.assertEqual(new.status_count, old.status_count)
+        self.assertEqual(new.count, old.count)
+        self.assertEqual(new.header, old.header)
+
     def test_archive_bytes_match_pinned_source(self):
         import subprocess
         record = json.loads((ROOT / 'docs/status-archive/manifest.json').read_text())
