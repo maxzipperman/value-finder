@@ -39,11 +39,15 @@ def main():
     parser.add_argument('--no-thinking', action='store_true')
     parser.add_argument('--hard-pair', action='store_true')
     parser.add_argument('--recovery-run', action='store_true')
+    parser.add_argument('--native-defaults', action='store_true')
+    parser.add_argument('--qwen-sampling', action='store_true')
     parser.add_argument('--tasks', nargs='+', choices=PROTOCOL['tasks'] + list(HARD_TASKS))
     args = parser.parse_args()
     if args.hard_pair:
         PROTOCOL['deadline_seconds'] = 600
     selected = args.models or PROTOCOL['models']
+    if args.qwen_sampling and (not args.hard_pair or any(not m.startswith('qwen3.8:') for m in selected)):
+        parser.error('Qwen sampling diagnostic requires hard-pair and explicit Qwen3.8 models')
     inventory = api('tags')['models']
     available = {m['name']: m for m in inventory}
     missing = [m for m in selected if m not in available]
@@ -70,6 +74,10 @@ def main():
     for task in (args.tasks or (list(HARD_TASKS) if args.hard_pair else PROTOCOL['tasks'])):
         for model in selected:
             prefix = ('hard-pair-recovery-' if args.recovery_run else 'hard-pair-') if args.hard_pair else ''
+            if args.hard_pair and args.native_defaults:
+                prefix = 'hard-native-'
+            if args.qwen_sampling:
+                prefix = 'hard-sampled-'
             out = ROOT / (prefix + model.replace(':', '-') + ('-no-thinking' if args.no_thinking else ''))
             out.mkdir(exist_ok=True)
             result_path = out / (task + '-result.json')
@@ -80,7 +88,12 @@ def main():
             body = dict(model=model, messages=[dict(role='user', content=prompt)],
                         stream=False, keep_alive=0,
                         think=False if args.no_thinking else ('medium' if model.startswith('gpt-oss:') else True),
-                        options=PROTOCOL['options'] | ({'draft_num_predict': 0} if args.hard_pair else {}))
+                        options=PROTOCOL['options'] | ({'draft_num_predict': 0} if args.hard_pair and not args.native_defaults else {}))
+            if args.qwen_sampling:
+                body['options'].update(temperature=0.7 if args.no_thinking else 1.0,
+                                       top_p=0.8 if args.no_thinking else 0.95,
+                                       top_k=20, min_p=0, presence_penalty=1.5 if args.no_thinking else 0,
+                                       repeat_penalty=1.0)
             (out / (task + '-request.json')).write_text(json.dumps(body, indent=2) + '\n')
             start = time.monotonic()
             try:
