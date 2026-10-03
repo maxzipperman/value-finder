@@ -54,3 +54,30 @@ def test_actual_poll_script_routes_to_disabled_admission(isolated,monkeypatch,ca
     assert 'enforcement bridge not implemented' in capsys.readouterr().out
     assert calls==[]
     assert not (fwd/'trigger_polls.csv').exists()
+
+
+@pytest.mark.parametrize('role', ['cfb-alert','cfb-close',None])
+def test_all_cfb_totals_roles_held_without_test_gate(isolated,role):
+    _,calls=isolated
+    assert fetch.odds_api_totals(NAMES,role=role,request_slot='synthetic').empty
+    assert calls==[]
+
+
+def test_actual_cfb_roles_reserve_at_common_boundary_and_manual_denied(isolated,monkeypatch):
+    from ops.shared_account_testkit import synthetic_account
+    root,_=isolated
+    params=dict(bookmakers=','.join(fetch.LIVE_BOOKS),markets='totals',oddsFormat='american',dateFormat='iso')
+    with synthetic_account(root/'account','CFB_SYNTHETIC_ONLY',params) as (session,state):
+        monkeypatch.setattr(fetch,'session',session)
+        for role in ('cfb-alert','cfb-close'):
+            assert fetch.odds_api_totals(NAMES,role=role,request_slot='synthetic-observation').empty
+        assert isinstance(live.live_totals(NAMES),pd.DataFrame)
+        used_before=quota.read()['used']
+        files={p:p.read_bytes() for p in (root/'raw'/'oddsapi'/'live').glob('*.json')}
+        fetch.odds_api_totals(NAMES,role='cfb-close',request_slot='synthetic-observation')
+        assert len(session.calls)==3
+        assert quota.read()['used']==used_before
+        assert all(p.read_bytes()==b for p,b in files.items())
+        assert fetch.odds_api_totals(NAMES).empty # manual has no role
+        assert len(session.calls)==3
+        assert {a['label'] for a in state()['attempts'].values()}=={'cfb-alert','cfb-close','cfb-trigger'}

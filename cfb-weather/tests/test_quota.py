@@ -33,6 +33,10 @@ def isolated(tmp_path, monkeypatch):
 
 
 def calls(monkeypatch, response):
+    from ops import collector_guard
+    # Downstream quota compatibility only; guard integration tested separately.
+    monkeypatch.setattr(collector_guard, "paid_get", lambda session, url, params, **kw:
+                        session.get(url, params=params, timeout=60))
     seen = []
 
     def get(url, params=None, timeout=None):

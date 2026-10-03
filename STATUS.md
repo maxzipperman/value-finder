@@ -87,3 +87,12 @@ owned by [GOVERNANCE.md](GOVERNANCE.md), research conventions by [CLAUDE.md](CLA
 Append historical snapshots without changing existing snapshot bytes. GitHub issues
 hold the [backlog](https://github.com/maxzipperman/value-finder/issues); do not copy
 historical narrative back into the current queue.
+
+## Disabled shared-account integration (PR #167)
+
+Stage 1 source work covers the eight recurring paid roles under one admission
+boundary. Production and installer remain unconditionally held. This changes no
+paid queue, schedules, registrations or runtime. Independent review/CI precede
+source adoption; historical-writer integration or enforced exclusion, authenticated
+account state and exact hub authority precede any later activation. See
+[`stage 1 contract`](ops/shared-account-bridge/STAGE1.md).

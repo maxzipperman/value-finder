@@ -48,6 +48,9 @@ from nflweather import oddsapi
 from nflweather.config import RAW, ROOT
 from nflweather.market import valid_odds
 
+sys.path.insert(0, str(ROOT.parent))
+from ops.collector_guard import close_slot
+
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
 MAX_TRIES = 2
 NEAR = pd.Timedelta(hours=6)       # a feed event belongs to a game only if it starts within this of the kickoff
@@ -132,10 +135,11 @@ def counted(payload):
 
 oddsapi.parse = counted     # the parser drops an event no logged book prices, so the count is taken before it
 try:
-    pin = oddsapi.live(markets=("totals",))
+    pin = oddsapi.live(markets=("totals",), role="nfl-close",
+                        request_slot=close_slot(slots, state["tries"], now.to_pydatetime()))
 except SystemExit as e:
     sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)} ({e}); "
-                   "will retry inside the window"))
+                   "later scheduled observation only; uncertain admission remains held"))
 finally:
     oddsapi.parse = parse
 no_events = pin.empty       # amendment 7: no usable feed event, a slot with no feed events

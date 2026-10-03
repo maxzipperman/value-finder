@@ -81,3 +81,55 @@ def test_actual_props_script_lists_free_events_but_never_sends_due_paid_slot(iso
     assert len(calls) == 1 and calls[0].endswith('/events')
     assert not (root/'data'/'forward'/'props_state.json').exists()
     assert not list(root.rglob('*_T24.json'))
+
+
+@pytest.mark.parametrize('role', ['nfl-alert','nfl-close','nfl-trigger',None])
+def test_all_nfl_live_roles_are_held_without_test_gate(isolated,role):
+    _,calls,_=isolated
+    with pytest.raises(oddsapi.OddsAPIUnavailable,match='enforcement bridge not implemented'):
+        oddsapi.live(markets=('totals',),role=role,request_slot='synthetic')
+    assert calls==[]
+
+
+def test_actual_nfl_roles_reserve_at_common_boundary_then_replay_original_clock(isolated,monkeypatch):
+    from ops.shared_account_testkit import synthetic_account
+    root,_,_=isolated
+    params=dict(bookmakers=','.join(oddsapi.LIVE_BOOKS),markets='totals',oddsFormat='american',dateFormat='iso')
+    with synthetic_account(root/'account',KEY,params) as (session,state):
+        monkeypatch.setattr(oddsapi,'session',session)
+        for role in ('nfl-alert','nfl-close','nfl-trigger'):
+            oddsapi.live(markets=('totals',),role=role,request_slot='synthetic-observation',tag='poll' if role=='nfl-trigger' else None)
+        used_before=quota.read()['used']
+        first_files={p:p.read_bytes() for p in (oddsapi.CACHE/'live').glob('*.json')}
+        oddsapi.live(markets=('totals',),role='nfl-close',request_slot='synthetic-observation')
+        assert len(session.calls)==3
+        assert quota.read()['used']==used_before
+        assert {a['label'] for a in state()['attempts'].values()}=={'nfl-alert','nfl-close','nfl-trigger'}
+        assert all(p.read_bytes()==b for p,b in first_files.items())
+        with pytest.raises(oddsapi.OddsAPIUnavailable):
+            oddsapi.live(markets=('totals',)) # manual cannot invent a role
+        with pytest.raises(oddsapi.OddsAPIUnavailable):
+            oddsapi.historical(pd.Timestamp('2025-01-01T00:00Z')) # no authority/adapter
+        assert len(session.calls)==3
+
+
+def test_actual_props_boundary_reserves_nine_markets(isolated,monkeypatch):
+    from ops.shared_account_testkit import synthetic_account
+    root,_,_=isolated
+    params=dict(bookmakers=','.join(live.PROP_BOOKS),markets=','.join(live.PROP_MARKETS),
+                oddsFormat=live.PROP_ODDS_FORMAT,dateFormat='iso')
+    with synthetic_account(root/'account',KEY,params) as (session,state):
+        monkeypatch.setattr(oddsapi,'session',session)
+        oddsapi._get(f'/sports/{oddsapi.SPORT}/events/synthetic/odds',params,
+                     collector_label='nfl-props',request_slot='synthetic:24')
+        a=next(iter(state()['attempts'].values()))
+        assert a['label']=='nfl-props' and a['reserved']==len(live.PROP_MARKETS)
+        assert len(session.calls)==1
+
+
+def test_board_helper_explicitly_forwards_alert_role(isolated,monkeypatch):
+    from nflweather import board
+    seen=[]
+    monkeypatch.setattr(oddsapi,'live',lambda **kwargs:(seen.append(kwargs) or pd.DataFrame()))
+    assert board._pinnacle_live(role='nfl-alert') is None
+    assert seen==[{'markets':('totals',),'role':'nfl-alert'}]

@@ -160,7 +160,7 @@ def one_row_per_game(oa: pd.DataFrame) -> pd.DataFrame:
     return oa.loc[sorted(keep)]
 
 
-def compute(days=8, refresh=True, prices=True):
+def compute(days=8, refresh=True, prices=True, *, odds_role=None):
     """`prices`: price at The Odds API when a key is set (1 credit); False (dry runs) uses ESPN only."""
     if refresh:
         fetch.fetch_cfbfastr([fetch.current_season()])
@@ -206,7 +206,7 @@ def compute(days=8, refresh=True, prices=True):
     # prices: The Odds API when a key is set (licensed, Pinnacle first), else ESPN/DraftKings
     names = odds_team_names()
     # prices=False (dry runs) skips The Odds API so it costs no credits
-    oa = fetch.odds_api_totals(names) if prices else pd.DataFrame(columns=["home_team", "away_team"])
+    oa = fetch.odds_api_totals(names, role=odds_role) if prices else pd.DataFrame(columns=["home_team", "away_team"])
     oa = oa.dropna(subset=["home_team", "away_team"])
     if len(oa):
         oa["day"] = pd.to_datetime(oa.commence_utc, utc=True).dt.strftime("%Y-%m-%d")

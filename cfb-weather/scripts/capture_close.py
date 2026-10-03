@@ -46,6 +46,9 @@ from cfbweather.board import odds_team_names
 from cfbweather.build import schedules
 from cfbweather.config import ROOT
 
+sys.path.insert(0, str(ROOT.parent))
+from ops.collector_guard import close_slot
+
 WINDOW = (pd.Timedelta(minutes=2), pd.Timedelta(minutes=20))
 MAX_TRIES = 2
 NEAR = pd.Timedelta(hours=6)       # a feed event belongs to a game only if it starts within this of the kickoff
@@ -116,9 +119,10 @@ if not slots:
     sys.exit()
 
 due = due[due.start_utc.dt.strftime("%Y-%m-%dT%H:%MZ").isin(slots)]
-oa = fetch.odds_api_totals(odds_team_names()).dropna(subset=["home_team", "away_team"])
+oa = fetch.odds_api_totals(odds_team_names(), role="cfb-close",
+                        request_slot=close_slot(slots, state["tries"], now.to_pydatetime())).dropna(subset=["home_team", "away_team"])
 if oa.empty:
-    sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)}; will retry inside the window"))
+    sys.exit(print(f"{now:%Y-%m-%d %H:%M}Z close capture: no prices for {', '.join(slots)}; later scheduled observation only; uncertain admission remains held"))
 oa = oa.reset_index(drop=True).rename_axis("event").reset_index()     # each feed event, numbered in feed order
 pick, notes = one_event(due, oa)
 oa = oa.merge(pick, on="event")               # only the feed event each due game takes, labelled with its game

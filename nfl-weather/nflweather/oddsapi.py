@@ -104,15 +104,19 @@ def _get(path, params, *, collector_label=None, request_slot=None):
     (the board) treat as "no price". Every response's quota headers go to quota.record."""
     try:
         keyed = {**params, "apiKey": api_key()}
-        if collector_label:
-            r = paid_get(session, f"{BASE}{path}", keyed, label=collector_label, request_slot=request_slot)
+        # Only the known free event listing bypasses paid admission. No implicit role.
+        if path == f"/sports/{SPORT}/events" and params == {"dateFormat": "iso"}:
+            if session.get_adapter(f"{BASE}{path}").max_retries.total != 0:
+                raise Blocked("Free listing transport retries enabled")
+            r = session.get(f"{BASE}{path}", params=keyed, timeout=60, allow_redirects=False)
         else:
-            r = session.get(f"{BASE}{path}", params=keyed, timeout=60)
+            r = paid_get(session, f"{BASE}{path}", keyed, label=collector_label, request_slot=request_slot)
     except Blocked as e:
         raise OddsAPIUnavailable(str(e)) from None
     except requests.RequestException as e:
         raise OddsAPIUnavailable(f"The Odds API is unreachable ({type(e).__name__})") from e
-    quota.record(r, "nfl-weather")
+    if not getattr(r, "replayed", False):
+        quota.record(r, "nfl-weather")
     if r.status_code == 401:
         raise OddsAPIUnavailable("The Odds API rejected the key, or the plan is out of credits (401)")
     if r.status_code == 422 and "historical" in path:
@@ -124,13 +128,20 @@ def _get(path, params, *, collector_label=None, request_slot=None):
     return r
 
 
-def live(markets=("totals", "spreads"), budget: Budget | None = None, tag: str | None = None):
+def live(markets=("totals", "spreads"), budget: Budget | None = None, tag: str | None = None,
+         *, role: str | None = None, request_slot: str | None = None):
     """Current lines at LIVE_BOOKS (Pinnacle first) for every upcoming NFL game. Costs len(markets)
     credits. Skipped when quota.check() says the month's credits are too low for this kind of run.
 
     The raw file is named to the second, plus `_{tag}` when given (the trigger poller passes "poll"),
     so the alerts, close capture and the poller never overwrite each other's snapshot in the same
     minute. The payload's snapshot_utc keeps its minute format."""
+    if tag == "poll":
+        if role not in (None, "nfl-trigger"):
+            raise OddsAPIUnavailable("Conflicting caller role")
+        role = "nfl-trigger"
+    if role in {"nfl-alert", "nfl-trigger"} and request_slot is None:
+        request_slot = slot(datetime.now(timezone.utc), 14400 if role == "nfl-alert" else 600)
     why = quota.check()
     if why:
         raise OddsAPIUnavailable(why)
@@ -140,9 +151,14 @@ def live(markets=("totals", "spreads"), budget: Budget | None = None, tag: str |
     dest.parent.mkdir(parents=True, exist_ok=True)
     r = _get(f"/sports/{SPORT}/odds", dict(bookmakers=",".join(LIVE_BOOKS), markets=",".join(markets),
                                             oddsFormat="american", dateFormat="iso"),
-             **({"collector_label": "nfl-trigger", "request_slot": slot(datetime.now(timezone.utc), 600)}
-                if tag == "poll" else {}))
-    if budget:
+             collector_label=role, request_slot=request_slot)
+    # Replay keeps the original decision-time quote clock, never a restart's time.
+    observed = getattr(r, "observed_utc", None)
+    if observed is not None:
+        now = pd.Timestamp(observed)
+        ts = now.strftime("%Y-%m-%dT%H%MZ")
+        dest = CACHE / "live" / f"{now:%Y-%m-%dT%H%M%SZ}{'_' + tag if tag else ''}.json"
+    if budget and not getattr(r, "replayed", False):
         budget.charge(r)
     payload = {"snapshot_utc": ts, "credits_last": r.headers.get("x-requests-last"),
                "credits_remaining": r.headers.get("x-requests-remaining"), "data": r.json()}
@@ -160,7 +176,7 @@ def historical(ts: pd.Timestamp, markets=("totals",), budget: Budget | None = No
     dest.parent.mkdir(parents=True, exist_ok=True)
     r = _get(f"/historical/sports/{SPORT}/odds", dict(bookmakers="pinnacle", markets=",".join(markets),
                                                        oddsFormat="american", dateFormat="iso", date=stamp))
-    if budget:
+    if budget and not getattr(r, "replayed", False):
         budget.charge(r)
     js = r.json()
     js["requested_utc"] = stamp

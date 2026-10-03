@@ -70,7 +70,7 @@ def damaged_notice(kept):
 def run(at):
     """One alert run. `at` holds the stage the run has reached and what it has counted so far, so a
     failure anywhere is recorded with both."""
-    up = board.compute(prices=not args.dry_run)  # a dry run spends no Odds API credits
+    up = board.compute(prices=not args.dry_run, odds_role="cfb-alert")  # a dry run spends no Odds API credits
     if up.empty:
         return print("no FBS games in the next 8 days")
     at["counts"] = dict(games=len(up), signals=int((up.rule_b == "SIGNAL").sum() + (up.rule_ht == "SIGNAL").sum()),

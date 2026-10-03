@@ -51,7 +51,7 @@ def capture(tmp_path, monkeypatch, capsys, now, events):
     monkeypatch.setattr(config, "ROOT", tmp_path)
     monkeypatch.setattr(build, "schedules", lambda: SCHEDULE.copy())
     monkeypatch.setattr(board, "odds_team_names", lambda: NAMES)
-    monkeypatch.setattr(fetch, "odds_api_totals", lambda names: fetch.parse_odds_api(events, names, now))
+    monkeypatch.setattr(fetch, "odds_api_totals", lambda names, **kwargs: fetch.parse_odds_api(events, names, now))
     monkeypatch.setattr(sys, "argv", ["capture_close.py", "--now", now])
     try:
         runpy.run_path(str(ROOT / "scripts" / "capture_close.py"), run_name="__main__")

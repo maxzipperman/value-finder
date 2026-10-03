@@ -183,7 +183,7 @@ def run(at):
     """One alert run. `at` holds the stage the run has reached and what it has counted so far, so a
     failure anywhere is recorded with both."""
     # a dry run spends no Odds API credits
-    up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run)
+    up = board.compute(days=args.days, refresh=True, pinnacle=oddsapi.has_key() and not args.dry_run, odds_role="nfl-alert")
     now = pd.Timestamp.now(tz="UTC")
     if up.empty:
         return print(f"{now:%Y-%m-%d %H:%M}Z no games in the next {args.days} days")

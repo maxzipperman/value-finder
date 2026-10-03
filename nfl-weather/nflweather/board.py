@@ -135,10 +135,10 @@ def one_row_per_game(pin: pd.DataFrame) -> pd.DataFrame:
     return pin.loc[sorted(keep)]
 
 
-def _pinnacle_live():
+def _pinnacle_live(*, role=None):
     from . import oddsapi
     try:
-        df = oddsapi.live(markets=("totals",))
+        df = oddsapi.live(markets=("totals",), role=role)
     except SystemExit as e:  # no key, out of credits, API down: board still works on nflverse lines
         print(f"  Pinnacle unavailable: {e}")
         return None
@@ -192,7 +192,7 @@ def use_pinnacle(up, pin):
     return up
 
 
-def compute(days=8, refresh=True, pinnacle=False):
+def compute(days=8, refresh=True, pinnacle=False, *, odds_role=None):
     """`pinnacle`: price at live Pinnacle (1 Odds API credit; quota.py may skip it when credits are low)."""
     if refresh:
         fetch.fetch_schedule()
@@ -237,7 +237,7 @@ def compute(days=8, refresh=True, pinnacle=False):
 
     # market: Pinnacle when available, else the nflverse line and prices
     LAST_UNMAPPED[:] = []
-    up = use_pinnacle(up, _pinnacle_live() if pinnacle else None)
+    up = use_pinnacle(up, _pinnacle_live(role=odds_role) if pinnacle else None)
     up["p_market"] = market_p_under(up.mkt_under, up.mkt_over, "shin")
     up["edge"] = up.p_under - up.p_market
 
