@@ -91,8 +91,9 @@ file modes/object identities in both the base and actual merge-result tree,
 including source, tests, locks, workflows, config, registrations and eligibility.
 Only exact explanatory paths adopted in the base policy can be excluded; the PR
 cannot exclude its own change. Unknown Markdown, policy changes, new/deleted/type
-changed paths, base changes and environment changes invalidate reuse. STATUS is
-the sole initial exclusion, still checked for parser/archive compatibility.
+changed paths, base changes and environment changes invalidate reuse. The initial
+policy has no exclusions. All STATUS bytes remain bound, including queue budgets
+and decisions; an adopted policy cannot exclude STATUS or other control paths.
 Effects can require review even on an excluded path; no automatic merge/tier
 downgrade follows from that classification hint.
 

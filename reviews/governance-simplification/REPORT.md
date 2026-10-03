@@ -11,13 +11,13 @@ Pure explanatory updates need automated checks; effects and path floors retain
 review for uncertainty, rules and consequential tests. No self-downgrade.
 
 The existing process CI now binds adopted base and actual merge-result trees and
-compares prior scope artifacts automatically. Only STATUS is initially excluded
-from substantive review identity; its parser/archive checks still run. All other
+compares prior scope artifacts automatically. The initial policy has no exclusions; all STATUS bytes, including queue budgets
+and decisions, remain bound. Adopted STATUS exclusions are rejected. All
 tracked inputs, tests, workflows, dependency files, policy and unknown Markdown
 remain bound. Review scope/test evidence reuse is never authenticated approval.
 Original reviewer provenance and current disposition remain required.
 
-The focused saved run passed **34 tests**, including tampered/changed input
+The focused saved run passed **36 tests**, including tampered/changed input
 invalidation, author-added exclusion rejection, pending/reservation/coverage guards,
 immutable packet/archive paths, real dashboard parsing and actual startup functions
 with synthetic adapters. The saved artifact records a clean tested source commit
@@ -53,3 +53,8 @@ The post-download audit exposed a second STATUS consumer: props registration.bar
 reads literal 0.05 / N. The shortened file preserves the prior294 expression, and
 a regression runs the actual reader against archived and current status, checking
 equal runtime count and unchanged registration header. No registration is edited.
+
+Independent-review repair: a STATUS budget change from 100 to 1,000,000 now
+changes review identity, requires effect review and rejects evidence reuse. The
+positive exclusion fixture is a separately adopted explanatory document; it gives
+no exemption to STATUS or an author-added exclusion.

@@ -15,8 +15,8 @@ class ReviewGuards(unittest.TestCase):
         subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
         for name, value in {'source.py': 'pass', 'test_source.py': '# test',
                             'lock.json': '{}', 'protocol.md': '# eligibility',
-                            '.github/workflows/check.yml': '# CI', 'STATUS.md': '# status',
-                            g.POLICY: json.dumps({'version': 1, 'explanatory_paths': ['STATUS.md']})}.items():
+                            '.github/workflows/check.yml': '# CI', 'STATUS.md': '# status', 'explanation.md': '# prose',
+                            g.POLICY: json.dumps({'version': 1, 'explanatory_paths': ['explanation.md']})}.items():
             self.write(name, value)
         self.base = self.save()
 
@@ -34,9 +34,9 @@ class ReviewGuards(unittest.TestCase):
     def record(self, base=None):
         return g.review_inputs(self.root, base or self.base, 'HEAD', {'python': 'synthetic', 'workflow': 'bound'})
 
-    def test_explicit_status_reuse_and_current_commit_binding(self):
+    def test_explicit_explanation_reuse_and_current_commit_binding(self):
         saved = self.record()
-        self.write('STATUS.md', '# refreshed current state')
+        self.write('explanation.md', '# refreshed explanation')
         head = self.save()
         now = self.record()
         self.assertEqual(now['merge_result_commit'], head)
@@ -58,10 +58,10 @@ class ReviewGuards(unittest.TestCase):
 
     def test_author_cannot_add_exclusion_or_self_authorize(self):
         saved = self.record()
-        self.write(g.POLICY, json.dumps({'version': 1, 'explanatory_paths': ['STATUS.md', 'protocol.md']}))
+        self.write(g.POLICY, json.dumps({'version': 1, 'explanatory_paths': ['explanation.md', 'protocol.md']}))
         self.write('protocol.md', '# weaker rule')
         self.save()
-        self.assertEqual(self.record()['excluded_paths'], ['STATUS.md'])
+        self.assertEqual(self.record()['excluded_paths'], ['explanation.md'])
         with self.assertRaises(ValueError): g.verify_review(self.record(), saved)
         forged = copy.deepcopy(saved); forged['authorization'] = True
         with self.assertRaises(ValueError): g.verify_review(saved, forged)
@@ -100,6 +100,24 @@ class ReviewGuards(unittest.TestCase):
         self.assertFalse(result['violations'])
         self.assertTrue(result['coverage_gaps'])
         self.assertFalse(result['runtime_safety_proven'])
+
+    def test_status_budget_change_invalidates_review_identity(self):
+        self.write('STATUS.md', '## Paid data\nMaximum new credits: 100\n')
+        base = self.save()
+        saved = self.record(base)
+        self.write('STATUS.md', '## Paid data\nMaximum new credits: 1000000\n')
+        self.save()
+        now = self.record(base)
+        self.assertTrue(now['effect_review_required'])
+        self.assertNotEqual(saved['relevant_identity'], now['relevant_identity'])
+        with self.assertRaisesRegex(ValueError, 'changed'):
+            g.verify_review(now, saved)
+
+    def test_adopted_status_exclusion_is_rejected(self):
+        self.write(g.POLICY, json.dumps({'version': 1, 'explanatory_paths': ['STATUS.md']}))
+        bad_base = self.save()
+        with self.assertRaisesRegex(ValueError, 'rule path'):
+            self.record(bad_base)
 
     def test_adopted_rule_exclusion_is_rejected(self):
         self.write(g.POLICY, json.dumps({'version': 1, 'explanatory_paths': ['STRATEGY.md']}))

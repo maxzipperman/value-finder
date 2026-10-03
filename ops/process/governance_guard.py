@@ -60,7 +60,7 @@ def review_inputs(root, base, head, environment):
                    '..' in PurePosixPath(p).parts for p in exclusions)):
         raise ValueError('only explicit canonical explanatory paths may be excluded')
     forbidden = ('GOVERNANCE', 'CLAUDE', 'AGENTS', 'STRATEGY', 'PREREGISTRATION',
-                 'ELIGIBILITY', 'PROTOCOL', 'POLICY')
+                 'ELIGIBILITY', 'PROTOCOL', 'POLICY', 'STATUS')
     if any(any(token in Path(p).name.upper() for token in forbidden) for p in exclusions):
         raise ValueError('control or rule path cannot be excluded')
     # Deletion/type changes/new paths are substantive even for an approved path.
