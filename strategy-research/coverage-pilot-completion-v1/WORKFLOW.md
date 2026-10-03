@@ -1,10 +1,10 @@
 # Frozen existing-frame pilot: completion workflow
 
-Prepared October2 from merged PR143 commit `912016b4820604324a0f4213784678c7cbd1489d`. This is a bounded implementation handoff, not a statistical result or authority to run the final look. No receipt payloads, outcomes or sealed2026 were inspected for this handoff. The hub is running the sole executor.
+Prepared October2 from merged PR143 commit `912016b4820604324a0f4213784678c7cbd1489d`. This is a bounded implementation handoff, not a statistical result or authority to run the final look. No receipt payloads, outcomes or sealed2026 were inspected for this handoff. The hub has confirmed completion of the sole executor.
 
 ## Readiness
 
-**Not ready for final measurement yet.** Two prerequisites remain: (1) hub confirmation of complete receipt/counter reconciliation, with exact completion pins; (2) independent review and merge of the implemented source-bound sibling adapter joining designated slots to the existing pure classifier/bounds/final-record helpers. The CLI is implemented but has not been run on production receipts. No additional paid data, forecast joins, settlement outcomes, new variants or sample expansion is required for this existing-frame quote-coverage look.
+**Not ready for final measurement yet.** Two prerequisites remain: (1) assembling the hub-confirmed exact completion pins into the adapter binding; (2) independent review and merge of the implemented source-bound sibling adapter joining designated slots to the existing pure classifier/bounds/final-record helpers. The CLI is implemented but has not been run on production receipts. No additional paid data, forecast joins, settlement outcomes, new variants or sample expansion is required for this existing-frame quote-coverage look.
 
 | Fixed input | Value |
 | --- | --- |
@@ -128,3 +128,5 @@ Completion binding JSON schema (all hashes are externally supplied by the hub af
 ```
 
 The schema illustration uses strings only to identify placeholders; actual counter/billing fields must be integers and epoch an object. `request_evidence` contains all729 current requests plus every designated ordinary or frozen-probe reuse, exactly once by ID; frozen-probe values are the complete original frozen claim objects rather than ordinary receipt claims. Shared selected games may reference the same ID without increasing sample size. The counter replay uses the reviewed Ledger primitive on an in-memory copy with save disabled, replays the sole initial free-account observation and each saved response in approved request order, and requires exact equality with the ledger epoch/provider/carry fields. No Ledger initializer, credential factory, HTTP client or acquisition writer is invoked.
+
+Hub confirmed all729 successor requests terminal:727 completed/2 zero-bill EVENT_NOT_FOUND,24,190 billed/36,810 reserved, no pending/untouched; combined pilot charges24,400 and conservative cumulative carry207,386. Completion ledger SHA256 `0890de1e51a70b0edba45b903e8ec1d68ebafb60ba5e0fe4c1f1e23a2d20410b`, marker `e0ec579359f8940553b2abec5a317de8034063c271679d59920b1dc2584e0853`, initialization `59caee42e0f72b5bdd3aa28e72b193c1655a75d7449e2f27a9e8a9e05a553248`. Paid authority5966101110 is EXHAUSTED. Final-look authority remains absent.
