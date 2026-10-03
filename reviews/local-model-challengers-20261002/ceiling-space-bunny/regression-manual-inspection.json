@@ -1,0 +1,23 @@
+{
+  "reviewer": "author entire source inspection before original default restricted15s grader; not independent validation",
+  "all_source_inspected": true,
+  "source_sha256": "7d896d0657a4facf5a5d0bec91fcaf4e9756a1615f62243c5f00c87f6b2f6797",
+  "delivery": "Valid single-key tests.py JSON. Original AST rejects special-method names and type(exc).__name__; no generated tests executed, no oracle acceptance or mutation credit.",
+  "filter_compatibility": "Custom list special methods are intended to test validation order, and type-name access labels caught exceptions. Their rejection is a restrictive-grader compatibility issue, not a malicious-code finding. No exception diagnostic or source salvage here.",
+  "manual_semantic_errors": [
+    {
+      "claim": "Expected probability0.75 for valid-200 odds in UPDATE_EQUAL, FUTURE_SHIELD, FILTER_FIRST and reversed EXACT.",
+      "fact": "Correct-200 American odds probability is200/(200+100)=2/3, not0.75. Correct candidate would not satisfy these explicit assertions."
+    },
+    {
+      "claim": "Deep-copied malformed input list must equal original despite bare object() sentinel.",
+      "fact": "copy.deepcopy(object()) creates distinct identity without value equality; list equality can fail even when candidate leaves inputs unchanged. Visible in malformed quote/run suites."
+    }
+  ],
+  "completed_wrong_answer_not_rerolled": true,
+  "evidence": [
+    "regression-response.txt",
+    "regression-acceptance.json",
+    "../ceiling/CONTRACT.md"
+  ]
+}

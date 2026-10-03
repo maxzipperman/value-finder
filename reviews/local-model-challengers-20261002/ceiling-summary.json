@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 19,
+    "result": 20,
     "error": 0,
     "pending": 1,
-    "not_started": 10
+    "not_started": 9
   },
   "records": [
     {
@@ -27324,7 +27324,7 @@
       "family": "api",
       "model": "stealth/space-bunny-alpha",
       "task": "regression",
-      "status": "pending",
+      "status": "result",
       "folder": "ceiling-space-bunny",
       "prompt_sha256": "123cf6e07cdf909838ea44a69bf18498231fb9551e4d3f1d9be3d6b053be96f3",
       "digest": null,
@@ -27349,13 +27349,52 @@
         },
         "top_p": 0.95
       },
-      "request_sha256": "13f185c278461bc5fc2b5c41b5b5d46aebb0fdc9762d34f29c4a828379031c30"
+      "request_sha256": "13f185c278461bc5fc2b5c41b5b5d46aebb0fdc9762d34f29c4a828379031c30",
+      "returned_model": "stealth/space-bunny-alpha",
+      "wall_seconds": 405.18080395899597,
+      "provider": "Stealth",
+      "finish_reason": "stop",
+      "final_answer_bytes": 33746,
+      "usage": {
+        "prompt_tokens": 1278,
+        "completion_tokens": 39241,
+        "total_tokens": 40519,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 1218,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: disallowed name"
+          }
+        ]
+      }
     },
     {
       "family": "api",
       "model": "stealth/space-bunny-alpha",
       "task": "review",
-      "status": "not_started",
+      "status": "pending",
       "folder": "ceiling-space-bunny",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": null,
@@ -27379,7 +27418,8 @@
           }
         },
         "top_p": 0.95
-      }
+      },
+      "request_sha256": "7cb5256759e0aa8d4bee6497cc235413aa86eb5eff67d2b562294c41b83f6f5c"
     },
     {
       "family": "api",

@@ -227,3 +227,6 @@ PR147 Q8review author9/10 causes,0whollyfalse/duplicate,497s, ancillary inaccura
 
 
 PR147 ceiling checkpoint: all18 local stress responses collected and author inspected; Ornith regression fenced/extra brace and wrong interfaces/oracle expectations, review fenced delivery with6/10 real causes+1false+1non-defect annotation. SpaceBunny sampled64K implementation completed283s at reported$0, passes154/197 frozen checks;43 failures trace to omitted partial_jobs list despite counted partial rows. Completed stop output not128K target. Queue98555 continues free regression/review then9paid, no competing collector. Qualified matched32K6 remain pending until queue exits/idle. Final report/hub allocation and independent extension validation remain pending.
+
+
+PR147 SpaceBunny regression checkpoint: completed405s/39,241tokens, validtests.pyJSON but originalAST rejects special-method names; no generated tests executed/oracle/mutation credit. Manual complete source also has repeated wrong-200 probability0.75 expectations (correct2/3) and object-sentinel deepcopy equality traps. Completedstop response not128K target. Reviewpending inqueue98555, all9paidstress unstarted;qualified32K wait.

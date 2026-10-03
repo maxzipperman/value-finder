@@ -172,5 +172,15 @@
       "ceiling-space-bunny/implementation-acceptance.json"
     ],
     "reviewer": "author full source/manual inspection"
+  },
+  "stealth/space-bunny-alpha|regression|128k": {
+    "proceed": false,
+    "reason": "Stop after completed test source at405.18s below65536. Original restrictedAST rejects special-method names/type-name access; manual source also has repeated wrong-200 probability0.75 assertions and bare-object deepcopy equality. No oracle/mutation credit or source-repair diagnostic. Semantic completion, not length exhaustion.",
+    "reviewer": "author complete source inspection",
+    "evidence": [
+      "ceiling-space-bunny/regression-result.json",
+      "ceiling-space-bunny/regression-manual-inspection.json",
+      "ceiling-space-bunny/regression-acceptance.json"
+    ]
   }
 }
