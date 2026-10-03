@@ -26,7 +26,7 @@ and runs only when absent/incompatible/failed. No fuzzy cache fallback. It uploa
 a fresh provenance link even on docs-only commits. Workflow/runner/environment
 changes invalidate evidence; docs outside the test input set do not. Concurrent
 first-time runs can both miss the cache, so this is reuse, not global exactly-once
-execution. This workflow covers these process guards only; it does not pretend to
+execution. This workflow covers portable process/startup/status guards only; it does not pretend to
 replace every project's test environment or private-data acceptance.
 
 ## Purchase content versus supporting provenance
@@ -83,3 +83,40 @@ helper are assertions, not authenticators. The helper neither authorizes a run
 nor modifies runtime. A clean restart within reviewed authority needs verification
 only; any uncertainty or out-of-policy state needs separate reviewed reconciliation.
 Completed acquisition evidence remains byte-for-byte unchanged.
+
+## Automatic review scope comparison and immutable-path check
+
+CI emits `review-inputs.json`, binding the adopted **base** policy and all tracked
+file modes/object identities in both the base and actual merge-result tree,
+including source, tests, locks, workflows, config, registrations and eligibility.
+Only exact explanatory paths adopted in the base policy can be excluded; the PR
+cannot exclude its own change. Unknown Markdown, policy changes, new/deleted/type
+changed paths, base changes and environment changes invalidate reuse. The initial
+policy has no exclusions. All STATUS bytes remain bound, including queue budgets
+and decisions; an adopted policy cannot exclude STATUS or other control paths.
+Effects can require review even on an excluded path; no automatic merge/tier
+downgrade follows from that classification hint.
+
+CI compares cached scope artifacts by exact complete identity and emits
+`review-reuse.json`. This certifies unchanged scope only, **not an authenticated
+reviewer's authorization**. Link the original trusted review/artifact and get a
+current reviewer disposition; never transplant a native approval. A reusable
+passing test artifact similarly requires trusted provenance. Cache contents/hashes
+cannot authenticate their producers. Executing paid commit remains exact.
+
+`governance_guard.py audit --base <adopted commit>` rejects changes inside every
+pre-existing freeze directory and edits to existing historical archive files.
+Logical/external captured dependencies remain explicit coverage gaps requiring
+native verifiers; new packets and general Python/runtime safety are not certified.
+The check is shadow-only for those incomplete closures, never a purchase gate
+replacement. A separate successor packet is required for protected scope changes.
+
+The startup regression compiles the **actual unmodified** orchestration `run`
+function without executing module imports, uses synthetic source/authority/history
+adapters and guards every fresh bootstrap executor. It stops at registration and
+blocks keys, provider transport, ledger and paid loop. Negative cases cover invalid
+closure, draft protocol, revoked authority and source drift under lock. It does
+not run an active captured executor, authenticate native captures or test paid
+execution. Static import checks remain a limited additional check.
+
+Future record shape and isolated-role setup are in [IDENTITIES.md](IDENTITIES.md).
