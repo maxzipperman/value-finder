@@ -1,5 +1,7 @@
 # Value Finder — running progress and credit plan
 
+**Completion adapter (PR144, proposed):** A sibling read-only verify/finalize adapter now joins the frozen430-game sample across current, prior and probe receipts using existing classifier/bounds/evidence helpers. Eighteen focused synthetic checks pass; fixed12-stratum denominators, quarantine failure and60/122 gross initially-unknown cost basis are retained. Independent source-bound review plus hub-confirmed terminal completion pins and explicit final-look authority still precede the production statistical look. No worker paid calls, runtime writes, outcomes or production final look.
+
 **Coverage pilot schema halt (October2, repair proposed):** The exact PR141 packet stopped after6 completed requests and1 saved pending HTTP200 response because an unrelated FanDuel h2h quote had decimal odds1.0. Observed charges are210 credits (180 completed plus30 pending); retain270 reservations and170,576 conservative cumulative carry. The proposed exact offline quarantine preserves bytes and marks the affected selected game as failure. The same430-game draw has729 untouched requests /36,810 maximum new credits. Recovery remains under review: no offline installation or successor paid authority. The hub alone installs and executes after independent review and exact approvals; no redraw or resend.
 
 
