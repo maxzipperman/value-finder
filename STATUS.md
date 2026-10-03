@@ -1,5 +1,7 @@
 # Value Finder: status
 
+**Post-successor151 cached readiness (PR155, October3):** acquired-data diagnostics preserve2,401 fixed game denominators, including missing/unbound slots. Primary NFL rush/reception and older-total pairs are measured without outcomes; T10-vs-registered-T5, inactive book/count notes, matching/settlement and draft price-engine adoption still block grading. Held CFB groups remain held. See [readiness report](reviews/post151-readiness/REPORT.md). No pilot final re-look, new spend, registration or runtime change.
+
 **Captured-path launch repair (PR150 proposed):** real dependency paths plus pinned nested union closure fix the concrete F2 ancestry lookup failure. New unexecuted successor c75ef924; corrected actual pre-registration probe passed with no runtime/registration/key/OddsHTTP. Initial faulty test05904 wrote only an empty directory+registration; hub separately archived exact marker and retired root, preserving inventory/carry. Failure evidence retained. New exact-head review/current-account/root+commit paid authority still required; same1,302/67,200 scope.
 
 **Prospective combined-stage correction (PR149, operational hold):** explicit stage amendment binds the saved final report and six accepted PASS groups to the unchanged1,302/67,200 list. New unexecuted root87819945 requires independent exact-head review and new exact hub authority. No new coverage look, scope or worker purchase; original stage gates remain for every other list. Hub-exclusive checkout remains untouched.
