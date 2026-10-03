@@ -20,8 +20,10 @@ For research/execution changes, retain both independent technical review and hub
 approval. Each reviewer posts `AGREE <full current head sha>`, or may substitute
 that same reviewer's formal GitHub **Approve** review only when the hub verifies:
 
-- the review is currently `APPROVED`, not dismissed, and its `commit_id` equals
-  the full current PR head;
+- the reviewer's latest effective opinionated review is `APPROVED` and its
+  `commit_id` equals the full current PR head; dismissed or obsolete reviews do
+  not count, and no later withdrawal or `CHANGES_REQUESTED` review supersedes it.
+  The hub verifies the reviewer's continuing agreement at merge time;
 - the reviewer uses a distinct, independently authenticated account, independent
   of the author and the other required reviewer;
 - the review includes a one-line rubric identifying scope checked, evidence/checks
