@@ -144,13 +144,17 @@ def eligibility(op, event, snapshot, requested, quote_time):
     return sorted(set(reasons))
 
 
-def quote_rows(row, ops, record, books):
+def quote_rows(row, ops, record, books, *, season=2025):
     """Retain offered rows and their eligibility reasons; no missing-side invention."""
+    if season not in (2023, 2024, 2025) or row.get('seasons', [season]) != [season]:
+        raise ValueError('Sealed or unsupported requested quote season')
+    if any(op.get('season', season) != season for op in ops):
+        raise ValueError('Opportunity season differs')
     body = json.loads(record['body']);event = body['data']
     if event['id'] != row['event_id'] or event['sport_key'] != NFL:
         raise ValueError('Response event identity differs')
     kickoff = stamp(event['commence_time'])
-    if not datetime(2025, 3, 1, tzinfo=timezone.utc) <= kickoff < datetime(2026, 3, 1, tzinfo=timezone.utc):
+    if not datetime(season, 3, 1, tzinfo=timezone.utc) <= kickoff < datetime(season+1, 3, 1, tzinfo=timezone.utc):
         raise ValueError('Response belongs to a sealed or unsupported season; prices not traversed')
     snapshot, requested = stamp(body['timestamp']), stamp(row['requested_utc'])
     if not stamp(body['previous_timestamp']) < snapshot < stamp(body['next_timestamp']):
@@ -170,7 +174,7 @@ def quote_rows(row, ops, record, books):
                     if not finite(outcome.get('point')): extra.append('missing_point')
                     if not finite(outcome.get('price')) or float(outcome['price']) <= 1: extra.append('invalid_price')
                     if outcome.get('name') not in ('Over', 'Under'): extra.append('unsupported_side')
-                    rows.append(dict(sport=NFL, season=2025, request_id=row['request_id'],
+                    rows.append(dict(sport=NFL, season=season, request_id=row['request_id'],
                         opportunity_id=op['opportunity_id'], game_id=op['game_identity'], event_id=event['id'],
                         role=op['slot'], requested=row['requested_utc'], snapshot=body['timestamp'],
                         book=book['key'], market=market['key'], description=outcome.get('description'),

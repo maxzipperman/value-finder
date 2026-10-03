@@ -1,0 +1,1262 @@
+{
+  "accepted_readiness_sha256": "acd2009728d88370465ce8da85e16d61ec2ca7489b3491005b304cdd9622530c",
+  "actual_play_certified": false,
+  "archive_reader_sha256": "8e05a8fad98f4980319e8930b71b2b9db816074a39293a1ddcf0ec31cefe2992",
+  "authenticated_records": 1707,
+  "book": "draftkings",
+  "book_status": "conditional candidate, not active selection",
+  "classifier_sha256": "3022001dd610bd57bdc9aa301e761f987f5977cabc200b81b2806218511e7ac2",
+  "coverage": [
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 2134,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 247,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2132,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 13173,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 250,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2574,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 2507,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 222,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2507,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 4338,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 120,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1450,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 2568,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 248,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2568,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 2541,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 247,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2541,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 1067,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 251,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1061,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 5060,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 250,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1141,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 1109,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 221,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1109,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 1907,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 120,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 636,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 1157,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 248,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1157,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 1300,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 247,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1300,
+      "season": 2023,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 1552,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 199,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1552,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 2341,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 200,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1723,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 1948,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 217,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1948,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 3204,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 110,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1074,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 1755,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 209,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1755,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 1856,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 217,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1856,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 763,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 203,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 757,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 984,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 199,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 773,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 901,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 209,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 901,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 1481,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 110,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 495,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 800,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 210,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 800,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 969,
+      "game_denominator": 294,
+      "games_with_quote_pairs": 217,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 969,
+      "season": 2023,
+      "slot": "T24"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 2414,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 198,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2410,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 12178,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 199,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2150,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 2506,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 215,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2506,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 1558,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 193,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1558,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 267,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 26,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 267,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 2246,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 205,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2246,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 2675,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 258,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2675,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 1131,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 197,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1131,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 4990,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 200,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 985,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 1167,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 215,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1167,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 649,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 191,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 649,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 121,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 26,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 121,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 1006,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 202,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1006,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 1424,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 257,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1424,
+      "season": 2024,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 1185,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 123,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1184,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 4098,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 89,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 808,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 972,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 102,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 972,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 605,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 90,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 605,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 134,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 15,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 134,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 1056,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 121,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1056,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 2054,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 227,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2054,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 566,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 122,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 566,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 1058,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 89,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 361,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 451,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 102,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 451,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 266,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 89,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 266,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 64,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 16,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 64,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 516,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 122,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 516,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 0,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 1069,
+      "game_denominator": 308,
+      "games_with_quote_pairs": 227,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1069,
+      "season": 2024,
+      "slot": "T24"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 2405,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 188,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2402,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 2212,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 205,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2212,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 2046,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 197,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2029,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 2164,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 192,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2164,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 2241,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 207,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2241,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 1744,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 167,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1744,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 1579,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 150,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1579,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 1711,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 179,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1711,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 2394,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 220,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 2394,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 1109,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 186,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1107,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 1027,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 201,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1026,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 958,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 196,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 951,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 1057,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 191,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1057,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 1126,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 208,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1126,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 788,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 167,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 788,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 800,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 150,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 800,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 827,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 178,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 827,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 1133,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 219,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 1133,
+      "season": 2025,
+      "slot": "CLOSE_T10"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 1293,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 109,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1292,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 1160,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 115,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1160,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 866,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 97,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 865,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 954,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 99,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 954,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 1069,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 108,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1047,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 468,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 53,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 468,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 635,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 70,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 635,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 0,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 655,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 80,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 655,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 1457,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 149,
+      "market": "player_reception_yds",
+      "provider_label_games_with_quote_pairs": 1457,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "betmgm",
+      "complete_pair_keys": 609,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 110,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 608,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "betonlineag",
+      "complete_pair_keys": 568,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 119,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 568,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "betrivers",
+      "complete_pair_keys": 428,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 96,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 428,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "draftkings",
+      "complete_pair_keys": 509,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 103,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 509,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "espnbet",
+      "complete_pair_keys": 527,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 105,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 527,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "fanatics",
+      "complete_pair_keys": 227,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 53,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 227,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "fanduel",
+      "complete_pair_keys": 320,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 70,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 320,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "lowvig",
+      "complete_pair_keys": 0,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 0,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 0,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "pinnacle",
+      "complete_pair_keys": 330,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 81,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 330,
+      "season": 2025,
+      "slot": "T24"
+    },
+    {
+      "book": "williamhill_us",
+      "complete_pair_keys": 722,
+      "game_denominator": 285,
+      "games_with_quote_pairs": 150,
+      "market": "player_rush_yds",
+      "provider_label_games_with_quote_pairs": 722,
+      "season": 2025,
+      "slot": "T24"
+    }
+  ],
+  "eligible_quote_rows": 291918,
+  "fixed_games": {
+    "2023": 294,
+    "2024": 308,
+    "2025": 285
+  },
+  "fixed_opportunities": 1774,
+  "grading_enabled": false,
+  "holds": [
+    "timing_stat_amendment_not_adopted",
+    "candidate_book_note_inactive",
+    "registration_variant_lineage_unresolved",
+    "roster_game_player_identity_unverified",
+    "mainline_selection_not_applied",
+    "participation_unverified",
+    "book_settlement_terms_unverified"
+  ],
+  "ledger_pins": {
+    "03391fd2c0bf224f053aae102fe1e3c520db58f9fa97837d34244e4fc54988c0": "4d2fb599aa16318ed09f4057bca63a0a9efc92810461f5e42879a742842ce586",
+    "059fc135b00bbbc36db208a8bb622d7444a43d42bb2607675d30671ad455f4e4": "cc2f17d3289ac1dbebac6bcf5d828f4384f2ea4c9d88829c2d8510a014a57313",
+    "4053703d09fdcedb6ce1608c8a5a0d09d3e702a6426891463163224e10af792e": "d10808cb0ba3962ff3abdef5d48c09cb53d3a95733e0b3b6c2bc605feccee3aa",
+    "4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d": "eb9e93e354babef2be73ddaa13ea6e2913c58eaaff706ed4e78aec1381636190",
+    "7485bc1230aeaf069a21e0a75ca9d93002c2e8abccdddaa706e45c5aa63aa467": "84ff08834943ab4418d69efa9c5ce9355d0be20931fee20df149937a5064d0cd",
+    "c75ef924f5d44c62176de915f47744515f2ca35088f2a82e507a105c0733bacb": "4e9afd9cf99499171b928551dd3fc79873f188b25a30b8b5702f9d2fc4192370",
+    "c7d3ea3d938918735e3ec99f9b56652f67f4f200c93f233385b4d6429fbe1376": "58b3ee64c6320fb29989b7ae41f2866ae2f9102e9bbfed703b684625187f017c",
+    "cbe125474acf46becd3f7e01903675ece864adb683cdc73734bad7e1635dddcc": "754c81b87bb22af671bcf8cc6d8dd02accd5123296ad43d0ce50a119adc49d77",
+    "f490e0daaec2d7721d0298da1abbfbce47a7de13124a412641d5edb33addb380": "0890de1e51a70b0edba45b903e8ec1d68ebafb60ba5e0fe4c1f1e23a2d20410b",
+    "f499935c05191d9583f891d9f859575ad7419472829fd802e39e2f62549eb22f": "3a3813fee41b4054cf4c67ed3c92c21a4247187b1f70c2ca536d2dff2c71d5bf",
+    "f955f28b2fba9f36b3cdcaa7cf29013de9b18b128a629204b0e098f6594259cd": "8c8592a437646416d6dfb3b0cb989738a5c6cbf100851e874e35d6ac36ad7ba9"
+  },
+  "mode": "eligibility",
+  "original_final_sha256": "100a53275119fba283b3e8938cfee994f0d1a535201f2bab2e8769bfba9fdbdb",
+  "outcomes_read": false,
+  "raw_quote_rows_exported": false,
+  "reader_sha256": "84a3f704657fffefda609f924b07123d39d0d862c71c72b93f37f7a0711e7fdb",
+  "row_exclusions": {
+    "conflicting_duplicate_quote": 4,
+    "kickoff_conflict": 5690,
+    "no_eligible_same_response_pair": 160467,
+    "outside_close_window": 1436,
+    "quote_age_at_snapshot": 155345
+  },
+  "statuses": {
+    "fixed_opportunities": 1774,
+    "missing_designated_opportunities": 2,
+    "opportunities_without_offered_primary_rows": 13,
+    "terminal_missing_records": 2,
+    "unbound_opportunities": 1,
+    "unresolved_identity_opportunities": 64
+  },
+  "timing_sha256": "45926bd9c8444dcda71f253a3c55e3c6d5f3942ade4b800b4ab3290f249cef58"
+}

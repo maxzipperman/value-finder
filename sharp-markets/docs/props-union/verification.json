@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "scopes": [
+    "sharp-markets/src/markets/research/props_grade/archive.py",
+    "sharp-markets/src/markets/research/props_grade/union.py",
+    "sharp-markets/tests/props_union",
+    "reviews/post151-readiness/readiness.json",
+    "reviews/post151-readiness/diagnostic.py",
+    "strategy-research/coverage-pilot-v1/classifier.py",
+    "strategy-research/coverage-pilot-v1/timing.py",
+    "strategy-research/coverage-pilot-completion-v1/report.py",
+    "ops/process/process_guard.py",
+    ".github/workflows/props-union.yml",
+    "sharp-markets/docs/props-union/PLAN.md",
+    "sharp-markets/docs/props-union/DECISIONS-DRAFT.md",
+    "sharp-markets/docs/props-union/discovery-matrix.json",
+    "sharp-markets/docs/props-union/README.md",
+    "sharp-markets/docs/props-union/dry-run.json",
+    "sharp-markets/docs/props-union/eligibility.json",
+    "sharp-markets/docs/props-union/comparison.json",
+    "sharp-markets/docs/props-union/verification.json"
+  ],
+  "commands": [
+    [
+      "{python}",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "sharp-markets/tests/props_union",
+      "-p",
+      "test_*.py",
+      "-v"
+    ]
+  ],
+  "environment": {
+    "PYTHONHASHSEED": "0",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}

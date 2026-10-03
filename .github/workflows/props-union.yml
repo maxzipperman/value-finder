@@ -1,0 +1,21 @@
+name: Props union eligibility
+on:
+  pull_request:
+    paths: ['sharp-markets/src/markets/research/props_grade/archive.py', 'sharp-markets/src/markets/research/props_grade/union.py', 'sharp-markets/tests/props_union/**', 'sharp-markets/docs/props-union/**', 'strategy-research/coverage-pilot-v1/**', 'reviews/post151-readiness/**', '.github/workflows/props-union.yml', 'ops/process/process_guard.py']
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Synthetic tests and aggregate evidence only; no native caches or outcomes
+        run: python -B ops/process/process_guard.py test --config sharp-markets/docs/props-union/verification.json --output props-union-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: props-union-${{ github.sha }}
+          path: props-union-evidence.json

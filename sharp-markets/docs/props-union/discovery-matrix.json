@@ -1,0 +1,141 @@
+{
+  "status": "DRAFT_NOT_ADOPTED",
+  "additional_deciding_cells": 8,
+  "original_pooled_variant_already_counted": 1,
+  "global_count": null,
+  "global_bar": null,
+  "baseline_resolution_required": true,
+  "inference": "pending reviewed game/day dependence implementation",
+  "confirmation": false,
+  "outcomes_read": false,
+  "cells": [
+    {
+      "id": "player_rush_yds/Over/T24",
+      "sport": "americanfootball_nfl",
+      "market": "player_rush_yds",
+      "side": "Over",
+      "slot": "T24",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    },
+    {
+      "id": "player_rush_yds/Over/CLOSE_T10",
+      "sport": "americanfootball_nfl",
+      "market": "player_rush_yds",
+      "side": "Over",
+      "slot": "CLOSE_T10",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    },
+    {
+      "id": "player_rush_yds/Under/T24",
+      "sport": "americanfootball_nfl",
+      "market": "player_rush_yds",
+      "side": "Under",
+      "slot": "T24",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    },
+    {
+      "id": "player_rush_yds/Under/CLOSE_T10",
+      "sport": "americanfootball_nfl",
+      "market": "player_rush_yds",
+      "side": "Under",
+      "slot": "CLOSE_T10",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    },
+    {
+      "id": "player_reception_yds/Over/T24",
+      "sport": "americanfootball_nfl",
+      "market": "player_reception_yds",
+      "side": "Over",
+      "slot": "T24",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    },
+    {
+      "id": "player_reception_yds/Over/CLOSE_T10",
+      "sport": "americanfootball_nfl",
+      "market": "player_reception_yds",
+      "side": "Over",
+      "slot": "CLOSE_T10",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    },
+    {
+      "id": "player_reception_yds/Under/T24",
+      "sport": "americanfootball_nfl",
+      "market": "player_reception_yds",
+      "side": "Under",
+      "slot": "T24",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    },
+    {
+      "id": "player_reception_yds/Under/CLOSE_T10",
+      "sport": "americanfootball_nfl",
+      "market": "player_reception_yds",
+      "side": "Under",
+      "slot": "CLOSE_T10",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ],
+      "book": "draftkings",
+      "book_status": "conditional candidate, inactive",
+      "selection": "all_players_original_mainline_power_closest_half_tie_exclusion",
+      "model": "offered_side_hit_rate_excess_power_devig"
+    }
+  ]
+}
