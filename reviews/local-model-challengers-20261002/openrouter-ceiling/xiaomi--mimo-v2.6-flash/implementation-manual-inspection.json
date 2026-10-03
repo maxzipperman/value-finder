@@ -1,0 +1,29 @@
+{
+  "reviewer": "author complete source inspection before original restricted15s grade and prospectively committed exact-source supplemental diagnostic; not independent validation",
+  "all_source_inspected": true,
+  "response_sha256": "f22d55a920f335bcaf9588dd57edd0615ac7d414c6c4991ce11843c1353102d4",
+  "delivery": "Valid exact four-fileJSON; original ASTrejects benign __all__ declarations and type(value).__name__ labels beforeexecution, no original197semantic score.",
+  "supporting_modules_invoked": true,
+  "manual_facts": [
+    "Uses absolute aware instants and eligible-before-dedupe quote selection; min-ID ties retain first exact instant/ID row.",
+    "Uses global run_id dedupe and first exact-time duplicate; per-job attempt/time/min-ID ranking.",
+    "Counts selected ok/partial rows and populates partial_jobs, failed and pending lists separately.",
+    "Both public select and reconcile normalize/validate asof before rows, including empty lists.",
+    "Only datetime/math/local imports, no I/O/network/environment/subprocess/dynamic code/candidate reflection."
+  ],
+  "diagnostic": "Exact static literal __all__ export and unshadowed type(NAME).__name__ allowance declared/committed471354c BEFORE execution; original source unchanged/defaultrestricted15s/7safetynegatives+positive/ref197+4first.",
+  "scores": {
+    "original_rejection_preserved": true,
+    "supplemental_original197_passed": 197,
+    "supplemental_original197_cases": 197,
+    "extra_helper_passed": 4,
+    "extra_helper_cases": 4
+  },
+  "limitations": "Author supplemental post-observation compatible-source grading, not independent/blinded initial/full-contract proof. No feedback/source repairs/new inference; exact allowance does not extend to other candidates.",
+  "evidence": [
+    "implementation-response.txt",
+    "implementation-acceptance.json",
+    "implementation-type-name-diagnostic.json",
+    "../../MIMO_COMPATIBILITY_DIAGNOSTIC.md"
+  ]
+}

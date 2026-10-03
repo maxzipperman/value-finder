@@ -1,0 +1,87 @@
+{
+  "reviewer": "author full manual semantic inspection; not independent validation",
+  "task": "review",
+  "all_findings_inspected": true,
+  "response_sha256": "63c4d95cacfaa86cba1e4e5b379089ae1db420848b07af6cf851f4f1e1c09527",
+  "distinct_real_causes": 10,
+  "seeded_causes": 10,
+  "false_findings": 0,
+  "duplicate_findings": 0,
+  "non_defect_annotations": 0,
+  "correct_times_component_flagged": false,
+  "finding_audit": [
+    {
+      "index": 1,
+      "classification": "real",
+      "cause": "negative odds formula",
+      "source_fact": "Negative odds magnitude a needs a/(a+100); -100 alone does not distinguish the formulas."
+    },
+    {
+      "index": 2,
+      "classification": "real",
+      "cause": "lexical offset ordering",
+      "source_fact": "Raw ISO string order differs from absolute time."
+    },
+    {
+      "index": 3,
+      "classification": "real",
+      "cause": "missing quote tie rules",
+      "source_fact": "Equal absolute time must choose smallest id and first equal instant/id; prefilter keeps first without id ranking."
+    },
+    {
+      "index": 4,
+      "classification": "real",
+      "cause": "eligibility after book dedupe",
+      "source_fact": "A newer future, expired, wrong-event or update-invalid record suppresses older eligible alternatives."
+    },
+    {
+      "index": 5,
+      "classification": "real",
+      "cause": "inclusive expiry",
+      "source_fact": "Exact expiry must be rejected."
+    },
+    {
+      "index": 6,
+      "classification": "real",
+      "cause": "job-scoped run id dedupe",
+      "source_fact": "run_id is global; a later correction to job must replace earlier same ID across jobs."
+    },
+    {
+      "index": 7,
+      "classification": "real",
+      "cause": "last duplicate time tie",
+      "source_fact": "Equal absolute observed times for same run ID must retain first eligible record."
+    },
+    {
+      "index": 8,
+      "classification": "real",
+      "cause": "stale job retry overwrite",
+      "source_fact": "Last distinct run input overwrites greatest attempt/time/ID selection; stale failures can erase newer success."
+    },
+    {
+      "index": 9,
+      "classification": "real",
+      "cause": "partial downloaded rows omitted",
+      "source_fact": "Selected partial download rows are known and count, once per selected job."
+    },
+    {
+      "index": 10,
+      "classification": "real",
+      "cause": "pending classified failed",
+      "source_fact": "Selected pending belongs only to unknown_jobs, not failures."
+    }
+  ],
+  "missed_causes": [],
+  "caveats": [
+    "Invalid JSON: extra quote after numeric line22 in finding4. Original schema rejection preserved; manual visible semantic credit does not imply delivered machine-readable artifact.",
+    "The quote tie explanation assumes same raw timestamp spelling; differing spellings are separately covered in lexical-order finding. Concatenation collision example is valid for actual job+run_id source.",
+    "All10 supplied causes checked against source/valid-record contract; no hidden reasoning salvage or repairs."
+  ],
+  "schema_check_is_not_semantic_credit": true,
+  "evidence": [
+    "review-response.txt",
+    "../../ceiling/review-source.json",
+    "../../ceiling/review-inventory.json",
+    "../../ceiling/review-validation.json"
+  ]
+}

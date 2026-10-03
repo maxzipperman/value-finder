@@ -1,0 +1,27 @@
+{
+  "reviewer": "author complete source inspection, not independent validation",
+  "all_source_inspected": true,
+  "response_sha256": "0d43d2b83be9c8c343d0d6c637bd4918c66f806d6e8b9107a20c24d659e2c5c1",
+  "original_acceptance": "AST disallowed operation; no candidate execution/oracle/mutation credit",
+  "compatibility_notes": [
+    "type(exc).__name__/type(res).__name__ and Guard.__iter__ are benign but outside original AST allowlist; not malicious-code evidence."
+  ],
+  "static_compile_only": "SyntaxError line 179: keyword argument repeated: id",
+  "duplicate_keyword_calls": [
+    {
+      "line": 179,
+      "keywords": [
+        "id",
+        "book",
+        "observed_at",
+        "id",
+        "odds"
+      ]
+    }
+  ],
+  "semantic_notes": [
+    "run_tests catches every AssertionError/Exception and returns tally rather than propagating failures. This is incompatible with the grader exception-based mutation signal; no oracle acceptance or mutation credit inferred."
+  ],
+  "executed_model_code": false,
+  "source_repaired": false
+}

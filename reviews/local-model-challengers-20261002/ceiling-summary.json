@@ -2,10 +2,10 @@
   "status": "collection_in_progress",
   "grading": "author only; independent validation pending",
   "counts": {
-    "result": 25,
+    "result": 28,
     "error": 1,
-    "pending": 1,
-    "not_started": 2,
+    "pending": 0,
+    "not_started": 0,
     "deferred": 1
   },
   "records": [
@@ -28883,7 +28883,7 @@
       "family": "api",
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "implementation",
-      "status": "pending",
+      "status": "result",
       "folder": "openrouter-ceiling/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "ec9b6c1ae9aa38803969eae7389065b5f1353b8ffd969250e7edea0e3e43068b",
       "digest": null,
@@ -28909,13 +28909,62 @@
         "seed": 42,
         "top_p": 0.95
       },
-      "request_sha256": "abe6206e01699f37f6f6e28ff0cb7bcc43c203f5e04ff229d4d1e10ca8264cd8"
+      "request_sha256": "abe6206e01699f37f6f6e28ff0cb7bcc43c203f5e04ff229d4d1e10ca8264cd8",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "wall_seconds": 267.31757779198233,
+      "provider": "InferenceNet",
+      "finish_reason": "stop",
+      "final_answer_bytes": 9568,
+      "usage": {
+        "prompt_tokens": 1114,
+        "completion_tokens": 22146,
+        "total_tokens": 23260,
+        "cost": 0.00632342,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00632342,
+          "upstream_inference_prompt_cost": 0.00012254,
+          "upstream_inference_completions_cost": 0.00620088
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 19763,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: disallowed name"
+          }
+        ]
+      },
+      "supplemental_diagnostic": {
+        "evidence": "openrouter-ceiling/xiaomi--mimo-v2.6-flash/implementation-type-name-diagnostic.json",
+        "grading": "supplemental author exact-source compatibility diagnostic, post-observation, not independent/blinded initial grading",
+        "original_acceptance_preserved": true,
+        "original197_passed": 197,
+        "original197_cases": 197,
+        "extra_helper_passed": 4,
+        "extra_helper_cases": 4,
+        "limitations": "Only static module export-list and exact unshadowed type(NAME).__name__ permitted; all other AST/runtime bans retained, default restricted15s/no network/credentials. Four extra probes separate, not exhaustive/full-contract proof or causal ranking; no source changes/model feedback/inference."
+      }
     },
     {
       "family": "api",
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "regression",
-      "status": "not_started",
+      "status": "result",
       "folder": "openrouter-ceiling/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "123cf6e07cdf909838ea44a69bf18498231fb9551e4d3f1d9be3d6b053be96f3",
       "digest": null,
@@ -28940,13 +28989,53 @@
         },
         "seed": 42,
         "top_p": 0.95
+      },
+      "request_sha256": "e14b967614cd6be2c3e6b665f64fd0e93b4c481ba7c9b3621d063e3a34c142a6",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "wall_seconds": 461.37596649999614,
+      "provider": "InferenceNet",
+      "finish_reason": "stop",
+      "final_answer_bytes": 38820,
+      "usage": {
+        "prompt_tokens": 1142,
+        "completion_tokens": 55980,
+        "total_tokens": 57122,
+        "cost": 0.01577954,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.01577954,
+          "upstream_inference_prompt_cost": 0.00010514,
+          "upstream_inference_completions_cost": 0.0156744
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 41941,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "ValueError: disallowed operation"
+          }
+        ]
       }
     },
     {
       "family": "api",
       "model": "xiaomi/mimo-v2.6-flash",
       "task": "review",
-      "status": "not_started",
+      "status": "result",
       "folder": "openrouter-ceiling/xiaomi--mimo-v2.6-flash",
       "prompt_sha256": "e5a70c472a171a03b8fbe097e6b409890c33688bed16c471f2dfe696a69268ef",
       "digest": null,
@@ -28971,6 +29060,133 @@
         },
         "seed": 42,
         "top_p": 0.95
+      },
+      "request_sha256": "09d9c35e9bb2b34b0782528cdd62d6d07cfa5e57d156e3a6a2b34f13e63ae518",
+      "returned_model": "xiaomi/mimo-v2.6-flash",
+      "wall_seconds": 224.55338995801867,
+      "provider": "InferenceNet",
+      "finish_reason": "stop",
+      "final_answer_bytes": 3699,
+      "usage": {
+        "prompt_tokens": 2443,
+        "completion_tokens": 18543,
+        "total_tokens": 20986,
+        "cost": 0.00544029,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00544029,
+          "upstream_inference_prompt_cost": 0.00024825,
+          "upstream_inference_completions_cost": 0.00519204
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 17636,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "checks": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting ',' delimiter: line 1 column 1303 (char 1302)"
+          }
+        ]
+      },
+      "manual_review": {
+        "reviewer": "author full manual semantic inspection; not independent validation",
+        "task": "review",
+        "all_findings_inspected": true,
+        "response_sha256": "63c4d95cacfaa86cba1e4e5b379089ae1db420848b07af6cf851f4f1e1c09527",
+        "distinct_real_causes": 10,
+        "seeded_causes": 10,
+        "false_findings": 0,
+        "duplicate_findings": 0,
+        "non_defect_annotations": 0,
+        "correct_times_component_flagged": false,
+        "finding_audit": [
+          {
+            "index": 1,
+            "classification": "real",
+            "cause": "negative odds formula",
+            "source_fact": "Negative odds magnitude a needs a/(a+100); -100 alone does not distinguish the formulas."
+          },
+          {
+            "index": 2,
+            "classification": "real",
+            "cause": "lexical offset ordering",
+            "source_fact": "Raw ISO string order differs from absolute time."
+          },
+          {
+            "index": 3,
+            "classification": "real",
+            "cause": "missing quote tie rules",
+            "source_fact": "Equal absolute time must choose smallest id and first equal instant/id; prefilter keeps first without id ranking."
+          },
+          {
+            "index": 4,
+            "classification": "real",
+            "cause": "eligibility after book dedupe",
+            "source_fact": "A newer future, expired, wrong-event or update-invalid record suppresses older eligible alternatives."
+          },
+          {
+            "index": 5,
+            "classification": "real",
+            "cause": "inclusive expiry",
+            "source_fact": "Exact expiry must be rejected."
+          },
+          {
+            "index": 6,
+            "classification": "real",
+            "cause": "job-scoped run id dedupe",
+            "source_fact": "run_id is global; a later correction to job must replace earlier same ID across jobs."
+          },
+          {
+            "index": 7,
+            "classification": "real",
+            "cause": "last duplicate time tie",
+            "source_fact": "Equal absolute observed times for same run ID must retain first eligible record."
+          },
+          {
+            "index": 8,
+            "classification": "real",
+            "cause": "stale job retry overwrite",
+            "source_fact": "Last distinct run input overwrites greatest attempt/time/ID selection; stale failures can erase newer success."
+          },
+          {
+            "index": 9,
+            "classification": "real",
+            "cause": "partial downloaded rows omitted",
+            "source_fact": "Selected partial download rows are known and count, once per selected job."
+          },
+          {
+            "index": 10,
+            "classification": "real",
+            "cause": "pending classified failed",
+            "source_fact": "Selected pending belongs only to unknown_jobs, not failures."
+          }
+        ],
+        "missed_causes": [],
+        "caveats": [
+          "Invalid JSON: extra quote after numeric line22 in finding4. Original schema rejection preserved; manual visible semantic credit does not imply delivered machine-readable artifact.",
+          "The quote tie explanation assumes same raw timestamp spelling; differing spellings are separately covered in lexical-order finding. Concatenation collision example is valid for actual job+run_id source.",
+          "All10 supplied causes checked against source/valid-record contract; no hidden reasoning salvage or repairs."
+        ],
+        "schema_check_is_not_semantic_credit": true,
+        "evidence": [
+          "review-response.txt",
+          "../../ceiling/review-source.json",
+          "../../ceiling/review-inventory.json",
+          "../../ceiling/review-validation.json"
+        ]
       }
     }
   ],

@@ -237,5 +237,32 @@
     "evidence": [
       "openrouter-ceiling/z-ai--glm-5.3-flash/regression-error.json"
     ]
+  },
+  "xiaomi/mimo-v2.6-flash|implementation|128k": {
+    "proceed": false,
+    "reason": "Completedstop22146completiontokens/267.32s below65536. OriginalASTcompatibilityreject retained; prospectivelyfrozen exactsource staticexport/type-label diagnostic passes197/197+4/4extrahelpers. No length/time constraint or unfinishedprogress warrants128K.",
+    "reviewer": "author complete source inspection and supplemental defaultrestricteddiagnostic, not independentvalidation",
+    "evidence": [
+      "openrouter-ceiling/xiaomi--mimo-v2.6-flash/implementation-result.json",
+      "openrouter-ceiling/xiaomi--mimo-v2.6-flash/implementation-type-name-diagnostic.json"
+    ]
+  },
+  "xiaomi/mimo-v2.6-flash|regression|128k": {
+    "proceed": false,
+    "reason": "Completed stop55980tokens/461s below65536, invalid repeated keyword id plus swallowed failures. Original AST compatibility rejection remains; syntax/behavior error not truncation, no128K.",
+    "reviewer": "author complete source/semantic inspection",
+    "evidence": [
+      "openrouter-ceiling/xiaomi--mimo-v2.6-flash/regression-result.json",
+      "openrouter-ceiling/xiaomi--mimo-v2.6-flash/regression-manual-inspection.json"
+    ]
+  },
+  "xiaomi/mimo-v2.6-flash|review|128k": {
+    "proceed": false,
+    "reason": "Completed stop18543tokens/225s below65536. Visible10/10real causes but malformedJSON; no128K reroll of completed delivery error.",
+    "reviewer": "author complete source/semantic inspection",
+    "evidence": [
+      "openrouter-ceiling/xiaomi--mimo-v2.6-flash/review-result.json",
+      "openrouter-ceiling/xiaomi--mimo-v2.6-flash/manual-review.json"
+    ]
   }
 }

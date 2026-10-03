@@ -1,0 +1,7 @@
+[
+  {
+    "case": "candidate completion/loading",
+    "passed": false,
+    "error": "JSONDecodeError: Expecting ',' delimiter: line 1 column 1303 (char 1302)"
+  }
+]
