@@ -1,5 +1,5 @@
 {
-  "evidence_digest": "158011cdd4cd824d9c1f23a599085e24299a6296a113b9e99dfe4369ed8b03ad",
+  "evidence_digest": "5a282127fe54fa139b1d9ab499f8991d6c9f995cbdcbddfadf184056decd0168",
   "inputs": {
     "command_binaries": {
       "{python}": {
@@ -317,7 +317,7 @@
     "files": {
       ".github/workflows/process.yml": "4da28b672694421a9d74dc29e68f910e877d1d44be6458b1f70f8803cc1e83af",
       "GOVERNANCE.md": "f521aa7206795a590eef021bdfd9db2d60f36f47889e77d6dde6ebf584b85254",
-      "STATUS.md": "5cadc9cc7421bced4b9d44b2384fd6655d2b3f57ba8c0121bae8b7a0224e061c",
+      "STATUS.md": "28f1a26fe5285b4adf5b322f89fd1a75349f8bb66808e963ffb78c4eec5e8ff4",
       "dashboard/vfdash/__init__.py": "d17f21fe42a5a71589071b9870c39e685ce501622eb8e43fe4a96f25d98996e4",
       "dashboard/vfdash/status_md.py": "46a105350e48a15e93adb6f3f0548d80f65b5f6ba52fa3d30793266d43a4dac8",
       "dashboard/vfdash/words.py": "ae5f56809163d2394fc621916955a8fb4f1214e64394716282d945a592f7707f",
@@ -338,7 +338,7 @@
     }
   },
   "passed": true,
-  "recorded_at": "2026-10-03T18:44:47.726332+00:00",
+  "recorded_at": "2026-10-03T18:48:40.804453+00:00",
   "results": [
     {
       "argv": [
@@ -354,15 +354,15 @@
         "-v"
       ],
       "exit_code": 0,
-      "stderr_sha256": "f1fe90cffab525930ca22959b384fa7608365f300f821ed9c3862d171ed74d9c",
+      "stderr_sha256": "11cae9570ce0a90f268fb938b3cf6c86ec17f08a7ae3791b768f52a0b904bc60",
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "unittest_count": [
         36
       ]
     }
   ],
-  "tested_commit": "34c1d6598f1d32682a0055c29c68fa39c5c8d5bf",
-  "tested_identity": "0ef250ced27ffc5e6acccff4fb2ebfe1cf501f04244efb4a25d0a8aa6e7df53b",
+  "tested_commit": "186dfa21dbc9ecd6b367c82e622df18a0911254e",
+  "tested_identity": "1b1b01328c74ad52bea995b7dfb6af18af269284c01193ffed26cf1c4f40b712",
   "version": 1,
   "worktree_clean": true
 }
