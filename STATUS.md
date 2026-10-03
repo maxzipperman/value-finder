@@ -217,3 +217,5 @@ Reuse the 2025 F3a cache baseline; measure unobserved 2023–24 NFL/CFB cells th
 stratified sampling. Actual usable pairs/freshness/book/settlement support gate
 large purchases. The existing 1,544/7,032 metadata proposals are not selected paid
 scope. PR132 continues safety repair only; weather is a separate next PR.
+
+**Hub acquisition update (October2):** PR132 safety repair and PR134 successor/coverage-first preparation are merged. PR133 merged coverage/settlement primitives still leave real grading disabled pending timing registration. The285-game2025NFL known F3a REG/playoff frame census provides fresh two-family entry/close quote pairs in215games across retail books, but66 at fixedDraftKings (close-only192). These support different analysis uses. The bounded coverage-pilot adapter and exact reconciled sample/cap remain under preparation; no new paid calls were made. See [running progress](HUB_PROGRESS.md).
