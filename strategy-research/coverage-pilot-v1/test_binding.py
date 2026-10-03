@@ -24,6 +24,10 @@ class BindingTests(unittest.TestCase):
         proof=dict(frame_sha256=self.capture.digest(data['frame.json']),requested_slot_map_sha256=self.capture.digest(data['slot-map.json']),contract_sha256=self.capture.digest(data['classifier-contract.json']),older_metadata_proof=dict(metadata_files={n:self.capture.digest(v) for n,v in source.items()},early_decision_rule_source_sha256=self.capture.digest(data['code/plan.py'])))
         data['certainty-source-proof.json']=json.dumps(proof).encode()
         self.assertTrue(m.verify(data,source,rows,{},maps,frame))
+        quarantine_data=dict(data,**{'baseline.json':json.dumps({'pilot_bindings':{'prior':{'reconciliation':{'certificate':{'quarantined_request_id':rows[0]['request_id']}}}}}).encode()})
+        with self.assertRaisesRegex(ValueError,'quarantined response'):m.verify(quarantine_data,source,rows,{},maps,frame)
+        marked=copy.deepcopy(maps);marked[0]['coverage_disposition']=dict(classification='failure',reason='certified_quarantined_response',request_ids=[rows[0]['request_id']])
+        self.assertTrue(m.verify(quarantine_data,source,rows,{},marked,frame))
         # Exercise actual packet validation with internally consistent frozen pins.
         def packet(f, rs, ms):
             planner=self.load('planner');runner=self.load('runner');values=copy.deepcopy(data)

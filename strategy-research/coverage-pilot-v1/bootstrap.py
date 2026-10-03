@@ -7,7 +7,7 @@ import os
 import stat
 
 SOURCE_ROOT='4468a94c2b415cd5c53dd58163831f61d379ee44ec1b560f5a9b84be9c7f010d'
-MODULES={'planner','bounds','timing','mapping','receipts','baseline','evidence','transport','authority','bootstrap','runner','classifier','execution','certainty','overlap','orchestration','frame_binding'}
+MODULES={'planner','bounds','timing','mapping','receipts','baseline','evidence','transport','authority','bootstrap','runner','classifier','execution','certainty','overlap','orchestration','frame_binding','quarantine'}
 PACKET={'manifest.json','requests.json','policy.json','protocol.json','frame.json','draw.json','selected.json','mappings.json','baseline.json','overlap.json','slot-map.json','classifier-contract.json','certainty-source-proof.json'}
 
 

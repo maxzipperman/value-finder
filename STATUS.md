@@ -1,5 +1,8 @@
 # Value Finder: status
 
+**Coverage pilot schema halt (October2, repair proposed):** The exact PR141 packet stopped after6 completed requests and1 saved pending HTTP200 response because an unrelated FanDuel h2h quote had decimal odds1.0. Observed charges are210 credits (180 completed plus30 pending); retain270 reservations and170,576 conservative cumulative carry. The proposed exact offline quarantine preserves bytes and marks the affected selected game as failure. The same430-game draw has729 untouched requests /36,810 maximum new credits. Recovery remains under review: no offline installation or successor paid authority. The hub alone installs and executes after independent review and exact approvals; no redraw or resend.
+
+
 *Updated October 1, 2026*
 
 Paper-only sports-betting research. The goal is to find prices the market gets wrong, and to prove each one on a pre-registered forward test graded on closing-line value (CLV) before any money goes in. Nothing in this repo places bets.
