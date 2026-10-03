@@ -1,5 +1,9 @@
 # Completed football cache: readiness before grading
 
+**Provisional:** slot-qualified frozen failures were applied to both slots in
+PR155. Per-slot coverage, reasons and clocks require a narrow descriptive repair.
+Original pilot decisions and grading holds remain unchanged.
+
 **Cached quote diagnostics are available; registered grading is still blocked.**
 This is a read-only acquired-data report, not another pilot gate look, draw,
 confidence bound, book selection or profitability result. Original pilot final
