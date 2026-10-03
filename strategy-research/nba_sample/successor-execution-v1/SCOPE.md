@@ -1,0 +1,45 @@
+# N0 successor-aware executor — bounded scope first
+
+Related #38; follows merged PR128; coordinates with auditor-owned PR167. Draft design only, no activation or actual packet. This is substantial enough to settle the transport/lock/account interface before code: PR167 stage1 admits eight LIVE roles, while N0 is a historical endpoint with a changing date parameter and a fixed10credit bound. Its schema cannot be reused by inventing a live role or applying the live market/book cost formula.
+
+## Fixed purchase / finite ceiling proposal
+
+Unchanged56events /754historical NBA h2h requests, January5–11,2026ET; three sharp books; maximum7540credits, no retry allowance. CSV `b9232db3a473992a88c04640ff579d9a834ab7f61c723cd9032b73b7f115c7e5`; request-set `b4894a5b1b837372d0a5aa7e649abe49b79840b5b6f1ef4836233c192a51a6a5`. Successor151 exact ledger `58b3ee64c6320fb29989b7ae41f2866ae2f9102e9bbfed703b684625187f017c`; conservative274586carry +7540max =282126. Proposed **400000** first-tranche ceiling, matching existing day-one ceiling; broader4440000ceiling and531630reserve remain unchanged. Owner relaxed250000; no exact paid/adoption authority follows. No forecast of later live debit or provider account baseline is invented.
+
+## Minimal implementation sequence
+
+1. Pure successor-aware global-settled adapter: reuse PR128's exact eleven-root/35metadata-pin proof, native predecessor snapshot, exact retired pending60/720reservations and F2 proof. Do not blanket-exempt halted/partial/pilot roots. A new active N0 root is admitted only against the actual frozen plan, authenticated authorization and its durable initialization/registration/receipts, not a caller-supplied ignore-root switch. Uncertain own attempts halt and remain attributable. Authenticate fresh global/cache inventory at preparation, under purchase lock and before every send/completion.
+2. Separate prospective protocol derived from verified immutable v4 bytes: change only first_tranche_cumulative_credits250000→400000; preserve day_one400000, broader4440000, floor531630, zero retries and timing/identity checks. Bind source protocol hash, full prospective protocol hash, exact list/set/root/cap/commit and explicit prospective ceiling approval. Original captured source/protocol/records are unchanged; no constructor override silently edits the frozen driver.
+3. Narrow HTTP-factory seam around the existing N0 driver/GuardedSession, coordinated with PR167. Account admission binds immutable plan/content identity, stable request ID, exact public URL/params, explicit frozen maximum10credits and current authenticated authority. Returns saved sanitized status/billing/body plus original observed UTC and replayed status. Historical request identity is the existing committed ID, not wall-clock poll slot. No N0 live role, no live cost formula, no generic runner consolidation.
+4. Production packet admission and sending remain unconditionally held until the shared boundary is independently reviewed and adopted, actual operational writer inventory/baseline/exposure and prospective ceiling verified, and exact current hub authority exists. Synthetic tests inject fake admission/HTTP only. A constructor/fake-session flag cannot lift production hold. Do not create a paid packet by patching a production hold or labeling synthetic ancestry native.
+
+## One account / lock contract
+
+Use ONLY `~/Library/Application Support/ValueFinder/shared-account-state/journal.json` and persistent `journal.json.lock` from PR167, not a second account ledger, alternate envelope domain or plan-triggered account reset. N0's existing per-plan ledger remains provenance, not another account baseline. Count account exposure once: prior/probe/retained reservations already represented in baseline are not re-added as independent account spend; pending N0 reservation is reserved by account admission once, while separately recorded per-plan for attribution. Source/month/authority/new-plan transitions must preserve totals and uncertain attempts through a separately reviewed no-reset schema; none is initialized by this PR.
+
+Proposed order: outer `followup-purchase.lock`, then existing plan/epoch lock, then account lock per send. Recurring callers take account lock only. Account admission owns account lock through reservation fsync, authority recheck, sole GET, receipt fsync and terminal fsync. Never acquire purchase lock while holding account lock; never wrap an account-owning session with another account-locking layer. Verify actual lock owners before adoption. Free account check remains explicit/finitely authorized and cannot bootstrap a fresh baseline or bypass the production hold. A replay returns its original price/receipt timestamp and cannot charge quota/budget twice or become a fresh quote.
+
+## Outcome-blind NBA expansion readiness proposal — not registered
+
+Freeze eligibility before inspecting sample prices/outcomes: fixed56events/seven ET days and every original request slot; missing/cancelled/unmatched cases remain visible, no profitable-game selection. Count independent game/day units, never754snapshots/books/price minutes as independent observations. Define exact independent schedule/decision-time join, same-response two-team h2h pairs per book, original quote clocks/age, Kalshi market identity and supported executable fee/price/settlement inputs. The acquisition tip proxy is not an independent start/first-play certificate; post-tip samples are descriptive only.
+
+Propose a finite-sample feasibility floor: at least80% of all56events AND at least80% of each day’s fixed events meet the predeclared paired-price/clock/identity requirement for the intended study; no alternate book/scope/threshold after viewing quotes. Report numerators/denominators/exclusions and credits per usable game (bounded7540 divided by passing games), separately by book/day and timing cell. Unknown settlement/execution evidence remains an analysis hold. January's seven-day sample is a finite feasibility census, not a representative full-season estimate; no independence-based confidence interval or extrapolation is claimed. A full-season coverage claim needs independently designed season/time sampling, not more snapshots of these same games.
+
+This feasibility floor is a NEW draft acquisition readiness gate, to be separately reviewed/registered prospectively; it does NOT replace or relax existing N1 H1/H2 gate in sharp-markets/docs/PLAN.md and strategy-research/odds-api-credits.md, change variant counts, select outcomes or release a full season. Passing sample feasibility alone does not authorize N1. Exact price/clock/coverage definitions and useful yield ceiling must be adopted before implementation/quote inspection; threshold changes afterward create another declared specification.
+
+## Required source/synthetic proofs
+
+- Exact eleven-root/active-plan lineage and changed/missing certificate/ledger/inventory; preserved pending60/F2 proof and no reduced carry.
+- Prospective protocol changes exactly one budget field; changed protocol/list/root/commit/ceiling/account authority blocks before key, runtime or paid packet.
+- Actual factory/GuardedSession chain uses the canonical account journal; no direct HTTP, live-cost fallback, role alias, fake flag or free-check bootstrap bypass.
+- Concurrent recurring/historical admission at cap/reserve; actual lock ownership/order with contention, no nested/reverse lock; restart and source/month transition preserve exposure.
+- Death/disk failure at account reservation, per-plan reservation, after GET, receipt and terminal write; retain uncertain attempt in both attribution views and never resend.
+- Full10credit reservation even when returned market/book presence bills less; invalid/missing/lagging/regressing/foreign billing and revocation before/after lock/reservation halt safely.
+- Successful replay original observation time, zero new charge/send, and crash after account completion before per-plan capture recovers attribution without rebuying or rewriting quote time.
+- Synthetic754row driver, no quotes/outcomes/native raw/probe fixture replay. Native full-v4/environment acceptance remains explicitly unverified until authorized prerequisites are available.
+
+## Scope handoff / remaining prerequisites
+
+Author requests hub/auditor confirmation of the future historical admission/factory and no-reset transition interface before implementing those shared-dependent pieces. PR167 is still independently reviewed/held (close-identity repair auditor-owned); this draft does not copy or modify it. Pure protocol/global-settled helpers can be authored next without enabling sends. Author will not self-approve. Actual runtime inventory, authenticated account/probe/prior/uncertain baseline, finite caps/reserve/expiry/source authority, historical/manual integration or enforced exclusion, prospective adoption, current cache/root/list approval and environment readiness remain hub-owned blockers.
+
+READY FOR THE HUB for scope coordination only. NOT READY for implementation approval, packet freeze or execution. No provider/key/outcome access, live runtime mutation, paid calls or deployment.
