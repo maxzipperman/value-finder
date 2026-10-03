@@ -318,5 +318,11 @@
       "passed": true,
       "error": null
     }
+  ],
+  "extraction": [
+    {
+      "case": "exact fact extraction and schema",
+      "passed": true
+    }
   ]
 }

@@ -1,0 +1,1572 @@
+{
+  "status": "in_progress",
+  "grading": "author grading; original38 reviewer signoff does not cover extensions",
+  "memory_note": "sampled Ollama allocation only; not total memory or proof of no swapping",
+  "inventory": {
+    "qwen3.6:35b": {
+      "digest": "a7eb95c53bcf96b4bdd008d0fab4a5dac88047d9c1a7a9ab88ed453423fbd87c",
+      "artifact_bytes": 22621314381
+    },
+    "qwen3.8:27b": {
+      "digest": "aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813",
+      "artifact_bytes": 17741872154
+    },
+    "gpt-oss:20b": {
+      "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
+      "artifact_bytes": 13793441244
+    },
+    "gemma4:26b": {
+      "digest": "001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c",
+      "artifact_bytes": 18731025629
+    },
+    "qwen3.8:27b-q8_0": {
+      "digest": "8f5fb6b71ea00052cbe8545738c55ce61112c4e571cb60ca4dad00b131766039",
+      "artifact_bytes": 29978242050
+    },
+    "ornith-1.5:35b": {
+      "digest": "9f3b89b2521908dd2e6f7a11fa368e62c8f89e1075f22604e4d1a76dd1240fcc",
+      "artifact_bytes": 22616285024
+    }
+  },
+  "records": [
+    {
+      "folder": "hard-native-qwen3.8-27b",
+      "task": "hard-review",
+      "model": "qwen3.8:27b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "1e1618ed7609a30312bb8531cebd07f64c33be9fc3e91786ad52511fb76e1b21",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 71.53844491700875,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 3466,
+      "load_seconds": 2.071914375,
+      "generation_seconds": 67.792845,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 2101,
+      "sampled_allocation_bytes": [
+        18231003707
+      ],
+      "sampled_vram_bytes": [
+        18231003707
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-native-qwen3.8-27b",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "0051630318bbb75d7e32ac90d5e90a7fb74502388914ea30e2ba9747939c4a95",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 87.62021937497775,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 4606,
+      "load_seconds": 4.089141041,
+      "generation_seconds": 82.662998,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 2685,
+      "sampled_allocation_bytes": [
+        18231003707
+      ],
+      "sampled_vram_bytes": [
+        18231003707
+      ],
+      "acceptance": {
+        "passed": 77,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-gemma4-26b-no-thinking",
+      "task": "hard-review",
+      "model": "gemma4:26b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "c676296385b3a1a28698eeae75e6d94cfd5d5c6345323450a9920f9aa2635e0d",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 5.023784082994098,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 229,
+      "load_seconds": 2.12045075,
+      "generation_seconds": 2.362505,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 906,
+      "sampled_allocation_bytes": [
+        17982826740
+      ],
+      "sampled_vram_bytes": [
+        17982826740
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-gemma4-26b-no-thinking",
+      "task": "hard-selection",
+      "model": "gemma4:26b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "aae09f1ed0c3472579dcaa5f13fd6346dc3775b54661d8dd30c1046d4710fb3c",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 14.087556582991965,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 867,
+      "load_seconds": 4.3897785,
+      "generation_seconds": 8.991236,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 3195,
+      "sampled_allocation_bytes": [
+        17982826740
+      ],
+      "sampled_vram_bytes": [
+        17982826740
+      ],
+      "acceptance": {
+        "passed": 77,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-gpt-oss-20b",
+      "task": "hard-review",
+      "model": "gpt-oss:20b",
+      "think": "medium",
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "80af91fdfc6e731b86a78f3db4cb72436b056c15b344178e5244e08370f0d726",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 48.36179483300657,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 5167,
+      "load_seconds": 1.571019042,
+      "generation_seconds": 46.04513,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 1686,
+      "sampled_allocation_bytes": [
+        12866111405
+      ],
+      "sampled_vram_bytes": [
+        12866111405
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-gpt-oss-20b",
+      "task": "hard-selection",
+      "model": "gpt-oss:20b",
+      "think": "medium",
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "3a1f31cdaf897a01897a5755eda0dd547b8bf9eb2309b8f8d983f890fddc920b",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "error",
+      "wall_seconds": 24.1975969170162,
+      "deadline_seconds": null,
+      "done_reason": null,
+      "output_tokens": null,
+      "load_seconds": 0.0,
+      "generation_seconds": 0.0,
+      "error_type": "HTTPError",
+      "server_error": "{\"error\":\"prediction aborted, token repeat limit reached\"}",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/hard-pair-gpt-oss-20b/hard-selection-response.txt'"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-ornith-1.5-35b",
+      "task": "hard-review",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "d356bec1667113a984819f90133f312d7b9edc39641640fbf2c505820b45672d",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 74.54304616700392,
+      "deadline_seconds": 600,
+      "done_reason": "length",
+      "output_tokens": 8192,
+      "load_seconds": 2.065091917,
+      "generation_seconds": 72.236432,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-ornith-1.5-35b",
+      "task": "hard-selection",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "c9529508527bce7aefea4c47d8f953287fc2afa81fd34e672559a3cded30e290",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 79.58749066700693,
+      "deadline_seconds": 600,
+      "done_reason": "length",
+      "output_tokens": 8192,
+      "load_seconds": 6.356419459,
+      "generation_seconds": 72.81655,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "KeyError: 'select_books'"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-qwen3.6-35b-no-thinking",
+      "task": "hard-review",
+      "model": "qwen3.6:35b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "7217207a7e94758722f6797274f372bf20c6c352cf32f845bba676597f7fe3b6",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 16.11421120801242,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 837,
+      "load_seconds": 6.86165325,
+      "generation_seconds": 8.292793,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 3446,
+      "sampled_allocation_bytes": [
+        22092468713
+      ],
+      "sampled_vram_bytes": [
+        22092468713
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-qwen3.6-35b-no-thinking",
+      "task": "hard-selection",
+      "model": "qwen3.6:35b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "0650548dc411f9648bb6e98fec4d922a6961024b303ad3e2126e610ea6b2a549",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 36.29862487499486,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 2829,
+      "load_seconds": 6.357988625,
+      "generation_seconds": 29.347821,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 11838,
+      "sampled_allocation_bytes": [
+        22092468713
+      ],
+      "sampled_vram_bytes": [
+        22092468713
+      ],
+      "acceptance": {
+        "passed": 40,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "absolute offset order",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "offset instant tie id",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": "OverflowError: int too large to convert to float"
+          },
+          {
+            "case": "observed_at malformed plus eligible",
+            "passed": false,
+            "error": "unexpected ValueError"
+          },
+          {
+            "case": "expires_at malformed plus eligible",
+            "passed": false,
+            "error": "unexpected ValueError"
+          },
+          {
+            "case": "mixed 1",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 3",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 5",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 6",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 8",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 9",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 10",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 12",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 15",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 16",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 17",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 18",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 19",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 21",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 22",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 24",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 25",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 26",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 27",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 28",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 29",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 32",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 33",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 35",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 36",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 38",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 39",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 40",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 43",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 44",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 45",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 46",
+            "passed": false,
+            "error": null
+          },
+          {
+            "case": "mixed 47",
+            "passed": false,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-qwen3.8-27b",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "2ed2060f5d3f1eec4a7b277058d72fa7b0c96808af0add7bc894c678a6cf97f4",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "error",
+      "wall_seconds": 120.57381674999488,
+      "deadline_seconds": null,
+      "done_reason": null,
+      "output_tokens": null,
+      "load_seconds": 0.0,
+      "generation_seconds": 0.0,
+      "error_type": "HTTPError",
+      "server_error": null
+    },
+    {
+      "folder": "hard-pair-qwen3.8-27b-no-thinking",
+      "task": "hard-review",
+      "model": "qwen3.8:27b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "068b38d6685c1272b85bac517916c76471860f88f76a14264fd340c15abf9965",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 13.099958374979906,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 225,
+      "load_seconds": 3.831867583,
+      "generation_seconds": 7.682208,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 970,
+      "sampled_allocation_bytes": [
+        18391603608
+      ],
+      "sampled_vram_bytes": [
+        18391603608
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-qwen3.8-27b-no-thinking",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "896b9e33c0305015a84191795e6051a2993555c199332974dd8d2a4684cfc919",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 42.19737329200143,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 1089,
+      "load_seconds": 3.573163333,
+      "generation_seconds": 37.056224,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 4223,
+      "sampled_allocation_bytes": [
+        18391603608
+      ],
+      "sampled_vram_bytes": [
+        18391603608
+      ],
+      "acceptance": {
+        "passed": 77,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-qwen3.8-27b-q8_0-no-thinking",
+      "task": "hard-review",
+      "model": "qwen3.8:27b-q8_0",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "5e2e4b9ad44c0a3d97b67ab326ea0b486486ef0c67d3d7e38b138d8423a7c93f",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 16.125379874982173,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 161,
+      "load_seconds": 6.101566042,
+      "generation_seconds": 8.480552,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 679,
+      "sampled_allocation_bytes": [
+        30439962049
+      ],
+      "sampled_vram_bytes": [
+        30439962049
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-qwen3.8-27b-q8_0-no-thinking",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b-q8_0",
+      "think": false,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "37563e802b5023d7df6dcfc26d5a11c8ae744e103916f436b9eb8260afa6a960",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 66.36575658401125,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 1105,
+      "load_seconds": 7.090224,
+      "generation_seconds": 58.680179,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 4132,
+      "sampled_allocation_bytes": [
+        30439962049
+      ],
+      "sampled_vram_bytes": [
+        30439962049
+      ],
+      "acceptance": {
+        "passed": 77,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": "OverflowError: int too large to convert to float"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-recovery-qwen3.8-27b",
+      "task": "hard-review",
+      "model": "qwen3.8:27b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "3273e6d695c8e3999db2ad8386b5ba1b935e867712eefa4234c5b2f986fec9be",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 148.67257575000986,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 4129,
+      "load_seconds": 5.322402625,
+      "generation_seconds": 142.08129,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 1776,
+      "sampled_allocation_bytes": [
+        18391603608
+      ],
+      "sampled_vram_bytes": [
+        18391603608
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-recovery-qwen3.8-27b",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "2ed2060f5d3f1eec4a7b277058d72fa7b0c96808af0add7bc894c678a6cf97f4",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "error",
+      "wall_seconds": 119.53131020802539,
+      "deadline_seconds": null,
+      "done_reason": null,
+      "output_tokens": null,
+      "load_seconds": 0.0,
+      "generation_seconds": 0.0,
+      "error_type": "HTTPError",
+      "server_error": "{\"error\":\"prediction aborted, token repeat limit reached\"}",
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "FileNotFoundError: [Errno 2] No such file or directory: '/Users/maxzipperman/.codex/.chatgpt-projects/g-p-6abd9b86b9548191a07ce7f1180bc80a/local-model-comparison/checkout/reviews/local-model-challengers-20261002/hard-pair-recovery-qwen3.8-27b/hard-selection-response.txt'"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-pair-recovery-qwen3.8-27b-q8_0",
+      "task": "hard-review",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "83b95e41da072ece4be0ed9710f54856d301b0d9c99e964ac7ac5463668c9590",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 201.93878329201834,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 3616,
+      "load_seconds": 7.372404792,
+      "generation_seconds": 193.015221,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 1662,
+      "sampled_allocation_bytes": [
+        30439962049
+      ],
+      "sampled_vram_bytes": [
+        30439962049
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-pair-recovery-qwen3.8-27b-q8_0",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0
+      },
+      "request_sha256": "eba3b1f27643d8a7d1e9fa6e35983e0051b36a6e4eebfbff463ca4929984b3a6",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 314.5094887909945,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 5691,
+      "load_seconds": 5.832378708,
+      "generation_seconds": 307.695165,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 2253,
+      "sampled_allocation_bytes": [
+        30439962049
+      ],
+      "sampled_vram_bytes": [
+        30439962049
+      ],
+      "acceptance": {
+        "passed": 77,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": "OverflowError: int too large to convert to float"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-sampled-qwen3.8-27b",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b",
+      "think": true,
+      "options": {
+        "temperature": 1.0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0,
+        "top_p": 0.95,
+        "top_k": 20,
+        "min_p": 0,
+        "presence_penalty": 0,
+        "repeat_penalty": 1.0
+      },
+      "request_sha256": "4e9cabb97b28f94299363dd345d3b956c2ad89240aed8458504ecf314bc0c32d",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 147.10630012501497,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 4202,
+      "load_seconds": 1.815216417,
+      "generation_seconds": 144.47461,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 3007,
+      "sampled_allocation_bytes": [
+        18391603608
+      ],
+      "sampled_vram_bytes": [
+        18391603608
+      ],
+      "acceptance": {
+        "passed": 78,
+        "cases": 78,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-sampled-qwen3.8-27b-no-thinking",
+      "task": "hard-review",
+      "model": "qwen3.8:27b",
+      "think": false,
+      "options": {
+        "temperature": 0.7,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0,
+        "top_p": 0.8,
+        "top_k": 20,
+        "min_p": 0,
+        "presence_penalty": 1.5,
+        "repeat_penalty": 1.0
+      },
+      "request_sha256": "35dbeb44a129864541acbf6d18e3cac5168340648bad78eb628fe011dd8e5ae5",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 13.10163995900075,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 193,
+      "load_seconds": 5.5850295,
+      "generation_seconds": 6.57929,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 731,
+      "sampled_allocation_bytes": [
+        18391603608
+      ],
+      "sampled_vram_bytes": [
+        18391603608
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "hard-sampled-qwen3.8-27b-q8_0",
+      "task": "hard-selection",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 1.0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0,
+        "top_p": 0.95,
+        "top_k": 20,
+        "min_p": 0,
+        "presence_penalty": 0,
+        "repeat_penalty": 1.0
+      },
+      "request_sha256": "a174f0ac5aeba2461e94b0ad032cad6df54c324a05c9b1ab73c4e82f9e2a6978",
+      "prompt_sha256": "7567dd8ea92b2a87632ee64b35fa4c05fc665fd0d006869d9f6f21f73e6551a3",
+      "status": "result",
+      "wall_seconds": 320.44452424999326,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 5763,
+      "load_seconds": 9.130123333,
+      "generation_seconds": 309.785552,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 2234,
+      "sampled_allocation_bytes": [
+        30290151996
+      ],
+      "sampled_vram_bytes": [
+        30290151996
+      ],
+      "acceptance": {
+        "passed": 77,
+        "cases": 78,
+        "failures": [
+          {
+            "case": "odds malformed plus eligible",
+            "passed": false,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "folder": "hard-sampled-qwen3.8-27b-q8_0-no-thinking",
+      "task": "hard-review",
+      "model": "qwen3.8:27b-q8_0",
+      "think": false,
+      "options": {
+        "temperature": 0.7,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192,
+        "draft_num_predict": 0,
+        "top_p": 0.8,
+        "top_k": 20,
+        "min_p": 0,
+        "presence_penalty": 1.5,
+        "repeat_penalty": 1.0
+      },
+      "request_sha256": "c116208d36bb18ecb335253fd520317e077d10802ad5b7ec2f848dbaf6ba02a0",
+      "prompt_sha256": "8aaa68d2acec291c1082875e9e9fe2453f1b8432b7c8330ca87c875969873230",
+      "status": "result",
+      "wall_seconds": 20.172495000006165,
+      "deadline_seconds": 600,
+      "done_reason": "stop",
+      "output_tokens": 245,
+      "load_seconds": 5.846882958,
+      "generation_seconds": 12.99637,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 941,
+      "sampled_allocation_bytes": [
+        30439962049
+      ],
+      "sampled_vram_bytes": [
+        30439962049
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "ornith-1.5-35b",
+      "task": "extraction",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "8f57393a09104d30c482ab9ab9141181c53fac7538164ffdebc693508db614b2",
+      "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
+      "status": "result",
+      "wall_seconds": 15.112862417008728,
+      "deadline_seconds": 300,
+      "done_reason": "stop",
+      "output_tokens": 921,
+      "load_seconds": 6.859812042,
+      "generation_seconds": 7.945364,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 205,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "ornith-1.5-35b",
+      "task": "multifile",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "c2b07059dc8e7344f87b78c541b65a6e2a6d244700a69e92942b01810d1d3155",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "status": "result",
+      "wall_seconds": 82.54422870799317,
+      "deadline_seconds": 300,
+      "done_reason": "length",
+      "output_tokens": 8192,
+      "load_seconds": 6.614319792,
+      "generation_seconds": 74.88869,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "ornith-1.5-35b",
+      "task": "regression",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "9b27995cbc86916142df889b3753d5d9978dbd61aa057e734bb9119475204254",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "status": "result",
+      "wall_seconds": 76.60701170799439,
+      "deadline_seconds": 300,
+      "done_reason": "length",
+      "output_tokens": 8192,
+      "load_seconds": 2.063550084,
+      "generation_seconds": 74.089514,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "KeyError: 'run_tests'"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "ornith-1.5-35b",
+      "task": "review",
+      "model": "ornith-1.5:35b",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "d77ffbcba6f3cb2ab4164281498a48af85db57e314c94d15d828f16a3f1930a1",
+      "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
+      "status": "result",
+      "wall_seconds": 81.61646300001303,
+      "deadline_seconds": 300,
+      "done_reason": "length",
+      "output_tokens": 8192,
+      "load_seconds": 7.849191459,
+      "generation_seconds": 73.048544,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 0,
+      "sampled_allocation_bytes": [
+        22092625999
+      ],
+      "sampled_vram_bytes": [
+        22092625999
+      ],
+      "acceptance": {
+        "passed": 0,
+        "cases": 1,
+        "failures": [
+          {
+            "case": "candidate completion/loading",
+            "passed": false,
+            "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "qwen3.8-27b-q8_0",
+      "task": "extraction",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "325f29a26705f792880f644d4ad72f85f37b7c3c2b1a91114ed1dd476a786595",
+      "prompt_sha256": "8ca4e62551821f0f3a6ed072fda6d7152ded6be370b45ceaf9d560e83e4daffa",
+      "status": "result",
+      "wall_seconds": 56.45191629198962,
+      "deadline_seconds": 300,
+      "done_reason": "stop",
+      "output_tokens": 866,
+      "load_seconds": 9.373973708,
+      "generation_seconds": 46.069852,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 193,
+      "sampled_allocation_bytes": [
+        30439962049
+      ],
+      "sampled_vram_bytes": [
+        30439962049
+      ],
+      "acceptance": {
+        "passed": 1,
+        "cases": 1,
+        "failures": []
+      }
+    },
+    {
+      "folder": "qwen3.8-27b-q8_0",
+      "task": "multifile",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "42e87de4342f01f7fe41458fcef16746283a2268162ea74f477bef3e1d908774",
+      "prompt_sha256": "56b70b3ee51622bb04ad34e32094567d6a6eb195b11e2741660e142aaf113762",
+      "status": "result",
+      "wall_seconds": 271.1080792499997,
+      "deadline_seconds": null,
+      "done_reason": "stop",
+      "output_tokens": 4343,
+      "load_seconds": 3.051074708,
+      "generation_seconds": 266.754526,
+      "error_type": null,
+      "server_error": null,
+      "final_answer_bytes": 3061,
+      "sampled_allocation_bytes": [
+        30290151996
+      ],
+      "sampled_vram_bytes": [
+        30290151996
+      ],
+      "acceptance": {
+        "passed": 52,
+        "cases": 53,
+        "failures": [
+          {
+            "case": "invalid odds 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            "group": "invalid odds",
+            "passed": false,
+            "error": "OverflowError: int too large to convert to float"
+          }
+        ]
+      }
+    },
+    {
+      "folder": "qwen3.8-27b-q8_0",
+      "task": "real-helper",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "828f27acb5857e375a9fb7a1576dc7c90d068505d5561590eac6fb15fbef28e5",
+      "prompt_sha256": "58a191a40c37027f54595a9b53a2cc71716793cd5ff74a03c388191f7e36b40b",
+      "status": "pending"
+    },
+    {
+      "folder": "qwen3.8-27b-q8_0",
+      "task": "regression",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "ee87eab664e7cd8c3850b68eaf0303ef6ff670e757f568c4cd7a5d699f80a685",
+      "prompt_sha256": "63d6da6d04766db8ce4f05df17036d84b93bfcb61cad211735768ee989a9aa89",
+      "status": "error",
+      "wall_seconds": 300.3535047500045,
+      "deadline_seconds": null,
+      "done_reason": null,
+      "output_tokens": null,
+      "load_seconds": 0.0,
+      "generation_seconds": 0.0,
+      "error_type": "TimeoutError",
+      "server_error": null
+    },
+    {
+      "folder": "qwen3.8-27b-q8_0",
+      "task": "review",
+      "model": "qwen3.8:27b-q8_0",
+      "think": true,
+      "options": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 16384,
+        "num_predict": 8192
+      },
+      "request_sha256": "6ed155bb4f75b210a6dff8829bbce7c82961a843b42dfcb3a26b286d8aba6e7e",
+      "prompt_sha256": "66931a14e35ab3e6e5195d18e0a08ca125d137627cad68e23a2618392d5231ac",
+      "status": "error",
+      "wall_seconds": 300.3330027089978,
+      "deadline_seconds": null,
+      "done_reason": null,
+      "output_tokens": null,
+      "load_seconds": 0.0,
+      "generation_seconds": 0.0,
+      "error_type": "TimeoutError",
+      "server_error": null
+    }
+  ],
+  "hard_manual_reviews": {
+    "hard-pair-recovery-qwen3.8-27b": {
+      "true_defects": 5,
+      "independent_false_findings": 0,
+      "covered": [
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "eligibility_after_latest",
+        "inclusive_expiry",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Says every negative-odds row has incorrect probability; -100 correctly gives 0.5 under both formulas. Main negative-odds finding is valid."
+      ],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-pair-recovery-qwen3.8-27b-q8_0": {
+      "true_defects": 5,
+      "independent_false_findings": 0,
+      "covered": [
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "eligibility_after_latest",
+        "inclusive_expiry",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Wrong formula is the complement, not reciprocal, of correct negative-odds probability.",
+        "Says every negative-odds row has incorrect probability; -100 correctly gives 0.5 under both formulas. Main finding valid."
+      ],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-pair-qwen3.8-27b-no-thinking": {
+      "true_defects": 2,
+      "independent_false_findings": 1,
+      "covered": [
+        "eligibility_after_latest",
+        "missing_id_tie_break"
+      ],
+      "missed": [
+        "lexical_offset_order",
+        "inclusive_expiry",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Line12 finding wrongly says inclusive asof <= expires allows observed==expires; inputs guarantee observed<expires, so this is not a valid finding of the real expiry defect.",
+        "Tie finding wrongly claims identical clock/id ties do not retain first input row; the exact-string case does retain it."
+      ],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-pair-qwen3.8-27b-q8_0-no-thinking": {
+      "true_defects": 2,
+      "independent_false_findings": 0,
+      "covered": [
+        "eligibility_after_latest",
+        "inclusive_expiry"
+      ],
+      "missed": [
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-pair-qwen3.6-35b-no-thinking": {
+      "true_defects": 3,
+      "independent_false_findings": 1,
+      "duplicate_findings": 1,
+      "covered": [
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "eligibility_after_latest"
+      ],
+      "missed": [
+        "inclusive_expiry",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Reverses American-odds formulas, wrongly claims current formula is correct for negatives and incorrect for positives.",
+        "Finding3 includes speculation about datetime objects despite string-input contract and weak cause localization.",
+        "Finding4 repeats eligibility-after-selection rather than identifying inclusive expiry."
+      ],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-pair-gpt-oss-20b": {
+      "reviewer": "author manual source/contract check, not separate reviewer signoff",
+      "true_defects": 5,
+      "independent_false_findings": 1,
+      "covered": [
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "eligibility_after_latest",
+        "inclusive_expiry",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Python3.14 fromisoformat supports Z; input contract guarantees aware clocks. Tie finding overstates missing first-input preference on identical strings, which strict > preserves."
+      ]
+    },
+    "hard-pair-gemma4-26b-no-thinking": {
+      "reviewer": "author manual source/contract check, not separate reviewer signoff",
+      "true_defects": 4,
+      "independent_false_findings": 0,
+      "covered": [
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "eligibility_after_latest",
+        "inclusive_expiry"
+      ],
+      "missed": [
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Tie finding implies identical-string clock/id first-input preference is missing; strict > preserves this case."
+      ]
+    },
+    "hard-pair-ornith-1.5-35b": {
+      "reviewer": "author manual source/contract check, not separate reviewer signoff",
+      "true_defects": 0,
+      "independent_false_findings": 0,
+      "status": "8192-token reasoning limit with empty answer; no usable review to assess"
+    },
+    "hard-native-qwen3.8-27b": {
+      "true_defects": 5,
+      "independent_false_findings": 0,
+      "covered": [
+        "lexical_offset_order",
+        "missing_id_tie_break",
+        "eligibility_after_latest",
+        "inclusive_expiry",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-sampled-qwen3.8-27b-no-thinking": {
+      "true_defects": 3,
+      "independent_false_findings": 0,
+      "covered": [
+        "eligibility_after_latest",
+        "inclusive_expiry",
+        "missing_id_tie_break"
+      ],
+      "missed": [
+        "lexical_offset_order",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Tie finding overstates lack of first-input preference for identical timestamp strings: strict > retains that case."
+      ],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    },
+    "hard-sampled-qwen3.8-27b-q8_0-no-thinking": {
+      "true_defects": 3,
+      "independent_false_findings": 1,
+      "covered": [
+        "eligibility_after_latest",
+        "inclusive_expiry",
+        "missing_id_tie_break"
+      ],
+      "missed": [
+        "lexical_offset_order",
+        "negative_odds_probability"
+      ],
+      "inaccurate_claims": [
+        "Inputs guarantee aware ISO clocks, and Python3.14 handles offsets and Z; the naive-clock finding is outside contract and falsely claims offset/Z handling is wrong.",
+        "Tie finding overstates missing first-input retention for identical strings."
+      ],
+      "reviewer": "author manual source/contract check, not separate reviewer signoff"
+    }
+  }
+}

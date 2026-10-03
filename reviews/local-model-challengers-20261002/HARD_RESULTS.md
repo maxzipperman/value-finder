@@ -21,7 +21,7 @@ Q4 native-drafting diagnostic completed: selection77/78 in88s, review5/5 with0 f
 
 Both Qwen thinking reviews identify all five causes, with small explanatory inaccuracies (-100 exception; Q8 calls complementary probabilities reciprocal). GPT-OSS falsely claims Python3.14 cannot parse Z timestamps. Gemma misses negative-odds probability; Qwen3.6 reverses the correct American-odds formulas. Some tie-break findings overstate loss of first input on identical clock strings: strict > retains that case. Manual records: [hard-review-manual.json](hard-review-manual.json).
 
-All Qwen3.8 passing-selection drafts still fail the out-of-float-range integer case: some crash, others accept an invalid record. Gemma accepts nonfinite positive infinity. Qwen3.6 adds broken offset parsing and batch-aborting malformed clock handling. No draft is production-ready merely because most checks pass.
+The greedy Qwen3.8 selection drafts fail the out-of-float-range integer case: some crash, others accept an invalid record. The separate sampled Q4 diagnostic passes this case and all78 checks; sampled Q8 still accepts the invalid record. Gemma accepts nonfinite positive infinity. Qwen3.6 adds broken offset parsing and batch-aborting malformed clock handling. No draft is production-ready merely because most checks pass.
 
 The reference passes all78 cases and all eight deliberately faulty implementations are detected; [hard-pair-harness-validation.json](hard-pair-harness-validation.json). Inspect candidate source before executing AST-restricted grading in the ordinary sandbox. No candidate has been given test failures or patched by the grader.
 
@@ -34,3 +34,7 @@ Exact model digests/artifact sizes: [inventory.json](inventory.json). Q4/Q8 meta
 ## Owner-requested budget diagnostics pending
 
 After the owner questioned unfinished tests, prospective separate diagnostics were declared: Ornith hard tasks thinking with output16384/context32768/deadline600 (double output, larger context), and Q8 original regression with only time300→600 and original output8192/context16384. Native/sampling/fast modes remain separate. Current sequential collectors complete the original six-task extensions before queued Ornith fast/extended and Q8 runtime-only diagnostic. No old results are overwritten; no solutions or grading feedback supplied. Completion and grading remain pending, and no new Dot handoff has been sent yet.
+
+Original six-task extension progress: Q8 multifile52/53 in271s; regression and review each timed out at300s, so no review capability grade is assigned. Ornith multifile/regression each reached8192 output tokens with empty final answers (~83/77s); no semantic/test-suite score is assigned. Remaining tasks and larger-budget diagnostics are pending.
+
+Original extraction: both Q8 and Ornith exactly match the expected schema/facts and ignore adversarial instructions in synthetic logs. Q8 takes56.45s, Ornith15.11s. Ornith original review also reaches8192 tokens with empty final answer in81.62s. This is a narrowly demonstrated extraction role, not broader review/code quality.
