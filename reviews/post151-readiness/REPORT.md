@@ -1,8 +1,9 @@
 # Completed football cache: readiness before grading
 
-**Provisional:** slot-qualified frozen failures were applied to both slots in
-PR155. Per-slot coverage, reasons and clocks require a narrow descriptive repair.
-Original pilot decisions and grading holds remain unchanged.
+**Provisional pending independent review of PR159:** slot-qualified failures now
+apply only to the named diagnostic slot. The corrected descriptive artifact and
+[exact count delta](slot-correction-delta.json) preserve original pilot decisions
+and all grading holds.
 
 **Cached quote diagnostics are available; registered grading is still blocked.**
 This is a read-only acquired-data report, not another pilot gate look, draw,
@@ -85,7 +86,7 @@ or actual fill. Both provider and independent schedule clocks are checked.
 replaced. Snapshot/event orientation, as-of binding, and both kickoff restrictions
 remain those of the reviewed classifier.
 
-All 4,362 measured game-slot snapshot ages were 0–600 seconds. Of 112,486
+All 4,364 measured game-slot snapshot ages were 0–600 seconds. Of 112,528
 measured event/market-clock occurrences, **19,972 market updates were after the
 returned snapshot** (but before the decision), and **111 were more than 900
 seconds old relative to snapshot**. No quote-clock semantics or thresholds were
@@ -142,3 +143,25 @@ Independent-review correction: the temporal-point label was renamed without
 remeasuring caches or changing any counts, classifier, gate or final look. The
 JSON preserves the original artifact and measurement-producer hashes alongside
 the corrected label provenance. A 40-versus-42 regression tests the actual classifier.
+
+## Slot-failure correction (PR159)
+
+The frozen paired-game veto remains unchanged. EARLY-only failures previously
+suppressed CLOSE diagnostics too. The repaired projection checks the named slot;
+unqualified, unknown-prefix and reasonless failures remain global and fail closed.
+
+Of four EARLY-only cases, CFB2020 401249878 and NFL2020 2020_17_TEN_HOU have
+authenticated CLOSE receipts and the existing classifier accepts six and eight
+book/game pairs respectively. CFB2020 401249032 and NFL2020 2020_12_BAL_PIT
+have no designated CLOSE receipt in the pinned ledger set and remain missing.
+No unavailable quote was invented or automatically admitted. Three both-slot
+failures remain excluded; their reason labels now identify only the relevant slot.
+
+The exact delta is +14 book/game CLOSE pairs, +2 snapshot observations and +42
+quote-clock occurrences. Fifty aggregate rows change, including reason-only
+changes; exclusion records fall from 1,854 to 1,852. The 2,401 overall / 1,514
+older-game denominators, 1,267 paired games, 334 within-book temporal-point games,
+all NFL2023–25 props coverage and frozen input/ledger/receipt/classifier/timing/final
+hashes are unchanged. Clock counts describe occurrences, not independent trials.
+Only descriptive readiness was recomputed. No coverage bounds or pilot final look,
+held-group release, outcome join, registration, runtime write or new spend occurred.
