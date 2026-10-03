@@ -209,3 +209,6 @@ PR147 integrated ceiling checkpoint: active sequential queue98555, Qwen3.6fast t
 
 
 PR147 follow-up: Qwen3.8Q4 regression also stop-empty below32K; review9/10 causes,0false/duplicates,289s. Six of18 conditional API32K targets prospectively qualified by saved baseline progress (DeepSeek multifile/hard-selection; MiMo multifile/debugging/regression/hard-selection),12 denied/deferred, maximum additional reserve$0.11718916; no32K collector started. Active integrated queue98555 continues GPT-OSS medium next, no competing inference or final handoff.
+
+
+PR147 ceiling checkpoint: GPT-OSS medium implementation/regression both length32K empty finals (~349s/~347s). Implementation thinking10092 literal - Enough. repetitions; regression six repeated suite headers.64K denied for repetition/no progress, no hidden-source salvage. Review queued separately, other integrated models/API still pending; no final handoff.

@@ -1,0 +1,2075 @@
+{
+  "model": "gpt-oss:20b",
+  "created_at": "2026-10-03T11:11:59.471792Z",
+  "message": {
+    "role": "assistant",
+    "content": "",
+    "thinking": "We need to write tests for the snapshot function. We need to test behavior: validation of asof, event, quote selection, run reconciliation, counts, lists. We need to cover edge cases: invalid inputs, tie-breaking, first-input tie exception, future rows, expired rows, etc.\n\nWe need to write tests that call candidate(snapshot) with various inputs. The candidate is the snapshot function from pipeline module. We need to import it? The tests will be run by some harness that passes candidate. So we just define run_tests(candidate). We can import datetime, math, copy, json.\n\nWe need to test:\n\n- Validation: asof must be timezone-aware. Provide naive datetime -> ValueError. Provide string with Z -> ok. Provide string without timezone -> ValueError. Provide event empty string -> ValueError. Provide event whitespace? allowed? \"nonempty str (whitespace allowed)\" so whitespace-only string is allowed. But event must be nonempty. So event=\" \" is allowed. event=\"\" invalid.\n\n- quote selection: test that only rows matching event and within asof window are selected. Test that last_update <= observed_at. Test that observed_at <= asof < expires_at. Test that future rows (observed_at > asof) are skipped. Test that expired rows (expires_at <= asof) are skipped. Test that invalid rows (missing fields, bad types) are skipped.\n\n- Probability calculation: test positive odds, negative odds, large odds, small odds (<100 abs) invalid. Test string convertible to float. Test bool invalid. Test NaN/inf invalid. Test conversion overflow? Not needed.\n\n- Tie-breaking: For same book, multiple eligible rows: choose greatest observed_at. If tie, lexicographically smallest id. If tie again, keep first eligible input row. So we need to test that if two rows have same observed_at and id, but different other fields, the first one is chosen. Also test that if two rows have same observed_at but different id, the smaller id chosen. Also test that if two rows have same observed_at and id but different probability, first one chosen.\n\n- Ensure that the returned dict contains only selected rows, with original dict reference (not copy). We can test that the returned row is the same object as in input list (by identity). But we cannot rely on identity? The spec says \"Do not copy chosen row.\" So we can test that returned row is the same object.\n\n- runs.reconcile: test that invalid rows skipped. Future rows skipped. Duplicate run_id: choose greatest observed_at; ties keep first eligible input row. Then per job, choose latest attempt: greatest numeric attempt, then greatest observed_at, then lexicographically smallest run_id, ties first. No status preference. So we need to test that a later attempt with failed status overrides earlier ok. Also test that duplicate run_id with later valid record can correct job field. Also test that duplicate run_id with future invalid row does not suppress previous valid.\n\n- Count downloaded_rows: sum once per selected job with status ok or partial. So we need to test that duplicates don't inflate counts. Also test that partial jobs counted once.\n\n- The returned snapshot dict: keys 'quotes', 'runs', 'successful_rows', 'failures', 'partial_jobs', 'unknown_jobs'. We need to test that these keys exist and values correct.\n\n- Sorting of failures, partial_jobs, unknown_jobs: sorted list of job strings.\n\n- Ensure that unknown_jobs only includes pending jobs.\n\n- Ensure that successful_rows is sum of downloaded_rows for ok or partial jobs.\n\n- Ensure that if no runs, successful_rows=0, lists empty.\n\n- Ensure that if no quotes, quotes empty dict.\n\n- Ensure that event whitespace allowed: event=\" \" should be accepted.\n\n- Ensure that asof string with Z accepted.\n\n- Ensure that asof string without timezone invalid.\n\n- Ensure that asof datetime naive invalid.\n\n- Ensure that asof datetime with timezone but offset None invalid.\n\n- Ensure that asof datetime with timezone offset non-zero accepted.\n\n- Ensure that quote rows with invalid observed_at or expires_at or last_update cause skip.\n\n- Ensure that quote rows with last_update > observed_at cause skip.\n\n- Ensure that quote rows with observed_at > asof cause skip.\n\n- Ensure that quote rows with expires_at <= asof cause skip.\n\n- Ensure that quote rows with event mismatch cause skip.\n\n- Ensure that quote rows with invalid odds cause skip.\n\n- Ensure that quote rows with id, book, event empty string cause skip.\n\n- Ensure that quote rows with missing fields cause skip.\n\n- Ensure that run rows with missing fields cause skip.\n\n- Ensure that run rows with status not in allowed set cause skip.\n\n- Ensure that run rows with downloaded_rows negative cause skip.\n\n- Ensure that run rows with attempt negative or zero? attempt must be positive int. So zero invalid.\n\n- Ensure that run rows with future observed_at cause skip.\n\n- Ensure that run rows with status pending or failed must have downloaded_rows==0; else skip.\n\n- Ensure that run rows with status ok or partial may have downloaded_rows>=0.\n\n- Ensure that run rows with duplicate run_id but later observed_at override earlier.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt? The dedup step uses observed_at only, not attempt. So later observed_at wins regardless of attempt. Then later attempt selection uses attempt.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt? The later observed_at wins, but then attempt selection uses attempt. So if later observed_at has lower attempt, but earlier observed_at had higher attempt, the later observed_at row will be considered for that job. But then attempt selection picks highest attempt among all rows for that job. So earlier attempt may still win if higher attempt. But the later observed_at row may have lower attempt, but still considered. So we need to test that.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt but same job? The later observed_at row may have lower attempt, but attempt selection picks highest attempt among all rows for that job. So earlier attempt may win. But the later observed_at row may still be considered for that job. But the earlier attempt row may be older observed_at but higher attempt. So the final selected row may be the earlier attempt row. So we need to test that.\n\n- Ensure that run rows with duplicate run_id but later observed_at but same attempt? Then tie: lexicographically smallest run_id, ties first. But run_id same. So first eligible input row wins. So earlier row wins.\n\n- Ensure that run rows with duplicate run_id but later observed_at but same attempt but different job? The later observed_at row may have different job. But dedup step uses run_id only, so later observed_at row wins, overriding earlier job. So job field may change. So we need to test that.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt but same job? The later observed_at row wins, but attempt selection picks highest attempt among all rows for that job. So earlier attempt may win. So final selected row may be earlier attempt row. So we need to test that.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt but same job but earlier observed_at? Wait earlier observed_at? No, later observed_at wins. So later observed_at row is considered. But attempt selection picks highest attempt among all rows for that job. So earlier attempt may win. So final selected row may be earlier attempt row. So we need to test that.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt but same job but earlier observed_at? Not possible.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt but same job but earlier observed_at? Not possible.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt but same job but earlier observed_at? Not possible.\n\n- Ensure that run rows with duplicate run_id but later observed_at but earlier attempt but same job but earlier observed_at? Not possible.\n\nOk.\n\nAlso test that the snapshot function does not mutate input lists or dicts. So we can copy input lists before calling, and after call compare equality.\n\nAlso test that snapshot returns new dict, not same as input.\n\nAlso test that snapshot returns quotes dict with keys as book names.\n\nAlso test that probability values are floats.\n\nAlso test that probability calculation for positive odds: e.g., odds=200 -> 100/(200+100)=0.3333. For negative odds: odds=-200 -> (-(-200))/((-(-200))+100)=200/(200+100)=0.6666.\n\nAlso test that odds string convertible: \"200\" -> 200.\n\nAlso test that odds bool invalid: True -> ValueError.\n\nAlso test that odds NaN invalid: float('nan') -> ValueError.\n\nAlso test that odds inf invalid: float('inf') -> ValueError.\n\nAlso test that odds abs<100 invalid: 50 -> ValueError.\n\nAlso test that odds 100 exactly? abs>=100 allowed. So 100 -> 100/(100+100)=0.5. -100 -> 100/(100+100)=0.5.\n\nAlso test that odds 100.0 -> 0.5.\n\nAlso test that odds 100.1 -> 100/(200.1)=0.49975.\n\nAlso test that odds -100.1 -> 100.1/(200.1)=0.50025.\n\nAlso test that odds 1000000 -> 100/(1000000+100)=0.00009999.\n\nAlso test that odds -1000000 -> 1000000/(1000000+100)=0.9999.\n\nAlso test that odds string \"1e6\" -> 1e6.\n\nAlso test that odds string \"1e-6\" -> 1e-6 -> abs<100 -> invalid.\n\nAlso test that odds string \"abc\" -> ValueError.\n\nAlso test that odds string \"True\" -> ValueError.\n\nAlso test that odds string \"False\" -> ValueError.\n\nAlso test that odds string \"1.0\" -> 1.0 -> abs<100 -> invalid.\n\nAlso test that odds string \"100\" -> 0.5.\n\nAlso test that odds string \"200\" -> 0.3333.\n\nAlso test that odds string \"-200\" -> 0.6666.\n\nAlso test that odds string \"200.0\" -> 0.3333.\n\nAlso test that odds string \"-200.0\" -> 0.6666.\n\nAlso test that odds string \"100.0\" -> 0.5.\n\nAlso test that odds string \"100.0000001\" -> 100/(200.0000001)=0.49999999975.\n\nAlso test that odds string \"100.0000001\" -> 0.49999999975.\n\nAlso test that odds string \"100.0000001\" -> 0.49999999975.\n\nOk.\n\nAlso test that quotes.select returns dict with keys book names. For each book, the 'row' key is the original dict, 'probability' key is float.\n\nAlso test that if no eligible quotes, quotes empty dict.\n\nAlso test that if multiple books, each book appears once.\n\nAlso test that if two books have same book name but different rows, only one selected.\n\nAlso test that if two rows for same book have same observed_at but different id, smaller id chosen.\n\nAlso test that if two rows for same book have same observed_at and same id but different other fields, first eligible input row chosen.\n\nAlso test that if two rows for same book have same observed_at but different id, but one id lexicographically larger but has later observed_at? Wait same observed_at. So smaller id chosen.\n\nAlso test that if two rows for same book have same observed_at but same id but different last_update? last_update <= observed_at must hold. If one has last_update > observed_at, skip.\n\nAlso test that if two rows for same book have same observed_at but one has last_update <= observed_at and other > observed_at, only the valid one considered.\n\nAlso test that if two rows for same book have same observed_at but one has last_update <= observed_at and other <= observed_at, but one has id lexicographically smaller, choose that.\n\nAlso test that if two rows for same book have same observed_at but one has id lexicographically smaller but last_update > observed_at, skip that one, choose other.\n\nAlso test that if two rows for same book have same observed_at but one has id lexicographically smaller but last_update <= observed_at, choose that.\n\nAlso test that if two rows for same book have same observed_at but one has id lexicographically smaller but last_update <= observed_at, but other has same id but different probability, choose first.\n\nAlso test that if two rows for same book have same observed_at but one has id lexicographically smaller but last_update <= observed_at, but other has same id but last_update <= observed_at, but one appears later in input list, first eligible input row chosen.\n\nAlso test that if two rows for same book have same observed_at but one has id lexicographically smaller but last_update <= observed_at, but other has same id but last_update <= observed_at, but one appears later, first eligible input row chosen.\n\nOk.\n\nAlso test that runs.reconcile returns dict keyed by job, values original run dict.\n\nAlso test that if no eligible runs, runs empty dict.\n\nAlso test that if multiple runs for same job, only one selected.\n\nAlso test that if duplicate run_id with later observed_at, later wins.\n\nAlso test that if duplicate run_id with later observed_at but earlier attempt, later wins but attempt selection may choose earlier attempt.\n\nAlso test that if duplicate run_id with later observed_at but same attempt, earlier wins due to first eligible input row rule.\n\nAlso test that if duplicate run_id with later observed_at but same attempt but different job, later wins and job field may change.\n\nAlso test that if duplicate run_id with later observed_at but same attempt but same job, earlier wins.\n\nAlso test that if duplicate run_id with later observed_at but same attempt but same job but earlier observed_at? Not possible.\n\nAlso test that if duplicate run_id with later observed_at but same attempt but same job but earlier observed_at? Not possible.\n\nOk.\n\nAlso test that runs.reconcile returns original dict objects.\n\nAlso test that snapshot returns correct counts.\n\nAlso test that snapshot returns sorted lists.\n\nAlso test that snapshot returns correct successful_rows.\n\nAlso test that snapshot returns correct failures, partial_jobs, unknown_jobs.\n\nAlso test that snapshot returns correct quotes dict.\n\nAlso test that snapshot returns correct runs dict.\n\nAlso test that snapshot does not mutate input lists or dicts.\n\nAlso test that snapshot handles empty inputs.\n\nAlso test that snapshot handles invalid asof and event raising ValueError before inspecting lists.\n\nAlso test that snapshot handles invalid asof string raising ValueError.\n\nAlso test that snapshot handles invalid event string raising ValueError.\n\nAlso test that snapshot handles event whitespace allowed.\n\nAlso test that snapshot handles asof string with Z.\n\nAlso test that snapshot handles asof datetime with timezone.\n\nAlso test that snapshot handles asof datetime naive raising ValueError.\n\nAlso test that snapshot handles asof datetime with timezone offset None raising ValueError.\n\nAlso test that snapshot handles asof datetime with timezone offset zero? Should be accepted? It says timezone-aware values with non-None utcoffset. So offset zero is allowed. So asof datetime with tzinfo=timezone.utc is allowed.\n\nAlso test that snapshot handles asof string without timezone raising ValueError.\n\nAlso test that snapshot handles asof string with timezone offset like \"+02:00\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"-05:00\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"Z\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+00:00\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+02:00\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00-05:00\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00Z\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+00:00\" accepted.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+00:00\" accepted.\n\nOk.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+00:00\" accepted.\n\nOk.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+00:00\" accepted.\n\nOk.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+00:00\" accepted.\n\nOk.\n\nStop repeating.\n\nAlso test that snapshot handles asof string with timezone offset like \"2023-01-01T00:00:00+00:00\" accepted.\n\nOk.\n\nNow we need to write tests accordingly.\n\nWe need to import datetime, math, copy, json.\n\nWe need to define run_tests(candidate). We'll call candidate with various inputs.\n\nWe need to use assert statements.\n\nWe need to catch ValueError for invalid asof/event.\n\nWe need to test that snapshot returns correct structure.\n\nWe need to test that snapshot does not mutate inputs.\n\nWe need to test that snapshot returns original dict objects.\n\nWe need to test that snapshot returns correct counts.\n\nWe need to test that snapshot returns sorted lists.\n\nWe need to test that snapshot returns correct quotes dict.\n\nWe need to test that snapshot returns correct runs dict.\n\nWe need to test that snapshot returns correct successful_rows.\n\nWe need to test that snapshot returns correct failures, partial_jobs, unknown_jobs.\n\nWe need to test that snapshot returns correct quotes probability.\n\nWe need to test that snapshot returns correct quotes selection.\n\nWe need to test that snapshot returns correct runs selection.\n\nWe need to test that snapshot returns correct runs dedup.\n\nWe need to test that snapshot returns correct runs attempt selection.\n\nWe need to test that snapshot returns correct runs job field override.\n\nWe need to test that snapshot returns correct runs status.\n\nWe need to test that snapshot returns correct runs downloaded_rows sum.\n\nWe need to test that snapshot returns correct runs status.\n\nWe need to test that snapshot returns correct runs status.\n\nOk.\n\nLet's design tests.\n\nWe'll create helper functions to create quote rows and run rows.\n\nWe'll use datetime objects with timezone.\n\nWe'll use datetime.fromisoformat for parsing.\n\nWe'll use timezone.utc.\n\nWe'll use datetime.now(timezone.utc) for asof.\n\nWe'll create asof string \"2023-01-01T12:00:00Z\".\n\nWe'll create quote rows with observed_at <= asof < expires_at.\n\nWe'll create run rows with observed_at <= asof.\n\nWe'll test various scenarios.\n\nWe'll also test that snapshot raises ValueError for invalid asof string.\n\nWe'll test that snapshot raises ValueError for invalid event string.\n\nWe'll test that snapshot returns correct quotes dict.\n\nWe'll test that snapshot returns correct runs dict.\n\nWe'll test that snapshot returns correct counts.\n\nWe'll test that snapshot returns correct lists.\n\nWe'll test that snapshot does not mutate inputs.\n\nWe'll test that snapshot returns original dict objects.\n\nWe'll test that snapshot returns correct probability values.\n\nWe'll test that snapshot returns correct selection for ties.\n\nWe'll test that snapshot returns correct selection for first-input tie.\n\nWe'll test that snapshot returns correct selection for duplicate run_id.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with later observed_at.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with same observed_at but earlier input.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with same observed_at but later input.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with same observed_at but same id.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with same observed_at but different job.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with same observed_at but different attempt.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with same observed_at but different attempt and job.\n\nWe'll test that snapshot returns correct selection for duplicate run_id with same observed_at but different attempt and job.\n\nOk.\n\nWe need to keep tests concise but cover many cases.\n\nWe'll write tests in a single function run_tests(candidate). We'll use assert statements.\n\nWe'll use try/except for ValueError.\n\nWe'll use copy.deepcopy to check mutation.\n\nWe'll use assert candidate(...) returns expected.\n\nWe'll use assert candidate(...) returns dict with keys.\n\nWe'll use assert candidate(...) returns quotes dict with expected keys.\n\nWe'll use assert candidate(...) returns runs dict with expected keys.\n\nWe'll use assert candidate(...) returns successful_rows int.\n\nWe'll use assert candidate(...) returns failures list sorted.\n\nWe'll use assert candidate(...) returns partial_jobs list sorted.\n\nWe'll use assert candidate(...) returns unknown_jobs list sorted.\n\nWe'll use assert candidate(...) returns probability values close to expected.\n\nWe'll use math.isclose for floats.\n\nWe'll use assert candidate(...) returns original dict objects.\n\nWe'll use assert candidate(...) returns original dict objects by identity.\n\nWe'll use assert candidate(...) returns original dict objects by id.\n\nWe'll use assert candidate(...) returns original dict objects by is.\n\nWe'll use assert candidate(...) returns original dict objects by id.\n\nOk.\n\nLet's write tests.\n\nWe'll need to import datetime, math, copy, json.\n\nWe'll need to use timezone from datetime.\n\nWe'll need to use datetime.fromisoformat.\n\nWe'll need to use datetime.now.\n\nWe'll need to use timezone.utc.\n\nWe'll need to use datetime.timedelta.\n\nWe'll need to use datetime.datetime.\n\nWe'll need to use datetime.timezone.\n\nWe'll need to use datetime.timedelta.\n\nOk.\n\nLet's write tests.\n\nWe'll create a helper function to create quote row:\n\ndef make_quote(id, book, event, observed_at, expires_at, last_update, odds, extra=None):\n\n    row = {'id': id, 'book': book, 'event': event, 'observed_at': observed_at, 'expires_at': expires_at, 'last_update': last_update, 'odds': odds}\n\n    if extra: row.update(extra)\n\n    return row\n\nSimilarly for run row:\n\ndef make_run(run_id, job, attempt, observed_at, status, downloaded_rows, extra=None):\n\n    row = {'run_id': run_id, 'job': job, 'attempt': attempt, 'observed_at': observed_at, 'status': status, 'downloaded_rows': downloaded_rows}\n\n    if extra: row.update(extra)\n\n    return row\n\nWe'll use datetime objects with timezone.\n\nWe'll use asof = datetime(2023,1,1,12,0,0,tzinfo=timezone.utc)\n\nWe'll use observed_at = asof - timedelta(minutes=10)\n\nexpires_at = asof + timedelta(minutes=10)\n\nlast_update = observed_at\n\nWe'll create quotes with event \"E1\" and event \"E2\".\n\nWe'll create runs with job \"J1\", \"J2\", \"J3\".\n\nWe'll test various scenarios.\n\nWe'll test that snapshot returns quotes for event \"E1\" only.\n\nWe'll test that snapshot returns runs for jobs with status ok, partial, failed, pending.\n\nWe'll test that snapshot returns counts accordingly.\n\nWe'll test that snapshot returns sorted lists.\n\nWe'll test that snapshot returns original dict objects.\n\nWe'll test that snapshot does not mutate inputs.\n\nWe'll test that snapshot raises ValueError for invalid asof string.\n\nWe'll test that snapshot raises ValueError for invalid event string.\n\nWe'll test that snapshot accepts whitespace event.\n\nWe'll test that snapshot accepts asof string with Z.\n\nWe'll test that snapshot rejects naive datetime.\n\nWe'll test that snapshot rejects datetime with tzinfo but utcoffset None.\n\nWe'll test that snapshot rejects asof string without timezone.\n\nWe'll test that snapshot rejects asof string with invalid format.\n\nWe'll test that snapshot rejects event empty string.\n\nWe'll test that snapshot rejects event None.\n\nWe'll test that snapshot rejects event not string.\n\nWe'll test that snapshot rejects asof None.\n\nWe'll test that snapshot rejects asof not string or datetime.\n\nWe'll test that snapshot rejects asof string with timezone offset.\n\nOk.\n\nWe'll also test probability calculation.\n\nWe'll test that quotes.select returns probability values.\n\nWe'll test that probability calculation for positive odds.\n\nWe'll test that probability calculation for negative odds.\n\nWe'll test that probability calculation for string odds.\n\nWe'll test that probability calculation for invalid odds.\n\nWe'll test that probability calculation for bool.\n\nWe'll test that probability calculation for NaN.\n\nWe'll test that probability calculation for inf.\n\nWe'll test that probability calculation for abs<100.\n\nWe'll test that probability calculation for abs>=100.\n\nWe'll test that probability calculation for large odds.\n\nWe'll test that probability calculation for small odds.\n\nOk.\n\nWe'll also test that quotes.select returns correct selection for ties.\n\nWe'll test that quotes.select returns correct selection for first-input tie.\n\nWe'll test that quotes.select returns correct selection for tie with same observed_at and id.\n\nWe'll test that quotes.select returns correct selection for tie with same observed_at but different id.\n\nWe'll test that quotes.select returns correct selection for tie with same observed_at but different last_update.\n\nWe'll test that quotes.select returns correct selection for tie with same observed_at but different odds.\n\nWe'll test that quotes.select returns correct selection for tie with same observed_at but different id and last_update.\n\nOk.\n\nWe'll also test that runs.reconcile returns correct selection for duplicate run_id.\n\nWe'll test that runs.reconcile returns correct selection for duplicate run_id with later observed_at.\n\nWe'll test that runs.reconcile returns correct selection for duplicate run_id with same observed_at but earlier input.\n\nWe'll test that runs.reconcile returns correct selection for duplicate run_id with same observed_at but later input.\n\nWe'll test that runs.reconcile returns correct selection for duplicate run_id with same observed_at but different job.\n\nWe'll test that runs.reconcile returns correct selection for duplicate run_id with same observed_at but different attempt.\n\nWe'll test that runs.reconcile returns correct selection for duplicate run_id with same observed_at but different attempt and job.\n\nOk.\n\nWe'll also test that runs.reconcile returns correct selection for job with multiple attempts.\n\nWe'll test that runs.reconcile returns correct selection for job with attempts 1,2,3.\n\nWe'll test that runs.reconcile returns correct selection for job with attempts 1,2,3 but later observed_at for attempt 1.\n\nWe'll test that runs.reconcile returns correct selection for job with attempts 1,2,3 but later observed_at for attempt 2.\n\nWe'll test that runs.reconcile returns correct selection for job with attempts 1,2,3 but later observed_at for attempt 3.\n\nWe'll test that runs.reconcile returns correct selection for job with attempts 1,2,3 but later observed_at for attempt 2 but attempt 3 earlier.\n\nOk.\n\nWe'll also test that runs.reconcile returns correct selection for job with status ok, partial, failed, pending.\n\nWe'll test that runs.reconcile returns correct selection for job with status pending but downloaded_rows==0.\n\nWe'll test that runs.reconcile returns correct selection for job with status failed but downloaded_rows==0.\n\nWe'll test that runs.reconcile returns correct selection for job with status ok but downloaded_rows>0.\n\nWe'll test that runs.reconcile returns correct selection for job with status partial but downloaded_rows>0.\n\nWe'll test that runs.reconcile returns correct selection for job with status ok but downloaded_rows==0.\n\nWe'll test that runs.reconcile returns correct selection for job with status partial but downloaded_rows==0.\n\nOk.\n\nWe'll also test that snapshot returns correct successful_rows sum.\n\nWe'll test that snapshot returns correct failures list.\n\nWe'll test that snapshot returns correct partial_jobs list.\n\nWe'll test that snapshot returns correct unknown_jobs list.\n\nWe'll test that snapshot returns correct lists sorted.\n\nOk.\n\nNow we need to write tests accordingly.\n\nWe need to keep tests within 15 seconds. So we need to keep them efficient.\n\nWe'll write a single function run_tests(candidate) that runs all tests.\n\nWe'll use assert statements.\n\nWe'll use try/except for ValueError.\n\nWe'll use math.isclose for floats.\n\nWe'll use copy.deepcopy to check mutation.\n\nWe'll use id() to check identity.\n\nWe'll use assert candidate(...) returns dict.\n\nWe'll use assert 'quotes' in result.\n\nWe'll use assert 'runs' in result.\n\nWe'll use assert 'successful_rows' in result.\n\nWe'll use assert 'failures' in result.\n\nWe'll use assert 'partial_jobs' in result.\n\nWe'll use assert 'unknown_jobs' in result.\n\nWe'll use assert isinstance(result['quotes'], dict).\n\nWe'll use assert isinstance(result['runs'], dict).\n\nWe'll use assert isinstance(result['successful_rows'], int).\n\nWe'll use assert isinstance(result['failures'], list).\n\nWe'll use assert isinstance(result['partial_jobs'], list).\n\nWe'll use assert isinstance(result['unknown_jobs'], list).\n\nWe'll use assert all(isinstance(job, str) for job in result['failures']).\n\nWe'll use assert all(isinstance(job, str) for job in result['partial_jobs']).\n\nWe'll use assert all(isinstance(job, str) for job in result['unknown_jobs']).\n\nWe'll use assert result['failures'] == sorted(result['failures']).\n\nWe'll use assert result['partial_jobs'] == sorted(result['partial_jobs']).\n\nWe'll use assert result['unknown_jobs'] == sorted(result['unknown_jobs']).\n\nWe'll use assert result['successful_rows'] >= 0.\n\nWe'll use assert result['successful_rows'] == sum(row['downloaded_rows'] for row in result['runs'].values() if row['status'] in ('ok','partial'))\n\nWe'll use assert result['failures'] == sorted([job for job, row in result['runs'].items() if row['status']=='failed'])\n\nWe'll use assert result['partial_jobs'] == sorted([job for job, row in result['runs'].items() if row['status']=='partial'])\n\nWe'll use assert result['unknown_jobs'] == sorted([job for job, row in result['runs'].items() if row['status']=='pending'])\n\nWe'll test that quotes probabilities are correct.\n\nWe'll test that quotes probabilities are floats.\n\nWe'll test that quotes probabilities are close to expected.\n\nWe'll test that quotes probabilities are computed correctly.\n\nWe'll test that quotes selection uses observed_at and id tie-breaking.\n\nWe'll test that quotes selection uses last_update <= observed_at.\n\nWe'll test that quotes selection uses event matching.\n\nWe'll test that quotes selection uses asof window.\n\nWe'll test that quotes selection uses observed_at <= asof < expires_at.\n\nWe'll test that quotes selection uses last_update <= observed_at.\n\nWe'll test that quotes selection uses observed_at <= asof < expires_at.\n\nWe'll test that quotes selection uses last_update <= observed_at.\n\nOk.\n\nWe'll also test that snapshot does not mutate inputs.\n\nWe'll use copy.deepcopy to copy inputs before calling candidate, then compare after.\n\nWe'll test that snapshot returns original dict objects.\n\nWe'll test that snapshot returns original dict objects by identity.\n\nWe'll test that snapshot returns original dict objects by id.\n\nOk.\n\nNow we need to write the test code.\n\nWe'll need to import datetime, math, copy, json.\n\nWe'll need to use timezone from datetime.\n\nWe'll need to use datetime.fromisoformat.\n\nWe'll need to use datetime.now.\n\nWe'll need to use datetime.timedelta.\n\nWe'll need to use datetime.timezone.\n\nOk.\n\nLet's write the code.\n\nWe'll define run_tests(candidate):\n\n    import datetime, math, copy, json\n\n    from datetime import datetime, timezone, timedelta\n\n    # Helper functions\n\n    def make_quote(...)\n\n    def make_run(...)\n\n    # Test 1: Validation of asof and event\n\n    # etc.\n\nWe'll write tests sequentially.\n\nWe'll use try/except for ValueError.\n\nWe'll use assert statements.\n\nWe'll use math.isclose for floats.\n\nWe'll use copy.deepcopy for mutation test.\n\nWe'll use id() for identity.\n\nOk.\n\nLet's write the code.\n\nWe'll need to ensure we don't use any external modules.\n\nWe'll need to ensure we don't use any network.\n\nOk.\n\nLet's write the code.\n\nWe'll produce JSON with key \"tests.py\" mapping to the source string.\n\nWe need to output JSON only, no markdown.\n\nOk.\n\nLet's write the code.\n\nWe'll produce a string with the code.\n\nWe'll need to escape newlines properly.\n\nWe'll produce the JSON string with double quotes around key and value.\n\nWe'll need to escape double quotes inside the code string.\n\nBut we can produce JSON with the code string as a raw string, but we need to escape double quotes.\n\nWe can produce JSON with single quotes? No, JSON requires double quotes.\n\nSo we need to escape double quotes inside the code string.\n\nWe can use triple quotes in Python code, but inside JSON we need to escape them.\n\nSimplest: produce JSON with key \"tests.py\" and value as a string with newline escapes \\n and double quotes escaped as \\\".\n\nWe'll produce the code string with \\n and \\\".\n\nOk.\n\nLet's write the code string.\n\nWe'll write the code as a Python string with triple quotes, but we need to escape.\n\nBetter: Write the code string as a raw string in the JSON, but we need to escape double quotes.\n\nWe'll produce the code string with \\n and \\\".\n\nOk.\n\nLet's write the code.\n\nWe'll produce the code string:\n\n\"\"\"def run_tests(candidate):\n    import datetime, math, copy, json\n    from datetime import datetime, timezone, timedelta\n\n    # Helper to create quote rows\n    def make_quote(id, book, event, observed_at, expires_at, last_update, odds, extra=None):\n        row = {\n            'id': id,\n            'book': book,\n            'event': event,\n            'observed_at': observed_at,\n            'expires_at': expires_at,\n            'last_update': last_update,\n            'odds': odds\n        }\n        if extra:\n            row.update(extra)\n        return row\n\n    # Helper to create run rows\n    def make_run(run_id, job, attempt, observed_at, status, downloaded_rows, extra=None):\n        row = {\n            'run_id': run_id,\n            'job': job,\n            'attempt': attempt,\n            'observed_at': observed_at,\n            'status': status,\n            'downloaded_rows': downloaded_rows\n        }\n        if extra:\n            row.update(extra)\n        return row\n\n    # Common timestamps\n    asof = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)\n    obs = asof - timedelta(minutes=10)\n    exp = asof + timedelta(minutes=10)\n    last = obs\n\n    # 1. Validation of asof and event\n    # Invalid asof string\n    try:\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\n        assert False, 'Expected ValueError for asof without timezone'\n    except ValueError:\n        pass\n\n    # Invalid asof naive datetime\n    try:\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\n        assert False, 'Expected ValueError for naive datetime asof'\n    except ValueError:\n        pass\n\n    # Invalid event empty string\n    try:\n        candidate([], [], '', asof)\n        assert False, 'Expected ValueError for empty event'\n    except ValueError:\n        pass\n\n    # Valid event whitespace\n    result = candidate([], [], '   ', asof)\n    assert result['quotes'] == {}, 'Expected empty quotes for no rows'\n    assert result['runs'] == {}, 'Expected empty runs for no rows'\n\n    # 2. Probability calculation via quotes.select indirectly\n    # Create quotes with various odds\n    q1 = make_quote('q1', 'B1', 'E1', obs, exp, last, 200)\n    q2 = make_quote('q2', 'B2', 'E1', obs, exp, last, -200)\n    q3 = make_quote('q3', 'B3', 'E1', obs, exp, last, '300')\n    q4 = make_quote('q4', 'B4', 'E1', obs, exp, last, '-400')\n    q5 = make_quote('q5', 'B5', 'E1', obs, exp, last, 100)\n    q6 = make_quote('q6', 'B6', 'E1', obs, exp, last, -100)\n    # Invalid odds abs<100\n    q_invalid = make_quote('q_invalid', 'B7', 'E1', obs, exp, last, 50)\n    # Invalid odds NaN\n    q_nan = make_quote('q_nan', 'B8', 'E1', obs, exp, last, float('nan'))\n    # Invalid odds inf\n    q_inf = make_quote('q_inf', 'B9', 'E1', obs, exp, last, float('inf'))\n    # Invalid odds bool\n    q_bool = make_quote('q_bool', 'B10', 'E1', obs, exp, last, True)\n\n    quotes_rows = [q1, q2, q3, q4, q5, q6, q_invalid, q_nan, q_inf, q_bool]\n    runs_rows = []\n\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\n    quotes = result['quotes']\n    # Should contain 6 books\n    assert set(quotes.keys()) == {'B1','B2','B3','B4','B5','B6'}, 'Unexpected books selected'\n    # Check probabilities\n    def prob(v):\n        return 100/(v+100) if v>0 else (-v)/((-v)+100)\n    for book, data in quotes.items():\n        row = data['row']\n        odds = row['odds']\n        if isinstance(odds, str):\n            odds = float(odds)\n        expected = prob(odds)\n        assert math.isclose(data['probability'], expected, rel_tol=1e-9), f'Probability mismatch for {book}'\n    # 3. Quote selection tie-breaking\n    # Two rows for same book with same observed_at, different id\n    q_a = make_quote('a', 'TIE', 'E1', obs, exp, last, 200)\n    q_b = make_quote('b', 'TIE', 'E1', obs, exp, last, 200)\n    # q_a has lexicographically smaller id\n    result = candidate([q_b, q_a], [], 'E1', asof)\n    assert result['quotes']['TIE']['row']['id'] == 'a', 'Tie-breaking by id failed'\n    # Same observed_at and id, different last_update (one invalid)\n    q_c = make_quote('c', 'TIE2', 'E1', obs, exp, last, 200)\n    q_d = make_quote('c', 'TIE2', 'E1', obs, exp, obs+timedelta(seconds=1), 200)  # last_update > observed_at\n    result = candidate([q_c, q_d], [], 'E1', asof)\n    assert result['quotes']['TIE2']['row']['id'] == 'c', 'Invalid last_update should be skipped'\n    # Same observed_at and id, both valid, first input wins\n    q_e = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\n    q_f = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\n    result = candidate([q_f, q_e], [], 'E1', asof)\n    assert result['quotes']['TIE3']['row']['id'] == 'e', 'First-input tie exception failed'\n    # 4. Run reconciliation\n    # Create runs with various statuses\n    r1 = make_run('r1', 'J1', 1, obs, 'ok', 10)\n    r2 = make_run('r2', 'J1', 2, obs, 'partial', 5)\n    r3 = make_run('r3', 'J1', 3, obs, 'failed', 0)\n    r4 = make_run('r4', 'J2', 1, obs, 'pending', 0)\n    r5 = make_run('r5', 'J3', 1, obs, 'ok', 7)\n    r6 = make_run('r6', 'J3', 2, obs, 'ok', 3)\n    r7 = make_run('r7', 'J4', 1, obs, 'failed', 0)\n    r8 = make_run('r8', 'J4', 2, obs, 'ok', 4)\n    # Duplicate run_id with later observed_at\n    r9 = make_run('r1', 'J1', 4, obs+timedelta(seconds=5), 'ok', 8)\n    # Duplicate run_id with same observed_at but later input\n    r10 = make_run('r2', 'J1', 5, obs, 'ok', 9)\n    runs_rows = [r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]\n    result = candidate([], runs_rows, 'E1', asof)\n    runs = result['runs']\n    # Check selected jobs\n    assert set(runs.keys()) == {'J1','J2','J3','J4'}, 'Unexpected jobs selected'\n    # J1 should be from r9 (later observed_at)\n    assert runs['J1']['run_id'] == 'r1' and runs['J1']['attempt'] == 4, 'Duplicate run_id tie-breaking failed'\n    # J2 should be from r4\n    assert runs['J2']['run_id'] == 'r4', 'Pending run selection failed'\n    # J3 should be from r6 (attempt 2 > 1)\n    assert runs['J3']['attempt'] == 2, 'Attempt selection failed'\n    # J4 should be from r8 (attempt 2 > 1)\n    assert runs['J4']['attempt'] == 2, 'Attempt selection failed'\n    # 5. Snapshot counts and lists\n    # Successful rows: J1 (ok), J3 (ok), J4 (ok) => downloaded_rows 8+7+3+4? Wait J1 from r9 has 8, J3 from r6 has 3, J4 from r8 has 4 => sum=15\n    assert result['successful_rows'] == 15, 'Successful rows count mismatch'\n    # Failures: J1? r9 status ok, so no failure. J4 ok. So failures empty\n    assert result['failures'] == [], 'Failures list mismatch'\n    # Partial jobs: J1? r9 ok, so no partial. J3 ok. So partial empty\n    assert result['partial_jobs'] == [], 'Partial jobs list mismatch'\n    # Unknown jobs: J2 pending => ['J2']\n    assert result['unknown_jobs'] == ['J2'], 'Unknown jobs list mismatch'\n    # 6. Mutation test\n    quotes_copy = copy.deepcopy(quotes_rows)\n    runs_copy = copy.deepcopy(runs_rows)\n    candidate(quotes_copy, runs_copy, 'E1', asof)\n    assert quotes_copy == quotes_rows, 'Input quotes mutated'\n    assert runs_copy == runs_rows, 'Input runs mutated'\n    # 7. Identity test: returned rows are original dicts\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\n    for book, data in result['quotes'].items():\n        assert data['row'] is quotes_rows[quotes_rows.index(data['row'])], 'Quote row not original'\n    for job, row in result['runs'].items():\n        # find original run dict\n        orig = next(r for r in runs_rows if r['run_id']==row['run_id'])\n        assert row is orig, 'Run row not original'\n    # 8. Sorting of lists\n    # Add more jobs to test sorting\n    r11 = make_run('r11', 'A', 1, obs, 'ok', 2)\n    r12 = make_run('r12', 'B', 1, obs, 'failed', 0)\n    r13 = make_run('r13', 'C', 1, obs, 'pending', 0)\n    runs_rows2 = [r11,r12,r13]\n    result = candidate([], runs_rows2, 'E1', asof)\n    assert result['failures'] == ['B'], 'Failures not sorted'\n    assert result['partial_jobs'] == [], 'Partial jobs not sorted'\n    assert result['unknown_jobs'] == ['C'], 'Unknown jobs not sorted'\n    # 9. Event mismatch\n    result = candidate(quotes_rows, runs_rows, 'NONMATCH', asof)\n    assert result['quotes'] == {}, 'Quotes should be empty for event mismatch'\n    assert result['runs'] == {}, 'Runs should be empty for event mismatch'\n    # 10. asof string with Z\n    asof_z = '2023-01-01T12:00:00Z'\n    result = candidate([], [], 'E1', asof_z)\n    assert result['quotes'] == {}, 'Empty quotes for asof string'\n    # 11. asof string without timezone\n    try:\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\n        assert False, 'Expected ValueError for asof string without timezone'\n    except ValueError:\n        pass\n    # 12. asof datetime with timezone offset\n    asof_offset = datetime(2023,1,1,12,0,0,tzinfo=timezone(timedelta(hours=2)))\n    result = candidate([], [], 'E1', asof_offset)\n    assert result['quotes'] == {}, 'Empty quotes for offset asof'\n    # 13. asof datetime naive\n    try:\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\n        assert False, 'Expected ValueError for naive datetime asof'\n    except ValueError:\n        pass\n    # 14. asof datetime with None offset\n    try:\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0,tzinfo=None))\n        assert False, 'Expected ValueError for tzinfo None'\n    except ValueError:\n        pass\n    # 15. event None\n    try:\n        candidate([], [], None, asof)\n        assert False, 'Expected ValueError for event None'\n    except ValueError:\n        pass\n    # 16. event not string\n    try:\n        candidate([], [], 123, asof)\n        assert False, 'Expected ValueError for non-string event'\n    except ValueError:\n        pass\n    # 17. asof None\n    try:\n        candidate([], [], 'E1', None)\n        assert False, 'Expected ValueError for asof None'\n    except ValueError:\n        pass\n    # 18. asof not string or datetime\n    try:\n        candidate([], [], 'E1', 123)\n        assert False, 'Expected ValueError for non-string/non-datetime asof'\n    except ValueError:\n        pass\n    # 19. quotes with missing fields\n    bad_quote = {'id':'bad','book':'B','event':'E1','observed_at':obs,'expires_at':exp,'last_update':last}\n    result = candidate([bad_quote], [], 'E1', asof)\n    assert result['quotes'] == {}, 'Missing odds should skip quote'\n    # 20. runs with missing fields\n    bad_run = {'run_id':'bad','job':'J','attempt':1,'observed_at':obs,'status':'ok'}\n    result = candidate([], [bad_run], 'E1', asof)\n    assert result['runs'] == {}, 'Missing downloaded_rows should skip run'\n    # 21. run with invalid status\n    bad_run2 = {'run_id':'bad2','job':'J','attempt':1,'observed_at':obs,'status':'unknown','downloaded_rows':0}\n    result = candidate([], [bad_run2], 'E1', asof)\n    assert result['runs'] == {}, 'Invalid status should skip run'\n    # 22. run with negative attempt\n    bad_run3 = {'run_id':'bad3','job':'J','attempt':0,'observed_at':obs,'status':'ok','downloaded_rows':5}\n    result = candidate([], [bad_run3], 'E1', asof)\n    assert result['runs'] == {}, 'Non-positive attempt should skip run'\n    # 23. run with negative downloaded_rows\n    bad_run4 = {'run_id':'bad4','job':'J','attempt':1,'observed_at':obs,'status':'ok','downloaded_rows':-1}\n    result = candidate([], [bad_run4], 'E1', asof)\n    assert result['runs'] == {}, 'Negative downloaded_rows should skip run'\n    # 24. run with failed status but nonzero downloaded_rows\n    bad_run5 = {'run_id':'bad5','job':'J','attempt':1,'observed_at':obs,'status':'failed','downloaded_rows':5}\n    result = candidate([], [bad_run5], 'E1', asof)\n    assert result['runs'] == {}, 'Failed with nonzero downloaded_rows should skip run'\n    # 25. run with pending status but nonzero downloaded_rows\n    bad_run6 = {'run_id':'bad6','job':'J','attempt':1,'observed_at':obs,'status':'pending','downloaded_rows':5}\n    result = candidate([], [bad_run6], 'E1', asof)\n    assert result['runs'] == {}, 'Pending with nonzero downloaded_rows should skip run'\n    # 26. run with status ok but future observed_at\n    future_run = {'run_id':'future','job':'J','attempt':1,'observed_at':asof+timedelta(seconds=10),'status':'ok','downloaded_rows':5}\n    result = candidate([], [future_run], 'E1', asof)\n    assert result['runs'] == {}, 'Future run should be skipped'\n    # 27. quote with future observed_at\n    future_quote = make_quote('future','B','E1',asof+timedelta(seconds=10),exp,obs,200)\n    result = candidate([future_quote], [], 'E1', asof)\n    assert result['quotes'] == {}, 'Future quote should be skipped'\n    # 28. quote with expired expires_at\n    expired_quote = make_quote('expired','B','E1',obs,asof-timedelta(seconds=10),last,200)\n    result = candidate([expired_quote], [], 'E1', asof)\n    assert result['quotes'] == {}, 'Expired quote should be skipped'\n    # 29. quote with last_update > observed_at\n    bad_last_update = make_quote('badlu','B','E1',obs,exp,obs+timedelta(seconds=1),200)\n    result = candidate([bad_last_update], [], 'E1', asof)\n    assert result['quotes'] == {}, 'Quote with last_update > observed_at should be skipped'\n    # 30. quote with event mismatch\n    mismatch_quote = make_quote('mismatch','B','E2',obs,exp,last,200)\n    result = candidate([mismatch_quote], [], 'E1', asof)\n    assert result['quotes'] == {}, 'Quote with event mismatch should be skipped'\n    # 31. run with job mismatch? runs are independent of event, but event mismatch should skip runs as well\n    mismatch_run = make_run('run_mismatch','J','1',obs,'ok',5)\n    result = candidate([], [mismatch_run], 'E2', asof)\n    assert result['runs'] == {}, 'Run with event mismatch should be skipped'\n    # 32. Ensure that snapshot returns empty dicts when no valid rows\n    result = candidate([], [], 'E1', asof)\n    assert result['quotes'] == {}, 'Empty quotes expected'\n    assert result['runs'] == {}, 'Empty runs expected'\n    assert result['successful_rows'] == 0, 'Successful rows should be zero'\n    assert result['failures'] == [], 'Failures should be empty'\n    assert result['partial_jobs'] == [], 'Partial jobs should be empty'\n    assert result['unknown_jobs'] == [], 'Unknown jobs should be empty'\n    print('All tests passed')\n\"\"\"\n\nWe need to escape double quotes inside the string. The code contains double quotes inside string literals. We need to escape them as \\\". Also backslashes need to be escaped. But we can use triple quotes in JSON? JSON string cannot contain unescaped newlines? It can contain \\n. So we need to produce a JSON string with \\n and \\\". Let's produce the JSON string with proper escaping.\n\nWe can produce the JSON string by writing the code string with \\n and \\\". Let's produce the final JSON.\n\nWe'll produce:\n\n{\n  \"tests.py\": \"def run_tests(candidate):\\n    import datetime, math, copy, json\\n    from datetime import datetime, timezone, timedelta\\n\\n    # Helper to create quote rows\\n    def make_quote(id, book, event, observed_at, expires_at, last_update, odds, extra=None):\\n        row = {\\n            'id': id,\\n            'book': book,\\n            'event': event,\\n            'observed_at': observed_at,\\n            'expires_at': expires_at,\\n            'last_update': last_update,\\n            'odds': odds\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Helper to create run rows\\n    def make_run(run_id, job, attempt, observed_at, status, downloaded_rows, extra=None):\\n        row = {\\n            'run_id': run_id,\\n            'job': job,\\n            'attempt': attempt,\\n            'observed_at': observed_at,\\n            'status': status,\\n            'downloaded_rows': downloaded_rows\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Common timestamps\\n    asof = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)\\n    obs = asof - timedelta(minutes=10)\\n    exp = asof + timedelta(minutes=10)\\n    last = obs\\n\\n    # 1. Validation of asof and event\\n    # Invalid asof string\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof without timezone'\\n    except ValueError:\\n        pass\\n\\n    # Invalid asof naive datetime\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n\\n    # Invalid event empty string\\n    try:\\n        candidate([], [], '', asof)\\n        assert False, 'Expected ValueError for empty event'\\n    except ValueError:\\n        pass\\n\\n    # Valid event whitespace\\n    result = candidate([], [], '   ', asof)\\n    assert result['quotes'] == {}, 'Expected empty quotes for no rows'\\n    assert result['runs'] == {}, 'Expected empty runs for no rows'\\n\\n    # 2. Probability calculation via quotes.select indirectly\\n    # Create quotes with various odds\\n    q1 = make_quote('q1', 'B1', 'E1', obs, exp, last, 200)\\n    q2 = make_quote('q2', 'B2', 'E1', obs, exp, last, -200)\\n    q3 = make_quote('q3', 'B3', 'E1', obs, exp, last, '300')\\n    q4 = make_quote('q4', 'B4', 'E1', obs, exp, last, '-400')\\n    q5 = make_quote('q5', 'B5', 'E1', obs, exp, last, 100)\\n    q6 = make_quote('q6', 'B6', 'E1', obs, exp, last, -100)\\n    # Invalid odds abs<100\\n    q_invalid = make_quote('q_invalid', 'B7', 'E1', obs, exp, last, 50)\\n    # Invalid odds NaN\\n    q_nan = make_quote('q_nan', 'B8', 'E1', obs, exp, last, float('nan'))\\n    # Invalid odds inf\\n    q_inf = make_quote('q_inf', 'B9', 'E1', obs, exp, last, float('inf'))\\n    # Invalid odds bool\\n    q_bool = make_quote('q_bool', 'B10', 'E1', obs, exp, last, True)\\n\\n    quotes_rows = [q1, q2, q3, q4, q5, q6, q_invalid, q_nan, q_inf, q_bool]\\n    runs_rows = []\\n\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    quotes = result['quotes']\\n    # Should contain 6 books\\n    assert set(quotes.keys()) == {'B1','B2','B3','B4','B5','B6'}, 'Unexpected books selected'\\n    # Check probabilities\\n    def prob(v):\\n        return 100/(v+100) if v>0 else (-v)/((-v)+100)\\n    for book, data in quotes.items():\\n        row = data['row']\\n        odds = row['odds']\\n        if isinstance(odds, str):\\n            odds = float(odds)\\n        expected = prob(odds)\\n        assert math.isclose(data['probability'], expected, rel_tol=1e-9), f'Probability mismatch for {book}'\\n    # 3. Quote selection tie-breaking\\n    # Two rows for same book with same observed_at, different id\\n    q_a = make_quote('a', 'TIE', 'E1', obs, exp, last, 200)\\n    q_b = make_quote('b', 'TIE', 'E1', obs, exp, last, 200)\\n    # q_a has lexicographically smaller id\\n    result = candidate([q_b, q_a], [], 'E1', asof)\\n    assert result['quotes']['TIE']['row']['id'] == 'a', 'Tie-breaking by id failed'\\n    # Same observed_at and id, different last_update (one invalid)\\n    q_c = make_quote('c', 'TIE2', 'E1', obs, exp, last, 200)\\n    q_d = make_quote('c', 'TIE2', 'E1', obs, exp, obs+timedelta(seconds=1), 200)  # last_update > observed_at\\n    result = candidate([q_c, q_d], [], 'E1', asof)\\n    assert result['quotes']['TIE2']['row']['id'] == 'c', 'Invalid last_update should be skipped'\\n    # Same observed_at and id, both valid, first input wins\\n    q_e = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    q_f = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    result = candidate([q_f, q_e], [], 'E1', asof)\\n    assert result['quotes']['TIE3']['row']['id'] == 'e', 'First-input tie exception failed'\\n    # 4. Run reconciliation\\n    # Create runs with various statuses\\n    r1 = make_run('r1', 'J1', 1, obs, 'ok', 10)\\n    r2 = make_run('r2', 'J1', 2, obs, 'partial', 5)\\n    r3 = make_run('r3', 'J1', 3, obs, 'failed', 0)\\n    r4 = make_run('r4', 'J2', 1, obs, 'pending', 0)\\n    r5 = make_run('r5', 'J3', 1, obs, 'ok', 7)\\n    r6 = make_run('r6', 'J3', 2, obs, 'ok', 3)\\n    r7 = make_run('r7', 'J4', 1, obs, 'failed', 0)\\n    r8 = make_run('r8', 'J4', 2, obs, 'ok', 4)\\n    # Duplicate run_id with later observed_at\\n    r9 = make_run('r1', 'J1', 4, obs+timedelta(seconds=5), 'ok', 8)\\n    # Duplicate run_id with same observed_at but later input\\n    r10 = make_run('r2', 'J1', 5, obs, 'ok', 9)\\n    runs_rows = [r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]\\n    result = candidate([], runs_rows, 'E1', asof)\\n    runs = result['runs']\\n    # Check selected jobs\\n    assert set(runs.keys()) == {'J1','J2','J3','J4'}, 'Unexpected jobs selected'\\n    # J1 should be from r9 (later observed_at)\\n    assert runs['J1']['run_id'] == 'r1' and runs['J1']['attempt'] == 4, 'Duplicate run_id tie-breaking failed'\\n    # J2 should be from r4\\n    assert runs['J2']['run_id'] == 'r4', 'Pending run selection failed'\\n    # J3 should be from r6 (attempt 2 > 1)\\n    assert runs['J3']['attempt'] == 2, 'Attempt selection failed'\\n    # J4 should be from r8 (attempt 2 > 1)\\n    assert runs['J4']['attempt'] == 2, 'Attempt selection failed'\\n    # 5. Snapshot counts and lists\\n    # Successful rows: J1 (ok), J3 (ok), J4 (ok) => downloaded_rows 8+7+3+4? Wait J1 from r9 has 8, J3 from r6 has 3, J4 from r8 has 4 => sum=15\\n    assert result['successful_rows'] == 15, 'Successful rows count mismatch'\\n    # Failures: J1? r9 status ok, so no failure. J4 ok. So failures empty\\n    assert result['failures'] == [], 'Failures list mismatch'\\n    # Partial jobs: J1? r9 ok, so no partial. J3 ok. So partial empty\\n    assert result['partial_jobs'] == [], 'Partial jobs list mismatch'\\n    # Unknown jobs: J2 pending => ['J2']\\n    assert result['unknown_jobs'] == ['J2'], 'Unknown jobs list mismatch'\\n    # 6. Mutation test\\n    quotes_copy = copy.deepcopy(quotes_rows)\\n    runs_copy = copy.deepcopy(runs_rows)\\n    candidate(quotes_copy, runs_copy, 'E1', asof)\\n    assert quotes_copy == quotes_rows, 'Input quotes mutated'\\n    assert runs_copy == runs_rows, 'Input runs mutated'\\n    # 7. Identity test: returned rows are original dicts\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    for book, data in result['quotes'].items():\\n        assert data['row'] is quotes_rows[quotes_rows.index(data['row'])], 'Quote row not original'\\n    for job, row in result['runs'].items():\\n        # find original run dict\\n        orig = next(r for r in runs_rows if r['run_id']==row['run_id'])\\n        assert row is orig, 'Run row not original'\\n    # 8. Sorting of lists\\n    # Add more jobs to test sorting\\n    r11 = make_run('r11', 'A', 1, obs, 'ok', 2)\\n    r12 = make_run('r12', 'B', 1, obs, 'failed', 0)\\n    r13 = make_run('r13', 'C', 1, obs, 'pending', 0)\\n    runs_rows2 = [r11,r12,r13]\\n    result = candidate([], runs_rows2, 'E1', asof)\\n    assert result['failures'] == ['B'], 'Failures not sorted'\\n    assert result['partial_jobs'] == [], 'Partial jobs not sorted'\\n    assert result['unknown_jobs'] == ['C'], 'Unknown jobs not sorted'\\n    # 9. Event mismatch\\n    result = candidate(quotes_rows, runs_rows, 'NONMATCH', asof)\\n    assert result['quotes'] == {}, 'Quotes should be empty for event mismatch'\\n    assert result['runs'] == {}, 'Runs should be empty for event mismatch'\\n    # 10. asof string with Z\\n    asof_z = '2023-01-01T12:00:00Z'\\n    result = candidate([], [], 'E1', asof_z)\\n    assert result['quotes'] == {}, 'Empty quotes for asof string'\\n    # 11. asof string without timezone\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof string without timezone'\\n    except ValueError:\\n        pass\\n    # 12. asof datetime with timezone offset\\n    asof_offset = datetime(2023,1,1,12,0,0,tzinfo=timezone(timedelta(hours=2)))\\n    result = candidate([], [], 'E1', asof_offset)\\n    assert result['quotes'] == {}, 'Empty quotes for offset asof'\\n    # 13. asof datetime naive\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n    # 14. asof datetime with None offset\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0,tzinfo=None))\\n        assert False, 'Expected ValueError for tzinfo None'\\n    except ValueError:\\n        pass\\n    # 15. event None\\n    try:\\n        candidate([], [], None, asof)\\n        assert False, 'Expected ValueError for event None'\\n    except ValueError:\\n        pass\\n    # 16. event not string\\n    try:\\n        candidate([], [], 123, asof)\\n        assert False, 'Expected ValueError for non-string event'\\n    except ValueError:\\n        pass\\n    # 17. asof None\\n    try:\\n        candidate([], [], 'E1', None)\\n        assert False, 'Expected ValueError for asof None'\\n    except ValueError:\\n        pass\\n    # 18. asof not string or datetime\\n    try:\\n        candidate([], [], 'E1', 123)\\n        assert False, 'Expected ValueError for non-string/non-datetime asof'\\n    except ValueError:\\n        pass\\n    # 19. quotes with missing fields\\n    bad_quote = {'id':'bad','book':'B','event':'E1','observed_at':obs,'expires_at':exp,'last_update':last}\\n    result = candidate([bad_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Missing odds should skip quote'\\n    # 20. runs with missing fields\\n    bad_run = {'run_id':'bad','job':'J','attempt':1,'observed_at':obs,'status':'ok'}\\n    result = candidate([], [bad_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Missing downloaded_rows should skip run'\\n    # 21. run with invalid status\\n    bad_run2 = {'run_id':'bad2','job':'J','attempt':1,'observed_at':obs,'status':'unknown','downloaded_rows':0}\\n    result = candidate([], [bad_run2], 'E1', asof)\\n    assert result['runs'] == {}, 'Invalid status should skip run'\\n    # 22. run with negative attempt\\n    bad_run3 = {'run_id':'bad3','job':'J','attempt':0,'observed_at':obs,'status':'ok','downloaded_rows':5}\\n    result = candidate([], [bad_run3], 'E1', asof)\\n    assert result['runs'] == {}, 'Non-positive attempt should skip run'\\n    # 23. run with negative downloaded_rows\\n    bad_run4 = {'run_id':'bad4','job':'J','attempt':1,'observed_at':obs,'status':'ok','downloaded_rows':-1}\\n    result = candidate([], [bad_run4], 'E1', asof)\\n    assert result['runs'] == {}, 'Negative downloaded_rows should skip run'\\n    # 24. run with failed status but nonzero downloaded_rows\\n    bad_run5 = {'run_id':'bad5','job':'J','attempt':1,'observed_at':obs,'status':'failed','downloaded_rows':5}\\n    result = candidate([], [bad_run5], 'E1', asof)\\n    assert result['runs'] == {}, 'Failed with nonzero downloaded_rows should skip run'\\n    # 25. run with pending status but nonzero downloaded_rows\\n    bad_run6 = {'run_id':'bad6','job':'J','attempt':1,'observed_at':obs,'status':'pending','downloaded_rows':5}\\n    result = candidate([], [bad_run6], 'E1', asof)\\n    assert result['runs'] == {}, 'Pending with nonzero downloaded_rows should skip run'\\n    # 26. run with status ok but future observed_at\\n    future_run = {'run_id':'future','job':'J','attempt':1,'observed_at':asof+timedelta(seconds=10),'status':'ok','downloaded_rows':5}\\n    result = candidate([], [future_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Future run should be skipped'\\n    # 27. quote with future observed_at\\n    future_quote = make_quote('future','B','E1',asof+timedelta(seconds=10),exp,obs,200)\\n    result = candidate([future_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Future quote should be skipped'\\n    # 28. quote with expired expires_at\\n    expired_quote = make_quote('expired','B','E1',obs,asof-timedelta(seconds=10),last,200)\\n    result = candidate([expired_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Expired quote should be skipped'\\n    # 29. quote with last_update > observed_at\\n    bad_last_update = make_quote('badlu','B','E1',obs,exp,last,200)\\n    result = candidate([bad_last_update], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with last_update > observed_at should be skipped'\\n    # 30. quote with event mismatch\\n    mismatch_quote = make_quote('mismatch','B','E2',obs,exp,last,200)\\n    result = candidate([mismatch_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with event mismatch should be skipped'\\n    # 31. run with job mismatch? runs are independent of event, but event mismatch should skip runs as well\\n    mismatch_run = make_run('run_mismatch','J','1',obs,'ok',5)\\n    result = candidate([], [mismatch_run], 'E2', asof)\\n    assert result['runs'] == {}, 'Run with event mismatch should be skipped'\\n    # 32. Ensure that snapshot returns empty dicts when no valid rows\\n    result = candidate([], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Empty quotes expected'\\n    assert result['runs'] == {}, 'Empty runs expected'\\n    assert result['successful_rows'] == 0, 'Successful rows should be zero'\\n    assert result['failures'] == [], 'Failures should be empty'\\n    assert result['partial_jobs'] == [], 'Partial jobs should be empty'\\n    assert result['unknown_jobs'] == [], 'Unknown jobs should be empty'\\n    print('All tests passed')\\n\"\n\nWe need to escape double quotes inside the string. Let's go through the string and escape all double quotes. The string uses single quotes for dictionary keys, so no double quotes inside except for the outer string. But there are double quotes in the string for the print statement: print('All tests passed') uses single quotes. So no double quotes inside. But there are double quotes in the string for the JSON keys? No. The code uses single quotes for string literals. So no double quotes inside. But there are double quotes in the string for the JSON key \"tests.py\" and the outer JSON string. So we need to escape the double quotes inside the JSON string. The JSON string will contain the code string with \\n and \\\". But the code string itself contains no double quotes, so we don't need to escape any double quotes inside the code string. But we need to escape the double quotes that delimit the JSON string. So we need to produce a JSON string with the code string inside double quotes, with \\n for newlines. So we need to produce something like:\n\n{\n  \"tests.py\": \"def run_tests(candidate):\\n    import datetime, math, copy, json\\n    from datetime import datetime, timezone, timedelta\\n\\n    # Helper to create quote rows\\n    def make_quote(id, book, event, observed_at, expires_at, last_update, odds, extra=None):\\n        row = {\\n            'id': id,\\n            'book': book,\\n            'event': event,\\n            'observed_at': observed_at,\\n            'expires_at': expires_at,\\n            'last_update': last_update,\\n            'odds': odds\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Helper to create run rows\\n    def make_run(run_id, job, attempt, observed_at, status, downloaded_rows, extra=None):\\n        row = {\\n            'run_id': run_id,\\n            'job': job,\\n            'attempt': attempt,\\n            'observed_at': observed_at,\\n            'status': status,\\n            'downloaded_rows': downloaded_rows\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Common timestamps\\n    asof = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)\\n    obs = asof - timedelta(minutes=10)\\n    exp = asof + timedelta(minutes=10)\\n    last = obs\\n\\n    # 1. Validation of asof and event\\n    # Invalid asof string\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof without timezone'\\n    except ValueError:\\n        pass\\n\\n    # Invalid asof naive datetime\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n\\n    # Invalid event empty string\\n    try:\\n        candidate([], [], '', asof)\\n        assert False, 'Expected ValueError for empty event'\\n    except ValueError:\\n        pass\\n\\n    # Valid event whitespace\\n    result = candidate([], [], '   ', asof)\\n    assert result['quotes'] == {}, 'Expected empty quotes for no rows'\\n    assert result['runs'] == {}, 'Expected empty runs for no rows'\\n\\n    # 2. Probability calculation via quotes.select indirectly\\n    # Create quotes with various odds\\n    q1 = make_quote('q1', 'B1', 'E1', obs, exp, last, 200)\\n    q2 = make_quote('q2', 'B2', 'E1', obs, exp, last, -200)\\n    q3 = make_quote('q3', 'B3', 'E1', obs, exp, last, '300')\\n    q4 = make_quote('q4', 'B4', 'E1', obs, exp, last, '-400')\\n    q5 = make_quote('q5', 'B5', 'E1', obs, exp, last, 100)\\n    q6 = make_quote('q6', 'B6', 'E1', obs, exp, last, -100)\\n    # Invalid odds abs<100\\n    q_invalid = make_quote('q_invalid', 'B7', 'E1', obs, exp, last, 50)\\n    # Invalid odds NaN\\n    q_nan = make_quote('q_nan', 'B8', 'E1', obs, exp, last, float('nan'))\\n    # Invalid odds inf\\n    q_inf = make_quote('q_inf', 'B9', 'E1', obs, exp, last, float('inf'))\\n    # Invalid odds bool\\n    q_bool = make_quote('q_bool', 'B10', 'E1', obs, exp, last, True)\\n\\n    quotes_rows = [q1, q2, q3, q4, q5, q6, q_invalid, q_nan, q_inf, q_bool]\\n    runs_rows = []\\n\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    quotes = result['quotes']\\n    # Should contain 6 books\\n    assert set(quotes.keys()) == {'B1','B2','B3','B4','B5','B6'}, 'Unexpected books selected'\\n    # Check probabilities\\n    def prob(v):\\n        return 100/(v+100) if v>0 else (-v)/((-v)+100)\\n    for book, data in quotes.items():\\n        row = data['row']\\n        odds = row['odds']\\n        if isinstance(odds, str):\\n            odds = float(odds)\\n        expected = prob(odds)\\n        assert math.isclose(data['probability'], expected, rel_tol=1e-9), f'Probability mismatch for {book}'\\n    # 3. Quote selection tie-breaking\\n    # Two rows for same book with same observed_at, different id\\n    q_a = make_quote('a', 'TIE', 'E1', obs, exp, last, 200)\\n    q_b = make_quote('b', 'TIE', 'E1', obs, exp, last, 200)\\n    # q_a has lexicographically smaller id\\n    result = candidate([q_b, q_a], [], 'E1', asof)\\n    assert result['quotes']['TIE']['row']['id'] == 'a', 'Tie-breaking by id failed'\\n    # Same observed_at and id, different last_update (one invalid)\\n    q_c = make_quote('c', 'TIE2', 'E1', obs, exp, last, 200)\\n    q_d = make_quote('c', 'TIE2', 'E1', obs, exp, obs+timedelta(seconds=1), 200)  # last_update > observed_at\\n    result = candidate([q_c, q_d], [], 'E1', asof)\\n    assert result['quotes']['TIE2']['row']['id'] == 'c', 'Invalid last_update should be skipped'\\n    # Same observed_at and id, both valid, first input wins\\n    q_e = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    q_f = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    result = candidate([q_f, q_e], [], 'E1', asof)\\n    assert result['quotes']['TIE3']['row']['id'] == 'e', 'First-input tie exception failed'\\n    # 4. Run reconciliation\\n    # Create runs with various statuses\\n    r1 = make_run('r1', 'J1', 1, obs, 'ok', 10)\\n    r2 = make_run('r2', 'J1', 2, obs, 'partial', 5)\\n    r3 = make_run('r3', 'J1', 3, obs, 'failed', 0)\\n    r4 = make_run('r4', 'J2', 1, obs, 'pending', 0)\\n    r5 = make_run('r5', 'J3', 1, obs, 'ok', 7)\\n    r6 = make_run('r6', 'J3', 2, obs, 'ok', 3)\\n    r7 = make_run('r7', 'J4', 1, obs, 'failed', 0)\\n    r8 = make_run('r8', 'J4', 2, obs, 'ok', 4)\\n    # Duplicate run_id with later observed_at\\n    r9 = make_run('r1', 'J1', 4, obs+timedelta(seconds=5), 'ok', 8)\\n    # Duplicate run_id with same observed_at but later input\\n    r10 = make_run('r2', 'J1', 5, obs, 'ok', 9)\\n    runs_rows = [r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]\\n    result = candidate([], runs_rows, 'E1', asof)\\n    runs = result['runs']\\n    # Check selected jobs\\n    assert set(runs.keys()) == {'J1','J2','J3','J4'}, 'Unexpected jobs selected'\\n    # J1 should be from r9 (later observed_at)\\n    assert runs['J1']['run_id'] == 'r1' and runs['J1']['attempt'] == 4, 'Duplicate run_id tie-breaking failed'\\n    # J2 should be from r4\\n    assert runs['J2']['run_id'] == 'r4', 'Pending run selection failed'\\n    # J3 should be from r6 (attempt 2 > 1)\\n    assert runs['J3']['attempt'] == 2, 'Attempt selection failed'\\n    # J4 should be from r8 (attempt 2 > 1)\\n    assert runs['J4']['attempt'] == 2, 'Attempt selection failed'\\n    # 5. Snapshot counts and lists\\n    # Successful rows: J1 (ok), J3 (ok), J4 (ok) => downloaded_rows 8+7+3+4? Wait J1 from r9 has 8, J3 from r6 has 3, J4 from r8 has 4 => sum=15\\n    assert result['successful_rows'] == 15, 'Successful rows count mismatch'\\n    # Failures: J1? r9 status ok, so no failure. J4 ok. So failures empty\\n    assert result['failures'] == [], 'Failures list mismatch'\\n    # Partial jobs: J1? r9 ok, so no partial. J3 ok. So partial empty\\n    assert result['partial_jobs'] == [], 'Partial jobs list mismatch'\\n    # Unknown jobs: J2 pending => ['J2']\\n    assert result['unknown_jobs'] == ['J2'], 'Unknown jobs list mismatch'\\n    # 6. Mutation test\\n    quotes_copy = copy.deepcopy(quotes_rows)\\n    runs_copy = copy.deepcopy(runs_rows)\\n    candidate(quotes_copy, runs_copy, 'E1', asof)\\n    assert quotes_copy == quotes_rows, 'Input quotes mutated'\\n    assert runs_copy == runs_rows, 'Input runs mutated'\\n    # 7. Identity test: returned rows are original dicts\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    for book, data in result['quotes'].items():\\n        assert data['row'] is quotes_rows[quotes_rows.index(data['row'])], 'Quote row not original'\\n    for job, row in result['runs'].items():\\n        # find original run dict\\n        orig = next(r for r in runs_rows if r['run_id']==row['run_id'])\\n        assert row is orig, 'Run row not original'\\n    # 8. Sorting of lists\\n    # Add more jobs to test sorting\\n    r11 = make_run('r11', 'A', 1, obs, 'ok', 2)\\n    r12 = make_run('r12', 'B', 1, obs, 'failed', 0)\\n    r13 = make_run('r13', 'C', 1, obs, 'pending', 0)\\n    runs_rows2 = [r11,r12,r13]\\n    result = candidate([], runs_rows2, 'E1', asof)\\n    assert result['failures'] == ['B'], 'Failures not sorted'\\n    assert result['partial_jobs'] == [], 'Partial jobs not sorted'\\n    assert result['unknown_jobs'] == ['C'], 'Unknown jobs not sorted'\\n    # 9. Event mismatch\\n    result = candidate(quotes_rows, runs_rows, 'NONMATCH', asof)\\n    assert result['quotes'] == {}, 'Quotes should be empty for event mismatch'\\n    assert result['runs'] == {}, 'Runs should be empty for event mismatch'\\n    # 10. asof string with Z\\n    asof_z = '2023-01-01T12:00:00Z'\\n    result = candidate([], [], 'E1', asof_z)\\n    assert result['quotes'] == {}, 'Empty quotes for asof string'\\n    # 11. asof string without timezone\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof string without timezone'\\n    except ValueError:\\n        pass\\n    # 12. asof datetime with timezone offset\\n    asof_offset = datetime(2023,1,1,12,0,0,tzinfo=timezone(timedelta(hours=2)))\\n    result = candidate([], [], 'E1', asof_offset)\\n    assert result['quotes'] == {}, 'Empty quotes for offset asof'\\n    # 13. asof datetime naive\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n    # 14. asof datetime with None offset\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0,tzinfo=None))\\n        assert False, 'Expected ValueError for tzinfo None'\\n    except ValueError:\\n        pass\\n    # 15. event None\\n    try:\\n        candidate([], [], None, asof)\\n        assert False, 'Expected ValueError for event None'\\n    except ValueError:\\n        pass\\n    # 16. event not string\\n    try:\\n        candidate([], [], 123, asof)\\n        assert False, 'Expected ValueError for non-string event'\\n    except ValueError:\\n        pass\\n    # 17. asof None\\n    try:\\n        candidate([], [], 'E1', None)\\n        assert False, 'Expected ValueError for asof None'\\n    except ValueError:\\n        pass\\n    # 18. asof not string or datetime\\n    try:\\n        candidate([], [], 'E1', 123)\\n        assert False, 'Expected ValueError for non-string/non-datetime asof'\\n    except ValueError:\\n        pass\\n    # 19. quotes with missing fields\\n    bad_quote = {'id':'bad','book':'B','event':'E1','observed_at':obs,'expires_at':exp,'last_update':last}\\n    result = candidate([bad_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Missing odds should skip quote'\\n    # 20. runs with missing fields\\n    bad_run = {'run_id':'bad','job':'J','attempt':1,'observed_at':obs,'status':'ok'}\\n    result = candidate([], [bad_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Missing downloaded_rows should skip run'\\n    # 21. run with invalid status\\n    bad_run2 = {'run_id':'bad2','job':'J','attempt':1,'observed_at':obs,'status':'unknown','downloaded_rows':0}\\n    result = candidate([], [bad_run2], 'E1', asof)\\n    assert result['runs'] == {}, 'Invalid status should skip run'\\n    # 22. run with negative attempt\\n    bad_run3 = {'run_id':'bad3','job':'J','attempt':0,'observed_at':obs,'status':'ok','downloaded_rows':5}\\n    result = candidate([], [bad_run3], 'E1', asof)\\n    assert result['runs'] == {}, 'Non-positive attempt should skip run'\\n    # 23. run with negative downloaded_rows\\n    bad_run4 = {'run_id':'bad4','job':'J','attempt':1,'observed_at':obs,'status':'ok','downloaded_rows':-1}\\n    result = candidate([], [bad_run4], 'E1', asof)\\n    assert result['runs'] == {}, 'Negative downloaded_rows should skip run'\\n    # 24. run with failed status but nonzero downloaded_rows\\n    bad_run5 = {'run_id':'bad5','job':'J','attempt':1,'observed_at':obs,'status':'failed','downloaded_rows':5}\\n    result = candidate([], [bad_run5], 'E1', asof)\\n    assert result['runs'] == {}, 'Failed with nonzero downloaded_rows should skip run'\\n    # 25. run with pending status but nonzero downloaded_rows\\n    bad_run6 = {'run_id':'bad6','job':'J','attempt':1,'observed_at':obs,'status':'pending','downloaded_rows':5}\\n    result = candidate([], [bad_run6], 'E1', asof)\\n    assert result['runs'] == {}, 'Pending with nonzero downloaded_rows should skip run'\\n    # 26. run with status ok but future observed_at\\n    future_run = {'run_id':'future','job':'J','attempt':1,'observed_at':asof+timedelta(seconds=10),'status':'ok','downloaded_rows':5}\\n    result = candidate([], [future_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Future run should be skipped'\\n    # 27. quote with future observed_at\\n    future_quote = make_quote('future','B','E1',asof+timedelta(seconds=10),exp,obs,200)\\n    result = candidate([future_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Future quote should be skipped'\\n    # 28. quote with expired expires_at\\n    expired_quote = make_quote('expired','B','E1',obs,asof-timedelta(seconds=10),last,200)\\n    result = candidate([expired_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Expired quote should be skipped'\\n    # 29. quote with last_update > observed_at\\n    bad_last_update = make_quote('badlu','B','E1',obs,exp,last,200)\\n    result = candidate([bad_last_update], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with last_update > observed_at should be skipped'\\n    # 30. quote with event mismatch\\n    mismatch_quote = make_quote('mismatch','B','E2',obs,exp,last,200)\\n    result = candidate([mismatch_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with event mismatch should be skipped'\\n    # 31. run with job mismatch? runs are independent of event, but event mismatch should skip runs as well\\n    mismatch_run = make_run('run_mismatch','J','1',obs,'ok',5)\\n    result = candidate([], [mismatch_run], 'E2', asof)\\n    assert result['runs'] == {}, 'Run with event mismatch should be skipped'\\n    # 32. Ensure that snapshot returns empty dicts when no valid rows\\n    result = candidate([], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Empty quotes expected'\\n    assert result['runs'] == {}, 'Empty runs expected'\\n    assert result['successful_rows'] == 0, 'Successful rows should be zero'\\n    assert result['failures'] == [], 'Failures should be empty'\\n    assert result['partial_jobs'] == [], 'Partial jobs should be empty'\\n    assert result['unknown_jobs'] == [], 'Unknown jobs should be empty'\\n    print('All tests passed')\\n\"\n\nWe need to escape the double quotes inside the JSON string. The code string contains no double quotes, so we can just wrap it in double quotes and escape newlines as \\n. But we need to escape the double quotes that delimit the JSON string. So we need to produce:\n\n{\n  \"tests.py\": \"def run_tests(candidate):\\n    import datetime, math, copy, json\\n    from datetime import datetime, timezone, timedelta\\n\\n    # Helper to create quote rows\\n    def make_quote(id, book, event, observed_at, expires_at, last_update, odds, extra=None):\\n        row = {\\n            'id': id,\\n            'book': book,\\n            'event': event,\\n            'observed_at': observed_at,\\n            'expires_at': expires_at,\\n            'last_update': last_update,\\n            'odds': odds\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Helper to create run rows\\n    def make_run(run_id, job, attempt, observed_at, status, downloaded_rows, extra=None):\\n        row = {\\n            'run_id': run_id,\\n            'job': job,\\n            'attempt': attempt,\\n            'observed_at': observed_at,\\n            'status': status,\\n            'downloaded_rows': downloaded_rows\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Common timestamps\\n    asof = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)\\n    obs = asof - timedelta(minutes=10)\\n    exp = asof + timedelta(minutes=10)\\n    last = obs\\n\\n    # 1. Validation of asof and event\\n    # Invalid asof string\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof without timezone'\\n    except ValueError:\\n        pass\\n\\n    # Invalid asof naive datetime\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n\\n    # Invalid event empty string\\n    try:\\n        candidate([], [], '', asof)\\n        assert False, 'Expected ValueError for empty event'\\n    except ValueError:\\n        pass\\n\\n    # Valid event whitespace\\n    result = candidate([], [], '   ', asof)\\n    assert result['quotes'] == {}, 'Expected empty quotes for no rows'\\n    assert result['runs'] == {}, 'Expected empty runs for no rows'\\n\\n    # 2. Probability calculation via quotes.select indirectly\\n    # Create quotes with various odds\\n    q1 = make_quote('q1', 'B1', 'E1', obs, exp, last, 200)\\n    q2 = make_quote('q2', 'B2', 'E1', obs, exp, last, -200)\\n    q3 = make_quote('q3', 'B3', 'E1', obs, exp, last, '300')\\n    q4 = make_quote('q4', 'B4', 'E1', obs, exp, last, '-400')\\n    q5 = make_quote('q5', 'B5', 'E1', obs, exp, last, 100)\\n    q6 = make_quote('q6', 'B6', 'E1', obs, exp, last, -100)\\n    # Invalid odds abs<100\\n    q_invalid = make_quote('q_invalid', 'B7', 'E1', obs, exp, last, 50)\\n    # Invalid odds NaN\\n    q_nan = make_quote('q_nan', 'B8', 'E1', obs, exp, last, float('nan'))\\n    # Invalid odds inf\\n    q_inf = make_quote('q_inf', 'B9', 'E1', obs, exp, last, float('inf'))\\n    # Invalid odds bool\\n    q_bool = make_quote('q_bool', 'B10', 'E1', obs, exp, last, True)\\n\\n    quotes_rows = [q1, q2, q3, q4, q5, q6, q_invalid, q_nan, q_inf, q_bool]\\n    runs_rows = []\\n\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    quotes = result['quotes']\\n    # Should contain 6 books\\n    assert set(quotes.keys()) == {'B1','B2','B3','B4','B5','B6'}, 'Unexpected books selected'\\n    # Check probabilities\\n    def prob(v):\\n        return 100/(v+100) if v>0 else (-v)/((-v)+100)\\n    for book, data in quotes.items():\\n        row = data['row']\\n        odds = row['odds']\\n        if isinstance(odds, str):\\n            odds = float(odds)\\n        expected = prob(odds)\\n        assert math.isclose(data['probability'], expected, rel_tol=1e-9), f'Probability mismatch for {book}'\\n    # 3. Quote selection tie-breaking\\n    # Two rows for same book with same observed_at, different id\\n    q_a = make_quote('a', 'TIE', 'E1', obs, exp, last, 200)\\n    q_b = make_quote('b', 'TIE', 'E1', obs, exp, last, 200)\\n    # q_a has lexicographically smaller id\\n    result = candidate([q_b, q_a], [], 'E1', asof)\\n    assert result['quotes']['TIE']['row']['id'] == 'a', 'Tie-breaking by id failed'\\n    # Same observed_at and id, different last_update (one invalid)\\n    q_c = make_quote('c', 'TIE2', 'E1', obs, exp, last, 200)\\n    q_d = make_quote('c', 'TIE2', 'E1', obs, exp, obs+timedelta(seconds=1), 200)  # last_update > observed_at\\n    result = candidate([q_c, q_d], [], 'E1', asof)\\n    assert result['quotes']['TIE2']['row']['id'] == 'c', 'Invalid last_update should be skipped'\\n    # Same observed_at and id, both valid, first input wins\\n    q_e = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    q_f = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    result = candidate([q_f, q_e], [], 'E1', asof)\\n    assert result['quotes']['TIE3']['row']['id'] == 'e', 'First-input tie exception failed'\\n    # 4. Run reconciliation\\n    # Create runs with various statuses\\n    r1 = make_run('r1', 'J1', 1, obs, 'ok', 10)\\n    r2 = make_run('r2', 'J1', 2, obs, 'partial', 5)\\n    r3 = make_run('r3', 'J1', 3, obs, 'failed', 0)\\n    r4 = make_run('r4', 'J2', 1, obs, 'pending', 0)\\n    r5 = make_run('r5', 'J3', 1, obs, 'ok', 7)\\n    r6 = make_run('r6', 'J3', 2, obs, 'ok', 3)\\n    r7 = make_run('r7', 'J4', 1, obs, 'failed', 0)\\n    r8 = make_run('r8', 'J4', 2, obs, 'ok', 4)\\n    # Duplicate run_id with later observed_at\\n    r9 = make_run('r1', 'J1', 4, obs+timedelta(seconds=5), 'ok', 8)\\n    # Duplicate run_id with same observed_at but later input\\n    r10 = make_run('r2', 'J1', 5, obs, 'ok', 9)\\n    runs_rows = [r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]\\n    result = candidate([], runs_rows, 'E1', asof)\\n    runs = result['runs']\\n    # Check selected jobs\\n    assert set(runs.keys()) == {'J1','J2','J3','J4'}, 'Unexpected jobs selected'\\n    # J1 should be from r9 (later observed_at)\\n    assert runs['J1']['run_id'] == 'r1' and runs['J1']['attempt'] == 4, 'Duplicate run_id tie-breaking failed'\\n    # J2 should be from r4\\n    assert runs['J2']['run_id'] == 'r4', 'Pending run selection failed'\\n    # J3 should be from r6 (attempt 2 > 1)\\n    assert runs['J3']['attempt'] == 2, 'Attempt selection failed'\\n    # J4 should be from r8 (attempt 2 > 1)\\n    assert runs['J4']['attempt'] == 2, 'Attempt selection failed'\\n    # 5. Snapshot counts and lists\\n    # Successful rows: J1 (ok), J3 (ok), J4 (ok) => downloaded_rows 8+7+3+4? Wait J1 from r9 has 8, J3 from r6 has 3, J4 from r8 has 4 => sum=15\\n    assert result['successful_rows'] == 15, 'Successful rows count mismatch'\\n    # Failures: J1? r9 status ok, so no failure. J4 ok. So failures empty\\n    assert result['failures'] == [], 'Failures list mismatch'\\n    # Partial jobs: J1? r9 ok, so no partial. J3 ok. So partial empty\\n    assert result['partial_jobs'] == [], 'Partial jobs list mismatch'\\n    # Unknown jobs: J2 pending => ['J2']\\n    assert result['unknown_jobs'] == ['J2'], 'Unknown jobs list mismatch'\\n    # 6. Mutation test\\n    quotes_copy = copy.deepcopy(quotes_rows)\\n    runs_copy = copy.deepcopy(runs_rows)\\n    candidate(quotes_copy, runs_copy, 'E1', asof)\\n    assert quotes_copy == quotes_rows, 'Input quotes mutated'\\n    assert runs_copy == runs_rows, 'Input runs mutated'\\n    # 7. Identity test: returned rows are original dicts\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    for book, data in result['quotes'].items():\\n        assert data['row'] is quotes_rows[quotes_rows.index(data['row'])], 'Quote row not original'\\n    for job, row in result['runs'].items():\\n        # find original run dict\\n        orig = next(r for r in runs_rows if r['run_id']==row['run_id'])\\n        assert row is orig, 'Run row not original'\\n    # 8. Sorting of lists\\n    # Add more jobs to test sorting\\n    r11 = make_run('r11', 'A', 1, obs, 'ok', 2)\\n    r12 = make_run('r12', 'B', 1, obs, 'failed', 0)\\n    r13 = make_run('r13', 'C', 1, obs, 'pending', 0)\\n    runs_rows2 = [r11,r12,r13]\\n    result = candidate([], runs_rows2, 'E1', asof)\\n    assert result['failures'] == ['B'], 'Failures not sorted'\\n    assert result['partial_jobs'] == [], 'Partial jobs not sorted'\\n    assert result['unknown_jobs'] == ['C'], 'Unknown jobs not sorted'\\n    # 9. Event mismatch\\n    result = candidate(quotes_rows, runs_rows, 'NONMATCH', asof)\\n    assert result['quotes'] == {}, 'Quotes should be empty for event mismatch'\\n    assert result['runs'] == {}, 'Runs should be empty for event mismatch'\\n    # 10. asof string with Z\\n    asof_z = '2023-01-01T12:00:00Z'\\n    result = candidate([], [], 'E1', asof_z)\\n    assert result['quotes'] == {}, 'Empty quotes for asof string'\\n    # 11. asof string without timezone\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof string without timezone'\\n    except ValueError:\\n        pass\\n    # 12. asof datetime with timezone offset\\n    asof_offset = datetime(2023,1,1,12,0,0,tzinfo=timezone(timedelta(hours=2)))\\n    result = candidate([], [], 'E1', asof_offset)\\n    assert result['quotes'] == {}, 'Empty quotes for offset asof'\\n    # 13. asof datetime naive\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n    # 14. asof datetime with None offset\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0,tzinfo=None))\\n        assert False, 'Expected ValueError for tzinfo None'\\n    except ValueError:\\n        pass\\n    # 15. event None\\n    try:\\n        candidate([], [], None, asof)\\n        assert False, 'Expected ValueError for event None'\\n    except ValueError:\\n        pass\\n    # 16. event not string\\n    try:\\n        candidate([], [], 123, asof)\\n        assert False, 'Expected ValueError for non-string event'\\n    except ValueError:\\n        pass\\n    # 17. asof None\\n    try:\\n        candidate([], [], 'E1', None)\\n        assert False, 'Expected ValueError for asof None'\\n    except ValueError:\\n        pass\\n    # 18. asof not string or datetime\\n    try:\\n        candidate([], [], 'E1', 123)\\n        assert False, 'Expected ValueError for non-string/non-datetime asof'\\n    except ValueError:\\n        pass\\n    # 19. quotes with missing fields\\n    bad_quote = {'id':'bad','book':'B','event':'E1','observed_at':obs,'expires_at':exp,'last_update':last}\\n    result = candidate([bad_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Missing odds should skip quote'\\n    # 20. runs with missing fields\\n    bad_run = {'run_id':'bad','job':'J','attempt':1,'observed_at':obs,'status':'ok'}\\n    result = candidate([], [bad_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Missing downloaded_rows should skip run'\\n    # 21. run with invalid status\\n    bad_run2 = {'run_id':'bad2','job':'J','attempt':1,'observed_at':obs,'status':'unknown','downloaded_rows':0}\\n    result = candidate([], [bad_run2], 'E1', asof)\\n    assert result['runs'] == {}, 'Invalid status should skip run'\\n    # 22. run with negative attempt\\n    bad_run3 = {'run_id':'bad3','job':'J','attempt':0,'observed_at':obs,'status':'ok','downloaded_rows':5}\\n    result = candidate([], [bad_run3], 'E1', asof)\\n    assert result['runs'] == {}, 'Non-positive attempt should skip run'\\n    # 23. run with negative downloaded_rows\\n    bad_run4 = {'run_id':'bad4','job':'J','attempt':1,'observed_at':obs,'status':'ok','downloaded_rows':-1}\\n    result = candidate([], [bad_run4], 'E1', asof)\\n    assert result['runs'] == {}, 'Negative downloaded_rows should skip run'\\n    # 24. run with failed status but nonzero downloaded_rows\\n    bad_run5 = {'run_id':'bad5','job':'J','attempt':1,'observed_at':obs,'status':'failed','downloaded_rows':5}\\n    result = candidate([], [bad_run5], 'E1', asof)\\n    assert result['runs'] == {}, 'Failed with nonzero downloaded_rows should skip run'\\n    # 25. run with pending status but nonzero downloaded_rows\\n    bad_run6 = {'run_id':'bad6','job':'J','attempt':1,'observed_at':obs,'status':'pending','downloaded_rows':5}\\n    result = candidate([], [bad_run6], 'E1', asof)\\n    assert result['runs'] == {}, 'Pending with nonzero downloaded_rows should skip run'\\n    # 26. run with status ok but future observed_at\\n    future_run = {'run_id':'future','job':'J','attempt':1,'observed_at':asof+timedelta(seconds=10),'status':'ok','downloaded_rows':5}\\n    result = candidate([], [future_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Future run should be skipped'\\n    # 27. quote with future observed_at\\n    future_quote = make_quote('future','B','E1',asof+timedelta(seconds=10),exp,obs,200)\\n    result = candidate([future_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Future quote should be skipped'\\n    # 28. quote with expired expires_at\\n    expired_quote = make_quote('expired','B','E1',obs,asof-timedelta(seconds=10),last,200)\\n    result = candidate([expired_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Expired quote should be skipped'\\n    # 29. quote with last_update > observed_at\\n    bad_last_update = make_quote('badlu','B','E1',obs,exp,last,200)\\n    result = candidate([bad_last_update], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with last_update > observed_at should be skipped'\\n    # 30. quote with event mismatch\\n    mismatch_quote = make_quote('mismatch','B','E2',obs,exp,last,200)\\n    result = candidate([mismatch_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with event mismatch should be skipped'\\n    # 31. run with job mismatch? runs are independent of event, but event mismatch should skip runs as well\\n    mismatch_run = make_run('run_mismatch','J','1',obs,'ok',5)\\n    result = candidate([], [mismatch_run], 'E2', asof)\\n    assert result['runs'] == {}, 'Run with event mismatch should be skipped'\\n    # 32. Ensure that snapshot returns empty dicts when no valid rows\\n    result = candidate([], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Empty quotes expected'\\n    assert result['runs'] == {}, 'Empty runs expected'\\n    assert result['successful_rows'] == 0, 'Successful rows should be zero'\\n    assert result['failures'] == [], 'Failures should be empty'\\n    assert result['partial_jobs'] == [], 'Partial jobs should be empty'\\n    assert result['unknown_jobs'] == [], 'Unknown jobs should be empty'\\n    print('All tests passed')\\n\"\n\nWe need to escape the double quotes inside the JSON string. The code string contains double quotes only in the string literal for asof_z: '2023-01-01T12:00:00Z' uses single quotes. So no double quotes inside. But the code string contains double quotes in the print statement: print('All tests passed') uses single quotes. So no double quotes. So we can just wrap the code string in double quotes and escape newlines as \\n. But we need to escape the double quotes that delimit the JSON string. So we need to produce:\n\n{\n  \"tests.py\": \"def run_tests(candidate):\\n    import datetime, math, copy, json\\n    from datetime import datetime, timezone, timedelta\\n\\n    # Helper to create quote rows\\n    def make_quote(id, book, event, observed_at, expires_at, last_update, odds, extra=None):\\n        row = {\\n            'id': id,\\n            'book': book,\\n            'event': event,\\n            'observed_at': observed_at,\\n            'expires_at': expires_at,\\n            'last_update': last_update,\\n            'odds': odds\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Helper to create run rows\\n    def make_run(run_id, job, attempt, observed_at, status, downloaded_rows, extra=None):\\n        row = {\\n            'run_id': run_id,\\n            'job': job,\\n            'attempt': attempt,\\n            'observed_at': observed_at,\\n            'status': status,\\n            'downloaded_rows': downloaded_rows\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Common timestamps\\n    asof = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)\\n    obs = asof - timedelta(minutes=10)\\n    exp = asof + timedelta(minutes=10)\\n    last = obs\\n\\n    # 1. Validation of asof and event\\n    # Invalid asof string\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof without timezone'\\n    except ValueError:\\n        pass\\n\\n    # Invalid asof naive datetime\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n\\n    # Invalid event empty string\\n    try:\\n        candidate([], [], '', asof)\\n        assert False, 'Expected ValueError for empty event'\\n    except ValueError:\\n        pass\\n\\n    # Valid event whitespace\\n    result = candidate([], [], '   ', asof)\\n    assert result['quotes'] == {}, 'Expected empty quotes for no rows'\\n    assert result['runs'] == {}, 'Expected empty runs for no rows'\\n\\n    # 2. Probability calculation via quotes.select indirectly\\n    # Create quotes with various odds\\n    q1 = make_quote('q1', 'B1', 'E1', obs, exp, last, 200)\\n    q2 = make_quote('q2', 'B2', 'E1', obs, exp, last, -200)\\n    q3 = make_quote('q3', 'B3', 'E1', obs, exp, last, '300')\\n    q4 = make_quote('q4', 'B4', 'E1', obs, exp, last, '-400')\\n    q5 = make_quote('q5', 'B5', 'E1', obs, exp, last, 100)\\n    q6 = make_quote('q6', 'B6', 'E1', obs, exp, last, -100)\\n    # Invalid odds abs<100\\n    q_invalid = make_quote('q_invalid', 'B7', 'E1', obs, exp, last, 50)\\n    # Invalid odds NaN\\n    q_nan = make_quote('q_nan', 'B8', 'E1', obs, exp, last, float('nan'))\\n    # Invalid odds inf\\n    q_inf = make_quote('q_inf', 'B9', 'E1', obs, exp, last, float('inf'))\\n    # Invalid odds bool\\n    q_bool = make_quote('q_bool', 'B10', 'E1', obs, exp, last, True)\\n\\n    quotes_rows = [q1, q2, q3, q4, q5, q6, q_invalid, q_nan, q_inf, q_bool]\\n    runs_rows = []\\n\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    quotes = result['quotes']\\n    # Should contain 6 books\\n    assert set(quotes.keys()) == {'B1','B2','B3','B4','B5','B6'}, 'Unexpected books selected'\\n    # Check probabilities\\n    def prob(v):\\n        return 100/(v+100) if v>0 else (-v)/((-v)+100)\\n    for book, data in quotes.items():\\n        row = data['row']\\n        odds = row['odds']\\n        if isinstance(odds, str):\\n            odds = float(odds)\\n        expected = prob(odds)\\n        assert math.isclose(data['probability'], expected, rel_tol=1e-9), f'Probability mismatch for {book}'\\n    # 3. Quote selection tie-breaking\\n    # Two rows for same book with same observed_at, different id\\n    q_a = make_quote('a', 'TIE', 'E1', obs, exp, last, 200)\\n    q_b = make_quote('b', 'TIE', 'E1', obs, exp, last, 200)\\n    # q_a has lexicographically smaller id\\n    result = candidate([q_b, q_a], [], 'E1', asof)\\n    assert result['quotes']['TIE']['row']['id'] == 'a', 'Tie-breaking by id failed'\\n    # Same observed_at and id, different last_update (one invalid)\\n    q_c = make_quote('c', 'TIE2', 'E1', obs, exp, last, 200)\\n    q_d = make_quote('c', 'TIE2', 'E1', obs, exp, obs+timedelta(seconds=1), 200)  # last_update > observed_at\\n    result = candidate([q_c, q_d], [], 'E1', asof)\\n    assert result['quotes']['TIE2']['row']['id'] == 'c', 'Invalid last_update should be skipped'\\n    # Same observed_at and id, both valid, first input wins\\n    q_e = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    q_f = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    result = candidate([q_f, q_e], [], 'E1', asof)\\n    assert result['quotes']['TIE3']['row']['id'] == 'e', 'First-input tie exception failed'\\n    # 4. Run reconciliation\\n    # Create runs with various statuses\\n    r1 = make_run('r1', 'J1', 1, obs, 'ok', 10)\\n    r2 = make_run('r2', 'J1', 2, obs, 'partial', 5)\\n    r3 = make_run('r3', 'J1', 3, obs, 'failed', 0)\\n    r4 = make_run('r4', 'J2', 1, obs, 'pending', 0)\\n    r5 = make_run('r5', 'J3', 1, obs, 'ok', 7)\\n    r6 = make_run('r6', 'J3', 2, obs, 'ok', 3)\\n    r7 = make_run('r7', 'J4', 1, obs, 'failed', 0)\\n    r8 = make_run('r8', 'J4', 2, obs, 'ok', 4)\\n    # Duplicate run_id with later observed_at\\n    r9 = make_run('r1', 'J1', 4, obs+timedelta(seconds=5), 'ok', 8)\\n    # Duplicate run_id with same observed_at but later input\\n    r10 = make_run('r2', 'J1', 5, obs, 'ok', 9)\\n    runs_rows = [r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]\\n    result = candidate([], runs_rows, 'E1', asof)\\n    runs = result['runs']\\n    # Check selected jobs\\n    assert set(runs.keys()) == {'J1','J2','J3','J4'}, 'Unexpected jobs selected'\\n    # J1 should be from r9 (later observed_at)\\n    assert runs['J1']['run_id'] == 'r1' and runs['J1']['attempt'] == 4, 'Duplicate run_id tie-breaking failed'\\n    # J2 should be from r4\\n    assert runs['J2']['run_id'] == 'r4', 'Pending run selection failed'\\n    # J3 should be from r6 (attempt 2 > 1)\\n    assert runs['J3']['attempt'] == 2, 'Attempt selection failed'\\n    # J4 should be from r8 (attempt 2 > 1)\\n    assert runs['J4']['attempt'] == 2, 'Attempt selection failed'\\n    # 5. Snapshot counts and lists\\n    # Successful rows: J1 (ok), J3 (ok), J4 (ok) => downloaded_rows 8+7+3+4? Wait J1 from r9 has 8, J3 from r6 has 3, J4 from r8 has 4 => sum=15\\n    assert result['successful_rows'] == 15, 'Successful rows count mismatch'\\n    # Failures: J1? r9 status ok, so no failure. J4 ok. So failures empty\\n    assert result['failures'] == [], 'Failures list mismatch'\\n    # Partial jobs: J1? r9 ok, so no partial. J3 ok. So partial empty\\n    assert result['partial_jobs'] == [], 'Partial jobs list mismatch'\\n    # Unknown jobs: J2 pending => ['J2']\\n    assert result['unknown_jobs'] == ['J2'], 'Unknown jobs list mismatch'\\n    # 6. Mutation test\\n    quotes_copy = copy.deepcopy(quotes_rows)\\n    runs_copy = copy.deepcopy(runs_rows)\\n    candidate(quotes_copy, runs_copy, 'E1', asof)\\n    assert quotes_copy == quotes_rows, 'Input quotes mutated'\\n    assert runs_copy == runs_rows, 'Input runs mutated'\\n    # 7. Identity test: returned rows are original dicts\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    for book, data in result['quotes'].items():\\n        assert data['row'] is quotes_rows[quotes_rows.index(data['row'])], 'Quote row not original'\\n    for job, row in result['runs'].items():\\n        # find original run dict\\n        orig = next(r for r in runs_rows if r['run_id']==row['run_id'])\\n        assert row is orig, 'Run row not original'\\n    # 8. Sorting of lists\\n    # Add more jobs to test sorting\\n    r11 = make_run('r11', 'A', 1, obs, 'ok', 2)\\n    r12 = make_run('r12', 'B', 1, obs, 'failed', 0)\\n    r13 = make_run('r13', 'C', 1, obs, 'pending', 0)\\n    runs_rows2 = [r11,r12,r13]\\n    result = candidate([], runs_rows2, 'E1', asof)\\n    assert result['failures'] == ['B'], 'Failures not sorted'\\n    assert result['partial_jobs'] == [], 'Partial jobs not sorted'\\n    assert result['unknown_jobs'] == ['C'], 'Unknown jobs not sorted'\\n    # 9. Event mismatch\\n    result = candidate(quotes_rows, runs_rows, 'NONMATCH', asof)\\n    assert result['quotes'] == {}, 'Quotes should be empty for event mismatch'\\n    assert result['runs'] == {}, 'Runs should be empty for event mismatch'\\n    # 10. asof string with Z\\n    asof_z = '2023-01-01T12:00:00Z'\\n    result = candidate([], [], 'E1', asof_z)\\n    assert result['quotes'] == {}, 'Empty quotes for asof string'\\n    # 11. asof string without timezone\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof string without timezone'\\n    except ValueError:\\n        pass\\n    # 12. asof datetime with timezone offset\\n    asof_offset = datetime(2023,1,1,12,0,0,tzinfo=timezone(timedelta(hours=2)))\\n    result = candidate([], [], 'E1', asof_offset)\\n    assert result['quotes'] == {}, 'Empty quotes for offset asof'\\n    # 13. asof datetime naive\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n    # 14. asof datetime with None offset\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0,tzinfo=None))\\n        assert False, 'Expected ValueError for tzinfo None'\\n    except ValueError:\\n        pass\\n    # 15. event None\\n    try:\\n        candidate([], [], None, asof)\\n        assert False, 'Expected ValueError for event None'\\n    except ValueError:\\n        pass\\n    # 16. event not string\\n    try:\\n        candidate([], [], 123, asof)\\n        assert False, 'Expected ValueError for non-string event'\\n    except ValueError:\\n        pass\\n    # 17. asof None\\n    try:\\n        candidate([], [], 'E1', None)\\n        assert False, 'Expected ValueError for asof None'\\n    except ValueError:\\n        pass\\n    # 18. asof not string or datetime\\n    try:\\n        candidate([], [], 'E1', 123)\\n        assert False, 'Expected ValueError for non-string/non-datetime asof'\\n    except ValueError:\\n        pass\\n    # 19. quotes with missing fields\\n    bad_quote = {'id':'bad','book':'B','event':'E1','observed_at':obs,'expires_at':exp,'last_update':last}\\n    result = candidate([bad_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Missing odds should skip quote'\\n    # 20. runs with missing fields\\n    bad_run = {'run_id':'bad','job':'J','attempt':1,'observed_at':obs,'status':'ok'}\\n    result = candidate([], [bad_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Missing downloaded_rows should skip run'\\n    # 21. run with invalid status\\n    bad_run2 = {'run_id':'bad2','job':'J','attempt':1,'observed_at':obs,'status':'unknown','downloaded_rows':0}\\n    result = candidate([], [bad_run2], 'E1', asof)\\n    assert result['runs'] == {}, 'Invalid status should skip run'\\n    # 22. run with negative attempt\\n    bad_run3 = {'run_id':'bad3','job':'J','attempt':0,'observed_at':obs,'status':'ok','downloaded_rows':5}\\n    result = candidate([], [bad_run3], 'E1', asof)\\n    assert result['runs'] == {}, 'Non-positive attempt should skip run'\\n    # 23. run with negative downloaded_rows\\n    bad_run4 = {'run_id':'bad4','job':'J','attempt':1,'observed_at':obs,'status':'ok','downloaded_rows':-1}\\n    result = candidate([], [bad_run4], 'E1', asof)\\n    assert result['runs'] == {}, 'Negative downloaded_rows should skip run'\\n    # 24. run with failed status but nonzero downloaded_rows\\n    bad_run5 = {'run_id':'bad5','job':'J','attempt':1,'observed_at':obs,'status':'failed','downloaded_rows':5}\\n    result = candidate([], [bad_run5], 'E1', asof)\\n    assert result['runs'] == {}, 'Failed with nonzero downloaded_rows should skip run'\\n    # 25. run with pending status but nonzero downloaded_rows\\n    bad_run6 = {'run_id':'bad6','job':'J','attempt':1,'observed_at':obs,'status':'pending','downloaded_rows':5}\\n    result = candidate([], [bad_run6], 'E1', asof)\\n    assert result['runs'] == {}, 'Pending with nonzero downloaded_rows should skip run'\\n    # 26. run with status ok but future observed_at\\n    future_run = {'run_id':'future','job':'J','attempt':1,'observed_at':asof+timedelta(seconds=10),'status':'ok','downloaded_rows':5}\\n    result = candidate([], [future_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Future run should be skipped'\\n    # 27. quote with future observed_at\\n    future_quote = make_quote('future','B','E1',asof+timedelta(seconds=10),exp,obs,200)\\n    result = candidate([future_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Future quote should be skipped'\\n    # 28. quote with expired expires_at\\n    expired_quote = make_quote('expired','B','E1',obs,asof-timedelta(seconds=10),last,200)\\n    result = candidate([expired_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Expired quote should be skipped'\\n    # 29. quote with last_update > observed_at\\n    bad_last_update = make_quote('badlu','B','E1',obs,exp,last,200)\\n    result = candidate([bad_last_update], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with last_update > observed_at should be skipped'\\n    # 30. quote with event mismatch\\n    mismatch_quote = make_quote('mismatch','B','E2',obs,exp,last,200)\\n    result = candidate([mismatch_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Quote with event mismatch should be skipped'\\n    # 31. run with job mismatch? runs are independent of event, but event mismatch should skip runs as well\\n    mismatch_run = make_run('run_mismatch','J','1',obs,'ok',5)\\n    result = candidate([], [mismatch_run], 'E2', asof)\\n    assert result['runs'] == {}, 'Run with event mismatch should be skipped'\\n    # 32. Ensure that snapshot returns empty dicts when no valid rows\\n    result = candidate([], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Empty quotes expected'\\n    assert result['runs'] == {}, 'Empty runs expected'\\n    assert result['successful_rows'] == 0, 'Successful rows should be zero'\\n    assert result['failures'] == [], 'Failures should be empty'\\n    assert result['partial_jobs'] == [], 'Partial jobs should be empty'\\n    assert result['unknown_jobs'] == [], 'Unknown jobs should be empty'\\n    print('All tests passed')\\n\"\n\nWe need to escape the double quotes inside the JSON string. The code string contains double quotes only in the string literal for asof_z: '2023-01-01T12:00:00Z' uses single quotes. So no double quotes inside. But there are double quotes in the string for asof_z? Actually asof_z is defined as '2023-01-01T12:00:00Z', single quotes. So no double quotes. The code string uses single quotes for all string literals. So no double quotes inside. So we can wrap the code string in double quotes and escape newlines as \\n. But we need to escape the double quotes that delimit the JSON string. So we need to produce:\n\n{\n  \"tests.py\": \"def run_tests(candidate):\\n    import datetime, math, copy, json\\n    from datetime import datetime, timezone, timedelta\\n\\n    # Helper to create quote rows\\n    def make_quote(id, book, event, observed_at, expires_at, last_update, odds, extra=None):\\n        row = {\\n            'id': id,\\n            'book': book,\\n            'event': event,\\n            'observed_at': observed_at,\\n            'expires_at': expires_at,\\n            'last_update': last_update,\\n            'odds': odds\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Helper to create run rows\\n    def make_run(run_id, job, attempt, observed_at, status, downloaded_rows, extra=None):\\n        row = {\\n            'run_id': run_id,\\n            'job': job,\\n            'attempt': attempt,\\n            'observed_at': observed_at,\\n            'status': status,\\n            'downloaded_rows': downloaded_rows\\n        }\\n        if extra:\\n            row.update(extra)\\n        return row\\n\\n    # Common timestamps\\n    asof = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)\\n    obs = asof - timedelta(minutes=10)\\n    exp = asof + timedelta(minutes=10)\\n    last = obs\\n\\n    # 1. Validation of asof and event\\n    # Invalid asof string\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof without timezone'\\n    except ValueError:\\n        pass\\n\\n    # Invalid asof naive datetime\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n\\n    # Invalid event empty string\\n    try:\\n        candidate([], [], '', asof)\\n        assert False, 'Expected ValueError for empty event'\\n    except ValueError:\\n        pass\\n\\n    # Valid event whitespace\\n    result = candidate([], [], '   ', asof)\\n    assert result['quotes'] == {}, 'Expected empty quotes for no rows'\\n    assert result['runs'] == {}, 'Expected empty runs for no rows'\\n\\n    # 2. Probability calculation via quotes.select indirectly\\n    # Create quotes with various odds\\n    q1 = make_quote('q1', 'B1', 'E1', obs, exp, last, 200)\\n    q2 = make_quote('q2', 'B2', 'E1', obs, exp, last, -200)\\n    q3 = make_quote('q3', 'B3', 'E1', obs, exp, last, '300')\\n    q4 = make_quote('q4', 'B4', 'E1', obs, exp, last, '-400')\\n    q5 = make_quote('q5', 'B5', 'E1', obs, exp, last, 100)\\n    q6 = make_quote('q6', 'B6', 'E1', obs, exp, last, -100)\\n    # Invalid odds abs<100\\n    q_invalid = make_quote('q_invalid', 'B7', 'E1', obs, exp, last, 50)\\n    # Invalid odds NaN\\n    q_nan = make_quote('q_nan', 'B8', 'E1', obs, exp, last, float('nan'))\\n    # Invalid odds inf\\n    q_inf = make_quote('q_inf', 'B9', 'E1', obs, exp, last, float('inf'))\\n    # Invalid odds bool\\n    q_bool = make_quote('q_bool', 'B10', 'E1', obs, exp, last, True)\\n\\n    quotes_rows = [q1, q2, q3, q4, q5, q6, q_invalid, q_nan, q_inf, q_bool]\\n    runs_rows = []\\n\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    quotes = result['quotes']\\n    # Should contain 6 books\\n    assert set(quotes.keys()) == {'B1','B2','B3','B4','B5','B6'}, 'Unexpected books selected'\\n    # Check probabilities\\n    def prob(v):\\n        return 100/(v+100) if v>0 else (-v)/((-v)+100)\\n    for book, data in quotes.items():\\n        row = data['row']\\n        odds = row['odds']\\n        if isinstance(odds, str):\\n            odds = float(odds)\\n        expected = prob(odds)\\n        assert math.isclose(data['probability'], expected, rel_tol=1e-9), f'Probability mismatch for {book}'\\n    # 3. Quote selection tie-breaking\\n    # Two rows for same book with same observed_at, different id\\n    q_a = make_quote('a', 'TIE', 'E1', obs, exp, last, 200)\\n    q_b = make_quote('b', 'TIE', 'E1', obs, exp, last, 200)\\n    # q_a has lexicographically smaller id\\n    result = candidate([q_b, q_a], [], 'E1', asof)\\n    assert result['quotes']['TIE']['row']['id'] == 'a', 'Tie-breaking by id failed'\\n    # Same observed_at and id, different last_update (one invalid)\\n    q_c = make_quote('c', 'TIE2', 'E1', obs, exp, last, 200)\\n    q_d = make_quote('c', 'TIE2', 'E1', obs, exp, obs+timedelta(seconds=1), 200)  # last_update > observed_at\\n    result = candidate([q_c, q_d], [], 'E1', asof)\\n    assert result['quotes']['TIE2']['row']['id'] == 'c', 'Invalid last_update should be skipped'\\n    # Same observed_at and id, both valid, first input wins\\n    q_e = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    q_f = make_quote('e', 'TIE3', 'E1', obs, exp, last, 200)\\n    result = candidate([q_f, q_e], [], 'E1', asof)\\n    assert result['quotes']['TIE3']['row']['id'] == 'e', 'First-input tie exception failed'\\n    # 4. Run reconciliation\\n    # Create runs with various statuses\\n    r1 = make_run('r1', 'J1', 1, obs, 'ok', 10)\\n    r2 = make_run('r2', 'J1', 2, obs, 'partial', 5)\\n    r3 = make_run('r3', 'J1', 3, obs, 'failed', 0)\\n    r4 = make_run('r4', 'J2', 1, obs, 'pending', 0)\\n    r5 = make_run('r5', 'J3', 1, obs, 'ok', 7)\\n    r6 = make_run('r6', 'J3', 2, obs, 'ok', 3)\\n    r7 = make_run('r7', 'J4', 1, obs, 'failed', 0)\\n    r8 = make_run('r8', 'J4', 2, obs, 'ok', 4)\\n    # Duplicate run_id with later observed_at\\n    r9 = make_run('r1', 'J1', 4, obs+timedelta(seconds=5), 'ok', 8)\\n    # Duplicate run_id with same observed_at but later input\\n    r10 = make_run('r2', 'J1', 5, obs, 'ok', 9)\\n    runs_rows = [r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]\\n    result = candidate([], runs_rows, 'E1', asof)\\n    runs = result['runs']\\n    # Check selected jobs\\n    assert set(runs.keys()) == {'J1','J2','J3','J4'}, 'Unexpected jobs selected'\\n    # J1 should be from r9 (later observed_at)\\n    assert runs['J1']['run_id'] == 'r1' and runs['J1']['attempt'] == 4, 'Duplicate run_id tie-breaking failed'\\n    # J2 should be from r4\\n    assert runs['J2']['run_id'] == 'r4', 'Pending run selection failed'\\n    # J3 should be from r6 (attempt 2 > 1)\\n    assert runs['J3']['attempt'] == 2, 'Attempt selection failed'\\n    # J4 should be from r8 (attempt 2 > 1)\\n    assert runs['J4']['attempt'] == 2, 'Attempt selection failed'\\n    # 5. Snapshot counts and lists\\n    # Successful rows: J1 (ok), J3 (ok), J4 (ok) => downloaded_rows 8+7+3+4? Wait J1 from r9 has 8, J3 from r6 has 3, J4 from r8 has 4 => sum=15\\n    assert result['successful_rows'] == 15, 'Successful rows count mismatch'\\n    # Failures: J1? r9 status ok, so no failure. J4 ok. So failures empty\\n    assert result['failures'] == [], 'Failures list mismatch'\\n    # Partial jobs: J1? r9 ok, so no partial. J3 ok. So partial empty\\n    assert result['partial_jobs'] == [], 'Partial jobs list mismatch'\\n    # Unknown jobs: J2 pending => ['J2']\\n    assert result['unknown_jobs'] == ['J2'], 'Unknown jobs list mismatch'\\n    # 6. Mutation test\\n    quotes_copy = copy.deepcopy(quotes_rows)\\n    runs_copy = copy.deepcopy(runs_rows)\\n    candidate(quotes_copy, runs_copy, 'E1', asof)\\n    assert quotes_copy == quotes_rows, 'Input quotes mutated'\\n    assert runs_copy == runs_rows, 'Input runs mutated'\\n    # 7. Identity test: returned rows are original dicts\\n    result = candidate(quotes_rows, runs_rows, 'E1', asof)\\n    for book, data in result['quotes'].items():\\n        assert data['row'] is quotes_rows[quotes_rows.index(data['row'])], 'Quote row not original'\\n    for job, row in result['runs'].items():\\n        # find original run dict\\n        orig = next(r for r in runs_rows if r['run_id']==row['run_id'])\\n        assert row is orig, 'Run row not original'\\n    # 8. Sorting of lists\\n    # Add more jobs to test sorting\\n    r11 = make_run('r11', 'A', 1, obs, 'ok', 2)\\n    r12 = make_run('r12', 'B', 1, obs, 'failed', 0)\\n    r13 = make_run('r13', 'C', 1, obs, 'pending', 0)\\n    runs_rows2 = [r11,r12,r13]\\n    result = candidate([], runs_rows2, 'E1', asof)\\n    assert result['failures'] == ['B'], 'Failures not sorted'\\n    assert result['partial_jobs'] == [], 'Partial jobs not sorted'\\n    assert result['unknown_jobs'] == ['C'], 'Unknown jobs not sorted'\\n    # 9. Event mismatch\\n    result = candidate(quotes_rows, runs_rows, 'NONMATCH', asof)\\n    assert result['quotes'] == {}, 'Quotes should be empty for event mismatch'\\n    assert result['runs'] == {}, 'Runs should be empty for event mismatch'\\n    # 10. asof string with Z\\n    asof_z = '2023-01-01T12:00:00Z'\\n    result = candidate([], [], 'E1', asof_z)\\n    assert result['quotes'] == {}, 'Empty quotes for asof string'\\n    # 11. asof string without timezone\\n    try:\\n        candidate([], [], 'E1', '2023-01-01T12:00:00')\\n        assert False, 'Expected ValueError for asof string without timezone'\\n    except ValueError:\\n        pass\\n    # 12. asof datetime with timezone offset\\n    asof_offset = datetime(2023,1,1,12,0,0,tzinfo=timezone(timedelta(hours=2)))\\n    result = candidate([], [], 'E1', asof_offset)\\n    assert result['quotes'] == {}, 'Empty quotes for offset asof'\\n    # 13. asof datetime naive\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0))\\n        assert False, 'Expected ValueError for naive datetime asof'\\n    except ValueError:\\n        pass\\n    # 14. asof datetime with None offset\\n    try:\\n        candidate([], [], 'E1', datetime(2023,1,1,12,0,0,tzinfo=None))\\n        assert False, 'Expected ValueError for tzinfo None'\\n    except ValueError:\\n        pass\\n    # 15. event None\\n    try:\\n        candidate([], [], None, asof)\\n        assert False, 'Expected ValueError for event None'\\n    except ValueError:\\n        pass\\n    # 16. event not string\\n    try:\\n        candidate([], [], 123, asof)\\n        assert False, 'Expected ValueError for non-string event'\\n    except ValueError:\\n        pass\\n    # 17. asof None\\n    try:\\n        candidate([], [], 'E1', None)\\n        assert False, 'Expected ValueError for asof None'\\n    except ValueError:\\n        pass\\n    # 18. asof not string or datetime\\n    try:\\n        candidate([], [], 'E1', 123)\\n        assert False, 'Expected ValueError for non-string/non-datetime asof'\\n    except ValueError:\\n        pass\\n    # 19. quotes with missing fields\\n    bad_quote = {'id':'bad','book':'B','event':'E1','observed_at':obs,'expires_at':exp,'last_update':last}\\n    result = candidate([bad_quote], [], 'E1', asof)\\n    assert result['quotes'] == {}, 'Missing odds should skip quote'\\n    # 20. runs with missing fields\\n    bad_run = {'run_id':'bad','job':'J','attempt':1,'observed_at':obs,'status':'ok'}\\n    result = candidate([], [bad_run], 'E1', asof)\\n    assert result['runs'] == {}, 'Missing downloaded_rows should skip run'\\n    # 21. run with invalid status\\n    bad_run2 = {'run_id':'bad2','job':'J','attempt':1,'observed_at':obs,'status':'unknown','download"
+  },
+  "done": true,
+  "done_reason": "length",
+  "total_duration": 346288145500,
+  "load_duration": 1309045542,
+  "prompt_eval_count": 1188,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 331582000,
+  "eval_count": 32768,
+  "eval_duration": 344640837000,
+  "wall_seconds": 346.7586821659934,
+  "memory_samples": [
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 80,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

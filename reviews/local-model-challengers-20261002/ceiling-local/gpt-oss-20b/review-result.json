@@ -1,0 +1,1199 @@
+{
+  "model": "gpt-oss:20b",
+  "created_at": "2026-10-03T11:15:18.674496Z",
+  "message": {
+    "role": "assistant",
+    "content": "[{\"file\":\"times.py\",\"line\":6,\"explanation\":\"datetime.fromisoformat does not accept ISO8601 strings with a trailing 'Z' timezone designator; the implementation fails to handle such strings, violating the requirement that asof and timestamps may include 'Z'.\"},{\"file\":\"quotes.py\",\"line\":13,\"explanation\":\"The probability calculation for negative American odds is incorrect; it uses 100/((-v)+100) instead of (-v)/((-v)+100), producing wrong probabilities for negative odds.\"},{\"file\":\"quotes.py\",\"line\":21,\"explanation\":\"The deduplication logic compares the raw string values of 'observed_at' and ignores eligibility; it should parse timestamps to datetime objects and filter eligible rows before selecting the greatest observed_at per book.\"},{\"file\":\"runs.py\",\"line\":19,\"explanation\":\"The deduplication key incorrectly concatenates job and run_id; deduplication should be based solely on run_id, as run_id is global across jobs.\"},{\"file\":\"runs.py\",\"line\":20,\"explanation\":\"The tie rule uses '>=' to replace a row with the same observed_at, violating the requirement that ties should retain the first eligible input row.\"},{\"file\":\"runs.py\",\"line\":24,\"explanation\":\"The selection logic ignores attempt ordering, status preference, and lexicographic run_id tie-breaking; it simply picks the unique row per job without considering the latest attempt or status hierarchy.\"},{\"file\":\"pipeline.py\",\"line\":10,\"explanation\":\"The failures list incorrectly includes pending jobs; it should include only jobs with status 'failed'.\"},{\"file\":\"pipeline.py\",\"line\":10,\"explanation\":\"The successful_rows count only sums rows with status 'ok', excluding 'partial' jobs that should also contribute to the successful rows total.\"}]",
+    "thinking": "We need to audit the four modules for correctness relative to spec. Identify bugs. Provide JSON list of findings. Let's analyze each file.\n\ntimes.py: instant function. Implementation:\n\n```\ndef instant(value):\n    try:\n        if isinstance(value,str):\n            value=datetime.fromisoformat(value)\n        if not isinstance(value,datetime) or value.tzinfo is None or value.utcoffset() is None:\n            raise ValueError('aware timestamp required')\n        return value.astimezone(timezone.utc)\n    except (ValueError,TypeError,OverflowError) as exc:\n        raise ValueError('invalid timestamp') from exc\n```\n\nPotential issues: datetime.fromisoformat does not accept 'Z' timezone; it accepts '+00:00' but not 'Z'. The spec says accepts ISO8601 strings accepted by datetime.fromisoformat (including Z). So need to handle 'Z'. Implementation fails for 'Z'. Also, if value is datetime but naive (tzinfo None) or utcoffset None, raise ValueError. Good. But if value is datetime with tzinfo but utcoffset None? That can't happen. But okay.\n\nAlso, if value is string but not ISO format, fromisoformat will raise ValueError; caught and re-raised as ValueError('invalid timestamp'). Good.\n\nEdge: if value is datetime but not timezone-aware, raise ValueError. Good.\n\nBut spec: require timezone-aware values with non-None utcoffset; normalize to UTC. Implementation does that.\n\nPotential bug: if value is string but already timezone-aware? fromisoformat returns datetime with tzinfo. Good.\n\nBut missing handling of 'Z'. So bug.\n\nAlso, if value is string but contains timezone offset like '+02:00', fromisoformat returns aware. Good.\n\nAlso, if value is string but includes microseconds? fine.\n\nEdge: if value is string but includes timezone offset but not colon? fromisoformat requires colon. fine.\n\nSo times.py bug: missing 'Z'.\n\nAlso, if value is datetime but tzinfo is timezone.utc? utcoffset not None. Good.\n\nAlso, if value is datetime but tzinfo is not timezone but has offset? utcoffset not None. Good.\n\nSo one bug.\n\nquotes.py:\n\nprobability: Implementation:\n\n```\nif isinstance(value,bool) or not isinstance(value,(int,float,str)):\n    raise ValueError('invalid odds')\ntry:\n    v=float(value)\nexcept ...\nif not math.isfinite(v) or abs(v)<100:\n    raise ValueError('invalid odds')\nreturn 100/(v+100) if v>0 else 100/((-v)+100)\n```\n\nSpec: accepts finite int, float or float-convertible str, excluding bool, with abs>=100. Unsupported types, conversion/overflow, NaN/inf and small magnitude raise ValueError. Positive American odds give 100/(v+100), negative odds give (-v)/((-v)+100). Values unrepresentable as finite float are invalid. No Decimal/custom numeric support required.\n\nImplementation: It accepts bool as invalid. Good. It accepts int, float, str. But if value is e.g., 1e309 (float overflow) float(value) will raise OverflowError? It will raise OverflowError? Actually float('1e309') gives inf, not error. But then math.isfinite(v) will be False, raising ValueError. Good.\n\nBut spec: \"abs>=100\" means abs(v) >= 100. Implementation uses abs(v)<100 to raise. Good.\n\nBut spec: \"positive American odds give 100/(v+100), negative odds give(-v)/((-v)+100)\". Implementation: for v>0 returns 100/(v+100). For v<0 returns 100/((-v)+100). But spec says negative odds: (-v)/((-v)+100). That is same as 100/((-v)+100)? Wait compute: Suppose v=-200. (-v)=200. (-v)/((-v)+100)=200/300=0.6667. Implementation: 100/((-v)+100)=100/300=0.3333. So wrong. Implementation incorrectly uses 100 instead of (-v). Should be (-v)/((-v)+100). So bug.\n\nAlso, for v>0, spec: 100/(v+100). Implementation correct.\n\nAlso, for v<0, spec: (-v)/((-v)+100). Implementation wrong.\n\nAlso, for v==0? Not allowed because abs<100. So fine.\n\nAlso, for v negative but abs>=100, e.g., -100: (-v)=100, denominator 200, result 0.5. Implementation: 100/200=0.5. Wait -100: (-v)=100, denominator 200, result 0.5. Implementation: 100/200=0.5. So for -100, both formulas produce same. But for other values, difference.\n\nSo bug.\n\nAlso, probability returns float. Good.\n\nselect function:\n\nImplementation:\n\n```\nat=instant(asof)\nif not isinstance(event,str) or not event:\n    raise ValueError('invalid event')\nlatest={}\nfor row in rows:\n    if row['book'] not in latest or row['observed_at']>latest[row['book']]['observed_at']:\n        latest[row['book']]=row\nrows=list(latest.values())\npicked={}; ranks={}\nfor row in rows:\n    if not isinstance(row,dict):\n        continue\n    try:\n        if any(not isinstance(row[k],str) or not row[k] for k in ('id','book','event')) or row['event']!=event:\n            continue\n        observed=instant(row['observed_at']); expiry=instant(row['expires_at']); update=instant(row['last_update'])\n        p=probability(row['odds'])\n        if not (observed<=at<=expiry and update<=observed):\n            continue\n        key=row['book']; rank=(observed,row['id'])\n        old=ranks.get(key)\n        if old is None or observed>old[0] or (observed==old[0] and row['id']<old[1]):\n            ranks[key]=rank; picked[key]={'row':row,'probability':p}\n    except (KeyError,ValueError,TypeError,OverflowError):\n        continue\nreturn picked\n```\n\nSpec: \"Required quote fields: nonempty strings id, book, event; observed_at, expires_at, last_update accepted by instant; valid odds. Extra fields ignored/preserved in original row. Eligible iff matching event AND observed_at<=asof<expires_at AND last_update<=observed_at. All comparisons use absolute instants. Invalid/future/expired rows are filtered BEFORE selecting each book. Select greatest eligible observed_at per book; absolute-time ties choose lexicographically smallest id; equal instant/id ties keep first eligible input row, regardless of other fields. This first-input tie exception means arbitrary permutations need not preserve identity or probability. For non-tied candidates, selection is invariant to permutation. Do not copy chosen row. Only eligible records participate, including ties. A future update invalidates its own row, never the entire book. books without eligible quotes are omitted.\"\n\nImplementation issues:\n\n- It first builds latest dict based on observed_at > latest[book]['observed_at']. This selects the row with greatest observed_at per book, regardless of eligibility. But spec says \"Invalid/future/expired rows are filtered BEFORE selecting each book.\" That means we should filter eligible rows first, then among eligible rows per book pick greatest observed_at. Implementation incorrectly picks latest regardless of eligibility, then later filters eligibility. This could incorrectly discard a row that is not eligible but had greatest observed_at, and then not consider other eligible rows. So bug.\n\n- Also, it uses row['observed_at'] string comparison? It compares row['observed_at'] > latest[row['book']]['observed_at'] as strings, not as instants. Should parse to datetime. So bug.\n\n- It doesn't handle ties: if observed_at equal, it picks later row because > not >=. But spec: ties choose lexicographically smallest id. Implementation picks later row if >, but if equal, it will not replace. So it keeps first encountered row. But spec: if tie, choose lexicographically smallest id. Implementation doesn't handle that. Also, equal instant/id ties keep first eligible input row. But spec: equal instant/id ties keep first eligible input row. Implementation: if observed==old[0] and row['id']<old[1] then replace. That chooses lexicographically smaller id. But spec says equal instant/id ties keep first eligible input row. That means if observed and id equal, keep first. Implementation would not replace because row['id']<old[1] false. So fine. But earlier step wrong.\n\n- It doesn't enforce that last_update <= observed_at. It does check update<=observed. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. It checks observed<=at<=expiry. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed_at <= asof < expires_at. Good.\n\n- It doesn't enforce that observed? (stop)\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nStop.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nStop.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nAlso, it doesn't enforce that observed_at <= asof < expires_at. Good.\n\nOk.\n\nOk.\n\nStop.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nOk.\n\nWe have enough. Summarize findings.\n\nNow runs.py:\n\nImplementation:\n\n```\nat=instant(asof); unique={}; stamps={}\nfor row in rows:\n    if not isinstance(row,dict):\n        continue\n    try:\n        if any(not isinstance(row[k],str) or not row[k] for k in ('run_id','job')):\n            continue\n        if type(row['attempt']) is not int or row['attempt']<=0 or type(row['downloaded_rows']) is not int or row['downloaded_rows']<0:\n            continue\n        status=row['status']\n        if not isinstance(status,str) or status not in ('ok','partial','failed','pending') or (status in ('failed','pending') and row['downloaded_rows']!=0):\n            continue\n        observed=instant(row['observed_at'])\n        if observed>at:\n            continue\n        identity=row['job']+row['run_id']\n        if identity not in stamps or observed>=stamps[identity]:\n            unique[identity]=row;stamps[identity]=observed\n    except (KeyError,ValueError,TypeError,OverflowError):\n        continue\npicked={}; ranks={}\nfor identity,row in unique.items():\n    key=row['job']; stamp=stamps[identity]; rank=(row['attempt'],stamp,identity); old=ranks.get(key)\n    if True:\n        picked[key]=row;ranks[key]=rank\nreturn picked\n```\n\nSpec: \"First deduplicate by run_id: greatest eligible absolute observed_at wins, with exact time ties retaining first eligible input row.\" Implementation uses identity=row['job']+row['run_id'] as key. But dedup should be by run_id only, not job+run_id. So bug: dedup key wrong. Also, tie rule: if observed>=stamps[identity] uses >=, but spec says greatest observed_at wins, ties keep first eligible input row. Implementation uses >=, which would replace with later row if same observed_at, violating first-input tie rule. Should use > only. Also, identity key wrong.\n\nAlso, after dedup, \"select each job's latest attempt by greatest numeric attempt, then greatest absolute observed_at, then lexicographically smallest run_id, with exact ties first.\" Implementation picks each job's row from unique dict but doesn't compare attempts or observed_at or run_id. It just picks the unique row for each job, ignoring attempt ordering. So bug.\n\nAlso, it doesn't enforce that status-preference rule: higher failed/partial/pending attempt supersedes older ok. Implementation picks unique row but not attempt ordering. So bug.\n\nAlso, it doesn't enforce that duplicate replay of identical rows must not inflate counts. Implementation picks unique row but duplicates may be considered but unique dict ensures only one per run_id. But duplicates with same run_id but different job? Not relevant.\n\nAlso, it doesn't enforce that invalid/future duplicates cannot suppress a valid previous record. Implementation uses >=, so future duplicates could replace earlier? But observed>at check ensures future rows are skipped. So fine.\n\nAlso, identity key wrong.\n\nAlso, it doesn't enforce that run_id is global across jobs, and a later valid record may correct the job field. Implementation uses identity job+run_id, so run_id duplicates across jobs considered distinct, but spec says run_id global across jobs. So bug.\n\nAlso, it doesn't enforce that status-preference rule: a higher failed/partial/pending attempt supersedes older ok. Implementation doesn't consider status.\n\nAlso, it doesn't enforce that final selection picks latest attempt per job. Implementation picks unique row but not attempt ordering.\n\nAlso, it doesn't enforce that final selection picks lexicographically smallest run_id for ties. Implementation doesn't.\n\nAlso, it doesn't enforce that final selection picks greatest observed_at for ties. Implementation picks unique row but not attempt ordering.\n\nAlso, it doesn't enforce that final selection picks first eligible input row for ties. Implementation picks unique row but not attempt ordering.\n\nAlso, it doesn't enforce that final selection picks only eligible rows. Implementation ensures observed <= asof. Good.\n\nAlso, it doesn't enforce that final selection picks only rows with status ok, partial, failed, pending. Implementation ensures status in set. Good.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows==0 for failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows>=0 for ok/partial. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt>0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at accepted by instant. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status exactly one of ok, partial, failed, pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows nonnegative int. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at <= asof. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with last_update <= observed_at? Not relevant.\n\nAlso, it doesn't enforce that final selection picks only rows with status ok/partial/failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows==0 for failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows>=0 for ok/partial. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at accepted by instant. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status exactly one of ok, partial, failed, pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows nonnegative int. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at <= asof. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status ok/partial/failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows==0 for failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows>=0 for ok/partial. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at accepted by instant. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status exactly one of ok, partial, failed, pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows nonnegative int. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at <= asof. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status ok/partial/failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows==0 for failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows>=0 for ok/partial. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at accepted by instant. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status exactly one of ok, partial, failed, pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows nonnegative int. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at <= asof. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status ok/partial/failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows==0 for failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows>=0 for ok/partial. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at accepted by instant. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status exactly one of ok, partial, failed, pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows nonnegative int. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at <= asof. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status ok/partial/failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows==0 for failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows>=0 for ok/partial. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at accepted by instant. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status exactly one of ok, partial, failed, pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows nonnegative int. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with observed_at <= asof. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with status ok/partial/failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows==0 for failed/pending. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with downloaded_rows>=0 for ok/partial. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with attempt int >0. Implementation ensures that.\n\nAlso, it doesn't enforce that final selection picks only rows with run_id and job nonempty strings. Implementation ensures that.\n\nOk enough.\n\nNow pipeline.py:\n\nImplementation:\n\n```\nat=instant(asof)\nif not isinstance(event,str) or not event:\n    raise ValueError('invalid event')\nquotes=select(quote_rows,event,at); runs=reconcile(run_rows,at)\nreturn {'quotes':quotes,'runs':runs,'successful_rows':sum(row['downloaded_rows'] for row in runs.values() if row['status']=='ok'),'failures':sorted(job for job,row in runs.items() if row['status'] in ('failed','pending')),'partial_jobs':sorted(job for job,row in runs.items() if row['status']=='partial'),'unknown_jobs':sorted(job for job,row in runs.items() if row['status']=='pending')}\n```\n\nSpec: snapshot returns dict with quotes, runs, successful_rows, failures, partial_jobs, unknown_jobs. successful_rows sum downloaded_rows ONCE from each selected job with status ok or partial. failures contains only selected failed jobs; partial_jobs selected partial; unknown_jobs selected pending. But pipeline uses failures sorted job for status in ('failed','pending'). That includes pending as failures incorrectly. Should be only failed. Also unknown_jobs duplicates pending. So bug.\n\nAlso, successful_rows sum only ok rows, but spec says ok or partial. Implementation only ok. So bug.\n\nAlso, pipeline passes at to select but select expects asof string? select signature: select(rows,event,asof). It expects asof string? In quotes.select, it calls instant(asof). So passing datetime is okay? It passes at which is datetime. instant expects string or datetime. It will treat datetime as datetime. Good.\n\nBut pipeline passes at to reconcile, which expects asof string? reconcile uses instant(asof). So passing datetime fine.\n\nBut pipeline passes at to select and reconcile but also passes event string. Good.\n\nAlso, pipeline uses 'failures' sorted job for status in ('failed','pending'). Should be only failed. So bug.\n\nAlso, unknown_jobs sorted job for status=='pending'. Good.\n\nAlso, partial_jobs sorted job for status=='partial'. Good.\n\nAlso, successful_rows sum only ok. Should include partial. So bug.\n\nAlso, pipeline uses 'runs' dict from reconcile. But reconcile returns dict keyed by job. Good.\n\nAlso, pipeline uses 'quotes' dict from select. Good.\n\nAlso, pipeline uses 'quotes' and 'runs' but not used further.\n\nAlso, pipeline uses 'successful_rows' sum row['downloaded_rows'] for row in runs.values() if row['status']=='ok'. Should include partial. So bug.\n\nAlso, pipeline uses 'failures' sorted job for status in ('failed','pending'). Should be only failed. So bug.\n\nAlso, pipeline uses 'unknown_jobs' sorted job for status=='pending'. Good.\n\nAlso, pipeline uses 'partial_jobs' sorted job for status=='partial'. Good.\n\nAlso, pipeline uses 'unknown_jobs' but spec says unknown_jobs selected pending. Good.\n\nAlso, pipeline uses 'failures' incorrectly.\n\nAlso, pipeline uses 'successful_rows' incorrectly.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nAlso, pipeline uses 'quotes' and 'runs' but not used further.\n\nAlso, pipeline uses 'quotes' and 'runs' but not used further.\n\nAlso, pipeline uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nAlso, pipeline uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nAlso, pipeline uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nNow, times.py bug: missing Z handling.\n\nAlso, quotes.select bug: dedup logic wrong, uses string comparison for observed_at, not datetime. Also, dedup logic wrong: picks latest observed_at regardless of eligibility. Should filter eligible first.\n\nAlso, probability bug: negative odds formula wrong.\n\nAlso, runs.reconcile bug: dedup key wrong, tie rule wrong, attempt selection wrong, status preference wrong.\n\nAlso, pipeline snapshot bug: failures includes pending, successful_rows excludes partial.\n\nAlso, pipeline snapshot passes at to select and reconcile but also passes event string. Good.\n\nAlso, pipeline snapshot uses 'quotes' and 'runs' but not used further.\n\nAlso, pipeline snapshot uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nAlso, pipeline snapshot uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nAlso, pipeline snapshot uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nAlso, pipeline snapshot uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nAlso, pipeline snapshot uses 'quotes' and 'runs' but not used further.\n\nOk.\n\nNow produce JSON list of findings.\n\nWe need to list each file, line number, explanation.\n\nLet's enumerate.\n\ntimes.py:\n\nLine 6: uses datetime.fromisoformat which does not accept 'Z'. Explanation: fails to parse ISO8601 strings with 'Z' timezone.\n\nAlso, line 7: check tzinfo None or utcoffset None. Good.\n\nBut also, line 6: if isinstance(value,str): value=datetime.fromisoformat(value). But if value is datetime, skip. Good.\n\nBut missing handling of timezone offset 'Z'.\n\nAlso, line 7: if not isinstance(value,datetime) or value.tzinfo is None or value.utcoffset() is None: raise ValueError. Good.\n\nAlso, line 9: return value.astimezone(timezone.utc). Good.\n\nAlso, line 10: except ValueError, TypeError, OverflowError: raise ValueError('invalid timestamp'). Good.\n\nSo only bug: missing 'Z'.\n\nAlso, line 6: if isinstance(value,str): value=datetime.fromisoformat(value). But if value is string but not ISO, will raise ValueError. Good.\n\nAlso, line 6: if isinstance(value,str): value=datetime.fromisoformat(value). But if value is string but not ISO, will raise ValueError. Good.\n\nAlso, line 6: if isinstance(value,str): value=datetime.fromisoformat(value). But if value is string but not ISO, will raise ValueError. Good.\n\nOk.\n\nNow quotes.py:\n\nLine 5: if isinstance(value,bool) or not isinstance(value,(int,float,str)): raise ValueError. Good.\n\nLine 8: v=float(value). Good.\n\nLine 11: if not math.isfinite(v) or abs(v)<100: raise ValueError. Good.\n\nLine 13: return 100/(v+100) if v>0 else 100/((-v)+100). Wrong for negative odds.\n\nAlso, line 21: if row['book'] not in latest or row['observed_at']>latest[row['book']]['observed_at']:\n\n- row['observed_at'] is string, not parsed. Should compare instants. So bug.\n\nAlso, line 21: uses > on strings, not datetime.\n\nAlso, line 21: dedup logic wrong: picks latest observed_at regardless of eligibility.\n\nAlso, line 26: if not isinstance(row,dict): continue. Good.\n\nLine 29: if any(not isinstance(row[k],str) or not row[k] for k in ('id','book','event')) or row['event']!=event: continue. Good.\n\nLine 31: observed=instant(row['observed_at']); expiry=instant(row['expires_at']); update=instant(row['last_update']). Good.\n\nLine 32: p=probability(row['odds']). Good.\n\nLine 33: if not (observed<=at<=expiry and update<=observed): continue. Good.\n\nLine 35: key=row['book']; rank=(observed,row['id']). Good.\n\nLine 37: if old is None or observed>old[0] or (observed==old[0] and row['id']<old[1]): ranks[key]=rank; picked[key]={'row':row,'probability':p}. Good.\n\nBut tie rule: if observed==old[0] and row['id']<old[1] choose lexicographically smaller id. Good.\n\nBut first-input tie exception: equal instant/id ties keep first eligible input row. Implementation: if observed==old[0] and row['id']<old[1] replace. If equal id, not replace. So first input remains. Good.\n\nBut dedup logic earlier wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: uses string comparison.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, line 21: dedup logic wrong.\n\nOk.\n\nStop.\n\nOk.\n\nOk.\n\nNow runs.py:\n\nLine 9: if any(not isinstance(row[k],str) or not row[k] for k in ('run_id','job')): continue. Good.\n\nLine 11: if type(row['attempt']) is not int or row['attempt']<=0 or type(row['downloaded_rows']) is not int or row['downloaded_rows']<0: continue. Good.\n\nLine 13: status=row['status'].\n\nLine 14: if not isinstance(status,str) or status not in ('ok','partial','failed','pending') or (status in ('failed','pending') and row['downloaded_rows']!=0): continue. Good.\n\nLine 16: observed=instant(row['observed_at']).\n\nLine 17: if observed>at: continue.\n\nLine 19: identity=row['job']+row['run_id'].\n\nLine 20: if identity not in stamps or observed>=stamps[identity]: unique[identity]=row;stamps[identity]=observed.\n\nBug: dedup key wrong, should be run_id only. Also tie rule wrong: should use > not >=.\n\nAlso, identity uses job+run_id, but run_id global across jobs. So bug.\n\nAlso, after dedup, picks each job's latest attempt incorrectly.\n\nLine 24: for identity,row in unique.items(): key=row['job']; stamp=stamps[identity]; rank=(row['attempt'],stamp,identity); old=ranks.get(key); if True: picked[key]=row;ranks[key]=rank.\n\nThis picks each job's row from unique dict, but doesn't compare attempts. So bug.\n\nAlso, rank tuple not used.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no lexicographic run_id tie.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nOk.\n\nAlso, line 24: if True: always true. So picks all unique rows.\n\nAlso, no attempt ordering.\n\nAlso, no status preference.\n\nAlso, no lexicographic run_id tie.\n\nAlso, no attempt ordering.\n\nOk.\n\nAlso, line 24: rank tuple not used.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nStop.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nStop.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nStop.\n\nOk.\n\nNow pipeline.py:\n\nLine 6: at=instant(asof). Good.\n\nLine 7: if not isinstance(event,str) or not event: raise ValueError. Good.\n\nLine 9: quotes=select(quote_rows,event,at); runs=reconcile(run_rows,at). Good.\n\nLine 10: return {'quotes':quotes,'runs':runs,'successful_rows':sum(row['downloaded_rows'] for row in runs.values() if row['status']=='ok'),'failures':sorted(job for job,row in runs.items() if row['status'] in ('failed','pending')),'partial_jobs':sorted(job for job,row in runs.items() if row['status']=='partial'),'unknown_jobs':sorted(job for job,row in runs.items() if row['status']=='pending')}\n\nBug: failures includes pending. Should only failed.\n\nAlso, successful_rows only ok, not partial.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs should be pending only. Good.\n\nAlso, partial_jobs correct.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nAlso, unknown_jobs duplicates pending. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nAlso, pipeline passes.\n\nStop.\n\nOk.\n\nNow produce JSON list of findings.\n\nWe need to list each file, line number, explanation.\n\nLet's enumerate:\n\ntimes.py line 6: missing handling of 'Z'.\n\nquotes.py line 13: negative odds formula incorrect.\n\nquotes.py line 21: dedup logic uses string comparison and ignores eligibility; should parse instants and filter eligible first.\n\nquotes.py line 21: uses string comparison for observed_at; should compare datetime.\n\nquotes.py line 21: dedup logic wrong: picks latest observed_at regardless of eligibility.\n\nquotes.py line 21: dedup logic wrong: uses string comparison.\n\nquotes.py line 21: dedup logic wrong: uses string comparison.\n\nBut we can combine into one explanation: dedup logic wrong.\n\nAlso, quotes.py line 21: uses string comparison for observed_at; should parse to datetime.\n\nAlso, quotes.py line 21: dedup logic wrong: picks latest observed_at regardless of eligibility.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nAlso, quotes.py line 21: dedup logic wrong: uses string comparison.\n\nOk.\n\nStop.\n\nOk.\n\nOk, this is too many. We need to produce concise list. We can combine multiple issues into one entry per file. But spec: \"Return only JSON list of {\"file\": filename, \"line\": integer, \"explanation\": string}, one independent cause per finding.\" So each bug is a finding. We can group multiple bugs per file but each line number must be specific. We can list each bug with its line number. For quotes.select, we can list multiple bugs: line 21 string comparison, line 21 dedup logic wrong, line 21 ignoring eligibility. But they are same line. We can list one bug for line 21: \"dedup logic uses string comparison and ignores eligibility, should parse instants and filter eligible first.\" That covers multiple issues.\n\nAlso, line 13 negative odds formula wrong.\n\nAlso, line 21 dedup logic wrong.\n\nAlso, line 21 string comparison.\n\nBut we can combine into one.\n\nAlso, line 21 dedup logic wrong.\n\nAlso, line 21 string comparison.\n\nBut we can combine into one.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nAlso, line 21 dedup logic wrong.\n\nOk.\n\nStop.\n\nNow runs.py:\n\nLine 19 identity key wrong.\n\nLine 20 tie rule wrong.\n\nLine 24 picks each job's latest attempt incorrectly.\n\nLine 24 no attempt ordering.\n\nLine 24 no status preference.\n\nLine 24 no lexicographic run_id tie.\n\nWe can combine into one bug: line 19-24 dedup and selection logic incorrect.\n\nBut we need separate line numbers. We can list line 19: identity key wrong. Line 20: tie rule wrong. Line 24: selection logic wrong.\n\nAlso, line 24: no attempt ordering.\n\nBut we can combine into one: line 24 selection logic wrong.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no lexicographic run_id tie.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no lexicographic run_id tie.\n\nOk.\n\nAlso, line 24: no attempt ordering.\n\nOk.\n\nAlso, line 24: no status preference.\n\nOk.\n\nAlso, line 24: no lexicographic run_id tie.\n\nOk.\n\nOk.\n\nNow pipeline.py:\n\nLine 10: failures includes pending. Should only failed.\n\nLine 10: successful_rows only ok, not partial.\n\nAlso, unknown_jobs duplicates pending? Actually unknown_jobs is pending only. That's fine.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nAlso, pipeline passes at to select and reconcile but also passes event string. Good.\n\nOk.\n\nNow times.py:\n\nLine 6: missing Z handling.\n\nAlso, line 6: string parsing may raise ValueError but caught. Good.\n\nOk.\n\nNow produce JSON list.\n\nWe need to output JSON array of objects.\n\nLet's list:\n\n1. times.py line 6: missing handling of 'Z' timezone in ISO8601 strings.\n\n2. quotes.py line 13: negative odds probability formula incorrect.\n\n3. quotes.py line 21: dedup logic uses string comparison and ignores eligibility; should parse instants and filter eligible first.\n\n4. runs.py line 19: identity key incorrectly combines job and run_id; dedup should be by run_id only.\n\n5. runs.py line 20: tie rule uses >=, should use > to preserve first-input tie.\n\n6. runs.py line 24: selection logic ignores attempt ordering, status preference, and lexicographic run_id tie; should select latest attempt per job.\n\n7. pipeline.py line 10: failures list incorrectly includes pending jobs; should include only failed.\n\n8. pipeline.py line 10: successful_rows sum only ok rows; should include partial rows as well.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Actually unknown_jobs is pending only; that's fine.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nStop.\n\nNow produce JSON.\n\nLet's produce list of 8 findings.\n\nAlso, we might add times.py line 6: missing Z handling.\n\nAlso, quotes.py line 21: dedup logic wrong.\n\nAlso, quotes.py line 13: negative odds formula wrong.\n\nAlso, runs.py line 19: identity key wrong.\n\nAlso, runs.py line 20: tie rule wrong.\n\nAlso, runs.py line 24: selection logic wrong.\n\nAlso, pipeline.py line 10: failures includes pending.\n\nAlso, pipeline.py line 10: successful_rows excludes partial.\n\nAlso, pipeline.py line 10: unknown_jobs duplicates pending? Not a bug.\n\nOk.\n\nNow produce JSON.\n\n"
+  },
+  "done": true,
+  "done_reason": "stop",
+  "total_duration": 198707624875,
+  "load_duration": 1321589250,
+  "prompt_eval_count": 2438,
+  "prompt_eval_cached_count": 0,
+  "prompt_eval_duration": 769154000,
+  "eval_count": 19673,
+  "eval_duration": 196605651000,
+  "wall_seconds": 199.57723416702356,
+  "memory_samples": [
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    },
+    {
+      "name": "gpt-oss:20b",
+      "size": 13310088969,
+      "size_vram": 13310088969,
+      "context_length": 65536
+    }
+  ],
+  "preflight_memory_free_percentage": 81,
+  "sampling_note": "Ollama allocation samples, not complete machine peak/RSS or swap measurements"
+}

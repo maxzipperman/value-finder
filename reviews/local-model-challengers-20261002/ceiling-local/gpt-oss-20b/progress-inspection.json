@@ -1,0 +1,29 @@
+{
+  "implementation": {
+    "finish": "length",
+    "final_chars": 0,
+    "thinking_chars": 122763,
+    "enough_literal_repetitions": 10092,
+    "run_tests_header_character_offsets": [],
+    "result_sha256": "e95aecba7c834f3ad277ab8e9c713097de5865db4746618961f5d0a15620f16e",
+    "source_not_salvaged_or_executed": true,
+    "inspection": "Author inspected empty final plus saved thinking middle/tail and repeated draft locations; counts are metadata only, not semantic grading."
+  },
+  "regression": {
+    "finish": "length",
+    "final_chars": 0,
+    "thinking_chars": 117974,
+    "enough_literal_repetitions": 0,
+    "run_tests_header_character_offsets": [
+      32830,
+      47397,
+      62783,
+      77380,
+      92230,
+      107173
+    ],
+    "result_sha256": "a146df5e6d951f2632bbe32ff87b30b26d818d7916d1dceba8215eb9ca42f50e",
+    "source_not_salvaged_or_executed": true,
+    "inspection": "Author inspected empty final plus saved thinking middle/tail and repeated draft locations; counts are metadata only, not semantic grading."
+  }
+}

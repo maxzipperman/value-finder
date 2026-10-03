@@ -52,5 +52,25 @@
       "ceiling-local/qwen3.8-27b/manual-review.json"
     ],
     "reviewer": "author manual semantic inspection"
+  },
+  "gpt-oss:20b|implementation|64k": {
+    "proceed": false,
+    "reason": "Capped32K empty final with10092 literal - Enough. repetitions occupying middle and tail. No meaningful unfinished progress;64K would extend repetition.",
+    "evidence": [
+      "ceiling-local/gpt-oss-20b/implementation-result.json",
+      "ceiling-local/gpt-oss-20b/progress-inspection.json",
+      "ceiling-local/gpt-oss-20b/implementation-acceptance.json"
+    ],
+    "reviewer": "author progress inspection; not independent validation"
+  },
+  "gpt-oss:20b|regression|64k": {
+    "proceed": false,
+    "reason": "Capped32K empty final repeatedly serializes substantially the same test suite, with six run_tests headers and recurring initial test cases. Tail still reproduces earlier assertions, including wrong event/run dependence. Repetition/no delivery, not meaningful new unfinished progress; no64K escalation. Hidden draft never graded as a deliverable.",
+    "evidence": [
+      "ceiling-local/gpt-oss-20b/regression-result.json",
+      "ceiling-local/gpt-oss-20b/progress-inspection.json",
+      "ceiling-local/gpt-oss-20b/regression-acceptance.json"
+    ],
+    "reviewer": "author progress inspection; not independent validation"
   }
 }
