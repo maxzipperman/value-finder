@@ -1,6 +1,6 @@
 {
-  "root": "05904da51d2487f4295dd41c45b105ea3b187dd7dbaf964f6a7e549fdc67a017",
-  "bootstrap_sha256": "261963c85ed8da80fddadc2dfe83188b622fc30130c23076f5e236c370aefe27",
+  "root": "c75ef924f5d44c62176de915f47744515f2ca35088f2a82e507a105c0733bacb",
+  "bootstrap_sha256": "48ba33f06b02c1024d49f2758ddd3a5106fcc34ab6c0f09420e71c6407d41213",
   "request_count": 1302,
   "max_new_credits": 67200,
   "conservative_carry": 207386,
@@ -9,5 +9,5 @@
   "live_account_verified": false,
   "runtime_writes": 0,
   "paid_calls": 0,
-  "source": "actual assemble.py stdout; actual orchestration regression reported separately"
+  "source": "actual confirmed-path successor assemble.py stdout after hub reconciliation; actual orchestration proof is separate"
 }
